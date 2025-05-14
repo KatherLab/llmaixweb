@@ -19,13 +19,14 @@ import yaml
 from typing import Optional
 
 # Insert the absolute path to backend/src into sys.path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'src'))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from backend.src.db.session import SessionLocal, engine
 from backend.src.db.base import Base
 from backend.src.models.user import User, UserRole
 from backend.src.core.security import get_password_hash
 import re
+
 
 def init_db():
     """Initialize the database by creating all tables if they don't exist"""
@@ -37,10 +38,12 @@ def init_db():
         print(f"Error creating database tables: {e}")
         sys.exit(1)
 
+
 def validate_email(email: str) -> bool:
     """Validate email format"""
     email_pattern = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
     return bool(email_pattern.match(email))
+
 
 def validate_password(password: str) -> bool:
     """Validate password strength"""
@@ -59,6 +62,7 @@ def validate_password(password: str) -> bool:
         return False
     return True
 
+
 def user_exists(email: str) -> bool:
     """Check if a user with the given email already exists"""
     db = SessionLocal()
@@ -67,6 +71,7 @@ def user_exists(email: str) -> bool:
         return user is not None
     finally:
         db.close()
+
 
 def get_user_input(role: UserRole) -> tuple[str, str, str]:
     """Get user input interactively"""
@@ -79,7 +84,9 @@ def get_user_input(role: UserRole) -> tuple[str, str, str]:
             print("Invalid email format. Please try again.")
             continue
         if user_exists(email):
-            print("A user with this email already exists. Please use a different email.")
+            print(
+                "A user with this email already exists. Please use a different email."
+            )
             continue
         break
     # Get full name
@@ -96,7 +103,10 @@ def get_user_input(role: UserRole) -> tuple[str, str, str]:
         break
     return email, full_name, password
 
-def create_user(email: str, full_name: str, password: str, role: UserRole) -> Optional[User]:
+
+def create_user(
+    email: str, full_name: str, password: str, role: UserRole
+) -> Optional[User]:
     """Create a new user in the database"""
     db = SessionLocal()
     try:
@@ -110,7 +120,7 @@ def create_user(email: str, full_name: str, password: str, role: UserRole) -> Op
             full_name=full_name,
             hashed_password=get_password_hash(password),
             role=role.value,
-            is_active=True
+            is_active=True,
         )
         db.add(user)
         db.commit()
@@ -124,6 +134,7 @@ def create_user(email: str, full_name: str, password: str, role: UserRole) -> Op
     finally:
         db.close()
 
+
 def list_users():
     """List all users in the database"""
     db = SessionLocal()
@@ -135,21 +146,26 @@ def list_users():
         print("\nExisting Users:")
         print("===============")
         for user in users:
-            print(f"ID: {user.id} | Email: {user.email} | Name: {user.full_name} | Role: {user.role.value}")
+            print(
+                f"ID: {user.id} | Email: {user.email} | Name: {user.full_name} | Role: {user.role.value}"
+            )
     except Exception as e:
         print(f"Error listing users: {e}")
     finally:
         db.close()
+
 
 def create_admin_user():
     """Create an admin user interactively"""
     email, full_name, password = get_user_input(UserRole.ADMIN)
     create_user(email, full_name, password, UserRole.ADMIN)
 
+
 def create_regular_user():
     """Create a regular user interactively"""
     email, full_name, password = get_user_input(UserRole.USER)
     create_user(email, full_name, password, UserRole.USER)
+
 
 def check_admin_exists() -> bool:
     """Check if any admin user already exists"""
@@ -160,6 +176,7 @@ def check_admin_exists() -> bool:
     finally:
         db.close()
 
+
 def import_users_from_yaml(yaml_file: str):
     """Import multiple users from a YAML file"""
     if not os.path.exists(yaml_file):
@@ -167,7 +184,7 @@ def import_users_from_yaml(yaml_file: str):
         return
 
     try:
-        with open(yaml_file, 'r') as file:
+        with open(yaml_file, "r") as file:
             users_data = yaml.safe_load(file)
         if not isinstance(users_data, list):
             print("Error: YAML file should contain a list of user entries.")
@@ -179,18 +196,24 @@ def import_users_from_yaml(yaml_file: str):
         for idx, user_data in enumerate(users_data):
             # Validate required fields
             if not isinstance(user_data, dict):
-                print(f"Error: User entry {idx+1} is not a dictionary. Skipping.")
+                print(f"Error: User entry {idx + 1} is not a dictionary. Skipping.")
                 failed_imports += 1
                 continue
 
-            if 'email' not in user_data or 'full_name' not in user_data or 'password' not in user_data:
-                print(f"Error: User entry {idx+1} is missing required fields (email, full_name, password). Skipping.")
+            if (
+                "email" not in user_data
+                or "full_name" not in user_data
+                or "password" not in user_data
+            ):
+                print(
+                    f"Error: User entry {idx + 1} is missing required fields (email, full_name, password). Skipping."
+                )
                 failed_imports += 1
                 continue
 
-            email = user_data['email']
-            full_name = user_data['full_name']
-            password = user_data['password']
+            email = user_data["email"]
+            full_name = user_data["full_name"]
+            password = user_data["password"]
             role = UserRole.USER  # Default role for imported users
 
             # Validate email
@@ -201,7 +224,9 @@ def import_users_from_yaml(yaml_file: str):
 
             # Validate password (optionally disable for bulk imports)
             if not validate_password(password):
-                print(f"Error: Password for user {email} does not meet requirements. Skipping.")
+                print(
+                    f"Error: Password for user {email} does not meet requirements. Skipping."
+                )
                 failed_imports += 1
                 continue
 
@@ -212,10 +237,13 @@ def import_users_from_yaml(yaml_file: str):
             else:
                 failed_imports += 1
 
-        print(f"\nImport summary: {successful_imports} users imported successfully, {failed_imports} failed.")
+        print(
+            f"\nImport summary: {successful_imports} users imported successfully, {failed_imports} failed."
+        )
 
     except Exception as e:
         print(f"Error importing users from YAML: {e}")
+
 
 def generate_sample_yaml():
     """Generate a sample YAML file for user import"""
@@ -233,12 +261,13 @@ def generate_sample_yaml():
   password: User3Pass
 """
     filename = "sample_users.yaml"
-    with open(filename, 'w') as file:
+    with open(filename, "w") as file:
         file.write(sample_content)
 
     print(f"Sample YAML file created: {filename}")
     print("You can modify this file and then import users with:")
     print(f"python -m scripts.populate_users --import-yaml {filename}")
+
 
 def main():
     parser = argparse.ArgumentParser(description="User management script")
@@ -246,8 +275,14 @@ def main():
     group.add_argument("--admin", action="store_true", help="Create an admin user")
     group.add_argument("--user", action="store_true", help="Create a regular user")
     group.add_argument("--list", action="store_true", help="List all users")
-    group.add_argument("--import-yaml", metavar="FILE", help="Import multiple users from a YAML file")
-    group.add_argument("--generate-sample", action="store_true", help="Generate a sample YAML file for importing users")
+    group.add_argument(
+        "--import-yaml", metavar="FILE", help="Import multiple users from a YAML file"
+    )
+    group.add_argument(
+        "--generate-sample",
+        action="store_true",
+        help="Generate a sample YAML file for importing users",
+    )
 
     args = parser.parse_args()
 
@@ -296,6 +331,7 @@ def main():
                 generate_sample_yaml()
             else:
                 print("Exiting.")
+
 
 if __name__ == "__main__":
     main()

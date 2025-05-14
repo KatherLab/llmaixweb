@@ -2,7 +2,7 @@ import enum
 
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
-from sqlalchemy import String, Enum, CheckConstraint
+from sqlalchemy import String, Enum
 
 from ..db.base import Base
 
