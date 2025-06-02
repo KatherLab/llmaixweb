@@ -2,6 +2,7 @@ import datetime
 from typing import Any
 
 import jwt
+from jwt.exceptions import PyJWTError
 import bcrypt
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -18,7 +19,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
 
 
 def create_access_token(
-    subject: str | Any, expires_delta: datetime.timedelta = None
+    subject: str | Any, expires_delta: datetime.timedelta | None = None
 ) -> str:
     if expires_delta:
         expire = datetime.datetime.now(datetime.UTC) + expires_delta
@@ -34,11 +35,11 @@ def create_access_token(
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     # Convert plain password to bytes if it's not already
     if isinstance(plain_password, str):
-        plain_password = plain_password.encode("utf-8")
+        plain_password: bytes = plain_password.encode("utf-8")
 
     # Convert hashed password to bytes if it's not already
     if isinstance(hashed_password, str):
-        hashed_password = hashed_password.encode("utf-8")
+        hashed_password: bytes = hashed_password.encode("utf-8")
 
     try:
         return bcrypt.checkpw(plain_password, hashed_password)
@@ -49,7 +50,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     # Convert password to bytes if it's not already
     if isinstance(password, str):
-        password = password.encode("utf-8")
+        password: bytes = password.encode("utf-8")
 
     # Generate a salt and hash the password
     salt = bcrypt.gensalt(rounds=12)  # Higher rounds = more secure but slower
@@ -72,7 +73,7 @@ async def get_current_user(
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except jwt.exceptions.PyJWTError:
+    except PyJWTError:
         raise credentials_exception
 
     user = db.execute(select(User).where(User.id == user_id)).scalars().one()
