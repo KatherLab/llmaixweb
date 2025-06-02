@@ -110,11 +110,15 @@ class Settings(BaseSettings):
                 print(f"Connected to S3 bucket: {self.S3_BUCKET_NAME}")
             except ClientError as client_error:
                 print(f"Error connecting to S3: {client_error}")
-                if "HeadBucket" in str(client_error) and "Not Found" in str(client_error):
+                if "HeadBucket" in str(client_error) and "Not Found" in str(
+                    client_error
+                ):
                     print(
                         f"Probably the bucket {self.S3_BUCKET_NAME} does not exist or you do not have access to it."
                     )
-                if "HeadBucket" in str(client_error) and "Forbidden" in str(client_error):
+                if "HeadBucket" in str(client_error) and "Forbidden" in str(
+                    client_error
+                ):
                     print(
                         f"Access to the bucket {self.S3_BUCKET_NAME} is forbidden. Please check your AWS credentials."
                     )
