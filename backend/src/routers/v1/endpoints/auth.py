@@ -159,7 +159,7 @@ async def invite(
     # Generate a unique token
     token = secrets.token_urlsafe(32)
 
-    invitation = schemas.Invitation(email=email, token=token, is_used=False)
+    invitation = models.Invitation(email=email, token=token, is_used=False)
 
     db.add(invitation)
     db.commit()

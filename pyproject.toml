@@ -5,10 +5,16 @@ description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.115.12",
-    "uvicorn>=0.34.2",
+    "uvicorn>=0.34.3",
     "pyjwt~=2.10.1",
-    "sqlalchemy~=2.0.40",
+    "sqlalchemy~=2.0.41",
     "pydantic_settings~=2.9.1",
-    "openai~=1.78.1",
+    "openai~=1.82.1",
     "bcrypt~=4.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.11.12",
+    "ty>=0.0.1a8",
 ]

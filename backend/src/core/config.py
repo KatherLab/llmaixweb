@@ -65,9 +65,12 @@ class Settings(BaseSettings):
 
 
 try:
-    settings = Settings()
+    Settings()
 except ValidationError as e:
     print("Configuration Error:")
     print(e)
     print("Please check your .env file or environment variables.")
     sys.exit(1)
+
+# Appease ty - otherwise it will complain about a possible unbound variable
+settings: Settings = Settings()
