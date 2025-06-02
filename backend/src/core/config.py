@@ -4,6 +4,9 @@ from pydantic import ValidationError
 from pydantic_settings import BaseSettings
 import secrets
 import openai
+from pathlib import Path
+import boto3
+from botocore.exceptions import ClientError
 
 
 class Settings(BaseSettings):
@@ -15,8 +18,17 @@ class Settings(BaseSettings):
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "medical_cases"
+    POSTGRES_DB: str = "llmaixweb"
     SQLALCHEMY_DATABASE_URI: str | None = "sqlite:///database.db"
+
+    # storing files in S3
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    S3_ENDPOINT_URL: str | None = None
+    S3_BUCKET_NAME: str = "llmaixweb"
+
+    # Alternative for storing files locally
+    LOCAL_DIRECTORY: str | None = None
 
     OPENAI_API_KEY: str = ""
     OPENAI_API_BASE: str | None = None
@@ -62,6 +74,59 @@ class Settings(BaseSettings):
             except Exception as e:
                 print("LLM API Connection Error: ", e)
                 sys.exit(1)
+
+        if self.LOCAL_DIRECTORY:
+            path = Path(self.LOCAL_DIRECTORY)
+            if not path.exists():
+                print(
+                    f"Local directory {self.LOCAL_DIRECTORY} does not exist. Please create it or configure S3."
+                )
+                sys.exit(1)
+            else:
+                print(f"Using local directory for file storage: {self.LOCAL_DIRECTORY}")
+        elif self.AWS_SECRET_ACCESS_KEY and self.AWS_ACCESS_KEY_ID:
+            if not self.S3_ENDPOINT_URL:
+                print("S3_ENDPOINT_URL is not set. Please set it in your .env file.")
+                sys.exit(1)
+            if not self.S3_BUCKET_NAME:
+                print("S3_BUCKET_NAME is not set. Please set it in your .env file.")
+                sys.exit(1)
+
+            try:
+                if self.S3_ENDPOINT_URL:
+                    s3 = boto3.client(
+                        "s3",
+                        endpoint_url=self.S3_ENDPOINT_URL,
+                        aws_access_key_id=self.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=self.AWS_SECRET_ACCESS_KEY,
+                    )
+                else:
+                    s3 = boto3.client(
+                        "s3",
+                        aws_access_key_id=self.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=self.AWS_SECRET_ACCESS_KEY,
+                    )
+                s3.head_bucket(Bucket=self.S3_BUCKET_NAME)
+                print(f"Connected to S3 bucket: {self.S3_BUCKET_NAME}")
+            except ClientError as client_error:
+                print(f"Error connecting to S3: {client_error}")
+                if "HeadBucket" in str(client_error) and "Not Found" in str(client_error):
+                    print(
+                        f"Probably the bucket {self.S3_BUCKET_NAME} does not exist or you do not have access to it."
+                    )
+                if "HeadBucket" in str(client_error) and "Forbidden" in str(client_error):
+                    print(
+                        f"Access to the bucket {self.S3_BUCKET_NAME} is forbidden. Please check your AWS credentials."
+                    )
+                sys.exit(1)
+            except Exception as exception:
+                print(f"Unexpected error connecting to S3: {exception}")
+                sys.exit(1)
+        else:
+            print(
+                "Neither LOCAL_DIRECTORY nor S3 credentials are set. Please configure one of them in your .env file."
+            )
+            sys.exit(1)
 
 
 try:
