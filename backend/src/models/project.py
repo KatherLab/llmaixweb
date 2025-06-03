@@ -47,6 +47,9 @@ class Project(Base):
     schemas: Mapped[list["Schema"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    preprocessing_tasks: Mapped[list["PreprocessingTask"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     owner: Mapped["User"] = relationship(back_populates="projects")  # noqa: F821
 
@@ -81,7 +84,7 @@ class File(Base):
     )
     file_name: Mapped[str] = mapped_column(String(500), nullable=False)
     file_type: Mapped[FileType] = mapped_column(
-        Enum(FileType, native_enum=False, length=10), default=FileType.APPLICATION_PDF
+        Enum(FileType, native_enum=False, length=100), default=FileType.APPLICATION_PDF
     )
     description: Mapped[str] = mapped_column(String(500), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(
@@ -205,3 +208,23 @@ class TrialResult(Base):
         DateTime(timezone=True), onupdate=func.now()
     )
     trial: Mapped["Trial"] = relationship(back_populates="results")
+
+
+class PreprocessingTask(Base):
+    __tablename__ = "preprocessing_tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    message: Mapped[str] = mapped_column(String(500), nullable=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    project: Mapped["Project"] = relationship(back_populates="preprocessing_tasks")
+    progress: Mapped[float] = mapped_column(String(10), nullable=False, default="0.0")
+    progress_details: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+    celery_id: Mapped[str] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), onupdate=func.now()
+    )

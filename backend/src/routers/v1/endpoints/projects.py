@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db, save_file, get_file, remove_file
+from ....celery.preprocessing import preprocess_data
 
 router = APIRouter()
 
@@ -299,3 +300,32 @@ def delete_file(
     db.commit()
 
     return schemas.File.model_validate(file)
+
+
+@router.post("/{project_id}/preprocess", response_model=schemas.PreprocessingTask)
+def preprocess_project_data(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.PreprocessingTask:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to preprocess this project"
+        )
+
+    preprocessing_task = models.PreprocessingTask(project_id=project_id)
+    db.add(preprocessing_task)
+    db.commit()
+    db.refresh(preprocessing_task)
+
+    preprocess_data.delay(preprocessing_task.id)
+
+    return schemas.PreprocessingTask.model_validate(preprocessing_task)

@@ -159,6 +159,32 @@ class TrialResult(TrialResultBase):
         from_attributes = True
 
 
+class PreprocessingTaskBase(BaseModel):
+    status: str | None = None
+    message: str | None = None
+    progress: float | None = None
+    progress_details: dict | None = None
+    celery_id: str | None = None
+
+
+class PreprocessingTaskCreate(PreprocessingTaskBase):
+    project_id: int
+
+
+class PreprocessingTaskUpdate(PreprocessingTaskBase):
+    pass
+
+
+class PreprocessingTask(PreprocessingTaskBase):
+    id: int
+    project_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 from .user import User  # noqa: E402, F401
 
 Project.model_rebuild()

@@ -8,6 +8,9 @@ from .project import (
     FileType,
     Document,
     DocumentSet,
+    Trial,
+    Schema,
+    PreprocessingTask,
 )
 
 __all__ = [
@@ -22,4 +25,7 @@ __all__ = [
     "FileType",
     "Document",
     "DocumentSet",
+    "Trial",
+    "Schema",
+    "PreprocessingTask",
 ]

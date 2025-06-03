@@ -14,6 +14,10 @@ from .project import (
     DocumentSet,
     DocumentSetCreate,
     DocumentSetBase,
+    PreprocessingTaskBase,
+    PreprocessingTaskCreate,
+    PreprocessingTaskUpdate,
+    PreprocessingTask,
 )
 
 __all__ = [
@@ -36,4 +40,8 @@ __all__ = [
     "DocumentSet",
     "DocumentSetCreate",
     "DocumentSetBase",
+    "PreprocessingTaskBase",
+    "PreprocessingTaskCreate",
+    "PreprocessingTaskUpdate",
+    "PreprocessingTask",
 ]
