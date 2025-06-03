@@ -1,5 +1,5 @@
 from ..db.base import Base
 from .user import User, UserRole, Invitation
+from .project import Project, ProjectStatus
 
-
-__all__ = ["Base", "User", "UserRole", "Invitation"]
+__all__ = ["Base", "User", "UserRole", "Invitation", "Project", "ProjectStatus"]

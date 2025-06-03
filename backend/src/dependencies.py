@@ -6,6 +6,7 @@ from .core.config import settings
 import boto3
 from botocore.client import BaseClient
 
+
 if settings.OPENAI_NO_API_CHECK:
     openai_client: OpenAI | None = None
 else:

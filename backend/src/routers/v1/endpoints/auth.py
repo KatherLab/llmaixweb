@@ -20,9 +20,6 @@ from ....models import UserRole
 
 router = APIRouter()
 
-# App settings
-REQUIRE_INVITATION = True  # Can be set to False to enable normal registration
-
 
 @router.post("/login", response_model=schemas.Token)
 def login(
@@ -84,7 +81,7 @@ def register(
         )
 
     # Check if invitation is required by app settings
-    if REQUIRE_INVITATION:
+    if settings.REQUIRE_INVITATION:
         # Ensure invitation token is provided
         if not user_in.invitation_token:
             raise HTTPException(

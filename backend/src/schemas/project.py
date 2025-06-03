@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 from pydantic import BaseModel
 from datetime import datetime
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -18,14 +19,18 @@ class ProjectCreate(ProjectBase):
     name: str
 
 
+class ProjectUpdate(ProjectBase):
+    name: str
+
+
 class Project(ProjectBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    owner: "User" | None = None  # noqa: F821
+    owner: User | None = None  # noqa: F821
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class FileBase(BaseModel):
@@ -47,7 +52,7 @@ class File(FileBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class DocumentBase(BaseModel):
@@ -70,7 +75,7 @@ class Document(DocumentBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class DocumentSetBase(BaseModel):
@@ -89,7 +94,7 @@ class DocumentSet(DocumentSetBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class SchemaBase(BaseModel):
@@ -109,7 +114,7 @@ class Schema(SchemaBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TrialBase(BaseModel):
@@ -134,7 +139,7 @@ class Trial(TrialBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TrialResultBase(BaseModel):
@@ -152,4 +157,9 @@ class TrialResult(TrialResultBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+
+from .user import User  # noqa: E402, F401
+
+Project.model_rebuild()

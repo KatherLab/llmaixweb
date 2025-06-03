@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr
+from __future__ import annotations
 
+from pydantic import BaseModel, EmailStr
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -30,7 +31,7 @@ class UserUpdate(UserBase):
 class UserInDBBase(UserBase):
     id: int
     is_active: bool
-    projects: list["Project"] | None = None  # noqa: F821
+    projects: list[Project] | None = None  # noqa: F821
 
 
 class User(UserInDBBase):
@@ -70,3 +71,10 @@ class InvitationResponse(InvitationBase):
 class InvitationInfo(BaseModel):
     valid: bool
     email: str | None = None
+
+
+from .project import Project  # noqa: E402, F401
+
+UserInDBBase.model_rebuild()
+User.model_rebuild()
+UserInDB.model_rebuild()
