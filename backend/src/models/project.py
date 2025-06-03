@@ -5,6 +5,11 @@ from sqlalchemy import String, Enum, ForeignKey, DateTime, JSON
 from sqlalchemy.sql import func
 from ..db.base import Base
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .user import User
+
 
 class ProjectStatus(str, enum.Enum):
     ACTIVE = "active"
@@ -42,6 +47,8 @@ class Project(Base):
     schemas: Mapped[list["Schema"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    owner: Mapped["User"] = relationship(back_populates="projects")  # noqa: F821
 
 
 class FileStorageType(str, enum.Enum):

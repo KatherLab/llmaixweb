@@ -1,10 +1,15 @@
 import enum
 
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm import mapped_column
 from sqlalchemy import String, Enum
 
 from ..db.base import Base
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .project import Project
 
 
 class UserRole(str, enum.Enum):
@@ -23,6 +28,7 @@ class User(Base):
         Enum(UserRole, native_enum=False, length=10), default=UserRole.USER
     )
     is_active: Mapped[bool] = mapped_column(default=True)
+    projects: Mapped[list["Project"]] = relationship(back_populates="owner")  # noqa: F821
 
 
 class Invitation(Base):

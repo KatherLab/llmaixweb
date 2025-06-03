@@ -1,31 +1,36 @@
-from typing import Optional
 from pydantic import BaseModel, EmailStr
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .project import Project  # noqa: F401
 
 
 # User schemas
 class UserBase(BaseModel):
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
-    role: Optional[str] = "student"
+    email: EmailStr | None = None
+    full_name: str | None = None
+    role: str | None = "student"
+
+    class Config:
+        from_attributes = True
 
 
 class UserCreate(UserBase):
     email: EmailStr
     password: str
     full_name: str
-    invitation_token: Optional[str] = None  # Made optional to support both workflows
+    invitation_token: str | None = None
 
 
 class UserUpdate(UserBase):
-    password: Optional[str] = None
+    password: str | None = None
 
 
 class UserInDBBase(UserBase):
     id: int
     is_active: bool
-
-    class Config:
-        from_attributes = True
+    projects: list["Project"] | None = None  # noqa: F821
 
 
 class User(UserInDBBase):
@@ -64,4 +69,4 @@ class InvitationResponse(InvitationBase):
 
 class InvitationInfo(BaseModel):
     valid: bool
-    email: Optional[str] = None
+    email: str | None = None
