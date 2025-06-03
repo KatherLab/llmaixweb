@@ -57,9 +57,18 @@ class FileStorageType(str, enum.Enum):
 
 
 class FileType(str, enum.Enum):
-    PDF = "pdf"
-    IMAGE = "image"
-    TEXT = "text"
+    """MIMEs for image / application / text file types."""
+
+    APPLICATION_PDF = "application/pdf"
+    APPLICATION_MSWORD = "application/msword"
+    APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_WORDPROCESSINGML_DOCUMENT = (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+    IMAGE_JPEG = "image/jpeg"
+    IMAGE_PNG = "image/png"
+    IMAGE_SVG = "image/svg+xml"
+    TEXT_PLAIN = "text/plain"
+    TEXT_CSV = "text/csv"
 
 
 class File(Base):
@@ -72,7 +81,7 @@ class File(Base):
     )
     file_name: Mapped[str] = mapped_column(String(500), nullable=False)
     file_type: Mapped[FileType] = mapped_column(
-        Enum(FileType, native_enum=False, length=10), default=FileType.PDF
+        Enum(FileType, native_enum=False, length=10), default=FileType.APPLICATION_PDF
     )
     description: Mapped[str] = mapped_column(String(500), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(

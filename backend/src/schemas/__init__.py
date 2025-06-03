@@ -1,6 +1,20 @@
 from .auth import Token, TokenPayload
 from .user import User, UserCreate, InvitationResponse, InvitationInfo
-from .project import Project, ProjectBase, ProjectCreate, ProjectUpdate
+from .project import (
+    Project,
+    ProjectBase,
+    ProjectCreate,
+    ProjectUpdate,
+    FileBase,
+    FileCreate,
+    File,
+    DocumentBase,
+    DocumentCreate,
+    Document,
+    DocumentSet,
+    DocumentSetCreate,
+    DocumentSetBase,
+)
 
 __all__ = [
     "Token",
@@ -13,4 +27,13 @@ __all__ = [
     "ProjectBase",
     "ProjectCreate",
     "ProjectUpdate",
+    "FileBase",
+    "FileCreate",
+    "File",
+    "DocumentBase",
+    "DocumentCreate",
+    "Document",
+    "DocumentSet",
+    "DocumentSetCreate",
+    "DocumentSetBase",
 ]

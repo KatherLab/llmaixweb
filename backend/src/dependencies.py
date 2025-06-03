@@ -51,9 +51,9 @@ def get_file(file_name: str) -> bytes:
         return response["Body"].read()
 
 
-def upload_file(file_name: str, file_content: bytes, replace: bool = False) -> None:
+def save_file(file_name: str, file_content: bytes, replace: bool = False) -> None:
     """
-    Uploads a file to S3 or local storage.
+    Saves a file to S3 or local storage.
 
     Args:
         file_name (str): The name of the file to upload.
@@ -80,6 +80,32 @@ def upload_file(file_name: str, file_content: bytes, replace: bool = False) -> N
         s3_client.put_object(
             Bucket=settings.S3_BUCKET_NAME, Key=file_name, Body=file_content
         )
+
+
+def remove_file(file_name: str) -> None:
+    """
+    Deletes a file from S3 or local storage.
+
+    Args:
+        file_name (str): The name of the file to delete.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+    """
+    if settings.LOCAL_DIRECTORY:
+        file_path = f"{settings.LOCAL_DIRECTORY}/{file_name}"
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File {file_name} not found in local storage.")
+        os.remove(file_path)
+    else:
+        try:
+            s3_client.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
+            s3_client.delete_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
+        except s3_client.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                raise FileNotFoundError(f"File {file_name} not found in S3.")
+            else:
+                raise e
 
 
 def get_db() -> Generator:

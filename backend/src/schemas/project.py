@@ -42,7 +42,6 @@ class FileBase(BaseModel):
 
 class FileCreate(FileBase):
     file_name: str
-    file_type: str
 
 
 class File(FileBase):
