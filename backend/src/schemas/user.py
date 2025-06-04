@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class UserBase(BaseModel):
     email: EmailStr | None = None
     full_name: str | None = None
-    role: str | None = "student"
+    role: str | None = "user"
 
     class Config:
         from_attributes = True

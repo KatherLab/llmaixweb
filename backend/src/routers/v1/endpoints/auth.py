@@ -153,6 +153,14 @@ async def invite(
     if existing_invitation:
         return existing_invitation
 
+    # Check if email is already registered
+    existing_user = db.query(models.User).filter(models.User.email == email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists.",
+        )
+
     # Generate a unique token
     token = secrets.token_urlsafe(32)
 
@@ -220,7 +228,7 @@ def validate_invitation(
     """
     invitation = (
         db.query(models.Invitation)
-        .filter(models.Invitation.token == token, models.Invitation.is_used is False)
+        .filter(models.Invitation.token == token, models.Invitation.is_used.is_(False))
         .first()
     )
 
@@ -294,7 +302,7 @@ def read_current_user(
 @router.post("/reset-password", response_model=schemas.User)
 def reset_password(
     new_password: str,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Any:
     raise HTTPException(

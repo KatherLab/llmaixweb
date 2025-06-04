@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db, save_file, get_file, remove_file
-from ....celery.preprocessing import preprocess_data
+from ....celery.preprocessing import preprocess_file
 
 router = APIRouter()
 
@@ -326,6 +326,6 @@ def preprocess_project_data(
     db.commit()
     db.refresh(preprocessing_task)
 
-    preprocess_data.delay(preprocessing_task.id)
+    preprocess_file.delay(preprocessing_task.id)
 
     return schemas.PreprocessingTask.model_validate(preprocessing_task)

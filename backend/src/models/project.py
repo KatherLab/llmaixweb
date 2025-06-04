@@ -1,7 +1,7 @@
 import enum
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm import mapped_column
-from sqlalchemy import String, Enum, ForeignKey, DateTime, JSON
+from sqlalchemy import String, Enum, ForeignKey, DateTime, JSON, Table, Column
 from sqlalchemy.sql import func
 from ..db.base import Base
 
@@ -98,7 +98,8 @@ class File(Base):
         foreign_keys="[Document.original_file_id]", back_populates="original_file"
     )
     documents_as_preprocessed: Mapped[list["Document"]] = relationship(
-        foreign_keys="[Document.preprocessed_file_id]"
+        foreign_keys="[Document.preprocessed_file_id]",
+        back_populates="preprocessed_file",
     )
 
 
@@ -106,6 +107,14 @@ class PreprocessingMethod(str, enum.Enum):
     TESSERACT = "tesseract"
     VISION_OCR = "vision_ocr"
     SURYA_OCR = "surya_ocr"
+
+
+document_set_association = Table(
+    "document_set_association",
+    Base.metadata,
+    Column("document_id", ForeignKey("documents.id"), primary_key=True),
+    Column("document_set_id", ForeignKey("document_sets.id"), primary_key=True),
+)
 
 
 class Document(Base):
@@ -134,9 +143,11 @@ class Document(Base):
         foreign_keys=[original_file_id], back_populates="documents_as_original"
     )
     preprocessed_file: Mapped["File"] = relationship(
-        foreign_keys=[preprocessed_file_id]
+        foreign_keys=[preprocessed_file_id], back_populates="documents_as_preprocessed"
     )
-    document_set: Mapped["DocumentSet"] = relationship(back_populates="documents")
+    document_sets: Mapped[list["DocumentSet"]] = relationship(
+        secondary=document_set_association, back_populates="documents"
+    )
 
 
 class DocumentSet(Base):
@@ -152,7 +163,9 @@ class DocumentSet(Base):
     )
     project: Mapped["Project"] = relationship(back_populates="document_sets")
     trial: Mapped["Trial"] = relationship(back_populates="document_set")
-    documents: Mapped[list["Document"]] = relationship(back_populates="document_set")
+    documents: Mapped[list["Document"]] = relationship(
+        secondary=document_set_association, back_populates="document_sets"
+    )
 
 
 class Schema(Base):

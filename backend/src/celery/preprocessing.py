@@ -18,7 +18,7 @@ app: Celery = Celery("preprocessing", broker="redis://localhost:6379/0")
 
 
 @app.task
-def preprocess_data(data):
+def preprocess_file(data):
     """
     A simple Celery task to preprocess data.
     This is a placeholder for actual preprocessing logic.
