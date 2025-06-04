@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, SkipValidation
+from pydantic import BaseModel, SkipValidation
 from datetime import datetime
 from typing import TYPE_CHECKING, Annotated
 
@@ -163,10 +163,12 @@ class PreprocessingTaskBase(BaseModel):
     progress: float | None = None
     progress_details: dict | None = None
     celery_id: str | None = None
+    bypass_celery: bool = False
 
 
 class PreprocessingTaskCreate(PreprocessingTaskBase):
-    project_id: int
+    pass
+    # project_id: int
 
 
 class PreprocessingTaskUpdate(PreprocessingTaskBase):

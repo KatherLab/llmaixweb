@@ -1,6 +1,8 @@
 from celery import Celery
 from celery.exceptions import CeleryError
 
+from ..utils.preprocessing import preprocess_file
+
 try:
     Celery("preprocessing", broker="redis://localhost:6379/0")
     print("Celery app initialized successfully.")
@@ -18,13 +20,15 @@ app: Celery = Celery("preprocessing", broker="redis://localhost:6379/0")
 
 
 @app.task
-def preprocess_file(data):
+def preprocess_file_celery(data):
     """
     A simple Celery task to preprocess data.
     This is a placeholder for actual preprocessing logic.
     """
     # Simulate some work by sleeping
     import time
+
+    data = preprocess_file(data)
 
     time.sleep(10)
     # Here you would add your preprocessing logic

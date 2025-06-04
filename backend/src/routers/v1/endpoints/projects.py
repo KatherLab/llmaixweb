@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db, save_file, get_file, remove_file
-from ....celery.preprocessing import preprocess_file
 
 router = APIRouter()
 
@@ -61,13 +60,13 @@ def create_project(
     project: schemas.ProjectCreate,
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.Project:
-
     if not current_user.role == "user":
         if not project.owner_id:
             project.owner_id = current_user.id
         elif project.owner_id != current_user.id:
             raise HTTPException(
-                status_code=403, detail="Not authorized to create project for another user"
+                status_code=403,
+                detail="Not authorized to create project for another user",
             )
     else:
         if not project.owner_id:
@@ -330,6 +329,7 @@ def preprocess_project_data(
     *,
     db: Session = Depends(get_db),
     project_id: int,
+    preprocessing_task: schemas.PreprocessingTaskCreate,
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.PreprocessingTask:
     project: models.Project | None = db.execute(
@@ -344,11 +344,25 @@ def preprocess_project_data(
             status_code=403, detail="Not authorized to preprocess this project"
         )
 
-    preprocessing_task = models.PreprocessingTask(project_id=project_id)
-    db.add(preprocessing_task)
+    preprocessing_task_db = models.PreprocessingTask(**preprocessing_task.model_dump())
+    preprocessing_task_db.project_id = project_id
+    db.add(preprocessing_task_db)
     db.commit()
-    db.refresh(preprocessing_task)
+    db.refresh(preprocessing_task_db)
 
-    preprocess_file.delay(preprocessing_task.id)
+    if preprocessing_task_db.bypass_celery:
+        from ....utils.preprocessing import preprocess_file
 
-    return schemas.PreprocessingTask.model_validate(preprocessing_task)
+        print("Bypassing Celery for preprocessing task, preprocess synchronously.")
+        try:
+            preprocess_file(preprocessing_task_db.id)
+        except Exception as e:
+            db.delete(preprocessing_task)
+            db.commit()
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        from ....celery.preprocessing import preprocess_file_celery
+
+        preprocess_file_celery.delay(preprocessing_task_db.id)
+
+    return schemas.PreprocessingTask.model_validate(preprocessing_task_db)

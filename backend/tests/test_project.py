@@ -3,10 +3,12 @@ import pytest
 from fastapi.testclient import TestClient
 import os
 
+
 # Fixtures for setup and teardown
 @pytest.fixture(scope="session", autouse=True)
 def set_working_directory():
     os.chdir(os.path.dirname(__file__))
+
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_and_teardown_test_dir():
@@ -28,19 +30,21 @@ def setup_and_teardown_test_dir():
     except Exception as e:
         print(f"Error deleting test directory: {e}")
 
+
 @pytest.fixture
 def client():
-    print("Provide client")
     from ..src.main import app
+
     return TestClient(app)
+
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
     from ..src.db.base import Base
     from ..src.db.session import SessionLocal, engine
     from ..src.models.user import User, UserRole
-    from ..src.models.project import Project
     from ..src.core.security import get_password_hash
+
     print("Current working directory:", os.getcwd())
     # Create admin user
     Base.metadata.create_all(bind=engine)
@@ -66,6 +70,7 @@ def setup_db():
         db.commit()
     db.close()
 
+
 # Test Create Project
 def test_create_project(client):
     user_data = {
@@ -84,6 +89,7 @@ def test_create_project(client):
     assert response.status_code == 200
     assert response.json()["name"] == project_data["name"]
 
+
 # Test Get Projects
 def test_get_projects(client):
     user_data = {
@@ -97,6 +103,7 @@ def test_get_projects(client):
     response = client.get("/project/", headers=headers)
     assert response.status_code == 200
     assert len(response.json()) > 0
+
 
 # Test Get Project
 def test_get_project(client):
@@ -119,6 +126,7 @@ def test_get_project(client):
     assert response.status_code == 200
     assert response.json()["name"] == project_data["name"]
 
+
 # Test Update Project
 def test_update_project(client):
     user_data = {
@@ -140,9 +148,12 @@ def test_update_project(client):
         "name": "Updated Test Project",
         "description": "This is an updated test project",
     }
-    response = client.put(f"/project/{project_id}", headers=headers, json=updated_project_data)
+    response = client.put(
+        f"/project/{project_id}", headers=headers, json=updated_project_data
+    )
     assert response.status_code == 200
     assert response.json()["name"] == updated_project_data["name"]
+
 
 # Test Delete Project
 def test_delete_project(client):
@@ -165,6 +176,7 @@ def test_delete_project(client):
     assert response.status_code == 200
     assert response.json()["name"] == project_data["name"]
 
+
 # Test Get Project Files
 def test_get_project_files(client):
     user_data = {
@@ -186,6 +198,7 @@ def test_get_project_files(client):
     assert response.status_code == 200
     assert len(response.json()) == 0  # No files uploaded yet
 
+
 # Test Upload File
 def test_upload_file(client):
     user_data = {
@@ -200,7 +213,11 @@ def test_upload_file(client):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post("/project/", headers={"Authorization": f"Bearer {access_token}"}, json=project_data)
+    response = client.post(
+        "/project/",
+        headers={"Authorization": f"Bearer {access_token}"},
+        json=project_data,
+    )
     assert response.status_code == 200
     project_id = response.json()["id"]
     with open("files/9874562_text.pdf", "rb") as f:
@@ -222,6 +239,7 @@ def test_upload_file(client):
     assert response_json["file_name"] == "9874562_text.pdf"
     assert response_json["file_type"] == "application/pdf"
 
+
 # Test Get Project File
 def test_get_project_file(client):
     user_data = {
@@ -236,19 +254,30 @@ def test_get_project_file(client):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post("/project/", headers={"Authorization": f"Bearer {access_token}"}, json=project_data)
+    response = client.post(
+        "/project/",
+        headers={"Authorization": f"Bearer {access_token}"},
+        json=project_data,
+    )
     assert response.status_code == 200
     project_id = response.json()["id"]
     file_data = {
         "file": ("test.txt", b"Hello World!", "text/plain"),
-        "file_info": ("", '{"file_name": "test.txt", "file_type": "text/plain"}', "application/json"),
+        "file_info": (
+            "",
+            '{"file_name": "test.txt", "file_type": "text/plain"}',
+            "application/json",
+        ),
     }
-    response = client.post(f"/project/{project_id}/file", headers=headers, files=file_data)
+    response = client.post(
+        f"/project/{project_id}/file", headers=headers, files=file_data
+    )
     assert response.status_code == 200
     file_id = response.json()["id"]
     response = client.get(f"/project/{project_id}/file/{file_id}", headers=headers)
     assert response.status_code == 200
     assert response.json()["file_name"] == "test.txt"
+
 
 # Test Delete File
 def test_delete_file(client):
@@ -264,19 +293,30 @@ def test_delete_file(client):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post("/project/", headers={"Authorization": f"Bearer {access_token}"}, json=project_data)
+    response = client.post(
+        "/project/",
+        headers={"Authorization": f"Bearer {access_token}"},
+        json=project_data,
+    )
     assert response.status_code == 200
     project_id = response.json()["id"]
     file_data = {
         "file": ("test.txt", b"Hello World!", "text/plain"),
-        "file_info": ("", '{"file_name": "test.txt", "file_type": "text/plain"}', "application/json"),
+        "file_info": (
+            "",
+            '{"file_name": "test.txt", "file_type": "text/plain"}',
+            "application/json",
+        ),
     }
-    response = client.post(f"/project/{project_id}/file", headers=headers, files=file_data)
+    response = client.post(
+        f"/project/{project_id}/file", headers=headers, files=file_data
+    )
     assert response.status_code == 200
     file_id = response.json()["id"]
     response = client.delete(f"/project/{project_id}/file/{file_id}", headers=headers)
     assert response.status_code == 200
     assert response.json()["file_name"] == "test.txt"
+
 
 # Test Get Project File Content
 def test_get_project_file_content(client):
@@ -292,19 +332,32 @@ def test_get_project_file_content(client):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post("/project/", headers={"Authorization": f"Bearer {access_token}"}, json=project_data)
+    response = client.post(
+        "/project/",
+        headers={"Authorization": f"Bearer {access_token}"},
+        json=project_data,
+    )
     assert response.status_code == 200
     project_id = response.json()["id"]
     file_data = {
-        "file": ("test.txt", b"Hello World!", "text/plain"),
-        "file_info": ("", '{"file_name": "test.txt", "file_type": "text/plain"}', "application/json"),
+        "file": ("test.txt", b"Hello KatherLab!", "text/plain"),
+        "file_info": (
+            "",
+            '{"file_name": "test.txt", "file_type": "text/plain"}',
+            "application/json",
+        ),
     }
-    response = client.post(f"/project/{project_id}/file", headers=headers, files=file_data)
+    response = client.post(
+        f"/project/{project_id}/file", headers=headers, files=file_data
+    )
     assert response.status_code == 200
     file_id = response.json()["id"]
-    response = client.get(f"/project/{project_id}/file/{file_id}/content", headers=headers)
+    response = client.get(
+        f"/project/{project_id}/file/{file_id}/content", headers=headers
+    )
     assert response.status_code == 200
-    assert response.content == b"Hello World!"
+    assert response.content == b"Hello KatherLab!"
+
 
 # Test Preprocess Project Data
 def test_preprocess_project_data(client):
@@ -320,11 +373,23 @@ def test_preprocess_project_data(client):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post("/project/", headers={"Authorization": f"Bearer {access_token}"}, json=project_data)
+    response = client.post(
+        "/project/",
+        headers={"Authorization": f"Bearer {access_token}"},
+        json=project_data,
+    )
     assert response.status_code == 200
     project_id = response.json()["id"]
-    response = client.post(f"/project/{project_id}/preprocess", headers=headers)
+
+    preprocessing_data = {
+        "bypass_celery": True,
+    }
+
+    response = client.post(
+        f"/project/{project_id}/preprocess", headers=headers, json=preprocessing_data
+    )
     assert response.status_code == 200
+
 
 # Test Create Project and check that another user can't access it
 def test_project_access_control(client):
@@ -386,7 +451,9 @@ def test_project_access_control(client):
         "name": "Updated Test Project",
         "description": "This is an updated test project",
     }
-    response = client.put(f"/project/{project_id}", headers=another_headers, json=updated_project_data)
+    response = client.put(
+        f"/project/{project_id}", headers=another_headers, json=updated_project_data
+    )
     assert response.status_code == 403
     assert response.json()["detail"] == "Not authorized to update this project"
 

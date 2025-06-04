@@ -233,6 +233,9 @@ class PreprocessingTask(Base):
     project: Mapped["Project"] = relationship(back_populates="preprocessing_tasks")
     progress: Mapped[float] = mapped_column(String(10), nullable=False, default="0.0")
     progress_details: Mapped[dict] = mapped_column(JSON, nullable=True)
+    bypass_celery: Mapped[bool] = mapped_column(
+        String(5), nullable=False, default=False
+    )
 
     celery_id: Mapped[str] = mapped_column(String(100), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(
