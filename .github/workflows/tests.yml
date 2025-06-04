@@ -1,6 +1,6 @@
 # .github/workflows/test.yml
 
-name: Run Python tests
+name: Backend Tests
 
 on:
   push:

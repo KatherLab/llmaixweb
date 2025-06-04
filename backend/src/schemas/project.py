@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, SkipValidation
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 if TYPE_CHECKING:
     from .user import User  # noqa: F401
@@ -12,7 +12,7 @@ class ProjectBase(BaseModel):
     name: str | None = None
     description: str | None = None
     status: str | None = None
-    owner_id: str | None = None
+    owner_id: int | None = None
 
 
 class ProjectCreate(ProjectBase):
@@ -25,9 +25,7 @@ class ProjectUpdate(ProjectBase):
 
 class Project(ProjectBase):
     id: int
-    created_at: datetime
-    updated_at: datetime
-    owner: User | None = None  # noqa: F821
+    owner: Annotated[User, SkipValidation] | None = None
 
     class Config:
         from_attributes = True

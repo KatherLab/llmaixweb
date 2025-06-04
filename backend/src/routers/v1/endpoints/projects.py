@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+import json
+
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from fastapi.responses import Response
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -58,7 +61,20 @@ def create_project(
     project: schemas.ProjectCreate,
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.Project:
-    new_project = models.Project(**project.model_dump(), owner_id=current_user.id)
+
+    if not current_user.role == "user":
+        if not project.owner_id:
+            project.owner_id = current_user.id
+        elif project.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=403, detail="Not authorized to create project for another user"
+            )
+    else:
+        if not project.owner_id:
+            project.owner_id = current_user.id
+
+    new_project = models.Project(**project.model_dump())
+
     db.add(new_project)
     db.commit()
     db.refresh(new_project)
@@ -227,9 +243,16 @@ def upload_file(
     db: Session = Depends(get_db),
     project_id: int,
     file: UploadFile = File(...),
-    file_info: schemas.FileCreate,
+    file_info: str = Form(...),
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.File:
+    try:
+        file_info = schemas.FileCreate.model_validate_json(file_info)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON in file_info")
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()

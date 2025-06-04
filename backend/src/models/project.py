@@ -21,7 +21,7 @@ class ProjectStatus(str, enum.Enum):
 class Project(Base):
     __tablename__ = "projects"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True)
+    name: Mapped[str] = mapped_column(String(100), unique=False)
     description: Mapped[str] = mapped_column(String(500), nullable=True)
     status: Mapped[ProjectStatus] = mapped_column(
         Enum(ProjectStatus, native_enum=False, length=10), default=ProjectStatus.ACTIVE
@@ -30,7 +30,7 @@ class Project(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     files: Mapped[list["File"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
@@ -91,7 +91,7 @@ class File(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     project: Mapped["Project"] = relationship(back_populates="files")
     documents_as_original: Mapped[list["Document"]] = relationship(
@@ -136,7 +136,7 @@ class Document(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     project: Mapped["Project"] = relationship(back_populates="documents")
     original_file: Mapped["File"] = relationship(
@@ -159,7 +159,7 @@ class DocumentSet(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     project: Mapped["Project"] = relationship(back_populates="document_sets")
     trial: Mapped["Trial"] = relationship(back_populates="document_set")
@@ -178,7 +178,7 @@ class Schema(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     project: Mapped["Project"] = relationship(back_populates="schemas")
     trials: Mapped[list["Trial"]] = relationship(back_populates="schema")
@@ -197,7 +197,7 @@ class Trial(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     project: Mapped["Project"] = relationship(back_populates="trials")
     schema: Mapped["Schema"] = relationship(back_populates="trials")
@@ -218,7 +218,7 @@ class TrialResult(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     trial: Mapped["Trial"] = relationship(back_populates="results")
 
@@ -239,5 +239,5 @@ class PreprocessingTask(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
