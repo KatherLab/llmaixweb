@@ -9,18 +9,18 @@ dependencies = [
     "pyjwt~=2.10.1",
     "sqlalchemy~=2.0.41",
     "pydantic_settings~=2.9.1",
-    "openai~=1.82.1",
+    "openai~=1.86.0",
     "bcrypt~=4.3.0",
-    "boto3~=1.38.29",
-    "llmaix~=0.0.6",
+    "boto3~=1.38.36",
+    "llmaix~=0.0.8",
     "redis~=6.2.0",
     "celery~=5.5.3"
 ]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.11.12",
-    "ty>=0.0.1a8",
+    "ruff>=0.11.13",
+    "ty>=0.0.1a10",
     "pytest>=8.4.0",
-    "pytest-cov~=6.1.1"
+    "pytest-cov~=6.2.1"
 ]
