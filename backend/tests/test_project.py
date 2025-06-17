@@ -132,6 +132,10 @@ def test_get_project(client, api_url):
     assert response.status_code == 200
     assert response.json()["name"] == project_data["name"]
 
+    response = client.get(f"{api_url}/project/372849078/", headers=headers)
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Project not found"
+
 
 # Test Update Project
 def test_update_project(client, api_url):
