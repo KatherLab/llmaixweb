@@ -1,7 +1,19 @@
 import enum
+
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm import mapped_column
-from sqlalchemy import String, Enum, ForeignKey, DateTime, JSON, Table, Column
+from sqlalchemy import (
+    String,
+    Enum,
+    ForeignKey,
+    DateTime,
+    JSON,
+    Table,
+    Column,
+    Float,
+    Boolean,
+)
 from sqlalchemy.sql import func
 from ..db.base import Base
 
@@ -82,6 +94,7 @@ class File(Base):
         Enum(FileStorageType, native_enum=False, length=10),
         default=FileStorageType.LOCAL,
     )
+    file_uuid: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
     file_name: Mapped[str] = mapped_column(String(500), nullable=False)
     file_type: Mapped[FileType] = mapped_column(
         Enum(FileType, native_enum=False, length=100), default=FileType.APPLICATION_PDF
@@ -100,6 +113,9 @@ class File(Base):
     documents_as_preprocessed: Mapped[list["Document"]] = relationship(
         foreign_keys="[Document.preprocessed_file_id]",
         back_populates="preprocessed_file",
+    )
+    preprocessing_tasks: Mapped[list["PreprocessingTask"]] = relationship(
+        secondary="preprocessing_task_file_association", back_populates="files"
     )
 
 
@@ -131,7 +147,7 @@ class Document(Base):
         Enum(PreprocessingMethod, native_enum=False, length=20)
     )
     text: Mapped[str] = mapped_column(String, nullable=False)
-    meta_data: Mapped[dict] = mapped_column(JSON, nullable=True)
+    meta_data: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -147,6 +163,9 @@ class Document(Base):
     )
     document_sets: Mapped[list["DocumentSet"]] = relationship(
         secondary=document_set_association, back_populates="documents"
+    )
+    preprocessing_tasks: Mapped[list["PreprocessingTask"]] = relationship(
+        secondary="preprocessing_task_document_association", back_populates="documents"
     )
 
 
@@ -223,20 +242,43 @@ class TrialResult(Base):
     trial: Mapped["Trial"] = relationship(back_populates="results")
 
 
+class PreprocessingTaskStatus(str, enum.Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class PreprocessingTask(Base):
     __tablename__ = "preprocessing_tasks"
-
     id: Mapped[int] = mapped_column(primary_key=True)
-    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    status: Mapped[PreprocessingTaskStatus] = mapped_column(
+        Enum(PreprocessingTaskStatus, native_enum=False, length=20),
+        default=PreprocessingTaskStatus.PENDING,
+    )
     message: Mapped[str] = mapped_column(String(500), nullable=True)
+    ocr_backend: Mapped[str] = mapped_column(String(100), nullable=True)
+    pdf_backend: Mapped[str] = mapped_column(String(100), nullable=True)
+    use_ocr: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    force_ocr: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    ocr_languages: Mapped[list[str]] = mapped_column(JSON, nullable=True, default=list)
+    ocr_model: Mapped[str] = mapped_column(String(100), nullable=True)
+    llm_model: Mapped[str] = mapped_column(String(100), nullable=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     project: Mapped["Project"] = relationship(back_populates="preprocessing_tasks")
-    progress: Mapped[float] = mapped_column(String(10), nullable=False, default="0.0")
-    progress_details: Mapped[dict] = mapped_column(JSON, nullable=True)
-    bypass_celery: Mapped[bool] = mapped_column(
-        String(5), nullable=False, default=False
+    file_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
+    files: Mapped[list["File"]] = relationship(
+        secondary="preprocessing_task_file_association",
+        back_populates="preprocessing_tasks",
     )
-
+    document_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
+    documents: Mapped[list["Document"]] = relationship(
+        secondary="preprocessing_task_document_association",
+        back_populates="preprocessing_tasks",
+    )
+    progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    progress_details: Mapped[dict] = mapped_column(JSON, nullable=True)
+    bypass_celery: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     celery_id: Mapped[str] = mapped_column(String(100), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -244,3 +286,23 @@ class PreprocessingTask(Base):
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+# Association tables
+preprocessing_task_file_association = Table(
+    "preprocessing_task_file_association",
+    Base.metadata,
+    Column(
+        "preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True
+    ),
+    Column("file_id", ForeignKey("files.id"), primary_key=True),
+)
+
+preprocessing_task_document_association = Table(
+    "preprocessing_task_document_association",
+    Base.metadata,
+    Column(
+        "preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True
+    ),
+    Column("document_id", ForeignKey("documents.id"), primary_key=True),
+)

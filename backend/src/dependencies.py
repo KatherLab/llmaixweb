@@ -1,4 +1,5 @@
 import os
+import uuid
 from typing import Generator
 from .db.session import SessionLocal
 from openai import OpenAI
@@ -51,35 +52,28 @@ def get_file(file_name: str) -> bytes:
         return response["Body"].read()
 
 
-def save_file(file_name: str, file_content: bytes, replace: bool = False) -> None:
+def save_file(file_content: bytes) -> str:
     """
     Saves a file to S3 or local storage.
 
     Args:
-        file_name (str): The name of the file to upload.
         file_content (bytes): The content of the file to upload.
-        replace (bool): Whether to replace the file if it already exists. Defaults to False.
 
-    Raises:
-        FileExistsError: If the file already exists and replace is False.
+    Returns:
+        str: The generated file name.
     """
+    file_name = f"{uuid.uuid4()}"
     file_path = f"{settings.LOCAL_DIRECTORY}/{file_name}"
+
     if settings.LOCAL_DIRECTORY:
-        if not replace and os.path.exists(file_path):
-            raise FileExistsError(f"File {file_name} already exists")
         with open(file_path, "wb") as file:
             file.write(file_content)
     else:
-        try:
-            s3_client.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
-            if not replace:
-                raise FileExistsError(f"File {file_name} already exists")
-        except s3_client.exceptions.ClientError:
-            # File does not exist in S3
-            pass
         s3_client.put_object(
             Bucket=settings.S3_BUCKET_NAME, Key=file_name, Body=file_content
         )
+
+    return file_name
 
 
 def remove_file(file_name: str) -> None:

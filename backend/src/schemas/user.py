@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -13,8 +13,7 @@ class UserBase(BaseModel):
     full_name: str | None = None
     role: str | None = "user"
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserCreate(UserBase):
@@ -57,15 +56,13 @@ class InvitationBase(BaseModel):
 
 
 class InvitationCreate(InvitationBase):
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InvitationResponse(InvitationBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InvitationInfo(BaseModel):

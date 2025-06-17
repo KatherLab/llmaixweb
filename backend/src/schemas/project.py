@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, SkipValidation
+from pydantic import BaseModel, SkipValidation, field_validator, ConfigDict
 from datetime import datetime
 from typing import TYPE_CHECKING, Annotated
 
@@ -26,14 +26,15 @@ class ProjectUpdate(ProjectBase):
 class Project(ProjectBase):
     id: int
     owner: Annotated[User, SkipValidation] | None = None
+    documents: list[Document] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FileBase(BaseModel):
     file_name: str | None = None
     file_type: str | None = None
+    file_uuid: str | None = None
     file_storage_type: str | None = None
     description: str | None = None
 
@@ -48,14 +49,13 @@ class File(FileBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentBase(BaseModel):
     preprocessing_method: str | None = None
     text: str | None = None
-    metadata: str | None = None
+    meta_data: dict | None = None
 
 
 class DocumentCreate(DocumentBase):
@@ -67,12 +67,13 @@ class Document(DocumentBase):
     id: int
     project_id: int
     original_file_id: int
+    original_file: File | None = None
     preprocessed_file_id: int | None = None
+    preprocessed_file: File | None = None
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentSetBase(BaseModel):
@@ -90,8 +91,7 @@ class DocumentSet(DocumentSetBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SchemaBase(BaseModel):
@@ -110,8 +110,7 @@ class Schema(SchemaBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TrialBase(BaseModel):
@@ -135,8 +134,7 @@ class Trial(TrialBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TrialResultBase(BaseModel):
@@ -153,8 +151,7 @@ class TrialResult(TrialResultBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PreprocessingTaskBase(BaseModel):
@@ -164,11 +161,65 @@ class PreprocessingTaskBase(BaseModel):
     progress_details: dict | None = None
     celery_id: str | None = None
     bypass_celery: bool = False
+    file_ids: list[int] = []
+    document_ids: list[int] = []
+    ocr_backend: str | None = None
+    pdf_backend: str | None = None
+    use_ocr: bool = True
+    force_ocr: bool = False
+    ocr_languages: list[str] | None = None
+    ocr_model: str | None = None
+    llm_model: str | None = None
+    base_url: str | None = None
+    api_key: str | None = None
 
 
 class PreprocessingTaskCreate(PreprocessingTaskBase):
-    pass
-    # project_id: int
+    @field_validator("file_ids")
+    def file_ids_must_not_be_empty(cls, v):
+        if not v:
+            raise ValueError("At least one file ID must be provided for preprocessing")
+        return v
+
+    @field_validator("ocr_languages")
+    def ocr_languages_must_be_list(cls, v):
+        if v and not isinstance(v, list):
+            raise ValueError("OCR languages must be a list of language codes")
+        return v
+
+    @field_validator("pdf_backend")
+    def pdf_backend_must_be_valid(cls, v):
+        valid_backends = ["pymupdf4llm", "markitdown"]  # Add valid backends here
+        if v and v not in valid_backends:
+            raise ValueError(
+                f"Invalid PDF backend: {v}. Valid backends are: {valid_backends}"
+            )
+        return v
+
+    @field_validator("ocr_backend")
+    def ocr_backend_must_be_valid(cls, v):
+        valid_backends = ["ocrmypdf"]  # Add valid backends here
+        if v and v not in valid_backends:
+            raise ValueError(
+                f"Invalid OCR backend: {v}. Valid backends are: {valid_backends}"
+            )
+        return v
+
+    @field_validator("force_ocr")
+    def force_ocr_must_be_used_with_use_ocr(cls, v, info):
+        if v and info.data.get("use_ocr") is False:
+            raise ValueError(
+                "force_ocr is True, but use_ocr is False. Set use_ocr=True."
+            )
+        return v
+
+    @field_validator("llm_model", "api_key")
+    def llm_model_and_api_key_must_be_provided_together(cls, v, info):
+        if info.field_name == "llm_model" and v and not info.data.get("api_key"):
+            raise ValueError("Both LLM model and API key must be provided together")
+        if info.field_name == "api_key" and v and not info.data.get("llm_model"):
+            raise ValueError("Both LLM model and API key must be provided together")
+        return v
 
 
 class PreprocessingTaskUpdate(PreprocessingTaskBase):
@@ -180,9 +231,10 @@ class PreprocessingTask(PreprocessingTaskBase):
     project_id: int
     created_at: datetime
     updated_at: datetime
+    files: list[File] | None = None
+    documents: list[Document] | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 from .user import User  # noqa: E402, F401

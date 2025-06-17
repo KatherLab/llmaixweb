@@ -5,6 +5,8 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from typing import cast
+
 
 from .... import models, schemas
 from ....core.security import get_current_user
@@ -229,7 +231,7 @@ def get_project_file_content(
         raise HTTPException(status_code=404, detail="File not found")
 
     # Retrieve the file content from storage
-    file_content = get_file(str(file.id))
+    file_content = get_file(file.file_uuid)
 
     headers = {"Content-Disposition": f"attachment; filename={file.file_name}"}
 
@@ -269,14 +271,17 @@ def upload_file(
         file.content_type if not file_info.file_type else file_info.file_type
     )
 
-    new_file = models.File(**file_info.model_dump(), project_id=project_id)
+    # Save the file content to the storage using the generated file_uuid
+    file_uuid = save_file(file.file.read())
+    new_file = models.File(
+        **file_info.model_dump(exclude={"file_uuid"}),
+        project_id=project_id,
+        file_uuid=file_uuid,
+    )
+
     db.add(new_file)
     db.commit()
     db.refresh(new_file)
-
-    # Save the file content to the storage using the File object's id
-    save_file(str(new_file.id), file.file.read())
-
     return schemas.File.model_validate(new_file)
 
 
@@ -311,7 +316,7 @@ def delete_file(
 
     # Delete the file content from storage
     try:
-        remove_file(str(file.id))
+        remove_file(file.file_uuid)
     except FileNotFoundError:
         raise HTTPException(
             status_code=404,
@@ -327,42 +332,176 @@ def delete_file(
 @router.post("/{project_id}/preprocess", response_model=schemas.PreprocessingTask)
 def preprocess_project_data(
     *,
-    db: Session = Depends(get_db),
     project_id: int,
     preprocessing_task: schemas.PreprocessingTaskCreate,
     current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
+    """
+    Preprocess project data.
+
+    This endpoint initiates a preprocessing task for the specified project.
+
+    Args:
+    ----
+    project_id (int): The ID of the project to preprocess.
+    preprocessing_task (schemas.PreprocessingTaskCreate): The preprocessing task details.
+
+    Returns:
+    -------
+    schemas.PreprocessingTask: The created preprocessing task.
+
+    Raises:
+    ------
+    HTTPException: If the project is not found or the user is not authorized.
+    """
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
-
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-
     if current_user.role != "admin" and project.owner_id != current_user.id:
         raise HTTPException(
             status_code=403, detail="Not authorized to preprocess this project"
         )
-
-    preprocessing_task_db = models.PreprocessingTask(**preprocessing_task.model_dump())
+    # Check if all files in the preprocessing task exist in the project
+    existing_files = (
+        db.execute(select(models.File.id).where(models.File.project_id == project_id))
+        .scalars()
+        .all()
+    )
+    for file_id in preprocessing_task.file_ids:
+        if file_id not in existing_files:
+            raise HTTPException(
+                status_code=404,
+                detail=f"File with id {file_id} not found in project {project_id}",
+            )
+    preprocessing_task_db = models.PreprocessingTask(
+        **preprocessing_task.model_dump(exclude={"base_url", "api_key"})
+    )
     preprocessing_task_db.project_id = project_id
     db.add(preprocessing_task_db)
     db.commit()
     db.refresh(preprocessing_task_db)
-
+    files = cast(
+        list[models.File],
+        (
+            db.execute(
+                select(models.File).where(
+                    models.File.project_id == project_id,
+                    models.File.id.in_(preprocessing_task.file_ids),
+                )
+            )
+            .scalars()
+            .all()
+        ),
+    )
     if preprocessing_task_db.bypass_celery:
-        from ....utils.preprocessing import preprocess_file
+        from ....utils.preprocessing import preprocess_files
 
         print("Bypassing Celery for preprocessing task, preprocess synchronously.")
         try:
-            preprocess_file(preprocessing_task_db.id)
+            preprocess_files(
+                files=files,
+                pdf_backend=preprocessing_task.pdf_backend or "pymupdf4llm",
+                ocr_backend=preprocessing_task.ocr_backend or "ocrmypdf",
+                use_ocr=preprocessing_task.use_ocr,
+                force_ocr=preprocessing_task.force_ocr,
+                ocr_languages=preprocessing_task.ocr_languages,
+                ocr_model=preprocessing_task.ocr_model,
+                llm_model=preprocessing_task.llm_model,
+                base_url=preprocessing_task.base_url,
+                api_key=preprocessing_task.api_key,
+                db_session=db,
+                preprocessing_task_id=preprocessing_task_db.id,
+                project_id=project_id,
+            )
         except Exception as e:
-            db.delete(preprocessing_task)
+            db.delete(preprocessing_task_db)
             db.commit()
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(
+                status_code=500, detail="Preprocessing failed: " + str(e)
+            )
     else:
         from ....celery.preprocessing import preprocess_file_celery
 
-        preprocess_file_celery.delay(preprocessing_task_db.id)
-
+        preprocess_file_celery.delay(
+            files=files,
+            preprocessing_task_id=preprocessing_task_db.id,
+            pdf_backend=preprocessing_task.pdf_backend,
+            ocr_backend=preprocessing_task.ocr_backend,
+            use_ocr=preprocessing_task.use_ocr,
+            force_ocr=preprocessing_task.force_ocr,
+            ocr_languages=preprocessing_task.ocr_languages,
+            ocr_model=preprocessing_task.ocr_model,
+            llm_model=preprocessing_task.llm_model,
+            base_url=preprocessing_task.base_url,
+            api_key=preprocessing_task.api_key,
+            db_session=db,
+            project_id=project_id,
+        )
     return schemas.PreprocessingTask.model_validate(preprocessing_task_db)
+
+
+@router.get(
+    "/{project_id}/preprocess/{preprocessing_task_id}",
+    response_model=schemas.PreprocessingTask,
+)
+def get_preprocessing_task(
+    *,
+    project_id: int,
+    preprocessing_task_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.PreprocessingTask:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's preprocessing tasks",
+        )
+
+    preprocessing_task: models.PreprocessingTask | None = db.execute(
+        select(models.PreprocessingTask).where(
+            models.PreprocessingTask.project_id == project_id,
+            models.PreprocessingTask.id == preprocessing_task_id,
+        )
+    ).scalar_one_or_none()
+    if not preprocessing_task:
+        raise HTTPException(status_code=404, detail="Preprocessing task not found")
+
+    return schemas.PreprocessingTask.model_validate(preprocessing_task)
+
+
+@router.get("/{project_id}/document/{document_id}", response_model=schemas.Document)
+def get_document(
+    *,
+    project_id: int,
+    document_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Document:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's documents"
+        )
+
+    document: models.Document | None = db.execute(
+        select(models.Document).where(
+            models.Document.project_id == project_id,
+            models.Document.id == document_id,
+        )
+    ).scalar_one_or_none()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return schemas.Document.model_validate(document)

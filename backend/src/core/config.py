@@ -1,7 +1,7 @@
 import sys
 
 from pydantic import ValidationError
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 import secrets
 import openai
 from pathlib import Path
@@ -38,10 +38,11 @@ class Settings(BaseSettings):
 
     BACKEND_CORS_ORIGINS: list = ["http://localhost:5173"]
 
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        case_sensitive=True,
+        env_file=".env",
+        env_file_encoding="utf-8",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
