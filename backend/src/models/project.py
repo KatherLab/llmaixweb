@@ -203,15 +203,30 @@ class Schema(Base):
     trials: Mapped[list["Trial"]] = relationship(back_populates="schema")
 
 
+class TrialStatus(str, enum.Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class Trial(Base):
     __tablename__ = "trials"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"), nullable=False)
-    prompt: Mapped[str] = mapped_column(String(5000), nullable=False)
-    model: Mapped[str] = mapped_column(String(100), nullable=False)
-    trial_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    trial_description: Mapped[str] = mapped_column(String(500), nullable=True)
+    document_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
+    document_set: Mapped["DocumentSet"] = relationship(
+        back_populates="trial", uselist=False
+    )
+    status: Mapped[TrialStatus] = mapped_column(
+        Enum(TrialStatus, native_enum=False, length=20),
+        default=TrialStatus.PENDING,
+    )
+    llm_model: Mapped[str] = mapped_column(String(100), nullable=False)
+    api_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    base_url: Mapped[str] = mapped_column(String(100), nullable=False)
+    bypass_celery: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -220,9 +235,6 @@ class Trial(Base):
     )
     project: Mapped["Project"] = relationship(back_populates="trials")
     schema: Mapped["Schema"] = relationship(back_populates="trials")
-    document_set: Mapped["DocumentSet"] = relationship(
-        back_populates="trial", uselist=False
-    )
     results: Mapped[list["TrialResult"]] = relationship(
         back_populates="trial", cascade="all, delete-orphan"
     )
@@ -232,6 +244,7 @@ class TrialResult(Base):
     __tablename__ = "trial_results"
     id: Mapped[int] = mapped_column(primary_key=True)
     trial_id: Mapped[int] = mapped_column(ForeignKey("trials.id"), nullable=False)
+    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), nullable=False)
     result: Mapped[dict] = mapped_column(JSON, nullable=False)
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -240,6 +253,7 @@ class TrialResult(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     trial: Mapped["Trial"] = relationship(back_populates="results")
+    document: Mapped["Document"] = relationship()
 
 
 class PreprocessingTaskStatus(str, enum.Enum):

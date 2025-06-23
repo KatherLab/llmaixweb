@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, SkipValidation, field_validator, ConfigDict
 from datetime import datetime
 from typing import TYPE_CHECKING, Annotated
+from ..core.config import settings
 
 if TYPE_CHECKING:
     from .user import User  # noqa: F401
@@ -114,26 +115,25 @@ class Schema(SchemaBase):
 
 
 class TrialBase(BaseModel):
-    prompt: str | None = None
-    model: str | None = None
-    trial_name: str | None = None
-    trial_description: str | None = None
+    schema_id: int
+    document_ids: list[int]
+    llm_model: str | None = settings.OPENAI_API_MODEL
+    api_key: str | None = settings.OPENAI_API_KEY
+    base_url: str | None = settings.OPENAI_API_BASE
+    bypass_celery: bool = False
 
 
 class TrialCreate(TrialBase):
-    schema_id: int
-    prompt: str
-    model: str
-    trial_name: str
+    pass
 
 
 class Trial(TrialBase):
     id: int
     project_id: int
-    schema_id: int
+    status: str
     created_at: datetime
     updated_at: datetime
-
+    results: list[TrialResult] = []
     model_config = ConfigDict(from_attributes=True)
 
 

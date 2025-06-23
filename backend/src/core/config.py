@@ -1,3 +1,4 @@
+import os
 import sys
 
 from pydantic import ValidationError
@@ -40,7 +41,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         case_sensitive=True,
-        env_file=".env",
+        env_file=os.getenv("ENV_PATH", ".env"),
         env_file_encoding="utf-8",
     )
 

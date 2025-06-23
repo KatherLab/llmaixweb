@@ -2,6 +2,9 @@ import shutil
 import pytest
 from fastapi.testclient import TestClient
 import os
+import jsonschema
+
+from backend.src.core.config import settings
 
 
 # Fixtures for setup and teardown
@@ -550,3 +553,313 @@ def test_project_access_control(client, api_url):
     response = client.delete(f"{api_url}/project/{project_id}", headers=another_headers)
     assert response.status_code == 403
     assert response.json()["detail"] == "Not authorized to delete this project"
+
+
+# Test Create Schema
+def test_create_schema(client, api_url):
+    user_data = {
+        "username": "test@example.com",
+        "password": "testpassword",
+    }
+    response = client.post(f"{api_url}/auth/login", data=user_data)
+    assert response.status_code == 200
+    access_token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Create a project
+    project_data = {
+        "name": "Test Project",
+        "description": "This is a test project",
+    }
+    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    assert response.status_code == 200
+    project_id = response.json()["id"]
+
+    # Create a schema
+    schema_data = {
+        "schema_name": "Test Schema",
+        "schema_definition": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "location": {"type": "string"},
+            },
+        },
+    }
+    response = client.post(
+        f"{api_url}/project/{project_id}/schema", headers=headers, json=schema_data
+    )
+    assert response.status_code == 200
+    schema = response.json()
+    assert schema["schema_name"] == schema_data["schema_name"]
+    assert schema["schema_definition"] == schema_data["schema_definition"]
+
+
+# Test Get Schema
+def test_get_schema(client, api_url):
+    user_data = {
+        "username": "test@example.com",
+        "password": "testpassword",
+    }
+    response = client.post(f"{api_url}/auth/login", data=user_data)
+    assert response.status_code == 200
+    access_token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Create a project
+    project_data = {
+        "name": "Test Project",
+        "description": "This is a test project",
+    }
+    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    assert response.status_code == 200
+    project_id = response.json()["id"]
+
+    # Create a schema
+    schema_data = {
+        "schema_name": "Test Schema",
+        "schema_definition": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "location": {"type": "string"},
+            },
+        },
+    }
+    response = client.post(
+        f"{api_url}/project/{project_id}/schema", headers=headers, json=schema_data
+    )
+    assert response.status_code == 200
+    schema_id = response.json()["id"]
+
+    # Get the schema
+    response = client.get(
+        f"{api_url}/project/{project_id}/schema/{schema_id}", headers=headers
+    )
+    assert response.status_code == 200
+    schema = response.json()
+    assert schema["schema_name"] == schema_data["schema_name"]
+    assert schema["schema_definition"] == schema_data["schema_definition"]
+
+
+# Test Delete Schema
+def test_delete_schema(client, api_url):
+    user_data = {
+        "username": "test@example.com",
+        "password": "testpassword",
+    }
+    response = client.post(f"{api_url}/auth/login", data=user_data)
+    assert response.status_code == 200
+    access_token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Create a project
+    project_data = {
+        "name": "Test Project",
+        "description": "This is a test project",
+    }
+    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    assert response.status_code == 200
+    project_id = response.json()["id"]
+
+    # Create a schema
+    schema_data = {
+        "schema_name": "Test Schema",
+        "schema_definition": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "location": {"type": "string"},
+            },
+        },
+    }
+    response = client.post(
+        f"{api_url}/project/{project_id}/schema", headers=headers, json=schema_data
+    )
+    assert response.status_code == 200
+    schema_id = response.json()["id"]
+
+    # Delete the schema
+    response = client.delete(
+        f"{api_url}/project/{project_id}/schema/{schema_id}", headers=headers
+    )
+    assert response.status_code == 200
+
+    # Try to get the deleted schema
+    response = client.get(
+        f"{api_url}/project/{project_id}/schema/{schema_id}", headers=headers
+    )
+    assert response.status_code == 404
+
+
+# Test Delete Schema Referenced by Trial
+def test_delete_schema_referenced_by_trial(client, api_url):
+    user_data = {
+        "username": "test@example.com",
+        "password": "testpassword",
+    }
+    response = client.post(f"{api_url}/auth/login", data=user_data)
+    assert response.status_code == 200
+    access_token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Create a project
+    project_data = {
+        "name": "Test Project",
+        "description": "This is a test project",
+    }
+    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    assert response.status_code == 200
+    project_id = response.json()["id"]
+
+    # Create a schema
+    schema_data = {
+        "schema_name": "Test Schema",
+        "schema_definition": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "location": {"type": "string"},
+            },
+        },
+    }
+    response = client.post(
+        f"{api_url}/project/{project_id}/schema", headers=headers, json=schema_data
+    )
+    assert response.status_code == 200
+    schema_id = response.json()["id"]
+
+    # Create a trial
+    trial_data = {
+        "schema_id": schema_id,
+        "document_ids": [],
+        "bypass_celery": True,
+    }
+    response = client.post(
+        f"{api_url}/project/{project_id}/trials", headers=headers, json=trial_data
+    )
+    assert response.status_code == 200
+
+    # Try to delete the schema
+    response = client.delete(
+        f"{api_url}/project/{project_id}/schema/{schema_id}", headers=headers
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Cannot delete schema referenced by a trial"
+
+
+# Test Get Available LLM Models
+def test_get_available_llm_models(client, api_url):
+    if settings.OPENAI_NO_API_CHECK:
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+    response = client.get(f"{api_url}/project/llm/models")
+    assert response.status_code == 200
+    assert len(response.json()) > 0
+
+
+# Test Test LLM Connection
+def test_test_llm_connection(client, api_url):
+    if settings.OPENAI_NO_API_CHECK:
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+    response = client.post(f"{api_url}/project/llm/test")
+    assert response.status_code == 200
+    assert response.json() is True
+
+
+# Test Create Trial with Preprocessing and Extract Information
+def test_create_trial_with_preprocessing_and_extract_information(client, api_url):
+    if settings.OPENAI_NO_API_CHECK:
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+    user_data = {
+        "username": "test@example.com",
+        "password": "testpassword",
+    }
+    response = client.post(f"{api_url}/auth/login", data=user_data)
+    assert response.status_code == 200
+    access_token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Create a project
+    project_data = {
+        "name": "Test Project",
+        "description": "This is a test project",
+    }
+    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    assert response.status_code == 200
+    project_id = response.json()["id"]
+
+    # Upload a file
+    with open("files/9874562_text.pdf", "rb") as f:
+        file_data = {
+            "file": ("9874562_text.pdf", f, "application/pdf"),
+        }
+        file_info = '{"file_name": "9874562_text.pdf", "file_type": "application/pdf"}'
+        response = client.post(
+            f"{api_url}/project/{project_id}/file",
+            headers=headers,
+            files=file_data,
+            data={"file_info": file_info},
+        )
+    assert response.status_code == 200
+    file_id = response.json()["id"]
+
+    # Preprocess the file
+    preprocessing_data = {
+        "file_ids": [file_id],
+        "bypass_celery": True,
+    }
+    response = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=headers,
+        json=preprocessing_data,
+    )
+    assert response.status_code == 200
+    preprocessing_task = response.json()
+    document_id = preprocessing_task["documents"][0]["id"]
+
+    # Create a schema
+    schema_data = {
+        "schema_name": "Test Schema",
+        "schema_definition": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "location": {"type": "string"},
+            },
+        },
+    }
+    response = client.post(
+        f"{api_url}/project/{project_id}/schema", headers=headers, json=schema_data
+    )
+    assert response.status_code == 200
+    schema_id = response.json()["id"]
+
+    # Create a trial
+    trial_data = {
+        "schema_id": schema_id,
+        "document_ids": [document_id],
+        "bypass_celery": True,
+    }
+    response = client.post(
+        f"{api_url}/project/{project_id}/trials", headers=headers, json=trial_data
+    )
+    assert response.status_code == 200
+    trial_id = response.json()["id"]
+
+    # Check the trial result
+    response = client.get(
+        f"{api_url}/project/{project_id}/trials/{trial_id}", headers=headers
+    )
+
+    print(response.json())
+    assert response.status_code == 200
+    trial_result = response.json()
+    assert trial_result["status"] == "completed"
+
+    # Validate the extracted JSON against the schema
+    extracted_json = trial_result["results"][0]["result"]
+    schema = schema_data["schema_definition"]
+    try:
+        jsonschema.validate(instance=extracted_json, schema=schema)
+    except jsonschema.ValidationError as e:
+        assert False, f"Extracted JSON is not valid according to the schema: {e}"

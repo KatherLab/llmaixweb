@@ -6,11 +6,13 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typing import cast
-
+from jsonschema import validate, ValidationError as JsonValidationError
 
 from .... import models, schemas
+from ....core.config import settings
 from ....core.security import get_current_user
 from ....dependencies import get_db, save_file, get_file, remove_file
+from ....utils.info_extraction import get_available_models, test_llm_connection
 
 router = APIRouter()
 
@@ -505,3 +507,259 @@ def get_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     return schemas.Document.model_validate(document)
+
+
+@router.post("/{project_id}/schema", response_model=schemas.Schema)
+def create_schema(
+    project_id: int,
+    schema: schemas.SchemaCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Schema:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to create schemas for this project"
+        )
+
+    # Validate the JSON schema
+    try:
+        validate(instance={}, schema=schema.schema_definition)
+    except JsonValidationError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON schema: {e}")
+
+    schema_db = models.Schema(**schema.model_dump(), project_id=project_id)
+    db.add(schema_db)
+    db.commit()
+    db.refresh(schema_db)
+    return schemas.Schema.model_validate(schema_db)
+
+
+@router.get("/{project_id}/schema/{schema_id}", response_model=schemas.Schema)
+def get_schema(
+    project_id: int,
+    schema_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Schema:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's schemas"
+        )
+
+    schema: models.Schema | None = db.execute(
+        select(models.Schema).where(
+            models.Schema.project_id == project_id, models.Schema.id == schema_id
+        )
+    ).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+    return schemas.Schema.model_validate(schema)
+
+
+@router.delete("/{project_id}/schema/{schema_id}", response_model=schemas.Schema)
+def delete_schema(
+    project_id: int,
+    schema_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Schema:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete schemas from this project"
+        )
+
+    schema: models.Schema | None = db.execute(
+        select(models.Schema).where(
+            models.Schema.project_id == project_id, models.Schema.id == schema_id
+        )
+    ).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
+    # Check if the schema is referenced by any trials
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(models.Trial.schema_id == schema_id)
+    ).scalar_one_or_none()
+    if trial:
+        raise HTTPException(
+            status_code=400, detail="Cannot delete schema referenced by a trial"
+        )
+
+    db.delete(schema)
+    db.commit()
+    return schemas.Schema.model_validate(schema)
+
+
+@router.post("/{project_id}/trials", response_model=schemas.Trial)
+def create_trial(
+    project_id: int,
+    trial: schemas.TrialCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Trial:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to create trials for this project"
+        )
+
+    # Check if the schema exists
+    schema: models.Schema | None = db.execute(
+        select(models.Schema).where(models.Schema.id == trial.schema_id)
+    ).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
+    # Check if the documents exist and belong to the project
+    existing_documents = (
+        db.execute(
+            select(models.Document.id).where(models.Document.project_id == project_id)
+        )
+        .scalars()
+        .all()
+    )
+    for document_id in trial.document_ids:
+        if document_id not in existing_documents:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Document with id {document_id} not found in project {project_id}",
+            )
+
+    # Use default values from config if not provided
+    llm_model = trial.llm_model or settings.OPENAI_API_MODEL
+    api_key = trial.api_key or settings.OPENAI_API_KEY
+    base_url = trial.base_url or settings.OPENAI_API_BASE
+
+    if llm_model is None or api_key is None or base_url is None:
+        raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
+
+    # Create the trial
+    trial_db = models.Trial(
+        **trial.model_dump(exclude={"llm_model", "api_key", "base_url"}),
+        project_id=project_id,
+        llm_model=llm_model,
+        api_key=api_key,
+        base_url=base_url,
+    )
+
+    db.add(trial_db)
+    db.commit()
+    db.refresh(trial_db)
+
+    if trial.bypass_celery:
+        from ....utils.info_extraction import extract_info
+
+        try:
+            extract_info(
+                trial_id=trial_db.id,
+                document_ids=trial.document_ids,
+                llm_model=llm_model,
+                api_key=api_key,
+                base_url=base_url,
+                schema_id=trial.schema_id,
+                db_session=db,
+                project_id=project_id,
+            )
+        except Exception as e:
+            db.delete(trial_db)
+            db.commit()
+            raise HTTPException(
+                status_code=500, detail="Information extraction failed: " + str(e)
+            )
+    else:
+        from ....celery.info_extraction import extract_info_celery
+
+        extract_info_celery.delay(
+            trial_id=trial_db.id,
+            document_ids=trial.document_ids,
+            llm_model=trial.llm_model,
+            api_key=trial.api_key,
+            base_url=trial.base_url,
+            schema_id=trial.schema_id,
+            db_session=db,
+            project_id=project_id,
+        )
+
+    return schemas.Trial.model_validate(trial_db)
+
+
+@router.get("/{project_id}/trials/{trial_id}", response_model=schemas.Trial)
+def get_trial(
+    project_id: int,
+    trial_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Trial:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's trials"
+        )
+
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(
+            models.Trial.project_id == project_id, models.Trial.id == trial_id
+        )
+    ).scalar_one_or_none()
+
+    if trial:
+        trial.results = cast(
+            list[models.TrialResult],
+            (
+                db.execute(
+                    select(models.TrialResult).where(
+                        models.TrialResult.trial_id == trial_id
+                    )
+                )
+                .scalars()
+                .all()
+            ),
+        )
+
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+    return schemas.Trial.model_validate(trial)
+
+
+@router.get("/llm/models", response_model=list[str])
+def get_available_llm_models(
+    api_key: str | None = settings.OPENAI_API_KEY,
+    base_url: str | None = settings.OPENAI_API_BASE,
+) -> list[str]:
+    if api_key is None or base_url is None:
+        raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
+    return get_available_models(api_key, base_url)
+
+
+@router.post("/llm/test", response_model=bool)
+def test_llm_connection_endpoint(
+    api_key: str | None = settings.OPENAI_API_KEY,
+    base_url: str | None = settings.OPENAI_API_BASE,
+    llm_model: str | None = settings.OPENAI_API_MODEL,
+) -> bool:
+    if api_key is None or base_url is None or llm_model is None:
+        raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
+    return test_llm_connection(api_key, base_url, llm_model)
