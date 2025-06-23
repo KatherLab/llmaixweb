@@ -694,6 +694,8 @@ def test_delete_schema(client, api_url):
 
 # Test Delete Schema Referenced by Trial
 def test_delete_schema_referenced_by_trial(client, api_url):
+    if settings.OPENAI_NO_API_CHECK:
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
     user_data = {
         "username": "test@example.com",
         "password": "testpassword",
