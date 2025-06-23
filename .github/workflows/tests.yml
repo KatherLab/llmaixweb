@@ -31,5 +31,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --all-extras --dev
 
+      - name: Create temporary local directory
+        run: mkdir -p test_local_storage
+
       - name: Run tests
         run: ENV_PATH=backend/tests/.env uv run pytest
