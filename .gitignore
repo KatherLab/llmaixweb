@@ -1,5 +1,15 @@
-.env
+backend/.env
 __pycache__/
 database.db
 .idea
 .coverage
+.venv
+
+# frontend
+.DS_Store
+node_modules
+/dist
+
+.env.local
+
+.vscode
