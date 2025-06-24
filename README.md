@@ -18,3 +18,11 @@ Start on MacOS:
 ```bash
 minio server miniodata
 ```
+
+## Development
+
+**Run Backend Tests**
+```bash
+ENV_PATH=backend/.env uv run pytest
+--cov=backend --cov-report=html
+```

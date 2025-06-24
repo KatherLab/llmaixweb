@@ -38,13 +38,11 @@ def setup_and_teardown_test_dir():
 
 @pytest.fixture
 def api_url():
-    print("Provide API URL")
     return "/api/v1"
 
 
 @pytest.fixture
 def client():
-    print("Provide client")
     from ..src.main import app
 
     return TestClient(app)
@@ -107,14 +105,14 @@ def test_register_user(client, api_url):
     headers = {"Authorization": f"Bearer {access_token}"}
     invitation_data = {"email": "test@example.com"}
     response = client.post(
-        f"{api_url}/auth/invite", headers=headers, data=invitation_data
+        f"{api_url}/user/invite", headers=headers, data=invitation_data
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User with this email already exists."
 
     invitation_data = {"email": "inviteduser@example.com"}
     response = client.post(
-        f"{api_url}/auth/invite", headers=headers, data=invitation_data
+        f"{api_url}/user/invite", headers=headers, data=invitation_data
     )
     assert response.status_code == 200
 
@@ -127,7 +125,7 @@ def test_register_user(client, api_url):
         "password": "testpassword",
         "invitation_token": invitation_token,
     }
-    response = client.post(f"{api_url}/auth/register", json=user_data)
+    response = client.post(f"{api_url}/user", json=user_data)
     assert response.status_code == 400
     assert response.json()["detail"] == "Email does not match the invitation."
 
@@ -137,7 +135,7 @@ def test_register_user(client, api_url):
         "password": "testpassword",
         "invitation_token": invitation_token,
     }
-    response = client.post(f"{api_url}/auth/register", json=user_data)
+    response = client.post(f"{api_url}/user", json=user_data)
     assert response.status_code == 200
 
     assert response.json()["email"] == user_data["email"]
@@ -165,7 +163,7 @@ def test_read_current_user(client, api_url):
     access_token = response.json()["access_token"]
 
     headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.get(f"{api_url}/auth/me", headers=headers)
+    response = client.get(f"{api_url}/user/me", headers=headers)
     assert response.status_code == 200
     assert response.json()["email"] == user_data["username"]
 
@@ -180,7 +178,7 @@ def test_list_users(client, api_url):
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.get(f"{api_url}/auth/users", headers=headers)
+    response = client.get(f"{api_url}/user", headers=headers)
     assert response.status_code == 200
     assert len(response.json()) > 0
     # Test with user role
@@ -192,11 +190,11 @@ def test_list_users(client, api_url):
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.get(f"{api_url}/auth/users", headers=headers)
+    response = client.get(f"{api_url}/user", headers=headers)
     assert response.status_code == 403  # Forbidden
     # Test with invalid token
     headers = {"Authorization": "Bearer invalid_token"}
-    response = client.get(f"{api_url}/auth/users", headers=headers)
+    response = client.get(f"{api_url}/user", headers=headers)
     assert response.status_code == 401  # Unauthorized
 
 
@@ -212,14 +210,14 @@ def test_invite_user(client, api_url):
     admin_headers = {"Authorization": f"Bearer {access_token}"}
     invitation_data = {"email": "invited@example.com"}
     response = client.post(
-        f"{api_url}/auth/invite", headers=admin_headers, data=invitation_data
+        f"{api_url}/user/invite", headers=admin_headers, data=invitation_data
     )
     assert response.status_code == 200
     assert response.json()["email"] == invitation_data["email"]
     # Test with existing user email
     invitation_data = {"email": "test@example.com"}
     response = client.post(
-        f"{api_url}/auth/invite", headers=admin_headers, data=invitation_data
+        f"{api_url}/user/invite", headers=admin_headers, data=invitation_data
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User with this email already exists."
@@ -233,7 +231,7 @@ def test_invite_user(client, api_url):
     access_token = response.json()["access_token"]
     user_headers = {"Authorization": f"Bearer {access_token}"}
     response = client.post(
-        f"{api_url}/auth/invite", headers=user_headers, data=invitation_data
+        f"{api_url}/user/invite", headers=user_headers, data=invitation_data
     )
     assert response.status_code == 403  # Forbidden
 
@@ -250,15 +248,15 @@ def test_validate_invitation(client, api_url):
     headers = {"Authorization": f"Bearer {access_token}"}
     invitation_data = {"email": "invitedtest@example.com"}
     response = client.post(
-        f"{api_url}/auth/invite", headers=headers, data=invitation_data
+        f"{api_url}/user/invite", headers=headers, data=invitation_data
     )
     assert response.status_code == 200
     invitation_token = response.json()["token"]
-    response = client.get(f"{api_url}/auth/validate-invitation/{invitation_token}")
+    response = client.get(f"{api_url}/user/validate-invitation/{invitation_token}")
     assert response.status_code == 200
     assert response.json()["valid"]
     # Test with invalid token
-    response = client.get(f"{api_url}/auth/validate-invitation/invalid_token")
+    response = client.get(f"{api_url}/user/validate-invitation/invalid_token_748")
     assert response.status_code == 404
     assert response.json()["detail"] == "Invalid or expired invitation token"
 
@@ -273,7 +271,7 @@ def test_list_invitations(client, api_url):
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.get(f"{api_url}/auth/invitations", headers=headers)
+    response = client.get(f"{api_url}/user/invitations", headers=headers)
     assert response.status_code == 200
     assert len(response.json()) > 0
     # Test with user role
@@ -285,7 +283,7 @@ def test_list_invitations(client, api_url):
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.get(f"{api_url}/auth/invitations", headers=headers)
+    response = client.get(f"{api_url}/user/invitations", headers=headers)
     assert response.status_code == 403  # Forbidden
 
 
@@ -301,12 +299,12 @@ def test_delete_invitation(client, api_url):
     admin_headers = {"Authorization": f"Bearer {access_token}"}
     invitation_data = {"email": "inviteddelete@example.com"}
     response = client.post(
-        f"{api_url}/auth/invite", headers=admin_headers, data=invitation_data
+        f"{api_url}/user/invite", headers=admin_headers, data=invitation_data
     )
     assert response.status_code == 200
     invitation_id = response.json()["id"]
     response = client.delete(
-        f"{api_url}/auth/invitations/{invitation_id}", headers=admin_headers
+        f"{api_url}/user/invitations/{invitation_id}", headers=admin_headers
     )
     assert response.status_code == 200
     assert response.json()["email"] == invitation_data["email"]
@@ -320,11 +318,11 @@ def test_delete_invitation(client, api_url):
     access_token = response.json()["access_token"]
     user_headers = {"Authorization": f"Bearer {access_token}"}
     response = client.delete(
-        f"{api_url}/auth/invitations/{invitation_id}", headers=user_headers
+        f"{api_url}/user/invitations/{invitation_id}", headers=user_headers
     )
     assert response.status_code == 403  # Forbidden
     # Test with invalid invitation id
-    response = client.delete(f"{api_url}/auth/invitations/99999", headers=admin_headers)
+    response = client.delete(f"{api_url}/user/invitations/99999", headers=admin_headers)
     assert response.status_code == 404
     assert response.json()["detail"] == "Invitation not found"
 
@@ -341,13 +339,13 @@ def test_toggle_user_status(client, api_url):
     admin_headers = {"Authorization": f"Bearer {access_token}"}
     user_id = 2  # Assuming the test user has ID 2
     response = client.patch(
-        f"{api_url}/auth/users/{user_id}/toggle-status", headers=admin_headers
+        f"{api_url}/user/{user_id}/toggle-status", headers=admin_headers
     )
     assert response.status_code == 200
     assert not response.json()["is_active"]
     # Test with invalid user id
     response = client.patch(
-        f"{api_url}/auth/users/99999/toggle-status", headers=admin_headers
+        f"{api_url}/user/99999/toggle-status", headers=admin_headers
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "User not found"
@@ -361,7 +359,7 @@ def test_toggle_user_status(client, api_url):
     access_token = response.json()["access_token"]
     user_headers = {"Authorization": f"Bearer {access_token}"}
     response = client.patch(
-        f"{api_url}/auth/users/{user_id}/toggle-status", headers=user_headers
+        f"{api_url}/user/{user_id}/toggle-status", headers=user_headers
     )
     assert response.status_code == 403  # Forbidden
 
@@ -378,9 +376,10 @@ def test_reset_password(client, api_url):
     headers = {"Authorization": f"Bearer {access_token}"}
     new_password = "newpassword"
     response = client.post(
-        f"{api_url}/auth/reset-password?new_password={new_password}", headers=headers
+        f"{api_url}/user/reset-password?new_password={new_password}", headers=headers
     )
     # Not implemented in yet, so we expect a 501 Not Implemented status
+    print(response.json())
     assert response.status_code == 501
     # assert response.json()["email"] == user_data["username"]
 
@@ -395,7 +394,7 @@ def test_delete_user(client, api_url):
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.get(f"{api_url}/auth/users", headers=admin_headers)
+    response = client.get(f"{api_url}/user", headers=admin_headers)
     user_id: None | int = next(
         (
             user["id"]
@@ -406,7 +405,7 @@ def test_delete_user(client, api_url):
     )
     assert user_id is not None, "User to delete not found"
     response = client.delete(f"{api_url}/user/{user_id}", headers=admin_headers)
-    print(response.json())
+    # print(response.json())
     assert response.status_code == 200
     assert response.json()["email"] == "delete@example.com"
     # Test with invalid user id
@@ -419,6 +418,7 @@ def test_delete_user(client, api_url):
         "password": "testpassword",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
+    print(response.json())
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     user_headers = {"Authorization": f"Bearer {access_token}"}

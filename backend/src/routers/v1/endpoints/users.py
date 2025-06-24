@@ -1,25 +1,110 @@
-from fastapi import APIRouter, Depends, Path, HTTPException, status
+from fastapi import APIRouter, Depends, Path, HTTPException, status, Form
 from sqlalchemy.orm import Session
-
 from .... import schemas
 from .... import models
-from ....core.security import get_admin_user
+from ....core.security import get_admin_user, get_current_user, get_password_hash
+from ....core.config import settings
 from ....dependencies import get_db
+from ....utils.enums import UserRole
+import secrets
 
 router = APIRouter()
 
 
+@router.post("", response_model=schemas.UserResponse)
+def create_user(
+    user_in: schemas.UserCreate,
+    db: Session = Depends(get_db),
+) -> schemas.UserResponse:
+    # Check if user already exists
+    user = db.query(models.User).filter(models.User.email == user_in.email).first()
+    if user:
+        raise HTTPException(
+            status_code=400,
+            detail="The user with this email already exists in the system.",
+        )
+
+    # Prevent creating admin users via API
+    if user_in.role == UserRole.admin:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot create admin user via API!",
+        )
+
+    # Check if invitation is required by app settings
+    if settings.REQUIRE_INVITATION:
+        # Ensure invitation token is provided
+        if not user_in.invitation_token:
+            raise HTTPException(
+                status_code=400,
+                detail="Invitation token is required for registration.",
+            )
+
+        # Validate invitation token
+        invitation = (
+            db.query(models.Invitation)
+            .filter(
+                models.Invitation.token == user_in.invitation_token,
+                models.Invitation.is_used.is_(False),
+            )
+            .first()
+        )
+        if not invitation:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid or expired invitation token.",
+            )
+
+        # Optional: Check if the email matches the invitation (if provided)
+        if invitation.email and invitation.email != user_in.email:
+            raise HTTPException(
+                status_code=400,
+                detail="Email does not match the invitation.",
+            )
+
+        # Mark the invitation as used
+        invitation.is_used = True
+        db.add(invitation)
+
+    # Create the user
+    user = models.User(
+        email=str(user_in.email),
+        hashed_password=get_password_hash(user_in.password),
+        full_name=user_in.full_name,
+        role=user_in.role if user_in.role else UserRole.user,
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return schemas.UserResponse.model_validate(user)
+
+
+@router.get("", response_model=list[schemas.UserResponse])
+def list_users(
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+) -> list[schemas.UserResponse]:
+    """List all users (admin only)."""
+    users = db.query(models.User).all()
+    return [schemas.UserResponse.model_validate(user) for user in users]
+
+
+@router.get("/me", response_model=schemas.UserResponse)
+def read_current_user(
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.UserResponse:
+    """Get current user."""
+    return schemas.UserResponse.model_validate(current_user)
+
+
 @router.delete("/{user_id}", response_model=schemas.UserResponse)
 def delete_user(
-    *,
-    db: Session = Depends(get_db),
     user_id: int = Path(...),
     current_user: models.User = Depends(get_admin_user),
-):
-    """
-    Delete a user (admin only).
-    """
-
+    db: Session = Depends(get_db),
+) -> schemas.UserResponse:
+    """Delete a user (admin only)."""
     # Prevent admin from deleting themselves
     if user_id == current_user.id:
         raise HTTPException(
@@ -27,7 +112,7 @@ def delete_user(
             detail="You cannot delete your own user account",
         )
 
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.get(models.User, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -35,7 +120,7 @@ def delete_user(
         )
 
     # Prevent deleting admin users
-    if user.role == "admin":
+    if user.role == UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete admin users",
@@ -43,5 +128,128 @@ def delete_user(
 
     db.delete(user)
     db.commit()
+    return schemas.UserResponse.model_validate(user)
 
-    return user
+
+@router.patch("/{user_id}/toggle-status", response_model=schemas.UserResponse)
+def toggle_user_status(
+    user_id: int = Path(...),
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+) -> schemas.UserResponse:
+    """Toggle user active status (admin only)."""
+    user = db.get(models.User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if user.role == UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change status of admin users",
+        )
+
+    user.is_active = not user.is_active
+    db.commit()
+    db.refresh(user)
+    return schemas.UserResponse.model_validate(user)
+
+
+@router.post("/invite", response_model=schemas.InvitationResponse)
+async def invite(
+    email: str = Form(...),
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+) -> schemas.InvitationResponse:
+    """Invite a new user."""
+    # Check if invitation already exists for this email
+    existing_invitation = (
+        db.query(models.Invitation)
+        .filter(models.Invitation.email == email, models.Invitation.is_used.is_(False))
+        .first()
+    )
+    if existing_invitation:
+        return schemas.InvitationResponse.model_validate(existing_invitation)
+
+    # Check if email is already registered
+    existing_user = db.query(models.User).filter(models.User.email == email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists.",
+        )
+
+    # Generate a unique token
+    token = secrets.token_urlsafe(32)
+    invitation = models.Invitation(email=email, token=token, is_used=False)
+    db.add(invitation)
+    db.commit()
+    db.refresh(invitation)
+    return schemas.InvitationResponse.model_validate(invitation)
+
+
+@router.get("/invitations", response_model=list[schemas.InvitationResponse])
+def list_invitations(
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+) -> list[schemas.InvitationResponse]:
+    """List all invitations (admin only)."""
+    invitations = db.query(models.Invitation).all()
+    return [
+        schemas.InvitationResponse.model_validate(invitation)
+        for invitation in invitations
+    ]
+
+
+@router.delete(
+    "/invitations/{invitation_id}",
+    response_model=schemas.InvitationResponse,
+)
+def delete_invitation(
+    invitation_id: int = Path(...),
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+) -> schemas.InvitationResponse:
+    """Delete an invitation (admin only)."""
+    invitation = db.get(models.Invitation, invitation_id)
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found",
+        )
+    db.delete(invitation)
+    db.commit()
+    return schemas.InvitationResponse.model_validate(invitation)
+
+
+@router.get("/validate-invitation/{token}", response_model=schemas.InvitationInfo)
+def validate_invitation(
+    token: str,
+    db: Session = Depends(get_db),
+) -> schemas.InvitationInfo:
+    """Validate an invitation token and return associated email."""
+    invitation = (
+        db.query(models.Invitation)
+        .filter(models.Invitation.token == token, models.Invitation.is_used.is_(False))
+        .first()
+    )
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid or expired invitation token",
+        )
+    return schemas.InvitationInfo(valid=True, email=str(invitation.email))
+
+
+@router.post("/reset-password", response_model=schemas.UserResponse)
+def reset_password(
+    new_password: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.UserResponse:
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Reset password not implemented yet",
+    )

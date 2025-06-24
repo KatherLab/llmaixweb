@@ -45,6 +45,16 @@ class Settings(BaseSettings):
             return []
         return [origin.strip() for origin in self.BACKEND_CORS_ORIGINS.split(",")]
 
+    if not Path(os.getenv("ENV_PATH", "backend/.env")).exists():
+        raise EnvironmentError(
+            f".env file not found in {Path(os.getenv('ENV_PATH', 'backend/.env')).absolute()}. Please create it or set the ENV_PATH environment variable to the correct path."
+        )
+
+    print(
+        "Loading configuration from .env file at: ",
+        Path(os.getenv("ENV_PATH", "backend/.env")).absolute(),
+    )
+
     model_config = SettingsConfigDict(
         case_sensitive=True,
         env_file=os.getenv("ENV_PATH", "backend/.env"),
@@ -53,6 +63,9 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        # raise ValueError("Reading .env file from ", os.getenv("ENV_PATH", "backend/.env"), "Current working directory: ", os.getcwd())
+
         if not self.SQLALCHEMY_DATABASE_URI:
             self.SQLALCHEMY_DATABASE_URI = (
                 f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"

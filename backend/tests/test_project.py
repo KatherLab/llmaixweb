@@ -513,7 +513,7 @@ def test_project_access_control(client, api_url):
     admin_headers = {"Authorization": f"Bearer {admin_access_token}"}
     invitation_data = {"email": "another@example.com"}
     response = client.post(
-        f"{api_url}/auth/invite", headers=admin_headers, data=invitation_data
+        f"{api_url}/user/invite", headers=admin_headers, data=invitation_data
     )
     assert response.status_code == 200
     invitation_token = response.json()["token"]
@@ -523,7 +523,7 @@ def test_project_access_control(client, api_url):
         "password": "anotherpassword",
         "invitation_token": invitation_token,
     }
-    response = client.post(f"{api_url}/auth/register", json=another_user_create_data)
+    response = client.post(f"{api_url}/user", json=another_user_create_data)
     assert response.status_code == 200
 
     response = client.post(f"{api_url}/auth/login", data=another_user_data)
