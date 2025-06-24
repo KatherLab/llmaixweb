@@ -1,12 +1,11 @@
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, Query
 from fastapi.responses import Response
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typing import cast
-from jsonschema import validate, ValidationError as JsonValidationError
 
 from .... import models, schemas
 from ....core.config import settings
@@ -208,6 +207,7 @@ def get_project_file_content(
     db: Session = Depends(get_db),
     project_id: int,
     file_id: int,
+    preview: bool = Query(False),
     current_user: models.User = Depends(get_current_user),
 ) -> Response:
     """Retrieve the content of a file associated with a project."""
@@ -235,8 +235,10 @@ def get_project_file_content(
     # Retrieve the file content from storage
     file_content = get_file(file.file_uuid)
 
-    headers = {"Content-Disposition": f"attachment; filename={file.file_name}"}
-
+    if preview:
+        headers = {"Content-Disposition": f"inline; filename={file.file_name}"}
+    else:
+        headers = {"Content-Disposition": f"attachment; filename={file.file_name}"}
     return Response(content=file_content, media_type=file.file_type, headers=headers)
 
 
@@ -446,6 +448,41 @@ def preprocess_project_data(
 
 
 @router.get(
+    "/{project_id}/preprocess",
+    response_model=list[schemas.PreprocessingTask],
+)
+def get_preprocessing_tasks(
+    *,
+    project_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[schemas.PreprocessingTask]:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's preprocessing tasks",
+        )
+
+    preprocessing_tasks = list(
+        db.execute(
+            select(models.PreprocessingTask).where(
+                models.PreprocessingTask.project_id == project_id
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        schemas.PreprocessingTask.model_validate(task) for task in preprocessing_tasks
+    ]
+
+
+@router.get(
     "/{project_id}/preprocess/{preprocessing_task_id}",
     response_model=schemas.PreprocessingTask,
 )
@@ -477,6 +514,33 @@ def get_preprocessing_task(
         raise HTTPException(status_code=404, detail="Preprocessing task not found")
 
     return schemas.PreprocessingTask.model_validate(preprocessing_task)
+
+
+@router.get("/{project_id}/document", response_model=list[schemas.Document])
+def get_documents(
+    *,
+    project_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[schemas.Document]:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's documents"
+        )
+
+    documents = list(
+        db.execute(
+            select(models.Document).where(models.Document.project_id == project_id)
+        )
+        .scalars()
+        .all()
+    )
+    return [schemas.Document.model_validate(doc) for doc in documents]
 
 
 @router.get("/{project_id}/document/{document_id}", response_model=schemas.Document)
@@ -525,18 +589,37 @@ def create_schema(
         raise HTTPException(
             status_code=403, detail="Not authorized to create schemas for this project"
         )
-
-    # Validate the JSON schema
-    try:
-        validate(instance={}, schema=schema.schema_definition)
-    except JsonValidationError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid JSON schema: {e}")
-
+    if not isinstance(schema.schema_definition, dict):
+        raise HTTPException(status_code=400, detail="Invalid JSON schema")
     schema_db = models.Schema(**schema.model_dump(), project_id=project_id)
     db.add(schema_db)
     db.commit()
     db.refresh(schema_db)
     return schemas.Schema.model_validate(schema_db)
+
+
+@router.get("/{project_id}/schema", response_model=list[schemas.Schema])
+def get_schemas(
+    project_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[schemas.Schema]:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's schemas"
+        )
+
+    schemas_list = list(
+        db.execute(select(models.Schema).where(models.Schema.project_id == project_id))
+        .scalars()
+        .all()
+    )
+    return [schemas.Schema.model_validate(schema) for schema in schemas_list]
 
 
 @router.get("/{project_id}/schema/{schema_id}", response_model=schemas.Schema)
@@ -564,6 +647,45 @@ def get_schema(
     if not schema:
         raise HTTPException(status_code=404, detail="Schema not found")
     return schemas.Schema.model_validate(schema)
+
+
+@router.put("/{project_id}/schema/{schema_id}", response_model=schemas.Schema)
+def update_schema(
+    project_id: int,
+    schema_id: int,
+    schema: schemas.SchemaUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Schema:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to update schemas for this project"
+        )
+
+    existing_schema: models.Schema | None = db.execute(
+        select(models.Schema).where(
+            models.Schema.project_id == project_id, models.Schema.id == schema_id
+        )
+    ).scalar_one_or_none()
+    if not existing_schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
+    if not isinstance(schema.schema_definition, dict):
+        raise HTTPException(status_code=400, detail="Invalid JSON schema")
+
+    for key, value in schema.model_dump(exclude_unset=True).items():
+        setattr(existing_schema, key, value)
+
+    db.add(existing_schema)
+    db.commit()
+    db.refresh(existing_schema)
+
+    return schemas.Schema.model_validate(existing_schema)
 
 
 @router.delete("/{project_id}/schema/{schema_id}", response_model=schemas.Schema)

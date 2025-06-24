@@ -105,6 +105,11 @@ class SchemaCreate(SchemaBase):
     schema_definition: dict
 
 
+class SchemaUpdate(SchemaBase):
+    schema_name: str | None = None
+    schema_definition: dict | None = None
+
+
 class Schema(SchemaBase):
     id: int
     project_id: int

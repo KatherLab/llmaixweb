@@ -23,6 +23,7 @@ from .project import (
     TrialCreate,
     Schema,
     SchemaCreate,
+    SchemaUpdate,
 )
 
 __all__ = [
@@ -55,4 +56,5 @@ __all__ = [
     "TrialCreate",
     "Schema",
     "SchemaCreate",
+    "SchemaUpdate",
 ]

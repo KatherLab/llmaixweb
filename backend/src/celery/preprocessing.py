@@ -35,7 +35,9 @@ def preprocess_file_celery(
     ocr_languages: list[str] | None = None,
     ocr_model: str | None = None,
     db_session: Session | None = None,
+    project_id: int | None = None,
     preprocessing_task_id: int | None = None,
+    output_file: bool = True,
 ):
     """
     Preprocess a (pdf) file for LLM usage. Output is extracted text / markdown.
@@ -54,5 +56,7 @@ def preprocess_file_celery(
         base_url=base_url,
         api_key=api_key,
         db_session=db_session,
+        project_id=project_id,
         preprocessing_task_id=preprocessing_task_id,
+        output_file=output_file,
     )

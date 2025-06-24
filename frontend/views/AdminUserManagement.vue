@@ -1,4 +1,3 @@
-<!-- src/views/AdminUserManagement.vue -->
 <template>
   <div class="min-h-screen bg-gray-50">
     <header class="bg-white shadow">
@@ -12,7 +11,7 @@
       <div class="mb-6 flex justify-end">
         <button
           @click="showInviteModal = true"
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
         >
           <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -22,8 +21,8 @@
       </div>
 
       <!-- User List -->
-      <div class="bg-white shadow overflow-hidden sm:rounded-md mb-8">
-        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+      <div class="bg-white shadow rounded-lg mb-8 overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
           <h2 class="text-lg font-medium text-gray-900">Users</h2>
           <span class="text-sm text-gray-500">{{ users.length }} total users</span>
         </div>
@@ -32,74 +31,18 @@
           <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
         </div>
 
-        <div v-else>
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="user in users" :key="user.id">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center">
-                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span class="text-blue-800 font-medium">{{ getUserInitials(user.full_name) }}</span>
-                    </div>
-                    <div class="ml-4">
-                      <div class="text-sm font-medium text-gray-900">{{ user.full_name }}</div>
-                      <div class="text-sm text-gray-500">{{ user.email }}</div>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
-                    :class="user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
-                    {{ user.is_active ? 'Active' : 'Inactive' }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span class="capitalize">{{ user.role }}</span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div class="flex justify-end space-x-2">
-                    <button
-                      v-if="user.role !== 'admin'"
-                      @click="toggleUserStatus(user)"
-                      class="text-indigo-600 hover:text-indigo-900"
-                      :class="{'opacity-50': isProcessingUser === user.id}"
-                      :disabled="isProcessingUser === user.id"
-                    >
-                      {{ user.is_active ? 'Disable' : 'Enable' }}
-                    </button>
-                    <button
-                      v-if="user.role !== 'admin' && authStore.user?.id !== user.id"
-                      @click="confirmDeleteUser(user)"
-                      class="text-red-600 hover:text-red-900"
-                      :class="{'opacity-50': isProcessingUser === user.id}"
-                      :disabled="isProcessingUser === user.id"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="users.length === 0">
-                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
-                  No users found
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-else class="p-4">
+          <UserGrid
+            ref="userGrid"
+            @toggle-requested="confirmToggleUserStatus"
+            @delete-requested="confirmDeleteUser"
+          />
         </div>
       </div>
 
       <!-- Invitations Section -->
-      <div>
-        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+      <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
           <div class="flex items-center">
             <h2 class="text-lg font-medium text-gray-900">Invitations</h2>
             <div class="ml-4">
@@ -116,69 +59,15 @@
           <span class="text-sm text-gray-500">{{ activeInvitations }} active invitations</span>
         </div>
 
-        <div class="bg-white shadow overflow-hidden sm:rounded-md">
-          <div v-if="loadingInvitations" class="flex justify-center items-center p-6">
-            <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-          </div>
+        <div v-if="loadingInvitations" class="flex justify-center items-center p-6">
+          <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+        </div>
 
-          <div v-else>
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50">
-                <tr>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="invitation in filteredInvitations" :key="invitation.id">
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {{ invitation.email }}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
-                      :class="invitation.is_used ? 'bg-gray-100 text-gray-800' : 'bg-yellow-100 text-yellow-800'">
-                      {{ invitation.is_used ? 'Used' : 'Pending' }}
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div v-if="!invitation.is_used" class="flex justify-end space-x-2">
-                      <button
-                        @click="showInviteLink(invitation.token, invitation.id)"
-                        class="text-indigo-600 hover:text-indigo-900"
-                      >
-                        {{ invitationLinkId === invitation.id ? 'Hide Link' : 'Show Invite Link' }}
-                      </button>
-                      <div v-if="invitationLinkId === invitation.id" class="text-sm text-gray-600 ml-2">
-                        {{ invitationLink }}
-                        <button @click="copyInviteLink(invitation.token, invitation.id)" class="text-indigo-600 hover:text-indigo-900 ml-2 relative">
-                          Copy
-                          <span v-if="copiedInvitationId === invitation.id"
-                                class="absolute bg-gray-800 text-white text-xs px-2 py-1 rounded -mt-10 -ml-1 whitespace-nowrap">
-                            Copied!
-                          </span>
-                        </button>
-                      </div>
-                      <button
-                        @click="confirmDeleteInvitation(invitation)"
-                        class="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                    <div v-else-if="showUsedInvitations" class="text-gray-400">
-                      Already used
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="filteredInvitations.length === 0">
-                  <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
-                    No invitations found
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div v-else class="p-4">
+          <InvitationsGrid
+            :invitations="filteredInvitations"
+            @confirm-delete-invitation="confirmDeleteInvitation"
+          />
         </div>
       </div>
     </main>
@@ -256,43 +145,84 @@
       </div>
     </div>
 
-    <!-- Delete User Confirmation Modal -->
-    <div v-if="deleteUserModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-4 pt-5 pb-4 sm:p-6">
-          <div class="sm:flex sm:items-start">
-            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-              <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    <!-- Toggle User Status Confirmation Modal -->
+    <div v-if="userToToggle" class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50" @click="userToToggle = null">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full" @click.stop>
+        <div class="px-6 py-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">
+              {{ userToToggle.is_active ? 'Disable' : 'Enable' }} User
+            </h3>
+            <button @click="userToToggle = null" class="text-gray-400 hover:text-gray-500 transition-colors">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </div>
-            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-              <h3 class="text-lg leading-6 font-medium text-gray-900">Delete User</h3>
-              <div class="mt-2">
-                <p class="text-sm text-gray-500">
-                  Are you sure you want to delete this user? This action cannot be undone.
-                </p>
-                <p v-if="userToDelete" class="mt-2 text-sm font-medium text-gray-900">
-                  {{ userToDelete.full_name }} ({{ userToDelete.email }})
-                </p>
-              </div>
-            </div>
+            </button>
           </div>
-          <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+          <div class="mb-6">
+            <p class="text-sm text-gray-500">
+              Are you sure you want to {{ userToToggle.is_active ? 'disable' : 'enable' }} this user?
+            </p>
+            <p class="mt-2 text-sm font-medium text-gray-900">
+              {{ userToToggle.full_name }} ({{ userToToggle.email }})
+            </p>
+          </div>
+          <div class="flex justify-end space-x-3">
             <button
               type="button"
-              @click="deleteUser"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-              :disabled="isProcessingDelete"
+              @click="userToToggle = null"
+              class="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
-              {{ isProcessingDelete ? 'Deleting...' : 'Delete' }}
+              Cancel
             </button>
             <button
               type="button"
+              @click="toggleUserStatus"
+              class="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-lg shadow-sm hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
+              :disabled="isProcessingUser === userToToggle.id"
+            >
+              {{ isProcessingUser === userToToggle.id ? 'Processing...' : (userToToggle.is_active ? 'Disable' : 'Enable') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete User Confirmation Modal -->
+    <div v-if="deleteUserModal" class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50" @click="cancelDelete">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full" @click.stop>
+        <div class="px-6 py-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Delete User</h3>
+            <button @click="cancelDelete" class="text-gray-400 hover:text-gray-500 transition-colors">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="mb-6">
+            <p class="text-sm text-gray-500">
+              Are you sure you want to delete this user? This action cannot be undone.
+            </p>
+            <p v-if="userToDelete" class="mt-2 text-sm font-medium text-gray-900">
+              {{ userToDelete.full_name }} ({{ userToDelete.email }})
+            </p>
+          </div>
+          <div class="flex justify-end space-x-3">
+            <button
+              type="button"
               @click="cancelDelete"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm"
+              class="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
               Cancel
+            </button>
+            <button
+              type="button"
+              @click="deleteUser"
+              class="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+              :disabled="isProcessingDelete"
+            >
+              {{ isProcessingDelete ? 'Deleting...' : 'Delete' }}
             </button>
           </div>
         </div>
@@ -300,42 +230,40 @@
     </div>
 
     <!-- Delete Invitation Confirmation Modal -->
-    <div v-if="deleteInvitationModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-4 pt-5 pb-4 sm:p-6">
-          <div class="sm:flex sm:items-start">
-            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-              <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    <div v-if="deleteInvitationModal" class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50" @click="cancelDeleteInvitation">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full" @click.stop>
+        <div class="px-6 py-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Delete Invitation</h3>
+            <button @click="cancelDeleteInvitation" class="text-gray-400 hover:text-gray-500 transition-colors">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </div>
-            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-              <h3 class="text-lg leading-6 font-medium text-gray-900">Delete Invitation</h3>
-              <div class="mt-2">
-                <p class="text-sm text-gray-500">
-                  Are you sure you want to delete this invitation? This action cannot be undone.
-                </p>
-                <p v-if="invitationToDelete" class="mt-2 text-sm font-medium text-gray-900">
-                  {{ invitationToDelete.email }}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-            <button
-              type="button"
-              @click="deleteInvitation"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-              :disabled="isProcessingDelete"
-            >
-              {{ isProcessingDelete ? 'Deleting...' : 'Delete' }}
             </button>
+          </div>
+          <div class="mb-6">
+            <p class="text-sm text-gray-500">
+              Are you sure you want to delete this invitation? This action cannot be undone.
+            </p>
+            <p v-if="invitationToDelete" class="mt-2 text-sm font-medium text-gray-900">
+              {{ invitationToDelete.email }}
+            </p>
+          </div>
+          <div class="flex justify-end space-x-3">
             <button
               type="button"
               @click="cancelDeleteInvitation"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm"
+              class="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
               Cancel
+            </button>
+            <button
+              type="button"
+              @click="deleteInvitation"
+              class="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+              :disabled="isProcessingDelete"
+            >
+              {{ isProcessingDelete ? 'Deleting...' : 'Delete' }}
             </button>
           </div>
         </div>
@@ -349,6 +277,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import UserGrid from '@/components/UserGrid.vue';
+import InvitationsGrid from '@/components/InvitationsGrid.vue';
+
+const userGrid = ref(null);
 
 // Store
 const authStore = useAuthStore()
@@ -365,13 +297,14 @@ const isInviting = ref(false)
 const inviteError = ref('')
 const inviteSuccess = ref(false)
 const invitationLink = ref('')
-const invitationLinkId = ref(null);
 
 const isProcessingUser = ref(null)
 const isProcessingDelete = ref(false)
 const copySuccess = ref(false)
 const showUsedInvitations = ref(false)
-const copiedInvitationId = ref(null)
+
+// Toggle user state
+const userToToggle = ref(null)
 
 // Delete user modal
 const deleteUserModal = ref(false)
@@ -426,19 +359,6 @@ async function loadUsers() {
   }
 }
 
-function showInviteLink(token, id) {
-  if (invitationLinkId.value === id) {
-    // Hide the link if it's already shown
-    invitationLinkId.value = null;
-    invitationLink.value = '';
-  } else {
-    const baseUrl = window.location.origin;
-    const link = `${baseUrl}/register?token=${token}`;
-    invitationLink.value = link;
-    invitationLinkId.value = id;
-  }
-}
-
 async function loadInvitations() {
   loadingInvitations.value = true
   try {
@@ -449,15 +369,6 @@ async function loadInvitations() {
   } finally {
     loadingInvitations.value = false
   }
-}
-
-function getUserInitials(name) {
-  if (!name) return ''
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
 }
 
 async function sendInvitation() {
@@ -502,127 +413,184 @@ async function sendInvitation() {
   }
 }
 
+// Copy text to clipboard with fallback
 function copyGeneratedLink() {
-  // Just include the token in the URL, not the email
+  // Fallback for non-secure contexts or when the Clipboard API is not available
+  const copyTextFallback = (text) => {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+
+    // Make the textarea hidden
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+
+    // Select the text
+    textArea.focus();
+    textArea.select();
+
+    let success = false;
+    try {
+      // Execute the copy command
+      success = document.execCommand('copy');
+    } catch (err) {
+      console.error('Unable to copy with fallback method', err);
+    }
+
+    // Remove the textarea
+    document.body.removeChild(textArea);
+    return success;
+  };
+
   const baseUrl = window.location.origin;
   const token = invitationLink.value.split('token=')[1];
   const link = `${baseUrl}/register?token=${token}`;
-  copyTextToClipboard(link)
-    .then(() => {
+
+  // Try the modern Clipboard API first
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(link)
+      .then(() => {
+        copySuccess.value = true;
+        setTimeout(() => {
+          copySuccess.value = false;
+        }, 2000);
+      })
+      .catch(err => {
+        console.error('Error with Clipboard API:', err);
+        // Fall back to the older method
+        const success = copyTextFallback(link);
+        if (success) {
+          copySuccess.value = true;
+          setTimeout(() => {
+            copySuccess.value = false;
+          }, 2000);
+        } else {
+          alert(`Failed to copy. Please copy this link manually:\n${link}`);
+        }
+      });
+  } else {
+    // Use fallback for non-secure contexts
+    const success = copyTextFallback(link);
+    if (success) {
       copySuccess.value = true;
       setTimeout(() => {
         copySuccess.value = false;
       }, 2000);
-    })
-    .catch(err => {
-      console.error('Error copying text: ', err);
-      alert(`Failed to copy text. Please copy the following link manually: ${link}`);
-    });
-}
-
-function copyInviteLink(token, id) {
-  const baseUrl = window.location.origin;
-  // Just include the token in the URL, not the email
-  const link = `${baseUrl}/register?token=${token}`;
-  copyTextToClipboard(link)
-    .then(() => {
-      // Show temporary "Copied!" message for this specific invitation
-      copiedInvitationId.value = id;
-      setTimeout(() => {
-        copiedInvitationId.value = null;
-      }, 2000);
-    })
-    .catch(err => {
-      console.error('Error copying text: ', err);
-      alert(`Failed to copy text. Please copy the following link manually: ${link}`);
-    });
-}
-
-function copyTextToClipboard(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    return navigator.clipboard.writeText(text);
-  } else {
-    return Promise.reject(new Error('Clipboard API is not available'));
+    } else {
+      alert(`Failed to copy. Please copy this link manually:\n${link}`);
+    }
   }
 }
 
-// Toggle user active status
-async function toggleUserStatus(user) {
-  if (isProcessingUser.value) return
+// Toggle user confirmation and execution
+function confirmToggleUserStatus(user) {
+  userToToggle.value = user;
+}
 
-  isProcessingUser.value = user.id
+async function toggleUserStatus() {
+  if (!userToToggle.value || isProcessingUser.value) return;
+
+  isProcessingUser.value = userToToggle.value.id;
 
   try {
-    await api.patch(`/user/${user.id}/toggle-status`)
+    await api.patch(`/user/${userToToggle.value.id}/toggle-status`);
+
     // Update the user in the list
-    const index = users.value.findIndex(u => u.id === user.id)
+    const index = users.value.findIndex(u => u.id === userToToggle.value.id);
     if (index !== -1) {
-      users.value[index].is_active = !users.value[index].is_active
+      users.value[index].is_active = !users.value[index].is_active;
     }
+
+    // Refresh grid by reloading users
+    if (userGrid.value) {
+      await userGrid.value.loadUsers();
+    }
+    userToToggle.value = null;
   } catch (error) {
-    console.error('Error toggling user status:', error)
+    console.error('Error toggling user status:', error);
   } finally {
-    isProcessingUser.value = null
+    isProcessingUser.value = null;
   }
 }
 
 // Delete user functions
 function confirmDeleteUser(user) {
-  userToDelete.value = user
-  deleteUserModal.value = true
+  userToDelete.value = user;
+  deleteUserModal.value = true;
 }
 
 async function deleteUser() {
-  if (!userToDelete.value || isProcessingDelete.value) return
+  if (!userToDelete.value || isProcessingDelete.value) return;
 
-  isProcessingDelete.value = true
+  isProcessingDelete.value = true;
 
   try {
-    await api.delete(`/user/${userToDelete.value.id}`)
+    await api.delete(`/user/${userToDelete.value.id}`);
+
     // Remove user from the list
-    users.value = users.value.filter(user => user.id !== userToDelete.value.id)
-    // Close the modal
-    deleteUserModal.value = false
-    userToDelete.value = null
+    users.value = users.value.filter(user => user.id !== userToDelete.value.id);
+
+    // Refresh grid
+    if (userGrid.value) {
+      await userGrid.value.loadUsers();
+    }
+    deleteUserModal.value = false;
+    userToDelete.value = null;
   } catch (error) {
-    console.error('Error deleting user:', error)
+    console.error('Error deleting user:', error);
   } finally {
-    isProcessingDelete.value = false
+    isProcessingDelete.value = false;
   }
 }
 
 function cancelDelete() {
-  deleteUserModal.value = false
-  userToDelete.value = null
+  deleteUserModal.value = false;
+  userToDelete.value = null;
 }
 
 // Delete invitation functions
 function confirmDeleteInvitation(invitation) {
-  invitationToDelete.value = invitation
-  deleteInvitationModal.value = true
+  invitationToDelete.value = invitation;
+  deleteInvitationModal.value = true;
 }
 
 async function deleteInvitation() {
-  if (!invitationToDelete.value || isProcessingDelete.value) return
+  if (!invitationToDelete.value || isProcessingDelete.value) return;
 
-  isProcessingDelete.value = true
+  isProcessingDelete.value = true;
 
   try {
-    await api.delete(`/user/invitations/${invitationToDelete.value.id}`)
+    await api.delete(`/user/invitations/${invitationToDelete.value.id}`);
+
     // Remove invitation from the list
-    invitations.value = invitations.value.filter(inv => inv.id !== invitationToDelete.value.id)
+    invitations.value = invitations.value.filter(inv => inv.id !== invitationToDelete.value.id);
+
     // Close the modal
-    deleteInvitationModal.value = false
-    invitationToDelete.value = null
+    deleteInvitationModal.value = false;
+    invitationToDelete.value = null;
+
+    // Refresh invitations
+    await loadInvitations();
   } catch (error) {
-    console.error('Error deleting invitation:', error)
+    console.error('Error deleting invitation:', error);
   } finally {
-    isProcessingDelete.value = false
+    isProcessingDelete.value = false;
   }
 }
 
 function cancelDeleteInvitation() {
-  deleteInvitationModal.value = false
-  invitationToDelete.value = null
+  deleteInvitationModal.value = false;
+  invitationToDelete.value = null;
+}
+
+function closeInviteModal() {
+  if (!isInviting.value) {
+    showInviteModal.value = false;
+    if (inviteSuccess.value) {
+      inviteEmail.value = '';
+      inviteSuccess.value = false;
+    }
+  }
 }
 </script>

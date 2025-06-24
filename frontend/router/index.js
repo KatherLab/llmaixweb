@@ -7,7 +7,9 @@ import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import Landing from '../views/Landing.vue'
 import AdminUserManagement from '../views/AdminUserManagement.vue'
-
+import ProjectOverview from '@/views/ProjectOverview.vue'
+import ProjectDetail from '@/views/ProjectDetail.vue'
+import TrialResults from '@/views/TrialResults.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -22,20 +24,41 @@ const router = createRouter({
       name: 'register',
       component: Register
     },
-    // Student routes
     {
       path: '/',
       name: 'landing',
       component: Landing
     },
     {
-    // New route for User Management
-    path: '/admin/user-management',
-    name: 'AdminUserManagement',
-    component: AdminUserManagement,
-    meta: { requiresAdmin: true }
-  },
-
+      path: '/projects',
+      name: 'ProjectOverview',
+      component: ProjectOverview,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/projects/:projectId',
+      name: 'project-detail',
+      component: ProjectDetail,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/projects/:id/trials/:trialId',
+      name: 'trial-results',
+      component: TrialResults,
+      meta: { requiresAuth: true }
+    },
+    {
+      // New route for User Management
+      path: '/admin/user-management',
+      name: 'AdminUserManagement',
+      component: AdminUserManagement,
+      meta: { requiresAdmin: true }
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/NotFound.vue')
+    }
   ]
 })
 
@@ -89,18 +112,12 @@ router.beforeEach(async (to, from, next) => {
 
     // Handle role-based access
     console.log('Checking role-based access...')
-    if (to.meta.role) {
+    if (to.meta.requiresAdmin) {
       const userRole = authStore.user?.role
       console.log('User role:', userRole)
-      console.log('Required role:', to.meta.role)
-      if (to.meta.role === 'admin' && userRole !== 'admin') {
+      console.log('Required admin role')
+      if (userRole !== 'admin') {
         console.log('User is not admin, redirecting to user dashboard.')
-        authStore.navigationFlag = true
-        next('/')
-        return
-      }
-      if (to.meta.role === 'user' && userRole !== 'user') {
-        console.log('User is not user, redirecting to admin dashboard.')
         authStore.navigationFlag = true
         next('/')
         return
