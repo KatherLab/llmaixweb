@@ -11,3 +11,10 @@ Provides a web interface for the LLMAIx framework, allowing users to interact wi
 ```bash
 python -m backend.scripts.populate_users
 ```
+
+**Install Minio**
+
+Start on MacOS:
+```bash
+minio server miniodata
+```

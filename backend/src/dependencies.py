@@ -48,7 +48,8 @@ def get_file(file_name: str) -> bytes:
         with open(f"{settings.LOCAL_DIRECTORY}/{file_name}", "rb") as file:
             return file.read()
     else:
-        response = s3_client.get_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
+        assert s3_client is not None
+        response = s3_client.get_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)  # type: ignore
         return response["Body"].read()
 
 
@@ -69,7 +70,7 @@ def save_file(file_content: bytes) -> str:
         with open(file_path, "wb") as file:
             file.write(file_content)
     else:
-        s3_client.put_object(
+        s3_client.put_object(  # type: ignore
             Bucket=settings.S3_BUCKET_NAME, Key=file_name, Body=file_content
         )
 
@@ -93,8 +94,8 @@ def remove_file(file_name: str) -> None:
         os.remove(file_path)
     else:
         try:
-            s3_client.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
-            s3_client.delete_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
+            s3_client.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)  # type: ignore
+            s3_client.delete_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)  # type: ignore
         except s3_client.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "404":
                 raise FileNotFoundError(f"File {file_name} not found in S3.")

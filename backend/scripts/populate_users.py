@@ -157,21 +157,21 @@ def list_users():
 
 def create_admin_user():
     """Create an admin user interactively"""
-    email, full_name, password = get_user_input(UserRole.ADMIN)
-    create_user(email, full_name, password, UserRole.ADMIN)
+    email, full_name, password = get_user_input(UserRole.admin)
+    create_user(email, full_name, password, UserRole.admin)
 
 
 def create_regular_user():
     """Create a regular user interactively"""
-    email, full_name, password = get_user_input(UserRole.USER)
-    create_user(email, full_name, password, UserRole.USER)
+    email, full_name, password = get_user_input(UserRole.user)
+    create_user(email, full_name, password, UserRole.user)
 
 
 def check_admin_exists() -> bool:
     """Check if any admin user already exists"""
     db = SessionLocal()
     try:
-        admin = db.query(User).filter(User.role == UserRole.ADMIN).first()
+        admin = db.query(User).filter(User.role == UserRole.admin).first()
         return admin is not None
     finally:
         db.close()
@@ -214,7 +214,7 @@ def import_users_from_yaml(yaml_file: str):
             email = user_data["email"]
             full_name = user_data["full_name"]
             password = user_data["password"]
-            role = UserRole.USER  # Default role for imported users
+            role = UserRole.user  # Default role for imported users
 
             # Validate email
             if not validate_email(email):
@@ -286,7 +286,7 @@ def main():
 
     args = parser.parse_args()
 
-    # Initialize database if needed
+    # Initialize the database if needed
     print("Initializing database if needed...")
     init_db()
 

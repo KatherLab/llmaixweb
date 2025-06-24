@@ -1,4 +1,7 @@
 from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
+
+from .core.config import settings
 from .db.session import init_db
 from .routers.v1.endpoints import auth, users, projects
 
@@ -13,6 +16,17 @@ api_router.include_router(users.router, prefix="/user", tags=["users"])
 api_router.include_router(projects.router, prefix="/project", tags=["projects"])
 
 app.include_router(api_router)
+
+print("Using custom CORS origins from settings:", settings.BACKEND_CORS_ORIGINS_LIST)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS_LIST,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 
 @app.get("/")

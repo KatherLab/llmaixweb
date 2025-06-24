@@ -62,13 +62,13 @@ def setup_db():
     # Create admin user
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
-    admin_user = db.query(User).filter(User.role == UserRole.ADMIN).first()
+    admin_user = db.query(User).filter(User.role == UserRole.admin).first()
     if not admin_user:
         admin_user = User(
             email="admin@example.com",
             full_name="Admin User",
             hashed_password=get_password_hash("adminpassword"),
-            role=UserRole.ADMIN.value,
+            role=UserRole.admin.value,
             is_active=True,
         )
 
@@ -76,14 +76,14 @@ def setup_db():
             email="test@example.com",
             full_name="Test User",
             hashed_password=get_password_hash("testpassword"),
-            role=UserRole.USER.value,
+            role=UserRole.user.value,
             is_active=True,
         )
         test_user_to_delete = User(
             email="delete@example.com",
             full_name="Delete User",
             hashed_password=get_password_hash("testpassword"),
-            role=UserRole.USER.value,
+            role=UserRole.user.value,
             is_active=True,
         )
         db.add(test_user)
@@ -406,6 +406,7 @@ def test_delete_user(client, api_url):
     )
     assert user_id is not None, "User to delete not found"
     response = client.delete(f"{api_url}/user/{user_id}", headers=admin_headers)
+    print(response.json())
     assert response.status_code == 200
     assert response.json()["email"] == "delete@example.com"
     # Test with invalid user id

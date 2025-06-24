@@ -37,11 +37,17 @@ class Settings(BaseSettings):
     OPENAI_API_MODEL: str = ""
     OPENAI_NO_API_CHECK: bool = False
 
-    BACKEND_CORS_ORIGINS: list = ["http://localhost:5173"]
+    BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
+
+    @property
+    def BACKEND_CORS_ORIGINS_LIST(self):
+        if not self.BACKEND_CORS_ORIGINS:
+            return []
+        return [origin.strip() for origin in self.BACKEND_CORS_ORIGINS.split(",")]
 
     model_config = SettingsConfigDict(
         case_sensitive=True,
-        env_file=os.getenv("ENV_PATH", ".env"),
+        env_file=os.getenv("ENV_PATH", "backend/.env"),
         env_file_encoding="utf-8",
     )
 

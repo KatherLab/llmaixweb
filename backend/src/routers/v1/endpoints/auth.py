@@ -16,7 +16,6 @@ from ....core.security import (
     create_access_token,
 )
 from ....dependencies import get_db
-from ....models import UserRole
 
 router = APIRouter()
 
@@ -56,7 +55,7 @@ def login(
     }
 
 
-@router.post("/register", response_model=schemas.User)
+@router.post("/register", response_model=schemas.UserResponse)
 def register(
     *,
     db: Session = Depends(get_db),
@@ -121,7 +120,7 @@ def register(
         email=str(user_in.email),
         hashed_password=get_password_hash(user_in.password),
         full_name=user_in.full_name,
-        role=user_in.role if user_in.role else UserRole.USER.value,
+        role=user_in.role if user_in.role else models.UserRole.user.value,
         is_active=True,
     )
 
@@ -241,7 +240,7 @@ def validate_invitation(
     return {"valid": True, "email": invitation.email}
 
 
-@router.get("/users", response_model=list[schemas.User])
+@router.get("/users", response_model=list[schemas.UserResponse])
 def list_users(
     *,
     db: Session = Depends(get_db),
@@ -255,7 +254,7 @@ def list_users(
     return users
 
 
-@router.patch("/users/{user_id}/toggle-status", response_model=schemas.User)
+@router.patch("/users/{user_id}/toggle-status", response_model=schemas.UserResponse)
 def toggle_user_status(
     *,
     db: Session = Depends(get_db),
@@ -289,7 +288,7 @@ def toggle_user_status(
     return user
 
 
-@router.get("/me", response_model=schemas.User)
+@router.get("/me", response_model=schemas.UserResponse)
 def read_current_user(
     current_user: models.User = Depends(get_current_user),
 ) -> Any:
@@ -299,7 +298,7 @@ def read_current_user(
     return current_user
 
 
-@router.post("/reset-password", response_model=schemas.User)
+@router.post("/reset-password", response_model=schemas.UserResponse)
 def reset_password(
     new_password: str,
     current_user: models.User = Depends(get_current_user),

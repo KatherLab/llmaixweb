@@ -58,20 +58,20 @@ def setup_db():
     # Create admin user
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
-    admin_user = db.query(User).filter(User.role == UserRole.ADMIN).first()
+    admin_user = db.query(User).filter(User.role == UserRole.admin).first()
     if not admin_user:
         admin_user = User(
             email="admin@example.com",
             full_name="Admin User",
             hashed_password=get_password_hash("adminpassword"),
-            role=UserRole.ADMIN.value,
+            role=UserRole.admin.value,
             is_active=True,
         )
         test_user = User(
             email="test@example.com",
             full_name="Test User",
             hashed_password=get_password_hash("testpassword"),
-            role=UserRole.USER.value,
+            role=UserRole.user.value,
             is_active=True,
         )
         db.add(test_user)

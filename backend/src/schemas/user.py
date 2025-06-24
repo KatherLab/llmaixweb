@@ -3,15 +3,17 @@ from __future__ import annotations
 from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import TYPE_CHECKING
 
+from ..utils.enums import UserRole
+
 if TYPE_CHECKING:
-    from .project import Project  # noqa: F401
+    from .project import Project, ProjectBase  # noqa: F401
 
 
 # User schemas
 class UserBase(BaseModel):
     email: EmailStr | None = None
     full_name: str | None = None
-    role: str | None = "user"
+    role: UserRole | None = UserRole.user
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -25,6 +27,16 @@ class UserCreate(UserBase):
 
 class UserUpdate(UserBase):
     password: str | None = None
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: str
+    role: UserRole
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserInDBBase(UserBase):

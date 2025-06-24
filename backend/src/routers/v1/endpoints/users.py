@@ -9,7 +9,7 @@ from ....dependencies import get_db
 router = APIRouter()
 
 
-@router.delete("/{user_id}", response_model=schemas.User)
+@router.delete("/{user_id}", response_model=schemas.UserResponse)
 def delete_user(
     *,
     db: Session = Depends(get_db),

@@ -1,5 +1,5 @@
 from .auth import Token, TokenPayload
-from .user import User, UserCreate, InvitationResponse, InvitationInfo
+from .user import User, UserCreate, InvitationResponse, InvitationInfo, UserResponse
 from .project import (
     Project,
     ProjectBase,
@@ -30,6 +30,7 @@ __all__ = [
     "TokenPayload",
     "User",
     "UserCreate",
+    "UserResponse",
     "InvitationResponse",
     "InvitationInfo",
     "Project",

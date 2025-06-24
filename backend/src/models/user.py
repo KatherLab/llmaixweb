@@ -8,13 +8,10 @@ from ..db.base import Base
 
 from typing import TYPE_CHECKING
 
+from ..utils.enums import UserRole
+
 if TYPE_CHECKING:
     from .project import Project
-
-
-class UserRole(str, enum.Enum):
-    ADMIN = "admin"
-    USER = "user"
 
 
 class User(Base):
@@ -25,7 +22,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String())
     full_name: Mapped[str] = mapped_column(String())
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, native_enum=False, length=10), default=UserRole.USER
+        Enum(UserRole, native_enum=False, length=10), default=UserRole.user
     )
     is_active: Mapped[bool] = mapped_column(default=True)
     projects: Mapped[list["Project"]] = relationship(back_populates="owner")  # noqa: F821
