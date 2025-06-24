@@ -2,8 +2,14 @@
 
 # LLMAIx (v2) Web
 
+![cover.png](static/cover.png)
+
 Provides a web interface for the LLMAIx framework, allowing users to interact with the library through a user-friendly interface.
 
+
+## Features
+
+![img.png](static/features.png)
 
 ## Get started
 

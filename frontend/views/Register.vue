@@ -232,7 +232,7 @@ async function handleSubmit() {
       }
     })
 
-    router.push('/landing')
+    router.push('/')
   } catch (err) {
     error.value = err.response?.data?.detail || 'Registration failed. Please try again.'
   } finally {

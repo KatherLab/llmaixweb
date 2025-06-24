@@ -1,18 +1,19 @@
 <!-- src/App.vue -->
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Navigation - Only shown when authenticated -->
-    <nav v-if="authStore.isAuthenticated" class="w-full bg-white shadow-sm">
+  <div class="min-h-screen flex flex-col bg-gray-50">
+    <!-- Navigation -->
+    <nav class="w-full bg-white shadow-sm">
       <div class="w-full px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
           <div class="flex items-center">
             <!-- Logo/Home -->
             <div class="flex-shrink-0 flex items-center mr-8">
-              <span class="text-xl font-bold text-gray-900">LLMAIx-v2</span>
+              <router-link to="/">
+                <span class="text-xl font-bold text-gray-900">LLMAIx-v2</span>
+              </router-link>
             </div>
-
-            <!-- Navigation Links -->
-            <div class="hidden sm:flex sm:space-x-0">
+            <!-- Navigation Links - Only shown when authenticated -->
+            <div v-if="authStore.isAuthenticated" class="hidden sm:flex sm:space-x-0">
               <!-- Admin Navigation -->
               <template v-if="authStore.isAdmin">
                 <router-link
@@ -25,18 +26,8 @@
                   User Management
                 </router-link>
               </template>
-
               <!-- All User Navigation -->
               <template>
-                <router-link
-                  to="/landing"
-                  class="inline-flex items-center px-4 h-16 text-sm font-medium border-b-2"
-                  :class="[$route.path === '/landing'
-                    ? 'text-blue-600 border-blue-600'
-                    : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300']"
-                >
-                  LLMAIx-v2
-                </router-link>
                 <router-link
                   to="/preprocessing"
                   class="inline-flex items-center px-4 h-16 text-sm font-medium border-b-2"
@@ -58,10 +49,9 @@
               </template>
             </div>
           </div>
-
-          <!-- User Menu -->
+          <!-- User Menu or Login Button -->
           <div class="flex items-center">
-            <div class="relative">
+            <div v-if="authStore.isAuthenticated" class="relative">
               <button
                 @click="showUserMenu = !showUserMenu"
                 class="flex items-center space-x-3 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -71,7 +61,6 @@
                   <span class="font-medium text-blue-800">{{ userInitials }}</span>
                 </div>
               </button>
-
               <!-- Dropdown -->
               <div
                 v-if="showUserMenu"
@@ -89,34 +78,61 @@
                 </a>
               </div>
             </div>
+            <div v-else>
+              <router-link to="/login" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Login
+              </router-link>
+            </div>
           </div>
         </div>
       </div>
     </nav>
-
     <!-- Main Content -->
-    <main class="w-full">
-      <div v-if="isLoading" class="fixed inset-0 bg-white bg-opacity-75 z-50 flex items-center justify-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+    <div class="flex-1">
+      <main class="w-full">
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </main>
+    </div>
+    <!-- Footer -->
+    <footer class="w-full bg-white border-t border-gray-200 py-4 text-center text-sm text-gray-500">
+      <div>
+        &copy; {{ new Date().getFullYear() }} KatherLab. Licensed under
+        <a href="https://www.gnu.org/licenses/agpl-3.0.de.html" target="_blank" rel="noopener noreferrer">
+          AGPL-3.0
+        </a>
       </div>
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
-    </main>
+      <div>
+        Frontend Version: {{ frontendVersion }} | Backend Version: {{ backendVersion }}
+      </div>
+    </footer>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { frontendVersion} from '@/version.js'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { api } from "@/services/api.js";
 
 const router = useRouter()
 const authStore = useAuthStore()
 const showUserMenu = ref(false)
 const isLoading = ref(false)
+const backendVersion = ref('');
+
+onMounted(async () => {
+  try {
+    const response = await api.get('/version');
+    backendVersion.value = response.data.version;
+  } catch (error) {
+    console.error('Error fetching backend version:', error);
+  }
+});
 
 onMounted(async () => {
   console.log("App.vue mounted");
@@ -125,7 +141,7 @@ onMounted(async () => {
     const currentPath = router.currentRoute.value.path;
 
     if (authStore.isAuthenticated && ['/', '/login'].includes(currentPath)) {
-      await router.push(authStore.isAdmin ? '/landing' : '/landing');
+      await router.push(authStore.isAdmin ? '/' : '/');
     }
   } catch (error) {
     console.error("Mount error:", error);

@@ -1,0 +1,1 @@
+export const frontendVersion = '0.0.1';

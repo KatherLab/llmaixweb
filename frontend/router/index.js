@@ -1,4 +1,4 @@
-// src/router/index.js
+// router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -13,10 +13,6 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
-      redirect: '/login'
-    },
-    {
       path: '/login',
       name: 'login',
       component: Login
@@ -28,10 +24,9 @@ const router = createRouter({
     },
     // Student routes
     {
-      path: '/landing',
+      path: '/',
       name: 'landing',
-      component: Landing,
-      meta: { requiresAuth: true }
+      component: Landing
     },
     {
     // New route for User Management
@@ -83,11 +78,11 @@ router.beforeEach(async (to, from, next) => {
       if (authStore.isAdmin) {
         console.log('User is admin, redirecting to admin dashboard.')
         authStore.navigationFlag = true
-        next('/landing')
+        next('/')
       } else {
         console.log('User is not admin, redirecting to student dashboard.')
         authStore.navigationFlag = true
-        next('/landing')
+        next('/')
       }
       return
     }
@@ -101,13 +96,13 @@ router.beforeEach(async (to, from, next) => {
       if (to.meta.role === 'admin' && userRole !== 'admin') {
         console.log('User is not admin, redirecting to user dashboard.')
         authStore.navigationFlag = true
-        next('/landing')
+        next('/')
         return
       }
       if (to.meta.role === 'user' && userRole !== 'user') {
         console.log('User is not user, redirecting to admin dashboard.')
         authStore.navigationFlag = true
-        next('/landing')
+        next('/')
         return
       }
     }

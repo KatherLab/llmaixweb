@@ -109,7 +109,7 @@ async function handleSubmit() {
     if (rememberMe.value) {
       // Implement remember me logic if needed
     }
-    router.push('/landing')
+    router.push('/')
   } catch (err) {
     error.value = err.response?.data?.detail || 'An error occurred during sign in'
   } finally {

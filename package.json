@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "node frontend/update-version.js",
+    "preserve": "node frontend/update-version.js",
     "dev": "node_modules/.bin/vite --config frontend/vite.config.js",
     "build": "node_modules/.bin/vite build --config frontend/vite.config.js",
     "preview": "node_modules/.bin/vite preview --config frontend/vite.config.js"

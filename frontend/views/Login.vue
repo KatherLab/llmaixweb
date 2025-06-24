@@ -83,7 +83,7 @@ async function handleSubmit() {
 
     await authStore.setToken(response.data.access_token);
     await authStore.fetchUser();
-    router.push(authStore.isAdmin ? '/landing' : '/landing');
+    router.push(authStore.isAdmin ? '/' : '/');
   } catch (err) {
     error.value = 'Invalid email or password';
     console.error('Login error:', err);

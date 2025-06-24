@@ -7,7 +7,6 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   }
-  // Removed timeout setting to use default axios behavior
 });
 
 // Add request interceptor

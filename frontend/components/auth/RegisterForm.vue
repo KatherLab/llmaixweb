@@ -151,7 +151,7 @@ async function handleSubmit() {
 
     // Login after successful registration
     await authStore.login(email.value, password.value)
-    router.push('/landing')
+    router.push('/')
   } catch (err) {
     error.value = err.response?.data?.detail || 'An error occurred during registration'
   } finally {
