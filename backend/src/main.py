@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .db.session import init_db
 from .routers.v1.endpoints import auth, users, projects
+from llmaix.__version__ import __version__
 
 app = FastAPI()
 
@@ -32,3 +33,7 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "Hello, hello!"}
+
+@app.get("/version")
+async def version():
+    return {"version": __version__, "description": "LLMAIx (v2) backend API"}
