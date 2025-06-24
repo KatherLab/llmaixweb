@@ -8,7 +8,7 @@ database.db
 # frontend
 .DS_Store
 node_modules
-/dist
+*/dist
 
 .env.local
 
