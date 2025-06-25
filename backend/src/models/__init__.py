@@ -15,6 +15,8 @@ from .project import (
     PreprocessingTask,
     PreprocessingMethod,
     PreprocessingTaskStatus,
+    GroundTruth,
+    Evaluation,
 )
 
 __all__ = [
@@ -36,4 +38,6 @@ __all__ = [
     "PreprocessingTask",
     "PreprocessingMethod",
     "PreprocessingTaskStatus",
+    "GroundTruth",
+    "Evaluation",
 ]

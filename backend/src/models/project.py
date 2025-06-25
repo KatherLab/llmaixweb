@@ -62,6 +62,9 @@ class Project(Base):
     preprocessing_tasks: Mapped[list["PreprocessingTask"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    ground_truth_files: Mapped[list["GroundTruth"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     owner: Mapped["User"] = relationship(back_populates="projects")  # noqa: F821
 
@@ -238,6 +241,9 @@ class Trial(Base):
     results: Mapped[list["TrialResult"]] = relationship(
         back_populates="trial", cascade="all, delete-orphan"
     )
+    evaluations: Mapped[list["Evaluation"]] = relationship(
+        back_populates="trial", cascade="all, delete-orphan"
+    )
 
 
 class TrialResult(Base):
@@ -320,3 +326,44 @@ preprocessing_task_document_association = Table(
     ),
     Column("document_id", ForeignKey("documents.id"), primary_key=True),
 )
+
+
+class GroundTruth(Base):
+    __tablename__ = "ground_truth"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    format: Mapped[str] = mapped_column(String(10), nullable=False)  # json, csv, xlsx
+    file_uuid: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
+    comparison_options: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=True
+    )
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    project: Mapped["Project"] = relationship(back_populates="ground_truth_files")
+    evaluations: Mapped[list["Evaluation"]] = relationship(
+        back_populates="ground_truth", cascade="all, delete-orphan"
+    )
+
+
+class Evaluation(Base):
+    __tablename__ = "evaluations"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trial_id: Mapped[int] = mapped_column(ForeignKey("trials.id"), nullable=False)
+    groundtruth_id: Mapped[int] = mapped_column(
+        ForeignKey("ground_truth.id"), nullable=False
+    )
+    metrics: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), nullable=False)
+    field_metrics: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=False
+    )
+    document_metrics: Mapped[list] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    trial: Mapped["Trial"] = relationship(back_populates="evaluations")
+    ground_truth: Mapped["GroundTruth"] = relationship(back_populates="evaluations")

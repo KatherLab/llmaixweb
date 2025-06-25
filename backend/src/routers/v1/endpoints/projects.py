@@ -141,7 +141,7 @@ def delete_project(
     return schemas.Project.model_validate(existing_project)
 
 
-@router.get("/{project_id}/files", response_model=list[schemas.File])
+@router.get("/{project_id}/file", response_model=list[schemas.File])
 def get_project_files(
     *,
     db: Session = Depends(get_db),
@@ -387,6 +387,7 @@ def preprocess_project_data(
     db.add(preprocessing_task_db)
     db.commit()
     db.refresh(preprocessing_task_db)
+    # TODO: Disable file loading when using celery
     files = cast(
         list[models.File],
         (
@@ -427,23 +428,32 @@ def preprocess_project_data(
                 status_code=500, detail="Preprocessing failed: " + str(e)
             )
     else:
-        from ....celery.preprocessing import preprocess_file_celery
+        print("Preprocess using celery task.")
+        from ....celery import preprocessing
+        from ....celery.celery_config import celery_app
 
-        preprocess_file_celery.delay(
-            files=files,
-            preprocessing_task_id=preprocessing_task_db.id,
-            pdf_backend=preprocessing_task.pdf_backend,
-            ocr_backend=preprocessing_task.ocr_backend,
-            use_ocr=preprocessing_task.use_ocr,
-            force_ocr=preprocessing_task.force_ocr,
-            ocr_languages=preprocessing_task.ocr_languages,
-            ocr_model=preprocessing_task.ocr_model,
-            llm_model=preprocessing_task.llm_model,
-            base_url=preprocessing_task.base_url,
-            api_key=preprocessing_task.api_key,
-            db_session=db,
-            project_id=project_id,
-        )
+        print("Loaded celery successfully")
+
+        if celery_app is not None:
+            preprocessing.preprocess_file_celery.delay(  # type: ignore
+                file_ids=preprocessing_task.file_ids,
+                preprocessing_task_id=preprocessing_task_db.id,
+                pdf_backend=preprocessing_task.pdf_backend,
+                ocr_backend=preprocessing_task.ocr_backend,
+                use_ocr=preprocessing_task.use_ocr,
+                force_ocr=preprocessing_task.force_ocr,
+                ocr_languages=preprocessing_task.ocr_languages,
+                ocr_model=preprocessing_task.ocr_model,
+                llm_model=preprocessing_task.llm_model,
+                base_url=preprocessing_task.base_url,
+                api_key=preprocessing_task.api_key,
+                project_id=project_id,
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Celery task for preprocessing is not available.",
+            )
     return schemas.PreprocessingTask.model_validate(preprocessing_task_db)
 
 
@@ -727,7 +737,7 @@ def delete_schema(
     return schemas.Schema.model_validate(schema)
 
 
-@router.post("/{project_id}/trials", response_model=schemas.Trial)
+@router.post("/{project_id}/trial", response_model=schemas.Trial)
 def create_trial(
     project_id: int,
     trial: schemas.TrialCreate,
@@ -808,23 +818,98 @@ def create_trial(
                 status_code=500, detail="Information extraction failed: " + str(e)
             )
     else:
-        from ....celery.info_extraction import extract_info_celery
+        from ....celery import info_extraction
+        from ....celery.celery_config import celery_app
 
-        extract_info_celery.delay(
-            trial_id=trial_db.id,
-            document_ids=trial.document_ids,
-            llm_model=trial.llm_model,
-            api_key=trial.api_key,
-            base_url=trial.base_url,
-            schema_id=trial.schema_id,
-            db_session=db,
-            project_id=project_id,
-        )
+        if celery_app is not None:
+            info_extraction.extract_info_celery.delay( # type: ignore
+                trial_id=trial_db.id,
+                document_ids=trial.document_ids,
+                llm_model=trial.llm_model,
+                api_key=trial.api_key,
+                base_url=trial.base_url,
+                schema_id=trial.schema_id,
+                project_id=project_id,
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Celery task for information extraction is not available.",
+            )
 
     return schemas.Trial.model_validate(trial_db)
 
 
-@router.get("/{project_id}/trials/{trial_id}", response_model=schemas.Trial)
+@router.delete("/{project_id}/trial/{trial_id}", response_model=schemas.Trial)
+def delete_trial(
+    project_id: int,
+    trial_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Trial:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete trials for this project"
+        )
+
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(
+            models.Trial.project_id == project_id, models.Trial.id == trial_id
+        )
+    ).scalar_one_or_none()
+
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+
+    # Check if the trial has results
+    results = (
+        db.execute(
+            select(models.TrialResult).where(models.TrialResult.trial_id == trial_id)
+        )
+        .scalars()
+        .all()
+    )
+    if results:
+        raise HTTPException(
+            status_code=400, detail="Cannot delete trial with existing results"
+        )
+
+    db.delete(trial)
+    db.commit()
+
+    return schemas.Trial.model_validate(trial)
+
+
+@router.get("/{project_id}/trial", response_model=list[schemas.Trial])
+def get_trials(
+    project_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[schemas.Trial]:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's trials"
+        )
+
+    trials = list(
+        db.execute(select(models.Trial).where(models.Trial.project_id == project_id))
+        .scalars()
+        .all()
+    )
+    return [schemas.Trial.model_validate(trial) for trial in trials]
+
+
+@router.get("/{project_id}/trial/{trial_id}", response_model=schemas.Trial)
 def get_trial(
     project_id: int,
     trial_id: int,
@@ -885,3 +970,611 @@ def test_llm_connection_endpoint(
     if api_key is None or base_url is None or llm_model is None:
         raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
     return test_llm_connection(api_key, base_url, llm_model)
+
+
+@router.post("/{project_id}/groundtruth", response_model=schemas.GroundTruth)
+def upload_groundtruth(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file: UploadFile = File(...),
+    name: str = Form(None),
+    format: str = Form(...),  # 'json', 'csv', or 'xlsx'
+    comparison_options: str = Form(None),
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruth:
+    """Upload ground truth file for evaluation."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to upload ground truth to this project",
+        )
+
+    # Process comparison options if provided
+    comp_options = {}
+    if comparison_options:
+        try:
+            comp_options = json.loads(comparison_options)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=400, detail="Invalid comparison options JSON"
+            )
+
+    # Save the file content
+    file_content = file.file.read()
+    file_uuid = save_file(file_content)
+
+    # Create ground truth record
+    gt = models.GroundTruth(
+        project_id=project_id,
+        name=name or file.filename,
+        format=format,
+        file_uuid=file_uuid,
+        comparison_options=comp_options,
+    )
+
+    db.add(gt)
+    db.commit()
+    db.refresh(gt)
+
+    return schemas.GroundTruth.model_validate(gt)
+
+
+@router.get("/{project_id}/groundtruth", response_model=list[schemas.GroundTruth])
+def get_groundtruth_files(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> list[schemas.GroundTruth]:
+    """Get all ground truth files for a project."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's ground truth files",
+        )
+
+    ground_truths = list(
+        db.execute(
+            select(models.GroundTruth).where(
+                models.GroundTruth.project_id == project_id
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    return [schemas.GroundTruth.model_validate(gt) for gt in ground_truths]
+
+
+@router.get(
+    "/{project_id}/groundtruth/{groundtruth_id}", response_model=schemas.GroundTruth
+)
+def get_groundtruth(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruth:
+    """Get a specific ground truth file."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's ground truth",
+        )
+
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    return schemas.GroundTruth.model_validate(groundtruth)
+
+
+@router.delete(
+    "/{project_id}/groundtruth/{groundtruth_id}", response_model=schemas.GroundTruth
+)
+def delete_groundtruth(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruth:
+    """Delete a ground truth file."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to delete this project's ground truth",
+        )
+
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Delete the file content from storage
+    try:
+        remove_file(groundtruth.file_uuid)
+    except FileNotFoundError:
+        # Continue deletion even if file not found in storage
+        pass
+
+    # Remove any evaluations using this ground truth
+    evaluations = (
+        db.execute(
+            select(models.Evaluation).where(
+                models.Evaluation.groundtruth_id == groundtruth_id
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    for evaluation in evaluations:
+        db.delete(evaluation)
+
+    db.delete(groundtruth)
+    db.commit()
+
+    return schemas.GroundTruth.model_validate(groundtruth)
+
+
+@router.get("/{project_id}/evaluation", response_model=list[schemas.Evaluation])
+def get_evaluations(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int = Query(...),
+    current_user: models.User = Depends(get_current_user),
+) -> list[schemas.Evaluation]:
+    """Get evaluation results for all trials using a specific ground truth."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's evaluations",
+        )
+
+    # Verify ground truth exists for this project
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Get all evaluations for this ground truth
+    evaluations = list(
+        db.execute(
+            select(models.Evaluation).where(
+                models.Evaluation.groundtruth_id == groundtruth_id
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    return [schemas.Evaluation.model_validate(eval) for eval in evaluations]
+
+
+@router.get(
+    "/{project_id}/evaluation/{evaluation_id}", response_model=schemas.EvaluationDetail
+)
+def get_evaluation_detail(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    evaluation_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.EvaluationDetail:
+    """Get detailed evaluation for a specific trial/ground truth pair."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's evaluations",
+        )
+
+    evaluation: models.Evaluation | None = db.execute(
+        select(models.Evaluation).where(models.Evaluation.id == evaluation_id)
+    ).scalar_one_or_none()
+
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+
+    # Ensure the evaluation belongs to a trial in this project
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(
+            models.Trial.id == evaluation.trial_id,
+            models.Trial.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+
+    if not trial:
+        raise HTTPException(
+            status_code=404, detail="Evaluation not found for this project"
+        )
+
+    # Get detailed evaluation data
+    evaluation_detail = schemas.EvaluationDetail(
+        id=evaluation.id,
+        trial_id=evaluation.trial_id,
+        groundtruth_id=evaluation.groundtruth_id,
+        model=trial.llm_model,
+        metrics=evaluation.metrics,
+        document_count=len(evaluation.document_metrics),
+        fields=evaluation.field_metrics,
+        documents=evaluation.document_metrics,
+        created_at=evaluation.created_at,
+    )
+
+    return evaluation_detail
+
+
+@router.get("/{project_id}/evaluation/download", response_class=Response)
+def download_evaluation_metrics(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int = Query(...),
+    current_user: models.User = Depends(get_current_user),
+) -> Response:
+    """Download evaluation metrics as CSV."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's evaluations",
+        )
+
+    # Verify ground truth exists for this project
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Get all evaluations for this ground truth
+    evaluations = list(
+        db.execute(
+            select(models.Evaluation).where(
+                models.Evaluation.groundtruth_id == groundtruth_id
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    # Generate CSV content
+    import csv
+    import io
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    writer.writerow(
+        [
+            "Evaluation ID",
+            "Trial ID",
+            "Model",
+            "Accuracy",
+            "Precision",
+            "Recall",
+            "F1 Score",
+            "Document Count",
+            "Created At",
+        ]
+    )
+
+    # Write data rows
+    for eval in evaluations:
+        trial: models.Trial | None = db.execute(
+            select(models.Trial).where(models.Trial.id == eval.trial_id)
+        ).scalar_one_or_none()
+
+        model = trial.llm_model if trial else "Unknown"
+
+        writer.writerow(
+            [
+                eval.id,
+                eval.trial_id,
+                model,
+                eval.metrics.get("accuracy", "N/A"),
+                eval.metrics.get("precision", "N/A"),
+                eval.metrics.get("recall", "N/A"),
+                eval.metrics.get("f1_score", "N/A"),
+                len(eval.document_metrics),
+                eval.created_at.isoformat(),
+            ]
+        )
+
+    # Return CSV response
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=evaluation_metrics_{project_id}.csv"
+        },
+    )
+
+
+@router.get("/{project_id}/trial/{trial_id}/download", response_class=Response)
+def download_trial_results(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    trial_id: int,
+    format: str = Query("json", enum=["json", "csv"]),
+    include_content: bool = Query(True),
+    current_user: models.User = Depends(get_current_user),
+) -> Response:
+    """Download trial results in specified format."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's trials"
+        )
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(
+            models.Trial.project_id == project_id, models.Trial.id == trial_id
+        )
+    ).scalar_one_or_none()
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+    # Get trial results
+    results = list(
+        db.execute(
+            select(models.TrialResult).where(models.TrialResult.trial_id == trial_id)
+        )
+        .scalars()
+        .all()
+    )
+    if not results:
+        raise HTTPException(status_code=404, detail="No results found for this trial")
+    # Handle different format types
+    if format == "json":
+        # For JSON, create a JSON file for each document result
+        import zipfile
+        import io
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+            added_files = set()
+            for i, result in enumerate(results):
+                # Get document content if needed
+                document: models.Document | None = db.execute(
+                    select(models.Document).where(
+                        models.Document.id == result.document_id
+                    )
+                ).scalar_one_or_none()
+                if not document:
+                    continue
+
+                # Create result data
+                result_data = {
+                    "result": result.result,
+                    "metadata": {
+                        "trial_id": trial.id,
+                        "document_id": result.document_id,
+                        "created_at": result.created_at.isoformat(),
+                    },
+                }
+                if include_content:
+                    result_data["content"] = document.text
+                    # Add preprocessed or original file to zip
+                    file_id = document.preprocessed_file_id or document.original_file_id
+                    file: models.File | None = db.execute(
+                        select(models.File).where(models.File.id == file_id)
+                    ).scalar_one_or_none()
+                    if file and file_id not in added_files:
+                        added_files.add(file_id)
+                        file_content = get_file(file.file_uuid)
+                        file_path = f"files/{file.file_uuid}_{file.file_name}"
+                        zipf.writestr(file_path, file_content)
+
+                # Add to ZIP
+                zipf.writestr(
+                    f"document_{result.document_id}.json",
+                    json.dumps(result_data, indent=2),
+                )
+        zip_buffer.seek(0)
+        return Response(
+            content=zip_buffer.getvalue(),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename=trial_{trial_id}_results.zip"
+            },
+        )
+    elif format == "csv":
+        # For CSV, flatten the structure
+        import csv
+        import io
+        import zipfile
+
+        if include_content:
+            output = io.BytesIO()
+            with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zipf:
+                # Extract all keys from all results to create CSV columns
+                all_keys = set()
+                for result in results:
+                    all_keys.update(_extract_keys(result.result))
+                # Sort keys
+                all_keys = sorted(list(all_keys))
+                # Create header row
+                header = ["document_id", "trial_id", "created_at"]
+                header.append("document_content")
+                header.extend(all_keys)
+                csv_output = io.StringIO()
+                writer = csv.DictWriter(csv_output, fieldnames=header)
+                writer.writeheader()
+                added_files = set()
+                # Write data rows
+                for result in results:
+                    row = {
+                        "document_id": result.document_id,
+                        "trial_id": trial.id,
+                        "created_at": result.created_at.isoformat(),
+                    }
+                    # Add document content if needed
+                    document: models.Document | None = db.execute(
+                        select(models.Document).where(
+                            models.Document.id == result.document_id
+                        )
+                    ).scalar_one_or_none()
+                    row["document_content"] = document.text if document else ""
+                    # Add preprocessed or original file to zip
+                    if document:
+                        file_id = (
+                            document.preprocessed_file_id or document.original_file_id
+                        )
+                        file: models.File | None = db.execute(
+                            select(models.File).where(models.File.id == file_id)
+                        ).scalar_one_or_none()
+                        if file and file_id not in added_files:
+                            added_files.add(file_id)
+                            file_content = get_file(file.file_uuid)
+                            file_path = f"files/{file.file_uuid}_{file.file_name}"
+                            zipf.writestr(file_path, file_content)
+
+                    # Add flattened result data
+                    flattened = _flatten_dict(result.result)
+                    for key, value in flattened.items():
+                        row[key] = value
+                    writer.writerow(row)
+                zipf.writestr("results.csv", csv_output.getvalue())
+            output.seek(0)
+            return Response(
+                content=output.getvalue(),
+                media_type="application/zip",
+                headers={
+                    "Content-Disposition": f"attachment; filename=trial_{trial_id}_results.zip"
+                },
+            )
+        else:
+            output = io.StringIO()
+            # Extract all keys from all results to create CSV columns
+            all_keys = set()
+            for result in results:
+                all_keys.update(_extract_keys(result.result))
+            # Sort keys
+            all_keys = sorted(list(all_keys))
+            # Create header row
+            header = ["document_id", "trial_id", "created_at"]
+            header.extend(all_keys)
+            writer = csv.DictWriter(output, fieldnames=header)
+            writer.writeheader()
+            # Write data rows
+            for result in results:
+                row = {
+                    "document_id": result.document_id,
+                    "trial_id": trial.id,
+                    "created_at": result.created_at.isoformat(),
+                }
+                # Add flattened result data
+                flattened = _flatten_dict(result.result)
+                for key, value in flattened.items():
+                    row[key] = value
+                writer.writerow(row)
+            return Response(
+                content=output.getvalue(),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename=trial_{trial_id}_results.csv"
+                },
+            )
+
+    raise HTTPException(status_code=404, detail="No results found for this trial")
+
+
+def _flatten_dict(d, parent_key="", sep="_"):
+    """Flatten a nested dictionary."""
+    items = {}
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.update(_flatten_dict(v, new_key, sep=sep))
+        else:
+            items[new_key] = v
+    return items
+
+
+def _extract_keys(d, parent_key="", sep="_"):
+    """Extract all keys from a nested dictionary."""
+    keys = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            keys.extend(_extract_keys(v, new_key, sep=sep))
+        else:
+            keys.append(new_key)
+    return keys

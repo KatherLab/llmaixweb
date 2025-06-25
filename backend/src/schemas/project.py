@@ -242,6 +242,60 @@ class PreprocessingTask(PreprocessingTaskBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class GroundTruthBase(BaseModel):
+    name: str | None = None
+    format: str | None = None  # json, csv, xlsx
+    comparison_options: dict | None = None
+
+
+class GroundTruthCreate(GroundTruthBase):
+    name: str
+    format: str
+
+
+class GroundTruth(GroundTruthBase):
+    id: int
+    project_id: int
+    file_uuid: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EvaluationBase(BaseModel):
+    trial_id: int
+    groundtruth_id: int
+    metrics: dict
+    field_metrics: dict
+    document_metrics: list
+
+
+class EvaluationCreate(EvaluationBase):
+    pass
+
+
+class Evaluation(EvaluationBase):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EvaluationDetail(BaseModel):
+    id: int
+    trial_id: int
+    groundtruth_id: int
+    model: str
+    metrics: dict
+    document_count: int
+    fields: dict
+    documents: list
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 from .user import User  # noqa: E402, F401
 
 Project.model_rebuild()

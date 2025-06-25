@@ -84,7 +84,7 @@ const steps = [
   { id: 'documents', name: 'Documents' },
   { id: 'schemas', name: 'JSON Schemas' },
   { id: 'trials', name: 'Run Trials' },
-  { id: 'results', name: 'Results' }
+  { id: 'evaluation', name: 'Evaluation' }
 ];
 
 const selectedStep = ref(props.currentStep);

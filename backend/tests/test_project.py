@@ -207,7 +207,7 @@ def test_get_project_files(client, api_url):
     response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
-    response = client.get(f"{api_url}/project/{project_id}/files", headers=headers)
+    response = client.get(f"{api_url}/project/{project_id}/file", headers=headers)
     assert response.status_code == 200
     assert len(response.json()) == 0  # No files uploaded yet
 
@@ -738,7 +738,7 @@ def test_delete_schema_referenced_by_trial(client, api_url):
         "bypass_celery": True,
     }
     response = client.post(
-        f"{api_url}/project/{project_id}/trials", headers=headers, json=trial_data
+        f"{api_url}/project/{project_id}/trial", headers=headers, json=trial_data
     )
     assert response.status_code == 200
 
@@ -843,14 +843,14 @@ def test_create_trial_with_preprocessing_and_extract_information(client, api_url
         "bypass_celery": True,
     }
     response = client.post(
-        f"{api_url}/project/{project_id}/trials", headers=headers, json=trial_data
+        f"{api_url}/project/{project_id}/trial", headers=headers, json=trial_data
     )
     assert response.status_code == 200
     trial_id = response.json()["id"]
 
     # Check the trial result
     response = client.get(
-        f"{api_url}/project/{project_id}/trials/{trial_id}", headers=headers
+        f"{api_url}/project/{project_id}/trial/{trial_id}", headers=headers
     )
 
     print(response.json())

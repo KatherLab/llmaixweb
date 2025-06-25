@@ -24,6 +24,11 @@ from .project import (
     Schema,
     SchemaCreate,
     SchemaUpdate,
+    GroundTruthCreate,
+    GroundTruth,
+    Evaluation,
+    EvaluationCreate,
+    EvaluationDetail,
 )
 
 __all__ = [
@@ -57,4 +62,9 @@ __all__ = [
     "Schema",
     "SchemaCreate",
     "SchemaUpdate",
+    "GroundTruthCreate",
+    "GroundTruth",
+    "Evaluation",
+    "EvaluationCreate",
+    "EvaluationDetail",
 ]

@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     OPENAI_API_MODEL: str = ""
     OPENAI_NO_API_CHECK: bool = False
 
+    DISABLE_CELERY: bool = False
+
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
 
     @property

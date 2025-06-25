@@ -219,7 +219,7 @@ const previewUrl = ref('');
 const fetchFiles = async () => {
   isLoading.value = true;
   try {
-    const response = await api.get(`/project/${props.projectId}/files`);
+    const response = await api.get(`/project/${props.projectId}/file`);
     files.value = response.data;
   } catch (err) {
     error.value = 'Failed to load files';

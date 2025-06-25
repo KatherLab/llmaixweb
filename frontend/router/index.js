@@ -9,7 +9,6 @@ import Landing from '../views/Landing.vue'
 import AdminUserManagement from '../views/AdminUserManagement.vue'
 import ProjectOverview from '@/views/ProjectOverview.vue'
 import ProjectDetail from '@/views/ProjectDetail.vue'
-import TrialResults from '@/views/TrialResults.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -39,12 +38,6 @@ const router = createRouter({
       path: '/projects/:projectId',
       name: 'project-detail',
       component: ProjectDetail,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/projects/:id/trials/:trialId',
-      name: 'trial-results',
-      component: TrialResults,
       meta: { requiresAuth: true }
     },
     {

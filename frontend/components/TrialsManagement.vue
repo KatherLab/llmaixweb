@@ -17,17 +17,15 @@
         <button
           @click="openCreateTrialModal"
           class="px-4 py-2 rounded-md font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
-          :disabled="isLoadingTrials || schemas.length === 0 || documents.length === 0"
+          :disabled="isLoading || schemas.length === 0 || documents.length === 0"
+          :title="`isLoading: ${isLoading}, schemas.length: ${schemas.length}, documents.length: ${documents.length}`"
         >
           Start New Trial
         </button>
       </div>
     </div>
-
-    <ErrorBanner v-if="trialsError" :message="trialsError" />
-
-    <LoadingSpinner v-if="isLoadingTrials" />
-
+    <ErrorBanner v-if="error" :message="error" />
+    <LoadingSpinner v-if="isLoading" />
     <EmptyState
       v-else-if="trials.length === 0"
       title="No trials yet"
@@ -42,22 +40,20 @@
         </svg>
       </template>
     </EmptyState>
-
     <div v-else-if="filteredTrials.length === 0" class="text-center py-8 bg-gray-50 rounded-md">
       <p>No trials match your filter criteria.</p>
     </div>
-
     <div v-else class="grid gap-4">
       <TrialCard
         v-for="trial in filteredTrials"
         :key="trial.id"
         :trial="trial"
+        :projectId="projectId"
         @view="viewTrialResults"
         @retry="retryTrial"
         @delete="confirmDeleteTrial"
       />
     </div>
-
     <CreateTrialModal
       v-if="isModalOpen"
       :open="isModalOpen"
@@ -67,7 +63,6 @@
       @close="isModalOpen = false"
       @create="handleCreateTrial"
     />
-
     <ConfirmationDialog
       v-if="isConfirmDialogOpen"
       :open="isConfirmDialogOpen"
@@ -76,21 +71,94 @@
       @confirm="deleteTrial"
       @cancel="isConfirmDialogOpen = false"
     />
+    <TrialResults
+      v-if="showTrialResultsModal"
+      :isModal="true"
+      :projectId="props.projectId"
+      :trialId="selectedTrialId"
+      @close="showTrialResultsModal = false"
+    />
+    <ModalDialog
+      v-if="showDownloadModal"
+      title="Download Trial Results"
+      @close="showDownloadModal = false"
+    >
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Format</label>
+          <div class="mt-2 space-y-2">
+            <div class="flex items-center">
+              <input
+                id="format-json"
+                v-model="downloadFormat"
+                type="radio"
+                value="json"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+              />
+              <label for="format-json" class="ml-2 block text-sm text-gray-700">
+                JSON (one file per document)
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input
+                id="format-csv"
+                v-model="downloadFormat"
+                type="radio"
+                value="csv"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+              />
+              <label for="format-csv" class="ml-2 block text-sm text-gray-700">
+                CSV (flattened structure)
+              </label>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Include</label>
+          <div class="mt-2">
+            <div class="flex items-center">
+              <input
+                id="include-content"
+                v-model="includeContent"
+                type="checkbox"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label for="include-content" class="ml-2 block text-sm text-gray-700">
+                Include document content
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end space-x-3">
+          <button
+            type="button"
+            @click="showDownloadModal = false"
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            @click="downloadTrialResults(trialToDownload, { format: downloadFormat, includeContent }); showDownloadModal = false;"
+            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Download
+          </button>
+        </div>
+      </div>
+    </ModalDialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch, provide } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { storeToRefs } from 'pinia';
 import { useToast } from 'vue-toastification';
-import { useProjectStore } from '@/stores/projectStore';
-import { useTrialsStore } from '@/stores/trialsStore';
-import { useDocumentsStore } from '@/stores/documentStore';
-import { useSchemasStore } from '@/stores/schemasStore';
-
+import { api } from '@/services/api';
 import CreateTrialModal from '@/components/CreateTrialModal.vue';
 import TrialCard from '@/components/TrialCard.vue';
+import TrialResults from '@/components/TrialResults.vue';
+import ModalDialog from '@/components/ModalDialog.vue';
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
@@ -99,24 +167,29 @@ import ErrorBanner from '@/components/ErrorBanner.vue';
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
-const projectStore = useProjectStore();
-const trialsStore = useTrialsStore();
-const documentsStore = useDocumentsStore();
-const schemasStore = useSchemasStore();
 
-const { currentProject } = storeToRefs(projectStore);
-const { trials, isLoading: isLoadingTrials, error: trialsError } = storeToRefs(trialsStore);
-const { documents } = storeToRefs(documentsStore);
-const { schemas } = storeToRefs(schemasStore);
+const props = defineProps({
+  projectId: {
+    type: [String, Number],
+    required: true
+  }
+});
 
-const projectId = computed(() => parseInt(route.params.id));
+const documents = ref([]);
+const schemas = ref([]);
+const trials = ref([]);
+const isLoading = ref(true);
+const error = ref(null);
 const isModalOpen = ref(false);
 const isConfirmDialogOpen = ref(false);
 const trialToDelete = ref(null);
-const pollingIntervals = ref([]);
 const showCompleted = ref(true);
+const availableModels = ref([
+  'Llama-4-Maverick-17B-128E-Instruct-FP8',
+  'GPT-4o',
+  'Claude-3-Opus'
+]);
 
-// Filtered trials based on showCompleted toggle
 const filteredTrials = computed(() => {
   if (showCompleted.value) {
     return trials.value;
@@ -124,85 +197,40 @@ const filteredTrials = computed(() => {
   return trials.value.filter(trial => trial.status !== 'completed' && trial.status !== 'failed');
 });
 
-// Compute options for model selection
-const availableModels = ref([
-  'Llama-4-Maverick-17B-128E-Instruct-FP8',
-  'GPT-4o',
-  'Claude-3-Opus'
-]);
+const showTrialResultsModal = ref(false);
+const selectedTrialId = ref(null);
 
-// Fetch data on component mount
+const viewTrialResults = (trial) => {
+  selectedTrialId.value = trial.id;
+  showTrialResultsModal.value = true;
+};
+
 onMounted(async () => {
-  if (!currentProject.value || currentProject.value.id !== projectId.value) {
-    await projectStore.fetchProject(projectId.value);
-  }
-  await Promise.all([
-    trialsStore.fetchTrials(projectId.value),
-    documentsStore.fetchDocuments(projectId.value),
-    schemasStore.fetchSchemas(projectId.value)
-  ]);
+  try {
+    const [documentsResponse, schemasResponse, trialsResponse] = await Promise.all([
+      api.get(`/project/${props.projectId}/document`),
+      api.get(`/project/${props.projectId}/schema`),
+      api.get(`/project/${props.projectId}/trial`)
+    ]);
 
-  // Setup polling for in-progress trials
-  setupPollingForActiveTrials();
+    documents.value = documentsResponse.data;
+    schemas.value = schemasResponse.data;
+    trials.value = trialsResponse.data;
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    isLoading.value = false;
+  }
 });
 
-// Watch for changes in trials to update polling
-watch(trials, () => {
-  // Clear existing polling intervals
-  clearPollingIntervals();
-  // Set up new polling for active trials
-  setupPollingForActiveTrials();
-}, { deep: true });
-
-// Clean up polling intervals when component unmounts
-onUnmounted(() => {
-  clearPollingIntervals();
-});
-
-// Setup polling for active trials
-const setupPollingForActiveTrials = () => {
-  const activeTrials = trials.value.filter(
-    trial => !['completed', 'failed'].includes(trial.status)
-  );
-
-  if (activeTrials.length > 0) {
-    activeTrials.forEach(trial => {
-      const intervalId = setInterval(() => {
-        trialsStore.fetchTrial(projectId.value, trial.id);
-      }, 5000); // Poll every 5 seconds
-
-      pollingIntervals.value.push(intervalId);
-    });
-  }
-};
-
-// Clear all polling intervals
-const clearPollingIntervals = () => {
-  pollingIntervals.value.forEach(intervalId => {
-    clearInterval(intervalId);
-  });
-  pollingIntervals.value = [];
-};
-
-// Open modal to create a new trial
 const openCreateTrialModal = () => {
-  if (schemas.value.length === 0) {
-    toast.error('You need to create at least one schema before you can run a trial');
-    return;
-  }
-
-  if (documents.value.length === 0) {
-    toast.error('You need to have processed documents before you can run a trial');
-    return;
-  }
-
   isModalOpen.value = true;
 };
 
-// Handle trial creation
 const handleCreateTrial = async (trialData) => {
   try {
-    await trialsStore.createTrial(projectId.value, trialData);
+    const response = await api.post(`/project/${props.projectId}/trial`, trialData);
+    trials.value.push(response.data);
     toast.success('Trial created successfully');
     isModalOpen.value = false;
   } catch (err) {
@@ -210,18 +238,17 @@ const handleCreateTrial = async (trialData) => {
   }
 };
 
-// Confirm trial deletion
 const confirmDeleteTrial = (trial) => {
   trialToDelete.value = trial;
   isConfirmDialogOpen.value = true;
 };
 
-// Delete a trial
 const deleteTrial = async () => {
   if (!trialToDelete.value) return;
 
   try {
-    await trialsStore.deleteTrial(projectId.value, trialToDelete.value.id);
+    await api.delete(`/project/${props.projectId}/trial/${trialToDelete.value.id}`);
+    trials.value = trials.value.filter(trial => trial.id !== trialToDelete.value.id);
     toast.success('Trial deleted successfully');
   } catch (err) {
     toast.error(`Failed to delete trial: ${err.message || 'Unknown error'}`);
@@ -231,18 +258,6 @@ const deleteTrial = async () => {
   }
 };
 
-// View trial results
-const viewTrialResults = (trial) => {
-  router.push({
-    name: 'trial-results',
-    params: {
-      id: projectId.value,
-      trialId: trial.id
-    }
-  });
-};
-
-// Retry a trial with same configuration
 const retryTrial = async (trial) => {
   try {
     const trialData = {
@@ -253,14 +268,47 @@ const retryTrial = async (trial) => {
       base_url: trial.base_url
     };
 
-    await trialsStore.createTrial(projectId.value, trialData);
+    const response = await api.post(`/project/${props.projectId}/trial`, trialData);
+    trials.value.push(response.data);
     toast.success('Trial restarted successfully');
   } catch (err) {
     toast.error(`Failed to restart trial: ${err.message || 'Unknown error'}`);
   }
 };
 
-// Providing context for child components
-provide('projectId', projectId);
-provide('availableModels', availableModels);
+const downloadTrialResults = async (trial, options = {}) => {
+  const { format = 'json', includeContent = true } = options;
+
+  try {
+    const response = await api.get(
+      `/project/${props.projectId}/trial/${trial.id}/download?format=${format}&include_content=${includeContent}`,
+      { responseType: 'blob' }
+    );
+
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `trial_${trial.id}_results.${format}`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    toast.success('Trial results downloaded successfully');
+  } catch (err) {
+    toast.error(`Failed to download trial results: ${err.message}`);
+    console.error(err);
+  }
+};
+
+const trialToDownload = ref(null);
+const showDownloadModal = ref(false);
+
+const openDownloadModal = (trial) => {
+  trialToDownload.value = trial;
+  showDownloadModal.value = true;
+};
+
+const downloadFormat = ref('json');
+const includeContent = ref(true);
 </script>

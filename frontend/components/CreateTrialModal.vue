@@ -51,7 +51,6 @@ const filteredDocuments = computed(() => {
   if (!searchTerm.value) {
     return props.documents;
   }
-
   const term = searchTerm.value.toLowerCase();
   return props.documents.filter(doc => {
     const fileName = doc.original_file?.file_name || '';
@@ -92,14 +91,13 @@ const isFormValid = computed(() => {
 // Handle create submission
 const handleSubmit = () => {
   if (!isFormValid.value) return;
-
   const formData = {
     ...trialData.value,
     schema_id: parseInt(trialData.value.schema_id)
   };
-
   emit('create', formData);
-  resetForm();
+  // Remove resetForm() here to prevent form reset after submission
+  // resetForm();
 };
 
 // Initialize the form when component is mounted
@@ -107,8 +105,12 @@ resetForm();
 </script>
 
 <template>
-  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+  <div
+    v-if="open"
+    class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
+    @click="emit('close')"
+  >
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col" @click.stop>
       <div class="px-6 py-4 border-b flex justify-between items-center">
         <h3 class="text-xl font-semibold">Start New Trial</h3>
         <button @click="emit('close')" class="text-gray-500 hover:text-gray-700">
@@ -117,7 +119,6 @@ resetForm();
           </svg>
         </button>
       </div>
-
       <div class="p-6 overflow-y-auto flex-1">
         <!-- Schema Selection -->
         <div class="mb-6">
@@ -131,13 +132,11 @@ resetForm();
             </option>
           </select>
         </div>
-
         <!-- Schema Preview -->
         <div v-if="selectedSchema" class="mb-6 p-4 bg-gray-50 rounded-md">
           <h4 class="font-medium mb-2">Schema Definition:</h4>
           <pre class="text-xs overflow-auto max-h-24">{{ JSON.stringify(selectedSchema.schema_definition, null, 2) }}</pre>
         </div>
-
         <!-- Model Selection -->
         <div class="mb-6">
           <label class="block text-sm font-medium text-gray-700 mb-1">Select LLM Model</label>
@@ -150,7 +149,6 @@ resetForm();
             </option>
           </select>
         </div>
-
         <!-- Advanced Options Toggle -->
         <div class="mb-6">
           <button
@@ -164,7 +162,6 @@ resetForm();
               </svg>
             </span>
           </button>
-
           <!-- LLM API Settings -->
           <div v-if="advancedOptionsVisible" class="mt-3 bg-gray-50 p-4 rounded-md">
             <div class="grid grid-cols-1 gap-4">
@@ -177,7 +174,6 @@ resetForm();
                   placeholder="Enter API Key"
                 />
               </div>
-
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
                 <input
@@ -190,14 +186,12 @@ resetForm();
             </div>
           </div>
         </div>
-
         <!-- Document Selection -->
         <div class="mb-6">
           <div class="flex justify-between items-center mb-2">
             <label class="block text-sm font-medium text-gray-700">Select Documents</label>
             <span class="text-sm text-gray-500">{{ trialData.document_ids.length }} selected</span>
           </div>
-
           <div class="flex gap-2 mb-2">
             <input
               v-model="searchTerm"
@@ -205,7 +199,6 @@ resetForm();
               placeholder="Search documents..."
               class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
-
             <button
               @click="selectAllDocuments"
               class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
@@ -213,7 +206,6 @@ resetForm();
             >
               Select All
             </button>
-
             <button
               @click="clearDocumentSelection"
               class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
@@ -222,12 +214,10 @@ resetForm();
               Clear
             </button>
           </div>
-
           <div class="border rounded-md overflow-hidden">
             <div v-if="filteredDocuments.length === 0" class="p-4 text-center text-gray-500">
               No documents match your search criteria
             </div>
-
             <div v-else class="max-h-60 overflow-y-auto">
               <div
                 v-for="doc in filteredDocuments"
@@ -244,7 +234,6 @@ resetForm();
                   class="mr-3"
                   @click.stop
                 />
-
                 <div class="flex-1">
                   <div class="font-medium">{{ doc.original_file?.file_name || `Document #${doc.id}` }}</div>
                   <div class="text-xs text-gray-500">
@@ -257,7 +246,6 @@ resetForm();
           </div>
         </div>
       </div>
-
       <div class="px-6 py-4 border-t flex justify-end gap-2">
         <button @click="emit('close')" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md">
           Cancel

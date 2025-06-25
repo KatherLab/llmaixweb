@@ -112,13 +112,13 @@
         <DocumentsManagement v-else-if="currentStep === 'documents'" :projectId="projectId" />
 
         <!-- Trials Management -->
-        <TrialsManagement v-else-if="currentStep === 'trials'" />
+        <TrialsManagement v-else-if="currentStep === 'trials'" :projectId="projectId" />
 
         <!-- Schema Management -->
         <SchemaManagement v-else-if="currentStep === 'schemas'" :projectId="projectId" />
 
         <!-- Results View -->
-        <ResultsView v-else-if="currentStep === 'results'" :projectId="projectId" />
+        <EvaluationView v-else-if="currentStep === 'evaluation'" :projectId="projectId" />
       </div>
     </main>
 
@@ -146,7 +146,7 @@ import PreprocessingManagement from '@/components/PreprocessingManagement.vue';
 import DocumentsManagement from '@/components/DocumentsManagement.vue';
 import TrialsManagement from '@/components/TrialsManagement.vue';
 import SchemaManagement from '@/components/SchemaManagement.vue';
-import ResultsView from '@/views/TrialResults.vue';
+import EvaluationView from '@/components/EvaluationView.vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
 import { useToast } from 'vue-toastification';
 
