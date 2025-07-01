@@ -5,6 +5,7 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionUserMessageParam
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
 from .. import models
 
 

@@ -151,7 +151,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { api } from '@/services/api';
@@ -190,6 +190,70 @@ const availableModels = ref([
   'Claude-3-Opus'
 ]);
 
+const pollInterval = ref(null);
+const isPollingActive = ref(false);
+
+const fetchTrials = async () => {
+  try {
+    const response = await api.get(`/project/${props.projectId}/trial`);
+    trials.value = response.data;
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const setupPolling = () => {
+  if (isPollingActive.value) return;
+  isPollingActive.value = true;
+
+  const poll = async () => {
+    try {
+      const activeTrials = trials.value.filter(
+        (trial) => trial.status !== 'completed' && trial.status !== 'failed'
+      );
+
+      if (activeTrials.length === 0) {
+        clearTimeout(pollInterval.value);
+        pollInterval.value = null;
+        isPollingActive.value = false;
+        return;
+      }
+
+      await Promise.all(activeTrials.map((trial) => updateTrialStatus(trial.id)));
+    } catch (err) {
+      console.error('Polling error:', err);
+    } finally {
+      if (isPollingActive.value) {
+        pollInterval.value = setTimeout(poll, 3000);
+      }
+    }
+  };
+
+  poll();
+};
+
+const stopPolling = () => {
+  if (pollInterval.value) {
+    clearTimeout(pollInterval.value);
+    pollInterval.value = null;
+  }
+  isPollingActive.value = false;
+};
+
+const updateTrialStatus = async (trialId) => {
+  try {
+    const response = await api.get(`/project/${props.projectId}/trial/${trialId}`);
+    const index = trials.value.findIndex((trial) => trial.id === trialId);
+    if (index !== -1) {
+      trials.value[index] = response.data;
+    }
+  } catch (err) {
+    console.error(`Failed to update status for trial ${trialId}:`, err);
+  }
+};
+
 const filteredTrials = computed(() => {
   if (showCompleted.value) {
     return trials.value;
@@ -199,7 +263,6 @@ const filteredTrials = computed(() => {
 
 const showTrialResultsModal = ref(false);
 const selectedTrialId = ref(null);
-
 const viewTrialResults = (trial) => {
   selectedTrialId.value = trial.id;
   showTrialResultsModal.value = true;
@@ -216,11 +279,17 @@ onMounted(async () => {
     documents.value = documentsResponse.data;
     schemas.value = schemasResponse.data;
     trials.value = trialsResponse.data;
+
+    setupPolling();
   } catch (err) {
     error.value = err.message;
   } finally {
     isLoading.value = false;
   }
+});
+
+onUnmounted(() => {
+  stopPolling();
 });
 
 const openCreateTrialModal = () => {
@@ -233,6 +302,7 @@ const handleCreateTrial = async (trialData) => {
     trials.value.push(response.data);
     toast.success('Trial created successfully');
     isModalOpen.value = false;
+    setupPolling();
   } catch (err) {
     toast.error(`Failed to create trial: ${err.message || 'Unknown error'}`);
   }
@@ -245,7 +315,6 @@ const confirmDeleteTrial = (trial) => {
 
 const deleteTrial = async () => {
   if (!trialToDelete.value) return;
-
   try {
     await api.delete(`/project/${props.projectId}/trial/${trialToDelete.value.id}`);
     trials.value = trials.value.filter(trial => trial.id !== trialToDelete.value.id);
@@ -267,7 +336,6 @@ const retryTrial = async (trial) => {
       api_key: trial.api_key,
       base_url: trial.base_url
     };
-
     const response = await api.post(`/project/${props.projectId}/trial`, trialData);
     trials.value.push(response.data);
     toast.success('Trial restarted successfully');
@@ -278,14 +346,12 @@ const retryTrial = async (trial) => {
 
 const downloadTrialResults = async (trial, options = {}) => {
   const { format = 'json', includeContent = true } = options;
-
   try {
     const response = await api.get(
       `/project/${props.projectId}/trial/${trial.id}/download?format=${format}&include_content=${includeContent}`,
       { responseType: 'blob' }
     );
 
-    // Create download link
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
@@ -293,7 +359,6 @@ const downloadTrialResults = async (trial, options = {}) => {
     document.body.appendChild(link);
     link.click();
     link.remove();
-
     toast.success('Trial results downloaded successfully');
   } catch (err) {
     toast.error(`Failed to download trial results: ${err.message}`);
@@ -303,7 +368,6 @@ const downloadTrialResults = async (trial, options = {}) => {
 
 const trialToDownload = ref(null);
 const showDownloadModal = ref(false);
-
 const openDownloadModal = (trial) => {
   trialToDownload.value = trial;
   showDownloadModal.value = true;

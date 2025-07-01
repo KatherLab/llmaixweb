@@ -9,23 +9,24 @@ For adding a regular user: python -m scripts.populate_users --user
 For adding multiple users from a YAML file: python -m scripts.populate_users --import-yaml users.yaml
 """
 
-import sys
-import os
 import argparse
 import getpass
+import os
+import sys
 from pathlib import Path
+from typing import Optional
 
 import yaml
-from typing import Optional
 
 # Insert the absolute path to backend/src into sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from backend.src.db.session import SessionLocal, engine
-from backend.src.db.base import Base
-from backend.src.models.user import User, UserRole
-from backend.src.core.security import get_password_hash
 import re
+
+from backend.src.core.security import get_password_hash
+from backend.src.db.base import Base
+from backend.src.db.session import SessionLocal, engine
+from backend.src.models.user import User, UserRole
 
 
 def init_db():

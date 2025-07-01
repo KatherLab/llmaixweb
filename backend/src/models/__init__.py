@@ -1,23 +1,26 @@
 from ..db.base import Base
-from .user import User, UserRole, Invitation
 from .project import (
-    Project,
-    ProjectStatus,
+    Document,
+    DocumentSet,
+    Evaluation,
+    EvaluationMetric,
+    FieldMapping,
+    FieldType,
     File,
     FileStorageType,
     FileType,
-    Document,
-    DocumentSet,
+    GroundTruth,
+    PreprocessingMethod,
+    PreprocessingTask,
+    PreprocessingTaskStatus,
+    Project,
+    ProjectStatus,
+    Schema,
     Trial,
     TrialResult,
     TrialStatus,
-    Schema,
-    PreprocessingTask,
-    PreprocessingMethod,
-    PreprocessingTaskStatus,
-    GroundTruth,
-    Evaluation,
 )
+from .user import Invitation, User, UserRole
 
 __all__ = [
     "Base",
@@ -40,4 +43,7 @@ __all__ = [
     "PreprocessingTaskStatus",
     "GroundTruth",
     "Evaluation",
+    "FieldType",
+    "FieldMapping",
+    "EvaluationMetric",
 ]

@@ -1,10 +1,12 @@
 from openai import OpenAI
+
 from .. import models
-from ..utils.preprocessing import preprocess_files
 from ..dependencies import get_db
+from ..utils.preprocessing import preprocess_files
 from .celery_config import celery_app
 
 if celery_app:
+
     @celery_app.task(autoretry_for=(Exception,), retry_backoff=True)
     def preprocess_file_celery(
         file_ids: list[int],

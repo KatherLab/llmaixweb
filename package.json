@@ -24,7 +24,8 @@
     "vue-router": "^4.5.1",
     "vue-toastification": "^2.0.0-rc.5",
     "jsonschema": "^1.5.0",
-    "@vueform/multiselect": "^2.6.11"
+    "@vueform/multiselect": "^2.6.11",
+    "marked": "^15.0.12"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.0",

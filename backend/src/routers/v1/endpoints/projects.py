@@ -1,16 +1,32 @@
+import csv
+import io
 import json
+import re
+from typing import List, cast
 
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, Query
+import pandas as pd
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 from fastapi.responses import Response
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
-from typing import cast
+from thefuzz import fuzz
 
 from .... import models, schemas
 from ....core.config import settings
 from ....core.security import get_current_user
-from ....dependencies import get_db, save_file, get_file, remove_file
+from ....dependencies import get_db, get_file, remove_file, save_file
+from ....utils.enums import FileCreator
+from ....utils.helpers import extract_field_types_from_schema
 from ....utils.info_extraction import get_available_models, test_llm_connection
 
 router = APIRouter()
@@ -146,26 +162,22 @@ def get_project_files(
     *,
     db: Session = Depends(get_db),
     project_id: int,
+    file_creator: FileCreator | None = Query(None),
     current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.File]:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
-
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-
     if current_user.role != "admin" and project.owner_id != current_user.id:
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project's files"
         )
-
-    files = list(
-        db.execute(select(models.File).where(models.File.project_id == project_id))
-        .scalars()
-        .all()
-    )
-
+    query = select(models.File).where(models.File.project_id == project_id)
+    if file_creator is not None:
+        query = query.where(models.File.file_creator == file_creator)
+    files = list(db.execute(query).scalars().all())
     return [schemas.File.model_validate(file) for file in files]
 
 
@@ -822,7 +834,7 @@ def create_trial(
         from ....celery.celery_config import celery_app
 
         if celery_app is not None:
-            info_extraction.extract_info_celery.delay( # type: ignore
+            info_extraction.extract_info_celery.delay(  # type: ignore
                 trial_id=trial_db.id,
                 document_ids=trial.document_ids,
                 llm_model=trial.llm_model,
@@ -951,419 +963,6 @@ def get_trial(
     return schemas.Trial.model_validate(trial)
 
 
-@router.get("/llm/models", response_model=list[str])
-def get_available_llm_models(
-    api_key: str | None = settings.OPENAI_API_KEY,
-    base_url: str | None = settings.OPENAI_API_BASE,
-) -> list[str]:
-    if api_key is None or base_url is None:
-        raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
-    return get_available_models(api_key, base_url)
-
-
-@router.post("/llm/test", response_model=bool)
-def test_llm_connection_endpoint(
-    api_key: str | None = settings.OPENAI_API_KEY,
-    base_url: str | None = settings.OPENAI_API_BASE,
-    llm_model: str | None = settings.OPENAI_API_MODEL,
-) -> bool:
-    if api_key is None or base_url is None or llm_model is None:
-        raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
-    return test_llm_connection(api_key, base_url, llm_model)
-
-
-@router.post("/{project_id}/groundtruth", response_model=schemas.GroundTruth)
-def upload_groundtruth(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file: UploadFile = File(...),
-    name: str = Form(None),
-    format: str = Form(...),  # 'json', 'csv', or 'xlsx'
-    comparison_options: str = Form(None),
-    current_user: models.User = Depends(get_current_user),
-) -> schemas.GroundTruth:
-    """Upload ground truth file for evaluation."""
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to upload ground truth to this project",
-        )
-
-    # Process comparison options if provided
-    comp_options = {}
-    if comparison_options:
-        try:
-            comp_options = json.loads(comparison_options)
-        except json.JSONDecodeError:
-            raise HTTPException(
-                status_code=400, detail="Invalid comparison options JSON"
-            )
-
-    # Save the file content
-    file_content = file.file.read()
-    file_uuid = save_file(file_content)
-
-    # Create ground truth record
-    gt = models.GroundTruth(
-        project_id=project_id,
-        name=name or file.filename,
-        format=format,
-        file_uuid=file_uuid,
-        comparison_options=comp_options,
-    )
-
-    db.add(gt)
-    db.commit()
-    db.refresh(gt)
-
-    return schemas.GroundTruth.model_validate(gt)
-
-
-@router.get("/{project_id}/groundtruth", response_model=list[schemas.GroundTruth])
-def get_groundtruth_files(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    current_user: models.User = Depends(get_current_user),
-) -> list[schemas.GroundTruth]:
-    """Get all ground truth files for a project."""
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's ground truth files",
-        )
-
-    ground_truths = list(
-        db.execute(
-            select(models.GroundTruth).where(
-                models.GroundTruth.project_id == project_id
-            )
-        )
-        .scalars()
-        .all()
-    )
-
-    return [schemas.GroundTruth.model_validate(gt) for gt in ground_truths]
-
-
-@router.get(
-    "/{project_id}/groundtruth/{groundtruth_id}", response_model=schemas.GroundTruth
-)
-def get_groundtruth(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    current_user: models.User = Depends(get_current_user),
-) -> schemas.GroundTruth:
-    """Get a specific ground truth file."""
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's ground truth",
-        )
-
-    groundtruth: models.GroundTruth | None = db.execute(
-        select(models.GroundTruth).where(
-            models.GroundTruth.project_id == project_id,
-            models.GroundTruth.id == groundtruth_id,
-        )
-    ).scalar_one_or_none()
-
-    if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
-
-    return schemas.GroundTruth.model_validate(groundtruth)
-
-
-@router.delete(
-    "/{project_id}/groundtruth/{groundtruth_id}", response_model=schemas.GroundTruth
-)
-def delete_groundtruth(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    current_user: models.User = Depends(get_current_user),
-) -> schemas.GroundTruth:
-    """Delete a ground truth file."""
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to delete this project's ground truth",
-        )
-
-    groundtruth: models.GroundTruth | None = db.execute(
-        select(models.GroundTruth).where(
-            models.GroundTruth.project_id == project_id,
-            models.GroundTruth.id == groundtruth_id,
-        )
-    ).scalar_one_or_none()
-
-    if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
-
-    # Delete the file content from storage
-    try:
-        remove_file(groundtruth.file_uuid)
-    except FileNotFoundError:
-        # Continue deletion even if file not found in storage
-        pass
-
-    # Remove any evaluations using this ground truth
-    evaluations = (
-        db.execute(
-            select(models.Evaluation).where(
-                models.Evaluation.groundtruth_id == groundtruth_id
-            )
-        )
-        .scalars()
-        .all()
-    )
-
-    for evaluation in evaluations:
-        db.delete(evaluation)
-
-    db.delete(groundtruth)
-    db.commit()
-
-    return schemas.GroundTruth.model_validate(groundtruth)
-
-
-@router.get("/{project_id}/evaluation", response_model=list[schemas.Evaluation])
-def get_evaluations(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int = Query(...),
-    current_user: models.User = Depends(get_current_user),
-) -> list[schemas.Evaluation]:
-    """Get evaluation results for all trials using a specific ground truth."""
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's evaluations",
-        )
-
-    # Verify ground truth exists for this project
-    groundtruth: models.GroundTruth | None = db.execute(
-        select(models.GroundTruth).where(
-            models.GroundTruth.project_id == project_id,
-            models.GroundTruth.id == groundtruth_id,
-        )
-    ).scalar_one_or_none()
-
-    if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
-
-    # Get all evaluations for this ground truth
-    evaluations = list(
-        db.execute(
-            select(models.Evaluation).where(
-                models.Evaluation.groundtruth_id == groundtruth_id
-            )
-        )
-        .scalars()
-        .all()
-    )
-
-    return [schemas.Evaluation.model_validate(eval) for eval in evaluations]
-
-
-@router.get(
-    "/{project_id}/evaluation/{evaluation_id}", response_model=schemas.EvaluationDetail
-)
-def get_evaluation_detail(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    evaluation_id: int,
-    current_user: models.User = Depends(get_current_user),
-) -> schemas.EvaluationDetail:
-    """Get detailed evaluation for a specific trial/ground truth pair."""
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's evaluations",
-        )
-
-    evaluation: models.Evaluation | None = db.execute(
-        select(models.Evaluation).where(models.Evaluation.id == evaluation_id)
-    ).scalar_one_or_none()
-
-    if not evaluation:
-        raise HTTPException(status_code=404, detail="Evaluation not found")
-
-    # Ensure the evaluation belongs to a trial in this project
-    trial: models.Trial | None = db.execute(
-        select(models.Trial).where(
-            models.Trial.id == evaluation.trial_id,
-            models.Trial.project_id == project_id,
-        )
-    ).scalar_one_or_none()
-
-    if not trial:
-        raise HTTPException(
-            status_code=404, detail="Evaluation not found for this project"
-        )
-
-    # Get detailed evaluation data
-    evaluation_detail = schemas.EvaluationDetail(
-        id=evaluation.id,
-        trial_id=evaluation.trial_id,
-        groundtruth_id=evaluation.groundtruth_id,
-        model=trial.llm_model,
-        metrics=evaluation.metrics,
-        document_count=len(evaluation.document_metrics),
-        fields=evaluation.field_metrics,
-        documents=evaluation.document_metrics,
-        created_at=evaluation.created_at,
-    )
-
-    return evaluation_detail
-
-
-@router.get("/{project_id}/evaluation/download", response_class=Response)
-def download_evaluation_metrics(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int = Query(...),
-    current_user: models.User = Depends(get_current_user),
-) -> Response:
-    """Download evaluation metrics as CSV."""
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's evaluations",
-        )
-
-    # Verify ground truth exists for this project
-    groundtruth: models.GroundTruth | None = db.execute(
-        select(models.GroundTruth).where(
-            models.GroundTruth.project_id == project_id,
-            models.GroundTruth.id == groundtruth_id,
-        )
-    ).scalar_one_or_none()
-
-    if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
-
-    # Get all evaluations for this ground truth
-    evaluations = list(
-        db.execute(
-            select(models.Evaluation).where(
-                models.Evaluation.groundtruth_id == groundtruth_id
-            )
-        )
-        .scalars()
-        .all()
-    )
-
-    # Generate CSV content
-    import csv
-    import io
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # Write header
-    writer.writerow(
-        [
-            "Evaluation ID",
-            "Trial ID",
-            "Model",
-            "Accuracy",
-            "Precision",
-            "Recall",
-            "F1 Score",
-            "Document Count",
-            "Created At",
-        ]
-    )
-
-    # Write data rows
-    for eval in evaluations:
-        trial: models.Trial | None = db.execute(
-            select(models.Trial).where(models.Trial.id == eval.trial_id)
-        ).scalar_one_or_none()
-
-        model = trial.llm_model if trial else "Unknown"
-
-        writer.writerow(
-            [
-                eval.id,
-                eval.trial_id,
-                model,
-                eval.metrics.get("accuracy", "N/A"),
-                eval.metrics.get("precision", "N/A"),
-                eval.metrics.get("recall", "N/A"),
-                eval.metrics.get("f1_score", "N/A"),
-                len(eval.document_metrics),
-                eval.created_at.isoformat(),
-            ]
-        )
-
-    # Return CSV response
-    return Response(
-        content=output.getvalue(),
-        media_type="text/csv",
-        headers={
-            "Content-Disposition": f"attachment; filename=evaluation_metrics_{project_id}.csv"
-        },
-    )
-
-
 @router.get("/{project_id}/trial/{trial_id}/download", response_class=Response)
 def download_trial_results(
     *,
@@ -1404,8 +1003,8 @@ def download_trial_results(
     # Handle different format types
     if format == "json":
         # For JSON, create a JSON file for each document result
-        import zipfile
         import io
+        import zipfile
 
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
@@ -1578,3 +1177,1733 @@ def _extract_keys(d, parent_key="", sep="_"):
         else:
             keys.append(new_key)
     return keys
+
+
+@router.get("/llm/models", response_model=list[str])
+def get_available_llm_models(
+    api_key: str | None = settings.OPENAI_API_KEY,
+    base_url: str | None = settings.OPENAI_API_BASE,
+) -> list[str]:
+    if api_key is None or base_url is None:
+        raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
+    return get_available_models(api_key, base_url)
+
+
+@router.post("/llm/test", response_model=bool)
+def test_llm_connection_endpoint(
+    api_key: str | None = settings.OPENAI_API_KEY,
+    base_url: str | None = settings.OPENAI_API_BASE,
+    llm_model: str | None = settings.OPENAI_API_MODEL,
+) -> bool:
+    if api_key is None or base_url is None or llm_model is None:
+        raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
+    return test_llm_connection(api_key, base_url, llm_model)
+
+
+# Add these endpoints to your existing projects.py file
+@router.post("/{project_id}/groundtruth", response_model=schemas.GroundTruth)
+def upload_groundtruth(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file: UploadFile = File(...),
+    name: str = Form(None),
+    format: str = Form(...),  # 'json', 'csv', 'xlsx', 'zip'
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruth:
+    """Upload ground truth file for evaluation."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to upload ground truth to this project",
+        )
+    # Validate format
+    if format not in ["json", "csv", "xlsx", "zip"]:
+        raise HTTPException(
+            status_code=400, detail="Invalid format. Must be json, csv, xlsx, or zip"
+        )
+    # Save the file
+    file_content = file.file.read()
+    file_uuid = save_file(file_content)
+    # Create ground truth record
+    gt = models.GroundTruth(
+        project_id=project_id,
+        name=name or file.filename,
+        format=format,
+        file_uuid=file_uuid,
+    )
+    db.add(gt)
+    db.commit()
+    db.refresh(gt)
+    return schemas.GroundTruth.model_validate(gt)
+
+
+@router.get(
+    "/{project_id}/groundtruth/{groundtruth_id}", response_model=schemas.GroundTruth
+)
+def get_groundtruth(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruth:
+    """Get a specific ground truth file."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's ground truth",
+        )
+
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    return schemas.GroundTruth.model_validate(groundtruth)
+
+
+@router.delete(
+    "/{project_id}/groundtruth/{groundtruth_id}", response_model=schemas.GroundTruth
+)
+def delete_groundtruth(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruth:
+    """Delete a ground truth file."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to delete this project's ground truth",
+        )
+
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Delete the file content from storage
+    try:
+        remove_file(groundtruth.file_uuid)
+    except FileNotFoundError:
+        # Continue deletion even if file not found in storage
+        pass
+
+    # Remove any evaluations using this ground truth
+    evaluations = (
+        db.execute(
+            select(models.Evaluation).where(
+                models.Evaluation.groundtruth_id == groundtruth_id
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    for evaluation in evaluations:
+        db.delete(evaluation)
+
+    db.delete(groundtruth)
+    db.commit()
+
+    return schemas.GroundTruth.model_validate(groundtruth)
+
+
+@router.get("/{project_id}/groundtruth", response_model=list[schemas.GroundTruth])
+def get_groundtruth_files(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> list[schemas.GroundTruth]:
+    """Get all ground truth files for a project."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's ground truth files",
+        )
+    ground_truths = list(
+        db.execute(
+            select(models.GroundTruth).where(
+                models.GroundTruth.project_id == project_id
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [schemas.GroundTruth.model_validate(gt) for gt in ground_truths]
+
+
+@router.put(
+    "/{project_id}/groundtruth/{groundtruth_id}", response_model=schemas.GroundTruth
+)
+def update_groundtruth(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    file: UploadFile = File(None),
+    name: str = Form(None),
+    comparison_options: str = Form(None),
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruth:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to update this project's ground truth",
+        )
+
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    if name:
+        groundtruth.name = name
+
+    if comparison_options:
+        try:
+            groundtruth.comparison_options = json.loads(comparison_options)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=400, detail="Invalid comparison options JSON"
+            )
+
+    if file:
+        try:
+            remove_file(groundtruth.file_uuid)
+        except FileNotFoundError:
+            pass
+
+        file_content = file.file.read()
+        file_uuid = save_file(file_content)
+        groundtruth.file_uuid = file_uuid
+
+        evaluations = (
+            db.execute(
+                select(models.Evaluation).where(
+                    models.Evaluation.groundtruth_id == groundtruth_id
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for evaluation in evaluations:
+            db.delete(evaluation)
+
+    groundtruth.updated_at = func.now()
+    db.add(groundtruth)
+    db.commit()
+    db.refresh(groundtruth)
+
+    return schemas.GroundTruth.model_validate(groundtruth)
+
+
+@router.post(
+    "/{project_id}/groundtruth/{groundtruth_id}/schema/{schema_id}/mapping",
+    response_model=schemas.GroundTruth,
+)
+def configure_field_mapping(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    schema_id: int,
+    mappings: list[schemas.FieldMappingCreate] = Body(...),
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruth:
+    """Configure field mappings for a specific groundtruth-schema combination."""
+    # Validate project access
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to configure field mappings"
+        )
+
+    # Validate groundtruth exists
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Validate schema exists
+    schema: models.Schema | None = db.execute(
+        select(models.Schema).where(
+            models.Schema.project_id == project_id,
+            models.Schema.id == schema_id,
+        )
+    ).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
+    # Delete existing mappings for this groundtruth-schema combination
+    db.execute(
+        delete(models.FieldMapping).where(
+            models.FieldMapping.ground_truth_id == groundtruth_id,
+            models.FieldMapping.schema_id == schema_id,
+        )
+    )
+
+    # Create new mappings
+    for mapping_data in mappings:
+        mapping = models.FieldMapping(
+            ground_truth_id=groundtruth_id, **mapping_data.model_dump()
+        )
+        db.add(mapping)
+
+    # Invalidate evaluations for this specific groundtruth-schema combination
+    db.execute(
+        delete(models.Evaluation).where(
+            models.Evaluation.groundtruth_id == groundtruth_id,
+            models.Evaluation.trial_id.in_(
+                select(models.Trial.id).where(models.Trial.schema_id == schema_id)
+            ),
+        )
+    )
+
+    db.commit()
+    db.refresh(groundtruth)
+    return schemas.GroundTruth.model_validate(groundtruth)
+
+
+@router.get("/{project_id}/schema/{schema_id}/field_types", response_model=dict)
+def get_schema_field_types(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    schema_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's schemas"
+        )
+
+    schema: models.Schema | None = db.execute(
+        select(models.Schema).where(
+            models.Schema.project_id == project_id, models.Schema.id == schema_id
+        )
+    ).scalar_one_or_none()
+
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
+    field_types = {}
+    extract_field_types_from_schema(schema.schema_definition, field_types)
+
+    return field_types
+
+
+@router.get("/{project_id}/evaluation", response_model=list[schemas.Evaluation])
+def get_evaluations(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int = Query(...),
+    current_user: models.User = Depends(get_current_user),
+) -> list[schemas.Evaluation]:
+    """Get evaluation results for all trials using a specific ground truth."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's evaluations",
+        )
+
+    # Verify ground truth exists for this project
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Get all evaluations for this ground truth
+    evaluations = list(
+        db.execute(
+            select(models.Evaluation).where(
+                models.Evaluation.groundtruth_id == groundtruth_id
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    return [schemas.Evaluation.model_validate(eval) for eval in evaluations]
+
+
+@router.get(
+    "/{project_id}/evaluation/{evaluation_id}", response_model=schemas.EvaluationDetail
+)
+def get_evaluation_detail(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    evaluation_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.EvaluationDetail:
+    """Get detailed evaluation for a specific trial/ground truth pair."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's evaluations",
+        )
+
+    evaluation: models.Evaluation | None = db.execute(
+        select(models.Evaluation).where(models.Evaluation.id == evaluation_id)
+    ).scalar_one_or_none()
+
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+
+    # Ensure the evaluation belongs to a trial in this project
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(
+            models.Trial.id == evaluation.trial_id,
+            models.Trial.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+
+    if not trial:
+        raise HTTPException(
+            status_code=404, detail="Evaluation not found for this project"
+        )
+
+    # Get detailed evaluation data
+    evaluation_detail = schemas.EvaluationDetail(
+        id=evaluation.id,
+        trial_id=evaluation.trial_id,
+        groundtruth_id=evaluation.groundtruth_id,
+        model=trial.llm_model,
+        metrics=evaluation.metrics,
+        document_count=len(evaluation.document_metrics),
+        fields=evaluation.field_metrics,
+        documents=evaluation.document_metrics,
+        created_at=evaluation.created_at,
+    )
+
+    return evaluation_detail
+
+
+@router.get("/{project_id}/groundtruth/{groundtruth_id}/preview", response_model=dict)
+def preview_groundtruth(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    limit: int = Query(10, description="Number of documents to preview"),
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Preview ground truth data and field structure."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's ground truth",
+        )
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+    # Load ground truth data
+    from ....utils.evaluation import EvaluationEngine
+
+    engine = EvaluationEngine(db)
+    gt_data = engine._load_ground_truth(groundtruth)
+    # Get field structure
+    all_fields = set()
+    field_types = {}
+    sample_values = {}
+    for doc_id, fields in list(gt_data.items())[:limit]:
+        for field, value in fields.items():
+            all_fields.add(field)
+            # Infer field type
+            if field not in field_types:
+                if isinstance(value, bool):
+                    field_types[field] = "boolean"
+                elif isinstance(value, (int, float)):
+                    field_types[field] = "number"
+                elif isinstance(value, str):
+                    # Check if it's a date
+                    if re.match(r"\d{4}-\d{2}-\d{2}", value):
+                        field_types[field] = "date"
+                    else:
+                        field_types[field] = "string"
+                else:
+                    field_types[field] = "string"
+            # Collect sample values
+            if field not in sample_values:
+                sample_values[field] = []
+            if value not in sample_values[field] and len(sample_values[field]) < 5:
+                sample_values[field].append(value)
+    return {
+        "document_count": len(gt_data),
+        "fields": list(all_fields),
+        "field_types": field_types,
+        "sample_values": sample_values,
+        "preview_data": dict(list(gt_data.items())[:limit]),
+    }
+
+
+@router.post(
+    "/{project_id}/groundtruth/{groundtruth_id}/mapping",
+    response_model=schemas.GroundTruth,
+)
+def configure_field_mapping(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    mappings: list[schemas.FieldMappingCreate] = Body(...),
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruth:
+    """Configure field mappings for ground truth evaluation."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to configure ground truth mappings"
+        )
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+    # Delete existing mappings
+    db.execute(
+        delete(models.FieldMapping).where(
+            models.FieldMapping.ground_truth_id == groundtruth_id
+        )
+    )
+    # Create new mappings
+    for mapping_data in mappings:
+        mapping = models.FieldMapping(
+            ground_truth_id=groundtruth_id, **mapping_data.model_dump()
+        )
+        db.add(mapping)
+    # Invalidate existing evaluations
+    db.execute(
+        delete(models.Evaluation).where(
+            models.Evaluation.groundtruth_id == groundtruth_id
+        )
+    )
+    db.commit()
+    db.refresh(groundtruth)
+    return schemas.GroundTruth.model_validate(groundtruth)
+
+
+@router.get(
+    "/{project_id}/groundtruth/{groundtruth_id}/schema/{schema_id}/mapping",
+    response_model=list[schemas.FieldMapping],
+)
+def get_field_mappings(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    schema_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> list[schemas.FieldMapping]:
+    """Get field mappings for a specific groundtruth-schema combination."""
+    # Validate project access
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access field mappings"
+        )
+
+    # Validate groundtruth exists
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Validate schema exists
+    schema: models.Schema | None = db.execute(
+        select(models.Schema).where(
+            models.Schema.project_id == project_id,
+            models.Schema.id == schema_id,
+        )
+    ).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
+    # Get mappings for this groundtruth-schema combination
+    mappings = (
+        db.execute(
+            select(models.FieldMapping).where(
+                models.FieldMapping.ground_truth_id == groundtruth_id,
+                models.FieldMapping.schema_id == schema_id,
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    return [schemas.FieldMapping.model_validate(mapping) for mapping in mappings]
+
+
+@router.delete(
+    "/{project_id}/groundtruth/{groundtruth_id}/schema/{schema_id}/mapping",
+    response_model=dict,
+)
+def delete_field_mappings(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    schema_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Delete all field mappings for a specific groundtruth-schema combination."""
+    # Validate project access
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete field mappings"
+        )
+
+    # Validate groundtruth exists
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Validate schema exists
+    schema: models.Schema | None = db.execute(
+        select(models.Schema).where(
+            models.Schema.project_id == project_id,
+            models.Schema.id == schema_id,
+        )
+    ).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
+    # Delete mappings for this groundtruth-schema combination
+    deleted_count = db.execute(
+        delete(models.FieldMapping).where(
+            models.FieldMapping.ground_truth_id == groundtruth_id,
+            models.FieldMapping.schema_id == schema_id,
+        )
+    ).rowcount
+
+    # Invalidate related evaluations
+    db.execute(
+        delete(models.Evaluation).where(
+            models.Evaluation.groundtruth_id == groundtruth_id,
+            models.Evaluation.trial_id.in_(
+                select(models.Trial.id).where(models.Trial.schema_id == schema_id)
+            ),
+        )
+    )
+
+    db.commit()
+
+    return {"deleted_mappings": deleted_count}
+
+
+@router.get(
+    "/{project_id}/groundtruth/{groundtruth_id}/schema/{schema_id}/mapping/suggest",
+    response_model=list[schemas.FieldMapping],
+)
+def suggest_field_mappings(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    schema_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> list[schemas.FieldMapping]:
+    """Suggest field mappings based on schema and ground truth."""
+    # Validate project access
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project"
+        )
+
+    # Get schema
+    schema: models.Schema | None = db.execute(
+        select(models.Schema).where(
+            models.Schema.project_id == project_id, models.Schema.id == schema_id
+        )
+    ).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
+    # Get ground truth
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Load ground truth data
+    from ....utils.evaluation import EvaluationEngine
+
+    engine = EvaluationEngine(db)
+    gt_data = engine._load_ground_truth(groundtruth)
+
+    # Extract schema fields
+    schema_fields = {}
+    extract_field_types_from_schema(schema.schema_definition, schema_fields)
+
+    # Get ground truth fields
+    gt_fields = set()
+    for fields in gt_data.values():
+        gt_fields.update(fields.keys())
+
+    # Suggest mappings
+    suggestions = []
+    for schema_field, field_type in schema_fields.items():
+        # Try exact match
+        if schema_field in gt_fields:
+            suggestions.append(
+                {
+                    "id": 0,
+                    "ground_truth_id": groundtruth_id,
+                    "schema_id": schema_id,
+                    "schema_field": schema_field,
+                    "ground_truth_field": schema_field,
+                    "field_type": field_type,
+                    "comparison_method": _get_comparison_method(field_type),
+                    "confidence": 1.0,
+                }
+            )
+            continue
+
+        # Try fuzzy matching
+        best_match = None
+        best_score = 0
+        for gt_field in gt_fields:
+            score = fuzz.ratio(schema_field.lower(), gt_field.lower())
+            if score > best_score and score > 70:
+                best_score = score
+                best_match = gt_field
+
+        if best_match:
+            suggestions.append(
+                {
+                    "id": 0,
+                    "ground_truth_id": groundtruth_id,
+                    "schema_id": schema_id,
+                    "schema_field": schema_field,
+                    "ground_truth_field": best_match,
+                    "field_type": field_type,
+                    "comparison_method": _get_comparison_method(field_type),
+                    "confidence": best_score / 100.0,
+                }
+            )
+
+    return suggestions
+
+
+def _get_comparison_method(field_type: str) -> str:
+    """Get default comparison method for field type."""
+    type_to_method = {
+        "boolean": "boolean",
+        "number": "numeric",
+        "date": "date",
+        "category": "category",
+        "string": "exact",
+    }
+    return type_to_method.get(field_type, "exact")
+
+
+@router.post(
+    "/{project_id}/trial/{trial_id}/evaluate", response_model=schemas.EvaluationSummary
+)
+def evaluate_trial(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    trial_id: int,
+    groundtruth_id: int = Query(...),
+    force_recalculate: bool = Query(False),
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.EvaluationSummary:
+    """Evaluate a trial against ground truth."""
+    # Validate project access
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to evaluate trials for this project"
+        )
+
+    # Verify trial exists and get schema_id
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(
+            models.Trial.project_id == project_id, models.Trial.id == trial_id
+        )
+    ).scalar_one_or_none()
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+
+    # Verify ground truth exists
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Check if mapping exists for this groundtruth-schema combination
+    mapping_exists = db.execute(
+        select(models.FieldMapping)
+        .where(
+            models.FieldMapping.ground_truth_id == groundtruth_id,
+            models.FieldMapping.schema_id == trial.schema_id,
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+
+    if not mapping_exists:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No field mapping found for ground truth {groundtruth_id} and schema {trial.schema_id}. Please configure field mappings first.",
+        )
+
+    # Run evaluation
+    from ....utils.evaluation import EvaluationEngine
+
+    engine = EvaluationEngine(db)
+    try:
+        evaluation = engine.evaluate_trial(
+            trial_id=trial_id,
+            groundtruth_id=groundtruth_id,
+            force_recalculate=force_recalculate,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Build summary (same as before)
+    field_summaries = []
+    for field_name, metrics in evaluation.field_metrics.items():
+        # Get sample errors
+        sample_errors = []
+        error_details = (
+            db.query(models.EvaluationMetric)
+            .filter(
+                models.EvaluationMetric.evaluation_id == evaluation.id,
+                models.EvaluationMetric.field_name == field_name,
+                models.EvaluationMetric.is_correct == False,
+            )
+            .limit(5)
+            .all()
+        )
+        for detail in error_details:
+            sample_errors.append(
+                {
+                    "document_id": detail.document_id,
+                    "ground_truth": detail.ground_truth_value,
+                    "predicted": detail.predicted_value,
+                    "error_type": detail.error_type,
+                }
+            )
+
+        field_summaries.append(
+            schemas.FieldEvaluationSummary(
+                field_name=field_name,
+                accuracy=metrics.get("accuracy", 0),
+                total_count=metrics.get("total_count", 0),
+                correct_count=metrics.get("correct_count", 0),
+                error_distribution=metrics.get("error_distribution", {}),
+                sample_errors=sample_errors,
+            )
+        )
+
+    # Build document summaries
+    document_summaries = []
+    for doc_metrics in evaluation.document_metrics:
+        doc_id = doc_metrics["document_id"]
+        # Get field details
+        field_details = {}
+        details = (
+            db.query(models.EvaluationMetric)
+            .filter(
+                models.EvaluationMetric.evaluation_id == evaluation.id,
+                models.EvaluationMetric.document_id == doc_id,
+            )
+            .all()
+        )
+        for detail in details:
+            field_details[detail.field_name] = schemas.EvaluationMetricDetail(
+                document_id=doc_id,
+                field_name=detail.field_name,
+                ground_truth_value=detail.ground_truth_value,
+                predicted_value=detail.predicted_value,
+                is_correct=detail.is_correct,
+                error_type=detail.error_type,
+                confidence_score=detail.confidence_score,
+            )
+
+        document_summaries.append(
+            schemas.DocumentEvaluationDetail(
+                document_id=doc_id,
+                accuracy=doc_metrics["accuracy"],
+                correct_fields=doc_metrics["correct_fields"],
+                total_fields=doc_metrics["total_fields"],
+                missing_fields=doc_metrics.get("missing_fields", []),
+                incorrect_fields=doc_metrics.get("incorrect_fields", []),
+                field_details=field_details,
+            )
+        )
+
+    return schemas.EvaluationSummary(
+        id=evaluation.id,
+        trial_id=evaluation.trial_id,
+        groundtruth_id=evaluation.groundtruth_id,
+        overall_metrics=evaluation.metrics,
+        field_summaries=field_summaries,
+        document_summaries=document_summaries,
+        confusion_matrices=evaluation.confusion_matrices,
+        created_at=evaluation.created_at,
+    )
+
+
+@router.get(
+    "/{project_id}/evaluation/{evaluation_id}/document/{document_id}",
+    response_model=schemas.DocumentEvaluationDetail,
+)
+def get_document_evaluation(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    evaluation_id: int,
+    document_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.DocumentEvaluationDetail:
+    """Get detailed evaluation for a single document."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's evaluations",
+        )
+    # Get evaluation
+    evaluation: models.Evaluation | None = db.execute(
+        select(models.Evaluation).where(models.Evaluation.id == evaluation_id)
+    ).scalar_one_or_none()
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+    # Verify evaluation belongs to project
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(
+            models.Trial.id == evaluation.trial_id,
+            models.Trial.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+    if not trial:
+        raise HTTPException(
+            status_code=404, detail="Evaluation not found for this project"
+        )
+    # Find document metrics
+    doc_metrics = None
+    for metrics in evaluation.document_metrics:
+        if metrics["document_id"] == document_id:
+            doc_metrics = metrics
+            break
+    if not doc_metrics:
+        raise HTTPException(status_code=404, detail="Document not found in evaluation")
+    # Get detailed metrics
+    field_details = {}
+    details = (
+        db.query(models.EvaluationMetric)
+        .filter(
+            models.EvaluationMetric.evaluation_id == evaluation_id,
+            models.EvaluationMetric.document_id == document_id,
+        )
+        .all()
+    )
+    for detail in details:
+        field_details[detail.field_name] = schemas.EvaluationMetricDetail(
+            document_id=document_id,
+            field_name=detail.field_name,
+            ground_truth_value=detail.ground_truth_value,
+            predicted_value=detail.predicted_value,
+            is_correct=detail.is_correct,
+            error_type=detail.error_type,
+            confidence_score=detail.confidence_score,
+        )
+    return schemas.DocumentEvaluationDetail(
+        document_id=document_id,
+        accuracy=doc_metrics["accuracy"],
+        correct_fields=doc_metrics["correct_fields"],
+        total_fields=doc_metrics["total_fields"],
+        missing_fields=doc_metrics.get("missing_fields", []),
+        incorrect_fields=doc_metrics.get("incorrect_fields", []),
+        field_details=field_details,
+    )
+
+
+@router.get("/{project_id}/evaluations/download", response_class=Response)
+def download_evaluations_report(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    evaluation_ids: str = Query(...),
+    format: str = Query("csv", enum=["csv", "xlsx"]),
+    include_details: bool = Query(True),
+    current_user: models.User = Depends(get_current_user),
+) -> Response:
+    """Download evaluation report in CSV or Excel format."""
+    try:
+        evaluation_ids_list = [int(i) for i in evaluation_ids.split(",")]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid evaluation_ids")
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's evaluations",
+        )
+    # Get evaluations
+    evaluations = []
+    for eval_id in evaluation_ids:
+        eval_obj = db.execute(
+            select(models.Evaluation).where(models.Evaluation.id == eval_id)
+        ).scalar_one_or_none()
+        if eval_obj:
+            # Verify it belongs to project
+            trial = db.execute(
+                select(models.Trial).where(
+                    models.Trial.id == eval_obj.trial_id,
+                    models.Trial.project_id == project_id,
+                )
+            ).scalar_one_or_none()
+            if trial:
+                evaluations.append((eval_obj, trial))
+    if not evaluations:
+        raise HTTPException(status_code=404, detail="No evaluations found")
+    # Create report data
+    if format == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        # Summary sheet
+        writer.writerow(
+            [
+                "Evaluation ID",
+                "Trial ID",
+                "Model",
+                "Ground Truth",
+                "Accuracy",
+                "Precision",
+                "Recall",
+                "F1 Score",
+                "Total Documents",
+                "Total Fields",
+                "Created At",
+            ]
+        )
+        for eval, trial in evaluations:
+            gt = db.query(models.GroundTruth).get(eval.groundtruth_id)
+            writer.writerow(
+                [
+                    eval.id,
+                    eval.trial_id,
+                    trial.llm_model,
+                    gt.name if gt else "Unknown",
+                    eval.metrics.get("accuracy", 0),
+                    eval.metrics.get("precision", 0),
+                    eval.metrics.get("recall", 0),
+                    eval.metrics.get("f1_score", 0),
+                    eval.metrics.get("total_documents", 0),
+                    eval.metrics.get("total_fields", 0),
+                    eval.created_at.isoformat(),
+                ]
+            )
+        if include_details:
+            writer.writerow([])  # Empty row
+            writer.writerow(["Field-Level Metrics"])
+            writer.writerow(
+                [
+                    "Evaluation ID",
+                    "Field Name",
+                    "Accuracy",
+                    "Total Count",
+                    "Correct Count",
+                ]
+            )
+            for eval, _ in evaluations:
+                for field, metrics in eval.field_metrics.items():
+                    writer.writerow(
+                        [
+                            eval.id,
+                            field,
+                            metrics.get("accuracy", 0),
+                            metrics.get("total_count", 0),
+                            metrics.get("correct_count", 0),
+                        ]
+                    )
+        content = output.getvalue()
+        media_type = "text/csv"
+        filename = f"evaluation_report_{project_id}.csv"
+    else:  # xlsx
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+            # Summary sheet
+            summary_data = []
+            for eval, trial in evaluations:
+                gt = db.query(models.GroundTruth).get(eval.groundtruth_id)
+                summary_data.append(
+                    {
+                        "Evaluation ID": eval.id,
+                        "Trial ID": eval.trial_id,
+                        "Model": trial.llm_model,
+                        "Ground Truth": gt.name if gt else "Unknown",
+                        "Accuracy": eval.metrics.get("accuracy", 0),
+                        "Precision": eval.metrics.get("precision", 0),
+                        "Recall": eval.metrics.get("recall", 0),
+                        "F1 Score": eval.metrics.get("f1_score", 0),
+                        "Total Documents": eval.metrics.get("total_documents", 0),
+                        "Total Fields": eval.metrics.get("total_fields", 0),
+                        "Created At": eval.created_at.isoformat(),
+                    }
+                )
+            pd.DataFrame(summary_data).to_excel(
+                writer, sheet_name="Summary", index=False
+            )
+            if include_details:
+                # Field metrics sheet
+                field_data = []
+                for eval, _ in evaluations:
+                    for field, metrics in eval.field_metrics.items():
+                        field_data.append(
+                            {
+                                "Evaluation ID": eval.id,
+                                "Field Name": field,
+                                "Accuracy": metrics.get("accuracy", 0),
+                                "Total Count": metrics.get("total_count", 0),
+                                "Correct Count": metrics.get("correct_count", 0),
+                            }
+                        )
+                pd.DataFrame(field_data).to_excel(
+                    writer, sheet_name="Field Metrics", index=False
+                )
+                # Document metrics sheet
+                doc_data = []
+                for eval, _ in evaluations:
+                    for doc_metrics in eval.document_metrics:
+                        doc_data.append(
+                            {
+                                "Evaluation ID": eval.id,
+                                "Document ID": doc_metrics["document_id"],
+                                "Accuracy": doc_metrics["accuracy"],
+                                "Correct Fields": doc_metrics["correct_fields"],
+                                "Total Fields": doc_metrics["total_fields"],
+                            }
+                        )
+                pd.DataFrame(doc_data).to_excel(
+                    writer, sheet_name="Document Metrics", index=False
+                )
+        output.seek(0)
+        content = output.getvalue()
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        filename = f"evaluation_report_{project_id}.xlsx"
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.post(
+    "/{project_id}/evaluation/batch", response_model=list[schemas.EvaluationSummary]
+)
+def batch_evaluate_trials(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    trial_ids: list[int] = Body(...),
+    groundtruth_id: int = Body(...),
+    force_recalculate: bool = Body(False),
+    current_user: models.User = Depends(get_current_user),
+) -> list[schemas.EvaluationSummary]:
+    """Evaluate multiple trials against ground truth."""
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to evaluate trials for this project"
+        )
+    # Verify ground truth
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+    # Evaluate trials
+    from ....utils.evaluation import EvaluationEngine
+
+    engine = EvaluationEngine(db)
+    results = []
+    errors = []
+    for trial_id in trial_ids:
+        try:
+            # Verify trial exists
+            trial: models.Trial | None = db.execute(
+                select(models.Trial).where(
+                    models.Trial.project_id == project_id, models.Trial.id == trial_id
+                )
+            ).scalar_one_or_none()
+            if not trial:
+                errors.append(f"Trial {trial_id} not found")
+                continue
+            evaluation = engine.evaluate_trial(
+                trial_id=trial_id,
+                groundtruth_id=groundtruth_id,
+                force_recalculate=force_recalculate,
+            )
+            # Build summary (same as single evaluation)
+            # ... (same summary building code as above)
+            results.append(evaluation)
+        except Exception as e:
+            errors.append(f"Error evaluating trial {trial_id}: {str(e)}")
+    if errors and not results:
+        raise HTTPException(
+            status_code=400, detail=f"All evaluations failed: {'; '.join(errors)}"
+        )
+    return results
+
+
+@router.get("/{project_id}/evaluation/compare", response_model=dict)
+def compare_evaluations(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    evaluation_ids: list[int] = Query(...),
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Compare multiple evaluations side by side."""
+
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's evaluations",
+        )
+
+    # Get evaluations
+    evaluations = []
+    for eval_id in evaluation_ids:
+        eval_obj = db.execute(
+            select(models.Evaluation).where(models.Evaluation.id == eval_id)
+        ).scalar_one_or_none()
+
+        if eval_obj:
+            # Verify it belongs to project
+            trial = db.execute(
+                select(models.Trial).where(
+                    models.Trial.id == eval_obj.trial_id,
+                    models.Trial.project_id == project_id,
+                )
+            ).scalar_one_or_none()
+
+            if trial:
+                evaluations.append({"evaluation": eval_obj, "trial": trial})
+
+    if not evaluations:
+        raise HTTPException(status_code=404, detail="No evaluations found")
+
+    # Build comparison
+    comparison = {
+        "evaluations": [],
+        "overall_comparison": {},
+        "field_comparison": {},
+        "model_comparison": {},
+    }
+
+    # Collect all fields
+    all_fields = set()
+    for eval_data in evaluations:
+        eval = eval_data["evaluation"]
+        all_fields.update(eval.field_metrics.keys())
+
+    # Build evaluation summaries
+    for eval_data in evaluations:
+        eval = eval_data["evaluation"]
+        trial = eval_data["trial"]
+
+        comparison["evaluations"].append(
+            {
+                "id": eval.id,
+                "trial_id": eval.trial_id,
+                "model": trial.llm_model,
+                "groundtruth_id": eval.groundtruth_id,
+                "metrics": eval.metrics,
+                "created_at": eval.created_at.isoformat(),
+            }
+        )
+
+    # Compare overall metrics
+    metrics_to_compare = ["accuracy", "precision", "recall", "f1_score"]
+    for metric in metrics_to_compare:
+        comparison["overall_comparison"][metric] = []
+        for eval_data in evaluations:
+            eval = eval_data["evaluation"]
+            trial = eval_data["trial"]
+            comparison["overall_comparison"][metric].append(
+                {
+                    "evaluation_id": eval.id,
+                    "model": trial.llm_model,
+                    "value": eval.metrics.get(metric, 0),
+                }
+            )
+
+    # Compare field metrics
+    for field in sorted(all_fields):
+        comparison["field_comparison"][field] = []
+        for eval_data in evaluations:
+            eval = eval_data["evaluation"]
+            trial = eval_data["trial"]
+            field_metric = eval.field_metrics.get(field, {})
+            comparison["field_comparison"][field].append(
+                {
+                    "evaluation_id": eval.id,
+                    "model": trial.llm_model,
+                    "accuracy": field_metric.get("accuracy", 0),
+                    "total_count": field_metric.get("total_count", 0),
+                    "correct_count": field_metric.get("correct_count", 0),
+                }
+            )
+
+    # Group by model
+    model_groups = {}
+    for eval_data in evaluations:
+        eval = eval_data["evaluation"]
+        trial = eval_data["trial"]
+        model = trial.llm_model
+
+        if model not in model_groups:
+            model_groups[model] = []
+        model_groups[model].append(eval.metrics.get("accuracy", 0))
+
+    comparison["model_comparison"] = {
+        model: {
+            "average_accuracy": sum(accuracies) / len(accuracies),
+            "evaluation_count": len(accuracies),
+            "min_accuracy": min(accuracies),
+            "max_accuracy": max(accuracies),
+        }
+        for model, accuracies in model_groups.items()
+    }
+
+    return comparison
+
+
+@router.get(
+    "/{project_id}/evaluation/{evaluation_id}/errors", response_model=list[dict]
+)
+def get_evaluation_errors(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    evaluation_id: int,
+    field_name: str | None = Query(None),
+    error_type: str | None = Query(None),
+    limit: int = Query(100),
+    current_user: models.User = Depends(get_current_user),
+) -> list[dict]:
+    """Get detailed error analysis for an evaluation."""
+
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's evaluations",
+        )
+
+    # Get evaluation
+    evaluation: models.Evaluation | None = db.execute(
+        select(models.Evaluation).where(models.Evaluation.id == evaluation_id)
+    ).scalar_one_or_none()
+
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+
+    # Verify evaluation belongs to project
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(
+            models.Trial.id == evaluation.trial_id,
+            models.Trial.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+
+    if not trial:
+        raise HTTPException(
+            status_code=404, detail="Evaluation not found for this project"
+        )
+
+    # Get errors from detailed metrics
+    query = db.query(models.EvaluationMetric).filter(
+        models.EvaluationMetric.evaluation_id == evaluation_id,
+        models.EvaluationMetric.is_correct == False,
+    )
+
+    if field_name:
+        query = query.filter(models.EvaluationMetric.field_name == field_name)
+
+    if error_type:
+        query = query.filter(models.EvaluationMetric.error_type == error_type)
+
+    errors = query.limit(limit).all()
+
+    # Build error details
+    error_details = []
+    for error in errors:
+        # Get document info
+        document = db.query(models.Document).get(error.document_id)
+
+        error_detail = {
+            "document_id": error.document_id,
+            "document_name": document.original_file.file_name
+            if document and document.original_file
+            else "Unknown",
+            "field_name": error.field_name,
+            "ground_truth_value": error.ground_truth_value,
+            "predicted_value": error.predicted_value,
+            "error_type": error.error_type,
+            "confidence_score": error.confidence_score,
+        }
+
+        # Add context if available
+        if document:
+            # Extract surrounding text for context
+            text_snippet = document.text[:500] if document.text else ""
+            error_detail["context"] = text_snippet
+
+        error_details.append(error_detail)
+
+    return error_details
+
+
+@router.post(
+    "/{project_id}/groundtruth/{groundtruth_id}/schema/{schema_id}/auto-map",
+    response_model=dict,
+)
+def auto_map_fields(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    schema_id: int,
+    confidence_threshold: float = Body(0.7),
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Automatically map ground truth fields to schema fields."""
+    # Validate project access
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project"
+        )
+
+    # Get schema and ground truth
+    schema: models.Schema | None = db.execute(
+        select(models.Schema).where(
+            models.Schema.project_id == project_id, models.Schema.id == schema_id
+        )
+    ).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Load ground truth data
+    from ....utils.evaluation import EvaluationEngine
+
+    engine = EvaluationEngine(db)
+    gt_data = engine._load_ground_truth(groundtruth)
+
+    # Extract schema fields
+    schema_fields = {}
+    extract_field_types_from_schema(schema.schema_definition, schema_fields)
+
+    # Get ground truth fields and sample values
+    gt_fields = {}
+    for doc_id, fields in list(gt_data.items())[:10]:  # Sample first 10 docs
+        for field, value in fields.items():
+            if field not in gt_fields:
+                gt_fields[field] = []
+            if value not in gt_fields[field] and len(gt_fields[field]) < 5:
+                gt_fields[field].append(value)
+
+    # Auto-map fields
+    from ....utils.field_mapping import FieldMapper
+
+    mapper = FieldMapper()
+    mappings = mapper.auto_map(
+        schema_fields=schema_fields,
+        ground_truth_fields=gt_fields,
+        confidence_threshold=confidence_threshold,
+    )
+
+    # Delete existing mappings for this groundtruth-schema combination
+    db.execute(
+        delete(models.FieldMapping).where(
+            models.FieldMapping.ground_truth_id == groundtruth_id,
+            models.FieldMapping.schema_id == schema_id,
+        )
+    )
+
+    # Apply mappings
+    applied_count = 0
+    for mapping in mappings:
+        if mapping["confidence"] >= confidence_threshold:
+            field_mapping = models.FieldMapping(
+                ground_truth_id=groundtruth_id,
+                schema_id=schema_id,
+                schema_field=mapping["schema_field"],
+                ground_truth_field=mapping["ground_truth_field"],
+                field_type=mapping["field_type"],
+                comparison_method=mapping["comparison_method"],
+                comparison_options=mapping.get("comparison_options", {}),
+            )
+            db.add(field_mapping)
+            applied_count += 1
+
+    # Invalidate existing evaluations for this groundtruth-schema combination
+    db.execute(
+        delete(models.Evaluation).where(
+            models.Evaluation.groundtruth_id == groundtruth_id,
+            models.Evaluation.trial_id.in_(
+                select(models.Trial.id).where(models.Trial.schema_id == schema_id)
+            ),
+        )
+    )
+
+    db.commit()
+
+    return {
+        "total_schema_fields": len(schema_fields),
+        "total_ground_truth_fields": len(gt_fields),
+        "suggested_mappings": len(mappings),
+        "applied_mappings": applied_count,
+        "mappings": mappings,
+    }
+
+
+@router.get(
+    "/{project_id}/groundtruth/{groundtruth_id}/schema/{schema_id}/mapping/status",
+    response_model=dict,
+)
+def check_mapping_status(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    schema_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Check if field mappings exist for a groundtruth-schema combination."""
+    # Validate project access
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project"
+        )
+
+    # Validate groundtruth and schema exist
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    schema: models.Schema | None = db.execute(
+        select(models.Schema).where(
+            models.Schema.project_id == project_id,
+            models.Schema.id == schema_id,
+        )
+    ).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
+    # Check mapping status
+    mapping_count = db.execute(
+        select(func.count(models.FieldMapping.id)).where(
+            models.FieldMapping.ground_truth_id == groundtruth_id,
+            models.FieldMapping.schema_id == schema_id,
+        )
+    ).scalar()
+
+    # Get schema field count
+    schema_fields = {}
+    extract_field_types_from_schema(schema.schema_definition, schema_fields)
+    schema_field_count = len(schema_fields)
+
+    return {
+        "has_mappings": mapping_count > 0,
+        "mapping_count": mapping_count,
+        "schema_field_count": schema_field_count,
+        "mapping_complete": mapping_count == schema_field_count,
+        "groundtruth_name": groundtruth.name,
+        "schema_name": schema.schema_name,
+    }

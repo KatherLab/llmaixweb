@@ -1,17 +1,15 @@
 import datetime
 from typing import Any
 
-import jwt
-from jwt.exceptions import PyJWTError
 import bcrypt
+import jwt
 from fastapi import Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi.security import OAuth2PasswordBearer
+from jwt.exceptions import PyJWTError
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from ..core.config import settings
-
-from fastapi.security import OAuth2PasswordBearer
-
 from ..dependencies import get_db
 from ..models.user import User
 

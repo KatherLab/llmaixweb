@@ -1,3 +1,4 @@
+// EvaluationView.vue
 <template>
   <div class="evaluation-view p-4">
     <div class="header flex justify-between items-center mb-6">
@@ -14,24 +15,22 @@
           Upload Ground Truth
         </button>
         <button
-          v-if="groundTruthFiles.length > 0"
-          @click="downloadMetrics"
+          v-if="evaluations.length > 0"
+          @click="showExportModal = true"
           class="px-4 py-2 rounded-md font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed"
-          :disabled="isLoading || !selectedGroundTruth"
+          :disabled="isLoading"
         >
           <span class="flex items-center">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Download Metrics
+            Export Results
           </span>
         </button>
       </div>
     </div>
-
     <ErrorBanner v-if="error" :message="error" />
     <LoadingSpinner v-if="isLoading" />
-
     <!-- No ground truth files yet -->
     <EmptyState
       v-else-if="groundTruthFiles.length === 0"
@@ -46,500 +45,314 @@
         </svg>
       </template>
     </EmptyState>
-
-    <!-- Ground truth file selection and evaluation display -->
-    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main evaluation interface -->
+    <div v-else class="grid grid-cols-1 xl:grid-cols-4 gap-6">
       <!-- Ground truth files panel -->
       <div class="bg-white shadow-sm rounded-lg p-4">
-        <h2 class="font-medium mb-3">Ground Truth Files</h2>
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-medium">Ground Truth Files</h2>
+          <button
+            @click="showGroundTruthManager = true"
+            class="text-blue-600 hover:text-blue-800 text-sm"
+          >
+            Manage
+          </button>
+        </div>
         <div class="space-y-2 max-h-96 overflow-y-auto">
           <div
             v-for="(gt, index) in groundTruthFiles"
             :key="gt.id"
-            class="border rounded-lg p-3 hover:bg-gray-50"
+            class="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
             :class="{ 'border-blue-500 bg-blue-50': selectedGroundTruth?.id === gt.id }"
+            @click="selectGroundTruth(gt)"
           >
-            <div class="flex justify-between items-center">
-              <div>
-                <div class="font-medium">{{ gt.name || `Ground Truth #${index + 1}` }}</div>
-                <div class="text-sm text-gray-500">{{ formatDate(gt.created_at) }}</div>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  @click="selectGroundTruth(gt)"
-                  class="p-1 text-blue-600 hover:text-blue-800"
-                  :class="{ 'bg-blue-100 rounded': selectedGroundTruth?.id === gt.id }"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </button>
-                <button @click="deleteGroundTruth(gt)" class="p-1 text-red-600 hover:text-red-800">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              </div>
+            <div class="font-medium text-sm">{{ gt.name || `Ground Truth #${index + 1}` }}</div>
+            <div class="text-xs text-gray-500">{{ gt.format?.toUpperCase() }} • {{ formatDate(gt.created_at) }}</div>
+            <div v-if="gt.field_mappings?.length" class="text-xs text-green-600 mt-1">
+              {{ gt.field_mappings.length }} field mappings configured
             </div>
           </div>
         </div>
       </div>
-
-      <!-- Evaluation results panel -->
-      <div class="bg-white shadow-sm rounded-lg p-4 lg:col-span-2">
-        <h2 class="font-medium mb-3">Evaluation Results</h2>
-
-        <div v-if="!selectedGroundTruth" class="text-center py-8 text-gray-500">
-          Select a ground truth file to view evaluation results
+      <!-- Trial selection and evaluation panel -->
+      <div class="bg-white shadow-sm rounded-lg p-4 xl:col-span-3">
+        <div v-if="!selectedGroundTruth" class="text-center py-12 text-gray-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <p>Select a ground truth file to start evaluation</p>
         </div>
-
-        <div v-else-if="!evaluationResults.length" class="text-center py-8 text-gray-500">
-          No trials have been evaluated yet
-        </div>
-
         <div v-else>
-          <!-- Trial summary metrics -->
-          <div class="overflow-x-auto">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="font-medium">Evaluation Dashboard</h2>
+            <div class="flex gap-2">
+              <button
+                @click="showTrialSelector = true"
+                class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm hover:bg-blue-100 transition-colors"
+              >
+                Evaluate Trial
+              </button>
+              <button
+                v-if="selectedGroundTruth && !selectedGroundTruth.field_mappings?.length"
+                @click="previewGroundTruth"
+                class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-md text-sm hover:bg-yellow-100 transition-colors"
+              >
+                Preview & Configure
+              </button>
+            </div>
+          </div>
+          <!-- Evaluation results table -->
+          <div v-if="evaluations.length === 0" class="text-center py-8 text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2V7a2 2 0 012-2h2a2 2 0 002 2v2a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 00-2 2h-2a2 2 0 00-2 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2z" />
+            </svg>
+            <p>No evaluations yet. Select a trial to evaluate.</p>
+          </div>
+          <div v-else class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
                   <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trial</th>
                   <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
-                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
-                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">F1 Score</th>
-                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overall Accuracy</th>
+                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documents</th>
+                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="result in evaluationResults" :key="result.trial_id">
-                  <td class="px-4 py-3 whitespace-nowrap text-sm">Trial #{{ result.trial_id }}</td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm">{{ result.model }}</td>
+                <tr v-for="evaluation in evaluations" :key="evaluation.id" class="hover:bg-gray-50">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm">
+                    <div class="font-medium">Trial #{{ evaluation.trial_id }}</div>
+                    <div class="text-xs text-gray-500">{{ formatDate(evaluation.created_at) }}</div>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm">
+                    {{ getTrialModel(evaluation.trial_id) }}
+                  </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div class="flex items-center">
-                      <div class="mr-2">{{ (result.metrics.accuracy * 100).toFixed(1) }}%</div>
+                      <!-- Fix: Use overall_metrics instead of metrics -->
+                      <div class="mr-2">{{ ((evaluation.overall_metrics?.accuracy || evaluation.metrics?.accuracy || 0) * 100).toFixed(1) }}%</div>
                       <div class="w-16 bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-600 h-2 rounded-full" :style="{width: `${result.metrics.accuracy * 100}%`}"></div>
+                        <div class="bg-blue-600 h-2 rounded-full" :style="{width: `${((evaluation.overall_metrics?.accuracy || evaluation.metrics?.accuracy || 0) * 100)}%`}"></div>
                       </div>
                     </div>
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
-                    <div class="flex items-center">
-                      <div class="mr-2">{{ (result.metrics.f1_score * 100).toFixed(1) }}%</div>
-                      <div class="w-16 bg-gray-200 rounded-full h-2">
-                        <div class="bg-green-600 h-2 rounded-full" :style="{width: `${result.metrics.f1_score * 100}%`}"></div>
-                      </div>
-                    </div>
+                    {{ evaluation.document_summaries?.length || evaluation.document_metrics?.length || 0 }}
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
-                    <button
-                      @click="viewTrialEvaluation(result)"
-                      class="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      View Details
-                    </button>
+                    <div class="flex gap-2">
+                      <button
+                        @click="viewEvaluationDetails(evaluation)"
+                        class="text-blue-600 hover:text-blue-800 text-sm underline"
+                      >
+                        Details
+                      </button>
+                      <button
+                        @click="viewDocumentEvaluations(evaluation)"
+                        class="text-green-600 hover:text-green-800 text-sm underline"
+                      >
+                        Documents
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-
-          <!-- Detailed view for selected trial evaluation -->
-          <div v-if="selectedTrialEvaluation" class="mt-6 border-t pt-4">
-            <h3 class="font-medium mb-3">Detailed Evaluation: Trial #{{ selectedTrialEvaluation.trial_id }}</h3>
-
-            <div class="mb-4 flex justify-between items-center">
-              <div class="text-sm text-gray-500">
-                {{ selectedTrialEvaluation.document_count }} documents evaluated
-              </div>
-              <div class="flex gap-3">
-                <div class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  Accuracy: {{ (selectedTrialEvaluation.metrics.accuracy * 100).toFixed(1) }}%
-                </div>
-                <div class="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
-                  F1: {{ (selectedTrialEvaluation.metrics.f1_score * 100).toFixed(1) }}%
-                </div>
-              </div>
-            </div>
-
-            <!-- Document-level metrics -->
-            <div class="bg-gray-50 p-4 rounded-md overflow-x-auto">
-              <h4 class="font-medium mb-2">Document-Level Results</h4>
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th class="px-3 py-2 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
-                    <th class="px-3 py-2 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
-                    <th class="px-3 py-2 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fields Correct</th>
-                  </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="(doc, idx) in selectedTrialEvaluation.documents" :key="idx">
-                    <td class="px-3 py-2 whitespace-nowrap text-sm">Document #{{ doc.document_id }}</td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm">
-                      {{ (doc.accuracy * 100).toFixed(1) }}%
-                    </td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm">
-                      {{ doc.fields_correct }}/{{ doc.total_fields }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Field-level metrics -->
-            <div class="mt-4 bg-gray-50 p-4 rounded-md overflow-x-auto">
-              <h4 class="font-medium mb-2">Field-Level Results</h4>
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th class="px-3 py-2 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Field</th>
-                    <th class="px-3 py-2 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
-                    <th class="px-3 py-2 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precision</th>
-                    <th class="px-3 py-2 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recall</th>
-                  </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="(field, fieldName) in selectedTrialEvaluation.fields" :key="fieldName">
-                    <td class="px-3 py-2 whitespace-nowrap text-sm">{{ fieldName }}</td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm">
-                      {{ (field.accuracy * 100).toFixed(1) }}%
-                    </td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm">
-                      {{ (field.precision * 100).toFixed(1) }}%
-                    </td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm">
-                      {{ (field.recall * 100).toFixed(1) }}%
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
       </div>
     </div>
-
-    <!-- Upload ground truth modal -->
-    <ModalDialog
+    <!-- Modals -->
+    <GroundTruthUploadModal
       v-if="showUploadModal"
-      title="Upload Ground Truth"
+      :project-id="projectId"
       @close="showUploadModal = false"
-    >
-      <form @submit.prevent="uploadGroundTruth">
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Name (optional)</label>
-            <input
-              v-model="groundTruthName"
-              type="text"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              placeholder="Ground truth file name"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Format</label>
-            <select
-              v-model="groundTruthFormat"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="json">JSON (one file per document)</option>
-              <option value="csv">CSV (all documents in one file)</option>
-              <option value="xlsx">XLSX (all documents in one file)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700">File</label>
-            <div
-              class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
-              @dragover.prevent
-              @drop.prevent="handleFileDrop"
-            >
-              <div class="space-y-1 text-center">
-                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <div class="flex text-sm text-gray-600">
-                  <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                    <span>Upload a file</span>
-                    <input
-                      id="file-upload"
-                      name="file-upload"
-                      type="file"
-                      class="sr-only"
-                      @change="handleFileSelect"
-                    />
-                  </label>
-                  <p class="pl-1">or drag and drop</p>
-                </div>
-                <p class="text-xs text-gray-500">
-                  {{ groundTruthFormat === 'json' ? 'ZIP of JSON files' : groundTruthFormat.toUpperCase() }}
-                </p>
-              </div>
-            </div>
-            <div v-if="selectedFile" class="mt-2 text-sm text-gray-600">
-              Selected: {{ selectedFile.name }}
-            </div>
-          </div>
-
-          <div v-if="groundTruthFormat !== 'json'">
-            <label class="block text-sm font-medium text-gray-700">Comparison Options</label>
-            <div class="mt-2 space-y-2">
-              <div class="flex items-center">
-                <input
-                  id="ignore-case"
-                  v-model="comparisonOptions.ignoreCase"
-                  type="checkbox"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label for="ignore-case" class="ml-2 block text-sm text-gray-700">
-                  Ignore case when comparing
-                </label>
-              </div>
-              <div class="flex items-center">
-                <input
-                  id="category-matching"
-                  v-model="comparisonOptions.categoryMatching"
-                  type="checkbox"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label for="category-matching" class="ml-2 block text-sm text-gray-700">
-                  Enable category matching (e.g., "yes"="1"="true")
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-6 flex justify-end space-x-3">
-          <button
-            type="button"
-            @click="showUploadModal = false"
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            :disabled="isUploading || !selectedFile"
-          >
-            <span v-if="isUploading" class="flex items-center">
-              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Uploading...
-            </span>
-            <span v-else>Upload</span>
-          </button>
-        </div>
-      </form>
-    </ModalDialog>
+      @uploaded="onGroundTruthUploaded"
+    />
+    <GroundTruthManager
+      v-if="showGroundTruthManager"
+      :project-id="projectId"
+      :ground-truth-files="groundTruthFiles"
+      @close="showGroundTruthManager = false"
+      @updated="fetchGroundTruthFiles"
+    />
+    <TrialSelectorModal
+      v-if="showTrialSelector"
+      :project-id="projectId"
+      :ground-truth="selectedGroundTruth"
+      @close="showTrialSelector = false"
+      @evaluate="onTrialEvaluate"
+    />
+    <EvaluationDetailsModal
+      v-if="showEvaluationDetails"
+      :project-id="projectId"
+      :evaluation="selectedEvaluation"
+      @close="showEvaluationDetails = false"
+    />
+    <DocumentEvaluationModal
+      v-if="showDocumentEvaluation"
+      :project-id="projectId"
+      :evaluation="selectedEvaluation"
+      @close="showDocumentEvaluation = false"
+    />
+    <GroundTruthPreviewModal
+      v-if="showGroundTruthPreview"
+      :project-id="projectId"
+      :ground-truth="selectedGroundTruth"
+      @close="showGroundTruthPreview = false"
+      @configured="onMappingConfigured"
+    />
+    <MetricsExportModal
+      v-if="showExportModal"
+      :project-id="projectId"
+      :evaluations="evaluations"
+      @close="showExportModal = false"
+    />
   </div>
 </template>
-
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { api } from '@/services/api';
 import { formatDate } from '@/utils/formatters';
 import { useToast } from 'vue-toastification';
-import ModalDialog from '@/components/ModalDialog.vue';
 import ErrorBanner from '@/components/ErrorBanner.vue';
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 import EmptyState from '@/components/EmptyState.vue';
-
+import GroundTruthUploadModal from './GroundTruthUploadModal.vue';
+import GroundTruthManager from './GroundTruthManager.vue';
+import TrialSelectorModal from './TrialSelectorModal.vue';
+import EvaluationDetailsModal from './EvaluationDetailsModal.vue';
+import DocumentEvaluationModal from './DocumentEvaluationModal.vue';
+import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue';
+import MetricsExportModal from './MetricsExportModal.vue';
 const props = defineProps({
   projectId: {
     type: [String, Number],
     required: true
   }
 });
-
 const toast = useToast();
 const isLoading = ref(false);
 const error = ref(null);
+// Data
 const groundTruthFiles = ref([]);
 const selectedGroundTruth = ref(null);
-const evaluationResults = ref([]);
-const selectedTrialEvaluation = ref(null);
+const evaluations = ref([]);
+const trials = ref([]);
+// Modal states
 const showUploadModal = ref(false);
-
-// Upload form state
-const groundTruthName = ref('');
-const groundTruthFormat = ref('json');
-const selectedFile = ref(null);
-const isUploading = ref(false);
-const comparisonOptions = ref({
-  ignoreCase: true,
-  categoryMatching: false
-});
-
+const showGroundTruthManager = ref(false);
+const showTrialSelector = ref(false);
+const showEvaluationDetails = ref(false);
+const showDocumentEvaluation = ref(false);
+const showGroundTruthPreview = ref(false);
+const showExportModal = ref(false);
+// Selected items
+const selectedEvaluation = ref(null);
 // Load ground truth files
 const fetchGroundTruthFiles = async () => {
-  isLoading.value = true;
   try {
     const response = await api.get(`/project/${props.projectId}/groundtruth`);
     groundTruthFiles.value = response.data;
-    // Select the first one by default if available
+    // Auto-select first ground truth if none selected
     if (groundTruthFiles.value.length > 0 && !selectedGroundTruth.value) {
       selectGroundTruth(groundTruthFiles.value[0]);
     }
   } catch (err) {
     error.value = `Failed to load ground truth files: ${err.message}`;
     console.error(err);
-  } finally {
-    isLoading.value = false;
   }
 };
-
-// Select a ground truth file and load evaluations
+// Load trials for model names
+const fetchTrials = async () => {
+  try {
+    const response = await api.get(`/project/${props.projectId}/trial`);
+    trials.value = response.data;
+  } catch (err) {
+    console.error('Failed to load trials:', err);
+  }
+};
+// Select ground truth and load evaluations
 const selectGroundTruth = async (groundTruth) => {
   selectedGroundTruth.value = groundTruth;
-  selectedTrialEvaluation.value = null;
-
+  await fetchEvaluations();
+};
+// Load evaluations for selected ground truth
+const fetchEvaluations = async () => {
+  if (!selectedGroundTruth.value) return;
   isLoading.value = true;
   try {
-    const response = await api.get(`/project/${props.projectId}/evaluation?groundtruth_id=${groundTruth.id}`);
-    evaluationResults.value = response.data;
+    const response = await api.get(`/project/${props.projectId}/evaluation?groundtruth_id=${selectedGroundTruth.value.id}`);
+    evaluations.value = response.data;
   } catch (err) {
-    error.value = `Failed to load evaluation results: ${err.message}`;
+    error.value = `Failed to load evaluations: ${err.message}`;
     console.error(err);
   } finally {
     isLoading.value = false;
   }
 };
+// Get trial model name
+const getTrialModel = (trialId) => {
+  const trial = trials.value.find(t => t.id === trialId);
+  return trial?.llm_model || 'Unknown';
+};
+// Event handlers
+const onGroundTruthUploaded = (groundTruth) => {
+  groundTruthFiles.value.push(groundTruth);
+  selectGroundTruth(groundTruth);
+  showUploadModal.value = false;
+  toast.success('Ground truth uploaded successfully');
+};
+const onTrialEvaluate = async (evaluationSummary) => {
+  // Convert EvaluationSummary to Evaluation format for consistency
+  const evaluation = {
+    id: evaluationSummary.id,
+    trial_id: evaluationSummary.trial_id,
+    groundtruth_id: evaluationSummary.groundtruth_id,
+    metrics: evaluationSummary.overall_metrics, // Map overall_metrics to metrics
+    overall_metrics: evaluationSummary.overall_metrics,
+    field_metrics: {}, // Can be populated from field_summaries if needed
+    document_metrics: evaluationSummary.document_summaries || [],
+    document_summaries: evaluationSummary.document_summaries,
+    created_at: evaluationSummary.created_at
+  };
 
-// View detailed evaluation for a trial
-const viewTrialEvaluation = async (evaluation) => {
-  selectedTrialEvaluation.value = null;
+  evaluations.value.push(evaluation);
+  showTrialSelector.value = false;
+  toast.success('Trial evaluation completed');
+};
+
+const onMappingConfigured = () => {
+  showGroundTruthPreview.value = false;
+  fetchGroundTruthFiles(); // Refresh to get updated mappings
+  toast.success('Field mappings configured successfully');
+};
+// Modal actions
+const previewGroundTruth = () => {
+  showGroundTruthPreview.value = true;
+};
+const viewEvaluationDetails = (evaluation) => {
+  selectedEvaluation.value = evaluation;
+  showEvaluationDetails.value = true;
+};
+const viewDocumentEvaluations = (evaluation) => {
+  selectedEvaluation.value = evaluation;
+  showDocumentEvaluation.value = true;
+};
+// Initialize
+onMounted(async () => {
   isLoading.value = true;
-
   try {
-    const response = await api.get(`/project/${props.projectId}/evaluation/${evaluation.id}`);
-    selectedTrialEvaluation.value = response.data;
+    await Promise.all([
+      fetchGroundTruthFiles(),
+      fetchTrials()
+    ]);
   } catch (err) {
-    error.value = `Failed to load trial evaluation details: ${err.message}`;
+    error.value = 'Failed to initialize evaluation view';
     console.error(err);
   } finally {
     isLoading.value = false;
   }
-};
-
-// Delete ground truth file
-const deleteGroundTruth = async (groundTruth) => {
-  if (!confirm(`Are you sure you want to delete this ground truth file?`)) {
-    return;
-  }
-
-  try {
-    await api.delete(`/project/${props.projectId}/groundtruth/${groundTruth.id}`);
-
-    // Remove from list and reset selection if needed
-    groundTruthFiles.value = groundTruthFiles.value.filter(gt => gt.id !== groundTruth.id);
-    if (selectedGroundTruth.value?.id === groundTruth.id) {
-      selectedGroundTruth.value = groundTruthFiles.value.length > 0 ? groundTruthFiles.value[0] : null;
-      evaluationResults.value = [];
-      selectedTrialEvaluation.value = null;
-    }
-
-    toast.success('Ground truth file deleted successfully');
-  } catch (err) {
-    toast.error(`Failed to delete ground truth file: ${err.message}`);
-    console.error(err);
-  }
-};
-
-// File selection handlers
-const handleFileSelect = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    selectedFile.value = file;
-  }
-};
-
-const handleFileDrop = (event) => {
-  const file = event.dataTransfer.files[0];
-  if (file) {
-    selectedFile.value = file;
-  }
-};
-
-// Upload ground truth file
-const uploadGroundTruth = async () => {
-  if (!selectedFile.value) {
-    toast.warning('Please select a file to upload');
-    return;
-  }
-
-  isUploading.value = true;
-
-  const formData = new FormData();
-  formData.append('file', selectedFile.value);
-  formData.append('name', groundTruthName.value || selectedFile.value.name);
-  formData.append('format', groundTruthFormat.value);
-
-  if (groundTruthFormat.value !== 'json') {
-    formData.append('comparison_options', JSON.stringify(comparisonOptions.value));
-  }
-
-  try {
-    const response = await api.post(`/project/${props.projectId}/groundtruth`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-
-    // Add the new ground truth file and select it
-    groundTruthFiles.value.push(response.data);
-    selectGroundTruth(response.data);
-
-    toast.success('Ground truth file uploaded successfully');
-    showUploadModal.value = false;
-
-    // Reset form
-    groundTruthName.value = '';
-    selectedFile.value = null;
-  } catch (err) {
-    toast.error(`Failed to upload ground truth file: ${err.message}`);
-    console.error(err);
-  } finally {
-    isUploading.value = false;
-  }
-};
-
-// Download metrics as CSV
-const downloadMetrics = async () => {
-  if (!selectedGroundTruth.value) {
-    return;
-  }
-
-  try {
-    const response = await api.get(
-      `/project/${props.projectId}/evaluation/download?groundtruth_id=${selectedGroundTruth.value.id}`,
-      { responseType: 'blob' }
-    );
-
-    // Create download link
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `evaluation_metrics_${props.projectId}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    toast.success('Metrics downloaded successfully');
-  } catch (err) {
-    toast.error(`Failed to download metrics: ${err.message}`);
-    console.error(err);
-  }
-};
-
-// Load data on mount
-onMounted(() => {
-  fetchGroundTruthFiles();
 });
 </script>

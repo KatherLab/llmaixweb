@@ -1,11 +1,9 @@
-from sqlalchemy.orm import Mapped, relationship
-from sqlalchemy.orm import mapped_column
-from sqlalchemy import String, Enum
-
-from ..db.base import Base
-
 from typing import TYPE_CHECKING
 
+from sqlalchemy import Enum, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from ..db.base import Base
 from ..utils.enums import UserRole
 
 if TYPE_CHECKING:

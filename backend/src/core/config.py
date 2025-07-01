@@ -1,13 +1,13 @@
 import os
+import secrets
 import sys
+from pathlib import Path
 
+import boto3
+import openai
+from botocore.exceptions import ClientError
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import secrets
-import openai
-from pathlib import Path
-import boto3
-from botocore.exceptions import ClientError
 
 
 class Settings(BaseSettings):

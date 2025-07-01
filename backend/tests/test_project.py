@@ -1,8 +1,9 @@
+import os
 import shutil
+
+import jsonschema
 import pytest
 from fastapi.testclient import TestClient
-import os
-import jsonschema
 
 from backend.src.core.config import settings
 
@@ -49,10 +50,10 @@ def client():
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
+    from ..src.core.security import get_password_hash
     from ..src.db.base import Base
     from ..src.db.session import SessionLocal, engine
     from ..src.models.user import User, UserRole
-    from ..src.core.security import get_password_hash
 
     print("Current working directory:", os.getcwd())
     # Create admin user

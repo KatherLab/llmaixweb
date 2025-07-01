@@ -1,7 +1,6 @@
-from ..utils.info_extraction import extract_info
 from ..dependencies import get_db
+from ..utils.info_extraction import extract_info
 from .celery_config import celery_app
-
 
 if celery_app:
 

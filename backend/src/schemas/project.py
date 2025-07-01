@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, SkipValidation, field_validator, ConfigDict
 from datetime import datetime
 from typing import TYPE_CHECKING, Annotated
+
+from pydantic import BaseModel, ConfigDict, SkipValidation, field_validator
+
 from ..core.config import settings
+from ..utils.enums import FileCreator
 
 if TYPE_CHECKING:
     from .user import User  # noqa: F401
@@ -49,6 +52,7 @@ class File(FileBase):
     project_id: int
     created_at: datetime
     updated_at: datetime
+    file_creator: FileCreator = FileCreator.user
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -242,27 +246,6 @@ class PreprocessingTask(PreprocessingTaskBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class GroundTruthBase(BaseModel):
-    name: str | None = None
-    format: str | None = None  # json, csv, xlsx
-    comparison_options: dict | None = None
-
-
-class GroundTruthCreate(GroundTruthBase):
-    name: str
-    format: str
-
-
-class GroundTruth(GroundTruthBase):
-    id: int
-    project_id: int
-    file_uuid: str
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 class EvaluationBase(BaseModel):
     trial_id: int
     groundtruth_id: int
@@ -294,6 +277,91 @@ class EvaluationDetail(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class FieldMappingBase(BaseModel):
+    schema_field: str
+    ground_truth_field: str
+    schema_id: int  # Add this field
+    field_type: str = "string"
+    comparison_method: str = "exact"
+    comparison_options: dict | None = None
+
+
+class FieldMappingCreate(FieldMappingBase):
+    pass
+
+
+class FieldMapping(FieldMappingBase):
+    id: int
+    ground_truth_id: int
+    created_at: datetime | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GroundTruthBase(BaseModel):
+    name: str | None = None
+    format: str | None = None
+
+
+class GroundTruthCreate(GroundTruthBase):
+    name: str
+    format: str
+
+
+class GroundTruthUpdate(BaseModel):
+    name: str | None = None
+    field_mappings: list[FieldMappingCreate] | None = None
+
+
+class GroundTruth(GroundTruthBase):
+    id: int
+    project_id: int
+    file_uuid: str
+    field_mappings: list[FieldMapping] = []
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EvaluationMetricDetail(BaseModel):
+    document_id: int
+    field_name: str
+    ground_truth_value: str | None
+    predicted_value: str | None
+    is_correct: bool
+    error_type: str | None
+    confidence_score: float | None
+
+
+class DocumentEvaluationDetail(BaseModel):
+    document_id: int
+    accuracy: float
+    correct_fields: int
+    total_fields: int
+    missing_fields: list[str]
+    incorrect_fields: list[str]
+    field_details: dict[str, EvaluationMetricDetail]
+
+
+class FieldEvaluationSummary(BaseModel):
+    field_name: str
+    accuracy: float
+    total_count: int
+    correct_count: int
+    error_distribution: dict[str, int]
+    sample_errors: list[dict]
+
+
+class EvaluationSummary(BaseModel):
+    id: int
+    trial_id: int
+    groundtruth_id: int
+    overall_metrics: dict
+    field_summaries: list[FieldEvaluationSummary]
+    document_summaries: list[DocumentEvaluationDetail]
+    confusion_matrices: dict | None
+    created_at: datetime
 
 
 from .user import User  # noqa: E402, F401

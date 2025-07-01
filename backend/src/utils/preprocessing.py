@@ -2,9 +2,10 @@ from openai import OpenAI
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..core.config import settings
-from ..dependencies import save_file, get_file
 from .. import models
+from ..core.config import settings
+from ..dependencies import get_file, save_file
+from .enums import FileCreator
 
 
 def preprocess_files(
@@ -151,6 +152,7 @@ def preprocess_files(
                         if settings.LOCAL_DIRECTORY
                         else models.FileStorageType.S3,
                         file_uuid=new_file_uuid,
+                        file_creator=FileCreator.system,
                     )
                     db_session.add(file_obj)
                     db_session.commit()

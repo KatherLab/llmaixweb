@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 from ..utils.enums import UserRole
 

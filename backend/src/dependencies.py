@@ -1,12 +1,13 @@
 import os
 import uuid
 from typing import Generator
-from .db.session import SessionLocal
-from openai import OpenAI
-from .core.config import settings
+
 import boto3
 from botocore.client import BaseClient
+from openai import OpenAI
 
+from .core.config import settings
+from .db.session import SessionLocal
 
 if settings.OPENAI_NO_API_CHECK:
     openai_client: OpenAI | None = None

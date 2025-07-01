@@ -1,23 +1,24 @@
 import enum
-
-from sqlalchemy.ext.mutable import MutableDict
-from sqlalchemy.orm import Mapped, relationship
-from sqlalchemy.orm import mapped_column
-from sqlalchemy import (
-    String,
-    Enum,
-    ForeignKey,
-    DateTime,
-    JSON,
-    Table,
-    Column,
-    Float,
-    Boolean,
-)
-from sqlalchemy.sql import func
-from ..db.base import Base
-
 from typing import TYPE_CHECKING
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    String,
+    Table,
+    UniqueConstraint,
+)
+from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+
+from ..db.base import Base
+from ..utils.enums import ComparisonMethod, FieldType, FileCreator
 
 if TYPE_CHECKING:
     from .user import User
@@ -101,6 +102,9 @@ class File(Base):
     file_name: Mapped[str] = mapped_column(String(500), nullable=False)
     file_type: Mapped[FileType] = mapped_column(
         Enum(FileType, native_enum=False, length=100), default=FileType.APPLICATION_PDF
+    )
+    file_creator: Mapped[FileCreator] = mapped_column(
+        Enum(FileCreator, native_enum=False, length=20), default=FileCreator.user
     )
     description: Mapped[str] = mapped_column(String(500), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(
@@ -204,6 +208,7 @@ class Schema(Base):
     )
     project: Mapped["Project"] = relationship(back_populates="schemas")
     trials: Mapped[list["Trial"]] = relationship(back_populates="schema")
+    field_mappings: Mapped[list["FieldMapping"]] = relationship(back_populates="schema")
 
 
 class TrialStatus(str, enum.Enum):
@@ -328,14 +333,69 @@ preprocessing_task_document_association = Table(
 )
 
 
+class FieldMapping(Base):
+    __tablename__ = "field_mappings"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ground_truth_id: Mapped[int] = mapped_column(
+        ForeignKey("ground_truth.id"), nullable=False
+    )
+    schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"), nullable=False)
+    schema_field: Mapped[str] = mapped_column(String(200), nullable=False)
+    ground_truth_field: Mapped[str] = mapped_column(String(200), nullable=False)
+    field_type: Mapped[FieldType] = mapped_column(
+        Enum(FieldType, native_enum=False, length=20), default=FieldType.STRING
+    )
+    comparison_method: Mapped[ComparisonMethod] = mapped_column(
+        Enum(ComparisonMethod, native_enum=False, length=20),
+        default=ComparisonMethod.EXACT,
+    )
+    comparison_options: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=True
+    )
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    schema: Mapped[Schema] = relationship(back_populates="field_mappings")
+    ground_truth: Mapped["GroundTruth"] = relationship(back_populates="field_mappings")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "ground_truth_id",
+            "schema_id",
+            "schema_field",
+            name="uq_field_mapping_gt_schema_field",
+        ),
+    )
+
+
+class EvaluationMetric(Base):
+    __tablename__ = "evaluation_metrics"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    evaluation_id: Mapped[int] = mapped_column(
+        ForeignKey("evaluations.id"), nullable=False
+    )
+    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), nullable=False)
+    field_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    ground_truth_value: Mapped[str] = mapped_column(String, nullable=True)
+    predicted_value: Mapped[str] = mapped_column(String, nullable=True)
+    is_correct: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    error_type: Mapped[str] = mapped_column(String(50), nullable=True)
+    confidence_score: Mapped[float] = mapped_column(Float, nullable=True)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    evaluation: Mapped["Evaluation"] = relationship(back_populates="detailed_metrics")
+    document: Mapped["Document"] = relationship()
+
+
 class GroundTruth(Base):
     __tablename__ = "ground_truth"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    format: Mapped[str] = mapped_column(String(10), nullable=False)  # json, csv, xlsx
+    format: Mapped[str] = mapped_column(String(10), nullable=False)
     file_uuid: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
-    comparison_options: Mapped[dict] = mapped_column(
+    data_cache: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON), nullable=True
     )
     created_at: Mapped[DateTime] = mapped_column(
@@ -346,6 +406,9 @@ class GroundTruth(Base):
     )
     project: Mapped["Project"] = relationship(back_populates="ground_truth_files")
     evaluations: Mapped[list["Evaluation"]] = relationship(
+        back_populates="ground_truth", cascade="all, delete-orphan"
+    )
+    field_mappings: Mapped[list["FieldMapping"]] = relationship(
         back_populates="ground_truth", cascade="all, delete-orphan"
     )
 
@@ -362,8 +425,14 @@ class Evaluation(Base):
         MutableDict.as_mutable(JSON), nullable=False
     )
     document_metrics: Mapped[list] = mapped_column(JSON, nullable=False)
+    confusion_matrices: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=True
+    )
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     trial: Mapped["Trial"] = relationship(back_populates="evaluations")
     ground_truth: Mapped["GroundTruth"] = relationship(back_populates="evaluations")
+    detailed_metrics: Mapped[list["EvaluationMetric"]] = relationship(
+        back_populates="evaluation", cascade="all, delete-orphan"
+    )

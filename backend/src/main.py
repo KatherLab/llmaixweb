@@ -1,11 +1,13 @@
-from fastapi import FastAPI, APIRouter
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+
+from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from llmaix.__version__ import __version__
+
+from .celery.celery_config import celery_app
 from .core.config import settings
 from .db.session import init_db
-from .routers.v1.endpoints import auth, users, projects
-from llmaix.__version__ import __version__
-from .celery.celery_config import celery_app
+from .routers.v1.endpoints import auth, projects, users
 
 
 @asynccontextmanager

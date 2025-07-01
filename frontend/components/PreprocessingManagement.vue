@@ -357,7 +357,7 @@ const fetchPreprocessingTasks = async () => {
 // Fetch project files
 const fetchProjectFiles = async () => {
   try {
-    const response = await api.get(`/project/${props.projectId}/file`);
+    const response = await api.get(`/project/${props.projectId}/file?file_creator=user`);
     projectFiles.value = response.data;
   } catch (err) {
     error.value = 'Failed to load project files';

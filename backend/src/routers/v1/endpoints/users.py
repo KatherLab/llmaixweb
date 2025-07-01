@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, Path, HTTPException, status, Form
+import secrets
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Path, status
 from sqlalchemy.orm import Session
-from .... import schemas
-from .... import models
-from ....core.security import get_admin_user, get_current_user, get_password_hash
+
+from .... import models, schemas
 from ....core.config import settings
+from ....core.security import get_admin_user, get_current_user, get_password_hash
 from ....dependencies import get_db
 from ....utils.enums import UserRole
-import secrets
 
 router = APIRouter()
 
