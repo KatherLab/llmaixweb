@@ -11,14 +11,14 @@
     "preview": "node_modules/.bin/vite preview --config frontend/vite.config.js"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.10",
-    "ag-grid-vue3": "^33.3.2",
+    "@tailwindcss/vite": "^4.1.11",
+    "ag-grid-vue3": "^34.0.0",
     "autoprefixer": "^10.4.21",
     "axios": "^1.10.0",
     "chart.js": "^4.5.0",
     "pinia": "^3.0.3",
-    "recharts": "^3.0.0",
-    "tailwindcss": "^4.1.10",
+    "recharts": "^3.0.2",
+    "tailwindcss": "^4.1.11",
     "vue": "^3.5.17",
     "vue-chartjs": "^5.3.2",
     "vue-router": "^4.5.1",
