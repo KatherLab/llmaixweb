@@ -2,7 +2,7 @@ import csv
 import io
 import json
 import re
-from typing import List, cast
+from typing import List, cast, Any
 
 import pandas as pd
 from fastapi import (
@@ -27,7 +27,11 @@ from ....core.security import get_current_user
 from ....dependencies import get_db, get_file, remove_file, save_file
 from ....utils.enums import FileCreator
 from ....utils.helpers import extract_field_types_from_schema
-from ....utils.info_extraction import get_available_models, test_llm_connection
+from ....utils.info_extraction import (
+    get_available_models,
+    test_api_connection,
+    test_llm_connection,
+)
 
 router = APIRouter()
 
@@ -1179,25 +1183,47 @@ def _extract_keys(d, parent_key="", sep="_"):
     return keys
 
 
-@router.get("/llm/models", response_model=list[str])
+@router.get("/llm/models", response_model=dict[str, Any])
 def get_available_llm_models(
     api_key: str | None = settings.OPENAI_API_KEY,
     base_url: str | None = settings.OPENAI_API_BASE,
-) -> list[str]:
+) -> dict[str, Any]:
     if api_key is None or base_url is None:
-        raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
+        return {
+            "success": False,
+            "models": [],
+            "message": "LLM configuration is incomplete",
+            "error_type": "incomplete_config"
+        }
     return get_available_models(api_key, base_url)
 
+@router.post("/llm/test-connection", response_model=dict[str, Any])
+def test_api_connection_endpoint(
+    api_key: str | None = settings.OPENAI_API_KEY,
+    base_url: str | None = settings.OPENAI_API_BASE,
+) -> dict[str, Any]:
+    if api_key is None or base_url is None:
+        return {
+            "success": False,
+            "message": "LLM configuration is incomplete. Please provide API key and base URL.",
+            "error_type": "incomplete_config"
+        }
+    return test_api_connection(api_key, base_url)
 
-@router.post("/llm/test", response_model=bool)
-def test_llm_connection_endpoint(
+@router.post("/llm/test-model", response_model=dict[str, Any])
+def test_llm_model_endpoint(
     api_key: str | None = settings.OPENAI_API_KEY,
     base_url: str | None = settings.OPENAI_API_BASE,
     llm_model: str | None = settings.OPENAI_API_MODEL,
-) -> bool:
+) -> dict[str, Any]:
     if api_key is None or base_url is None or llm_model is None:
-        raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
+        return {
+            "success": False,
+            "message": "LLM configuration is incomplete. Please provide API key, base URL, and model.",
+            "error_type": "incomplete_config"
+        }
     return test_llm_connection(api_key, base_url, llm_model)
+
 
 
 # Add these endpoints to your existing projects.py file
