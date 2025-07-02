@@ -3,9 +3,7 @@
     <!-- Enhanced Error Banner -->
     <div v-if="error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
       <div class="flex items-start">
-        <svg class="w-5 h-5 text-red-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+        <span class="w-5 h-5 text-red-400 mt-0.5 mr-3">⚠️</span>
         <div class="flex-1">
           <h3 class="text-sm font-medium text-red-800">Evaluation System Error</h3>
           <div v-if="typeof error === 'string'" class="mt-1 text-sm text-red-700">
@@ -34,10 +32,7 @@
               :disabled="isRetrying"
             >
               <span v-if="isRetrying" class="flex items-center">
-                <svg class="animate-spin -ml-1 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <span class="animate-spin -ml-1 mr-1 h-3 w-3">⟳</span>
                 Retrying...
               </span>
               <span v-else>Retry</span>
@@ -73,9 +68,7 @@
           :disabled="loadingStates.evaluations"
         >
           <span class="flex items-center">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
+            <span class="mr-1">⬇</span>
             Export Results
           </span>
         </button>
@@ -97,9 +90,7 @@
       @action="showUploadModal = true"
     >
       <template #icon>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
+        <span class="text-6xl text-gray-400">📋</span>
       </template>
     </EmptyState>
 
@@ -139,9 +130,7 @@
       <!-- Trial selection and evaluation panel -->
       <div class="bg-white shadow-sm rounded-lg p-4 xl:col-span-3">
         <div v-if="!selectedGroundTruth" class="text-center py-12 text-gray-500">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
+          <span class="text-6xl text-gray-400 mb-3 block">📋</span>
           <p>Select a ground truth file to start evaluation</p>
         </div>
         <div v-else>
@@ -168,9 +157,7 @@
           <!-- Prerequisites Warning -->
           <div v-if="!canStartEvaluation" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
             <div class="flex">
-              <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-              </svg>
+              <span class="h-5 w-5 text-yellow-400">⚠️</span>
               <div class="ml-3">
                 <h3 class="text-sm font-medium text-yellow-800">Setup Required</h3>
                 <p class="mt-1 text-sm text-yellow-700">
@@ -188,9 +175,7 @@
 
           <!-- Evaluation results table -->
           <div v-else-if="evaluations.length === 0" class="text-center py-8 text-gray-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2V7a2 2 0 012-2h2a2 2 0 002 2v2a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 00-2 2h-2a2 2 0 00-2 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2z" />
-            </svg>
+            <span class="text-4xl text-gray-400 mb-2 block">📊</span>
             <p>No evaluations yet. Select a trial to evaluate.</p>
           </div>
           <div v-else class="overflow-x-auto">
@@ -235,24 +220,12 @@
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div class="flex gap-2">
+                      <!-- UNIFIED: Single button now opens the comprehensive modal -->
                       <button
-                        @click="viewEvaluationDetails(evaluation)"
+                        @click="viewEvaluationAnalysis(evaluation)"
                         class="text-blue-600 hover:text-blue-800 text-sm underline"
                       >
-                        Details
-                      </button>
-                      <button
-                        @click="viewDocumentEvaluations(evaluation)"
-                        class="text-green-600 hover:text-green-800 text-sm underline"
-                      >
-                        Documents
-                      </button>
-                      <button
-                        v-if="hasEvaluationErrors(evaluation)"
-                        @click="viewEvaluationErrors(evaluation)"
-                        class="text-red-600 hover:text-red-800 text-sm underline"
-                      >
-                        Errors ({{ getErrorCount(evaluation) }})
+                        Analysis
                       </button>
                     </div>
                   </td>
@@ -285,18 +258,15 @@
       @close="showTrialSelector = false"
       @evaluate="onTrialEvaluate"
     />
-    <EvaluationDetailsModal
-      v-if="showEvaluationDetails"
+
+    <!-- NEW UNIFIED MODAL - replaces EvaluationDetailsModal, DocumentEvaluationModal, etc. -->
+    <EvaluationAnalysisModal
+      v-if="showEvaluationAnalysis"
       :project-id="projectId"
       :evaluation="selectedEvaluation"
-      @close="showEvaluationDetails = false"
+      @close="showEvaluationAnalysis = false"
     />
-    <DocumentEvaluationModal
-      v-if="showDocumentEvaluation"
-      :project-id="projectId"
-      :evaluation="selectedEvaluation"
-      @close="showDocumentEvaluation = false"
-    />
+
     <GroundTruthPreviewModal
       v-if="showGroundTruthPreview"
       :project-id="projectId"
@@ -309,12 +279,6 @@
       :project-id="projectId"
       :evaluations="evaluations"
       @close="showExportModal = false"
-    />
-    <EvaluationErrorsModal
-      v-if="showErrorsModal"
-      :project-id="projectId"
-      :evaluation="selectedEvaluation"
-      @close="showErrorsModal = false"
     />
   </div>
 </template>
@@ -330,11 +294,11 @@ import EmptyState from '@/components/EmptyState.vue';
 import GroundTruthUploadModal from './GroundTruthUploadModal.vue';
 import GroundTruthManager from './GroundTruthManager.vue';
 import TrialSelectorModal from './TrialSelectorModal.vue';
-import EvaluationDetailsModal from './EvaluationDetailsModal.vue';
-import DocumentEvaluationModal from './DocumentEvaluationModal.vue';
 import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue';
 import MetricsExportModal from './MetricsExportModal.vue';
-import EvaluationErrorsModal from './EvaluationErrorsModal.vue';
+
+// NEW UNIFIED MODAL IMPORT - replaces the old ones
+import EvaluationAnalysisModal from './EvaluationAnalysisModal.vue';
 
 const props = defineProps({
   projectId: {
@@ -363,15 +327,15 @@ const selectedGroundTruth = ref(null);
 const evaluations = ref([]);
 const trials = ref([]);
 
-// Modal states
+// Modal states - UNIFIED
 const showUploadModal = ref(false);
 const showGroundTruthManager = ref(false);
 const showTrialSelector = ref(false);
-const showEvaluationDetails = ref(false);
-const showDocumentEvaluation = ref(false);
 const showGroundTruthPreview = ref(false);
 const showExportModal = ref(false);
-const showErrorsModal = ref(false);
+
+// NEW UNIFIED MODAL STATE - replaces the old separate modal states
+const showEvaluationAnalysis = ref(false);
 
 // Selected items
 const selectedEvaluation = ref(null);
@@ -627,7 +591,7 @@ const onMappingConfigured = async () => {
   }
 };
 
-// Modal actions
+// Modal actions - UNIFIED
 const previewGroundTruth = () => {
   if (!selectedGroundTruth.value) {
     error.value = 'No ground truth file selected';
@@ -636,19 +600,10 @@ const previewGroundTruth = () => {
   showGroundTruthPreview.value = true;
 };
 
-const viewEvaluationDetails = (evaluation) => {
+// NEW UNIFIED MODAL ACTION - replaces the old separate modal actions
+const viewEvaluationAnalysis = (evaluation) => {
   selectedEvaluation.value = evaluation;
-  showEvaluationDetails.value = true;
-};
-
-const viewDocumentEvaluations = (evaluation) => {
-  selectedEvaluation.value = evaluation;
-  showDocumentEvaluation.value = true;
-};
-
-const viewEvaluationErrors = (evaluation) => {
-  selectedEvaluation.value = evaluation;
-  showErrorsModal.value = true;
+  showEvaluationAnalysis.value = true;
 };
 
 // Initialize component

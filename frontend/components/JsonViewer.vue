@@ -1,29 +1,26 @@
 <template>
   <div class="json-viewer">
-    <div v-if="!data" class="text-gray-500 italic">null</div>
-    <div v-else-if="typeof data !== 'object'" class="json-value">{{ formatValue(data) }}</div>
+    <div v-if="!data" class="text-gray-500 italic text-xs">null</div>
+    <div v-else-if="typeof data !== 'object'" class="json-value text-xs">{{ formatValue(data) }}</div>
     <div v-else class="json-object">
       <div v-for="(value, key) in data" :key="key" class="json-item">
         <div class="json-key" @click="toggleExpanded(key)">
           <span class="toggle-icon">
-            <svg
+            <span
               v-if="isExpandable(value)"
-              class="w-4 h-4 transition-transform"
+              class="w-3 h-3 transition-transform text-gray-400 cursor-pointer inline-block"
               :class="{ 'transform rotate-90': expanded[key] }"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-            <span v-else class="w-4 h-4 inline-block"></span>
+              ▶
+            </span>
+            <span v-else class="w-3 h-3 inline-block"></span>
           </span>
-          <span class="key-name">{{ key }}:</span>
-          <span v-if="!isExpandable(value) || !expanded[key]" class="json-value">
+          <span class="key-name text-xs font-medium text-purple-700">{{ key }}:</span>
+          <span v-if="!isExpandable(value) || !expanded[key]" class="json-value text-xs ml-1">
             {{ formatValue(value, !expanded[key]) }}
           </span>
         </div>
-        <div v-if="isExpandable(value) && expanded[key]" class="json-children ml-4">
+        <div v-if="isExpandable(value) && expanded[key]" class="json-children ml-3 pl-2 border-l border-gray-200">
           <JsonViewer :data="value" :max-depth="maxDepth - 1" />
         </div>
       </div>
@@ -32,7 +29,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { reactive } from 'vue';
 
 const props = defineProps({
   data: {
@@ -82,12 +79,12 @@ const formatValue = (value, collapsed = false) => {
 <style scoped>
 .json-viewer {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
+  font-size: 0.75rem;
+  line-height: 1.4;
 }
 
 .json-item {
-  margin: 2px 0;
+  margin: 1px 0;
 }
 
 .json-key {
@@ -95,38 +92,27 @@ const formatValue = (value, collapsed = false) => {
   display: flex;
   align-items: flex-start;
   padding: 1px 0;
-}
-
-.json-key:hover {
-  background-color: rgba(59, 130, 246, 0.1);
   border-radius: 2px;
 }
 
+.json-key:hover {
+  background-color: rgba(99, 102, 241, 0.05);
+}
+
 .toggle-icon {
-  width: 16px;
+  width: 12px;
   display: inline-block;
-  color: #6b7280;
   flex-shrink: 0;
+  margin-right: 2px;
 }
 
 .key-name {
-  color: #881391;
-  margin-right: 5px;
+  margin-right: 4px;
   font-weight: 500;
 }
 
 .json-value {
-  color: #1a1aa6;
+  color: #1e40af;
   word-break: break-word;
-}
-
-.json-children {
-  border-left: 1px dashed #d1d5db;
-  padding-left: 1rem;
-  margin-left: 0.5rem;
-}
-
-.json-object > .json-item:first-child .json-children {
-  margin-top: 4px;
 }
 </style>

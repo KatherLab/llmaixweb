@@ -1,0 +1,415 @@
+<template>
+  <div class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50" @click="$emit('close')">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-[95vw] max-h-[95vh] flex flex-col" @click.stop>
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div>
+          <h3 class="text-lg font-medium text-gray-900">Evaluation Analysis</h3>
+          <p v-if="evaluation" class="text-sm text-gray-500">Trial #{{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}</p>
+        </div>
+        <button @click="$emit('close')" class="text-gray-400 hover:text-gray-500">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="px-6 py-3 border-b border-gray-200 bg-gray-50">
+        <nav class="flex space-x-8">
+          <button
+            v-for="tab in availableTabs"
+            :key="tab.id"
+            @click="activeTab = tab.id"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200"
+            :class="{
+              'border-blue-500 text-blue-600': activeTab === tab.id,
+              'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== tab.id
+            }"
+          >
+            <div class="flex items-center gap-2">
+              <span class="text-lg">{{ tab.icon }}</span>
+              {{ tab.name }}
+              <span v-if="tab.badge" class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+                {{ tab.badge }}
+              </span>
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Error Display -->
+      <div v-if="error" class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex items-start">
+          <span class="text-red-400 text-lg mr-3">⚠️</span>
+          <div class="flex-1">
+            <h4 class="text-sm font-medium text-red-800">Loading Error</h4>
+            <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+            <div class="mt-3 flex gap-2">
+              <button
+                @click="retryLoad"
+                class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
+                :disabled="isRetrying"
+              >
+                {{ isRetrying ? 'Retrying...' : 'Retry' }}
+              </button>
+              <button @click="clearError" class="text-sm text-red-600 hover:text-red-800">
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="flex-1 overflow-y-auto">
+        <!-- Loading State -->
+        <div v-if="isLoading" class="text-center py-12">
+          <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+          <p class="mt-2 text-gray-500">Loading evaluation details...</p>
+        </div>
+
+        <!-- Overview Tab -->
+        <div v-else-if="activeTab === 'overview' && evaluationDetail" class="p-6">
+          <EvaluationOverview
+            :evaluation-detail="evaluationDetail"
+            :document-stats="documentStats"
+            @view-field-errors="viewFieldErrors"
+            @view-document-details="switchToDocumentsTab"
+          />
+        </div>
+
+        <!-- Documents Tab -->
+        <div v-else-if="activeTab === 'documents'" class="p-6">
+          <DocumentAnalysis
+            :project-id="projectId"
+            :evaluation="evaluation"
+            :document-evaluations="documentEvaluations"
+            :document-contents="documentContents"
+            :document-names="documentNames"
+            :loading-documents="loadingDocuments"
+            @load-document-content="loadDocumentContent"
+            @view-document-details="viewIndividualDocument"
+          />
+        </div>
+
+        <!-- Field Errors Tab -->
+        <div v-else-if="activeTab === 'field-errors'" class="p-6">
+          <FieldErrorAnalysis
+            :project-id="projectId"
+            :evaluation="evaluation"
+            :field-errors="fieldErrors"
+            :selected-field="selectedFieldName"
+            @select-field="selectFieldForErrors"
+          />
+        </div>
+
+        <!-- Individual Document Tab -->
+        <div v-else-if="activeTab === 'document-detail' && selectedDocument" class="p-6">
+          <IndividualDocumentView
+            :project-id="projectId"
+            :evaluation="evaluation"
+            :document="selectedDocument"
+            :document-content="documentContents[selectedDocument?.document_id]"
+            :loading-content="loadingDocuments[selectedDocument?.document_id]"
+            @load-content="loadDocumentContent"
+            @back-to-documents="switchToDocumentsTab"
+          />
+        </div>
+
+        <!-- Fallback for no data -->
+        <div v-else class="text-center py-12 text-gray-500">
+          <span class="text-4xl text-gray-400 mb-2 block">📊</span>
+          <p>No data available for this view</p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+        <div class="text-sm text-gray-500">
+          {{ evaluationDetail?.document_count || 0 }} documents •
+          {{ evaluationDetail ? (evaluationDetail.metrics.accuracy * 100).toFixed(1) : '0.0' }}% accuracy
+        </div>
+
+        <div class="flex gap-3">
+          <button
+            @click="$emit('close')"
+            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, computed } from 'vue';
+import { api } from '@/services/api';
+import { formatDate } from '@/utils/formatters';
+import { useToast } from 'vue-toastification';
+
+// Import sub-components
+import EvaluationOverview from '@/components/EvaluationOverview.vue';
+import DocumentAnalysis from '@/components/DocumentAnalysis.vue';
+import FieldErrorAnalysis from '@/components/FieldErrorAnalysis.vue';
+import IndividualDocumentView from '@/components/IndividualDocumentView.vue';
+
+const props = defineProps({
+  projectId: {
+    type: [String, Number],
+    required: true
+  },
+  evaluation: {
+    type: Object,
+    required: true
+  }
+});
+
+const emit = defineEmits(['close']);
+const toast = useToast();
+
+// State
+const activeTab = ref('overview');
+const isLoading = ref(false);
+const isRetrying = ref(false);
+const error = ref(null);
+
+// Data
+const evaluationDetail = ref(null);
+const documentEvaluations = ref([]);
+const documentContents = ref({});
+const documentNames = ref({});
+const loadingDocuments = ref({});
+const fieldErrors = ref({});
+const selectedFieldName = ref(null);
+const selectedDocument = ref(null);
+
+// Tab configuration
+const availableTabs = computed(() => {
+  const tabs = [
+    {
+      id: 'overview',
+      name: 'Overview',
+      icon: '📊',
+      badge: evaluationDetail.value ? `${(evaluationDetail.value.metrics.accuracy * 100).toFixed(1)}%` : null
+    },
+    {
+      id: 'documents',
+      name: 'Documents',
+      icon: '📄',
+      badge: documentEvaluations.value.length || null
+    }
+  ];
+
+  // Add field errors tab if there are errors
+  const totalFieldErrors = getTotalFieldErrors();
+  if (totalFieldErrors > 0) {
+    tabs.push({
+      id: 'field-errors',
+      name: 'Field Errors',
+      icon: '⚠️',
+      badge: totalFieldErrors
+    });
+  }
+
+  // Add individual document tab if a document is selected
+  if (selectedDocument.value) {
+    tabs.push({
+      id: 'document-detail',
+      name: `Document #${selectedDocument.value.document_id}`,
+      icon: '🔍',
+      badge: null
+    });
+  }
+
+  return tabs;
+});
+
+// Computed properties
+const documentStats = computed(() => {
+  if (!documentEvaluations.value.length) {
+    return { perfect: 0, good: 0, poor: 0, perfectPercent: 0, goodPercent: 0, poorPercent: 0 };
+  }
+
+  const docs = documentEvaluations.value.filter(d => !d.error);
+  const perfect = docs.filter(d => d.accuracy >= 0.9).length;
+  const good = docs.filter(d => d.accuracy >= 0.7 && d.accuracy < 0.9).length;
+  const poor = docs.filter(d => d.accuracy < 0.7).length;
+  const total = docs.length;
+
+  return {
+    perfect,
+    good,
+    poor,
+    perfectPercent: total > 0 ? (perfect / total) * 100 : 0,
+    goodPercent: total > 0 ? (good / total) * 100 : 0,
+    poorPercent: total > 0 ? (poor / total) * 100 : 0
+  };
+});
+
+// Helper functions
+const getTotalFieldErrors = () => {
+  return Object.values(fieldErrors.value).reduce((total, errors) => total + errors.length, 0);
+};
+
+const clearError = () => {
+  error.value = null;
+};
+
+const retryLoad = async () => {
+  isRetrying.value = true;
+  error.value = null;
+  await fetchAllData();
+  isRetrying.value = false;
+};
+
+// Data fetching
+const fetchAllData = async () => {
+  isLoading.value = true;
+  error.value = null;
+
+  try {
+    // Fetch evaluation details
+    const evaluationResponse = await api.get(
+      `/project/${props.projectId}/evaluation/${props.evaluation.id}`
+    );
+    evaluationDetail.value = evaluationResponse.data;
+
+    // Fetch document evaluations
+    if (props.evaluation.document_metrics?.length) {
+      const documentPromises = props.evaluation.document_metrics.map(async (docMetric) => {
+        try {
+          const response = await api.get(
+            `/project/${props.projectId}/evaluation/${props.evaluation.id}/document/${docMetric.document_id}`
+          );
+          return response.data;
+        } catch (err) {
+          return {
+            document_id: docMetric.document_id,
+            error: err.response?.data?.detail || err.message,
+            accuracy: 0,
+            correct_fields: 0,
+            total_fields: 0,
+            field_details: {}
+          };
+        }
+      });
+
+      documentEvaluations.value = await Promise.all(documentPromises);
+    }
+
+    // Load document names
+    await loadDocumentNames();
+
+    // Load field errors for each field
+    if (evaluationDetail.value?.fields) {
+      await loadFieldErrors();
+    }
+
+  } catch (err) {
+    console.error('Failed to load evaluation data:', err);
+
+    if (err.response?.status === 404) {
+      error.value = 'Evaluation not found. It may have been deleted.';
+    } else if (err.response?.status === 403) {
+      error.value = 'You do not have permission to view this evaluation.';
+    } else {
+      error.value = `Failed to load evaluation data: ${err.response?.data?.detail || err.message}`;
+    }
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const loadDocumentNames = async () => {
+  const promises = documentEvaluations.value.map(async (docEval) => {
+    try {
+      const response = await api.get(`/project/${props.projectId}/document/${docEval.document_id}`);
+      const doc = response.data;
+
+      let name = '';
+      if (doc.original_file?.file_name) {
+        name = doc.original_file.file_name;
+      } else if (doc.meta_data?.title) {
+        name = doc.meta_data.title;
+      } else {
+        name = `Document ${docEval.document_id}`;
+      }
+
+      documentNames.value[docEval.document_id] = name;
+    } catch (err) {
+      console.error(`Failed to load document name for ${docEval.document_id}:`, err);
+      documentNames.value[docEval.document_id] = `Document ${docEval.document_id}`;
+    }
+  });
+
+  await Promise.all(promises);
+};
+
+const loadFieldErrors = async () => {
+  const fieldNames = Object.keys(evaluationDetail.value.fields);
+
+  const promises = fieldNames.map(async (fieldName) => {
+    try {
+      const response = await api.get(
+        `/project/${props.projectId}/evaluation/${props.evaluation.id}/errors?field_name=${fieldName}&limit=50`
+      );
+      fieldErrors.value[fieldName] = response.data;
+    } catch (err) {
+      console.error(`Failed to load errors for field ${fieldName}:`, err);
+      fieldErrors.value[fieldName] = [];
+    }
+  });
+
+  await Promise.all(promises);
+};
+
+const loadDocumentContent = async (documentId) => {
+  if (documentContents.value[documentId] || loadingDocuments.value[documentId]) return;
+
+  loadingDocuments.value[documentId] = true;
+
+  try {
+    const response = await api.get(`/project/${props.projectId}/document/${documentId}`);
+    documentContents.value[documentId] = response.data.text || 'No text content available';
+  } catch (err) {
+    console.error(`Failed to load document content for ${documentId}:`, err);
+    documentContents.value[documentId] = 'Error loading document content';
+  } finally {
+    loadingDocuments.value[documentId] = false;
+  }
+};
+
+// Navigation actions
+const viewFieldErrors = (fieldName) => {
+  selectedFieldName.value = fieldName;
+  activeTab.value = 'field-errors';
+};
+
+const selectFieldForErrors = (fieldName) => {
+  selectedFieldName.value = fieldName;
+};
+
+const switchToDocumentsTab = () => {
+  activeTab.value = 'documents';
+  selectedDocument.value = null;
+};
+
+const viewIndividualDocument = async (documentId) => {
+  const document = documentEvaluations.value.find(d => d.document_id === documentId);
+  if (document) {
+    selectedDocument.value = document;
+    activeTab.value = 'document-detail';
+
+    if (!documentContents.value[documentId]) {
+      await loadDocumentContent(documentId);
+    }
+  }
+};
+
+onMounted(() => {
+  fetchAllData();
+});
+</script>
