@@ -1,6 +1,58 @@
-// EvaluationView.vue
 <template>
   <div class="evaluation-view p-4">
+    <!-- Enhanced Error Banner -->
+    <div v-if="error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+      <div class="flex items-start">
+        <svg class="w-5 h-5 text-red-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="flex-1">
+          <h3 class="text-sm font-medium text-red-800">Evaluation System Error</h3>
+          <div v-if="typeof error === 'string'" class="mt-1 text-sm text-red-700">
+            {{ error }}
+          </div>
+          <div v-else class="mt-1">
+            <p class="text-sm text-red-700">{{ error.message }}</p>
+            <div v-if="error.errors && error.errors.length" class="mt-2">
+              <p class="text-xs font-medium text-red-800">Details:</p>
+              <ul class="mt-1 text-xs text-red-700 list-disc list-inside">
+                <li v-for="err in error.errors" :key="err">{{ err }}</li>
+              </ul>
+            </div>
+            <div v-if="error.suggestions && error.suggestions.length" class="mt-2">
+              <p class="text-xs font-medium text-red-800">Suggestions:</p>
+              <ul class="mt-1 text-xs text-red-700 list-disc list-inside">
+                <li v-for="suggestion in error.suggestions" :key="suggestion">{{ suggestion }}</li>
+              </ul>
+            </div>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <button
+              v-if="lastFailedOperation"
+              @click="retryLastOperation"
+              class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
+              :disabled="isRetrying"
+            >
+              <span v-if="isRetrying" class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Retrying...
+              </span>
+              <span v-else>Retry</span>
+            </button>
+            <button
+              @click="clearError"
+              class="text-sm text-red-600 hover:text-red-800"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="header flex justify-between items-center mb-6">
       <div>
         <h1 class="text-2xl font-bold">Evaluation</h1>
@@ -10,7 +62,7 @@
         <button
           @click="showUploadModal = true"
           class="px-4 py-2 rounded-md font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
-          :disabled="isLoading"
+          :disabled="loadingStates.groundTruthFiles"
         >
           Upload Ground Truth
         </button>
@@ -18,7 +70,7 @@
           v-if="evaluations.length > 0"
           @click="showExportModal = true"
           class="px-4 py-2 rounded-md font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed"
-          :disabled="isLoading"
+          :disabled="loadingStates.evaluations"
         >
           <span class="flex items-center">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,8 +81,13 @@
         </button>
       </div>
     </div>
-    <ErrorBanner v-if="error" :message="error" />
-    <LoadingSpinner v-if="isLoading" />
+
+    <!-- Loading States -->
+    <div v-if="loadingStates.groundTruthFiles" class="text-center py-8">
+      <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      <p class="mt-2 text-gray-500">Loading ground truth files...</p>
+    </div>
+
     <!-- No ground truth files yet -->
     <EmptyState
       v-else-if="groundTruthFiles.length === 0"
@@ -45,6 +102,7 @@
         </svg>
       </template>
     </EmptyState>
+
     <!-- Main evaluation interface -->
     <div v-else class="grid grid-cols-1 xl:grid-cols-4 gap-6">
       <!-- Ground truth files panel -->
@@ -64,16 +122,20 @@
             :key="gt.id"
             class="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
             :class="{ 'border-blue-500 bg-blue-50': selectedGroundTruth?.id === gt.id }"
-            @click="selectGroundTruth(gt)"
+            @click="selectGroundTruthWithValidation(gt)"
           >
             <div class="font-medium text-sm">{{ gt.name || `Ground Truth #${index + 1}` }}</div>
             <div class="text-xs text-gray-500">{{ gt.format?.toUpperCase() }} • {{ formatDate(gt.created_at) }}</div>
             <div v-if="gt.field_mappings?.length" class="text-xs text-green-600 mt-1">
               {{ gt.field_mappings.length }} field mappings configured
             </div>
+            <div v-else class="text-xs text-yellow-600 mt-1">
+              No field mappings configured
+            </div>
           </div>
         </div>
       </div>
+
       <!-- Trial selection and evaluation panel -->
       <div class="bg-white shadow-sm rounded-lg p-4 xl:col-span-3">
         <div v-if="!selectedGroundTruth" class="text-center py-12 text-gray-500">
@@ -87,8 +149,9 @@
             <h2 class="font-medium">Evaluation Dashboard</h2>
             <div class="flex gap-2">
               <button
-                @click="showTrialSelector = true"
-                class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm hover:bg-blue-100 transition-colors"
+                @click="showTrialSelectorWithValidation"
+                class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm hover:bg-blue-100 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                :disabled="!canStartEvaluation"
               >
                 Evaluate Trial
               </button>
@@ -101,8 +164,30 @@
               </button>
             </div>
           </div>
+
+          <!-- Prerequisites Warning -->
+          <div v-if="!canStartEvaluation" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <div class="flex">
+              <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">Setup Required</h3>
+                <p class="mt-1 text-sm text-yellow-700">
+                  {{ evaluationPrerequisiteMessage }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading evaluations -->
+          <div v-if="loadingStates.evaluations" class="text-center py-8">
+            <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+            <p class="mt-2 text-gray-500">Loading evaluations...</p>
+          </div>
+
           <!-- Evaluation results table -->
-          <div v-if="evaluations.length === 0" class="text-center py-8 text-gray-500">
+          <div v-else-if="evaluations.length === 0" class="text-center py-8 text-gray-500">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2V7a2 2 0 012-2h2a2 2 0 002 2v2a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 00-2 2h-2a2 2 0 00-2 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2z" />
             </svg>
@@ -116,6 +201,7 @@
                   <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
                   <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overall Accuracy</th>
                   <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documents</th>
+                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -130,15 +216,22 @@
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div class="flex items-center">
-                      <!-- Fix: Use overall_metrics instead of metrics -->
-                      <div class="mr-2">{{ ((evaluation.overall_metrics?.accuracy || evaluation.metrics?.accuracy || 0) * 100).toFixed(1) }}%</div>
+                      <div class="mr-2">{{ getAccuracyPercentage(evaluation) }}%</div>
                       <div class="w-16 bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-600 h-2 rounded-full" :style="{width: `${((evaluation.overall_metrics?.accuracy || evaluation.metrics?.accuracy || 0) * 100)}%`}"></div>
+                        <div class="bg-blue-600 h-2 rounded-full" :style="{width: `${getAccuracyPercentage(evaluation)}%`}"></div>
                       </div>
                     </div>
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
-                    {{ evaluation.document_summaries?.length || evaluation.document_metrics?.length || 0 }}
+                    {{ getDocumentCount(evaluation) }}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm">
+                    <span v-if="hasEvaluationErrors(evaluation)" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+                      Has Errors ({{ getErrorCount(evaluation) }})
+                    </span>
+                    <span v-else class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                      Complete
+                    </span>
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div class="flex gap-2">
@@ -154,6 +247,13 @@
                       >
                         Documents
                       </button>
+                      <button
+                        v-if="hasEvaluationErrors(evaluation)"
+                        @click="viewEvaluationErrors(evaluation)"
+                        class="text-red-600 hover:text-red-800 text-sm underline"
+                      >
+                        Errors ({{ getErrorCount(evaluation) }})
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -163,6 +263,7 @@
         </div>
       </div>
     </div>
+
     <!-- Modals -->
     <GroundTruthUploadModal
       v-if="showUploadModal"
@@ -175,7 +276,7 @@
       :project-id="projectId"
       :ground-truth-files="groundTruthFiles"
       @close="showGroundTruthManager = false"
-      @updated="fetchGroundTruthFiles"
+      @updated="fetchGroundTruthFilesWithRetry"
     />
     <TrialSelectorModal
       v-if="showTrialSelector"
@@ -209,8 +310,15 @@
       :evaluations="evaluations"
       @close="showExportModal = false"
     />
+    <EvaluationErrorsModal
+      v-if="showErrorsModal"
+      :project-id="projectId"
+      :evaluation="selectedEvaluation"
+      @close="showErrorsModal = false"
+    />
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { api } from '@/services/api';
@@ -226,20 +334,35 @@ import EvaluationDetailsModal from './EvaluationDetailsModal.vue';
 import DocumentEvaluationModal from './DocumentEvaluationModal.vue';
 import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue';
 import MetricsExportModal from './MetricsExportModal.vue';
+import EvaluationErrorsModal from './EvaluationErrorsModal.vue';
+
 const props = defineProps({
   projectId: {
     type: [String, Number],
     required: true
   }
 });
+
 const toast = useToast();
-const isLoading = ref(false);
+
+// Loading states
+const loadingStates = ref({
+  groundTruthFiles: false,
+  evaluations: false,
+  trials: false
+});
+
+// Error handling
 const error = ref(null);
+const lastFailedOperation = ref(null);
+const isRetrying = ref(false);
+
 // Data
 const groundTruthFiles = ref([]);
 const selectedGroundTruth = ref(null);
 const evaluations = ref([]);
 const trials = ref([]);
+
 // Modal states
 const showUploadModal = ref(false);
 const showGroundTruthManager = ref(false);
@@ -248,111 +371,298 @@ const showEvaluationDetails = ref(false);
 const showDocumentEvaluation = ref(false);
 const showGroundTruthPreview = ref(false);
 const showExportModal = ref(false);
+const showErrorsModal = ref(false);
+
 // Selected items
 const selectedEvaluation = ref(null);
-// Load ground truth files
+
+// Computed properties
+const canStartEvaluation = computed(() => {
+  return selectedGroundTruth.value &&
+         selectedGroundTruth.value.field_mappings?.length > 0 &&
+         !loadingStates.value.groundTruthFiles &&
+         !loadingStates.value.evaluations &&
+         !error.value;
+});
+
+const evaluationPrerequisiteMessage = computed(() => {
+  if (!selectedGroundTruth.value) {
+    return 'Please select a ground truth file first.';
+  }
+  if (!selectedGroundTruth.value.field_mappings?.length) {
+    return 'Configure field mappings for the selected ground truth file to enable evaluation.';
+  }
+  if (error.value) {
+    return 'Resolve the current error before starting evaluation.';
+  }
+  return '';
+});
+
+// Utility functions
+const clearError = () => {
+  error.value = null;
+  lastFailedOperation.value = null;
+};
+
+const handleApiError = (err, operation) => {
+  console.error(`${operation} failed:`, err);
+
+  let errorMessage;
+
+  if (!err.response) {
+    errorMessage = `Network error during ${operation}. Please check your connection and try again.`;
+  } else if (err.response.status === 400) {
+    errorMessage = `${operation} failed: ${err.response.data?.detail || err.message}`;
+  } else if (err.response.status === 403) {
+    errorMessage = `Permission denied: You don't have access to ${operation.toLowerCase()}.`;
+  } else if (err.response.status === 404) {
+    errorMessage = `Resource not found during ${operation}. Please refresh and try again.`;
+  } else if (err.response.status === 500) {
+    errorMessage = `Server error during ${operation}. Please try again later or contact support.`;
+  } else {
+    errorMessage = `${operation} failed: ${err.response?.data?.detail || err.message}`;
+  }
+
+  error.value = errorMessage;
+  toast.error(errorMessage);
+};
+
+const retryLastOperation = async () => {
+  if (!lastFailedOperation.value) return;
+
+  isRetrying.value = true;
+  error.value = null;
+
+  try {
+    await lastFailedOperation.value();
+    toast.success('Operation completed successfully');
+    lastFailedOperation.value = null;
+  } catch (err) {
+    handleApiError(err, 'Retry');
+  } finally {
+    isRetrying.value = false;
+  }
+};
+
+// Data fetching functions
 const fetchGroundTruthFiles = async () => {
+  lastFailedOperation.value = fetchGroundTruthFiles;
+  loadingStates.value.groundTruthFiles = true;
+  error.value = null;
+
   try {
     const response = await api.get(`/project/${props.projectId}/groundtruth`);
     groundTruthFiles.value = response.data;
-    // Auto-select first ground truth if none selected
+
+    // Auto-select first ground truth if none selected and available
     if (groundTruthFiles.value.length > 0 && !selectedGroundTruth.value) {
-      selectGroundTruth(groundTruthFiles.value[0]);
+      await selectGroundTruth(groundTruthFiles.value[0]);
     }
+
+    lastFailedOperation.value = null;
   } catch (err) {
-    error.value = `Failed to load ground truth files: ${err.message}`;
-    console.error(err);
+    handleApiError(err, 'Loading ground truth files');
+  } finally {
+    loadingStates.value.groundTruthFiles = false;
   }
 };
-// Load trials for model names
+
+const fetchGroundTruthFilesWithRetry = async () => {
+  lastFailedOperation.value = fetchGroundTruthFiles;
+  await fetchGroundTruthFiles();
+};
+
 const fetchTrials = async () => {
+  lastFailedOperation.value = fetchTrials;
+  loadingStates.value.trials = true;
+
   try {
     const response = await api.get(`/project/${props.projectId}/trial`);
     trials.value = response.data;
+    lastFailedOperation.value = null;
   } catch (err) {
     console.error('Failed to load trials:', err);
+    // Don't show error for trials loading as it's not critical
+  } finally {
+    loadingStates.value.trials = false;
   }
 };
-// Select ground truth and load evaluations
+
 const selectGroundTruth = async (groundTruth) => {
-  selectedGroundTruth.value = groundTruth;
-  await fetchEvaluations();
+  try {
+    error.value = null;
+    selectedGroundTruth.value = groundTruth;
+    await fetchEvaluations();
+  } catch (err) {
+    handleApiError(err, 'Selecting ground truth');
+  }
 };
-// Load evaluations for selected ground truth
+
+const selectGroundTruthWithValidation = async (groundTruth) => {
+  if (!groundTruth) {
+    error.value = 'Invalid ground truth file selected';
+    return;
+  }
+
+  await selectGroundTruth(groundTruth);
+};
+
 const fetchEvaluations = async () => {
   if (!selectedGroundTruth.value) return;
-  isLoading.value = true;
+
+  lastFailedOperation.value = fetchEvaluations;
+  loadingStates.value.evaluations = true;
+  error.value = null;
+
   try {
     const response = await api.get(`/project/${props.projectId}/evaluation?groundtruth_id=${selectedGroundTruth.value.id}`);
     evaluations.value = response.data;
+    lastFailedOperation.value = null;
   } catch (err) {
-    error.value = `Failed to load evaluations: ${err.message}`;
-    console.error(err);
+    handleApiError(err, 'Loading evaluations');
   } finally {
-    isLoading.value = false;
+    loadingStates.value.evaluations = false;
   }
 };
-// Get trial model name
+
+// Utility functions for evaluation display
 const getTrialModel = (trialId) => {
   const trial = trials.value.find(t => t.id === trialId);
   return trial?.llm_model || 'Unknown';
 };
+
+const getAccuracyPercentage = (evaluation) => {
+  const accuracy = evaluation.overall_metrics?.accuracy || evaluation.metrics?.accuracy || 0;
+  return (accuracy * 100).toFixed(1);
+};
+
+const getDocumentCount = (evaluation) => {
+  return evaluation.document_summaries?.length || evaluation.document_metrics?.length || 0;
+};
+
+const hasEvaluationErrors = (evaluation) => {
+  // Check if any document has errors
+  const documents = evaluation.document_summaries || evaluation.document_metrics || [];
+  return documents.some(doc => doc.error || doc.has_error);
+};
+
+const getErrorCount = (evaluation) => {
+  const documents = evaluation.document_summaries || evaluation.document_metrics || [];
+  return documents.filter(doc => doc.error || doc.has_error).length;
+};
+
+// Validation functions
+const validateEvaluationPrerequisites = () => {
+  const errors = [];
+
+  if (!selectedGroundTruth.value) {
+    errors.push('Please select a ground truth file');
+  }
+
+  if (selectedGroundTruth.value && !selectedGroundTruth.value.field_mappings?.length) {
+    errors.push('Ground truth file has no field mappings configured');
+  }
+
+  if (trials.value.length === 0) {
+    errors.push('No trials available for evaluation');
+  }
+
+  return errors;
+};
+
+const showTrialSelectorWithValidation = () => {
+  const validationErrors = validateEvaluationPrerequisites();
+
+  if (validationErrors.length > 0) {
+    error.value = `Cannot start evaluation: ${validationErrors.join(', ')}`;
+    toast.error(error.value);
+    return;
+  }
+
+  showTrialSelector.value = true;
+};
+
 // Event handlers
-const onGroundTruthUploaded = (groundTruth) => {
-  groundTruthFiles.value.push(groundTruth);
-  selectGroundTruth(groundTruth);
-  showUploadModal.value = false;
-  toast.success('Ground truth uploaded successfully');
+const onGroundTruthUploaded = async (groundTruth) => {
+  try {
+    groundTruthFiles.value.push(groundTruth);
+    await selectGroundTruth(groundTruth);
+    showUploadModal.value = false;
+    toast.success('Ground truth uploaded successfully');
+  } catch (err) {
+    handleApiError(err, 'Processing uploaded ground truth');
+  }
 };
+
 const onTrialEvaluate = async (evaluationSummary) => {
-  // Convert EvaluationSummary to Evaluation format for consistency
-  const evaluation = {
-    id: evaluationSummary.id,
-    trial_id: evaluationSummary.trial_id,
-    groundtruth_id: evaluationSummary.groundtruth_id,
-    metrics: evaluationSummary.overall_metrics, // Map overall_metrics to metrics
-    overall_metrics: evaluationSummary.overall_metrics,
-    field_metrics: {}, // Can be populated from field_summaries if needed
-    document_metrics: evaluationSummary.document_summaries || [],
-    document_summaries: evaluationSummary.document_summaries,
-    created_at: evaluationSummary.created_at
-  };
+  try {
+    // Convert EvaluationSummary to Evaluation format for consistency
+    const evaluation = {
+      id: evaluationSummary.id,
+      trial_id: evaluationSummary.trial_id,
+      groundtruth_id: evaluationSummary.groundtruth_id,
+      metrics: evaluationSummary.overall_metrics,
+      overall_metrics: evaluationSummary.overall_metrics,
+      field_metrics: {},
+      document_metrics: evaluationSummary.document_summaries || [],
+      document_summaries: evaluationSummary.document_summaries,
+      created_at: evaluationSummary.created_at
+    };
 
-  evaluations.value.push(evaluation);
-  showTrialSelector.value = false;
-  toast.success('Trial evaluation completed');
+    evaluations.value.push(evaluation);
+    showTrialSelector.value = false;
+    toast.success(`Trial #${evaluationSummary.trial_id} evaluation completed successfully`);
+  } catch (err) {
+    handleApiError(err, 'Processing evaluation result');
+  }
 };
 
-const onMappingConfigured = () => {
-  showGroundTruthPreview.value = false;
-  fetchGroundTruthFiles(); // Refresh to get updated mappings
-  toast.success('Field mappings configured successfully');
+const onMappingConfigured = async () => {
+  try {
+    showGroundTruthPreview.value = false;
+    await fetchGroundTruthFiles(); // Refresh to get updated mappings
+    toast.success('Field mappings configured successfully');
+  } catch (err) {
+    handleApiError(err, 'Refreshing after mapping configuration');
+  }
 };
+
 // Modal actions
 const previewGroundTruth = () => {
+  if (!selectedGroundTruth.value) {
+    error.value = 'No ground truth file selected';
+    return;
+  }
   showGroundTruthPreview.value = true;
 };
+
 const viewEvaluationDetails = (evaluation) => {
   selectedEvaluation.value = evaluation;
   showEvaluationDetails.value = true;
 };
+
 const viewDocumentEvaluations = (evaluation) => {
   selectedEvaluation.value = evaluation;
   showDocumentEvaluation.value = true;
 };
-// Initialize
+
+const viewEvaluationErrors = (evaluation) => {
+  selectedEvaluation.value = evaluation;
+  showErrorsModal.value = true;
+};
+
+// Initialize component
 onMounted(async () => {
-  isLoading.value = true;
+  loadingStates.value.groundTruthFiles = true;
   try {
     await Promise.all([
       fetchGroundTruthFiles(),
       fetchTrials()
     ]);
   } catch (err) {
-    error.value = 'Failed to initialize evaluation view';
-    console.error(err);
+    handleApiError(err, 'Initializing evaluation view');
   } finally {
-    isLoading.value = false;
+    loadingStates.value.groundTruthFiles = false;
   }
 });
 </script>

@@ -157,6 +157,7 @@ class TrialResultCreate(TrialResultBase):
 class TrialResult(TrialResultBase):
     id: int
     trial_id: int
+    document_id: int
     created_at: datetime
     updated_at: datetime
 
@@ -282,7 +283,7 @@ class EvaluationDetail(BaseModel):
 class FieldMappingBase(BaseModel):
     schema_field: str
     ground_truth_field: str
-    schema_id: int  # Add this field
+    schema_id: int
     field_type: str = "string"
     comparison_method: str = "exact"
     comparison_options: dict | None = None
@@ -334,6 +335,7 @@ class EvaluationMetricDetail(BaseModel):
     confidence_score: float | None
 
 
+# Enhanced DocumentEvaluationDetail with error handling
 class DocumentEvaluationDetail(BaseModel):
     document_id: int
     accuracy: float
@@ -342,6 +344,10 @@ class DocumentEvaluationDetail(BaseModel):
     missing_fields: list[str]
     incorrect_fields: list[str]
     field_details: dict[str, EvaluationMetricDetail]
+    # Add error handling fields
+    error: str | None = None
+    has_error: bool = False
+    document_name: str | None = None
 
 
 class FieldEvaluationSummary(BaseModel):
@@ -351,8 +357,11 @@ class FieldEvaluationSummary(BaseModel):
     correct_count: int
     error_distribution: dict[str, int]
     sample_errors: list[dict]
+    # Add error count for frontend
+    error_count: int | None = None
 
 
+# Enhanced EvaluationSummary with better error handling
 class EvaluationSummary(BaseModel):
     id: int
     trial_id: int
@@ -362,6 +371,30 @@ class EvaluationSummary(BaseModel):
     document_summaries: list[DocumentEvaluationDetail]
     confusion_matrices: dict | None
     created_at: datetime
+    # Add summary error information
+    total_errors: int | None = None
+    error_documents: list[int] | None = None
+
+
+# Add new schema for error details
+class EvaluationError(BaseModel):
+    document_id: int
+    document_name: str | None
+    error_message: str
+    error_type: str
+    field_name: str | None = None
+    ground_truth_value: str | None = None
+    predicted_value: str | None = None
+    context: str | None = None
+
+
+class EvaluationErrorSummary(BaseModel):
+    evaluation_id: int
+    total_errors: int
+    error_types: dict[str, int]
+    affected_documents: int
+    errors: list[EvaluationError]
+
 
 
 from .user import User  # noqa: E402, F401

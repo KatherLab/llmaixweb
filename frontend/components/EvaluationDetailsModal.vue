@@ -18,20 +18,32 @@
         </div>
 
         <div class="flex-1 overflow-y-auto p-6">
+          <!-- Enhanced Error Display -->
+          <div v-if="error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div class="flex items-start">
+              <svg class="w-5 h-5 text-red-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div class="flex-1">
+                <h4 class="text-sm font-medium text-red-800">Loading Error</h4>
+                <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+                <div class="mt-3">
+                  <button
+                    @click="retryLoad"
+                    class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
+                    :disabled="isRetrying"
+                  >
+                    <span v-if="isRetrying">Retrying...</span>
+                    <span v-else>Retry</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div v-if="isLoading" class="text-center py-12">
             <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
             <p class="mt-2 text-gray-500">Loading evaluation details...</p>
-          </div>
-
-          <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-4">
-            <div class="flex">
-              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-              </svg>
-              <div class="ml-3">
-                <p class="text-sm text-red-700">{{ error }}</p>
-              </div>
-            </div>
           </div>
 
           <div v-else-if="evaluationDetail">
@@ -42,6 +54,29 @@
                   <h2 class="text-xl font-semibold text-gray-800">Trial #{{ evaluationDetail.trial_id }}</h2>
                   <p class="text-gray-600">Model: {{ evaluationDetail.model }}</p>
                   <p class="text-sm text-gray-500">{{ formatDate(evaluationDetail.created_at) }}</p>
+
+                  <!-- Enhanced Error Summary -->
+                  <div v-if="hasDocumentErrors" class="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                    <div class="flex items-start">
+                      <svg class="w-4 h-4 text-yellow-400 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                      </svg>
+                      <div>
+                        <p class="text-sm font-medium text-yellow-800">
+                          {{ errorDocumentCount }} document(s) have evaluation errors
+                        </p>
+                        <p class="text-xs text-yellow-700 mt-1">
+                          These documents couldn't be properly evaluated due to missing ground truth data or other issues.
+                        </p>
+                        <button
+                          @click="showErrorsModal = true"
+                          class="mt-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded hover:bg-yellow-200 transition-colors"
+                        >
+                          View Error Details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div class="text-right">
                   <div class="text-2xl font-bold text-blue-600">
@@ -118,7 +153,8 @@
                       <td class="px-4 py-3 whitespace-nowrap text-sm">
                         <button
                           @click="viewFieldErrors(fieldName)"
-                          class="text-red-600 hover:text-red-800 text-sm underline"
+                          class="text-red-600 hover:text-red-800 text-sm underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed"
+                          :disabled="!fieldData.error_count || fieldData.error_count === 0"
                         >
                           {{ fieldData.error_count || 0 }} errors
                         </button>
@@ -161,6 +197,7 @@
                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correct Fields</th>
                       <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody class="bg-white divide-y divide-gray-200">
@@ -169,7 +206,10 @@
                         Document #{{ doc.document_id }}
                       </td>
                       <td class="px-4 py-3 whitespace-nowrap text-sm">
-                        <div class="flex items-center">
+                        <div v-if="doc.error" class="text-red-600 text-xs">
+                          Error: {{ doc.error }}
+                        </div>
+                        <div v-else class="flex items-center">
                           <div class="mr-2">{{ (doc.accuracy * 100).toFixed(1) }}%</div>
                           <div class="w-16 bg-gray-200 rounded-full h-2">
                             <div
@@ -185,10 +225,18 @@
                         </div>
                       </td>
                       <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {{ doc.correct_fields }}/{{ doc.total_fields }}
+                        <div v-if="doc.error" class="text-red-600">-</div>
+                        <div v-else>{{ doc.correct_fields }}/{{ doc.total_fields }}</div>
                       </td>
                       <td class="px-4 py-3 whitespace-nowrap">
                         <span
+                          v-if="doc.error"
+                          class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                        >
+                          Error
+                        </span>
+                        <span
+                          v-else
                           class="px-2 py-1 rounded-full text-xs font-medium"
                           :class="{
                             'bg-green-100 text-green-800': doc.accuracy >= 0.9,
@@ -198,6 +246,22 @@
                         >
                           {{ doc.accuracy >= 0.9 ? 'Perfect' : doc.accuracy >= 0.7 ? 'Good' : 'Needs Review' }}
                         </span>
+                      </td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm">
+                        <button
+                          v-if="!doc.error"
+                          @click="viewDocumentDetails(doc)"
+                          class="text-blue-600 hover:text-blue-800 text-sm underline"
+                        >
+                          Details
+                        </button>
+                        <button
+                          v-else
+                          @click="viewDocumentError(doc)"
+                          class="text-red-600 hover:text-red-800 text-sm underline"
+                        >
+                          View Error
+                        </button>
                       </td>
                     </tr>
                   </tbody>
@@ -234,6 +298,32 @@
             Close
           </button>
         </div>
+
+        <!-- Error Details Modal -->
+        <EvaluationErrorsModal
+          v-if="showErrorsModal"
+          :project-id="projectId"
+          :evaluation="evaluation"
+          @close="showErrorsModal = false"
+        />
+
+        <!-- Field Errors Modal -->
+        <FieldErrorsModal
+          v-if="showFieldErrorsModal"
+          :project-id="projectId"
+          :evaluation="evaluation"
+          :field-name="selectedFieldName"
+          @close="showFieldErrorsModal = false"
+        />
+
+        <!-- Document Details Modal -->
+        <DocumentDetailsModal
+          v-if="showDocumentDetailsModal"
+          :project-id="projectId"
+          :evaluation="evaluation"
+          :document="selectedDocument"
+          @close="showDocumentDetailsModal = false"
+        />
       </div>
     </div>
   </Teleport>
@@ -244,6 +334,9 @@ import { ref, onMounted, computed } from 'vue';
 import { api } from '@/services/api';
 import { formatDate } from '@/utils/formatters';
 import { useToast } from 'vue-toastification';
+import EvaluationErrorsModal from './EvaluationErrorsModal.vue';
+import FieldErrorsModal from './FieldErrorsModal.vue';
+import DocumentDetailsModal from './DocumentDetailsModal.vue';
 
 const props = defineProps({
   projectId: {
@@ -261,8 +354,29 @@ const emit = defineEmits(['close']);
 const toast = useToast();
 const isLoading = ref(false);
 const isDownloading = ref(false);
+const isRetrying = ref(false);
 const error = ref(null);
 const evaluationDetail = ref(null);
+
+// Modal states
+const showErrorsModal = ref(false);
+const showFieldErrorsModal = ref(false);
+const showDocumentDetailsModal = ref(false);
+
+// Selected items
+const selectedFieldName = ref(null);
+const selectedDocument = ref(null);
+
+// Computed properties
+const hasDocumentErrors = computed(() => {
+  if (!evaluationDetail.value?.documents) return false;
+  return evaluationDetail.value.documents.some(doc => doc.error);
+});
+
+const errorDocumentCount = computed(() => {
+  if (!evaluationDetail.value?.documents) return 0;
+  return evaluationDetail.value.documents.filter(doc => doc.error).length;
+});
 
 // Computed statistics for document performance
 const documentStats = computed(() => {
@@ -270,7 +384,7 @@ const documentStats = computed(() => {
     return { perfect: 0, good: 0, poor: 0, perfectPercent: 0, goodPercent: 0, poorPercent: 0 };
   }
 
-  const docs = evaluationDetail.value.documents;
+  const docs = evaluationDetail.value.documents.filter(d => !d.error); // Exclude error documents
   const perfect = docs.filter(d => d.accuracy >= 0.9).length;
   const good = docs.filter(d => d.accuracy >= 0.7 && d.accuracy < 0.9).length;
   const poor = docs.filter(d => d.accuracy < 0.7).length;
@@ -297,17 +411,44 @@ const fetchEvaluationDetail = async () => {
     );
     evaluationDetail.value = response.data;
   } catch (err) {
-    error.value = `Failed to load evaluation details: ${err.message}`;
-    console.error(err);
+    console.error('Failed to load evaluation details:', err);
+
+    if (err.response?.status === 404) {
+      error.value = 'Evaluation not found. It may have been deleted.';
+    } else if (err.response?.status === 403) {
+      error.value = 'You do not have permission to view this evaluation.';
+    } else {
+      error.value = `Failed to load evaluation details: ${err.response?.data?.detail || err.message}`;
+    }
   } finally {
     isLoading.value = false;
   }
 };
 
-// View field errors (placeholder for future implementation)
+// Retry loading
+const retryLoad = async () => {
+  isRetrying.value = true;
+  await fetchEvaluationDetail();
+  isRetrying.value = false;
+};
+
+// View field errors
 const viewFieldErrors = async (fieldName) => {
-  toast.info(`Field errors for "${fieldName}" - Feature coming soon!`);
-  // TODO: Implement field error modal
+  if (!fieldName) return;
+
+  selectedFieldName.value = fieldName;
+  showFieldErrorsModal.value = true;
+};
+
+// View document details
+const viewDocumentDetails = (document) => {
+  selectedDocument.value = document;
+  showDocumentDetailsModal.value = true;
+};
+
+// View document error
+const viewDocumentError = (document) => {
+  toast.error(`Document #${document.document_id}: ${document.error}`);
 };
 
 // Download evaluation report
@@ -331,8 +472,8 @@ const downloadReport = async () => {
 
     toast.success('Report downloaded successfully');
   } catch (err) {
-    toast.error(`Failed to download report: ${err.message}`);
-    console.error(err);
+    console.error('Failed to download report:', err);
+    toast.error(`Failed to download report: ${err.response?.data?.detail || err.message}`);
   } finally {
     isDownloading.value = false;
   }

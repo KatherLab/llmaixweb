@@ -2039,7 +2039,8 @@ def evaluate_trial(
     force_recalculate: bool = Query(False),
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.EvaluationSummary:
-    """Evaluate a trial against ground truth."""
+    """Evaluate a trial against ground truth with comprehensive error handling."""
+
     # Validate project access
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2051,7 +2052,7 @@ def evaluate_trial(
             status_code=403, detail="Not authorized to evaluate trials for this project"
         )
 
-    # Verify trial exists and get schema_id
+    # Verify trial exists and belongs to project
     trial: models.Trial | None = db.execute(
         select(models.Trial).where(
             models.Trial.project_id == project_id, models.Trial.id == trial_id
@@ -2060,7 +2061,7 @@ def evaluate_trial(
     if not trial:
         raise HTTPException(status_code=404, detail="Trial not found")
 
-    # Verify ground truth exists
+    # Verify ground truth exists and belongs to project
     groundtruth: models.GroundTruth | None = db.execute(
         select(models.GroundTruth).where(
             models.GroundTruth.project_id == project_id,
@@ -2070,26 +2071,43 @@ def evaluate_trial(
     if not groundtruth:
         raise HTTPException(status_code=404, detail="Ground truth not found")
 
-    # Check if mapping exists for this groundtruth-schema combination
-    mapping_exists = db.execute(
-        select(models.FieldMapping)
-        .where(
-            models.FieldMapping.ground_truth_id == groundtruth_id,
-            models.FieldMapping.schema_id == trial.schema_id,
-        )
-        .limit(1)
-    ).scalar_one_or_none()
-
-    if not mapping_exists:
-        raise HTTPException(
-            status_code=400,
-            detail=f"No field mapping found for ground truth {groundtruth_id} and schema {trial.schema_id}. Please configure field mappings first.",
-        )
-
-    # Run evaluation
+    # Pre-validation checks
     from ....utils.evaluation import EvaluationEngine
 
     engine = EvaluationEngine(db)
+
+    try:
+        validation_result = engine._validate_evaluation_prerequisites(
+            trial_id, groundtruth_id
+        )
+        if not validation_result["valid"]:
+            # Provide detailed error information
+            error_details = {
+                "message": "Cannot evaluate trial due to validation errors",
+                "errors": validation_result["errors"],
+                "suggestions": [],
+            }
+
+            # Add specific suggestions based on error types
+            for error in validation_result["errors"]:
+                if "No field mappings configured" in error:
+                    error_details["suggestions"].append(
+                        "Configure field mappings between your ground truth data and schema fields"
+                    )
+                elif "No results found" in error:
+                    error_details["suggestions"].append(
+                        "Ensure the trial has completed successfully and produced results"
+                    )
+                elif "documents have matching ground truth" in error:
+                    error_details["suggestions"].append(
+                        "Check that your ground truth file contains keys that match your document IDs or filenames"
+                    )
+
+            raise HTTPException(status_code=400, detail=error_details)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Validation failed: {str(e)}")
+
+    # Run evaluation
     try:
         evaluation = engine.evaluate_trial(
             trial_id=trial_id,
@@ -2098,10 +2116,15 @@ def evaluate_trial(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
 
-    # Build summary (same as before)
+    # Build enhanced summary with error information
     field_summaries = []
     for field_name, metrics in evaluation.field_metrics.items():
+        # Calculate error count
+        error_count = sum(metrics.get("error_distribution", {}).values())
+
         # Get sample errors
         sample_errors = []
         error_details = (
@@ -2132,13 +2155,30 @@ def evaluate_trial(
                 correct_count=metrics.get("correct_count", 0),
                 error_distribution=metrics.get("error_distribution", {}),
                 sample_errors=sample_errors,
+                error_count=error_count,
             )
         )
 
-    # Build document summaries
+    # Build document summaries with enhanced error information
     document_summaries = []
+    total_errors = 0
+    error_documents = []
+
     for doc_metrics in evaluation.document_metrics:
         doc_id = doc_metrics["document_id"]
+
+        # Check if this document had errors
+        has_error = "error" in doc_metrics
+        if has_error:
+            total_errors += 1
+            error_documents.append(doc_id)
+
+        # Get document name
+        document = db.query(models.Document).get(doc_id)
+        document_name = None
+        if document and document.original_file:
+            document_name = document.original_file.file_name
+
         # Get field details
         field_details = {}
         details = (
@@ -2160,17 +2200,23 @@ def evaluate_trial(
                 confidence_score=detail.confidence_score,
             )
 
-        document_summaries.append(
-            schemas.DocumentEvaluationDetail(
-                document_id=doc_id,
-                accuracy=doc_metrics["accuracy"],
-                correct_fields=doc_metrics["correct_fields"],
-                total_fields=doc_metrics["total_fields"],
-                missing_fields=doc_metrics.get("missing_fields", []),
-                incorrect_fields=doc_metrics.get("incorrect_fields", []),
-                field_details=field_details,
-            )
+        document_summary = schemas.DocumentEvaluationDetail(
+            document_id=doc_id,
+            accuracy=doc_metrics.get("accuracy", 0.0),
+            correct_fields=doc_metrics.get("correct_fields", 0),
+            total_fields=doc_metrics.get("total_fields", 0),
+            missing_fields=doc_metrics.get("missing_fields", []),
+            incorrect_fields=doc_metrics.get("incorrect_fields", []),
+            field_details=field_details,
+            has_error=has_error,
+            document_name=document_name,
         )
+
+        # Add error information if present
+        if has_error:
+            document_summary.error = doc_metrics["error"]
+
+        document_summaries.append(document_summary)
 
     return schemas.EvaluationSummary(
         id=evaluation.id,
@@ -2181,6 +2227,8 @@ def evaluate_trial(
         document_summaries=document_summaries,
         confusion_matrices=evaluation.confusion_matrices,
         created_at=evaluation.created_at,
+        total_errors=total_errors,
+        error_documents=error_documents,
     )
 
 

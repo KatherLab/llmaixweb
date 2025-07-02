@@ -10,7 +10,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import create_engine
 from thefuzz import fuzz
 
 from .. import models
@@ -28,16 +29,28 @@ def flatten_dict(d, parent_key="", sep="_"):
 
 
 class EvaluationEngine:
-    """Main evaluation engine with caching and parallel processing."""
+    """Main evaluation engine with enhanced concurrency handling."""
 
     def __init__(self, db_session: Session):
         self.db = db_session
         self._cache = {}
+        # Store engine for creating new sessions in parallel processing
+        self.engine = db_session.bind
 
     def evaluate_trial(
         self, trial_id: int, groundtruth_id: int, force_recalculate: bool = False
     ) -> models.Evaluation:
-        """Evaluate a trial against ground truth with caching."""
+        """Evaluate a trial against ground truth with comprehensive validation."""
+
+        # Pre-validation phase
+        validation_result = self._validate_evaluation_prerequisites(
+            trial_id, groundtruth_id
+        )
+        if not validation_result["valid"]:
+            raise ValueError(
+                f"Evaluation prerequisites not met: {'; '.join(validation_result['errors'])}"
+            )
+
         # Check cache
         if not force_recalculate:
             existing = (
@@ -47,23 +60,36 @@ class EvaluationEngine:
             )
             if existing:
                 return existing
-        # Load data
+
+        # Load validated data
         trial = self.db.query(models.Trial).get(trial_id)
         ground_truth = self.db.query(models.GroundTruth).get(groundtruth_id)
-        if not trial or not ground_truth:
-            raise ValueError("Trial or ground truth not found")
-        # Get results
         results = self.db.query(models.TrialResult).filter_by(trial_id=trial_id).all()
-        if not results:
-            raise ValueError("No results found for trial")
-        # Load and parse ground truth
+
+        # Load and validate ground truth data
         gt_data = self._load_ground_truth(ground_truth)
-        # Get field mappings
-        field_mappings = self._get_field_mappings(ground_truth)
-        # Evaluate in parallel
-        evaluation_results = self._evaluate_parallel(results, gt_data, field_mappings)
+        field_mappings = self._get_field_mappings(ground_truth, trial.schema_id)
+
+        # Final data consistency check
+        consistency_check = self._validate_data_consistency(
+            results, gt_data, field_mappings
+        )
+        if not consistency_check["valid"]:
+            raise ValueError(
+                f"Data consistency issues: {'; '.join(consistency_check['errors'])}"
+            )
+
+        # Pre-load all document data to avoid session issues in parallel processing
+        document_data = self._preload_document_data(results)
+
+        # Evaluate with enhanced error handling
+        evaluation_results = self._evaluate_parallel(
+            results, gt_data, field_mappings, document_data
+        )
+
         # Calculate metrics
         metrics = self._calculate_metrics(evaluation_results)
+
         # Create evaluation record
         evaluation = models.Evaluation(
             trial_id=trial_id,
@@ -73,56 +99,310 @@ class EvaluationEngine:
             document_metrics=metrics["documents"],
             confusion_matrices=metrics.get("confusion_matrices"),
         )
+
         # Store detailed metrics
         for detail in evaluation_results["detailed_metrics"]:
             metric = models.EvaluationMetric(**detail)
             evaluation.detailed_metrics.append(metric)
+
         self.db.add(evaluation)
         self.db.commit()
         return evaluation
+
+    def _validate_evaluation_prerequisites(
+        self, trial_id: int, groundtruth_id: int
+    ) -> Dict:
+        """Comprehensive validation before evaluation starts."""
+        errors = []
+        warnings = []
+
+        # Check trial exists
+        trial = self.db.query(models.Trial).get(trial_id)
+        if not trial:
+            errors.append(f"Trial {trial_id} not found")
+            return {"valid": False, "errors": errors}
+
+        # Check trial is completed
+        if trial.status != "completed":
+            errors.append(f"Trial {trial_id} is not completed (status: {trial.status})")
+
+        # Check ground truth exists
+        ground_truth = self.db.query(models.GroundTruth).get(groundtruth_id)
+        if not ground_truth:
+            errors.append(f"Ground truth {groundtruth_id} not found")
+            return {"valid": False, "errors": errors}
+
+        # Check trial has results
+        results = self.db.query(models.TrialResult).filter_by(trial_id=trial_id).all()
+        if not results:
+            errors.append(f"No results found for trial {trial_id}")
+
+        # Check field mappings exist for this schema
+        mappings = (
+            self.db.query(models.FieldMapping)
+            .filter_by(ground_truth_id=groundtruth_id, schema_id=trial.schema_id)
+            .all()
+        )
+        if not mappings:
+            errors.append(
+                f"No field mappings configured for ground truth {groundtruth_id} and schema {trial.schema_id}"
+            )
+
+        # Validate ground truth data can be loaded
+        try:
+            gt_data = self._load_ground_truth(ground_truth)
+            if not gt_data:
+                errors.append("Ground truth data is empty or invalid")
+        except Exception as e:
+            errors.append(f"Failed to load ground truth data: {str(e)}")
+            return {"valid": False, "errors": errors}
+
+        return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
+
+    def _validate_data_consistency(
+        self, results: List[models.TrialResult], gt_data: Dict, field_mappings: Dict
+    ) -> Dict:
+        """Validate that trial results can be matched with ground truth data."""
+        errors = []
+        warnings = []
+
+        total_results = len(results)
+        matched_count = 0
+        unmatched_documents = []
+
+        # Build document lookup for better error reporting
+        document_lookup = {}
+        for result in results:
+            doc_id = result.document_id
+            document = self.db.query(models.Document).get(doc_id)
+            if document:
+                document_lookup[doc_id] = document
+
+        for result in results:
+            doc_id = result.document_id
+
+            # Check if document exists
+            if doc_id not in document_lookup:
+                errors.append(f"Document {doc_id} not found in database")
+                continue
+
+            document = document_lookup[doc_id]
+
+            # Try to find ground truth key
+            gt_key = self._find_document_key_enhanced(doc_id, document, gt_data)
+            if gt_key is None:
+                filename = (
+                    document.original_file.file_name
+                    if document.original_file
+                    else "Unknown"
+                )
+                unmatched_documents.append({"doc_id": doc_id, "filename": filename})
+            else:
+                matched_count += 1
+
+        # Calculate match percentage
+        match_percentage = (
+            (matched_count / total_results) * 100 if total_results > 0 else 0
+        )
+
+        if match_percentage < 50:
+            errors.append(
+                f"Only {match_percentage:.1f}% of documents have matching ground truth data. "
+                f"This suggests a mismatch between document identifiers and ground truth keys."
+            )
+        elif match_percentage < 80:
+            warnings.append(
+                f"Only {match_percentage:.1f}% of documents have matching ground truth data"
+            )
+
+        if unmatched_documents:
+            # Show sample of unmatched documents
+            sample_unmatched = unmatched_documents[:3]
+            unmatched_list = [
+                f"Document {doc['doc_id']} ({doc['filename']})"
+                for doc in sample_unmatched
+            ]
+            if len(unmatched_documents) > 3:
+                unmatched_list.append(f"... and {len(unmatched_documents) - 3} more")
+
+            # Show available ground truth keys for debugging
+            available_keys = list(gt_data.keys())[:5]
+            errors.append(
+                f"Documents without ground truth matches: {', '.join(unmatched_list)}. "
+                f"Available ground truth keys: {available_keys}. "
+                f"Please check that ground truth keys match document IDs or filenames."
+            )
+
+        return {
+            "valid": len(errors) == 0,
+            "errors": errors,
+            "warnings": warnings,
+            "match_percentage": match_percentage,
+            "matched_count": matched_count,
+            "total_count": total_results,
+        }
+
+    def _preload_document_data(self, results: List[models.TrialResult]) -> Dict:
+        """Pre-load all document data to avoid session issues in parallel processing."""
+        document_data = {}
+
+        for result in results:
+            doc_id = result.document_id
+            try:
+                doc_id = int(doc_id)
+                document = self.db.query(models.Document).get(doc_id)
+                if document:
+                    # Store relevant document data
+                    document_data[doc_id] = {
+                        "id": document.id,
+                        "filename": document.original_file.file_name
+                        if document.original_file
+                        else None,
+                        "exists": True,
+                    }
+                else:
+                    document_data[doc_id] = {"exists": False}
+            except (ValueError, TypeError) as e:
+                print("Error converting document ID:", e)
+                document_data[doc_id] = {
+                    "exists": False,
+                    "error": "Invalid document ID",
+                }
+            except Exception as e:
+                print("Error loading documents: ", e)
+                import traceback
+                print(traceback.format_exc())
+
+
+        return document_data
+
+    def _find_document_key_enhanced(
+        self, doc_id: int, document: models.Document, gt_data: Dict
+    ) -> Optional[str]:
+        """Enhanced ground truth key finding with multiple strategies."""
+
+        # Strategy 1: Direct ID match (various formats)
+        id_variants = [
+            doc_id,
+            str(doc_id),
+            f"doc_{doc_id}",
+            f"document_{doc_id}",
+            f"doc{doc_id}",
+            f"document{doc_id}",
+        ]
+        for variant in id_variants:
+            if variant in gt_data:
+                return variant
+
+        # Strategy 2: Filename matching (if document has original file)
+        if document and document.original_file:
+            filename = document.original_file.file_name
+            filename_variants = [
+                filename,  # full filename
+                Path(filename).stem,  # filename without extension
+                Path(filename).name,  # filename with extension
+                filename.lower(),  # lowercase variants
+                Path(filename).stem.lower(),
+                Path(filename).name.lower(),
+                # Remove common prefixes/suffixes
+                filename.replace("_processed", "").replace("_ocr", ""),
+                Path(filename).stem.replace("_processed", "").replace("_ocr", ""),
+            ]
+
+            for variant in filename_variants:
+                if variant in gt_data:
+                    return variant
+
+        # Strategy 3: Fuzzy matching on keys (only if no exact matches found)
+        try:
+            best_match = None
+            best_score = 0
+            threshold = 85
+
+            search_terms = [str(doc_id)]
+            if document and document.original_file:
+                search_terms.extend(
+                    [
+                        document.original_file.file_name,
+                        Path(document.original_file.file_name).stem,
+                    ]
+                )
+
+            for search_term in search_terms:
+                for gt_key in gt_data.keys():
+                    score = fuzz.ratio(str(search_term).lower(), str(gt_key).lower())
+                    if score > best_score and score >= threshold:
+                        best_score = score
+                        best_match = gt_key
+
+            return best_match
+        except ImportError:
+            # thefuzz not available, skip fuzzy matching
+            pass
+
+        return None
 
     def _load_ground_truth(self, ground_truth: models.GroundTruth) -> Dict:
         """Load ground truth data with caching."""
         # Check cache
         if ground_truth.data_cache:
             return ground_truth.data_cache
+
         # Load from file
         from ..dependencies import get_file
 
         content = get_file(ground_truth.file_uuid)
         parser = GroundTruthParser()
         data = parser.parse(content, ground_truth.format)
+
         # Cache parsed data
         ground_truth.data_cache = data
         self.db.commit()
+
         return data
 
-    def _get_field_mappings(self, ground_truth: models.GroundTruth) -> Dict:
-        """Get field mappings with auto-detection."""
+    def _get_field_mappings(
+        self, ground_truth: models.GroundTruth, schema_id: int
+    ) -> Dict:
+        """Get field mappings for specific schema."""
         mappings = {}
-        # Load existing mappings
+
+        # Load mappings for this specific schema
         for mapping in ground_truth.field_mappings:
-            mappings[mapping.schema_field] = {
-                "gt_field": mapping.ground_truth_field,
-                "type": mapping.field_type,
-                "method": mapping.comparison_method,
-                "options": mapping.comparison_options or {},
-            }
+            if mapping.schema_id == schema_id:
+                mappings[mapping.schema_field] = {
+                    "gt_field": mapping.ground_truth_field,
+                    "type": mapping.field_type,
+                    "method": mapping.comparison_method,
+                    "options": mapping.comparison_options or {},
+                }
+
         return mappings
 
     def _evaluate_parallel(
-        self, results: List[models.TrialResult], gt_data: Dict, field_mappings: Dict
+        self,
+        results: List[models.TrialResult],
+        gt_data: Dict,
+        field_mappings: Dict,
+        document_data: Dict,
     ) -> Dict:
-        """Evaluate results in parallel."""
+        """Evaluate results in parallel with session isolation."""
         detailed_metrics = []
         doc_evaluations = []
-        with ThreadPoolExecutor(max_workers=10) as executor:
+
+        # Use smaller thread pool to avoid overwhelming the database
+        with ThreadPoolExecutor(max_workers=5) as executor:
             futures = []
             for result in results:
                 future = executor.submit(
-                    self._evaluate_document, result, gt_data, field_mappings
+                    self._evaluate_document_isolated,
+                    result,
+                    gt_data,
+                    field_mappings,
+                    document_data,
                 )
                 futures.append((result.document_id, future))
+
             for doc_id, future in futures:
                 try:
                     doc_eval = future.result()
@@ -130,75 +410,78 @@ class EvaluationEngine:
                     detailed_metrics.extend(doc_eval["detailed_metrics"])
                 except Exception as e:
                     print(f"Error evaluating document {doc_id}: {e}")
+                    # Add error document to results
+                    doc_evaluations.append(
+                        self._create_error_result(
+                            doc_id, f"Evaluation failed: {str(e)}"
+                        )
+                    )
+
         return {
             "document_evaluations": doc_evaluations,
             "detailed_metrics": detailed_metrics,
         }
 
-    def _evaluate_document(
-        self, result: models.TrialResult, gt_data: Dict, field_mappings: Dict
+    def _evaluate_document_isolated(
+        self,
+        result: models.TrialResult,
+        gt_data: Dict,
+        field_mappings: Dict,
+        document_data: Dict,
     ) -> Dict:
-        """Evaluate a single document."""
+        """Evaluate a single document using pre-loaded data to avoid session issues."""
         doc_id = result.document_id
 
-        # Ensure doc_id is an integer for SQLite
+        # Ensure doc_id is properly formatted
         try:
             doc_id = int(doc_id)
         except (ValueError, TypeError):
-            return {
-                "document_id": doc_id,
-                "error": f"Invalid document ID: {doc_id}",
-                "accuracy": 0.0,
-                "correct_fields": 0,
-                "total_fields": 0,
-                "missing_fields": [],
-                "incorrect_fields": [],
-                "detailed_metrics": [],
-            }
+            return self._create_error_result(doc_id, f"Invalid document ID: {doc_id}")
 
-        print("Evaluating document ID:", doc_id)
-        document = self.db.query(models.Document).get(doc_id)
-        if not document:
-            return {
-                "document_id": doc_id,
-                "error": "Document not found",
-                "accuracy": 0.0,
-                "correct_fields": 0,
-                "total_fields": 0,
-                "missing_fields": [],
-                "incorrect_fields": [],
-                "detailed_metrics": [],
-            }
+        # Use pre-loaded document data
+        if doc_id not in document_data or not document_data[doc_id].get(
+            "exists", False
+        ):
+            return self._create_error_result(doc_id, "Document not found in database")
 
-        # Get ground truth for this document
-        gt_key = self._find_document_key(doc_id, document, gt_data)
+        doc_info = document_data[doc_id]
+
+        # Get ground truth for this document using filename from pre-loaded data
+        gt_key = self._find_document_key_by_data(doc_id, doc_info, gt_data)
         if gt_key is None or gt_key not in gt_data:
-            return {
-                "document_id": doc_id,
-                "error": "No ground truth found",
-                "accuracy": 0.0,
-                "correct_fields": 0,
-                "total_fields": 0,
-                "missing_fields": [],
-                "incorrect_fields": [],
-                "detailed_metrics": [],
-            }
+            filename = doc_info.get("filename", "Unknown")
+            return self._create_error_result(
+                doc_id,
+                f"No ground truth found for document {doc_id} (filename: {filename}). "
+                f"Available ground truth keys: {list(gt_data.keys())[:5]}...",
+            )
 
         gt_values = gt_data[gt_key]
+
+        # Validate that we have trial results
+        if not result.result:
+            return self._create_error_result(
+                doc_id, "No trial results found for document"
+            )
+
         pred_values = flatten_dict(result.result)
+
         # Evaluate each field
         detailed_metrics = []
         correct_count = 0
         total_count = 0
         missing_fields = []
         incorrect_fields = []
+
         for schema_field, mapping in field_mappings.items():
             gt_field = mapping["gt_field"]
             if gt_field not in gt_values:
                 continue
+
             total_count += 1
             gt_value = gt_values[gt_field]
             pred_value = pred_values.get(schema_field)
+
             comparison = self._compare_values(
                 gt_value,
                 pred_value,
@@ -206,6 +489,7 @@ class EvaluationEngine:
                 mapping["method"],
                 mapping["options"],
             )
+
             if comparison["is_correct"]:
                 correct_count += 1
             else:
@@ -213,6 +497,7 @@ class EvaluationEngine:
                     missing_fields.append(schema_field)
                 else:
                     incorrect_fields.append(schema_field)
+
             detailed_metrics.append(
                 {
                     "document_id": doc_id,
@@ -228,7 +513,9 @@ class EvaluationEngine:
                     "confidence_score": comparison.get("confidence_score"),
                 }
             )
+
         accuracy = correct_count / total_count if total_count > 0 else 0
+
         return {
             "document_id": doc_id,
             "accuracy": accuracy,
@@ -239,24 +526,45 @@ class EvaluationEngine:
             "detailed_metrics": detailed_metrics,
         }
 
-    def _find_document_key(
-        self, doc_id: int, document: models.Document, gt_data: Dict
+    def _find_document_key_by_data(
+        self, doc_id: int, doc_info: Dict, gt_data: Dict
     ) -> Optional[str]:
-        """Find the ground truth key for a document."""
-        # Try direct ID match
-        if doc_id in gt_data:
-            return doc_id
-        if str(doc_id) in gt_data:
-            return str(doc_id)
-        # Try filename match
-        if document.original_file:
-            filename = document.original_file.file_name
-            base_name = Path(filename).stem
-            if filename in gt_data:
-                return filename
-            if base_name in gt_data:
-                return base_name
+        """Find document key using pre-loaded document data."""
+        # Strategy 1: Direct ID match
+        id_variants = [doc_id, str(doc_id), f"doc_{doc_id}", f"document_{doc_id}"]
+        for variant in id_variants:
+            if variant in gt_data:
+                return variant
+
+        # Strategy 2: Filename matching
+        filename = doc_info.get("filename")
+        if filename:
+            filename_variants = [
+                filename,
+                Path(filename).stem,
+                Path(filename).name,
+                filename.lower(),
+                Path(filename).stem.lower(),
+            ]
+
+            for variant in filename_variants:
+                if variant in gt_data:
+                    return variant
+
         return None
+
+    def _create_error_result(self, doc_id: Any, error_message: str) -> Dict:
+        """Create standardized error result."""
+        return {
+            "document_id": doc_id,
+            "error": error_message,
+            "accuracy": 0.0,
+            "correct_fields": 0,
+            "total_fields": 0,
+            "missing_fields": [],
+            "incorrect_fields": [],
+            "detailed_metrics": [],
+        }
 
     def _compare_values(
         self,
@@ -274,6 +582,9 @@ class EvaluationEngine:
         """Calculate overall and field-level metrics."""
         calculator = MetricsCalculator()
         return calculator.calculate(evaluation_results)
+
+
+# Keep existing GroundTruthParser, ValueComparator, and MetricsCalculator classes unchanged
 
 
 class GroundTruthParser:
@@ -626,12 +937,30 @@ class MetricsCalculator:
         return field_metrics
 
     def _calculate_document_metrics(self, doc_evals: List[Dict]) -> List[Dict]:
-        """Calculate document-level metrics."""
-        # Ensure accuracy is always present
+        """Calculate document-level metrics with error handling."""
+        processed_docs = []
+
         for doc_eval in doc_evals:
-            if "accuracy" not in doc_eval:
-                doc_eval["accuracy"] = 0.0  # or some other default value
-        return doc_evals
+            # Ensure all required fields are present
+            processed_doc = {
+                "document_id": doc_eval.get("document_id"),
+                "accuracy": doc_eval.get("accuracy", 0.0),
+                "correct_fields": doc_eval.get("correct_fields", 0),
+                "total_fields": doc_eval.get("total_fields", 0),
+                "missing_fields": doc_eval.get("missing_fields", []),
+                "incorrect_fields": doc_eval.get("incorrect_fields", []),
+            }
+
+            # Add error information if present
+            if "error" in doc_eval:
+                processed_doc["error"] = doc_eval["error"]
+                processed_doc["has_error"] = True
+            else:
+                processed_doc["has_error"] = False
+
+            processed_docs.append(processed_doc)
+
+        return processed_docs
 
     def _calculate_confusion_matrices(self, detailed_metrics: List[Dict]) -> Dict:
         """Calculate confusion matrices for categorical fields."""
