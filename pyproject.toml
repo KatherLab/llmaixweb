@@ -4,29 +4,29 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]>=0.115.14",
+    "fastapi[standard]>=0.116.0",
     "uvicorn>=0.35.0",
     "pyjwt~=2.10.1",
     "sqlalchemy~=2.0.41",
     "pydantic_settings~=2.10.1",
-    "openai~=1.93.0",
+    "openai~=1.93.3",
     "bcrypt~=4.3.0",
-    "boto3~=1.39.0",
-    "boto3-stubs==1.39.0",
-    "llmaix~=0.0.11",
+    "boto3~=1.39.3",
+    "boto3-stubs==1.39.3",
+    "llmaix~=0.0.12",
     "redis~=6.2.0",
     "celery~=5.5.3",
     "jsonschema~=4.24.0",
     "thefuzz>=0.22.1",
-    "pandas>=2.3.0",
-    "pandas-stubs>=2.2.3.250527",
+    "pandas>=2.3.1",
+    "pandas-stubs>=2.3.0.250703",
     "xlsxwriter>=3.2.5"
 ]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.12.1",
-    "ty>=0.0.1a12",
+    "ruff>=0.12.2",
+    "ty>=0.0.1a14",
     "pytest>=8.4.1",
     "pytest-cov~=6.2.1",
     "isort~=6.0.1",
