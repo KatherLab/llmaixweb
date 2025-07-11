@@ -624,6 +624,7 @@ const addProperty = () => {
   if (currentSchema.value.properties?.[key]) {
     alert(`Property "${key}" already exists!`);
     return;
+  }
 
   if (!newProperty.value.name.trim()) return;
 
