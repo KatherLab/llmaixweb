@@ -415,6 +415,8 @@ const schemaForm = ref({
 });
 
 let isUpdating = false;
+let isUpdatingFromWatch = false;
+let updateTimeout = null;
 
 const preserveCursorPosition = (event) => {
   cursorPosition.value = event.target.selectionStart;
@@ -555,11 +557,25 @@ const schemaTemplates = [
 ];
 
 watch(visualSchema, (newSchema) => {
-  // Only update if not currently focused on textarea
-  if (document.activeElement !== rawJsonTextarea.value) {
-    schemaForm.value.schema_definition = JSON.stringify(newSchema, null, 2);
+  if (isUpdatingFromWatch) return;
+
+  // Clear any pending updates
+  if (updateTimeout) {
+    clearTimeout(updateTimeout);
   }
+
+  // Debounce updates
+  updateTimeout = setTimeout(() => {
+    if (document.activeElement !== rawJsonTextarea.value) {
+      isUpdatingFromWatch = true;
+      schemaForm.value.schema_definition = JSON.stringify(newSchema, null, 2);
+      nextTick(() => {
+        isUpdatingFromWatch = false;
+      });
+    }
+  }, 300); // Increased debounce time
 }, { deep: true });
+
 
 // Watch for tab changes to sync data
 watch(activeTab, (newTab) => {
@@ -618,10 +634,21 @@ watch([schemaForm, visualSchema], () => {
 
 // Handle visual schema updates
 const updateVisualSchema = (newSchema) => {
-  visualSchema.value = newSchema;
-  // Auto-sync to raw JSON
+  if (isUpdatingFromWatch) return;
+
+  // Clear any pending updates
+  if (updateTimeout) {
+    clearTimeout(updateTimeout);
+  }
+
+  isUpdatingFromWatch = true;
+  visualSchema.value = JSON.parse(JSON.stringify(newSchema)); // Deep clone
   schemaForm.value.schema_definition = JSON.stringify(newSchema, null, 2);
   schemaError.value = '';
+
+  nextTick(() => {
+    isUpdatingFromWatch = false;
+  });
 };
 
 const applyTemplate = (template) => {
@@ -821,27 +848,39 @@ const editSchema = (schema) => {
   showEditModal.value = true;
 };
 
+
 const onRawSchemaChange = () => {
+  if (isUpdatingFromWatch) return;
+
+  // Clear any pending updates
+  if (updateTimeout) {
+    clearTimeout(updateTimeout);
+  }
+
   // Store cursor position
   const textarea = rawJsonTextarea.value;
   const savedPosition = textarea ? textarea.selectionStart : 0;
 
-  // Auto-sync to visual if valid JSON
-  try {
-    const parsed = JSON.parse(schemaForm.value.schema_definition);
-    visualSchema.value = parsed;
-    schemaError.value = '';
-  } catch (err) {
-    // Don't update visual schema if JSON is invalid
-    schemaError.value = 'Invalid JSON: ' + err.message;
-  }
+  updateTimeout = setTimeout(() => {
+    try {
+      const parsed = JSON.parse(schemaForm.value.schema_definition);
+      isUpdatingFromWatch = true;
 
-  // Restore cursor position after Vue updates
-  nextTick(() => {
-    if (textarea) {
-      textarea.setSelectionRange(savedPosition, savedPosition);
+      // Deep clone to break reference
+      visualSchema.value = JSON.parse(JSON.stringify(parsed));
+      schemaError.value = '';
+
+      nextTick(() => {
+        isUpdatingFromWatch = false;
+        // Restore cursor position
+        if (textarea && textarea === document.activeElement) {
+          textarea.setSelectionRange(savedPosition, savedPosition);
+        }
+      });
+    } catch (err) {
+      schemaError.value = 'Invalid JSON: ' + err.message;
     }
-  });
+  }, 300);
 };
 
 const confirmDelete = (schema) => {
@@ -855,6 +894,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.body.style.overflow = '';
+  if (updateTimeout) {
+    clearTimeout(updateTimeout);
+  }
 });
+
 
 </script>

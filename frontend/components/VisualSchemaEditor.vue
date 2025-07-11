@@ -198,7 +198,7 @@
       <div
         v-if="showEditPropertyModal"
         class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-        @click="showEditPropertyModal = false"
+        @click="handleEditModalClose"
       >
         <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" @click.stop>
           <div class="p-6 border-b">
@@ -215,7 +215,9 @@
               :property-key="editingProperty.key"
               :advanced-mode="advancedMode"
               @update="updateEditingProperty"
+              @update-key="updateEditingPropertyKey"
             />
+
           </div>
 
           <div class="p-6 border-t bg-gray-50 flex justify-end space-x-3">
@@ -449,6 +451,8 @@ const editingProperty = ref(null);
 const propertyToDelete = ref('');
 const enumProperty = ref(null);
 const enumValues = ref([]);
+const originalEditingProperty = ref(null);
+const originalEditingPropertyKey = ref(null);
 
 // Property type definitions with icons
 const StringIcon = {
@@ -556,8 +560,12 @@ const availableTypes = computed(() => [
 
 // Watch for external schema changes
 watch(() => props.schema, (newSchema) => {
-  localSchema.value = JSON.parse(JSON.stringify(newSchema));
+  // Only update if the schema actually changed
+  if (JSON.stringify(newSchema) !== JSON.stringify(localSchema.value)) {
+    localSchema.value = JSON.parse(JSON.stringify(newSchema));
+  }
 }, { deep: true });
+
 
 // Emit changes
 watch(localSchema, (newSchema) => {
@@ -599,16 +607,24 @@ const updateCurrentSchema = (updates) => {
   // Update the schema
   if (lastSegment) {
     if (schema.properties && schema.properties[lastSegment]) {
-      schema.properties[lastSegment] = { ...schema.properties[lastSegment], ...updates };
+      schema.properties[lastSegment] = JSON.parse(JSON.stringify(updates));
+    } else if (lastSegment === 'items' && schema.items) {
+      schema.items = JSON.parse(JSON.stringify(updates));
     }
   } else {
-    // Update root
-    Object.assign(localSchema.value, updates);
+    // root
+    localSchema.value = JSON.parse(JSON.stringify(updates));
   }
+
 };
 
 // Property management methods
 const addProperty = () => {
+  const key = newProperty.value.name.trim();
+  if (currentSchema.value.properties?.[key]) {
+    alert(`Property "${key}" already exists!`);
+    return;
+
   if (!newProperty.value.name.trim()) return;
 
   const propertyKey = newProperty.value.name.trim();
@@ -642,15 +658,32 @@ const addProperty = () => {
 };
 
 const editProperty = ({ key, schema }) => {
-  editingProperty.value = { key, schema: JSON.parse(JSON.stringify(schema)) };
+  if (key === '__root__') {
+    // Handle root schema editing
+    editingProperty.value = {
+      key: '__root__',
+      schema: JSON.parse(JSON.stringify(localSchema.value))
+    };
+    originalEditingProperty.value = JSON.parse(JSON.stringify(localSchema.value));
+    originalEditingPropertyKey.value = '__root__';
+  } else {
+    editingProperty.value = { key, schema: JSON.parse(JSON.stringify(schema)) };
+    originalEditingProperty.value = JSON.parse(JSON.stringify(schema));
+    originalEditingPropertyKey.value = key;
+  }
   showEditPropertyModal.value = true;
 };
 
-const updateEditingProperty = (updates) => {
+
+
+
+const updateEditingProperty = (newSchema) => {
   if (editingProperty.value) {
-    Object.assign(editingProperty.value.schema, updates);
+    // Deep-clone to break reactivity links
+    editingProperty.value.schema = JSON.parse(JSON.stringify(newSchema));
   }
 };
+
 
 // Add this method after the other property management methods
 const editRootSchema = () => {
@@ -661,19 +694,114 @@ const editRootSchema = () => {
   showEditPropertyModal.value = true;
 };
 
+// VisualSchemaEditor.vue
 const savePropertyEdits = () => {
-  if (editingProperty.value) {
-    if (editingProperty.value.key === '__root__') {
-      // Update root schema properties
-      Object.assign(localSchema.value, editingProperty.value.schema);
-    } else if (currentSchema.value.properties) {
-      currentSchema.value.properties[editingProperty.value.key] = editingProperty.value.schema;
+  if (!editingProperty.value) return;
+
+  /* ---------- 1. ROOT SCHEMA ---------- */
+  if (editingProperty.value.key === '__root__') {
+    // Replace (don’t merge) the entire root schema
+    localSchema.value = JSON.parse(JSON.stringify(editingProperty.value.schema));
+    showEditPropertyModal.value = false;
+    editingProperty.value = null;
+    return;
+  }
+
+  /* ---------- 2. NORMAL PROPERTY ---------- */
+  const oldKey = editingProperty.value.key;
+  const newKey = editingProperty.value.newKey || oldKey;
+
+  // Find the parent container of the property being edited
+  let parent = localSchema.value;
+  const path = [...currentPath.value];
+  for (const segment of path) {
+    if (parent.properties && parent.properties[segment]) {
+      parent = parent.properties[segment];
+    } else if (parent.items) {
+      parent = parent.items;
     }
   }
+
+  // Guard-clause for duplicates when renaming
+  if (oldKey !== newKey && parent.properties && parent.properties[newKey]) {
+    alert(`Property "${newKey}" already exists!`);
+    return;
+  }
+
+  // Deep-clone the edited schema so we don’t keep reactive links
+  const freshSchema = JSON.parse(JSON.stringify(editingProperty.value.schema));
+
+  // If the container is an OBJECT
+  if (parent.properties) {
+    if (oldKey !== newKey) {
+      delete parent.properties[oldKey];
+    }
+    parent.properties[newKey] = freshSchema;
+
+    // Update “required” array if present
+    if (parent.required && Array.isArray(parent.required)) {
+      const idx = parent.required.indexOf(oldKey);
+      if (idx !== -1) {
+        parent.required[idx] = newKey;
+      }
+    }
+  }
+
+  // If the container is an ARRAY items schema (editing “items”)
+  if (oldKey === 'items' && parent.type === 'array') {
+    parent.items = freshSchema;
+  }
+
+  /* ---------- 3. FINALISE ---------- */
   showEditPropertyModal.value = false;
   editingProperty.value = null;
 };
 
+
+const handleEditModalClose = () => {
+  if (editingProperty.value && hasUnsavedPropertyChanges()) {
+    if (confirm('You have unsaved changes. Are you sure you want to close?')) {
+      showEditPropertyModal.value = false;
+      editingProperty.value = null;
+      originalEditingProperty.value = null;
+      originalEditingPropertyKey.value = null;
+    }
+  } else {
+    showEditPropertyModal.value = false;
+    editingProperty.value = null;
+    originalEditingProperty.value = null;
+    originalEditingPropertyKey.value = null;
+  }
+};
+
+
+
+
+// Add this helper to check for unsaved changes
+const hasUnsavedPropertyChanges = () => {
+  if (!editingProperty.value || !originalEditingProperty.value) return false;
+
+  // Check if the key has changed
+  const currentKey = editingProperty.value.newKey || editingProperty.value.key;
+  if (currentKey !== originalEditingPropertyKey.value && originalEditingPropertyKey.value !== '__root__') {
+    return true;
+  }
+
+  // Compare original with edited version
+  const currentJSON = JSON.stringify(originalEditingProperty.value);
+  const editedJSON = JSON.stringify(editingProperty.value.schema);
+
+  return currentJSON !== editedJSON;
+};
+
+
+
+// Add this method to handle key updates
+const updateEditingPropertyKey = (newKey) => {
+  if (editingProperty.value) {
+    editingProperty.value.newKey = newKey;
+  }
+};
 
 const confirmDeleteProperty = (propertyKey) => {
   propertyToDelete.value = propertyKey;
@@ -682,11 +810,26 @@ const confirmDeleteProperty = (propertyKey) => {
 
 const deleteProperty = () => {
   if (propertyToDelete.value && currentSchema.value.properties) {
+    // Delete the property
     delete currentSchema.value.properties[propertyToDelete.value];
+
+    // Also remove from required array if present
+    if (currentSchema.value.required && Array.isArray(currentSchema.value.required)) {
+      const requiredIndex = currentSchema.value.required.indexOf(propertyToDelete.value);
+      if (requiredIndex !== -1) {
+        currentSchema.value.required.splice(requiredIndex, 1);
+
+        // Remove empty required array
+        if (currentSchema.value.required.length === 0) {
+          delete currentSchema.value.required;
+        }
+      }
+    }
   }
   showDeleteModal.value = false;
   propertyToDelete.value = '';
 };
+
 
 // Enum management
 const editEnum = (propertyKey, currentEnum) => {

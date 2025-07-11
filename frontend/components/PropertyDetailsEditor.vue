@@ -9,6 +9,23 @@
         Basic Information
       </h4>
 
+      <!-- Add this if not editing root -->
+      <div v-if="propertyKey !== '__root__' && propertyKey !== 'items'">
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          {{ advancedMode ? 'Property Key' : 'Field Name' }}
+        </label>
+        <input
+          :value="propertyKey"
+          @input="$emit('update-key', $event.target.value)"
+          class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+          placeholder="property_name"
+          pattern="^[a-zA-Z_][a-zA-Z0-9_]*$"
+        />
+        <p class="mt-1 text-xs text-gray-500">
+          Use lowercase with underscores (e.g., patient_name)
+        </p>
+      </div>
+
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -468,7 +485,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update']);
+const emit = defineEmits(['update', 'update-key']);
 
 const localProperty = ref(JSON.parse(JSON.stringify(props.property)));
 const showPatternHelp = ref(false);
@@ -573,18 +590,66 @@ const isInteger = computed({
 
 // Watch for changes and emit updates
 watch(localProperty, (newValue) => {
-  emit('update', newValue);
+  // Clean up the property before emitting
+  const cleaned = {};
+
+  // Always include type
+  cleaned.type = newValue.type;
+
+  // Add other properties based on type
+  for (const [key, value] of Object.entries(newValue)) {
+    // Skip if it's undefined, null, or empty string
+    if (value === undefined || value === null || value === '') {
+      continue;
+    }
+
+    // Skip type since we already added it
+    if (key === 'type') {
+      continue;
+    }
+
+    // Filter out properties that don't belong to the current type
+    const isStringProp = ['enum', 'pattern', 'minLength', 'maxLength', 'format'].includes(key);
+    const isNumberProp = ['minimum', 'maximum', 'multipleOf'].includes(key);
+    const isArrayProp = ['minItems', 'maxItems', 'uniqueItems', 'items'].includes(key);
+    const isObjectProp = ['properties', 'required', 'additionalProperties'].includes(key);
+    const isCommonProp = ['title', 'description', 'default', 'examples', 'readOnly'].includes(key);
+
+    // Only include properties that are common or belong to the current type
+    if (isCommonProp) {
+      cleaned[key] = value;
+    } else if (newValue.type === 'string' && isStringProp) {
+      cleaned[key] = value;
+    } else if ((newValue.type === 'number' || newValue.type === 'integer') && isNumberProp) {
+      cleaned[key] = value;
+    } else if (newValue.type === 'array' && isArrayProp) {
+      cleaned[key] = value;
+    } else if (newValue.type === 'object' && isObjectProp) {
+      cleaned[key] = value;
+    } else if (newValue.type === 'boolean') {
+      // Boolean has no specific properties besides common ones
+      continue;
+    }
+  }
+
+  emit('update', cleaned);
 }, { deep: true });
+
+
 
 // Enum management
 watch(enumValues, (newValues) => {
-  const filtered = newValues.filter(v => v.trim());
+  const filtered = newValues.filter(v => v && v.trim());
   if (filtered.length > 0) {
     localProperty.value.enum = filtered;
   } else {
-    delete localProperty.value.enum;
+    // Important: use Vue's delete to ensure reactivity
+    if (localProperty.value.enum) {
+      delete localProperty.value.enum;
+    }
   }
-});
+}, { deep: true });
+
 
 const addEnumValue = () => {
   enumValues.value.push('');
@@ -628,11 +693,23 @@ const toggleRequired = (propKey) => {
 
 // Type change handler
 const onTypeChange = () => {
+  // Store the values we want to preserve
+  const preservedTitle = localProperty.value.title || '';
+  const preservedDescription = localProperty.value.description || '';
+  const newType = localProperty.value.type;
+
+  // Create a completely new object with only the type and preserved values
   const newProperty = {
-    type: localProperty.value.type,
-    title: localProperty.value.title,
-    description: localProperty.value.description
+    type: newType
   };
+
+  // Only add title and description if they have values
+  if (preservedTitle) {
+    newProperty.title = preservedTitle;
+  }
+  if (preservedDescription) {
+    newProperty.description = preservedDescription;
+  }
 
   // Add type-specific defaults
   if (newProperty.type === 'object') {
@@ -641,9 +718,19 @@ const onTypeChange = () => {
     newProperty.items = { type: 'string' };
   }
 
+  // Replace the entire localProperty value
   localProperty.value = newProperty;
+
+  // Clear enum values
   enumValues.value = [];
+
+  // Clear examples text
+  examplesText.value = '';
+
+  // Emit the clean property immediately
+  emit('update', newProperty);
 };
+
 
 // Clear undefined values before emitting
 const cleanProperty = (prop) => {
