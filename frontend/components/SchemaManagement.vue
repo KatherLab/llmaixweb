@@ -12,12 +12,14 @@
         Create Schema
       </button>
     </div>
+
     <div v-if="isLoading" class="flex justify-center py-12">
       <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
       </svg>
     </div>
+
     <div v-else-if="schemas.length === 0" class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
       <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
@@ -25,6 +27,7 @@
       <p class="mt-2 text-sm text-gray-600">No schemas created yet</p>
       <p class="mt-1 text-sm text-gray-500">Create a schema to define the structure for information extraction</p>
     </div>
+
     <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div
         v-for="schema in schemas"
@@ -72,52 +75,178 @@
         </div>
       </div>
     </div>
+
+    <!-- Create/Edit Modal -->
     <Teleport to="body">
       <div
         v-if="showCreateModal || showEditModal"
-        class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
+        class="fixed inset-0 bg-black/30 backdrop-blur-md z-50"
         @click="cancelSchemaModal"
       >
-        <div class="bg-white rounded-lg max-w-2xl w-full p-6" @click.stop>
-          <h3 class="text-lg font-medium text-gray-900 mb-4">
-            {{ showEditModal ? 'Edit Schema' : 'Create New Schema' }}
-          </h3>
-          <form @submit.prevent="showEditModal ? updateSchema() : createSchema()">
-            <div class="space-y-4">
-              <div>
+        <div class="bg-white rounded-lg w-full h-[90vh] max-w-[1600px] my-8 flex flex-col mx-auto" @click.stop>
+          <div class="p-6 border-b flex items-center justify-between flex-shrink-0">
+            <h3 class="text-lg font-medium text-gray-900">
+              {{ showEditModal ? 'Edit Schema' : 'Create New Schema' }}
+            </h3>
+          </div>
+
+          <form @submit.prevent="showEditModal ? updateSchema() : createSchema()" class="flex flex-col flex-1 min-h-0">
+            <div class="flex-1 flex flex-col min-h-0">
+              <!-- Schema Name Input -->
+              <div class="px-6 pt-4 pb-2 flex-shrink-0">
                 <label for="schema-name" class="block text-sm font-medium text-gray-700">Schema Name</label>
                 <input
                   id="schema-name"
                   v-model="schemaForm.schema_name"
-                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  class="mt-1 block w-full max-w-md border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Enter schema name"
                   required
                 />
               </div>
-              <div>
-                <label for="schema-definition" class="block text-sm font-medium text-gray-700">Schema Definition (JSON)</label>
-                <div class="mt-1 relative">
-                  <textarea
-                    id="schema-definition"
-                    v-model="schemaForm.schema_definition"
-                    rows="12"
-                    class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono"
-                    placeholder='{"type": "object", "properties": {...}}'
-                    required
-                  ></textarea>
-                  <button
-                    type="button"
-                    @click="formatJsonInput"
-                    class="absolute top-2 right-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
-                    title="Format JSON"
-                  >
-                    Format
-                  </button>
+
+              <!-- Schema validation indicator -->
+              <div class="px-6 pb-2 flex items-center space-x-2">
+                <div v-if="schemaForm.schema_definition" class="flex items-center space-x-2 text-sm">
+                  <div v-if="!schemaError" class="flex items-center text-green-600">
+                    <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Valid JSON Schema</span>
+                  </div>
+                  <div v-else class="flex items-center text-red-600">
+                    <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Invalid Schema</span>
+                  </div>
                 </div>
-                <p v-if="schemaError" class="mt-2 text-sm text-red-600">{{ schemaError }}</p>
               </div>
+
+              <!-- Tab Navigation -->
+              <div class="px-6 border-b border-gray-200 flex-shrink-0">
+                <nav class="-mb-px flex items-center justify-between">
+                  <div class="flex space-x-8">
+                    <button
+                      type="button"
+                      @click="activeTab = 'visual'"
+                      :class="[
+                        activeTab === 'visual'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                        'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm'
+                      ]"
+                    >
+                      <svg class="h-4 w-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z" />
+                      </svg>
+                      Visual Editor
+                    </button>
+                    <button
+                      type="button"
+                      @click="activeTab = 'raw'"
+                      :class="[
+                        activeTab === 'raw'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                        'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm'
+                      ]"
+                    >
+                      <svg class="h-4 w-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
+                      Raw JSON
+                    </button>
+                  </div>
+
+                  <div class="flex items-center space-x-4">
+                    <!-- Advanced Features Toggle - Only show in Visual tab -->
+                    <label v-if="activeTab === 'visual'" class="flex items-center space-x-2 text-sm">
+                      <input
+                        type="checkbox"
+                        v-model="advancedMode"
+                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span class="text-gray-700">Enable advanced features</span>
+                    </label>
+
+                    <!-- Split View Toggle - Only show in Visual tab -->
+                    <label v-if="activeTab === 'visual'" class="flex items-center space-x-2 text-sm">
+                      <input
+                        type="checkbox"
+                        v-model="splitView"
+                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span class="text-gray-700">Split view</span>
+                    </label>
+
+                    <!-- Templates Button -->
+                    <button
+                      type="button"
+                      @click="showTemplates = true"
+                      class="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                    >
+                      <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                      Templates
+                    </button>
+                  </div>
+                </nav>
+              </div>
+
+              <!-- Tab Content -->
+              <div class="flex-1 min-h-0" :class="splitView && activeTab === 'visual' ? 'flex' : ''">
+                <!-- Visual Editor Tab -->
+                <div
+                  v-if="activeTab === 'visual' || (splitView && activeTab === 'visual')"
+                  :class="[
+                    'bg-gray-50',
+                    splitView && activeTab === 'visual' ? 'w-1/2 border-r' : 'h-full'
+                  ]"
+                >
+                  <VisualSchemaEditor
+                    :schema="visualSchema"
+                    @update:schema="updateVisualSchema"
+                    :advanced-mode="advancedMode"
+                  />
+                </div>
+
+                <!-- Raw JSON Tab -->
+                <div
+                  v-if="activeTab === 'raw' || (splitView && activeTab === 'visual')"
+                  :class="[
+                    'relative flex flex-col',
+                    splitView && activeTab === 'visual' ? 'w-1/2' : 'h-full'
+                  ]"
+                >
+                  <div class="flex-1 p-6 min-h-0">
+                    <textarea
+                      ref="rawJsonTextarea"
+                      v-model="schemaForm.schema_definition"
+                      @input="onRawSchemaChange"
+                      @keydown="preserveCursorPosition"
+                      class="block w-full h-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono resize-none"
+                      placeholder='{"type": "object", "properties": {...}}'
+                      required
+                    ></textarea>
+                    <button
+                      type="button"
+                      @click="formatJsonInput"
+                      class="absolute top-8 right-8 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
+                      title="Format JSON"
+                    >
+                      Format
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              <p v-if="schemaError" class="px-6 py-2 text-sm text-red-600 flex-shrink-0">{{ schemaError }}</p>
             </div>
-            <div class="mt-6 flex justify-end space-x-3">
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-gray-50 border-t flex justify-end space-x-3 flex-shrink-0">
               <button
                 type="button"
                 class="inline-flex justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
@@ -141,6 +270,43 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Templates Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showTemplates"
+        class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
+        @click="showTemplates = false"
+      >
+        <div class="bg-white rounded-lg max-w-4xl w-full p-6" @click.stop>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Schema Templates</h3>
+          <p class="text-sm text-gray-600 mb-6">Select a template for common medical document structures</p>
+
+          <div class="grid grid-cols-2 gap-4">
+            <button
+              v-for="template in schemaTemplates"
+              :key="template.name"
+              @click="applyTemplate(template)"
+              class="p-4 border rounded-lg hover:border-blue-500 hover:bg-blue-50 text-left transition-colors"
+            >
+              <h4 class="font-medium text-gray-900">{{ template.name }}</h4>
+              <p class="text-sm text-gray-600 mt-1">{{ template.description }}</p>
+            </button>
+          </div>
+
+          <div class="mt-6 flex justify-end">
+            <button
+              class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              @click="showTemplates = false"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- View Modal -->
     <Teleport to="body">
       <div
         v-if="showViewModal"
@@ -170,6 +336,8 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Delete Modal -->
     <Teleport to="body">
       <div
         v-if="showDeleteModal"
@@ -206,9 +374,11 @@
   </div>
 </template>
 
+
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { api } from '@/services/api';
+import VisualSchemaEditor from './VisualSchemaEditor.vue';
 
 const props = defineProps({
   projectId: {
@@ -216,6 +386,13 @@ const props = defineProps({
     required: true
   }
 });
+
+const hasUnsavedChanges = ref(false);
+const originalSchemaForm = ref({});
+
+const rawJsonTextarea = ref(null);
+const cursorPosition = ref(0);
+
 
 const schemas = ref([]);
 const isLoading = ref(true);
@@ -228,6 +405,7 @@ const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showViewModal = ref(false);
 const showDeleteModal = ref(false);
+const showTemplates = ref(false);
 
 const currentSchema = ref(null);
 const schemaToDelete = ref(null);
@@ -235,6 +413,223 @@ const schemaForm = ref({
   schema_name: '',
   schema_definition: ''
 });
+
+let isUpdating = false;
+
+const preserveCursorPosition = (event) => {
+  cursorPosition.value = event.target.selectionStart;
+};
+
+// New refs for visual editor
+const activeTab = ref('visual');
+const visualSchema = ref({
+  type: 'object',
+  properties: {}
+});
+
+// UI preferences
+const advancedMode = ref(false);
+const splitView = ref(false);
+
+
+
+// Schema templates for medical documents
+const schemaTemplates = [
+  {
+    name: 'Patient Information',
+    description: 'Basic patient demographics and contact details',
+    schema: {
+      type: 'object',
+      properties: {
+        patient_id: { type: 'string', title: 'Patient ID' },
+        first_name: { type: 'string', title: 'First Name' },
+        last_name: { type: 'string', title: 'Last Name' },
+        date_of_birth: { type: 'string', format: 'date', title: 'Date of Birth' },
+        gender: {
+          type: 'string',
+          title: 'Gender',
+          enum: ['Male', 'Female', 'Other']
+        },
+        contact: {
+          type: 'object',
+          title: 'Contact Information',
+          properties: {
+            phone: { type: 'string', title: 'Phone Number' },
+            email: { type: 'string', format: 'email', title: 'Email' },
+            address: { type: 'string', title: 'Address' }
+          }
+        }
+      }
+    }
+  },
+  {
+    name: 'Medical History',
+    description: 'Patient medical history and conditions',
+    schema: {
+      type: 'object',
+      properties: {
+        conditions: {
+          type: 'array',
+          title: 'Medical Conditions',
+          items: {
+            type: 'object',
+            properties: {
+              condition_name: { type: 'string', title: 'Condition' },
+              diagnosis_date: { type: 'string', format: 'date', title: 'Diagnosis Date' },
+              status: {
+                type: 'string',
+                title: 'Status',
+                enum: ['Active', 'Resolved', 'Chronic']
+              }
+            }
+          }
+        },
+        allergies: {
+          type: 'array',
+          title: 'Allergies',
+          items: {
+            type: 'object',
+            properties: {
+              allergen: { type: 'string', title: 'Allergen' },
+              severity: {
+                type: 'string',
+                title: 'Severity',
+                enum: ['Mild', 'Moderate', 'Severe']
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    name: 'Lab Results',
+    description: 'Laboratory test results and measurements',
+    schema: {
+      type: 'object',
+      properties: {
+        test_date: { type: 'string', format: 'date', title: 'Test Date' },
+        lab_name: { type: 'string', title: 'Laboratory Name' },
+        results: {
+          type: 'array',
+          title: 'Test Results',
+          items: {
+            type: 'object',
+            properties: {
+              test_name: { type: 'string', title: 'Test Name' },
+              value: { type: 'number', title: 'Value' },
+              unit: { type: 'string', title: 'Unit' },
+              reference_range: { type: 'string', title: 'Reference Range' },
+              abnormal: { type: 'boolean', title: 'Abnormal' }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    name: 'Prescription',
+    description: 'Medication prescriptions and dosage information',
+    schema: {
+      type: 'object',
+      properties: {
+        prescription_date: { type: 'string', format: 'date', title: 'Prescription Date' },
+        prescriber: { type: 'string', title: 'Prescriber Name' },
+        medications: {
+          type: 'array',
+          title: 'Medications',
+          items: {
+            type: 'object',
+            properties: {
+              medication_name: { type: 'string', title: 'Medication' },
+              dosage: { type: 'string', title: 'Dosage' },
+              frequency: { type: 'string', title: 'Frequency' },
+              duration: { type: 'string', title: 'Duration' },
+              instructions: { type: 'string', title: 'Instructions' }
+            }
+          }
+        }
+      }
+    }
+  }
+];
+
+watch(visualSchema, (newSchema) => {
+  // Only update if not currently focused on textarea
+  if (document.activeElement !== rawJsonTextarea.value) {
+    schemaForm.value.schema_definition = JSON.stringify(newSchema, null, 2);
+  }
+}, { deep: true });
+
+// Watch for tab changes to sync data
+watch(activeTab, (newTab) => {
+  if (newTab === 'visual' && !splitView.value) {
+    // Convert raw JSON to visual schema
+    try {
+      const parsed = JSON.parse(schemaForm.value.schema_definition || '{"type": "object", "properties": {}}');
+      visualSchema.value = parsed;
+    } catch (err) {
+      console.warn('Invalid JSON, using default schema');
+      visualSchema.value = { type: 'object', properties: {} };
+    }
+  } else if (newTab === 'raw' && !splitView.value) {
+    // Convert visual schema to raw JSON
+    schemaForm.value.schema_definition = JSON.stringify(visualSchema.value, null, 2);
+  }
+});
+
+watch([showCreateModal, showEditModal], ([create, edit]) => {
+  if (create || edit) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = '';
+  }
+});
+
+// Initialize visual schema when opening create modal
+watch(showCreateModal, (newValue) => {
+  if (newValue) {
+    activeTab.value = 'visual';
+    visualSchema.value = { type: 'object', properties: {} };
+    schemaForm.value = {
+      schema_name: '',
+      schema_definition: JSON.stringify({ type: 'object', properties: {} }, null, 2)
+    };
+  }
+});
+
+// Initialize visual schema when opening edit modal
+watch(showEditModal, (newValue) => {
+  if (newValue && currentSchema.value) {
+    activeTab.value = 'visual';
+    try {
+      const parsed = JSON.parse(schemaForm.value.schema_definition);
+      visualSchema.value = parsed;
+    } catch (err) {
+      visualSchema.value = { type: 'object', properties: {} };
+    }
+  }
+});
+
+watch([schemaForm, visualSchema], () => {
+  if (isUpdating) return;
+  hasUnsavedChanges.value = true;
+}, { deep: true });
+
+// Handle visual schema updates
+const updateVisualSchema = (newSchema) => {
+  visualSchema.value = newSchema;
+  // Auto-sync to raw JSON
+  schemaForm.value.schema_definition = JSON.stringify(newSchema, null, 2);
+  schemaError.value = '';
+};
+
+const applyTemplate = (template) => {
+  visualSchema.value = template.schema;
+  schemaForm.value.schema_definition = JSON.stringify(template.schema, null, 2);
+  schemaForm.value.schema_name = template.name;
+  showTemplates.value = false;
+};
 
 const validateSchema = (schema) => {
   try {
@@ -266,10 +661,12 @@ const formatJSON = (json) => {
   }
 };
 
+// Enhanced formatJsonInput to sync with visual editor
 const formatJsonInput = () => {
   try {
     const parsedJson = JSON.parse(schemaForm.value.schema_definition);
     schemaForm.value.schema_definition = JSON.stringify(parsedJson, null, 2);
+    visualSchema.value = parsedJson;
     schemaError.value = '';
   } catch (err) {
     schemaError.value = 'Invalid JSON: ' + err.message;
@@ -289,9 +686,35 @@ const fetchSchemas = async () => {
   }
 };
 
+watch([schemaForm, visualSchema], () => {
+  hasUnsavedChanges.value = true;
+}, { deep: true });
+
+const cancelSchemaModal = () => {
+  if (hasUnsavedChanges.value) {
+    if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
+      return;
+    }
+  }
+
+  showCreateModal.value = false;
+  showEditModal.value = false;
+  schemaError.value = '';
+  activeTab.value = 'visual';
+  schemaForm.value = {
+    schema_name: '',
+    schema_definition: ''
+  };
+  visualSchema.value = { type: 'object', properties: {} };
+  currentSchema.value = null;
+  hasUnsavedChanges.value = false;
+};
+
+
 const createSchema = async () => {
   schemaError.value = '';
   isSubmitting.value = true;
+  let response;
   try {
     let schemaDefinition;
     try {
@@ -301,19 +724,18 @@ const createSchema = async () => {
       isSubmitting.value = false;
       return;
     }
-
     if (!validateSchema(schemaDefinition)) {
       isSubmitting.value = false;
       return;
     }
-
-    const response = await api.post(`/project/${props.projectId}/schema`, {
+    response = await api.post(`/project/${props.projectId}/schema`, {
       schema_name: schemaForm.value.schema_name,
-      schema_definition: schemaDefinition // Send as dictionary
+      schema_definition: schemaDefinition
     });
-
     schemas.value.push(response.data);
     showCreateModal.value = false;
+    hasUnsavedChanges.value = false;
+    cancelSchemaModal();
   } catch (err) {
     schemaError.value = err.response?.data?.detail || 'Failed to create schema';
     console.error(err);
@@ -325,6 +747,7 @@ const createSchema = async () => {
 const updateSchema = async () => {
   schemaError.value = '';
   isSubmitting.value = true;
+  let response;
   try {
     let schemaDefinition;
     try {
@@ -334,22 +757,21 @@ const updateSchema = async () => {
       isSubmitting.value = false;
       return;
     }
-
     if (!validateSchema(schemaDefinition)) {
       isSubmitting.value = false;
       return;
     }
-
-    const response = await api.put(`/project/${props.projectId}/schema/${currentSchema.value.id}`, {
+    response = await api.put(`/project/${props.projectId}/schema/${currentSchema.value.id}`, {
       schema_name: schemaForm.value.schema_name,
-      schema_definition: schemaDefinition // Send as dictionary
+      schema_definition: schemaDefinition
     });
-
     const index = schemas.value.findIndex(s => s.id === currentSchema.value.id);
     if (index !== -1) {
       schemas.value[index] = response.data;
     }
     showEditModal.value = false;
+    hasUnsavedChanges.value = false;
+    cancelSchemaModal();
   } catch (err) {
     schemaError.value = err.response?.data?.detail || 'Failed to update schema';
     console.error(err);
@@ -379,13 +801,47 @@ const viewSchema = (schema) => {
   showViewModal.value = true;
 };
 
+// Enhanced editSchema function to properly initialize both views
 const editSchema = (schema) => {
   currentSchema.value = schema;
+  const formattedJson = formatJSON(schema.schema_definition);
   schemaForm.value = {
     schema_name: schema.schema_name,
-    schema_definition: formatJSON(schema.schema_definition)
+    schema_definition: formattedJson
   };
+
+  // Initialize visual schema
+  try {
+    visualSchema.value = JSON.parse(formattedJson);
+  } catch (err) {
+    console.warn('Failed to parse existing schema for visual editor:', err);
+    visualSchema.value = { type: 'object', properties: {} };
+  }
+
   showEditModal.value = true;
+};
+
+const onRawSchemaChange = () => {
+  // Store cursor position
+  const textarea = rawJsonTextarea.value;
+  const savedPosition = textarea ? textarea.selectionStart : 0;
+
+  // Auto-sync to visual if valid JSON
+  try {
+    const parsed = JSON.parse(schemaForm.value.schema_definition);
+    visualSchema.value = parsed;
+    schemaError.value = '';
+  } catch (err) {
+    // Don't update visual schema if JSON is invalid
+    schemaError.value = 'Invalid JSON: ' + err.message;
+  }
+
+  // Restore cursor position after Vue updates
+  nextTick(() => {
+    if (textarea) {
+      textarea.setSelectionRange(savedPosition, savedPosition);
+    }
+  });
 };
 
 const confirmDelete = (schema) => {
@@ -393,17 +849,12 @@ const confirmDelete = (schema) => {
   showDeleteModal.value = true;
 };
 
-const cancelSchemaModal = () => {
-  showCreateModal.value = false;
-  showEditModal.value = false;
-  schemaError.value = '';
-  schemaForm.value = {
-    schema_name: '',
-    schema_definition: ''
-  };
-};
-
 onMounted(() => {
   fetchSchemas();
 });
+
+onUnmounted(() => {
+  document.body.style.overflow = '';
+});
+
 </script>
