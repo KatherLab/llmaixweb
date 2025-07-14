@@ -1,8 +1,14 @@
-from typing import cast, Any
+from typing import Any, cast
 
 import requests
 from llmaix import extract_info as llmaix_extract_info
-from openai import OpenAI, AuthenticationError, APIConnectionError, RateLimitError, APIError
+from openai import (
+    APIConnectionError,
+    APIError,
+    AuthenticationError,
+    OpenAI,
+    RateLimitError,
+)
 from openai.types.chat import ChatCompletionUserMessageParam
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,10 +26,7 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
             messages=[{"role": "user", "content": "Test"}],
             max_tokens=1,
         )
-        return {
-            "success": True,
-            "message": "Model test successful"
-        }
+        return {"success": True, "message": "Model test successful"}
     except AuthenticationError as e:
         return {
             "success": False,
@@ -75,6 +78,7 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
             "error_type": "unknown",
         }
 
+
 # Update your existing functions to return detailed responses
 def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
     try:
@@ -84,7 +88,7 @@ def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
         return {
             "success": True,
             "models": models,
-            "message": f"Successfully loaded {len(models)} models"
+            "message": f"Successfully loaded {len(models)} models",
         }
     except AuthenticationError as e:
         return {
@@ -112,8 +116,9 @@ def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
             "success": False,
             "models": [],
             "message": f"Failed to load models: {str(e)}",
-            "error_type": "model_loading_failed"
+            "error_type": "model_loading_failed",
         }
+
 
 def test_api_connection(api_key: str, base_url: str) -> dict[str, Any]:
     """Test API connection by trying to list models"""
@@ -123,7 +128,7 @@ def test_api_connection(api_key: str, base_url: str) -> dict[str, Any]:
         return {
             "success": True,
             "message": "API connection successful",
-            "models_count": len(response.data)
+            "models_count": len(response.data),
         }
     except AuthenticationError as e:
         return {

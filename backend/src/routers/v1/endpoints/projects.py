@@ -2,7 +2,7 @@ import csv
 import io
 import json
 import re
-from typing import List, cast, Any
+from typing import Any, List, cast
 
 import pandas as pd
 from fastapi import (
@@ -1193,9 +1193,10 @@ def get_available_llm_models(
             "success": False,
             "models": [],
             "message": "LLM configuration is incomplete",
-            "error_type": "incomplete_config"
+            "error_type": "incomplete_config",
         }
     return get_available_models(api_key, base_url)
+
 
 @router.post("/llm/test-connection", response_model=dict[str, Any])
 def test_api_connection_endpoint(
@@ -1206,9 +1207,10 @@ def test_api_connection_endpoint(
         return {
             "success": False,
             "message": "LLM configuration is incomplete. Please provide API key and base URL.",
-            "error_type": "incomplete_config"
+            "error_type": "incomplete_config",
         }
     return test_api_connection(api_key, base_url)
+
 
 @router.post("/llm/test-model", response_model=dict[str, Any])
 def test_llm_model_endpoint(
@@ -1220,10 +1222,9 @@ def test_llm_model_endpoint(
         return {
             "success": False,
             "message": "LLM configuration is incomplete. Please provide API key, base URL, and model.",
-            "error_type": "incomplete_config"
+            "error_type": "incomplete_config",
         }
     return test_llm_connection(api_key, base_url, llm_model)
-
 
 
 # Add these endpoints to your existing projects.py file

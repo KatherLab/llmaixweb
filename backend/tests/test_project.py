@@ -764,9 +764,10 @@ def test_get_available_llm_models(client, api_url):
 def test_test_llm_connection(client, api_url):
     if settings.OPENAI_NO_API_CHECK:
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
-    response = client.post(f"{api_url}/project/llm/test")
+    response = client.post(f"{api_url}/project/llm/test-connection")
     assert response.status_code == 200
-    assert response.json() is True
+    assert 'success' in response.json()
+    assert response.json()["success"]
 
 
 # Test Create Trial with Preprocessing and Extract Information

@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 from thefuzz import fuzz
 
 from .. import models
@@ -271,8 +271,8 @@ class EvaluationEngine:
             except Exception as e:
                 print("Error loading documents: ", e)
                 import traceback
-                print(traceback.format_exc())
 
+                print(traceback.format_exc())
 
         return document_data
 

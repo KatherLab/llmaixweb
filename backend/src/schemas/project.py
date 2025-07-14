@@ -396,7 +396,6 @@ class EvaluationErrorSummary(BaseModel):
     errors: list[EvaluationError]
 
 
-
 from .user import User  # noqa: E402, F401
 
 Project.model_rebuild()

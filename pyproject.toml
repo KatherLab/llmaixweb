@@ -4,12 +4,12 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]>=0.116.0",
+    "fastapi[standard]>=0.116.1",
     "uvicorn>=0.35.0",
     "pyjwt~=2.10.1",
     "sqlalchemy~=2.0.41",
     "pydantic_settings~=2.10.1",
-    "openai~=1.95.0",
+    "openai~=1.95.1",
     "bcrypt~=4.3.0",
     "boto3~=1.39.4",
     "boto3-stubs==1.39.4",
@@ -25,7 +25,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.12.2",
+    "ruff>=0.12.3",
     "ty>=0.0.1a14",
     "pytest>=8.4.1",
     "pytest-cov~=6.2.1",
