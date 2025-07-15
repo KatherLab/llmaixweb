@@ -2,6 +2,7 @@ import re
 from typing import Any, Dict, List
 
 import pandas as pd
+from pandas.errors import ParserError
 from thefuzz import fuzz
 
 
@@ -200,7 +201,9 @@ class FieldMapper:
                 try:
                     pd.to_datetime(str_val)
                     matches += 1
-                except:
+                except ParserError:
+                    pass
+                except ValueError:
                     pass
 
         return matches / len(values)

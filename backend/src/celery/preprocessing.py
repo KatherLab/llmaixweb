@@ -14,7 +14,7 @@ if celery_app:
         autoretry_for=(Exception,),
         retry_backoff=True,
         max_retries=3,
-        default_retry_delay=60
+        default_retry_delay=60,
     )
     def process_files_async(self, task_id: int):
         """
@@ -46,26 +46,22 @@ if celery_app:
                     db.commit()
                 raise
 
-    @celery_app.task(
-        autoretry_for=(Exception,),
-        retry_backoff=True,
-        max_retries=3
-    )
+    @celery_app.task(autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
     def preprocess_file_celery(
-            file_ids: list[int],
-            client: OpenAI | None = None,
-            base_url: str | None = None,
-            api_key: str | None = None,
-            pdf_backend: str = "pymupdf4llm",
-            ocr_backend: str = "ocrmypdf",
-            llm_model: str | None = None,
-            use_ocr: bool = True,
-            force_ocr: bool = False,
-            ocr_languages: list[str] | None = None,
-            ocr_model: str | None = None,
-            project_id: int | None = None,
-            preprocessing_task_id: int | None = None,
-            output_file: bool = True,
+        file_ids: list[int],
+        client: OpenAI | None = None,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        pdf_backend: str = "pymupdf4llm",
+        ocr_backend: str = "ocrmypdf",
+        llm_model: str | None = None,
+        use_ocr: bool = True,
+        force_ocr: bool = False,
+        ocr_languages: list[str] | None = None,
+        ocr_model: str | None = None,
+        project_id: int | None = None,
+        preprocessing_task_id: int | None = None,
+        output_file: bool = True,
     ):
         """
         Legacy celery task for backward compatibility.
@@ -90,7 +86,7 @@ if celery_app:
                     "base_url": base_url,
                     "api_key": api_key,
                     "output_file": output_file,
-                }
+                },
             }
 
             # Create temporary configuration
@@ -98,8 +94,12 @@ if celery_app:
                 project_id=project_id,
                 name=f"Legacy config - {ocr_backend}",
                 description="Created from legacy preprocess_file_celery call",
-                **{k: v for k, v in config_snapshot.items() if k != "additional_settings"},
-                additional_settings=config_snapshot.get("additional_settings", {})
+                **{
+                    k: v
+                    for k, v in config_snapshot.items()
+                    if k != "additional_settings"
+                },
+                additional_settings=config_snapshot.get("additional_settings", {}),
             )
             db.add(config)
             db.commit()
@@ -109,14 +109,16 @@ if celery_app:
             if preprocessing_task_id:
                 task = db.get(models.PreprocessingTask, preprocessing_task_id)
                 if not task:
-                    raise ValueError(f"PreprocessingTask {preprocessing_task_id} not found")
+                    raise ValueError(
+                        f"PreprocessingTask {preprocessing_task_id} not found"
+                    )
                 task.configuration_id = config.id
             else:
                 task = models.PreprocessingTask(
                     project_id=project_id,
                     configuration_id=config.id,
                     total_files=len(file_ids),
-                    rollback_on_cancel=True
+                    rollback_on_cancel=True,
                 )
                 db.add(task)
 
@@ -125,8 +127,7 @@ if celery_app:
             # Create file tasks
             for file_id in file_ids:
                 file_task = models.FilePreprocessingTask(
-                    preprocessing_task_id=task.id,
-                    file_id=file_id
+                    preprocessing_task_id=task.id, file_id=file_id
                 )
                 db.add(file_task)
 

@@ -172,6 +172,7 @@ class TrialResult(TrialResultBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class PreprocessingConfigurationBase(BaseModel):
     name: str
     description: str | None = None
@@ -336,6 +337,7 @@ class PreprocessingTaskCreate(PreprocessingTaskBase):
                 "Either configuration_id or inline_config must be provided"
             )
         return self
+
 
 class PreprocessingTaskUpdate(PreprocessingTaskBase):
     pass

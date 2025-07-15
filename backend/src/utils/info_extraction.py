@@ -9,7 +9,6 @@ from openai import (
     OpenAI,
     RateLimitError,
 )
-from openai.types.chat import ChatCompletionUserMessageParam
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -27,7 +26,7 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
             max_tokens=1,
         )
         return {"success": True, "message": "Model test successful"}
-    except AuthenticationError as e:
+    except AuthenticationError:
         return {
             "success": False,
             "message": "Authentication failed. Please check your API key.",
@@ -39,7 +38,7 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
             "message": f"Connection failed. Please check your base URL: {str(e)}",
             "error_type": "connection",
         }
-    except RateLimitError as e:
+    except RateLimitError:
         return {
             "success": False,
             "message": "Rate limit exceeded. Please try again later.",
@@ -90,7 +89,7 @@ def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
             "models": models,
             "message": f"Successfully loaded {len(models)} models",
         }
-    except AuthenticationError as e:
+    except AuthenticationError:
         return {
             "success": False,
             "models": [],
@@ -130,7 +129,7 @@ def test_api_connection(api_key: str, base_url: str) -> dict[str, Any]:
             "message": "API connection successful",
             "models_count": len(response.data),
         }
-    except AuthenticationError as e:
+    except AuthenticationError:
         return {
             "success": False,
             "message": "Authentication failed. Please check your API key.",

@@ -1,8 +1,8 @@
 # utils/preprocessing.py
 
+import datetime
 import io
 import tempfile
-import datetime
 from pathlib import Path
 from typing import List
 
@@ -31,7 +31,7 @@ class PreprocessingPipeline:
         if additional_settings.get("api_key") and additional_settings.get("base_url"):
             self.client = OpenAI(
                 api_key=additional_settings["api_key"],
-                base_url=additional_settings["base_url"]
+                base_url=additional_settings["base_url"],
             )
 
     def check_cancelled(self):
@@ -112,12 +112,18 @@ class PreprocessingPipeline:
                 self.config.file_type = file.file_type
 
             # Route to appropriate processor
-            if file.file_type in [models.FileType.TEXT_CSV, "application/vnd.ms-excel",
-                                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]:
+            if file.file_type in [
+                models.FileType.TEXT_CSV,
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ]:
                 documents = self._process_table_file(file, file_task)
             elif file.file_type in [models.FileType.APPLICATION_PDF]:
                 documents = self._process_pdf_file(file, file_task)
-            elif file.file_type in [models.FileType.IMAGE_JPEG, models.FileType.IMAGE_PNG]:
+            elif file.file_type in [
+                models.FileType.IMAGE_JPEG,
+                models.FileType.IMAGE_PNG,
+            ]:
                 documents = self._process_image_file(file, file_task)
             else:
                 documents = self._process_text_file(file, file_task)
@@ -131,7 +137,9 @@ class PreprocessingPipeline:
 
         self.db.commit()
 
-    def _process_table_file(self, file: models.File, file_task: models.FilePreprocessingTask) -> List[models.Document]:
+    def _process_table_file(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document]:
         """Process CSV/Excel files row by row."""
         documents = []
         file_content = get_file(file.file_uuid)
@@ -146,15 +154,10 @@ class PreprocessingPipeline:
         # Read file based on type
         if file.file_type == models.FileType.TEXT_CSV:
             df = pd.read_csv(
-                io.BytesIO(file_content),
-                encoding=encoding,
-                skiprows=skip_rows
+                io.BytesIO(file_content), encoding=encoding, skiprows=skip_rows
             )
         else:
-            df = pd.read_excel(
-                io.BytesIO(file_content),
-                skiprows=skip_rows
-            )
+            df = pd.read_excel(io.BytesIO(file_content), skiprows=skip_rows)
 
         # Process each row
         for idx, row in df.iterrows():
@@ -186,8 +189,8 @@ class PreprocessingPipeline:
                 meta_data={
                     "row_index": idx,
                     "source_columns": content_columns or list(df.columns),
-                    "file_type": "table"
-                }
+                    "file_type": "table",
+                },
             )
 
             self.db.add(doc)
@@ -199,7 +202,9 @@ class PreprocessingPipeline:
 
         return documents
 
-    def _process_pdf_file(self, file: models.File, file_task: models.FilePreprocessingTask) -> List[models.Document]:
+    def _process_pdf_file(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document]:
         """Process PDF files with OCR support."""
         from llmaix import preprocess_file as llmaix_preprocess_file
 
@@ -250,7 +255,7 @@ class PreprocessingPipeline:
                         else models.FileStorageType.S3,
                         file_uuid=new_file_uuid,
                         file_creator=FileCreator.system,
-                        description=f"Preprocessed version of {file.file_name}"
+                        description=f"Preprocessed version of {file.file_name}",
                     )
                     self.db.add(file_obj)
                     self.db.commit()
@@ -276,14 +281,16 @@ class PreprocessingPipeline:
                 "file_type": "pdf",
                 "ocr_used": self.config.use_ocr,
                 "ocr_backend": self.config.ocr_backend if self.config.use_ocr else None,
-                "pdf_backend": self.config.pdf_backend
-            }
+                "pdf_backend": self.config.pdf_backend,
+            },
         )
 
         self.db.add(doc)
         return [doc]
 
-    def _process_image_file(self, file: models.File, file_task: models.FilePreprocessingTask) -> List[models.Document]:
+    def _process_image_file(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document]:
         """Process image files with OCR."""
         from llmaix import preprocess_file as llmaix_preprocess_file
 
@@ -317,21 +324,20 @@ class PreprocessingPipeline:
             text=result,
             document_name=file.file_name,
             preprocessing_config_id=self.config.id,
-            meta_data={
-                "file_type": "image",
-                "ocr_backend": self.config.ocr_backend
-            }
+            meta_data={"file_type": "image", "ocr_backend": self.config.ocr_backend},
         )
 
         self.db.add(doc)
         return [doc]
 
-    def _process_text_file(self, file: models.File, file_task: models.FilePreprocessingTask) -> List[models.Document]:
+    def _process_text_file(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document]:
         """Process plain text files."""
         file_content = get_file(file.file_uuid)
 
         # Decode text content
-        text = file_content.decode('utf-8', errors='replace')
+        text = file_content.decode("utf-8", errors="replace")
 
         # Create document
         doc = models.Document(
@@ -341,9 +347,7 @@ class PreprocessingPipeline:
             text=text,
             document_name=file.file_name,
             preprocessing_config_id=self.config.id,
-            meta_data={
-                "file_type": "text"
-            }
+            meta_data={"file_type": "text"},
         )
 
         self.db.add(doc)
@@ -373,21 +377,21 @@ def process_files_with_config(task_id: int, db: Session):
 
 # Legacy function for backward compatibility
 def preprocess_files(
-        files: list[models.File],
-        client: OpenAI | None = None,
-        pdf_backend: str = "pymupdf4llm",
-        ocr_backend: str = "ocrmypdf",
-        llm_model: str | None = None,
-        use_ocr: bool = True,
-        force_ocr: bool = False,
-        ocr_languages: list[str] | None = None,
-        ocr_model: str | None = None,
-        base_url: str | None = None,
-        api_key: str | None = None,
-        db_session: Session | None = None,
-        project_id: int | None = None,
-        preprocessing_task_id: int | None = None,
-        output_file: bool = True,
+    files: list[models.File],
+    client: OpenAI | None = None,
+    pdf_backend: str = "pymupdf4llm",
+    ocr_backend: str = "ocrmypdf",
+    llm_model: str | None = None,
+    use_ocr: bool = True,
+    force_ocr: bool = False,
+    ocr_languages: list[str] | None = None,
+    ocr_model: str | None = None,
+    base_url: str | None = None,
+    api_key: str | None = None,
+    db_session: Session | None = None,
+    project_id: int | None = None,
+    preprocessing_task_id: int | None = None,
+    output_file: bool = True,
 ) -> list[str]:
     """
     Legacy preprocessing function for backward compatibility.
@@ -396,6 +400,7 @@ def preprocess_files(
     if not db_session:
         # Simple processing without database
         from llmaix import preprocess_file as llmaix_preprocess_file
+
         results = []
         for file in files:
             file_content = get_file(file.file_uuid)
@@ -443,16 +448,14 @@ def preprocess_files(
                 "base_url": base_url,
                 "api_key": api_key,
                 "output_file": output_file,
-            }
+            },
         )
         db_session.add(config)
         db_session.commit()
 
         # Create task
         task = models.PreprocessingTask(
-            project_id=project_id,
-            configuration_id=config.id,
-            total_files=len(files)
+            project_id=project_id, configuration_id=config.id, total_files=len(files)
         )
         db_session.add(task)
         db_session.commit()
@@ -460,8 +463,7 @@ def preprocess_files(
         # Create file tasks
         for file in files:
             file_task = models.FilePreprocessingTask(
-                preprocessing_task_id=task.id,
-                file_id=file.id
+                preprocessing_task_id=task.id, file_id=file.id
             )
             db_session.add(file_task)
         db_session.commit()

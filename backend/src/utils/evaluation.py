@@ -1,17 +1,14 @@
 import io
 import json
-import re
 import zipfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from pandas.errors import ParserError
+from sqlalchemy.orm import Session
 from thefuzz import fuzz
 
 from .. import models
@@ -870,7 +867,9 @@ class ValueComparator:
         # Try pandas parser
         try:
             return pd.to_datetime(str_val).date()
-        except:
+        except ParserError:
+            return None
+        except ValueError:
             return None
 
 

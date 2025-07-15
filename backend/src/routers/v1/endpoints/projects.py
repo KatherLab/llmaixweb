@@ -1,9 +1,9 @@
 import csv
+import datetime
 import io
 import json
 import re
 from typing import Any, List, cast
-import datetime
 
 import pandas as pd
 from fastapi import (
@@ -26,7 +26,7 @@ from .... import models, schemas
 from ....core.config import settings
 from ....core.security import get_current_user
 from ....dependencies import get_db, get_file, remove_file, save_file
-from ....utils.enums import FileCreator, FileType
+from ....utils.enums import FileCreator, FileType, PreprocessingStrategy
 from ....utils.helpers import extract_field_types_from_schema
 from ....utils.info_extraction import (
     get_available_models,
@@ -388,7 +388,7 @@ def get_preprocessing_configurations(
     current_user: models.User = Depends(get_current_user),
 ) -> List[schemas.PreprocessingConfiguration]:
     """Get all preprocessing configurations for a project."""
-    project = check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, "read")
 
     query = select(models.PreprocessingConfiguration).where(
         models.PreprocessingConfiguration.project_id == project_id
@@ -416,7 +416,7 @@ def get_preprocessing_configuration(
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.PreprocessingConfiguration:
     """Get a specific preprocessing configuration."""
-    project = check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, "read")
 
     config = db.execute(
         select(models.PreprocessingConfiguration).where(
@@ -443,11 +443,11 @@ def create_preprocessing_configuration(
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.PreprocessingConfiguration:
     """Create a reusable preprocessing configuration."""
-    project = check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, "write")
 
     # Validate file type
     try:
-        file_type_enum = models.FileType(config.file_type)
+        FileType(config.file_type)
     except ValueError:
         raise HTTPException(
             status_code=400, detail=f"Invalid file type: {config.file_type}"
@@ -455,7 +455,7 @@ def create_preprocessing_configuration(
 
     # Validate preprocessing strategy
     try:
-        strategy_enum = models.PreprocessingStrategy(config.preprocessing_strategy)
+        PreprocessingStrategy(config.preprocessing_strategy)
     except ValueError:
         raise HTTPException(
             status_code=400,
@@ -498,7 +498,7 @@ def update_preprocessing_configuration(
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.PreprocessingConfiguration:
     """Update a preprocessing configuration."""
-    project = check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, "write")
 
     config = db.execute(
         select(models.PreprocessingConfiguration).where(
@@ -559,6 +559,7 @@ def update_preprocessing_configuration(
 
     return schemas.PreprocessingConfiguration.model_validate(config)
 
+
 @router.delete("/{project_id}/preprocessing-config/{config_id}")
 def delete_preprocessing_configuration(
     *,
@@ -568,7 +569,7 @@ def delete_preprocessing_configuration(
     current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Delete a preprocessing configuration."""
-    project = check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, "write")
 
     config = db.execute(
         select(models.PreprocessingConfiguration).where(
@@ -612,7 +613,7 @@ def preprocess_project_data(
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Start preprocessing with advanced duplicate detection and progress tracking."""
-    project = check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, "write")
 
     # Validate configuration
     if preprocessing_task.configuration_id:
@@ -626,8 +627,10 @@ def preprocess_project_data(
         config_dict = preprocessing_task.inline_config.model_dump()
         config = models.PreprocessingConfiguration(
             project_id=project_id,
-            name=config_dict.pop('name', f"Temp config {datetime.datetime.now(datetime.UTC)}"),
-            **config_dict
+            name=config_dict.pop(
+                "name", f"Temp config {datetime.datetime.now(datetime.UTC)}"
+            ),
+            **config_dict,
         )
         db.add(config)
         db.commit()
@@ -658,7 +661,10 @@ def preprocess_project_data(
 
     # Validate file types match configuration
     for file in files:
-        if not config.file_type == FileType.MIXED.value and config.file_type != file.file_type:
+        if (
+            not config.file_type == FileType.MIXED.value
+            and config.file_type != file.file_type
+        ):
             raise HTTPException(
                 status_code=400,
                 detail=f"File {file.file_name} has type {file.file_type} but configuration expects {config.file_type}",
@@ -739,7 +745,6 @@ def preprocess_project_data(
     return schemas.PreprocessingTask.model_validate(task)
 
 
-
 @router.get("/{project_id}/preprocess", response_model=List[schemas.PreprocessingTask])
 def get_preprocessing_tasks(
     *,
@@ -751,7 +756,7 @@ def get_preprocessing_tasks(
     db: Session = Depends(get_db),
 ) -> List[schemas.PreprocessingTask]:
     """Get preprocessing tasks for a project."""
-    project = check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, "read")
 
     query = select(models.PreprocessingTask).where(
         models.PreprocessingTask.project_id == project_id
@@ -782,7 +787,7 @@ def get_preprocessing_task(
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Get detailed information about a preprocessing task."""
-    project = check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, "read")
 
     task = db.execute(
         select(models.PreprocessingTask).where(
@@ -807,7 +812,7 @@ def cancel_preprocessing_task(
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Cancel a preprocessing task with option to keep or rollback processed files."""
-    project = check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, "write")
 
     task = db.execute(
         select(models.PreprocessingTask).where(
@@ -882,7 +887,7 @@ def get_preprocessing_progress(
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Get detailed progress of a preprocessing task."""
-    project = check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, "read")
 
     task = db.execute(
         select(models.PreprocessingTask).where(
@@ -904,10 +909,15 @@ def get_preprocessing_progress(
         remaining_files = task.total_files - task.processed_files - task.failed_files
 
         if remaining_files > 0:
-            estimated_remaining = datetime.timedelta(seconds=avg_time_per_file * remaining_files)
-            task.estimated_completion = datetime.datetime.now(datetime.UTC) + estimated_remaining
+            estimated_remaining = datetime.timedelta(
+                seconds=avg_time_per_file * remaining_files
+            )
+            task.estimated_completion = (
+                datetime.datetime.now(datetime.UTC) + estimated_remaining
+            )
 
     return schemas.PreprocessingTask.model_validate(task)
+
 
 @router.get("/{project_id}/preprocess/{task_id}/retry-failed")
 def retry_failed_files(
@@ -918,7 +928,7 @@ def retry_failed_files(
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Create a new task to retry failed files from a previous task."""
-    project = check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, "write")
 
     original_task = db.execute(
         select(models.PreprocessingTask).where(
@@ -969,6 +979,7 @@ def retry_failed_files(
     db.refresh(new_task)
     return schemas.PreprocessingTask.model_validate(new_task)
 
+
 @router.get("/{project_id}/document", response_model=List[schemas.Document])
 def get_documents(
     *,
@@ -983,7 +994,7 @@ def get_documents(
     db: Session = Depends(get_db),
 ) -> List[schemas.Document]:
     """Get documents for a project with optional filtering."""
-    project = check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, "read")
 
     query = select(models.Document).where(models.Document.project_id == project_id)
 
@@ -1041,7 +1052,7 @@ def delete_document(
     db: Session = Depends(get_db),
 ) -> dict:
     """Delete a specific document."""
-    project = check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, "write")
 
     document = db.execute(
         select(models.Document).where(
@@ -1085,6 +1096,7 @@ def delete_document(
     db.commit()
 
     return {"detail": "Document deleted successfully"}
+
 
 @router.post("/{project_id}/schema", response_model=schemas.Schema)
 def create_schema(
@@ -2251,7 +2263,7 @@ def preview_groundtruth(
     "/{project_id}/groundtruth/{groundtruth_id}/mapping",
     response_model=schemas.GroundTruth,
 )
-def configure_field_mapping(
+def configure_field_mapping_legacy(
     *,
     db: Session = Depends(get_db),
     project_id: int,
@@ -2646,7 +2658,7 @@ def evaluate_trial(
             .filter(
                 models.EvaluationMetric.evaluation_id == evaluation.id,
                 models.EvaluationMetric.field_name == field_name,
-                models.EvaluationMetric.is_correct == False,
+                ~models.EvaluationMetric.is_correct,
             )
             .limit(5)
             .all()
@@ -2852,7 +2864,7 @@ def download_evaluations_report(
         )
     # Get evaluations
     evaluations = []
-    for eval_id in evaluation_ids:
+    for eval_id in evaluation_ids_list:
         eval_obj = db.execute(
             select(models.Evaluation).where(models.Evaluation.id == eval_id)
         ).scalar_one_or_none()
@@ -3248,7 +3260,7 @@ def get_evaluation_errors(
     # Get errors from detailed metrics
     query = db.query(models.EvaluationMetric).filter(
         models.EvaluationMetric.evaluation_id == evaluation_id,
-        models.EvaluationMetric.is_correct == False,
+        ~models.EvaluationMetric.is_correct,
     )
 
     if field_name:

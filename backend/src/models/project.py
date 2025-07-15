@@ -18,7 +18,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from ..db.base import Base
-from ..utils.enums import ComparisonMethod, FieldType, FileCreator, FileType, FileStorageType, PreprocessingStrategy, PreprocessingMethod, PreprocessingStatus
+from ..utils.enums import (
+    ComparisonMethod,
+    FieldType,
+    FileCreator,
+    FileStorageType,
+    FileType,
+    PreprocessingStatus,
+    PreprocessingStrategy,
+)
 
 if TYPE_CHECKING:
     from .user import User
@@ -72,26 +80,36 @@ class Project(Base):
         relationship(back_populates="project", cascade="all, delete-orphan")
     )
 
+
 preprocessing_task_file_association = Table(
     "preprocessing_task_file_association",
     Base.metadata,
-    Column("preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True),
+    Column(
+        "preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True
+    ),
     Column("file_id", ForeignKey("files.id"), primary_key=True),
 )
 
 preprocessing_task_document_association = Table(
     "preprocessing_task_document_association",
     Base.metadata,
-    Column("preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True),
+    Column(
+        "preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True
+    ),
     Column("document_id", ForeignKey("documents.id"), primary_key=True),
 )
 
 preprocessing_configuration_file_association = Table(
     "preprocessing_configuration_file_association",
     Base.metadata,
-    Column("configuration_id", ForeignKey("preprocessing_configurations.id"), primary_key=True),
+    Column(
+        "configuration_id",
+        ForeignKey("preprocessing_configurations.id"),
+        primary_key=True,
+    ),
     Column("file_id", ForeignKey("files.id"), primary_key=True),
 )
+
 
 class File(Base):
     __tablename__ = "files"
@@ -320,7 +338,8 @@ class PreprocessingConfiguration(Base):
 
     # File type specific settings
     file_type: Mapped[FileType] = mapped_column(
-        Enum(FileType, native_enum=False, length=100, default=FileType.MIXED), nullable=False
+        Enum(FileType, native_enum=False, length=100, default=FileType.MIXED),
+        nullable=False,
     )
     preprocessing_strategy: Mapped[PreprocessingStrategy] = mapped_column(
         Enum(PreprocessingStrategy, native_enum=False, length=50),
@@ -468,6 +487,7 @@ class FilePreprocessingTask(Base):
     documents: Mapped[list["Document"]] = relationship(
         back_populates="file_preprocessing_task", cascade="all, delete-orphan"
     )
+
 
 class FieldMapping(Base):
     __tablename__ = "field_mappings"
