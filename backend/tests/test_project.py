@@ -585,6 +585,7 @@ def test_preprocess_project_data_v2(client, api_url, use_ocr, file_name, expecte
     preprocessing_task = response.json()
 
     # Check task status
+    print(preprocessing_task)
     assert preprocessing_task["status"] == "completed"
     assert preprocessing_task["total_files"] == 1
     assert preprocessing_task["processed_files"] == 1

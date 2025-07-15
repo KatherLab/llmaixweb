@@ -82,6 +82,8 @@ class Document(DocumentBase):
     original_file: File | None = None
     preprocessed_file_id: int | None = None
     preprocessed_file: File | None = None
+    preprocessing_config_id: int
+    preprocessing_config: PreprocessingConfiguration | None = None
     created_at: datetime
     updated_at: datetime
 

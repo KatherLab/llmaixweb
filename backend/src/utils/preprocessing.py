@@ -60,19 +60,37 @@ class PreprocessingPipeline:
 
                 # Update overall progress
                 self.task.processed_files = sum(
-                    1 for ft in self.task.file_tasks
+                    1
+                    for ft in self.task.file_tasks
                     if ft.status == models.PreprocessingStatus.COMPLETED
                 )
                 self.task.failed_files = sum(
-                    1 for ft in self.task.file_tasks
+                    1
+                    for ft in self.task.file_tasks
                     if ft.status == models.PreprocessingStatus.FAILED
                 )
                 self.db.commit()
 
-            if not self.cancelled:
+            total = len(self.task.file_tasks)
+            failed = self.task.failed_files
+            completed = self.task.processed_files
+
+            if self.cancelled:
+                # Don't overwrite CANCELLED status/message
+                pass
+            elif completed == total:
                 self.task.status = models.PreprocessingStatus.COMPLETED
-                self.task.completed_at = datetime.datetime.now(datetime.UTC)
                 self.task.message = "Processing completed successfully"
+            elif failed == total:
+                self.task.status = models.PreprocessingStatus.FAILED
+                self.task.message = "All files failed to preprocess"
+            else:
+                self.task.status = models.PreprocessingStatus.FAILED
+                self.task.message = (
+                    f"{completed} of {total} files processed successfully, "
+                    f"{failed} failed"
+                )
+            self.task.completed_at = datetime.datetime.now(datetime.UTC)
 
         except Exception as e:
             self.task.status = models.PreprocessingStatus.FAILED
@@ -164,7 +182,7 @@ class PreprocessingPipeline:
                 file_preprocessing_task_id=file_task.id,
                 text=content,
                 document_name=doc_name,
-                preprocessing_config=self._get_config_snapshot(),
+                preprocessing_config_id=self.config.id,
                 meta_data={
                     "row_index": idx,
                     "source_columns": content_columns or list(df.columns),
@@ -253,7 +271,7 @@ class PreprocessingPipeline:
             preprocessed_file_id=preprocessed_file_id,
             text=result,
             document_name=file.file_name,
-            preprocessing_config=self._get_config_snapshot(),
+            preprocessing_config_id=self.config.id,
             meta_data={
                 "file_type": "pdf",
                 "ocr_used": self.config.use_ocr,
@@ -298,7 +316,7 @@ class PreprocessingPipeline:
             file_preprocessing_task_id=file_task.id,
             text=result,
             document_name=file.file_name,
-            preprocessing_config=self._get_config_snapshot(),
+            preprocessing_config_id=self.config.id,
             meta_data={
                 "file_type": "image",
                 "ocr_backend": self.config.ocr_backend
@@ -322,7 +340,7 @@ class PreprocessingPipeline:
             file_preprocessing_task_id=file_task.id,
             text=text,
             document_name=file.file_name,
-            preprocessing_config=self._get_config_snapshot(),
+            preprocessing_config_id=self.config.id,
             meta_data={
                 "file_type": "text"
             }

@@ -3,7 +3,7 @@ import io
 import json
 import re
 from typing import Any, List, cast
-from datetime import datetime, timedelta
+import datetime
 
 import pandas as pd
 from fastapi import (
@@ -534,8 +534,25 @@ def update_preprocessing_configuration(
         )
 
     # Update fields
-    for field, value in config_update.model_dump(exclude_unset=True).items():
-        setattr(config, field, value)
+    in_use = (
+        db.query(models.Document)
+        .filter(models.Document.preprocessing_config_id == config.id)
+        .count()
+        > 0
+    )
+    if in_use:
+        allowed_fields = {"name", "description"}
+        for field, value in config_update.model_dump(exclude_unset=True).items():
+            if field not in allowed_fields:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot edit a configuration in use by existing documents (except name/description)",
+                )
+            setattr(config, field, value)
+    else:
+        # Proceed as before for unused configs
+        for field, value in config_update.model_dump(exclude_unset=True).items():
+            setattr(config, field, value)
 
     db.commit()
     db.refresh(config)
@@ -609,10 +626,9 @@ def preprocess_project_data(
         config_dict = preprocessing_task.inline_config.model_dump()
         config = models.PreprocessingConfiguration(
             project_id=project_id,
-            name=config_dict.pop('name', f"Temp config {datetime.utcnow()}"),  # Remove name from dict
-            **config_dict  # Now spread the rest
+            name=config_dict.pop('name', f"Temp config {datetime.datetime.now(datetime.UTC)}"),
+            **config_dict
         )
-
         db.add(config)
         db.commit()
         db.refresh(config)
@@ -633,7 +649,6 @@ def preprocess_project_data(
         .scalars()
         .all()
     )
-
     if len(files) != len(preprocessing_task.file_ids):
         missing_ids = set(preprocessing_task.file_ids) - {f.id for f in files}
         raise HTTPException(
@@ -661,26 +676,14 @@ def preprocess_project_data(
 
     # Check for duplicates and create file tasks
     file_tasks_to_process = []
-    config_snapshot = {
-        "file_type": config.file_type,
-        "preprocessing_strategy": config.preprocessing_strategy,
-        "pdf_backend": config.pdf_backend,
-        "ocr_backend": config.ocr_backend,
-        "use_ocr": config.use_ocr,
-        "force_ocr": config.force_ocr,
-        "ocr_languages": config.ocr_languages,
-        "ocr_model": config.ocr_model,
-        "table_settings": config.table_settings,
-        "llm_model": config.llm_model,
-    }
 
     for file in files:
-        # Check for existing documents with same configuration
+        # Check for existing documents with same configuration (FK!)
         existing_docs = (
             db.execute(
                 select(models.Document).where(
                     models.Document.original_file_id == file.id,
-                    models.Document.preprocessing_config == config_snapshot,
+                    models.Document.preprocessing_config_id == config.id,
                 )
             )
             .scalars()
@@ -695,7 +698,6 @@ def preprocess_project_data(
         # Delete existing documents if force reprocess
         if existing_docs and preprocessing_task.force_reprocess:
             for doc in existing_docs:
-                # Remove from document sets first
                 doc.document_sets.clear()
                 db.delete(doc)
 
@@ -710,7 +712,7 @@ def preprocess_project_data(
     if not file_tasks_to_process:
         task.status = models.PreprocessingStatus.COMPLETED
         task.message = "All files already processed with these settings"
-        task.completed_at = datetime.utcnow()
+        task.completed_at = datetime.datetime.now(datetime.UTC)
         db.commit()
         db.refresh(task)
         return schemas.PreprocessingTask.model_validate(task)
@@ -735,6 +737,7 @@ def preprocess_project_data(
 
     db.refresh(task)
     return schemas.PreprocessingTask.model_validate(task)
+
 
 
 @router.get("/{project_id}/preprocess", response_model=List[schemas.PreprocessingTask])
@@ -837,7 +840,7 @@ def cancel_preprocessing_task(
     # Update task status
     task.is_cancelled = True
     task.status = models.PreprocessingStatus.CANCELLED
-    task.completed_at = datetime.utcnow()
+    task.completed_at = datetime.datetime.now(datetime.UTC)
 
     # Handle rollback
     if not keep_processed and task.rollback_on_cancel:
@@ -896,13 +899,13 @@ def get_preprocessing_progress(
         task.status == models.PreprocessingStatus.IN_PROGRESS
         and task.processed_files > 0
     ):
-        elapsed = datetime.utcnow() - task.started_at
+        elapsed = datetime.datetime.now(datetime.UTC) - task.started_at
         avg_time_per_file = elapsed.total_seconds() / task.processed_files
         remaining_files = task.total_files - task.processed_files - task.failed_files
 
         if remaining_files > 0:
-            estimated_remaining = timedelta(seconds=avg_time_per_file * remaining_files)
-            task.estimated_completion = datetime.utcnow() + estimated_remaining
+            estimated_remaining = datetime.timedelta(seconds=avg_time_per_file * remaining_files)
+            task.estimated_completion = datetime.datetime.now(datetime.UTC) + estimated_remaining
 
     return schemas.PreprocessingTask.model_validate(task)
 

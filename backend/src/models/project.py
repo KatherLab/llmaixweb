@@ -159,8 +159,12 @@ class Document(Base):
     )
 
     # Configuration snapshot (for tracking what settings were used)
-    preprocessing_config: Mapped[dict] = mapped_column(JSON, nullable=False)
-    # This includes: method, ocr settings, table settings, etc.
+    preprocessing_config_id: Mapped[int] = mapped_column(
+        ForeignKey("preprocessing_configurations.id"), nullable=False
+    )
+    preprocessing_config: Mapped["PreprocessingConfiguration"] = relationship(
+        back_populates="documents"
+    )
 
     # Document content
     text: Mapped[str] = mapped_column(String, nullable=False)
@@ -201,7 +205,7 @@ class Document(Base):
     __table_args__ = (
         UniqueConstraint(
             "original_file_id",
-            "preprocessing_config",
+            "preprocessing_config_id",
             "document_name",
             name="_document_uniqueness",
         ),
@@ -365,6 +369,10 @@ class PreprocessingConfiguration(Base):
     files: Mapped[list["File"]] = relationship(
         secondary=preprocessing_configuration_file_association,
         back_populates="preprocessing_configurations",
+    )
+
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="preprocessing_config"
     )
 
 

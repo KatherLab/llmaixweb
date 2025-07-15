@@ -46,7 +46,6 @@
           Cancel All
         </button>
       </div>
-
       <div class="space-y-3">
         <TaskCard
           v-for="task in activeTasks"
@@ -77,7 +76,6 @@
           {{ showCompletedTasks ? 'Hide' : 'Show' }}
         </button>
       </div>
-
       <div v-if="showCompletedTasks" class="mt-3 space-y-2">
         <div
           v-for="task in completedTasks.slice(0, 3)"
@@ -88,8 +86,16 @@
             <span class="text-gray-700">Task #{{ task.id }}</span>
             <span class="text-gray-500">{{ formatRelativeTime(task.completed_at) }}</span>
           </div>
-          <div class="text-xs text-gray-500 mt-1">
-            {{ task.processed_files }} files processed successfully
+          <div class="text-xs text-gray-500 mt-1 flex items-center gap-3">
+            <span v-if="task.processed_files - task.failed_files - (task.skipped_files || 0) > 0">
+              {{ task.processed_files - task.failed_files - (task.skipped_files || 0) }} succeeded
+            </span>
+            <span v-if="task.failed_files > 0" class="text-red-600">
+              {{ task.failed_files }} failed
+            </span>
+            <span v-if="task.skipped_files > 0" class="text-yellow-600">
+              {{ task.skipped_files }} skipped
+            </span>
           </div>
         </div>
       </div>
@@ -99,13 +105,14 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200">
       <div class="p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-6">Create New Preprocessing Task</h3>
-
         <!-- Configuration Selection -->
+        <!-- ... keep your config selection as in your original file ... -->
         <div class="mb-6">
           <label class="block text-sm font-medium text-gray-700 mb-3">
             Configuration
           </label>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- ... all your configuration buttons ... -->
             <button
               @click="selectedConfig = 'quick'"
               :class="[
@@ -121,7 +128,6 @@
               <span class="font-medium text-sm">Quick Process</span>
               <span class="text-xs text-gray-500 mt-1">Smart defaults</span>
             </button>
-
             <button
               @click="selectedConfig = 'saved'"
               :class="[
@@ -137,7 +143,6 @@
               <span class="font-medium text-sm">Saved Config</span>
               <span class="text-xs text-gray-500 mt-1">Reuse settings</span>
             </button>
-
             <button
               @click="selectedConfig = 'custom'"
               :class="[
@@ -155,8 +160,6 @@
             </button>
           </div>
         </div>
-
-        <!-- Saved Configuration Selector -->
         <div v-if="selectedConfig === 'saved'" class="mb-6">
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Select Configuration
@@ -175,10 +178,7 @@
             </option>
           </select>
         </div>
-
-        <!-- Custom Configuration -->
         <div v-if="selectedConfig === 'custom'" class="space-y-6 mb-6">
-          <!-- OCR Settings Card -->
           <div class="bg-gray-50 rounded-lg p-4">
             <h4 class="font-medium text-gray-900 mb-4 flex items-center">
               <svg class="h-5 w-5 mr-2 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -186,7 +186,6 @@
               </svg>
               OCR Settings
             </h4>
-
             <div class="space-y-4">
               <label class="flex items-center">
                 <input
@@ -196,7 +195,6 @@
                 />
                 <span class="ml-2 text-sm text-gray-700">Enable OCR</span>
               </label>
-
               <label class="flex items-center">
                 <input
                   v-model="preprocessingConfig.force_ocr"
@@ -206,7 +204,6 @@
                 />
                 <span class="ml-2 text-sm text-gray-700">Force OCR (ignore existing text)</span>
               </label>
-
               <div v-if="preprocessingConfig.use_ocr" class="relative">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   OCR Languages
@@ -244,12 +241,10 @@
                     </div>
                   </template>
                 </Multiselect>
-              </div>
 
+              </div>
             </div>
           </div>
-
-          <!-- PDF Settings Card -->
           <div class="bg-gray-50 rounded-lg p-4">
             <h4 class="font-medium text-gray-900 mb-4 flex items-center">
               <svg class="h-5 w-5 mr-2 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -257,7 +252,6 @@
               </svg>
               PDF Processing
             </h4>
-
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 PDF Backend
@@ -271,8 +265,6 @@
               </select>
             </div>
           </div>
-
-          <!-- Save Configuration Option -->
           <div class="flex items-center">
             <input
               v-model="saveAsConfig"
@@ -291,7 +283,6 @@
             />
           </div>
         </div>
-
         <!-- File Selection -->
         <div class="mb-6">
           <div class="flex justify-between items-center mb-3">
@@ -302,7 +293,6 @@
               {{ selectedFiles.length }} of {{ availableFiles.length }} selected
             </div>
           </div>
-
           <FileSelector
             v-model:selected="selectedFiles"
             :files="availableFiles"
@@ -311,7 +301,6 @@
             @clear-selection="selectedFiles = []"
           />
         </div>
-
         <!-- Action Buttons -->
         <div class="flex justify-end space-x-3">
           <button
@@ -364,7 +353,6 @@ import FileSelector from './preprocessing/FileSelector.vue';
 import ConfigurationManager from './preprocessing/ConfigurationManager.vue';
 import TaskDetailsModal from './preprocessing/TaskDetailsModal.vue';
 
-
 const props = defineProps({
   projectId: {
     type: [String, Number],
@@ -378,7 +366,6 @@ const props = defineProps({
 
 const toast = useToast();
 
-// State
 const preprocessingTasks = ref([]);
 const savedConfigs = ref([]);
 const availableFiles = ref([]);
@@ -391,9 +378,8 @@ const showCompletedTasks = ref(false);
 const isSubmitting = ref(false);
 const saveAsConfig = ref(false);
 const configName = ref('');
-const pollInterval = ref(null);
+let pollInterval = null;
 
-// Configuration with proper defaults
 const preprocessingConfig = ref({
   use_ocr: true,
   force_ocr: false,
@@ -402,7 +388,6 @@ const preprocessingConfig = ref({
   ocr_languages: [{ value: 'eng', label: 'English' }],
 });
 
-// Language options - expanded list
 const ocrLanguagesForSelect = ref([
   { value: 'eng', label: 'English' },
   { value: 'spa', label: 'Spanish' },
@@ -433,7 +418,6 @@ const ocrLanguagesForSelect = ref([
   { value: 'ukr', label: 'Ukrainian' },
 ]);
 
-// Computed
 const activeTasks = computed(() =>
   preprocessingTasks.value.filter(task =>
     ['pending', 'processing'].includes(task.status)
@@ -450,7 +434,6 @@ const canStartProcessing = computed(() =>
   selectedFiles.value.length > 0 && !isSubmitting.value
 );
 
-// Methods
 const fetchPreprocessingTasks = async () => {
   try {
     const response = await api.get(`/project/${props.projectId}/preprocess`);
@@ -478,53 +461,66 @@ const fetchAvailableFiles = async () => {
   }
 };
 
+const getAlreadyProcessedFileIds = () => {
+  const alreadyDone = new Set();
+  preprocessingTasks.value.forEach(task => {
+    if (task.status === 'completed' && Array.isArray(task.file_ids)) {
+      task.file_ids.forEach(id => alreadyDone.add(id));
+    }
+  });
+  return selectedFiles.value.filter(fid => alreadyDone.has(fid));
+};
+
 const startPreprocessing = async () => {
   if (!canStartProcessing.value) return;
-
+  const alreadyProcessedIds = getAlreadyProcessedFileIds();
+  if (alreadyProcessedIds.length === selectedFiles.value.length) {
+    toast.info('All selected files were already processed. No new task created.');
+    return;
+  }
+  if (alreadyProcessedIds.length > 0) {
+    toast.info(`${alreadyProcessedIds.length} selected file(s) were already processed and will be skipped.`);
+  }
+  const filesToProcess = selectedFiles.value.filter(id => !alreadyProcessedIds.includes(id));
+  if (filesToProcess.length === 0) {
+    toast.info('No new files to process.');
+    return;
+  }
   isSubmitting.value = true;
   try {
     let taskData;
-
     if (selectedConfig.value === 'saved' && selectedSavedConfig.value) {
       taskData = {
         configuration_id: selectedSavedConfig.value,
-        file_ids: selectedFiles.value
+        file_ids: filesToProcess
       };
     } else {
-      // For both 'quick' and 'custom' modes, we need to provide inline_config
       const config = {
         name: selectedConfig.value === 'quick' ? 'Quick Process' : (configName.value || 'Custom Configuration'),
-        file_type: 'mixed', // Default to mixed for flexibility
+        file_type: 'mixed',
         ...preprocessingConfig.value,
         ocr_languages: preprocessingConfig.value.ocr_languages.map(lang =>
           typeof lang === 'string' ? lang : lang.value
         ),
       };
-
       if (saveAsConfig.value && configName.value) {
-        // First create the configuration
         const configResponse = await api.post(`/project/${props.projectId}/preprocessing-config`, config);
-
         taskData = {
           configuration_id: configResponse.data.id,
-          file_ids: selectedFiles.value
+          file_ids: filesToProcess
         };
       } else {
         taskData = {
           inline_config: config,
-          file_ids: selectedFiles.value
+          file_ids: filesToProcess
         };
       }
     }
-
     const response = await api.post(`/project/${props.projectId}/preprocess`, taskData);
     preprocessingTasks.value.unshift(response.data);
-
-    // Reset form
     selectedFiles.value = [];
     configName.value = '';
     saveAsConfig.value = false;
-
     toast.success('Preprocessing task started successfully');
     setupPolling();
   } catch (error) {
@@ -543,17 +539,17 @@ const startPreprocessing = async () => {
 };
 
 const startQuickPreprocess = async () => {
-  const unprocessedFiles = availableFiles.value.filter(file =>
-    !preprocessingTasks.value.some(task =>
-      task.file_ids?.includes(file.id) && task.status === 'completed'
-    )
-  );
-
+  const processedIds = new Set();
+  preprocessingTasks.value.forEach(task => {
+    if (task.status === 'completed' && Array.isArray(task.file_ids)) {
+      task.file_ids.forEach(id => processedIds.add(id));
+    }
+  });
+  const unprocessedFiles = availableFiles.value.filter(file => !processedIds.has(file.id));
   if (unprocessedFiles.length === 0) {
     toast.info('All files have been processed');
     return;
   }
-
   selectedFiles.value = unprocessedFiles.map(f => f.id);
   selectedConfig.value = 'quick';
   await startPreprocessing();
@@ -575,6 +571,7 @@ const retryTask = async (task) => {
     const response = await api.get(`/project/${props.projectId}/preprocess/${task.id}/retry-failed`);
     preprocessingTasks.value.unshift(response.data);
     toast.success('Retry task created');
+    setupPolling();
   } catch (error) {
     toast.error('Failed to retry task');
   }
@@ -582,7 +579,6 @@ const retryTask = async (task) => {
 
 const cancelAllTasks = async () => {
   if (!confirm('Cancel all active tasks?')) return;
-
   for (const task of activeTasks.value) {
     await cancelTask(task);
   }
@@ -616,6 +612,7 @@ const retryFailedFiles = async (taskId) => {
     preprocessingTasks.value.unshift(response.data);
     toast.success('Retry task created for failed files');
     selectedTask.value = null;
+    setupPolling();
   } catch (error) {
     toast.error('Failed to create retry task');
   }
@@ -626,7 +623,6 @@ const formatRelativeTime = (dateString) => {
   const date = new Date(dateString);
   const now = new Date();
   const diff = now - date;
-
   if (diff < 60000) return 'just now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
@@ -646,36 +642,29 @@ const updateTaskStatus = async (taskId) => {
 };
 
 const setupPolling = () => {
-  if (pollInterval.value) clearInterval(pollInterval.value);
-
-  pollInterval.value = setInterval(() => {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(() => {
     const tasksToUpdate = preprocessingTasks.value.filter(
       task => ['pending', 'processing'].includes(task.status)
     );
-
     if (tasksToUpdate.length === 0) {
-      clearInterval(pollInterval.value);
-      pollInterval.value = null;
+      clearInterval(pollInterval);
+      pollInterval = null;
       return;
     }
-
     tasksToUpdate.forEach(task => updateTaskStatus(task.id));
   }, 2000);
 };
 
-// Lifecycle
 onMounted(() => {
   fetchPreprocessingTasks();
   fetchConfigurations();
   fetchAvailableFiles();
   setupPolling();
 });
-
 onUnmounted(() => {
-  if (pollInterval.value) clearInterval(pollInterval.value);
+  if (pollInterval) clearInterval(pollInterval);
 });
-
-// Watchers
 watch(() => props.files, (newFiles) => {
   availableFiles.value = newFiles;
 }, { immediate: true });
@@ -1069,4 +1058,3 @@ watch(() => props.files, (newFiles) => {
 
 
 </style>
-

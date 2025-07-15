@@ -253,7 +253,6 @@
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Created
             </th>
-            <!-- Continuing DocumentsManagement.vue -->
             <th class="relative px-6 py-3">
               <span class="sr-only">Actions</span>
             </th>
@@ -416,6 +415,7 @@
       @close="viewingDocument = null"
       @reprocess="reprocessDocument"
     />
+
 
     <!-- Batch Actions Modal -->
     <BatchActionsModal
@@ -686,9 +686,37 @@ const handleBatchComplete = () => {
 };
 
 const reprocessDocument = async (doc) => {
-  // This will be handled by the parent component
-  toast.info('Please go to the Preprocessing tab to reprocess this document');
+  try {
+    const fileId = doc.original_file?.id;
+    const configId = doc.preprocessing_config?.id;
+    if (!fileId) {
+      console.error('Original file id not found for this document!');
+      toast.error('Original file id not found for this document!');
+      return;
+    }
+    if (!configId) {
+      console.error('Preprocessing configuration not found for this document!');
+      toast.error('Preprocessing configuration not found for this document!');
+      return;
+    }
+    const payload = {
+      file_ids: [fileId],
+      configuration_id: configId,
+      force_reprocess: true
+    };
+    await api.post(`/project/${props.projectId}/preprocess`, payload);
+    toast.success('Document reprocessing started!');
+    fetchDocuments();
+  } catch (error) {
+    toast.error(
+      error?.response?.data?.detail?.[0]?.msg ||
+      'Failed to start reprocessing'
+    );
+    console.error(error);
+  }
 };
+
+
 
 const clearFilters = () => {
   filters.value = {
