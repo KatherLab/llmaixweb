@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, SkipValidation, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    SkipValidation,
+    field_validator,
+    model_validator,
+)
 
 from ..core.config import settings
-from ..utils.enums import FileCreator
+from ..utils.enums import FileCreator, FileType, PreprocessingStrategy
 
 if TYPE_CHECKING:
     from .user import User  # noqa: F401
@@ -58,9 +64,10 @@ class File(FileBase):
 
 
 class DocumentBase(BaseModel):
-    preprocessing_method: str | None = None
-    text: str | None = None
+    text: str
+    document_name: str | None = None
     meta_data: dict | None = None
+    preprocessing_config: dict
 
 
 class DocumentCreate(DocumentBase):
@@ -163,74 +170,170 @@ class TrialResult(TrialResultBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-class PreprocessingTaskBase(BaseModel):
-    status: str | None = None
-    message: str | None = None
-    progress: float | None = None
-    progress_details: dict | None = None
-    celery_id: str | None = None
-    bypass_celery: bool = False
-    file_ids: list[int] = []
-    document_ids: list[int] = []
-    ocr_backend: str | None = None
+class PreprocessingConfigurationBase(BaseModel):
+    name: str
+    description: str | None = None
+    file_type: str
+    preprocessing_strategy: str = "full_document"
     pdf_backend: str | None = None
+    ocr_backend: str | None = None
     use_ocr: bool = True
     force_ocr: bool = False
     ocr_languages: list[str] | None = None
     ocr_model: str | None = None
+    table_settings: dict | None = None
     llm_model: str | None = None
-    base_url: str | None = None
-    api_key: str | None = None
+    additional_settings: dict | None = None
+
+    @field_validator("file_type")
+    def validate_file_type(cls, v):
+        """Convert file type string to enum value."""
+        if not v:
+            raise ValueError("file_type is required")
+
+        # Map common variations to enum values
+        file_type_mapping = {
+            # Direct enum values
+            "application/pdf": FileType.APPLICATION_PDF,
+            "application/msword": FileType.APPLICATION_MSWORD,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_WORDPROCESSINGML_DOCUMENT,
+            "application/vnd.ms-excel": FileType.APPLICATION_VND_MS_EXCEL,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET,
+            "image/jpeg": FileType.IMAGE_JPEG,
+            "image/png": FileType.IMAGE_PNG,
+            "image/svg+xml": FileType.IMAGE_SVG,
+            "text/plain": FileType.TEXT_PLAIN,
+            "text/csv": FileType.TEXT_CSV,
+            "mixed": FileType.MIXED,
+            # Common aliases
+            "pdf": FileType.APPLICATION_PDF,
+            "word": FileType.APPLICATION_MSWORD,
+            "docx": FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_WORDPROCESSINGML_DOCUMENT,
+            "excel": FileType.APPLICATION_VND_MS_EXCEL,
+            "xlsx": FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET,
+            "jpg": FileType.IMAGE_JPEG,
+            "jpeg": FileType.IMAGE_JPEG,
+            "png": FileType.IMAGE_PNG,
+            "svg": FileType.IMAGE_SVG,
+            "txt": FileType.TEXT_PLAIN,
+            "csv": FileType.TEXT_CSV,
+        }
+
+        # Convert to lowercase for case-insensitive matching
+        v_lower = v.lower()
+
+        # Check if it's already an enum value
+        try:
+            return FileType(v).value
+        except ValueError:
+            pass
+
+        # Check mapping
+        if v_lower in file_type_mapping:
+            return file_type_mapping[v_lower].value
+
+        # Check if it's an enum name (e.g., "APPLICATION_PDF")
+        for enum_item in FileType:
+            if v_lower == enum_item.name.lower():
+                return enum_item.value
+
+        raise ValueError(
+            f"Invalid file type: {v}. Valid types are: {', '.join([e.value for e in FileType])}"
+        )
+
+    @field_validator("preprocessing_strategy")
+    def validate_preprocessing_strategy(cls, v):
+        """Convert preprocessing strategy string to enum value."""
+        if not v:
+            return PreprocessingStrategy.FULL_DOCUMENT.value
+
+        strategy_mapping = {
+            "full_document": PreprocessingStrategy.FULL_DOCUMENT,
+            "row_by_row": PreprocessingStrategy.ROW_BY_ROW,
+            "custom": PreprocessingStrategy.CUSTOM,
+        }
+
+        v_lower = v.lower()
+
+        # Check if it's already an enum value
+        try:
+            return PreprocessingStrategy(v).value
+        except ValueError:
+            pass
+
+        # Check mapping
+        if v_lower in strategy_mapping:
+            return strategy_mapping[v_lower].value
+
+        # Check if it's an enum name
+        for enum_item in PreprocessingStrategy:
+            if v_lower == enum_item.name.lower():
+                return enum_item.value
+
+        raise ValueError(
+            f"Invalid preprocessing strategy: {v}. Valid strategies are: {', '.join([e.value for e in PreprocessingStrategy])}"
+        )
+
+
+class PreprocessingConfigurationCreate(PreprocessingConfigurationBase):
+    pass
+
+
+class PreprocessingConfigurationUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    table_settings: dict | None = None
+    additional_settings: dict | None = None
+
+
+class PreprocessingConfiguration(PreprocessingConfigurationBase):
+    id: int
+    project_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FilePreprocessingTaskStatus(BaseModel):
+    file_id: int
+    file_name: str
+    status: str
+    progress: float
+    error_message: str | None = None
+    document_count: int
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+
+
+class PreprocessingTaskBase(BaseModel):
+    configuration_id: int | None = None
+    rollback_on_cancel: bool = True
 
 
 class PreprocessingTaskCreate(PreprocessingTaskBase):
+    file_ids: list[int]
+    configuration_id: int | None = None
+
+    # Allow inline configuration if no configuration_id
+    inline_config: PreprocessingConfigurationBase | None = None
+
+    force_reprocess: bool = False
+    bypass_celery: bool = False
+
     @field_validator("file_ids")
     def file_ids_must_not_be_empty(cls, v):
         if not v:
-            raise ValueError("At least one file ID must be provided for preprocessing")
+            raise ValueError("At least one file ID must be provided")
         return v
 
-    @field_validator("ocr_languages")
-    def ocr_languages_must_be_list(cls, v):
-        if v and not isinstance(v, list):
-            raise ValueError("OCR languages must be a list of language codes")
-        return v
-
-    @field_validator("pdf_backend")
-    def pdf_backend_must_be_valid(cls, v):
-        valid_backends = ["pymupdf4llm", "markitdown"]  # Add valid backends here
-        if v and v not in valid_backends:
+    @model_validator(mode="after")
+    def validate_configuration(self):
+        if not self.configuration_id and not self.inline_config:
             raise ValueError(
-                f"Invalid PDF backend: {v}. Valid backends are: {valid_backends}"
+                "Either configuration_id or inline_config must be provided"
             )
-        return v
-
-    @field_validator("ocr_backend")
-    def ocr_backend_must_be_valid(cls, v):
-        valid_backends = ["ocrmypdf"]  # Add valid backends here
-        if v and v not in valid_backends:
-            raise ValueError(
-                f"Invalid OCR backend: {v}. Valid backends are: {valid_backends}"
-            )
-        return v
-
-    @field_validator("force_ocr")
-    def force_ocr_must_be_used_with_use_ocr(cls, v, info):
-        if v and info.data.get("use_ocr") is False:
-            raise ValueError(
-                "force_ocr is True, but use_ocr is False. Set use_ocr=True."
-            )
-        return v
-
-    @field_validator("llm_model", "api_key")
-    def llm_model_and_api_key_must_be_provided_together(cls, v, info):
-        if info.field_name == "llm_model" and v and not info.data.get("api_key"):
-            raise ValueError("Both LLM model and API key must be provided together")
-        if info.field_name == "api_key" and v and not info.data.get("llm_model"):
-            raise ValueError("Both LLM model and API key must be provided together")
-        return v
-
+        return self
 
 class PreprocessingTaskUpdate(PreprocessingTaskBase):
     pass
@@ -239,10 +342,55 @@ class PreprocessingTaskUpdate(PreprocessingTaskBase):
 class PreprocessingTask(PreprocessingTaskBase):
     id: int
     project_id: int
+    status: str
+    message: str | None = None
+    total_files: int
+    processed_files: int
+    failed_files: int
+    is_cancelled: bool
+    celery_task_id: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    estimated_completion: datetime | None = None
     created_at: datetime
     updated_at: datetime
-    files: list[File] | None = None
-    documents: list[Document] | None = None
+
+    # Change this to accept the ORM model directly
+    file_tasks: list[Any] = []  # Will be converted in validator
+
+    # Configuration used
+    configuration: PreprocessingConfiguration | None = None
+
+    @field_validator("file_tasks", mode="before")
+    def convert_file_tasks(cls, v):
+        """Convert FilePreprocessingTask ORM objects to FilePreprocessingTaskStatus."""
+        if not v:
+            return []
+
+        result = []
+        for task in v:
+            # Handle both ORM objects and dicts
+            if hasattr(task, "__dict__"):  # ORM object
+                result.append(
+                    {
+                        "file_id": task.file_id,
+                        "file_name": task.file.file_name
+                        if hasattr(task, "file") and task.file
+                        else f"File {task.file_id}",
+                        "status": task.status.value
+                        if hasattr(task.status, "value")
+                        else task.status,
+                        "progress": task.progress or 0.0,
+                        "error_message": task.error_message,
+                        "document_count": task.document_count,
+                        "started_at": task.started_at,
+                        "completed_at": task.completed_at,
+                    }
+                )
+            else:  # Already a dict
+                result.append(v)
+
+        return result
 
     model_config = ConfigDict(from_attributes=True)
 

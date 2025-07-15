@@ -18,7 +18,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from ..db.base import Base
-from ..utils.enums import ComparisonMethod, FieldType, FileCreator
+from ..utils.enums import ComparisonMethod, FieldType, FileCreator, FileType, FileStorageType, PreprocessingStrategy, PreprocessingMethod, PreprocessingStatus
 
 if TYPE_CHECKING:
     from .user import User
@@ -68,27 +68,30 @@ class Project(Base):
     )
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     owner: Mapped["User"] = relationship(back_populates="projects")  # noqa: F821
-
-
-class FileStorageType(str, enum.Enum):
-    LOCAL = "local"
-    S3 = "s3"
-
-
-class FileType(str, enum.Enum):
-    """MIMEs for image / application / text file types."""
-
-    APPLICATION_PDF = "application/pdf"
-    APPLICATION_MSWORD = "application/msword"
-    APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_WORDPROCESSINGML_DOCUMENT = (
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    preprocessing_configurations: Mapped[list["PreprocessingConfiguration"]] = (
+        relationship(back_populates="project", cascade="all, delete-orphan")
     )
-    IMAGE_JPEG = "image/jpeg"
-    IMAGE_PNG = "image/png"
-    IMAGE_SVG = "image/svg+xml"
-    TEXT_PLAIN = "text/plain"
-    TEXT_CSV = "text/csv"
 
+preprocessing_task_file_association = Table(
+    "preprocessing_task_file_association",
+    Base.metadata,
+    Column("preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True),
+    Column("file_id", ForeignKey("files.id"), primary_key=True),
+)
+
+preprocessing_task_document_association = Table(
+    "preprocessing_task_document_association",
+    Base.metadata,
+    Column("preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True),
+    Column("document_id", ForeignKey("documents.id"), primary_key=True),
+)
+
+preprocessing_configuration_file_association = Table(
+    "preprocessing_configuration_file_association",
+    Base.metadata,
+    Column("configuration_id", ForeignKey("preprocessing_configurations.id"), primary_key=True),
+    Column("file_id", ForeignKey("files.id"), primary_key=True),
+)
 
 class File(Base):
     __tablename__ = "files"
@@ -124,12 +127,15 @@ class File(Base):
     preprocessing_tasks: Mapped[list["PreprocessingTask"]] = relationship(
         secondary="preprocessing_task_file_association", back_populates="files"
     )
-
-
-class PreprocessingMethod(str, enum.Enum):
-    TESSERACT = "tesseract"
-    VISION_OCR = "vision_ocr"
-    SURYA_OCR = "surya_ocr"
+    preprocessing_configurations: Mapped[list["PreprocessingConfiguration"]] = (
+        relationship(
+            secondary=preprocessing_configuration_file_association,
+            back_populates="files",
+        )
+    )
+    file_preprocessing_tasks: Mapped[list["FilePreprocessingTask"]] = relationship(
+        back_populates="file"  # Link to FilePreprocessingTask.file
+    )
 
 
 document_set_association = Table(
@@ -142,25 +148,41 @@ document_set_association = Table(
 
 class Document(Base):
     __tablename__ = "documents"
+
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     original_file_id: Mapped[int] = mapped_column(
         ForeignKey("files.id"), nullable=False
     )
+    file_preprocessing_task_id: Mapped[int] = mapped_column(
+        ForeignKey("file_preprocessing_tasks.id"), nullable=True
+    )
+
+    # Configuration snapshot (for tracking what settings were used)
+    preprocessing_config: Mapped[dict] = mapped_column(JSON, nullable=False)
+    # This includes: method, ocr settings, table settings, etc.
+
+    # Document content
+    text: Mapped[str] = mapped_column(String, nullable=False)
+    document_name: Mapped[str] = mapped_column(String(500), nullable=True)
+
+    # Metadata
+    meta_data: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), nullable=True)
+    # Can include: page_number, row_number, source_columns, etc.
+
+    # Optional preprocessed file (for PDFs with OCR)
     preprocessed_file_id: Mapped[int] = mapped_column(
         ForeignKey("files.id"), nullable=True
     )
-    preprocessing_method: Mapped[PreprocessingMethod] = mapped_column(
-        Enum(PreprocessingMethod, native_enum=False, length=20)
-    )
-    text: Mapped[str] = mapped_column(String, nullable=False)
-    meta_data: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), nullable=True)
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    # Relationships
     project: Mapped["Project"] = relationship(back_populates="documents")
     original_file: Mapped["File"] = relationship(
         foreign_keys=[original_file_id], back_populates="documents_as_original"
@@ -168,11 +190,21 @@ class Document(Base):
     preprocessed_file: Mapped["File"] = relationship(
         foreign_keys=[preprocessed_file_id], back_populates="documents_as_preprocessed"
     )
+    file_preprocessing_task: Mapped["FilePreprocessingTask"] = relationship(
+        back_populates="documents"
+    )
     document_sets: Mapped[list["DocumentSet"]] = relationship(
         secondary=document_set_association, back_populates="documents"
     )
-    preprocessing_tasks: Mapped[list["PreprocessingTask"]] = relationship(
-        secondary="preprocessing_task_document_association", back_populates="documents"
+
+    # Add unique constraint for duplicate detection
+    __table_args__ = (
+        UniqueConstraint(
+            "original_file_id",
+            "preprocessing_config",
+            "document_name",
+            name="_document_uniqueness",
+        ),
     )
 
 
@@ -274,37 +306,48 @@ class PreprocessingTaskStatus(str, enum.Enum):
     FAILED = "failed"
 
 
-class PreprocessingTask(Base):
-    __tablename__ = "preprocessing_tasks"
+class PreprocessingConfiguration(Base):
+    __tablename__ = "preprocessing_configurations"
+
     id: Mapped[int] = mapped_column(primary_key=True)
-    status: Mapped[PreprocessingTaskStatus] = mapped_column(
-        Enum(PreprocessingTaskStatus, native_enum=False, length=20),
-        default=PreprocessingTaskStatus.PENDING,
-    )
-    message: Mapped[str] = mapped_column(String(500), nullable=True)
-    ocr_backend: Mapped[str] = mapped_column(String(100), nullable=True)
-    pdf_backend: Mapped[str] = mapped_column(String(100), nullable=True)
-    use_ocr: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    force_ocr: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    ocr_languages: Mapped[list[str]] = mapped_column(JSON, nullable=True, default=list)
-    ocr_model: Mapped[str] = mapped_column(String(100), nullable=True)
-    llm_model: Mapped[str] = mapped_column(String(100), nullable=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    project: Mapped["Project"] = relationship(back_populates="preprocessing_tasks")
-    file_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
-    files: Mapped[list["File"]] = relationship(
-        secondary="preprocessing_task_file_association",
-        back_populates="preprocessing_tasks",
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+
+    # File type specific settings
+    file_type: Mapped[FileType] = mapped_column(
+        Enum(FileType, native_enum=False, length=100, default=FileType.MIXED), nullable=False
     )
-    document_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
-    documents: Mapped[list["Document"]] = relationship(
-        secondary="preprocessing_task_document_association",
-        back_populates="preprocessing_tasks",
+    preprocessing_strategy: Mapped[PreprocessingStrategy] = mapped_column(
+        Enum(PreprocessingStrategy, native_enum=False, length=50),
+        default=PreprocessingStrategy.FULL_DOCUMENT,
     )
-    progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    progress_details: Mapped[dict] = mapped_column(JSON, nullable=True)
-    bypass_celery: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    celery_id: Mapped[str] = mapped_column(String(100), nullable=True)
+
+    # PDF/Image settings
+    pdf_backend: Mapped[str] = mapped_column(String(50), nullable=True)
+    ocr_backend: Mapped[str] = mapped_column(String(50), nullable=True)
+    use_ocr: Mapped[bool] = mapped_column(Boolean, default=True)
+    force_ocr: Mapped[bool] = mapped_column(Boolean, default=False)
+    ocr_languages: Mapped[list[str]] = mapped_column(JSON, nullable=True)
+    ocr_model: Mapped[str] = mapped_column(String(100), nullable=True)
+
+    # Table/CSV settings
+    table_settings: Mapped[dict] = mapped_column(JSON, nullable=True)
+    # Example structure:
+    # {
+    #     "content_columns": ["column1", "column2"],
+    #     "name_column": "document_name",
+    #     "join_separator": " ",
+    #     "skip_header_rows": 1,
+    #     "encoding": "utf-8"
+    # }
+
+    # LLM settings (optional)
+    llm_model: Mapped[str] = mapped_column(String(100), nullable=True)
+
+    # Additional settings
+    additional_settings: Mapped[dict] = mapped_column(JSON, nullable=True)
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -312,26 +355,111 @@ class PreprocessingTask(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+    # Relationships
+    project: Mapped["Project"] = relationship(
+        back_populates="preprocessing_configurations"
+    )
+    preprocessing_tasks: Mapped[list["PreprocessingTask"]] = relationship(
+        back_populates="configuration"
+    )
+    files: Mapped[list["File"]] = relationship(
+        secondary=preprocessing_configuration_file_association,
+        back_populates="preprocessing_configurations",
+    )
 
-# Association tables
-preprocessing_task_file_association = Table(
-    "preprocessing_task_file_association",
-    Base.metadata,
-    Column(
-        "preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True
-    ),
-    Column("file_id", ForeignKey("files.id"), primary_key=True),
-)
 
-preprocessing_task_document_association = Table(
-    "preprocessing_task_document_association",
-    Base.metadata,
-    Column(
-        "preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True
-    ),
-    Column("document_id", ForeignKey("documents.id"), primary_key=True),
-)
+class PreprocessingTask(Base):
+    __tablename__ = "preprocessing_tasks"
 
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    configuration_id: Mapped[int] = mapped_column(
+        ForeignKey("preprocessing_configurations.id"), nullable=True
+    )
+
+    status: Mapped[PreprocessingStatus] = mapped_column(
+        Enum(PreprocessingStatus, native_enum=False, length=20),
+        default=PreprocessingStatus.PENDING,
+    )
+    message: Mapped[str] = mapped_column(String(500), nullable=True)
+
+    # Overall progress
+    total_files: Mapped[int] = mapped_column(default=0)
+    processed_files: Mapped[int] = mapped_column(default=0)
+    failed_files: Mapped[int] = mapped_column(default=0)
+
+    # Cancellation settings
+    is_cancelled: Mapped[bool] = mapped_column(Boolean, default=False)
+    rollback_on_cancel: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Celery task ID for cancellation
+    celery_task_id: Mapped[str] = mapped_column(String(100), nullable=True)
+
+    # Timing
+    started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    estimated_completion: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    project: Mapped["Project"] = relationship(back_populates="preprocessing_tasks")
+    configuration: Mapped["PreprocessingConfiguration"] = relationship(
+        back_populates="preprocessing_tasks"
+    )
+    file_tasks: Mapped[list["FilePreprocessingTask"]] = relationship(
+        back_populates="preprocessing_task", cascade="all, delete-orphan"
+    )
+    files: Mapped[list["File"]] = relationship(
+        secondary="preprocessing_task_file_association",
+        back_populates="preprocessing_tasks",
+    )
+
+
+# New model for tracking individual file processing
+class FilePreprocessingTask(Base):
+    __tablename__ = "file_preprocessing_tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    preprocessing_task_id: Mapped[int] = mapped_column(
+        ForeignKey("preprocessing_tasks.id"), nullable=False
+    )
+    file_id: Mapped[int] = mapped_column(ForeignKey("files.id"), nullable=False)
+
+    status: Mapped[PreprocessingStatus] = mapped_column(
+        Enum(PreprocessingStatus, native_enum=False, length=20),
+        default=PreprocessingStatus.PENDING,
+    )
+    error_message: Mapped[str] = mapped_column(String(1000), nullable=True)
+    progress: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # Track produced documents
+    document_count: Mapped[int] = mapped_column(default=0)
+
+    started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Relationships
+    preprocessing_task: Mapped["PreprocessingTask"] = relationship(
+        back_populates="file_tasks"
+    )
+    file: Mapped["File"] = relationship(
+        back_populates="file_preprocessing_tasks"  # Link to File.file_preprocessing_tasks
+    )
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="file_preprocessing_task", cascade="all, delete-orphan"
+    )
 
 class FieldMapping(Base):
     __tablename__ = "field_mappings"

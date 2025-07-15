@@ -3,6 +3,7 @@ import io
 import json
 import re
 from typing import Any, List, cast
+from datetime import datetime, timedelta
 
 import pandas as pd
 from fastapi import (
@@ -25,7 +26,7 @@ from .... import models, schemas
 from ....core.config import settings
 from ....core.security import get_current_user
 from ....dependencies import get_db, get_file, remove_file, save_file
-from ....utils.enums import FileCreator
+from ....utils.enums import FileCreator, FileType
 from ....utils.helpers import extract_field_types_from_schema
 from ....utils.info_extraction import (
     get_available_models,
@@ -34,6 +35,32 @@ from ....utils.info_extraction import (
 )
 
 router = APIRouter()
+
+
+def check_project_access(
+    project_id: int, current_user: models.User, db: Session, permission: str = "read"
+) -> models.Project:
+    """Check if user has access to project."""
+    project = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Admin has full access
+    if current_user.role == "admin":
+        return project
+
+    # Owner has full access
+    if project.owner_id == current_user.id:
+        return project
+
+    # For non-owners, check specific permissions if needed
+    # You could extend this with a project_members table for shared projects
+    raise HTTPException(
+        status_code=403, detail=f"Not authorized to {permission} this project"
+    )
 
 
 @router.get("/", response_model=list[schemas.Project])
@@ -349,6 +376,216 @@ def delete_file(
     return schemas.File.model_validate(file)
 
 
+@router.get(
+    "/{project_id}/preprocessing-config",
+    response_model=List[schemas.PreprocessingConfiguration],
+)
+def get_preprocessing_configurations(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file_type: str | None = None,
+    current_user: models.User = Depends(get_current_user),
+) -> List[schemas.PreprocessingConfiguration]:
+    """Get all preprocessing configurations for a project."""
+    project = check_project_access(project_id, current_user, db, "read")
+
+    query = select(models.PreprocessingConfiguration).where(
+        models.PreprocessingConfiguration.project_id == project_id
+    )
+
+    if file_type:
+        file_type_enum = models.FileType(file_type)  # now accepts "mixed"
+        query = query.where(
+            models.PreprocessingConfiguration.file_type == file_type_enum
+        )
+
+    configs = db.execute(query).scalars().all()
+    return [schemas.PreprocessingConfiguration.model_validate(c) for c in configs]
+
+
+@router.get(
+    "/{project_id}/preprocessing-config/{config_id}",
+    response_model=schemas.PreprocessingConfiguration,
+)
+def get_preprocessing_configuration(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    config_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.PreprocessingConfiguration:
+    """Get a specific preprocessing configuration."""
+    project = check_project_access(project_id, current_user, db, "read")
+
+    config = db.execute(
+        select(models.PreprocessingConfiguration).where(
+            models.PreprocessingConfiguration.id == config_id,
+            models.PreprocessingConfiguration.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    return schemas.PreprocessingConfiguration.model_validate(config)
+
+
+@router.post(
+    "/{project_id}/preprocessing-config",
+    response_model=schemas.PreprocessingConfiguration,
+)
+def create_preprocessing_configuration(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    config: schemas.PreprocessingConfigurationCreate,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.PreprocessingConfiguration:
+    """Create a reusable preprocessing configuration."""
+    project = check_project_access(project_id, current_user, db, "write")
+
+    # Validate file type
+    try:
+        file_type_enum = models.FileType(config.file_type)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid file type: {config.file_type}"
+        )
+
+    # Validate preprocessing strategy
+    try:
+        strategy_enum = models.PreprocessingStrategy(config.preprocessing_strategy)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid preprocessing strategy: {config.preprocessing_strategy}",
+        )
+
+    # Check for duplicate names
+    existing = db.execute(
+        select(models.PreprocessingConfiguration).where(
+            models.PreprocessingConfiguration.project_id == project_id,
+            models.PreprocessingConfiguration.name == config.name,
+        )
+    ).scalar_one_or_none()
+
+    if existing:
+        raise HTTPException(
+            status_code=400, detail="Configuration with this name already exists"
+        )
+
+    db_config = models.PreprocessingConfiguration(
+        **config.model_dump(), project_id=project_id
+    )
+    db.add(db_config)
+    db.commit()
+    db.refresh(db_config)
+
+    return schemas.PreprocessingConfiguration.model_validate(db_config)
+
+
+@router.put(
+    "/{project_id}/preprocessing-config/{config_id}",
+    response_model=schemas.PreprocessingConfiguration,
+)
+def update_preprocessing_configuration(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    config_id: int,
+    config_update: schemas.PreprocessingConfigurationUpdate,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.PreprocessingConfiguration:
+    """Update a preprocessing configuration."""
+    project = check_project_access(project_id, current_user, db, "write")
+
+    config = db.execute(
+        select(models.PreprocessingConfiguration).where(
+            models.PreprocessingConfiguration.id == config_id,
+            models.PreprocessingConfiguration.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    # Check if configuration is in use
+    active_tasks = (
+        db.execute(
+            select(models.PreprocessingTask).where(
+                models.PreprocessingTask.configuration_id == config_id,
+                models.PreprocessingTask.status.in_(
+                    [
+                        models.PreprocessingStatus.PENDING,
+                        models.PreprocessingStatus.IN_PROGRESS,
+                    ]
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    if active_tasks:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot update configuration while it's being used in active tasks",
+        )
+
+    # Update fields
+    for field, value in config_update.model_dump(exclude_unset=True).items():
+        setattr(config, field, value)
+
+    db.commit()
+    db.refresh(config)
+
+    return schemas.PreprocessingConfiguration.model_validate(config)
+
+@router.delete("/{project_id}/preprocessing-config/{config_id}")
+def delete_preprocessing_configuration(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    config_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Delete a preprocessing configuration."""
+    project = check_project_access(project_id, current_user, db, "write")
+
+    config = db.execute(
+        select(models.PreprocessingConfiguration).where(
+            models.PreprocessingConfiguration.id == config_id,
+            models.PreprocessingConfiguration.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    # Check if configuration has been used
+    tasks_using_config = (
+        db.execute(
+            select(models.PreprocessingTask).where(
+                models.PreprocessingTask.configuration_id == config_id
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    if tasks_using_config:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete configuration that has been used in preprocessing tasks",
+        )
+
+    db.delete(config)
+    db.commit()
+
+    return {"detail": "Configuration deleted successfully"}
+
+
 @router.post("/{project_id}/preprocess", response_model=schemas.PreprocessingTask)
 def preprocess_project_data(
     *,
@@ -357,215 +594,408 @@ def preprocess_project_data(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
-    """
-    Preprocess project data.
+    """Start preprocessing with advanced duplicate detection and progress tracking."""
+    project = check_project_access(project_id, current_user, db, "write")
 
-    This endpoint initiates a preprocessing task for the specified project.
-
-    Args:
-    ----
-    project_id (int): The ID of the project to preprocess.
-    preprocessing_task (schemas.PreprocessingTaskCreate): The preprocessing task details.
-
-    Returns:
-    -------
-    schemas.PreprocessingTask: The created preprocessing task.
-
-    Raises:
-    ------
-    HTTPException: If the project is not found or the user is not authorized.
-    """
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to preprocess this project"
+    # Validate configuration
+    if preprocessing_task.configuration_id:
+        config = db.get(
+            models.PreprocessingConfiguration, preprocessing_task.configuration_id
         )
-    # Check if all files in the preprocessing task exist in the project
-    existing_files = (
-        db.execute(select(models.File.id).where(models.File.project_id == project_id))
+        if not config or config.project_id != project_id:
+            raise HTTPException(status_code=404, detail="Configuration not found")
+    elif preprocessing_task.inline_config:
+        # Create temporary configuration from inline config
+        config_dict = preprocessing_task.inline_config.model_dump()
+        config = models.PreprocessingConfiguration(
+            project_id=project_id,
+            name=config_dict.pop('name', f"Temp config {datetime.utcnow()}"),  # Remove name from dict
+            **config_dict  # Now spread the rest
+        )
+
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Either configuration_id or inline_config must be provided",
+        )
+
+    # Validate files exist and belong to project
+    files = (
+        db.execute(
+            select(models.File).where(
+                models.File.id.in_(preprocessing_task.file_ids),
+                models.File.project_id == project_id,
+            )
+        )
         .scalars()
         .all()
     )
-    for file_id in preprocessing_task.file_ids:
-        if file_id not in existing_files:
+
+    if len(files) != len(preprocessing_task.file_ids):
+        missing_ids = set(preprocessing_task.file_ids) - {f.id for f in files}
+        raise HTTPException(
+            status_code=404,
+            detail=f"Files not found or don't belong to project: {missing_ids}",
+        )
+
+    # Validate file types match configuration
+    for file in files:
+        if not config.file_type == FileType.MIXED.value and config.file_type != file.file_type:
             raise HTTPException(
-                status_code=404,
-                detail=f"File with id {file_id} not found in project {project_id}",
+                status_code=400,
+                detail=f"File {file.file_name} has type {file.file_type} but configuration expects {config.file_type}",
             )
-    preprocessing_task_db = models.PreprocessingTask(
-        **preprocessing_task.model_dump(exclude={"base_url", "api_key"})
+
+    # Create preprocessing task
+    task = models.PreprocessingTask(
+        project_id=project_id,
+        configuration_id=config.id,
+        total_files=len(files),
+        rollback_on_cancel=preprocessing_task.rollback_on_cancel,
     )
-    preprocessing_task_db.project_id = project_id
-    db.add(preprocessing_task_db)
+    db.add(task)
     db.commit()
-    db.refresh(preprocessing_task_db)
-    # TODO: Disable file loading when using celery
-    files = cast(
-        list[models.File],
-        (
+
+    # Check for duplicates and create file tasks
+    file_tasks_to_process = []
+    config_snapshot = {
+        "file_type": config.file_type,
+        "preprocessing_strategy": config.preprocessing_strategy,
+        "pdf_backend": config.pdf_backend,
+        "ocr_backend": config.ocr_backend,
+        "use_ocr": config.use_ocr,
+        "force_ocr": config.force_ocr,
+        "ocr_languages": config.ocr_languages,
+        "ocr_model": config.ocr_model,
+        "table_settings": config.table_settings,
+        "llm_model": config.llm_model,
+    }
+
+    for file in files:
+        # Check for existing documents with same configuration
+        existing_docs = (
             db.execute(
-                select(models.File).where(
-                    models.File.project_id == project_id,
-                    models.File.id.in_(preprocessing_task.file_ids),
+                select(models.Document).where(
+                    models.Document.original_file_id == file.id,
+                    models.Document.preprocessing_config == config_snapshot,
                 )
             )
             .scalars()
             .all()
-        ),
-    )
-    if preprocessing_task_db.bypass_celery:
-        from ....utils.preprocessing import preprocess_files
+        )
 
-        print("Bypassing Celery for preprocessing task, preprocess synchronously.")
+        if existing_docs and not preprocessing_task.force_reprocess:
+            # Skip this file
+            task.processed_files += 1
+            continue
+
+        # Delete existing documents if force reprocess
+        if existing_docs and preprocessing_task.force_reprocess:
+            for doc in existing_docs:
+                # Remove from document sets first
+                doc.document_sets.clear()
+                db.delete(doc)
+
+        file_task = models.FilePreprocessingTask(
+            preprocessing_task_id=task.id, file_id=file.id
+        )
+        db.add(file_task)
+        file_tasks_to_process.append(file_task)
+
+    db.commit()
+
+    if not file_tasks_to_process:
+        task.status = models.PreprocessingStatus.COMPLETED
+        task.message = "All files already processed with these settings"
+        task.completed_at = datetime.utcnow()
+        db.commit()
+        db.refresh(task)
+        return schemas.PreprocessingTask.model_validate(task)
+
+    # Start processing
+    if preprocessing_task.bypass_celery:
+        from ....utils.preprocessing import process_files_with_config
+
         try:
-            preprocess_files(
-                files=files,
-                pdf_backend=preprocessing_task.pdf_backend or "pymupdf4llm",
-                ocr_backend=preprocessing_task.ocr_backend or "ocrmypdf",
-                use_ocr=preprocessing_task.use_ocr,
-                force_ocr=preprocessing_task.force_ocr,
-                ocr_languages=preprocessing_task.ocr_languages,
-                ocr_model=preprocessing_task.ocr_model,
-                llm_model=preprocessing_task.llm_model,
-                base_url=preprocessing_task.base_url,
-                api_key=preprocessing_task.api_key,
-                db_session=db,
-                preprocessing_task_id=preprocessing_task_db.id,
-                project_id=project_id,
-            )
+            process_files_with_config(task.id, db)
         except Exception as e:
-            db.delete(preprocessing_task_db)
+            task.status = models.PreprocessingStatus.FAILED
+            task.message = f"Processing failed: {str(e)}"
             db.commit()
-            raise HTTPException(
-                status_code=500, detail="Preprocessing failed: " + str(e)
-            )
+            raise HTTPException(status_code=500, detail=str(e))
     else:
-        print("Preprocess using celery task.")
-        from ....celery import preprocessing
-        from ....celery.celery_config import celery_app
+        from ....celery.preprocessing import process_files_async
 
-        print("Loaded celery successfully")
+        result = process_files_async.delay(task.id)
+        task.celery_task_id = result.id
+        db.commit()
 
-        if celery_app is not None:
-            preprocessing.preprocess_file_celery.delay(  # type: ignore
-                file_ids=preprocessing_task.file_ids,
-                preprocessing_task_id=preprocessing_task_db.id,
-                pdf_backend=preprocessing_task.pdf_backend,
-                ocr_backend=preprocessing_task.ocr_backend,
-                use_ocr=preprocessing_task.use_ocr,
-                force_ocr=preprocessing_task.force_ocr,
-                ocr_languages=preprocessing_task.ocr_languages,
-                ocr_model=preprocessing_task.ocr_model,
-                llm_model=preprocessing_task.llm_model,
-                base_url=preprocessing_task.base_url,
-                api_key=preprocessing_task.api_key,
-                project_id=project_id,
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail="Celery task for preprocessing is not available.",
-            )
-    return schemas.PreprocessingTask.model_validate(preprocessing_task_db)
+    db.refresh(task)
+    return schemas.PreprocessingTask.model_validate(task)
 
 
-@router.get(
-    "/{project_id}/preprocess",
-    response_model=list[schemas.PreprocessingTask],
-)
+@router.get("/{project_id}/preprocess", response_model=List[schemas.PreprocessingTask])
 def get_preprocessing_tasks(
     *,
     project_id: int,
+    status: str | None = Query(None, description="Filter by status"),
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[schemas.PreprocessingTask]:
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's preprocessing tasks",
-        )
+) -> List[schemas.PreprocessingTask]:
+    """Get preprocessing tasks for a project."""
+    project = check_project_access(project_id, current_user, db, "read")
 
-    preprocessing_tasks = list(
-        db.execute(
-            select(models.PreprocessingTask).where(
-                models.PreprocessingTask.project_id == project_id
-            )
-        )
-        .scalars()
-        .all()
+    query = select(models.PreprocessingTask).where(
+        models.PreprocessingTask.project_id == project_id
     )
-    return [
-        schemas.PreprocessingTask.model_validate(task) for task in preprocessing_tasks
-    ]
+
+    if status:
+        try:
+            status_enum = models.PreprocessingStatus(status)
+            query = query.where(models.PreprocessingTask.status == status_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+
+    query = query.order_by(models.PreprocessingTask.created_at.desc())
+    query = query.limit(limit).offset(offset)
+
+    tasks = db.execute(query).scalars().all()
+    return [schemas.PreprocessingTask.model_validate(task) for task in tasks]
 
 
 @router.get(
-    "/{project_id}/preprocess/{preprocessing_task_id}",
-    response_model=schemas.PreprocessingTask,
+    "/{project_id}/preprocess/{task_id}", response_model=schemas.PreprocessingTask
 )
 def get_preprocessing_task(
     *,
     project_id: int,
-    preprocessing_task_id: int,
+    task_id: int,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's preprocessing tasks",
-        )
+    """Get detailed information about a preprocessing task."""
+    project = check_project_access(project_id, current_user, db, "read")
 
-    preprocessing_task: models.PreprocessingTask | None = db.execute(
+    task = db.execute(
         select(models.PreprocessingTask).where(
+            models.PreprocessingTask.id == task_id,
             models.PreprocessingTask.project_id == project_id,
-            models.PreprocessingTask.id == preprocessing_task_id,
         )
     ).scalar_one_or_none()
-    if not preprocessing_task:
-        raise HTTPException(status_code=404, detail="Preprocessing task not found")
 
-    return schemas.PreprocessingTask.model_validate(preprocessing_task)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return schemas.PreprocessingTask.model_validate(task)
 
 
-@router.get("/{project_id}/document", response_model=list[schemas.Document])
+@router.post("/{project_id}/preprocess/{task_id}/cancel")
+def cancel_preprocessing_task(
+    *,
+    project_id: int,
+    task_id: int,
+    keep_processed: bool = Query(False, description="Keep already processed files"),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.PreprocessingTask:
+    """Cancel a preprocessing task with option to keep or rollback processed files."""
+    project = check_project_access(project_id, current_user, db, "write")
+
+    task = db.execute(
+        select(models.PreprocessingTask).where(
+            models.PreprocessingTask.id == task_id,
+            models.PreprocessingTask.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if task.status in [
+        models.PreprocessingStatus.COMPLETED,
+        models.PreprocessingStatus.CANCELLED,
+    ]:
+        raise HTTPException(
+            status_code=400, detail=f"Cannot cancel task in {task.status} status"
+        )
+
+    # Cancel celery task if exists
+    if task.celery_task_id:
+        from celery.result import AsyncResult
+
+        try:
+            AsyncResult(task.celery_task_id).revoke(terminate=True)
+        except Exception as e:
+            # Log error but continue
+            print(f"Error revoking celery task: {e}")
+
+    # Update task status
+    task.is_cancelled = True
+    task.status = models.PreprocessingStatus.CANCELLED
+    task.completed_at = datetime.utcnow()
+
+    # Handle rollback
+    if not keep_processed and task.rollback_on_cancel:
+        # Delete documents created by this task
+        deleted_count = 0
+        for file_task in task.file_tasks:
+            if file_task.status == models.PreprocessingStatus.COMPLETED:
+                for doc in file_task.documents:
+                    # Remove from document sets first
+                    doc.document_sets.clear()
+                    db.delete(doc)
+                    deleted_count += 1
+        task.message = (
+            f"Task cancelled and {deleted_count} processed documents rolled back"
+        )
+    else:
+        task.message = "Task cancelled, keeping processed documents"
+
+    # Update file task statuses
+    for file_task in task.file_tasks:
+        if file_task.status in [
+            models.PreprocessingStatus.PENDING,
+            models.PreprocessingStatus.IN_PROGRESS,
+        ]:
+            file_task.status = models.PreprocessingStatus.CANCELLED
+
+    db.commit()
+    db.refresh(task)
+
+    return schemas.PreprocessingTask.model_validate(task)
+
+
+@router.get("/{project_id}/preprocess/{task_id}/progress")
+def get_preprocessing_progress(
+    *,
+    project_id: int,
+    task_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.PreprocessingTask:
+    """Get detailed progress of a preprocessing task."""
+    project = check_project_access(project_id, current_user, db, "read")
+
+    task = db.execute(
+        select(models.PreprocessingTask).where(
+            models.PreprocessingTask.id == task_id,
+            models.PreprocessingTask.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Calculate estimated completion time if in progress
+    if (
+        task.status == models.PreprocessingStatus.IN_PROGRESS
+        and task.processed_files > 0
+    ):
+        elapsed = datetime.utcnow() - task.started_at
+        avg_time_per_file = elapsed.total_seconds() / task.processed_files
+        remaining_files = task.total_files - task.processed_files - task.failed_files
+
+        if remaining_files > 0:
+            estimated_remaining = timedelta(seconds=avg_time_per_file * remaining_files)
+            task.estimated_completion = datetime.utcnow() + estimated_remaining
+
+    return schemas.PreprocessingTask.model_validate(task)
+
+@router.get("/{project_id}/preprocess/{task_id}/retry-failed")
+def retry_failed_files(
+    *,
+    project_id: int,
+    task_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.PreprocessingTask:
+    """Create a new task to retry failed files from a previous task."""
+    project = check_project_access(project_id, current_user, db, "write")
+
+    original_task = db.execute(
+        select(models.PreprocessingTask).where(
+            models.PreprocessingTask.id == task_id,
+            models.PreprocessingTask.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+
+    if not original_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Get failed file IDs
+    failed_file_ids = [
+        ft.file_id
+        for ft in original_task.file_tasks
+        if ft.status == models.PreprocessingStatus.FAILED
+    ]
+
+    if not failed_file_ids:
+        raise HTTPException(status_code=400, detail="No failed files to retry")
+
+    # Create new task with same configuration
+    new_task = models.PreprocessingTask(
+        project_id=project_id,
+        configuration_id=original_task.configuration_id,
+        total_files=len(failed_file_ids),
+        rollback_on_cancel=original_task.rollback_on_cancel,
+    )
+    db.add(new_task)
+    db.commit()
+
+    # Create file tasks for failed files
+    for file_id in failed_file_ids:
+        file_task = models.FilePreprocessingTask(
+            preprocessing_task_id=new_task.id, file_id=file_id
+        )
+        db.add(file_task)
+
+    db.commit()
+
+    # Start processing
+    from ....celery.preprocessing import process_files_async
+
+    result = process_files_async.delay(new_task.id)
+    new_task.celery_task_id = result.id
+    db.commit()
+
+    db.refresh(new_task)
+    return schemas.PreprocessingTask.model_validate(new_task)
+
+@router.get("/{project_id}/document", response_model=List[schemas.Document])
 def get_documents(
     *,
     project_id: int,
+    file_id: str | None = Query(None, description="Filter by original file"),
+    preprocessing_task_id: int | None = Query(
+        None, description="Filter by preprocessing task"
+    ),
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> list[schemas.Document]:
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's documents"
+) -> List[schemas.Document]:
+    """Get documents for a project with optional filtering."""
+    project = check_project_access(project_id, current_user, db, "read")
+
+    query = select(models.Document).where(models.Document.project_id == project_id)
+
+    if file_id:
+        query = query.where(models.Document.original_file_id == file_id)
+
+    if preprocessing_task_id:
+        query = query.join(models.FilePreprocessingTask).where(
+            models.FilePreprocessingTask.preprocessing_task_id == preprocessing_task_id
         )
 
-    documents = list(
-        db.execute(
-            select(models.Document).where(models.Document.project_id == project_id)
-        )
-        .scalars()
-        .all()
-    )
+    query = query.order_by(models.Document.created_at.desc())
+    query = query.limit(limit).offset(offset)
+
+    documents = db.execute(query).scalars().all()
     return [schemas.Document.model_validate(doc) for doc in documents]
 
 
@@ -598,6 +1028,60 @@ def get_document(
 
     return schemas.Document.model_validate(document)
 
+
+@router.delete("/{project_id}/document/{document_id}")
+def delete_document(
+    *,
+    project_id: int,
+    document_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Delete a specific document."""
+    project = check_project_access(project_id, current_user, db, "write")
+
+    document = db.execute(
+        select(models.Document).where(
+            models.Document.id == document_id, models.Document.project_id == project_id
+        )
+    ).scalar_one_or_none()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Check if document is part of any document sets
+    if document.document_sets:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Document is part of {len(document.document_sets)} document sets. Remove from sets first.",
+        )
+
+    # Delete preprocessed file if exists and not used by other documents
+    if document.preprocessed_file_id:
+        other_docs_using_file = db.execute(
+            select(models.Document).where(
+                models.Document.preprocessed_file_id == document.preprocessed_file_id,
+                models.Document.id != document_id,
+            )
+        ).scalar_one_or_none()
+
+        if not other_docs_using_file:
+            # Safe to delete preprocessed file
+            preprocessed_file = db.get(models.File, document.preprocessed_file_id)
+            if preprocessed_file:
+                try:
+                    from ....dependencies import remove_file
+
+                    remove_file(preprocessed_file.file_uuid)
+                    db.delete(preprocessed_file)
+                except Exception as e:
+                    # Log error but continue
+                    print(f"Error deleting preprocessed file: {e}")
+
+    db.delete(document)
+    db.commit()
+
+    return {"detail": "Document deleted successfully"}
 
 @router.post("/{project_id}/schema", response_model=schemas.Schema)
 def create_schema(

@@ -143,7 +143,7 @@ import { api } from '@/services/api';
 import ProjectWorkflow from '@/components/ProjectWorkflow.vue';
 import FilesManagement from '@/components/FilesManagement.vue';
 import PreprocessingManagement from '@/components/PreprocessingManagement.vue';
-import DocumentsManagement from '@/components/DocumentsManagement.vue';
+import DocumentsManagement from '@/components/documents/DocumentsManagement.vue';
 import TrialsManagement from '@/components/TrialsManagement.vue';
 import SchemaManagement from '@/components/SchemaManagement.vue';
 import EvaluationView from '@/components/EvaluationView.vue';
