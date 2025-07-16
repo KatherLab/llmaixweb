@@ -69,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps, onMounted } from 'vue';
+import { ref } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
 import { themeMaterial } from 'ag-grid-community'; // Import Material theme
 

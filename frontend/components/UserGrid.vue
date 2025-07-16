@@ -16,7 +16,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, defineExpose } from 'vue';
+import { ref, onMounted } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
 import { api } from '@/services/api';
 import { themeMaterial } from 'ag-grid-community'; // Import Material theme

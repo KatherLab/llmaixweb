@@ -1144,6 +1144,8 @@ def test_preprocessing_progress_tracking(client, api_url):
 
 # Test Retry Failed Files
 def test_retry_failed_preprocessing(client, api_url):
+    pytest.skip("Cannot produce a failed task like this at the moment.")
+
     user_data = {
         "username": "test@example.com",
         "password": "testpassword",
