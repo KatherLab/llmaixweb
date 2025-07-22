@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./*.{vue,js,ts,jsx,tsx}",
@@ -8,7 +9,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // You can add custom colors here if needed
+        // Add custom colors if you like
       },
     },
   },

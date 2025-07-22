@@ -234,19 +234,38 @@
         </div>
       </div>
 
-      <!-- CTA -->
       <div class="mt-16 text-center">
-        <router-link to="/projects" class="transform rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-3 font-medium text-white shadow-lg transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-          Get Started Now
-        </router-link>
+        <div v-if="authStore.isAuthenticated">
+          <router-link
+            to="/projects"
+            class="transform rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-3 font-medium text-white shadow-lg transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+          >
+            Go to Projects
+          </router-link>
+        </div>
+        <div v-else class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+          <router-link
+            to="/login"
+            class="rounded-full bg-blue-600 px-8 py-3 font-medium text-white shadow-lg transition hover:bg-blue-700 text-lg"
+          >
+            Login
+          </router-link>
+          <router-link
+            to="/register"
+            class="rounded-full bg-white text-blue-600 px-8 py-3 font-medium shadow-lg border border-blue-600 transition hover:bg-blue-50 text-lg"
+          >
+            Register
+          </router-link>
+        </div>
         <p class="mt-4 text-slate-400">Experience the future of medical data extraction</p>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-// Animation or interactive elements could be added here if needed
+<script setup>
+import { useAuthStore } from '@/stores/auth'
+const authStore = useAuthStore()
 </script>
 
 <style scoped>

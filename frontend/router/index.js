@@ -1,131 +1,84 @@
-// router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
 
-// Views
-import Login from '../views/Login.vue'
-import Register from '../views/Register.vue'
-import Landing from '../views/Landing.vue'
-import AdminUserManagement from '../views/AdminUserManagement.vue'
+import Landing from '@/views/Landing.vue'
+import AppLayout from '@/views/AppLayout.vue'
+import AuthLayout from '@/views/AuthLayout.vue'
+
+import Login from '@/views/Login.vue'
+import Register from '@/views/Register.vue'
+import InvitationLanding from '@/views/InvitationLandingPage.vue'
+import NotFound from '@/views/NotFound.vue'
+
 import ProjectOverview from '@/views/ProjectOverview.vue'
 import ProjectDetail from '@/views/ProjectDetail.vue'
+import AdminUserManagement from '@/views/AdminUserManagement.vue'
+
+import { useAuthStore } from '@/stores/auth'
+
+// Pages always accessible (landing, login, register, invite, 404)
+const publicRoutes = [
+  {
+    path: '/',
+    component: AuthLayout,
+    children: [
+      { path: '', component: Landing },
+      { path: 'login', component: Login },
+      { path: 'register', component: Register },
+      { path: 'invitation/:token', component: InvitationLanding }
+    ]
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    component: NotFound
+  }
+]
+
+// Authenticated "app" pages (with nav, including landing)
+const appRoutes = [
+  {
+    path: '/',
+    component: AppLayout,
+    children: [
+      { path: '', component: Landing },
+      { path: 'projects', component: ProjectOverview, meta: { requiresAuth: true } },
+      { path: 'projects/:projectId', component: ProjectDetail, props: true, meta: { requiresAuth: true } },
+      { path: 'admin/user-management', component: AdminUserManagement, meta: { requiresAuth: true } }
+    ]
+  }
+]
+
+// Use appRoutes first: logged-in users always get AppLayout and nav, even for /
+const routes = [
+  ...appRoutes,
+  ...publicRoutes
+]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/login',
-      name: 'login',
-      component: Login
-    },
-    {
-      path: '/register',
-      name: 'register',
-      component: Register
-    },
-    {
-      path: '/',
-      name: 'landing',
-      component: Landing
-    },
-    {
-      path: '/projects',
-      name: 'ProjectOverview',
-      component: ProjectOverview,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/projects/:projectId',
-      name: 'project-detail',
-      component: ProjectDetail,
-      meta: { requiresAuth: true }
-    },
-    {
-      // New route for User Management
-      path: '/admin/user-management',
-      name: 'AdminUserManagement',
-      component: AdminUserManagement,
-      meta: { requiresAdmin: true }
-    },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'not-found',
-      component: () => import('@/views/NotFound.vue')
-    }
-  ]
+  history: createWebHistory(),
+  routes
 })
 
-router.beforeEach(async (to, from, next) => {
-  console.log('beforeEach hook triggered')
-  console.log('Navigating from:', from.path)
-  console.log('Navigating to:', to.path)
-
+router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  console.log('Auth store state:', authStore.$state)
 
-  // Fetch user data before checking role-based access control
-  if (authStore.isAuthenticated && !authStore.user) {
-    await authStore.fetchUser()
+  // If route requires auth, and not logged in, redirect to login
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    if (!authStore.isAuthenticated) {
+      return next({ path: '/login', query: { redirect: to.fullPath } })
+    }
+    return next()
   }
 
-  const navigationFlag = authStore.navigationFlag
-  console.log('Navigation flag:', navigationFlag)
-
-  if (navigationFlag) {
-    console.log('Navigation flag is set, preventing recursive navigation')
-    next(false)
-    return
+  // If logged in and navigating to /login, /register, or /invitation, show nav (AppLayout)
+  if (
+    authStore.isAuthenticated &&
+    (to.path === '/login' || to.path === '/register' || to.path.startsWith('/invitation'))
+  ) {
+    return next('/')
   }
 
-  try {
-    console.log('Checking authentication...')
-    // Handle authentication
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-      console.log('Authentication required, but user is not authenticated. Redirecting to login.')
-      authStore.navigationFlag = true
-      next('/login')
-      return
-    }
-
-    // If user is authenticated and tries to access login/register
-    console.log('Checking if user is authenticated and trying to access login/register...')
-    if (authStore.isAuthenticated && (to.path === '/login' || to.path === '/register')) {
-      console.log('User is authenticated, redirecting to dashboard.')
-      if (authStore.isAdmin) {
-        console.log('User is admin, redirecting to admin dashboard.')
-        authStore.navigationFlag = true
-        next('/')
-      } else {
-        console.log('User is not admin, redirecting to student dashboard.')
-        authStore.navigationFlag = true
-        next('/')
-      }
-      return
-    }
-
-    // Handle role-based access
-    console.log('Checking role-based access...')
-    if (to.meta.requiresAdmin) {
-      const userRole = authStore.user?.role
-      console.log('User role:', userRole)
-      console.log('Required admin role')
-      if (userRole !== 'admin') {
-        console.log('User is not admin, redirecting to user dashboard.')
-        authStore.navigationFlag = true
-        next('/')
-        return
-      }
-    }
-
-    console.log('No redirects needed, proceeding with navigation.')
-    next()
-  } catch (error) {
-    console.error('Navigation error:', error)
-    next(false)
-  } finally {
-    console.log('Resetting navigation flag.')
-    authStore.navigationFlag = false
-  }
+  // All others: continue
+  return next()
 })
 
 export default router
