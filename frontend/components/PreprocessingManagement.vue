@@ -108,14 +108,15 @@
       <Transition
         enter-active-class="transition-all duration-300 ease-out"
         enter-from-class="max-h-0 opacity-0"
-        enter-to-class="max-h-96 opacity-100"
+        enter-to-class="opacity-100"
         leave-active-class="transition-all duration-300 ease-in"
-        leave-from-class="max-h-96 opacity-100"
+        leave-from-class="opacity-100"
         leave-to-class="max-h-0 opacity-0"
       >
         <div v-if="showCompletedTasks" class="mt-3 space-y-2 overflow-hidden">
+          <!-- Show limited or all tasks based on showAllCompleted -->
           <div
-            v-for="task in completedTasks.slice(0, 5)"
+            v-for="task in displayedCompletedTasks"
             :key="task.id"
             @click="viewTaskDetails(task)"
             class="bg-white bg-opacity-70 rounded-lg p-3 text-sm cursor-pointer hover:bg-opacity-100 transition-colors"
@@ -142,14 +143,34 @@
             </div>
           </div>
 
-          <div v-if="completedTasks.length > 5" class="text-center">
-            <span class="text-xs text-gray-500">
-              And {{ completedTasks.length - 5 }} more completed tasks
-            </span>
+          <!-- Show more/less button with inline arrow -->
+          <div v-if="completedTasks.length > 5" class="text-center pt-2">
+            <button
+              @click="showAllCompleted = !showAllCompleted"
+              class="text-sm text-green-700 hover:text-green-900 font-medium inline-flex items-center gap-1"
+            >
+              <span v-if="!showAllCompleted">
+                Show {{ completedTasks.length - 5 }} more completed {{ completedTasks.length - 5 === 1 ? 'task' : 'tasks' }}
+              </span>
+              <span v-else>
+                Show less
+              </span>
+              <svg
+                :class="['h-4 w-4 transition-transform duration-200', showAllCompleted ? 'rotate-180' : '']"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
           </div>
+
         </div>
       </Transition>
     </div>
+
 
 
     <!-- Create New Task -->
@@ -432,6 +453,7 @@ const isSubmitting = ref(false);
 const saveAsConfig = ref(false);
 const configName = ref('');
 let pollInterval = null;
+const showAllCompleted = ref(false);
 
 // Preprocessing configuration
 const preprocessingConfig = ref({
@@ -476,7 +498,7 @@ const ocrLanguagesForSelect = ref([
 // Computed properties
 const activeTasks = computed(() =>
   allTasks.value.filter(task =>
-    ['pending', 'processing'].includes(task.status)
+    ['pending', 'processing', 'in_progress'].includes(task.status)
   )
 );
 
@@ -485,6 +507,14 @@ const completedTasks = computed(() =>
     .filter(task => task.status === 'completed')
     .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
 );
+
+const displayedCompletedTasks = computed(() => {
+  if (showAllCompleted.value) {
+    return completedTasks.value;
+  }
+  return completedTasks.value.slice(0, 5);
+});
+
 
 const canStartProcessing = computed(() =>
   selectedFiles.value.length > 0 && !isSubmitting.value
@@ -496,14 +526,21 @@ const fetchPreprocessingTasks = async () => {
 
   isLoadingTasks.value = true;
   try {
-    const response = await api.get(`/project/${props.projectId}/preprocess`);
+    // Get all tasks, not just active ones
+    const response = await api.get(`/project/${props.projectId}/preprocess?limit=50`);
     allTasks.value = response.data;
+    console.log('Fetched tasks:', response.data.map(t => ({
+      id: t.id,
+      status: t.status,
+      file_tasks: t.file_tasks?.length
+    })));
   } catch (error) {
     console.error('Failed to fetch preprocessing tasks:', error);
   } finally {
     isLoadingTasks.value = false;
   }
 };
+
 
 const fetchConfigurations = async () => {
   try {
@@ -527,19 +564,25 @@ const fetchAvailableFiles = async () => {
 const updateTaskStatus = async (taskId) => {
   try {
     const response = await api.get(`/project/${props.projectId}/preprocess/${taskId}`);
+    console.log(`Task ${taskId} status:`, response.data.status, 'File tasks:', response.data.file_tasks?.length);
+
     const index = allTasks.value.findIndex(task => task.id === taskId);
     if (index !== -1) {
+      // Always update the task, even if completed
       allTasks.value[index] = response.data;
 
-      // Update selected task if viewing details
       if (selectedTask.value && selectedTask.value.id === taskId) {
         selectedTask.value = response.data;
       }
+    } else {
+      // Task not found in our list, add it
+      allTasks.value.unshift(response.data);
     }
   } catch (error) {
     console.error(`Failed to update task ${taskId}:`, error);
   }
 };
+
 
 // Polling setup
 const setupPolling = () => {
@@ -547,7 +590,7 @@ const setupPolling = () => {
 
   const pollActiveTasks = () => {
     const tasksToUpdate = allTasks.value.filter(
-      task => ['pending', 'processing'].includes(task.status)
+      task => ['pending', 'processing', 'in_progress'].includes(task.status)
     );
 
     if (tasksToUpdate.length === 0) {
@@ -558,6 +601,7 @@ const setupPolling = () => {
 
     tasksToUpdate.forEach(task => updateTaskStatus(task.id));
   };
+
 
   pollActiveTasks();
   pollInterval = setInterval(pollActiveTasks, 2000);
@@ -775,6 +819,11 @@ watch(() => activeTasks.value.length, (newLength, oldLength) => {
   if (newLength > 0 && !pollInterval) {
     setupPolling();
   }
+});
+
+watch(() => completedTasks.value.length, () => {
+  // Reset to collapsed view when tasks change
+  showAllCompleted.value = false;
 });
 </script>
 

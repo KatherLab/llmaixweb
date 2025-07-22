@@ -13,12 +13,13 @@ from pydantic import (
 
 from ..core.config import settings
 from ..utils.enums import FileCreator, FileType, PreprocessingStrategy
+from .other import UTCModel
 
 if TYPE_CHECKING:
     from .user import User  # noqa: F401
 
 
-class ProjectBase(BaseModel):
+class ProjectBase(UTCModel):
     name: str | None = None
     description: str | None = None
     status: str | None = None
@@ -37,11 +38,13 @@ class Project(ProjectBase):
     id: int
     owner: Annotated[User, SkipValidation] | None = None
     documents: list[Document] = []
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class FileBase(BaseModel):
+class FileBase(UTCModel):
     file_name: str | None = None
     file_type: str | None = None
     file_uuid: str | None = None
@@ -63,7 +66,7 @@ class File(FileBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class DocumentBase(BaseModel):
+class DocumentBase(UTCModel):
     text: str
     document_name: str | None = None
     meta_data: dict | None = None
@@ -90,7 +93,7 @@ class Document(DocumentBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class DocumentSetBase(BaseModel):
+class DocumentSetBase(UTCModel):
     pass
 
 
@@ -108,7 +111,7 @@ class DocumentSet(DocumentSetBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class SchemaBase(BaseModel):
+class SchemaBase(UTCModel):
     schema_name: str | None = None
     schema_definition: dict | None = None
 
@@ -132,7 +135,7 @@ class Schema(SchemaBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TrialBase(BaseModel):
+class TrialBase(UTCModel):
     schema_id: int
     document_ids: list[int]
     llm_model: str | None = settings.OPENAI_API_MODEL
@@ -155,7 +158,7 @@ class Trial(TrialBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TrialResultBase(BaseModel):
+class TrialResultBase(UTCModel):
     result: dict | None = None
 
 
@@ -173,7 +176,7 @@ class TrialResult(TrialResultBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PreprocessingConfigurationBase(BaseModel):
+class PreprocessingConfigurationBase(UTCModel):
     name: str
     description: str | None = None
     file_type: str
@@ -282,7 +285,7 @@ class PreprocessingConfigurationCreate(PreprocessingConfigurationBase):
     pass
 
 
-class PreprocessingConfigurationUpdate(BaseModel):
+class PreprocessingConfigurationUpdate(UTCModel):
     name: str | None = None
     description: str | None = None
     table_settings: dict | None = None
@@ -298,7 +301,7 @@ class PreprocessingConfiguration(PreprocessingConfigurationBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class FilePreprocessingTaskBase(BaseModel):
+class FilePreprocessingTaskBase(UTCModel):
     file_id: int
     status: str
     progress: float = 0.0
@@ -317,7 +320,7 @@ class FilePreprocessingTask(FilePreprocessingTaskBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PreprocessingTaskBase(BaseModel):
+class PreprocessingTaskBase(UTCModel):
     configuration_id: int | None = None
     rollback_on_cancel: bool = True
 
@@ -376,7 +379,7 @@ class PreprocessingTask(PreprocessingTaskBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class EvaluationBase(BaseModel):
+class EvaluationBase(UTCModel):
     trial_id: int
     groundtruth_id: int
     metrics: dict
@@ -395,7 +398,7 @@ class Evaluation(EvaluationBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class EvaluationDetail(BaseModel):
+class EvaluationDetail(UTCModel):
     id: int
     trial_id: int
     groundtruth_id: int
@@ -409,7 +412,7 @@ class EvaluationDetail(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class FieldMappingBase(BaseModel):
+class FieldMappingBase(UTCModel):
     schema_field: str
     ground_truth_field: str
     schema_id: int
@@ -429,7 +432,7 @@ class FieldMapping(FieldMappingBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class GroundTruthBase(BaseModel):
+class GroundTruthBase(UTCModel):
     name: str | None = None
     format: str | None = None
 
@@ -439,7 +442,7 @@ class GroundTruthCreate(GroundTruthBase):
     format: str
 
 
-class GroundTruthUpdate(BaseModel):
+class GroundTruthUpdate(UTCModel):
     name: str | None = None
     field_mappings: list[FieldMappingCreate] | None = None
 
@@ -491,7 +494,7 @@ class FieldEvaluationSummary(BaseModel):
 
 
 # Enhanced EvaluationSummary with better error handling
-class EvaluationSummary(BaseModel):
+class EvaluationSummary(UTCModel):
     id: int
     trial_id: int
     groundtruth_id: int

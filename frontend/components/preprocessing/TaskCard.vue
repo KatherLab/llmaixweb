@@ -11,7 +11,7 @@
       <div class="flex items-start justify-between mb-3">
         <div class="flex items-center space-x-3">
           <div class="flex-shrink-0">
-            <div v-if="task.status === 'processing'" class="relative">
+            <div v-if="['processing', 'in_progress'].includes(task.status)" class="relative">
               <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -49,7 +49,7 @@
         <!-- Actions -->
         <div class="flex items-center space-x-2">
           <button
-            v-if="task.status === 'processing'"
+            v-if="['processing', 'in_progress'].includes(task.status)"
             @click.stop="$emit('cancel', task)"
             class="text-sm text-red-600 hover:text-red-800 font-medium rounded px-2 py-1 transition-colors"
             aria-label="Cancel task"
@@ -75,7 +75,7 @@
       </div>
 
       <!-- Progress Bar -->
-      <div v-if="task.status === 'processing'" class="mb-3">
+      <div v-if="['processing', 'in_progress'].includes(task.status)" class="mb-3">
         <div class="flex items-center justify-between text-sm text-gray-600 mb-1">
           <span>Processing...</span>
           <span>{{ Math.round(progress * 100) }}%</span>

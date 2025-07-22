@@ -155,7 +155,7 @@ class PreprocessingPipeline:
                 processing_time = (
                     _make_aware(file_task.completed_at)
                     - _make_aware(file_task.started_at)
-                ).total_seconds()  / 1000  # Convert to seconds
+                ).total_seconds() / 1000  # Convert to seconds
                 file_task.processing_time = round(processing_time, 2)
 
         self.db.commit()

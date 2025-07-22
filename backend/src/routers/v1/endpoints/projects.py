@@ -741,6 +741,7 @@ def preprocess_project_data(
         task.celery_task_id = result.id
         db.commit()
 
+    db.commit()
     db.refresh(task)
     return schemas.PreprocessingTask.model_validate(task)
 
