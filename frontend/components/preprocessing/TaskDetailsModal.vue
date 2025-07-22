@@ -39,6 +39,7 @@
             </button>
           </div>
         </div>
+
         <!-- Content -->
         <div class="flex-1 overflow-y-auto">
           <!-- Summary Stats -->
@@ -60,6 +61,7 @@
               <div class="text-sm text-gray-500">Skipped</div>
             </div>
           </div>
+
           <!-- Configuration Details -->
           <div class="p-6 border-b">
             <h4 class="font-medium text-gray-900 mb-3">Configuration</h4>
@@ -90,8 +92,35 @@
                   </dd>
                 </div>
               </dl>
+
+              <!-- Message added inside the same grey block -->
+              <div class="mt-4 pt-4 border-t border-gray-200">
+                <h5 class="text-sm font-medium text-gray-900 mb-2">Message</h5>
+                <p class="text-sm text-gray-800 leading-6 whitespace-pre-wrap">
+                  {{ task.message || 'No message available.' }}
+                </p>
+              </div>
             </div>
           </div>
+
+          <!-- Skipped Files Details (New Section) -->
+          <div v-if="skippedFileNames.length > 0" class="p-6 border-b">
+            <h4 class="font-medium text-gray-900 mb-3">Skipped Files</h4>
+            <div class="bg-yellow-50 rounded-lg p-4">
+              <p class="text-sm text-yellow-800 mb-3">
+                The following files were already processed with this configuration and were skipped:
+              </p>
+              <div class="space-y-1 max-h-40 overflow-y-auto">
+                <div v-for="fileName in skippedFileNames" :key="fileName" class="text-sm text-gray-600 flex items-center">
+                  <svg class="h-4 w-4 text-yellow-600 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  {{ fileName }}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- File Tasks List -->
           <div class="p-6">
             <div class="flex items-center justify-between mb-4">
@@ -125,6 +154,7 @@
                   Failed
                 </button>
                 <button
+                  v-if="skippedCount > 0"
                   @click="filterStatus = 'skipped'"
                   :class="[
                     'px-3 py-1 text-sm rounded-md',
@@ -135,6 +165,7 @@
                 </button>
               </div>
             </div>
+
             <div class="space-y-2">
               <div
                 v-for="fileTask in filteredFileTasks"
@@ -176,8 +207,7 @@
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="#fef3c7"/>
-                      <path stroke="#f59e42" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <svg
                       v-else
@@ -201,18 +231,20 @@
                     </p>
                   </div>
                 </div>
-                <div v-if="fileTask.error_message" class="ml-4 max-w-xs truncate">
+                <div v-if="fileTask.error_message" class="ml-4 max-w-xs">
                   <p class="text-xs text-red-600 truncate" :title="fileTask.error_message">
                     {{ fileTask.error_message.length > 64 ? fileTask.error_message.slice(0, 64) + '…' : fileTask.error_message }}
                   </p>
                 </div>
               </div>
+
               <div v-if="filteredFileTasks.length === 0" class="text-center text-gray-400 py-6">
                 No files for this filter.
               </div>
             </div>
           </div>
         </div>
+
         <!-- Footer Actions -->
         <div class="p-6 border-t bg-gray-50 rounded-b-lg">
           <div class="flex justify-between items-center">
@@ -257,24 +289,38 @@ const props = defineProps({
     required: true
   }
 });
+
 const emit = defineEmits(['close', 'retry-failed']);
 const toast = useToast();
 const filterStatus = ref('all');
 
-// Defensive: support both "file_tasks" (array of file results) or legacy demo code
+// Compute file tasks including skipped ones
 const fileTasks = computed(() => {
   if (props.task.file_tasks && Array.isArray(props.task.file_tasks)) {
     return props.task.file_tasks;
   }
-  // fallback: mock demo data (if you want to demo without backend)
-  if (props.task.demo) {
-    return [
-      { id: 1, file_name: 'document1.pdf', status: 'completed', processing_time: 2.5 },
-      { id: 2, file_name: 'document2.pdf', status: 'failed', error_message: 'OCR failed: Unable to process image' },
-      { id: 3, file_name: 'document3.pdf', status: 'skipped' },
-    ];
+  return [];
+});
+
+// Compute skipped files from task metadata
+const skippedFiles = computed(() => {
+  if (props.task.skipped_files !== undefined) {
+    return props.task.skipped_files;
   }
-  // fallback: empty
+  if (props.task.task_metadata?.skipped_files !== undefined) {
+    return props.task.task_metadata.skipped_files;
+  }
+  // Calculate from the difference if all files were skipped
+  if (props.task.status === 'completed' && fileTasks.value.length === 0) {
+    return props.task.total_files;
+  }
+  return 0;
+});
+
+const skippedFileNames = computed(() => {
+  if (props.task.task_metadata?.skipped_file_names) {
+    return props.task.task_metadata.skipped_file_names;
+  }
   return [];
 });
 
@@ -306,12 +352,26 @@ const formatDateTime = (dateString) => {
 };
 
 const cancelTask = async () => {
-  // This should call your real cancel endpoint if you have one.
   toast.info('Task cancellation would be implemented here');
 };
 
-// Calculate counts from fileTasks:
-const successCount = computed(() => fileTasks.value.filter(t => t.status === 'completed').length);
-const failedCount = computed(() => fileTasks.value.filter(t => t.status === 'failed').length);
-const skippedCount = computed(() => fileTasks.value.filter(t => t.status === 'skipped').length);
+// Calculate counts from fileTasks and metadata
+const successCount = computed(() => {
+  const fromFileTasks = fileTasks.value.filter(t => t.status === 'completed').length;
+  // If we have file tasks, use them; otherwise calculate from totals
+  if (fileTasks.value.length > 0) {
+    return fromFileTasks;
+  }
+  // When all files were skipped, processed_files might include skipped
+  return Math.max(0, props.task.processed_files - props.task.failed_files - skippedFiles.value);
+});
+
+const failedCount = computed(() => {
+  const fromFileTasks = fileTasks.value.filter(t => t.status === 'failed').length;
+  return fromFileTasks || props.task.failed_files || 0;
+});
+
+const skippedCount = computed(() => {
+  return skippedFiles.value;
+});
 </script>

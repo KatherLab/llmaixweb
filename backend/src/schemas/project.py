@@ -376,6 +376,9 @@ class PreprocessingTask(PreprocessingTaskBase):
     # Configuration used
     configuration: PreprocessingConfiguration | None = None
 
+    skipped_files: int = 0
+    task_metadata: dict | None = None
+
     model_config = ConfigDict(from_attributes=True)
 
 

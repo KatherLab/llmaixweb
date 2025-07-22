@@ -17,6 +17,57 @@ from ..utils.enums import FileCreator
 from .helpers import _make_aware
 
 
+def find_matching_configuration(
+    db: Session, project_id: int, config_dict: dict, exclude_id: int | None = None
+) -> models.PreprocessingConfiguration | None:
+    """Find a configuration with matching settings."""
+    query = db.query(models.PreprocessingConfiguration).filter(
+        models.PreprocessingConfiguration.project_id == project_id
+    )
+
+    if exclude_id:
+        query = query.filter(models.PreprocessingConfiguration.id != exclude_id)
+
+    # Key fields to compare (excluding name and description)
+    compare_fields = [
+        "file_type",
+        "preprocessing_strategy",
+        "pdf_backend",
+        "ocr_backend",
+        "use_ocr",
+        "force_ocr",
+        "ocr_model",
+    ]
+
+    for field in compare_fields:
+        if field in config_dict:
+            query = query.filter(
+                getattr(models.PreprocessingConfiguration, field) == config_dict[field]
+            )
+
+    # Handle OCR languages comparison separately (array field)
+    if "ocr_languages" in config_dict:
+        # Convert to sorted list for comparison
+        target_langs = sorted(config_dict["ocr_languages"] or [])
+        configs = query.all()
+
+        for config in configs:
+            config_langs = sorted(config.ocr_languages or [])
+            if config_langs == target_langs:
+                # Also check table_settings and additional_settings
+                if (config.table_settings or {}) == (
+                    config_dict.get("table_settings") or {}
+                ):
+                    if (config.additional_settings or {}) == (
+                        config_dict.get("additional_settings") or {}
+                    ):
+                        return config
+    else:
+        return query.first()
+
+    return None
+
+
 class PreprocessingPipeline:
     """Flexible preprocessing pipeline for different file types."""
 

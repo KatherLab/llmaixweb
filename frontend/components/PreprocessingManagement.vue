@@ -629,6 +629,28 @@ const formatRelativeTime = (dateString) => {
   return date.toLocaleDateString();
 };
 
+const findExistingConfiguration = (configSettings) => {
+  return savedConfigs.value.find(config => {
+    // Compare key settings
+    return (
+      config.file_type === (configSettings.file_type || 'mixed') &&
+      config.preprocessing_strategy === (configSettings.preprocessing_strategy || 'full_document') &&
+      config.use_ocr === (configSettings.use_ocr !== undefined ? configSettings.use_ocr : true) &&
+      config.force_ocr === (configSettings.force_ocr || false) &&
+      config.pdf_backend === (configSettings.pdf_backend || 'pymupdf4llm') &&
+      config.ocr_backend === (configSettings.ocr_backend || 'ocrmypdf') &&
+      // Compare OCR languages
+      JSON.stringify(sortLanguages(config.ocr_languages || [])) ===
+      JSON.stringify(sortLanguages(configSettings.ocr_languages || ['eng']))
+    );
+  });
+};
+
+const sortLanguages = (langs) => {
+  return langs.map(l => typeof l === 'string' ? l : l.value).sort();
+};
+
+
 // Task actions
 const startPreprocessing = async () => {
   if (!canStartProcessing.value) return;
@@ -659,8 +681,8 @@ const startPreprocessing = async () => {
         file_ids: filesToProcess
       };
     } else {
+      // Build configuration
       const config = {
-        name: selectedConfig.value === 'quick' ? 'Quick Process' : (configName.value || 'Custom Configuration'),
         file_type: 'mixed',
         ...preprocessingConfig.value,
         ocr_languages: preprocessingConfig.value.ocr_languages.map(lang =>
@@ -668,13 +690,20 @@ const startPreprocessing = async () => {
         ),
       };
 
+      // Only save as a named config if explicitly requested
       if (saveAsConfig.value && configName.value) {
+        config.name = configName.value;
+        config.description = `Created from ${selectedConfig.value} process`;
+
         const configResponse = await api.post(`/project/${props.projectId}/preprocessing-config`, config);
         taskData = {
           configuration_id: configResponse.data.id,
           file_ids: filesToProcess
         };
+        await fetchConfigurations();
       } else {
+        // Use inline config - backend will find or create matching config
+        config.name = selectedConfig.value === 'quick' ? 'Quick Process' : 'Custom Process';
         taskData = {
           inline_config: config,
           file_ids: filesToProcess
@@ -706,6 +735,7 @@ const startPreprocessing = async () => {
   }
 };
 
+
 const startQuickPreprocess = async () => {
   const processedIds = new Set();
   allTasks.value.forEach(task => {
@@ -720,10 +750,38 @@ const startQuickPreprocess = async () => {
     return;
   }
 
-  selectedFiles.value = unprocessedFiles.map(f => f.id);
-  selectedConfig.value = 'quick';
-  await startPreprocessing();
+  isSubmitting.value = true;
+  try {
+    // Use inline config - backend will reuse existing "Quick Process" config if it exists
+    const taskData = {
+      inline_config: {
+        name: 'Quick Process',
+        file_type: 'mixed',
+        use_ocr: true,
+        force_ocr: false,
+        ocr_backend: 'ocrmypdf',
+        pdf_backend: 'pymupdf4llm',
+        ocr_languages: ['eng'],
+        preprocessing_strategy: 'full_document'
+      },
+      file_ids: unprocessedFiles.map(f => f.id)
+    };
+
+    console.log('DEBUG: Sending quick preprocess request:', taskData);
+
+    const response = await api.post(`/project/${props.projectId}/preprocess`, taskData);
+    allTasks.value.unshift(response.data);
+
+    toast.success('Quick preprocessing started for all unprocessed files');
+    setupPolling();
+  } catch (error) {
+    toast.error('Failed to start quick preprocessing');
+    console.error(error);
+  } finally {
+    isSubmitting.value = false;
+  }
 };
+
 
 const cancelTask = async (task) => {
   try {

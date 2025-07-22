@@ -414,6 +414,7 @@ class PreprocessingTask(Base):
     total_files: Mapped[int] = mapped_column(default=0)
     processed_files: Mapped[int] = mapped_column(default=0)
     failed_files: Mapped[int] = mapped_column(default=0)
+    skipped_files: Mapped[int] = mapped_column(default=0)
 
     # Cancellation settings
     is_cancelled: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -436,6 +437,10 @@ class PreprocessingTask(Base):
     )
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    task_metadata: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=True
     )
 
     # Relationships

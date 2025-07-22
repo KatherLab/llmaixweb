@@ -33,6 +33,7 @@ from ....utils.info_extraction import (
     test_api_connection,
     test_llm_connection,
 )
+from ....utils.preprocessing import find_matching_configuration
 
 router = APIRouter()
 
@@ -445,7 +446,7 @@ def create_preprocessing_configuration(
     """Create a reusable preprocessing configuration."""
     check_project_access(project_id, current_user, db, "write")
 
-    # Validate file type
+    # Validate file type and preprocessing strategy (keep existing validation)
     try:
         FileType(config.file_type)
     except ValueError:
@@ -453,7 +454,6 @@ def create_preprocessing_configuration(
             status_code=400, detail=f"Invalid file type: {config.file_type}"
         )
 
-    # Validate preprocessing strategy
     try:
         PreprocessingStrategy(config.preprocessing_strategy)
     except ValueError:
@@ -475,6 +475,7 @@ def create_preprocessing_configuration(
             status_code=400, detail="Configuration with this name already exists"
         )
 
+    # Create new configuration
     db_config = models.PreprocessingConfiguration(
         **config.model_dump(), project_id=project_id
     )
@@ -483,6 +484,7 @@ def create_preprocessing_configuration(
     db.refresh(db_config)
 
     return schemas.PreprocessingConfiguration.model_validate(db_config)
+
 
 
 @router.put(
@@ -603,7 +605,6 @@ def delete_preprocessing_configuration(
 
     return {"detail": "Configuration deleted successfully"}
 
-
 @router.post("/{project_id}/preprocess", response_model=schemas.PreprocessingTask)
 def preprocess_project_data(
     *,
@@ -615,26 +616,119 @@ def preprocess_project_data(
     """Start preprocessing with advanced duplicate detection and progress tracking."""
     check_project_access(project_id, current_user, db, "write")
 
-    # Validate configuration
+    # Determine configuration to use
     if preprocessing_task.configuration_id:
+        # Using existing configuration
         config = db.get(
             models.PreprocessingConfiguration, preprocessing_task.configuration_id
         )
         if not config or config.project_id != project_id:
             raise HTTPException(status_code=404, detail="Configuration not found")
     elif preprocessing_task.inline_config:
-        # Create temporary configuration from inline config
+        # Check if a matching configuration already exists
         config_dict = preprocessing_task.inline_config.model_dump()
-        config = models.PreprocessingConfiguration(
-            project_id=project_id,
-            name=config_dict.pop(
-                "name", f"Temp config {datetime.datetime.now(datetime.UTC)}"
-            ),
-            **config_dict,
+
+        # Build query to find matching configuration
+        query = db.query(models.PreprocessingConfiguration).filter(
+            models.PreprocessingConfiguration.project_id == project_id,
+            models.PreprocessingConfiguration.preprocessing_strategy
+            == config_dict.get("preprocessing_strategy", "full_document"),
+            models.PreprocessingConfiguration.pdf_backend
+            == config_dict.get("pdf_backend"),
+            models.PreprocessingConfiguration.ocr_backend
+            == config_dict.get("ocr_backend"),
+            models.PreprocessingConfiguration.use_ocr
+            == config_dict.get("use_ocr", True),
+            models.PreprocessingConfiguration.force_ocr
+            == config_dict.get("force_ocr", False),
         )
-        db.add(config)
-        db.commit()
-        db.refresh(config)
+
+        # Handle None values for ocr_model
+        if config_dict.get("ocr_model") is None:
+            query = query.filter(models.PreprocessingConfiguration.ocr_model.is_(None))
+        else:
+            query = query.filter(
+                models.PreprocessingConfiguration.ocr_model
+                == config_dict.get("ocr_model")
+            )
+
+        # For file_type, be more flexible - if incoming is 'mixed', match any
+        # Also handle the case where frontend sends 'mixed' but backend might have stored 'pdf'
+        if config_dict.get("file_type") != "mixed":
+            query = query.filter(
+                models.PreprocessingConfiguration.file_type
+                == config_dict.get("file_type")
+            )
+
+        # Get all potential matches to check complex fields
+        potential_matches = query.all()
+
+        # Check OCR languages and other complex fields
+        existing_config = None
+        for potential_config in potential_matches:
+            # Compare OCR languages (handle None and empty lists)
+            config_langs = sorted(potential_config.ocr_languages or [])
+            new_langs = sorted(config_dict.get("ocr_languages") or [])
+
+            if config_langs != new_langs:
+                continue
+
+            # Compare table_settings (handle None)
+            if (potential_config.table_settings or {}) != (
+                config_dict.get("table_settings") or {}
+            ):
+                continue
+
+            # Compare additional_settings (handle None)
+            if (potential_config.additional_settings or {}) != (
+                config_dict.get("additional_settings") or {}
+            ):
+                continue
+
+            # For "Quick Process" or similar standard configs, also check the name
+            if config_dict.get("name") in [
+                "Quick Process",
+                "Custom Process",
+                "Standard Process",
+            ]:
+                if potential_config.name == config_dict.get("name"):
+                    existing_config = potential_config
+                    break
+            else:
+                # For other configs, any match is good
+                existing_config = potential_config
+                break
+
+        if existing_config:
+            # Use existing configuration
+            config = existing_config
+        else:
+            # Create new configuration only if none exists
+            config = models.PreprocessingConfiguration(
+                project_id=project_id,
+                name=config_dict.get(
+                    "name", f"Auto-created config {datetime.datetime.now(datetime.UTC)}"
+                ),
+                description=config_dict.get(
+                    "description", "Automatically created configuration"
+                ),
+                file_type=config_dict.get("file_type"),
+                preprocessing_strategy=config_dict.get(
+                    "preprocessing_strategy", "full_document"
+                ),
+                pdf_backend=config_dict.get("pdf_backend"),
+                ocr_backend=config_dict.get("ocr_backend"),
+                use_ocr=config_dict.get("use_ocr", True),
+                force_ocr=config_dict.get("force_ocr", False),
+                ocr_languages=config_dict.get("ocr_languages"),
+                ocr_model=config_dict.get("ocr_model"),
+                table_settings=config_dict.get("table_settings"),
+                llm_model=config_dict.get("llm_model"),
+                additional_settings=config_dict.get("additional_settings"),
+            )
+            db.add(config)
+            db.commit()
+            db.refresh(config)
     else:
         raise HTTPException(
             status_code=400,
@@ -682,9 +776,11 @@ def preprocess_project_data(
 
     # Check for duplicates and create file tasks
     file_tasks_to_process = []
+    skipped_files = 0
+    skipped_file_names = []
 
     for file in files:
-        # Check for existing documents with same configuration (FK!)
+        # Check for existing documents with same configuration
         existing_docs = (
             db.execute(
                 select(models.Document).where(
@@ -699,6 +795,8 @@ def preprocess_project_data(
         if existing_docs and not preprocessing_task.force_reprocess:
             # Skip this file
             task.processed_files += 1
+            skipped_files += 1
+            skipped_file_names.append(file.file_name)
             continue
 
         # Delete existing documents if force reprocess
@@ -717,11 +815,28 @@ def preprocess_project_data(
 
     if not file_tasks_to_process:
         task.status = models.PreprocessingStatus.COMPLETED
-        task.message = "All files already processed with these settings"
+        task.message = f"All files already processed with these settings. {skipped_files} files skipped."
         task.completed_at = datetime.datetime.now(datetime.UTC)
+        # Store skipped files info in task metadata
+        task.skipped_files = skipped_files  # If you have this field
+        # Or use a JSON field to store more details
+        if hasattr(task, "task_metadata"):
+            task.task_metadata = {
+                "skipped_files": skipped_files,
+                "skipped_file_names": skipped_file_names,
+            }
         db.commit()
         db.refresh(task)
         return schemas.PreprocessingTask.model_validate(task)
+
+    # Store initial skipped files info
+    if skipped_files > 0:
+        task.message = f"Processing {len(file_tasks_to_process)} files. {skipped_files} files already processed and skipped."
+        if hasattr(task, "task_metadata"):
+            task.task_metadata = {
+                "skipped_files": skipped_files,
+                "skipped_file_names": skipped_file_names,
+            }
 
     # Start processing
     if preprocessing_task.bypass_celery:

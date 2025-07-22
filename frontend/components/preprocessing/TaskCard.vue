@@ -87,7 +87,7 @@
           />
         </div>
         <div class="mt-1 text-xs text-gray-500 flex items-center gap-4">
-          <span>{{ task.processed_files }} of {{ task.total_files }} processed</span>
+          <span>{{ actualProcessed }} of {{ task.total_files }} processed</span>
           <span
             v-if="task.failed_files > 0"
             class="text-red-600"
@@ -96,22 +96,22 @@
             • {{ task.failed_files }} failed
           </span>
           <span
-            v-if="task.skipped_files > 0"
+            v-if="skippedFiles > 0"
             class="text-yellow-600"
-            :title="`${task.skipped_files} already processed, skipped`"
+            :title="`${skippedFiles} already processed, skipped`"
           >
-            • {{ task.skipped_files }} skipped
+            • {{ skippedFiles }} skipped
           </span>
         </div>
       </div>
 
       <!-- Status Summary -->
       <div v-if="task.status === 'completed'" class="flex flex-wrap gap-4 items-center text-sm mt-2 mb-1">
-        <span class="flex items-center text-green-700 font-medium">
+        <span v-if="actualSucceeded > 0" class="flex items-center text-green-700 font-medium">
           <svg class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          {{ task.processed_files - task.failed_files - (task.skipped_files || 0) }} succeeded
+          {{ actualSucceeded }} succeeded
         </span>
         <span
           v-if="task.failed_files > 0"
@@ -124,15 +124,14 @@
           {{ task.failed_files }} failed
         </span>
         <span
-          v-if="task.skipped_files > 0"
+          v-if="skippedFiles > 0"
           class="flex items-center text-yellow-600 font-medium"
-          :title="`${task.skipped_files} files were skipped because they were already processed`"
+          :title="`${skippedFiles} files were skipped because they were already processed`"
         >
           <svg class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="#fef3c7"/>
-            <path stroke="#f59e42" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          {{ task.skipped_files }} skipped
+          {{ skippedFiles }} skipped
         </span>
         <span class="text-gray-500 ml-auto" v-if="task.completed_at">
           Completed in {{ formatDuration(task.started_at, task.completed_at) }}
@@ -142,6 +141,11 @@
       <!-- Error Message -->
       <div v-if="task.message && task.status === 'failed'" class="mt-3 p-3 bg-red-50 rounded-md">
         <p class="text-sm text-red-800">{{ task.message }}</p>
+      </div>
+
+      <!-- Info Message for completed tasks with skipped files -->
+      <div v-else-if="task.message && task.status === 'completed' && skippedFiles > 0" class="mt-3 p-3 bg-yellow-50 rounded-md">
+        <p class="text-sm text-yellow-800">{{ task.message }}</p>
       </div>
     </div>
   </div>
@@ -159,17 +163,40 @@ const props = defineProps({
 
 const emit = defineEmits(['cancel', 'retry', 'view-details']);
 
+// Compute skipped files from task metadata or skipped_files field
+const skippedFiles = computed(() => {
+  if (props.task.skipped_files !== undefined) {
+    return props.task.skipped_files;
+  }
+  if (props.task.task_metadata?.skipped_files !== undefined) {
+    return props.task.task_metadata.skipped_files;
+  }
+  return 0;
+});
+
+// Calculate actual processed files (excluding skipped)
+const actualProcessed = computed(() => {
+  // If we have file_tasks, count them
+  if (props.task.file_tasks && Array.isArray(props.task.file_tasks)) {
+    return props.task.file_tasks.filter(ft =>
+      ft.status === 'completed' || ft.status === 'failed'
+    ).length;
+  }
+  // Otherwise use processed_files minus skipped
+  return Math.max(0, props.task.processed_files - skippedFiles.value);
+});
+
+// Calculate actual succeeded files
+const actualSucceeded = computed(() => {
+  if (props.task.file_tasks && Array.isArray(props.task.file_tasks)) {
+    return props.task.file_tasks.filter(ft => ft.status === 'completed').length;
+  }
+  return Math.max(0, props.task.processed_files - props.task.failed_files - skippedFiles.value);
+});
+
 const progress = computed(() => {
-  // If backend returns processed_files, including failed/skipped, use that.
-  // Otherwise, use (processed + failed + skipped) / total
-  const total =
-    props.task.total_files > 0 ? props.task.total_files : 1;
-  let done =
-    (props.task.processed_files || 0) +
-    (props.task.failed_files || 0) +
-    (props.task.skipped_files || 0);
-  // If processed_files is already "including all" (most common), just use it
-  done = Math.max(props.task.processed_files, done);
+  const total = props.task.total_files > 0 ? props.task.total_files : 1;
+  const done = props.task.processed_files || 0;
   return Math.min(done / total, 1.0);
 });
 
@@ -201,5 +228,22 @@ const formatDuration = (start, end) => {
 :focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
+}
+
+/* Ensure the card has proper cursor feedback */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Smooth transitions for all interactive elements */
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Ensure proper spacing for mobile */
+@media (max-width: 640px) {
+  .flex-wrap {
+    gap: 0.5rem;
+  }
 }
 </style>
