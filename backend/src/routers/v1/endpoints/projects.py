@@ -18,14 +18,20 @@ from fastapi import (
 )
 from fastapi.responses import Response
 from pydantic import ValidationError
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, distinct, and_, or_
 from sqlalchemy.orm import Session, selectinload
 from thefuzz import fuzz
 
 from .... import models, schemas
 from ....core.config import settings
 from ....core.security import get_current_user
-from ....dependencies import get_db, get_file, remove_file, save_file
+from ....dependencies import (
+    get_db,
+    get_file,
+    remove_file,
+    save_file,
+    calculate_file_hash,
+)
 from ....utils.enums import FileCreator, FileType, PreprocessingStrategy
 from ....utils.helpers import extract_field_types_from_schema
 from ....utils.info_extraction import (
@@ -194,23 +200,109 @@ def get_project_files(
     *,
     db: Session = Depends(get_db),
     project_id: int,
+    # Filter parameters
+    search: str | None = Query(None, description="Search in filename"),
+    file_type: str | None = Query(None, description="Filter by file type"),
     file_creator: FileCreator | None = Query(None),
+    date_from: datetime.datetime | None = Query(None),
+    date_to: datetime.datetime | None = Query(None),
+    min_size: int | None = Query(None, description="Minimum file size in bytes"),
+    max_size: int | None = Query(None, description="Maximum file size in bytes"),
+    # Pagination
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
     current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.File]:
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's files"
-        )
+    """Get project files with advanced filtering"""
+    check_project_access(project_id, current_user, db)
+
     query = select(models.File).where(models.File.project_id == project_id)
+
+    # Apply filters
+    if search:
+        query = query.where(models.File.file_name.ilike(f"%{search}%"))
+    if file_type:
+        query = query.where(models.File.file_type == file_type)
     if file_creator is not None:
         query = query.where(models.File.file_creator == file_creator)
+    if date_from:
+        query = query.where(models.File.created_at >= date_from)
+    if date_to:
+        query = query.where(models.File.created_at <= date_to)
+    if min_size is not None:
+        query = query.where(models.File.file_size >= min_size)
+    if max_size is not None:
+        query = query.where(models.File.file_size <= max_size)
+
+    # Order by created_at desc and apply pagination
+    query = query.order_by(models.File.created_at.desc()).offset(skip).limit(limit)
+
     files = list(db.execute(query).scalars().all())
     return [schemas.File.model_validate(file) for file in files]
+
+
+@router.get("/{project_id}/file/stats", response_model=dict)
+def get_file_stats(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file_creator: FileCreator | None = Query(None),
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Get file statistics for the project"""
+    project = check_project_access(project_id, current_user, db)
+
+    # Base query
+    base_query = select(models.File).where(models.File.project_id == project_id)
+    if file_creator is not None:
+        base_query = base_query.where(models.File.file_creator == file_creator)
+
+    # Get total count and size
+    stats = db.execute(
+        select(
+            func.count(models.File.id).label("total_files"),
+            func.sum(models.File.file_size).label("total_size"),
+            func.count(distinct(models.File.file_hash)).label("unique_files"),
+        ).where(
+            models.File.project_id == project_id,
+            models.File.file_creator == file_creator if file_creator else True,
+        )
+    ).first()
+
+    # Get files by type
+    type_query = select(
+        models.File.file_type,
+        func.count(models.File.id).label("count"),
+        func.sum(models.File.file_size).label("size"),
+    ).where(models.File.project_id == project_id)
+
+    if file_creator is not None:
+        type_query = type_query.where(models.File.file_creator == file_creator)
+
+    type_stats = db.execute(type_query.group_by(models.File.file_type)).all()
+
+    # Get recent files (last 7 days)
+    week_ago = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=7)
+    recent_query = select(func.count(models.File.id)).where(
+        and_(models.File.project_id == project_id, models.File.created_at >= week_ago)
+    )
+
+    if file_creator is not None:
+        recent_query = recent_query.where(models.File.file_creator == file_creator)
+
+    recent_count = db.execute(recent_query).scalar()
+
+    return {
+        "total_files": stats.total_files or 0,
+        "total_size": stats.total_size or 0,
+        "unique_files": stats.unique_files or 0,
+        "recent_files": recent_count or 0,
+        "duplicates": (stats.total_files or 0) - (stats.unique_files or 0),
+        "by_type": [
+            {"type": t.file_type, "count": t.count, "size": t.size or 0}
+            for t in type_stats
+        ],
+    }
 
 
 @router.get("/{project_id}/file/{file_id}", response_model=schemas.File)
@@ -295,6 +387,7 @@ def upload_file(
     file_info: str = Form(...),
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.File:
+    """Upload a file with duplicate detection"""
     try:
         file_info = schemas.FileCreate.model_validate_json(file_info)
     except json.JSONDecodeError:
@@ -302,35 +395,94 @@ def upload_file(
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
+    project = check_project_access(project_id, current_user, db, permission="write")
+
+    # Read file content
+    file_content = file.file.read()
+    file_size = len(file_content)
+    file_hash = calculate_file_hash(file_content)
+
+    # Check for duplicates
+    existing_file = db.execute(
+        select(models.File).where(
+            and_(
+                models.File.project_id == project_id, models.File.file_hash == file_hash
+            )
+        )
     ).scalar_one_or_none()
 
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if existing_file:
         raise HTTPException(
-            status_code=403, detail="Not authorized to upload files to this project"
+            status_code=409,
+            detail={
+                "message": "File already exists",
+                "existing_file": {
+                    "id": existing_file.id,
+                    "file_name": existing_file.file_name,
+                    "created_at": existing_file.created_at.isoformat(),
+                },
+            },
         )
 
     # Read MIME type from the uploaded file
     file_info.file_type = (
-        file.content_type if not file_info.file_type else file_info.file_type
+        file.content_type or file_info.file_type or "application/octet-stream"
     )
 
-    # Save the file content to the storage using the generated file_uuid
-    file_uuid = save_file(file.file.read())
+    # Save the file
+    file_uuid = save_file(file_content)
+
     new_file = models.File(
-        **file_info.model_dump(exclude={"file_uuid"}),
+        **file_info.model_dump(exclude={"file_uuid", "file_size", "file_hash"}),
         project_id=project_id,
         file_uuid=file_uuid,
+        file_size=file_size,
+        file_hash=file_hash,
     )
 
     db.add(new_file)
     db.commit()
     db.refresh(new_file)
     return schemas.File.model_validate(new_file)
+
+@router.post("/{project_id}/file/check-duplicates", response_model=list[dict])
+def check_duplicates(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    files: list[dict] = Body(..., description="List of {filename, hash} objects"),
+    current_user: models.User = Depends(get_current_user),
+) -> list[dict]:
+    """Check for duplicate files before uploading"""
+    project = check_project_access(project_id, current_user, db)
+
+    results = []
+    for file_info in files:
+        existing = db.execute(
+            select(models.File).where(
+                and_(
+                    models.File.project_id == project_id,
+                    models.File.file_hash == file_info["hash"],
+                )
+            )
+        ).scalar_one_or_none()
+
+        results.append(
+            {
+                "filename": file_info["filename"],
+                "hash": file_info["hash"],
+                "exists": existing is not None,
+                "existing_file": {
+                    "id": existing.id,
+                    "file_name": existing.file_name,
+                    "created_at": existing.created_at.isoformat(),
+                }
+                if existing
+                else None,
+            }
+        )
+
+    return results
 
 
 @router.delete("/{project_id}/file/{file_id}", response_model=schemas.File)
@@ -339,42 +491,298 @@ def delete_file(
     db: Session = Depends(get_db),
     project_id: int,
     file_id: int,
+    force: bool = Query(False, description="Force delete even if linked"),
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.File:
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
+    """Delete a file with safety checks"""
+    project = check_project_access(project_id, current_user, db, permission="write")
 
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to delete files from this project"
+    file = db.execute(
+        select(models.File)
+        .options(
+            selectinload(models.File.documents_as_original),
+            selectinload(models.File.documents_as_preprocessed),
+            selectinload(models.File.preprocessing_tasks),
+            selectinload(models.File.file_preprocessing_tasks),
         )
-
-    file: models.File | None = db.execute(
-        select(models.File).where(
-            models.File.project_id == project_id, models.File.id == file_id
-        )
+        .where(models.File.project_id == project_id, models.File.id == file_id)
     ).scalar_one_or_none()
 
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
 
+    # Check if file is linked to other resources
+    is_linked = (
+        len(file.documents_as_original) > 0
+        or len(file.documents_as_preprocessed) > 0
+        or len(file.preprocessing_tasks) > 0
+        or len(file.file_preprocessing_tasks) > 0
+    )
+
+    if is_linked and not force:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "File is linked to other resources",
+                "links": {
+                    "documents": len(file.documents_as_original)
+                    + len(file.documents_as_preprocessed),
+                    "preprocessing_tasks": len(file.preprocessing_tasks)
+                    + len(file.file_preprocessing_tasks),
+                },
+            },
+        )
+
     # Delete the file content from storage
     try:
         remove_file(file.file_uuid)
     except FileNotFoundError:
-        raise HTTPException(
-            status_code=404,
-            detail="File content not found in storage. Something went wrong. Contact the administrator.",
-        )
+        # Log the error but continue with database deletion
+        pass
 
     db.delete(file)
     db.commit()
 
     return schemas.File.model_validate(file)
+
+
+@router.post("/{project_id}/file/batch-delete", response_model=dict)
+def batch_delete_files(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file_ids: list[int] = Body(...),
+    force: bool = Body(False),
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Delete multiple files at once"""
+    project = check_project_access(project_id, current_user, db, permission="write")
+
+    deleted = []
+    errors = []
+
+    for file_id in file_ids:
+        try:
+            file = delete_file(
+                db=db,
+                project_id=project_id,
+                file_id=file_id,
+                force=force,
+                current_user=current_user,
+            )
+            deleted.append(file_id)
+        except HTTPException as e:
+            errors.append({"file_id": file_id, "error": e.detail})
+        except Exception as e:
+            errors.append({"file_id": file_id, "error": str(e)})
+
+    return {
+        "deleted": deleted,
+        "errors": errors,
+        "total_deleted": len(deleted),
+        "total_errors": len(errors),
+    }
+
+# Continue the endpoint in project.py
+
+
+@router.post("/{project_id}/file/download-zip")
+async def download_files_as_zip(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file_ids: list[int] = Body(...),
+    include_metadata: bool = Body(True),
+    current_user: models.User = Depends(get_current_user),
+) -> Response:
+    """Download multiple files as a ZIP archive"""
+    project = check_project_access(project_id, current_user, db)
+
+    import zipfile
+    import io
+    import json
+    from datetime import datetime
+
+    # Create ZIP file in memory
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        files_metadata = []
+
+        for file_id in file_ids:
+            file = db.execute(
+                select(models.File).where(
+                    models.File.id == file_id, models.File.project_id == project_id
+                )
+            ).scalar_one_or_none()
+
+            if not file:
+                continue
+
+            try:
+                # Get file content
+                file_content = get_file(file.file_uuid)
+
+                # Add file to ZIP
+                zip_file.writestr(file.file_name, file_content)
+
+                # Collect metadata
+                if include_metadata:
+                    files_metadata.append(
+                        {
+                            "id": file.id,
+                            "file_name": file.file_name,
+                            "file_type": file.file_type,
+                            "file_size": file.file_size,
+                            "file_hash": file.file_hash,
+                            "description": file.description,
+                            "created_at": file.created_at.isoformat()
+                            if file.created_at
+                            else None,
+                            "updated_at": file.updated_at.isoformat()
+                            if file.updated_at
+                            else None,
+                        }
+                    )
+
+            except Exception as e:
+                print(f"Error adding file {file.file_name} to ZIP: {e}")
+                continue
+
+        # Add metadata file if requested
+        if include_metadata and files_metadata:
+            metadata_json = json.dumps(
+                {
+                    "project_id": project_id,
+                    "export_date": datetime.utcnow().isoformat(),
+                    "total_files": len(files_metadata),
+                    "files": files_metadata,
+                },
+                indent=2,
+            )
+            zip_file.writestr("metadata.json", metadata_json)
+
+    # Prepare response
+    zip_buffer.seek(0)
+    filename = (
+        f"project_{project_id}_files_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
+    )
+
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/{project_id}/file/move")
+async def move_files(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file_ids: list[int] = Body(...),
+    target_project_id: int = Body(...),
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Move files to another project"""
+    # Check access to both source and target projects
+    source_project = check_project_access(
+        project_id, current_user, db, permission="write"
+    )
+    target_project = check_project_access(
+        target_project_id, current_user, db, permission="write"
+    )
+
+    if project_id == target_project_id:
+        raise HTTPException(
+            status_code=400, detail="Source and target projects cannot be the same"
+        )
+
+    moved_count = 0
+    errors = []
+
+    for file_id in file_ids:
+        try:
+            file = db.execute(
+                select(models.File).where(
+                    models.File.id == file_id, models.File.project_id == project_id
+                )
+            ).scalar_one_or_none()
+
+            if not file:
+                errors.append({"file_id": file_id, "error": "File not found"})
+                continue
+
+            # Update the file's project
+            file.project_id = target_project_id
+
+            # Update any related documents
+            documents = (
+                db.execute(
+                    select(models.Document).where(
+                        or_(
+                            models.Document.original_file_id == file_id,
+                            models.Document.preprocessed_file_id == file_id,
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+
+            for doc in documents:
+                doc.project_id = target_project_id
+
+            moved_count += 1
+
+        except Exception as e:
+            errors.append({"file_id": file_id, "error": str(e)})
+
+    db.commit()
+
+    return {"moved": moved_count, "errors": errors, "total_requested": len(file_ids)}
+
+
+@router.get("/{project_id}/file/check-links/{file_id}")
+def check_file_links(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Check if a file has any linked resources"""
+    project = check_project_access(project_id, current_user, db)
+
+    file = db.execute(
+        select(models.File)
+        .options(
+            selectinload(models.File.documents_as_original),
+            selectinload(models.File.documents_as_preprocessed),
+            selectinload(models.File.preprocessing_tasks),
+            selectinload(models.File.file_preprocessing_tasks),
+        )
+        .where(models.File.project_id == project_id, models.File.id == file_id)
+    ).scalar_one_or_none()
+
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return {
+        "file_id": file_id,
+        "is_linked": bool(
+            file.documents_as_original
+            or file.documents_as_preprocessed
+            or file.preprocessing_tasks
+            or file.file_preprocessing_tasks
+        ),
+        "links": {
+            "documents_as_original": len(file.documents_as_original),
+            "documents_as_preprocessed": len(file.documents_as_preprocessed),
+            "preprocessing_tasks": len(file.preprocessing_tasks),
+            "file_preprocessing_tasks": len(file.file_preprocessing_tasks),
+        },
+    }
 
 
 @router.get(

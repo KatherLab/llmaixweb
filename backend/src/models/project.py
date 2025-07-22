@@ -12,6 +12,7 @@ from sqlalchemy import (
     String,
     Table,
     UniqueConstraint,
+    Index,
 )
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -128,12 +129,21 @@ class File(Base):
         Enum(FileCreator, native_enum=False, length=20), default=FileCreator.user
     )
     description: Mapped[str] = mapped_column(String(500), nullable=True)
+
+    # New fields for better file management
+    file_size: Mapped[int] = mapped_column(nullable=True)  # Size in bytes
+    file_hash: Mapped[str] = mapped_column(String(64), nullable=True)  # SHA-256 hash
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    # Add index for hash lookups
+    __table_args__ = (Index("ix_file_hash_project", "file_hash", "project_id"),)
+
     project: Mapped["Project"] = relationship(back_populates="files")
     documents_as_original: Mapped[list["Document"]] = relationship(
         foreign_keys="[Document.original_file_id]", back_populates="original_file"

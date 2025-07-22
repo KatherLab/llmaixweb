@@ -288,8 +288,6 @@ import { ref, onMounted, computed } from 'vue';
 import { api } from '@/services/api';
 import { formatDate } from '@/utils/formatters';
 import { useToast } from 'vue-toastification';
-import ErrorBanner from '@/components/ErrorBanner.vue';
-import LoadingSpinner from '@/components/LoadingSpinner.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import GroundTruthUploadModal from './GroundTruthUploadModal.vue';
 import GroundTruthManager from './GroundTruthManager.vue';
@@ -297,7 +295,6 @@ import TrialSelectorModal from './TrialSelectorModal.vue';
 import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue';
 import MetricsExportModal from './MetricsExportModal.vue';
 
-// NEW UNIFIED MODAL IMPORT - replaces the old ones
 import EvaluationAnalysisModal from './EvaluationAnalysisModal.vue';
 
 const props = defineProps({

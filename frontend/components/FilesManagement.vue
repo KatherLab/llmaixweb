@@ -1,192 +1,307 @@
-<!-- src/components/FilesManagement.vue -->
 <template>
-  <div class="p-6">
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-lg font-medium text-gray-900">Files</h2>
+  <div class="p-6 space-y-6">
+    <!-- Header with Stats -->
+    <div class="flex justify-between items-start">
       <div>
+        <h2 class="text-2xl font-bold text-gray-900">Files</h2>
+        <p class="mt-1 text-sm text-gray-500">
+          Upload and manage project files
+        </p>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-4 gap-4">
+        <div class="text-center">
+          <p class="text-2xl font-semibold text-gray-900">{{ stats.total_files }}</p>
+          <p class="text-xs text-gray-500">Total Files</p>
+        </div>
+        <div class="text-center">
+          <p class="text-2xl font-semibold text-blue-600">{{ stats.recent_files }}</p>
+          <p class="text-xs text-gray-500">Recent</p>
+        </div>
+        <div class="text-center">
+          <p class="text-2xl font-semibold text-amber-600">{{ formatFileSize(stats.total_size) }}</p>
+          <p class="text-xs text-gray-500">Total Size</p>
+        </div>
+        <div class="text-center">
+          <p class="text-2xl font-semibold text-red-600">{{ stats.duplicates }}</p>
+          <p class="text-xs text-gray-500">Duplicates</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <!-- Search -->
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          <div class="relative">
+            <input
+              v-model="filters.search"
+              type="text"
+              placeholder="Search files..."
+              class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              @input="debouncedFetch"
+            />
+            <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- File Type Filter -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">File Type</label>
+          <select
+            v-model="filters.fileType"
+            @change="fetchFiles"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Types</option>
+            <option value="application/pdf">PDF</option>
+            <option value="image/jpeg">JPEG</option>
+            <option value="image/png">PNG</option>
+            <option value="text/plain">Text</option>
+            <option value="text/csv">CSV</option>
+            <option value="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">Excel</option>
+            <option value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">Word</option>
+          </select>
+        </div>
+
+        <!-- File Creator Filter -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">File Source</label>
+          <select
+            v-model="filters.fileCreator"
+            @change="fetchFiles"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="user">User Uploaded</option>
+            <option value="preprocessing">From Preprocessing</option>
+            <option value="">All Sources</option>
+          </select>
+        </div>
+
+        <!-- Date Range -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+          <select
+            v-model="filters.dateRange"
+            @change="applyDateFilter"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">Last 7 days</option>
+            <option value="month">Last 30 days</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="flex justify-between items-center">
+      <div class="flex items-center space-x-4">
+        <!-- Upload Button -->
         <input
           ref="fileInputRef"
           type="file"
           @change="handleFileUpload"
-          accept="application/pdf"
+          accept=".pdf,.jpg,.jpeg,.png,.txt,.csv,.xlsx,.docx"
           multiple
           class="hidden"
         />
         <button
           @click="$refs.fileInputRef.click()"
-          class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md flex items-center"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center transition-colors"
           :disabled="isUploading"
         >
           <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6a2 2 0 00-2 2v6a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-1a1 1 0 100-2h1a4 4 0 014 4v6a4 4 0 01-4 4H6a4 4 0 01-4-4V7a4 4 0 014-4z" clip-rule="evenodd" />
           </svg>
           Upload Files
+        </button>
+
+        <!-- Select All / Batch Actions -->
+        <div v-if="selectedFiles.length === 0 && files.length > 0" class="flex items-center">
+          <button
+            @click="selectAllFiles"
+            class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
+          >
+            <svg class="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Select All ({{ files.length }})
+          </button>
+        </div>
+
+        <!-- Batch Actions (when files are selected) -->
+        <div v-else-if="selectedFiles.length > 0" class="flex items-center space-x-2">
+          <span class="text-sm text-gray-700">
+            {{ selectedFiles.length }} selected
+          </span>
+          <button
+            @click="showBatchDownload"
+            class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+          >
+            Download
+          </button>
+          <button
+            @click="confirmBatchDelete"
+            class="text-sm text-red-600 hover:text-red-800 font-medium"
+          >
+            Delete
+          </button>
+          <button
+            @click="selectedFiles = []"
+            class="text-sm text-gray-600 hover:text-gray-800"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- View Toggle -->
+      <div class="flex items-center space-x-2">
+        <button
+          @click="viewMode = 'grid'"
+          :class="[
+            'p-2 rounded-lg transition-colors',
+            viewMode === 'grid'
+              ? 'bg-blue-100 text-blue-600'
+              : 'text-gray-400 hover:text-gray-600'
+          ]"
+        >
+          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+          </svg>
+        </button>
+        <button
+          @click="viewMode = 'list'"
+          :class="[
+            'p-2 rounded-lg transition-colors',
+            viewMode === 'list'
+              ? 'bg-blue-100 text-blue-600'
+              : 'text-gray-400 hover:text-gray-600'
+          ]"
+        >
+          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
         </button>
       </div>
     </div>
 
     <!-- Upload Progress -->
-    <div v-if="uploadProgress > 0 && isUploading" class="mb-6">
-      <div class="bg-gray-200 rounded-full overflow-hidden">
-        <div
-          class="bg-blue-600 text-xs leading-none py-1 text-center text-white"
-          :style="{ width: `${uploadProgress}%` }"
-        >
-          {{ uploadProgress }}%
-        </div>
-      </div>
-      <p class="text-sm text-gray-600 mt-1">Uploading {{ currentUploadingFile }}...</p>
-    </div>
+    <UploadProgress
+      v-if="uploadQueue.length > 0"
+      :queue="uploadQueue"
+      :current-file="currentUploadingFile"
+      :progress="uploadProgress"
+      @cancel="cancelUpload"
+    />
 
-    <!-- Error Message -->
-    <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-      {{ error }}
-    </div>
+    <!-- Error Messages -->
+    <ErrorAlert
+      v-if="error"
+      :message="error"
+      @close="error = ''"
+    />
 
-    <!-- File List -->
+    <!-- File List/Grid -->
     <div v-if="isLoading" class="flex justify-center py-12">
-      <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
+      <LoadingSpinner size="large" />
     </div>
 
-    <div v-else-if="files.length === 0" class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-      <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-      <p class="mt-2 text-sm text-gray-600">No files uploaded yet</p>
-      <p class="mt-1 text-sm text-gray-500">Upload PDF files to begin processing</p>
+    <!-- Empty State with Drag & Drop -->
+    <FileDropZone
+      v-else-if="files.length === 0"
+      @files-selected="handleFilesSelected"
+      :disabled="isUploading"
+    />
+
+    <!-- Grid View -->
+    <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <FileCard
+        v-for="file in files"
+        :key="file.id"
+        :file="file"
+        :selected="selectedFiles.includes(file.id)"
+        @toggle-selection="toggleFileSelection"
+        @preview="previewFile"
+        @download="downloadFile"
+        @delete="confirmDeleteFile"
+      />
     </div>
 
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-      <div v-for="file in files" :key="file.id" class="bg-white border rounded-lg shadow-sm overflow-hidden">
-        <div class="p-4">
-          <div class="flex items-start justify-between">
-            <div class="flex items-center">
-              <div class="flex-shrink-0 bg-blue-100 rounded-md p-2">
-                <svg class="h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div class="ml-3">
-                <h3 class="text-sm font-medium text-gray-900 truncate max-w-[140px]" :title="file.file_name">
-                  {{ file.file_name }}
-                </h3>
-                <p class="text-xs text-gray-500">
-                  {{ formatDate(file.created_at) }} • {{ formatFileSize(file.file_size) }}
-                </p>
-              </div>
-            </div>
-            <button
-              @click="confirmDeleteFile(file)"
-              class="text-gray-400 hover:text-red-500"
-              title="Delete file"
-            >
-              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="bg-gray-50 px-4 py-3 border-t text-xs font-medium">
-          <div class="flex justify-between items-center">
-            <span class="text-gray-500">{{ file.file_type || 'application/pdf' }}</span>
-            <button
-              @click="previewFile(file)"
-              class="text-blue-600 hover:text-blue-800 flex items-center"
-            >
-              Preview
-              <svg class="h-4 w-4 ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
+    <!-- List View -->
+    <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <FileListTable
+        :files="files"
+        :selected-files="selectedFiles"
+        @toggle-selection="toggleFileSelection"
+        @toggle-all="toggleSelectAll"
+        @preview="previewFile"
+        @download="downloadFile"
+        @delete="confirmDeleteFile"
+      />
     </div>
 
-    <!-- Delete Confirmation Modal -->
-    <Teleport to="body">
-      <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-medium text-gray-900">Delete File</h3>
-          <p class="mt-2 text-sm text-gray-500">
-            Are you sure you want to delete this file? This action cannot be undone.
-          </p>
-          <div class="mt-6 flex justify-end space-x-3">
-            <button
-              class="inline-flex justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              @click="showDeleteModal = false"
-            >
-              Cancel
-            </button>
-            <button
-              class="inline-flex justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-              @click="deleteSelectedFile"
-              :disabled="isDeleting"
-            >
-              <svg v-if="isDeleting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- Modals -->
+    <FilePreviewModal
+      v-if="showPreviewModal"
+      :file="previewingFile"
+      :project-id="projectId"
+      @close="closePreview"
+    />
 
-    <!-- File Preview Modal -->
-    <Teleport to="body">
-  <div
-    v-if="showPreviewModal"
-    class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
-    @click="showPreviewModal = false"
-  >
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl h-[80vh] flex flex-col" @click.stop>
-      <div class="flex justify-between items-center p-4 border-b">
-        <h3 class="text-lg font-medium text-gray-900">{{ previewingFile?.file_name }}</h3>
-        <button @click="showPreviewModal = false" class="text-gray-400 hover:text-gray-500">
-          <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <div class="flex-1 overflow-hidden bg-gray-100">
-        <iframe
-          v-if="previewUrl && ['application/pdf'].includes(previewingFile.file_type)"
-          :src="previewUrl"
-          class="w-full h-full"
-          title="File preview"
-        ></iframe>
-        <img
-          v-else-if="previewUrl && previewingFile.file_type.startsWith('image/')"
-          :src="previewUrl"
-          class="object-contain w-full h-full"
-          alt="File preview"
-        />
-        <div v-else-if="previewUrl && previewingFile.file_type === 'text/csv'" class="p-4 overflow-auto h-full">
-          <pre>{{ previewText }}</pre>
-        </div>
-        <div v-else-if="previewUrl" class="flex items-center justify-center h-full">
-          <a :href="previewUrl" target="_blank" class="text-blue-600 hover:text-blue-800">
-            Download {{ previewingFile.file_name }}
-          </a>
-        </div>
-        <div v-else class="flex items-center justify-center h-full">
-          <p class="text-gray-500">Preview not available</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</Teleport>
+    <DeleteConfirmationModal
+      v-if="showDeleteModal"
+      :title="deleteModalTitle"
+      :message="deleteModalMessage"
+      :is-processing="isDeleting"
+      @confirm="executeDelete"
+      @cancel="cancelDelete"
+    />
+
+    <DuplicateFilesModal
+      v-if="showDuplicatesModal"
+      :duplicates="duplicateFiles"
+      @proceed="proceedWithDuplicates"
+      @cancel="cancelDuplicates"
+    />
+
+    <!-- File Batch Actions Modal -->
+    <FileBatchActionsModal
+      v-if="showBatchActionsModal"
+      :action="batchAction"
+      :selected-files="selectedFiles.map(id => files.find(f => f.id === id)).filter(Boolean)"
+      :project-id="projectId"
+      @close="closeBatchActions"
+      @complete="handleBatchComplete"
+    />
   </div>
 </template>
 
+
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { api } from '@/services/api';
+import { useToast } from 'vue-toastification';
+import { debounce } from 'perfect-debounce';
+import LoadingSpinner from './common/LoadingSpinner.vue';
+import ErrorAlert from './common/ErrorAlert.vue';
+import FileCard from './files/FileCard.vue';
+import FileListTable from './files/FileListTable.vue';
+import FilePreviewModal from './files/FilePreviewModal.vue';
+import FileBatchActionsModal from './files/FileBatchActionsModal.vue';
+import DeleteConfirmationModal from './files/DeleteConfirmationModal.vue';
+import DuplicateFilesModal from './files/DuplicateFilesModal.vue';
+import UploadProgress from './files/UploadProgress.vue';
+import FileDropZone from './files/FileDropZone.vue';
+
 
 const props = defineProps({
   projectId: {
@@ -195,58 +310,221 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['files-uploaded']);
+const emit = defineEmits(['files-changed']);
+const toast = useToast();
 
+// State
 const files = ref([]);
+const stats = ref({
+  total_files: 0,
+  total_size: 0,
+  unique_files: 0,
+  recent_files: 0,
+  duplicates: 0,
+  by_type: []
+});
 const isLoading = ref(true);
 const error = ref('');
-const isUploading = ref(false);
-const uploadProgress = ref(0);
-const currentUploadingFile = ref('');
+const viewMode = ref('grid');
+const selectedFiles = ref([]);
 const fileInputRef = ref(null);
 
-// Delete confirmation
-const showDeleteModal = ref(false);
-const isDeleting = ref(false);
-const fileToDelete = ref(null);
+// Upload state
+const isUploading = ref(false);
+const uploadQueue = ref([]);
+const currentUploadingFile = ref('');
+const uploadProgress = ref(0);
+const uploadAbortController = ref(null);
 
-// Preview
+// Modal state
 const showPreviewModal = ref(false);
 const previewingFile = ref(null);
 const previewUrl = ref('');
+const previewText = ref('');
 
-// Fetch files for the project
-const fetchFiles = async () => {
-  isLoading.value = true;
-  try {
-    const response = await api.get(`/project/${props.projectId}/file?file_creator=user`);
-    files.value = response.data;
-  } catch (err) {
-    error.value = 'Failed to load files';
-    console.error(err);
-  } finally {
-    isLoading.value = false;
+// Delete modal state
+const showDeleteModal = ref(false);
+const deleteModalTitle = ref('');
+const deleteModalMessage = ref('');
+const isDeleting = ref(false);
+const filesToDelete = ref([]);
+const deleteMode = ref(''); // 'single' or 'batch'
+
+// Duplicate detection
+const showDuplicatesModal = ref(false);
+const duplicateFiles = ref([]);
+const pendingUploads = ref([]);
+
+// Batch actions
+const showBatchActionsModal = ref(false);
+const batchAction = ref('');
+
+// Filters
+const filters = ref({
+  search: '',
+  fileType: '',
+  fileCreator: 'user', // Default to 'user' to show only user-uploaded files
+  dateRange: '',
+  date_from: null,
+  date_to: null,
+  minSize: null,
+  maxSize: null
+});
+
+// Debounced search
+const debouncedFetch = debounce(() => {
+  fetchFiles();
+}, 300);
+
+// Watch filters
+watch(() => filters.value, () => {
+  fetchFiles();
+}, { deep: true });
+
+// Format file size
+const formatFileSize = (bytes) => {
+  if (!bytes) return 'Unknown';
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+};
+
+const handleFilesSelected = async (files, errors) => {
+  // Show errors if any
+  errors.forEach(err => {
+    toast.warning(`${err.file}: ${err.error}`);
+  });
+
+  // Process valid files
+  if (files.length > 0) {
+    await handleFileUpload({ target: { files } });
   }
 };
 
-// Handle file upload
+const selectAllFiles = () => {
+  selectedFiles.value = files.value.map(f => f.id);
+  toast.info(`Selected all ${files.value.length} files`);
+};
+
+// Apply date filter
+const applyDateFilter = () => {
+  const now = new Date();
+  switch (filters.value.dateRange) {
+    case 'today':
+      filters.value.date_from = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+      filters.value.date_to = new Date().toISOString();
+      break;
+    case 'week':
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      filters.value.date_from = weekAgo.toISOString();
+      filters.value.date_to = new Date().toISOString();
+      break;
+    case 'month':
+      const monthAgo = new Date();
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      filters.value.date_from = monthAgo.toISOString();
+      filters.value.date_to = new Date().toISOString();
+      break;
+    default:
+      delete filters.value.date_from;
+      delete filters.value.date_to;
+  }
+};
+
+// Enhanced file upload with duplicate detection
 const handleFileUpload = async (event) => {
-  const selectedFiles = event.target.files;
+  const selectedFiles = Array.from(event.target.files);
   if (!selectedFiles.length) return;
 
+  // Calculate hashes for duplicate detection
+  const fileHashes = await Promise.all(
+    selectedFiles.map(async (file) => {
+      const buffer = await file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return {
+        filename: file.name,
+        hash: hashHex,
+        file: file
+      };
+    })
+  );
+
+  // Check for duplicates
+  try {
+    const response = await api.post(
+      `/project/${props.projectId}/file/check-duplicates`,
+      fileHashes.map(f => ({ filename: f.filename, hash: f.hash }))
+    );
+
+    const duplicates = response.data.filter(f => f.exists);
+
+    if (duplicates.length > 0) {
+      duplicateFiles.value = duplicates;
+      pendingUploads.value = fileHashes.filter(
+        f => !duplicates.some(d => d.hash === f.hash)
+      );
+      showDuplicatesModal.value = true;
+    } else {
+      await uploadFiles(fileHashes);
+    }
+  } catch (err) {
+    toast.error('Failed to check for duplicates');
+    console.error(err);
+  }
+
+  event.target.value = null;
+};
+
+// Process uploads after duplicate check
+const proceedWithDuplicates = async (skipDuplicates) => {
+  showDuplicatesModal.value = false;
+
+  if (skipDuplicates) {
+    await uploadFiles(pendingUploads.value);
+  } else {
+    // Upload all files including duplicates
+    const allFiles = [...pendingUploads.value];
+    duplicateFiles.value.forEach(dup => {
+      const file = uploadQueue.value.find(f => f.hash === dup.hash);
+      if (file) allFiles.push(file);
+    });
+    await uploadFiles(allFiles);
+  }
+
+  pendingUploads.value = [];
+  duplicateFiles.value = [];
+};
+
+const cancelDuplicates = () => {
+  showDuplicatesModal.value = false;
+  pendingUploads.value = [];
+  duplicateFiles.value = [];
+  toast.info('Upload cancelled');
+};
+
+// Upload files with progress tracking
+const uploadFiles = async (fileData) => {
   isUploading.value = true;
+  uploadQueue.value = fileData.map(f => f.filename);
   error.value = '';
 
-  for (let i = 0; i < selectedFiles.length; i++) {
-    const file = selectedFiles[i];
+  let successCount = 0;
+  let failedFiles = [];
+
+  for (let i = 0; i < fileData.length; i++) {
+    const { file, hash } = fileData[i];
     currentUploadingFile.value = file.name;
     uploadProgress.value = 0;
 
     try {
-      // Create file info object
       const fileInfo = JSON.stringify({
         file_name: file.name,
-        file_type: file.type,
+        file_type: file.type || 'application/octet-stream',
+        file_size: file.size,
+        file_hash: hash,
         description: ''
       });
 
@@ -254,12 +532,14 @@ const handleFileUpload = async (event) => {
       formData.append('file', file);
       formData.append('file_info', fileInfo);
 
-      // Upload with progress tracking
-      const response = await api.post(
+      uploadAbortController.value = new AbortController();
+
+      await api.post(
         `/project/${props.projectId}/file`,
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
+          signal: uploadAbortController.value.signal,
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             uploadProgress.value = percentCompleted;
@@ -267,90 +547,321 @@ const handleFileUpload = async (event) => {
         }
       );
 
-      // Add the new file to the list
-      files.value.push(response.data);
-
+      successCount++;
     } catch (err) {
-      error.value = `Failed to upload ${file.name}: ${err.response?.data?.detail || err.message}`;
-      console.error(err);
-      break;
+      if (err.name === 'CanceledError') {
+        toast.warning('Upload cancelled');
+        break;
+      }
+
+      failedFiles.push(file.name);
+      console.error(`Failed to upload ${file.name}:`, err);
+
+      if (err.response?.status === 409) {
+        toast.warning(`${file.name} already exists`, {
+          timeout: 3000
+        });
+      } else {
+        toast.error(`Failed to upload ${file.name}`, {
+          timeout: 3000
+        });
+      }
     }
+  }
+
+  // Show summary
+  if (successCount > 0) {
+    toast.success(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}`, {
+      timeout: 5000
+    });
+  }
+
+  if (failedFiles.length > 0) {
+    toast.error(`Failed to upload ${failedFiles.length} file${failedFiles.length !== 1 ? 's' : ''}`, {
+      timeout: 5000
+    });
   }
 
   isUploading.value = false;
   currentUploadingFile.value = '';
   uploadProgress.value = 0;
-  event.target.value = null; // Reset file input
+  uploadQueue.value = [];
+  uploadAbortController.value = null;
 
-  emit('files-uploaded');
+  await fetchFiles();
+  await fetchStats();
+  emit('files-changed');
 };
 
-// Format file size
-const formatFileSize = (bytes) => {
-  if (!bytes) return 'Unknown size';
-
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
+// Cancel ongoing upload
+const cancelUpload = () => {
+  if (uploadAbortController.value) {
+    uploadAbortController.value.abort();
   }
-
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
 };
 
-// Format date
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString();
+// Toggle file selection
+const toggleFileSelection = (fileId) => {
+  const index = selectedFiles.value.indexOf(fileId);
+  if (index > -1) {
+    selectedFiles.value.splice(index, 1);
+  } else {
+    selectedFiles.value.push(fileId);
+  }
 };
 
-// Confirm file deletion
-const confirmDeleteFile = (file) => {
-  fileToDelete.value = file;
-  showDeleteModal.value = true;
+// Toggle select all
+const toggleSelectAll = () => {
+  if (selectedFiles.value.length === files.value.length) {
+    selectedFiles.value = [];
+  } else {
+    selectedFiles.value = files.value.map(f => f.id);
+  }
 };
 
-// Delete file
-const deleteSelectedFile = async () => {
-  if (!fileToDelete.value) return;
+// Download selected files
+const downloadSelected = async () => {
+  for (const fileId of selectedFiles.value) {
+    const file = files.value.find(f => f.id === fileId);
+    if (file) {
+      await downloadFile(file);
+    }
+  }
+  toast.success(`Downloaded ${selectedFiles.value.length} files`);
+};
 
-  isDeleting.value = true;
+// Download single file
+const downloadFile = async (file) => {
   try {
-    await api.delete(`/project/${props.projectId}/file/${fileToDelete.value.id}`);
-    files.value = files.value.filter(f => f.id !== fileToDelete.value.id);
-    showDeleteModal.value = false;
-    emit('files-uploaded');
+    const response = await api.get(
+      `/project/${props.projectId}/file/${file.id}/content`,
+      { responseType: 'blob' }
+    );
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', file.file_name);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   } catch (err) {
-    error.value = 'Failed to delete file';
+    toast.error(`Failed to download ${file.file_name}`);
     console.error(err);
-  } finally {
-    isDeleting.value = false;
-    fileToDelete.value = null;
   }
 };
 
-const previewText = ref('');
-
-
+// Preview file
 const previewFile = async (file) => {
   previewingFile.value = file;
   showPreviewModal.value = true;
+  previewUrl.value = '';
+  previewText.value = '';
+
   try {
-    const response = await api.get(`/project/${props.projectId}/file/${file.id}/content?preview=true`, {
-      responseType: 'blob'
-    });
-    previewUrl.value = URL.createObjectURL(response.data);
+    const response = await api.get(
+      `/project/${props.projectId}/file/${file.id}/content?preview=true`,
+      { responseType: 'blob' }
+    );
+
+    if (file.file_type === 'text/plain' || file.file_type === 'text/csv') {
+      // For text files, read as text
+      const text = await response.data.text();
+      previewText.value = text;
+      previewUrl.value = 'text';
+    } else {
+      // For other files, create blob URL
+      previewUrl.value = URL.createObjectURL(response.data);
+    }
   } catch (err) {
-    previewUrl.value = '';
+    toast.error('Failed to load preview');
     console.error('Failed to get file preview:', err);
   }
 };
 
+// Close preview
+const closePreview = () => {
+  showPreviewModal.value = false;
+  if (previewUrl.value && previewUrl.value !== 'text') {
+    URL.revokeObjectURL(previewUrl.value);
+  }
+  previewUrl.value = '';
+  previewText.value = '';
+  previewingFile.value = null;
+};
+
+const confirmBatchDelete = () => {
+  if (selectedFiles.value.length === 0) {
+    toast.warning('Please select files first');
+    return;
+  }
+
+  filesToDelete.value = selectedFiles.value.map(id => files.value.find(f => f.id === id)).filter(Boolean);
+  deleteMode.value = 'batch';
+  deleteModalTitle.value = 'Delete Multiple Files';
+  deleteModalMessage.value = `Are you sure you want to delete ${selectedFiles.value.length} files? This action cannot be undone.`;
+  showDeleteModal.value = true;
+};
+
+// Confirm delete file(s)
+const confirmDeleteFile = (file) => {
+  filesToDelete.value = [file];
+  deleteMode.value = 'single';
+  deleteModalTitle.value = 'Delete File';
+  deleteModalMessage.value = `Are you sure you want to delete "${file.file_name}"? This action cannot be undone.`;
+  showDeleteModal.value = true;
+};
+
+// Show batch delete confirmation
+const showBatchDelete = () => {
+  filesToDelete.value = selectedFiles.value.map(id => files.value.find(f => f.id === id));
+  deleteMode.value = 'batch';
+  deleteModalTitle.value = 'Delete Multiple Files';
+  deleteModalMessage.value = `Are you sure you want to delete ${selectedFiles.value.length} files? This action cannot be undone.`;
+  showDeleteModal.value = true;
+};
+
+const executeDelete = async () => {
+  isDeleting.value = true;
+
+  try {
+    if (deleteMode.value === 'single') {
+      await api.delete(`/project/${props.projectId}/file/${filesToDelete.value[0].id}`);
+      toast.success('File deleted successfully');
+    } else {
+      // Batch delete
+      const response = await api.post(
+        `/project/${props.projectId}/file/batch-delete`,
+        {
+          file_ids: filesToDelete.value.map(f => f.id),
+          force: false
+        }
+      );
+
+      if (response.data.total_deleted > 0) {
+        toast.success(`Deleted ${response.data.total_deleted} files`);
+      }
+
+      if (response.data.errors && response.data.errors.length > 0) {
+        response.data.errors.forEach(error => {
+          toast.error(`Failed to delete file: ${error.error}`);
+        });
+      }
+
+      selectedFiles.value = [];
+    }
+
+    await fetchFiles();
+    await fetchStats();
+    emit('files-changed');
+  } catch (err) {
+    if (err.response?.status === 409) {
+      const detail = err.response?.data?.detail;
+      if (detail && detail.links) {
+        toast.error(`Cannot delete: File has ${detail.links.documents} linked documents and ${detail.links.preprocessing_tasks} preprocessing tasks`);
+      } else {
+        toast.error('Cannot delete file: it is linked to other resources');
+      }
+    } else {
+      toast.error('Failed to delete file(s)');
+    }
+    console.error(err);
+  } finally {
+    isDeleting.value = false;
+    showDeleteModal.value = false;
+    filesToDelete.value = [];
+    deleteMode.value = '';
+  }
+};
+
+// Cancel delete
+const cancelDelete = () => {
+  showDeleteModal.value = false;
+  filesToDelete.value = [];
+  deleteMode.value = '';
+};
+
+// Fetch files with filters
+const fetchFiles = async () => {
+  isLoading.value = true;
+  try {
+    const params = new URLSearchParams();
+
+    if (filters.value.search) params.append('search', filters.value.search);
+    if (filters.value.fileType) params.append('file_type', filters.value.fileType);
+    if (filters.value.fileCreator) params.append('file_creator', filters.value.fileCreator);
+    if (filters.value.date_from) params.append('date_from', filters.value.date_from);
+    if (filters.value.date_to) params.append('date_to', filters.value.date_to);
+    if (filters.value.minSize) params.append('min_size', filters.value.minSize);
+    if (filters.value.maxSize) params.append('max_size', filters.value.maxSize);
+
+    const response = await api.get(`/project/${props.projectId}/file?${params}`);
+    files.value = response.data;
+  } catch (err) {
+    error.value = 'Failed to load files';
+    toast.error('Failed to load files');
+    console.error(err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+
+// Fetch file statistics
+const fetchStats = async () => {
+  try {
+    const params = new URLSearchParams();
+    if (filters.value.fileCreator) params.append('file_creator', filters.value.fileCreator);
+
+    const response = await api.get(`/project/${props.projectId}/file/stats?${params}`);
+    stats.value = response.data;
+  } catch (err) {
+    console.error('Failed to fetch file stats:', err);
+  }
+};
+
+
+const showBatchDownload = () => {
+  if (selectedFiles.value.length === 0) {
+    toast.warning('Please select files first');
+    return;
+  }
+  batchAction.value = 'download';
+  showBatchActionsModal.value = true;
+};
+
+const showBatchMove = () => {
+  if (selectedFiles.value.length === 0) {
+    toast.warning('Please select files first');
+    return;
+  }
+  batchAction.value = 'move';
+  showBatchActionsModal.value = true;
+};
+
+const closeBatchActions = () => {
+  showBatchActionsModal.value = false;
+  batchAction.value = '';
+};
+
+const handleBatchComplete = () => {
+  closeBatchActions();
+  selectedFiles.value = [];
+  fetchFiles();
+  fetchStats();
+  emit('files-changed');
+};
+
 onMounted(() => {
   fetchFiles();
+  fetchStats();
+});
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (previewUrl.value && previewUrl.value !== 'text') {
+    URL.revokeObjectURL(previewUrl.value);
+  }
 });
 </script>

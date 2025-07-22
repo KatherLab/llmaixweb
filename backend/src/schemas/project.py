@@ -50,10 +50,19 @@ class FileBase(UTCModel):
     file_uuid: str | None = None
     file_storage_type: str | None = None
     description: str | None = None
+    file_size: int | None = None
+    file_hash: str | None = None
 
 
 class FileCreate(FileBase):
     file_name: str
+    file_type: str | None = None
+    file_size: int | None = None
+    file_hash: str | None = None
+
+
+class FileUpdate(FileBase):
+    description: str | None = None
 
 
 class File(FileBase):
@@ -63,7 +72,30 @@ class File(FileBase):
     updated_at: datetime
     file_creator: FileCreator = FileCreator.user
 
+    # Add computed properties
+    @property
+    def is_linked(self) -> bool:
+        """Check if file is linked to documents or preprocessing tasks"""
+        return bool(
+            self.documents_as_original
+            or self.documents_as_preprocessed
+            or self.preprocessing_tasks
+            or self.file_preprocessing_tasks
+        )
+
     model_config = ConfigDict(from_attributes=True)
+
+
+class FileFilter(BaseModel):
+    """Filter parameters for file queries"""
+
+    search: str | None = None
+    file_type: str | None = None
+    file_creator: FileCreator | None = None
+    date_from: datetime | None = None
+    date_to: datetime | None = None
+    min_size: int | None = None
+    max_size: int | None = None
 
 
 class DocumentBase(UTCModel):
