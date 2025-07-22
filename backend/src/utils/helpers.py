@@ -1,3 +1,6 @@
+from datetime import timezone
+
+
 def flatten_dict(d: dict, parent_key: str = "", sep: str = "_") -> dict:
     """Flatten a nested dictionary."""
     items = {}
@@ -42,3 +45,14 @@ def extract_field_types_from_schema(schema_def: dict, result: dict, prefix: str 
             if "format" in prop_def:
                 if prop_def["format"] in ["date", "date-time"]:
                     result[full_path] = "date"
+
+
+# As sqlite does not support timezone-aware datetimes, we have to do this manually.
+# Make extra-sure that all datetimes are timezone-aware to utc before saving to the database!
+def _make_aware(dt):
+    """Make a datetime timezone-aware, assuming UTC if naive."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt

@@ -26,6 +26,33 @@
           </svg>
           Quick Process All
         </button>
+        <button
+          @click="fetchPreprocessingTasks"
+          :disabled="isLoadingTasks"
+          class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
+          title="Refresh tasks"
+        >
+          <svg
+            :class="['h-4 w-4', isLoadingTasks && 'animate-spin']"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+
+      </div>
+    </div>
+
+    <div v-if="isLoadingTasks && allTasks.length === 0" class="flex justify-center items-center py-12">
+      <div class="flex items-center space-x-3">
+        <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-gray-600">Loading preprocessing tasks...</span>
       </div>
     </div>
 
@@ -66,40 +93,64 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span class="text-sm font-medium text-green-800">
-            {{ completedTasks.length }} task{{ completedTasks.length !== 1 ? 's' : '' }} completed recently
+            {{ completedTasks.length }} task{{ completedTasks.length !== 1 ? 's' : '' }} completed
           </span>
         </div>
         <button
           @click="showCompletedTasks = !showCompletedTasks"
-          class="text-sm text-green-700 hover:text-green-900"
+          class="text-sm text-green-700 hover:text-green-900 font-medium"
         >
-          {{ showCompletedTasks ? 'Hide' : 'Show' }}
+          {{ showCompletedTasks ? 'Hide Details' : 'Show Details' }}
         </button>
       </div>
-      <div v-if="showCompletedTasks" class="mt-3 space-y-2">
-        <div
-          v-for="task in completedTasks.slice(0, 3)"
-          :key="task.id"
-          class="bg-white bg-opacity-70 rounded-lg p-3 text-sm"
-        >
-          <div class="flex justify-between items-center">
-            <span class="text-gray-700">Task #{{ task.id }}</span>
-            <span class="text-gray-500">{{ formatRelativeTime(task.completed_at) }}</span>
+
+      <!-- Always show recent completed tasks when expanded -->
+      <Transition
+        enter-active-class="transition-all duration-300 ease-out"
+        enter-from-class="max-h-0 opacity-0"
+        enter-to-class="max-h-96 opacity-100"
+        leave-active-class="transition-all duration-300 ease-in"
+        leave-from-class="max-h-96 opacity-100"
+        leave-to-class="max-h-0 opacity-0"
+      >
+        <div v-if="showCompletedTasks" class="mt-3 space-y-2 overflow-hidden">
+          <div
+            v-for="task in completedTasks.slice(0, 5)"
+            :key="task.id"
+            @click="viewTaskDetails(task)"
+            class="bg-white bg-opacity-70 rounded-lg p-3 text-sm cursor-pointer hover:bg-opacity-100 transition-colors"
+          >
+            <div class="flex justify-between items-center">
+              <span class="text-gray-700 font-medium">
+                Task #{{ task.id }}
+                <span v-if="task.configuration?.name" class="text-gray-500 font-normal">
+                  - {{ task.configuration.name }}
+                </span>
+              </span>
+              <span class="text-gray-500">{{ formatRelativeTime(task.completed_at) }}</span>
+            </div>
+            <div class="text-xs text-gray-500 mt-1 flex items-center gap-3">
+              <span v-if="task.processed_files - task.failed_files - (task.skipped_files || 0) > 0" class="text-green-600">
+                ✓ {{ task.processed_files - task.failed_files - (task.skipped_files || 0) }} succeeded
+              </span>
+              <span v-if="task.failed_files > 0" class="text-red-600">
+                ✗ {{ task.failed_files }} failed
+              </span>
+              <span v-if="task.skipped_files > 0" class="text-yellow-600">
+                ⚠ {{ task.skipped_files }} skipped
+              </span>
+            </div>
           </div>
-          <div class="text-xs text-gray-500 mt-1 flex items-center gap-3">
-            <span v-if="task.processed_files - task.failed_files - (task.skipped_files || 0) > 0">
-              {{ task.processed_files - task.failed_files - (task.skipped_files || 0) }} succeeded
-            </span>
-            <span v-if="task.failed_files > 0" class="text-red-600">
-              {{ task.failed_files }} failed
-            </span>
-            <span v-if="task.skipped_files > 0" class="text-yellow-600">
-              {{ task.skipped_files }} skipped
+
+          <div v-if="completedTasks.length > 5" class="text-center">
+            <span class="text-xs text-gray-500">
+              And {{ completedTasks.length - 5 }} more completed tasks
             </span>
           </div>
         </div>
-      </div>
+      </Transition>
     </div>
+
 
     <!-- Create New Task -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -366,7 +417,9 @@ const props = defineProps({
 
 const toast = useToast();
 
-const preprocessingTasks = ref([]);
+// State management
+const allTasks = ref([]);
+const isLoadingTasks = ref(false);
 const savedConfigs = ref([]);
 const availableFiles = ref([]);
 const selectedFiles = ref([]);
@@ -374,12 +427,13 @@ const selectedConfig = ref('quick');
 const selectedSavedConfig = ref('');
 const selectedTask = ref(null);
 const showConfigManager = ref(false);
-const showCompletedTasks = ref(false);
+const showCompletedTasks = ref(true);
 const isSubmitting = ref(false);
 const saveAsConfig = ref(false);
 const configName = ref('');
 let pollInterval = null;
 
+// Preprocessing configuration
 const preprocessingConfig = ref({
   use_ocr: true,
   force_ocr: false,
@@ -388,6 +442,7 @@ const preprocessingConfig = ref({
   ocr_languages: [{ value: 'eng', label: 'English' }],
 });
 
+// OCR language options
 const ocrLanguagesForSelect = ref([
   { value: 'eng', label: 'English' },
   { value: 'spa', label: 'Spanish' },
@@ -418,14 +473,15 @@ const ocrLanguagesForSelect = ref([
   { value: 'ukr', label: 'Ukrainian' },
 ]);
 
+// Computed properties
 const activeTasks = computed(() =>
-  preprocessingTasks.value.filter(task =>
+  allTasks.value.filter(task =>
     ['pending', 'processing'].includes(task.status)
   )
 );
 
 const completedTasks = computed(() =>
-  preprocessingTasks.value
+  allTasks.value
     .filter(task => task.status === 'completed')
     .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
 );
@@ -434,12 +490,18 @@ const canStartProcessing = computed(() =>
   selectedFiles.value.length > 0 && !isSubmitting.value
 );
 
+// API methods
 const fetchPreprocessingTasks = async () => {
+  if (isLoadingTasks.value) return;
+
+  isLoadingTasks.value = true;
   try {
     const response = await api.get(`/project/${props.projectId}/preprocess`);
-    preprocessingTasks.value = response.data;
+    allTasks.value = response.data;
   } catch (error) {
     console.error('Failed to fetch preprocessing tasks:', error);
+  } finally {
+    isLoadingTasks.value = false;
   }
 };
 
@@ -461,9 +523,50 @@ const fetchAvailableFiles = async () => {
   }
 };
 
+// Task status updates
+const updateTaskStatus = async (taskId) => {
+  try {
+    const response = await api.get(`/project/${props.projectId}/preprocess/${taskId}`);
+    const index = allTasks.value.findIndex(task => task.id === taskId);
+    if (index !== -1) {
+      allTasks.value[index] = response.data;
+
+      // Update selected task if viewing details
+      if (selectedTask.value && selectedTask.value.id === taskId) {
+        selectedTask.value = response.data;
+      }
+    }
+  } catch (error) {
+    console.error(`Failed to update task ${taskId}:`, error);
+  }
+};
+
+// Polling setup
+const setupPolling = () => {
+  if (pollInterval) clearInterval(pollInterval);
+
+  const pollActiveTasks = () => {
+    const tasksToUpdate = allTasks.value.filter(
+      task => ['pending', 'processing'].includes(task.status)
+    );
+
+    if (tasksToUpdate.length === 0) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+      return;
+    }
+
+    tasksToUpdate.forEach(task => updateTaskStatus(task.id));
+  };
+
+  pollActiveTasks();
+  pollInterval = setInterval(pollActiveTasks, 2000);
+};
+
+// Helper functions
 const getAlreadyProcessedFileIds = () => {
   const alreadyDone = new Set();
-  preprocessingTasks.value.forEach(task => {
+  allTasks.value.forEach(task => {
     if (task.status === 'completed' && Array.isArray(task.file_ids)) {
       task.file_ids.forEach(id => alreadyDone.add(id));
     }
@@ -471,24 +574,41 @@ const getAlreadyProcessedFileIds = () => {
   return selectedFiles.value.filter(fid => alreadyDone.has(fid));
 };
 
+const formatRelativeTime = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = now - date;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return date.toLocaleDateString();
+};
+
+// Task actions
 const startPreprocessing = async () => {
   if (!canStartProcessing.value) return;
+
   const alreadyProcessedIds = getAlreadyProcessedFileIds();
   if (alreadyProcessedIds.length === selectedFiles.value.length) {
     toast.info('All selected files were already processed. No new task created.');
     return;
   }
+
   if (alreadyProcessedIds.length > 0) {
     toast.info(`${alreadyProcessedIds.length} selected file(s) were already processed and will be skipped.`);
   }
+
   const filesToProcess = selectedFiles.value.filter(id => !alreadyProcessedIds.includes(id));
   if (filesToProcess.length === 0) {
     toast.info('No new files to process.');
     return;
   }
+
   isSubmitting.value = true;
   try {
     let taskData;
+
     if (selectedConfig.value === 'saved' && selectedSavedConfig.value) {
       taskData = {
         configuration_id: selectedSavedConfig.value,
@@ -503,6 +623,7 @@ const startPreprocessing = async () => {
           typeof lang === 'string' ? lang : lang.value
         ),
       };
+
       if (saveAsConfig.value && configName.value) {
         const configResponse = await api.post(`/project/${props.projectId}/preprocessing-config`, config);
         taskData = {
@@ -516,11 +637,14 @@ const startPreprocessing = async () => {
         };
       }
     }
+
     const response = await api.post(`/project/${props.projectId}/preprocess`, taskData);
-    preprocessingTasks.value.unshift(response.data);
+    allTasks.value.unshift(response.data);
+
     selectedFiles.value = [];
     configName.value = '';
     saveAsConfig.value = false;
+
     toast.success('Preprocessing task started successfully');
     setupPolling();
   } catch (error) {
@@ -540,16 +664,18 @@ const startPreprocessing = async () => {
 
 const startQuickPreprocess = async () => {
   const processedIds = new Set();
-  preprocessingTasks.value.forEach(task => {
+  allTasks.value.forEach(task => {
     if (task.status === 'completed' && Array.isArray(task.file_ids)) {
       task.file_ids.forEach(id => processedIds.add(id));
     }
   });
+
   const unprocessedFiles = availableFiles.value.filter(file => !processedIds.has(file.id));
   if (unprocessedFiles.length === 0) {
     toast.info('All files have been processed');
     return;
   }
+
   selectedFiles.value = unprocessedFiles.map(f => f.id);
   selectedConfig.value = 'quick';
   await startPreprocessing();
@@ -569,7 +695,7 @@ const cancelTask = async (task) => {
 const retryTask = async (task) => {
   try {
     const response = await api.get(`/project/${props.projectId}/preprocess/${task.id}/retry-failed`);
-    preprocessingTasks.value.unshift(response.data);
+    allTasks.value.unshift(response.data);
     toast.success('Retry task created');
     setupPolling();
   } catch (error) {
@@ -584,6 +710,29 @@ const cancelAllTasks = async () => {
   }
 };
 
+const viewTaskDetails = async (task) => {
+  try {
+    const response = await api.get(`/project/${props.projectId}/preprocess/${task.id}`);
+    selectedTask.value = response.data;
+  } catch (error) {
+    console.error('Failed to fetch task details:', error);
+    selectedTask.value = task;
+  }
+};
+
+const retryFailedFiles = async (taskId) => {
+  try {
+    const response = await api.get(`/project/${props.projectId}/preprocess/${taskId}/retry-failed`);
+    allTasks.value.unshift(response.data);
+    toast.success('Retry task created for failed files');
+    selectedTask.value = null;
+    setupPolling();
+  } catch (error) {
+    toast.error('Failed to create retry task');
+  }
+};
+
+// Form actions
 const selectAllFiles = () => {
   selectedFiles.value = availableFiles.value.map(f => f.id);
 };
@@ -602,73 +751,33 @@ const applyConfiguration = (config) => {
   showConfigManager.value = false;
 };
 
-const viewTaskDetails = (task) => {
-  selectedTask.value = task;
-};
-
-const retryFailedFiles = async (taskId) => {
-  try {
-    const response = await api.get(`/project/${props.projectId}/preprocess/${taskId}/retry-failed`);
-    preprocessingTasks.value.unshift(response.data);
-    toast.success('Retry task created for failed files');
-    selectedTask.value = null;
-    setupPolling();
-  } catch (error) {
-    toast.error('Failed to create retry task');
-  }
-};
-
-const formatRelativeTime = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  const now = new Date();
-  const diff = now - date;
-  if (diff < 60000) return 'just now';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-  return date.toLocaleDateString();
-};
-
-const updateTaskStatus = async (taskId) => {
-  try {
-    const response = await api.get(`/project/${props.projectId}/preprocess/${taskId}`);
-    const index = preprocessingTasks.value.findIndex(task => task.id === taskId);
-    if (index !== -1) {
-      preprocessingTasks.value[index] = response.data;
-    }
-  } catch (error) {
-    console.error(`Failed to update task ${taskId}:`, error);
-  }
-};
-
-const setupPolling = () => {
-  if (pollInterval) clearInterval(pollInterval);
-  pollInterval = setInterval(() => {
-    const tasksToUpdate = preprocessingTasks.value.filter(
-      task => ['pending', 'processing'].includes(task.status)
-    );
-    if (tasksToUpdate.length === 0) {
-      clearInterval(pollInterval);
-      pollInterval = null;
-      return;
-    }
-    tasksToUpdate.forEach(task => updateTaskStatus(task.id));
-  }, 2000);
-};
-
+// Lifecycle hooks
 onMounted(() => {
   fetchPreprocessingTasks();
   fetchConfigurations();
   fetchAvailableFiles();
-  setupPolling();
+
+  if (activeTasks.value.length > 0) {
+    setupPolling();
+  }
 });
+
 onUnmounted(() => {
   if (pollInterval) clearInterval(pollInterval);
 });
+
+// Watchers
 watch(() => props.files, (newFiles) => {
   availableFiles.value = newFiles;
 }, { immediate: true });
+
+watch(() => activeTasks.value.length, (newLength, oldLength) => {
+  if (newLength > 0 && !pollInterval) {
+    setupPolling();
+  }
+});
 </script>
+
 
 <style>
 /* Multiselect styling - ensure dropdown behavior works correctly */

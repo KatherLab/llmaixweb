@@ -452,7 +452,6 @@ class PreprocessingTask(Base):
     )
 
 
-# New model for tracking individual file processing
 class FilePreprocessingTask(Base):
     __tablename__ = "file_preprocessing_tasks"
 
@@ -472,6 +471,10 @@ class FilePreprocessingTask(Base):
     # Track produced documents
     document_count: Mapped[int] = mapped_column(default=0)
 
+    # Add these new fields
+    file_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    processing_time: Mapped[float] = mapped_column(Float, nullable=True)
+
     started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -481,9 +484,7 @@ class FilePreprocessingTask(Base):
     preprocessing_task: Mapped["PreprocessingTask"] = relationship(
         back_populates="file_tasks"
     )
-    file: Mapped["File"] = relationship(
-        back_populates="file_preprocessing_tasks"  # Link to File.file_preprocessing_tasks
-    )
+    file: Mapped["File"] = relationship(back_populates="file_preprocessing_tasks")
     documents: Mapped[list["Document"]] = relationship(
         back_populates="file_preprocessing_task", cascade="all, delete-orphan"
     )

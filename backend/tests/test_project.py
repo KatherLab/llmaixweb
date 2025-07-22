@@ -774,7 +774,9 @@ def test_duplicate_detection(client, api_url):
 
 # Test Cancel Preprocessing Task
 def test_cancel_preprocessing_task(client, api_url):
-    pytest.skip("Skipping test_cancel_preprocessing_task as we don't have Celery for running which is required for this test.")
+    pytest.skip(
+        "Skipping test_cancel_preprocessing_task as we don't have Celery for running which is required for this test."
+    )
     user_data = {
         "username": "test@example.com",
         "password": "testpassword",

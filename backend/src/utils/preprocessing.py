@@ -14,6 +14,7 @@ from .. import models
 from ..core.config import settings
 from ..dependencies import get_file, save_file
 from ..utils.enums import FileCreator
+from .helpers import _make_aware
 
 
 class PreprocessingPipeline:
@@ -102,6 +103,10 @@ class PreprocessingPipeline:
         """Process a single file task."""
         file_task.status = models.PreprocessingStatus.IN_PROGRESS
         file_task.started_at = datetime.datetime.now(datetime.UTC)
+
+        # Set the file name for frontend display
+        file_task.file_name = file_task.file.file_name
+
         self.db.commit()
 
         try:
@@ -131,9 +136,27 @@ class PreprocessingPipeline:
             file_task.document_count = len(documents)
             file_task.status = models.PreprocessingStatus.COMPLETED
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
+
+            # Calculate processing time
+            if file_task.started_at:
+                processing_time = (
+                    _make_aware(datetime.datetime.now())
+                    - _make_aware(file_task.started_at)
+                ).total_seconds() / 1000  # Convert to seconds
+                file_task.processing_time = round(processing_time, 2)
+
         except Exception as e:
             file_task.status = models.PreprocessingStatus.FAILED
             file_task.error_message = str(e)
+            file_task.completed_at = datetime.datetime.now(datetime.UTC)
+
+            # Calculate processing time even for failed tasks
+            if file_task.started_at:
+                processing_time = (
+                    _make_aware(file_task.completed_at)
+                    - _make_aware(file_task.started_at)
+                ).total_seconds()  / 1000  # Convert to seconds
+                file_task.processing_time = round(processing_time, 2)
 
         self.db.commit()
 
@@ -373,112 +396,3 @@ def process_files_with_config(task_id: int, db: Session):
     """Entry point for processing files with configuration."""
     pipeline = PreprocessingPipeline(db, task_id)
     pipeline.process()
-
-
-# Legacy function for backward compatibility
-def preprocess_files(
-    files: list[models.File],
-    client: OpenAI | None = None,
-    pdf_backend: str = "pymupdf4llm",
-    ocr_backend: str = "ocrmypdf",
-    llm_model: str | None = None,
-    use_ocr: bool = True,
-    force_ocr: bool = False,
-    ocr_languages: list[str] | None = None,
-    ocr_model: str | None = None,
-    base_url: str | None = None,
-    api_key: str | None = None,
-    db_session: Session | None = None,
-    project_id: int | None = None,
-    preprocessing_task_id: int | None = None,
-    output_file: bool = True,
-) -> list[str]:
-    """
-    Legacy preprocessing function for backward compatibility.
-    Creates a configuration and task, then uses the new pipeline.
-    """
-    if not db_session:
-        # Simple processing without database
-        from llmaix import preprocess_file as llmaix_preprocess_file
-
-        results = []
-        for file in files:
-            file_content = get_file(file.file_uuid)
-            result = llmaix_preprocess_file(
-                filename=file_content,
-                client=client,
-                pdf_backend=pdf_backend,
-                ocr_backend=ocr_backend,
-                llm_model=llm_model,
-                use_ocr=use_ocr,
-                force_ocr=force_ocr,
-                ocr_languages=ocr_languages,
-                ocr_model=ocr_model,
-                base_url=base_url,
-                api_key=api_key,
-            )
-            results.append(result)
-        return results
-
-    # Use new pipeline for database processing
-    if not project_id:
-        raise ValueError("project_id is required when using database session")
-
-    # Create or get preprocessing task
-    if preprocessing_task_id:
-        task = db_session.get(models.PreprocessingTask, preprocessing_task_id)
-        if not task:
-            raise ValueError(f"PreprocessingTask {preprocessing_task_id} not found")
-    else:
-        # Create configuration
-        config = models.PreprocessingConfiguration(
-            project_id=project_id,
-            name=f"Legacy config - {ocr_backend}",
-            description="Created from legacy preprocess_files call",
-            file_type=models.FileType.MIXED,  # Will be updated per file
-            preprocessing_strategy=models.PreprocessingStrategy.FULL_DOCUMENT,
-            pdf_backend=pdf_backend,
-            ocr_backend=ocr_backend,
-            use_ocr=use_ocr,
-            force_ocr=force_ocr,
-            ocr_languages=ocr_languages,
-            ocr_model=ocr_model,
-            llm_model=llm_model,
-            additional_settings={
-                "base_url": base_url,
-                "api_key": api_key,
-                "output_file": output_file,
-            },
-        )
-        db_session.add(config)
-        db_session.commit()
-
-        # Create task
-        task = models.PreprocessingTask(
-            project_id=project_id, configuration_id=config.id, total_files=len(files)
-        )
-        db_session.add(task)
-        db_session.commit()
-
-        # Create file tasks
-        for file in files:
-            file_task = models.FilePreprocessingTask(
-                preprocessing_task_id=task.id, file_id=file.id
-            )
-            db_session.add(file_task)
-        db_session.commit()
-
-    # Process using new pipeline
-    pipeline = PreprocessingPipeline(db_session, task.id)
-    if client:
-        pipeline.client = client
-    pipeline.process()
-
-    # Return document texts for backward compatibility
-    db_session.refresh(task)
-    results = []
-    for file_task in task.file_tasks:
-        for doc in file_task.documents:
-            results.append(doc.text)
-
-    return results

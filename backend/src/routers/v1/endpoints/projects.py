@@ -19,7 +19,7 @@ from fastapi import (
 from fastapi.responses import Response
 from pydantic import ValidationError
 from sqlalchemy import delete, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from thefuzz import fuzz
 
 from .... import models, schemas
@@ -758,8 +758,15 @@ def get_preprocessing_tasks(
     """Get preprocessing tasks for a project."""
     check_project_access(project_id, current_user, db, "read")
 
-    query = select(models.PreprocessingTask).where(
-        models.PreprocessingTask.project_id == project_id
+    query = (
+        select(models.PreprocessingTask)
+        .where(models.PreprocessingTask.project_id == project_id)
+        .options(
+            selectinload(models.PreprocessingTask.file_tasks).selectinload(
+                models.FilePreprocessingTask.file
+            ),
+            selectinload(models.PreprocessingTask.configuration),
+        )
     )
 
     if status:
@@ -790,9 +797,16 @@ def get_preprocessing_task(
     check_project_access(project_id, current_user, db, "read")
 
     task = db.execute(
-        select(models.PreprocessingTask).where(
+        select(models.PreprocessingTask)
+        .where(
             models.PreprocessingTask.id == task_id,
             models.PreprocessingTask.project_id == project_id,
+        )
+        .options(
+            selectinload(models.PreprocessingTask.file_tasks).selectinload(
+                models.FilePreprocessingTask.file
+            ),
+            selectinload(models.PreprocessingTask.configuration),
         )
     ).scalar_one_or_none()
 

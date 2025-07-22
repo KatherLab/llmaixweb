@@ -1,7 +1,13 @@
 <template>
   <Teleport to="body">
     <div class="fixed inset-0 z-50 overflow-hidden">
-      <div class="absolute inset-0 bg-black bg-opacity-50" @click="$emit('close')"></div>
+      <!-- Semi-transparent backdrop with blur -->
+      <div
+        class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        @click="$emit('close')"
+      ></div>
+
+      <!-- Modal content -->
       <div class="absolute inset-4 md:inset-8 bg-white rounded-lg shadow-2xl flex flex-col max-w-4xl mx-auto">
         <!-- Header -->
         <div class="flex items-center justify-between p-6 border-b rounded-t-lg">

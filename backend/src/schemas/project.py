@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated
 
 from pydantic import (
     BaseModel,
@@ -298,15 +298,23 @@ class PreprocessingConfiguration(PreprocessingConfigurationBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class FilePreprocessingTaskStatus(BaseModel):
+class FilePreprocessingTaskBase(BaseModel):
     file_id: int
-    file_name: str
     status: str
-    progress: float
+    progress: float = 0.0
     error_message: str | None = None
-    document_count: int
+    document_count: int = 0
+    file_name: str | None = None
+    processing_time: float | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None
+
+
+class FilePreprocessingTask(FilePreprocessingTaskBase):
+    id: int
+    preprocessing_task_id: int
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PreprocessingTaskBase(BaseModel):
@@ -359,42 +367,11 @@ class PreprocessingTask(PreprocessingTaskBase):
     created_at: datetime
     updated_at: datetime
 
-    # Change this to accept the ORM model directly
-    file_tasks: list[Any] = []  # Will be converted in validator
+    # Update to use the proper schema
+    file_tasks: list[FilePreprocessingTask] = []
 
     # Configuration used
     configuration: PreprocessingConfiguration | None = None
-
-    @field_validator("file_tasks", mode="before")
-    def convert_file_tasks(cls, v):
-        """Convert FilePreprocessingTask ORM objects to FilePreprocessingTaskStatus."""
-        if not v:
-            return []
-
-        result = []
-        for task in v:
-            # Handle both ORM objects and dicts
-            if hasattr(task, "__dict__"):  # ORM object
-                result.append(
-                    {
-                        "file_id": task.file_id,
-                        "file_name": task.file.file_name
-                        if hasattr(task, "file") and task.file
-                        else f"File {task.file_id}",
-                        "status": task.status.value
-                        if hasattr(task.status, "value")
-                        else task.status,
-                        "progress": task.progress or 0.0,
-                        "error_message": task.error_message,
-                        "document_count": task.document_count,
-                        "started_at": task.started_at,
-                        "completed_at": task.completed_at,
-                    }
-                )
-            else:  # Already a dict
-                result.append(v)
-
-        return result
 
     model_config = ConfigDict(from_attributes=True)
 
