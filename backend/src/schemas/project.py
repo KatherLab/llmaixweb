@@ -308,6 +308,8 @@ class Prompt(PromptBase):
 
 
 class TrialBase(UTCModel):
+    name: str | None = None
+    description: str | None = None
     schema_id: int
     prompt_id: int
     document_ids: list[int] | None = None  # Make optional
@@ -330,6 +332,10 @@ class TrialBase(UTCModel):
 
 class TrialCreate(TrialBase):
     pass
+
+class TrialUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
 
 
 class Trial(TrialBase):

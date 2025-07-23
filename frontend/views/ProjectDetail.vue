@@ -1,128 +1,111 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <header class="bg-white shadow">
-      <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between">
-          <!-- Project title and description -->
-          <div v-if="!isEditing">
-            <div class="flex items-center">
-              <RouterLink to="/projects" class="text-blue-600 hover:text-blue-800 mr-2">
-                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                </svg>
-              </RouterLink>
-              <h1 class="text-2xl font-bold text-gray-900">{{ project.name }}</h1>
-              <button @click="isEditing = true" class="ml-2 text-gray-500 hover:text-gray-700">
-                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                </svg>
+  <div class="min-h-screen bg-gradient-to-br from-gray-100 via-white to-blue-100">
+    <!-- Glassy App Bar -->
+    <header class="sticky top-0 z-30 bg-white/70 shadow-lg backdrop-blur-lg transition-all">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
+        <div class="flex items-center">
+          <RouterLink to="/projects" class="text-blue-500 hover:text-blue-700 mr-4 rounded-lg transition-all">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </RouterLink>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 drop-shadow-sm">{{ project.name }}</h1>
+              <button @click="showEditModal = true" class="p-1 rounded-full hover:bg-blue-100 transition" aria-label="Edit Project">
+                <svg class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" fill="currentColor"/></svg>
               </button>
             </div>
-            <p v-if="project.description" class="mt-1 text-sm text-gray-600">{{ project.description }}</p>
+            <div v-if="project.description" class="text-gray-600 mt-1">{{ project.description }}</div>
           </div>
-
-          <!-- Edit mode -->
-          <div v-else class="flex-1 mr-4">
-            <input
-              v-model="editedProject.name"
-              class="block w-full text-2xl font-bold border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              placeholder="Project Name"
-            />
-            <textarea
-              v-model="editedProject.description"
-              class="mt-2 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              placeholder="Project Description (optional)"
-              rows="2"
-            ></textarea>
-            <div class="mt-2 flex space-x-2">
-              <button
-                @click="saveProjectEdits"
-                class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                :disabled="isSaving"
-              >
-                <svg v-if="isSaving" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Save
-              </button>
-              <button
-                @click="cancelEditing"
-                class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-
-          <!-- Status indicator and Delete button -->
-          <div class="flex items-center space-x-3">
-            <span class="px-3 py-1.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-              {{ project.status || 'Active' }}
-            </span>
-            <button
-              @click="confirmDelete"
-              class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </button>
-          </div>
+        </div>
+        <div class="flex items-center space-x-3">
+          <span class="px-4 py-1.5 text-xs font-bold rounded-full bg-green-50 text-green-700 border border-green-200 shadow-sm">{{ project.status || 'Active' }}</span>
+          <button @click="showDeleteConfirmation = true"
+                  class="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition shadow">
+            Delete
+          </button>
         </div>
       </div>
     </header>
 
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <!-- Project Workflow Tabs -->
-      <div class="mb-6">
+    <main class="max-w-7xl mx-auto px-4 py-4">
+      <!-- Modern Workflow Tabs -->
+      <div class="mb-4">
         <ProjectWorkflow
           :currentStep="currentStep"
-          @change-step="currentStep = $event"
+          :openTabs="openTabs"
+          @change-step="handleStepChange"
+          @update-open-tabs="updateOpenTabs"
         />
       </div>
 
-      <div v-if="isLoading" class="text-center py-12">
-        <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-        <p class="mt-2 text-gray-500">Loading project...</p>
+      <!-- Loading, Error, Main Content -->
+      <div v-if="isLoading" class="flex flex-col items-center py-24">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500"></div>
+        <span class="mt-4 text-gray-400 text-lg">Loading project...</span>
       </div>
 
-      <div v-else-if="error" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+      <div v-else-if="error" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-xl">
         <div class="flex">
-          <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ml-3">
-            <p class="text-sm text-red-700">{{ error }}</p>
-          </div>
+          <svg class="h-6 w-6 text-red-400 mr-2" fill="none" viewBox="0 0 24 24">
+            <path d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="text-red-700">{{ error }}</div>
         </div>
       </div>
 
-      <!-- Content based on current step -->
-      <div v-else class="bg-white shadow rounded-lg overflow-hidden">
-        <!-- Files Management -->
-        <FilesManagement v-if="currentStep === 'files'" :projectId="projectId" @files-uploaded="refreshProject" />
-
-        <!-- Preprocessing Management -->
-        <PreprocessingManagement v-else-if="currentStep === 'preprocessing'" :projectId="projectId" :files="project.files || []" />
-
-        <!-- Documents Management -->
-        <DocumentsManagement v-else-if="currentStep === 'documents'" :projectId="projectId" />
-
-        <!-- Trials Management -->
-        <TrialsManagement v-else-if="currentStep === 'trials'" :projectId="projectId" />
-
-        <!-- Schema Management -->
-        <SchemaManagement v-else-if="currentStep === 'schemas'" :projectId="projectId" />
-
-        <!-- Results View -->
-        <EvaluationView v-else-if="currentStep === 'evaluation'" :projectId="projectId" />
+      <!-- Workspace with glassmorphism -->
+      <div v-else class="relative bg-white/70 rounded-3xl shadow-2xl p-6 sm:p-8 mb-20 transition-all"
+           style="backdrop-filter: blur(12px);">
+        <transition name="fade" mode="out-in">
+          <!-- Show each tab as content, but only if it's currentStep -->
+          <FilesManagement
+            v-if="currentStep === 'files'"
+            :projectId="projectId"
+            @files-uploaded="refreshProject"
+            key="files"
+          />
+          <PreprocessingManagement
+            v-else-if="currentStep === 'preprocessing'"
+            :projectId="projectId"
+            :files="project.files || []"
+            key="preprocessing"
+          />
+          <DocumentsManagement
+            v-else-if="currentStep === 'documents'"
+            :projectId="projectId"
+            key="documents"
+          />
+          <SchemaManagement
+            v-else-if="currentStep === 'schemas'"
+            :projectId="projectId"
+            key="schemas"
+          />
+          <TrialsManagement
+            v-else-if="currentStep === 'trials'"
+            :projectId="projectId"
+            key="trials"
+          />
+          <EvaluationView
+            v-else-if="currentStep === 'evaluation'"
+            :projectId="projectId"
+            key="evaluation"
+          />
+        </transition>
       </div>
     </main>
 
-    <!-- Confirmation Dialog for Delete Project -->
+    <!-- Edit Modal -->
+    <ProjectEditModal
+      v-if="showEditModal"
+      :open="showEditModal"
+      :initialName="project.name"
+      :initialDescription="project.description"
+      :isSaving="isSaving"
+      @save="saveProjectEdits"
+      @close="showEditModal = false"
+    />
+
+    <!-- Delete Confirmation Modal -->
     <ConfirmationDialog
       v-if="showDeleteConfirmation"
       :open="showDeleteConfirmation"
@@ -133,6 +116,25 @@
       @confirm="deleteProject"
       @cancel="showDeleteConfirmation = false"
     />
+
+    <!-- Mobile: Workspace Tab Bar (at bottom) -->
+    <div
+      v-if="openTabs.length > 1"
+      class="fixed bottom-0 left-0 right-0 z-40 sm:hidden flex bg-white/80 backdrop-blur-lg border-t border-gray-200 rounded-t-2xl px-2 py-2 shadow-2xl"
+    >
+      <div class="flex-1 flex justify-between">
+        <button
+          v-for="tab in openTabs"
+          :key="tab"
+          class="flex flex-col items-center px-1"
+          :class="currentStep === tab ? 'text-blue-600 font-bold' : 'text-gray-400'"
+          @click="handleStepChange(tab)"
+        >
+          <span class="text-xs">{{ stepsMap[tab]?.name.split(' ')[0] }}</span>
+          <span v-if="openTabs.length > 1" @click.stop="closeTab(tab)" class="text-[10px] text-gray-300">×</span>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -148,44 +150,65 @@ import TrialsManagement from '@/components/TrialsManagement.vue';
 import SchemaManagement from '@/components/SchemaManagement.vue';
 import EvaluationView from '@/components/EvaluationView.vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
+import ProjectEditModal from '@/components/ProjectEditModal.vue';
 import { useToast } from 'vue-toastification';
 
+// --- DATA ---
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+
 const projectId = computed(() => route.params.projectId);
 const project = ref({});
 const isLoading = ref(true);
-const isEditing = ref(false);
-const isSaving = ref(false);
-const editedProject = ref({});
 const error = ref('');
+const isSaving = ref(false);
+const showEditModal = ref(false);
 const showDeleteConfirmation = ref(false);
 
-// Workflow step
-const currentStep = ref('files');
+// Workflow step management with tab workspace
+const steps = [
+  { id: 'files', name: 'Upload Files' },
+  { id: 'preprocessing', name: 'Preprocess Files' },
+  { id: 'documents', name: 'Documents' },
+  { id: 'schemas', name: 'Schemas & Prompts' },
+  { id: 'trials', name: 'Run Trials' },
+  { id: 'evaluation', name: 'Evaluation' }
+];
+const stepsMap = Object.fromEntries(steps.map(s => [s.id, s]));
+const defaultStep = 'files';
 
-// Provide project ID to child components
-provide('projectId', projectId);
+// Tabs (persisted in localStorage for true SaaS "workspace" vibes)
+const currentStep = ref(defaultStep);
+const openTabs = ref([defaultStep]);
+const openTabsStorageKey = `project-${projectId.value}-open-tabs`;
+const currentStepStorageKey = `project-${projectId.value}-current-step`;
 
-// Available LLM Models to provide to children
-const availableModels = ref([
-  'Llama-4-Maverick-17B-128E-Instruct-FP8',
-  'GPT-4o',
-  'Claude-3-Opus'
-]);
-provide('availableModels', availableModels);
+function persistWorkspace() {
+  localStorage.setItem(openTabsStorageKey, JSON.stringify(openTabs.value));
+  localStorage.setItem(currentStepStorageKey, currentStep.value);
+}
+function restoreWorkspace() {
+  try {
+    const open = JSON.parse(localStorage.getItem(openTabsStorageKey));
+    const curr = localStorage.getItem(currentStepStorageKey);
+    if (Array.isArray(open) && open.length) openTabs.value = open;
+    if (curr && openTabs.value.includes(curr)) currentStep.value = curr;
+  } catch {}
+}
 
-// Fetch project details
+// --- LIFECYCLE ---
+onMounted(() => {
+  fetchProject();
+  restoreWorkspace();
+});
+
+// --- API ---
 const fetchProject = async () => {
   isLoading.value = true;
   try {
     const response = await api.get(`/project/${projectId.value}`);
     project.value = response.data;
-    editedProject.value = {
-      name: response.data.name,
-      description: response.data.description
-    };
   } catch (err) {
     error.value = 'Failed to load project details';
     console.error(err);
@@ -193,39 +216,48 @@ const fetchProject = async () => {
     isLoading.value = false;
   }
 };
+const refreshProject = () => fetchProject();
 
-// Save project edits
-const saveProjectEdits = async () => {
+// --- WORKFLOW & TAB LOGIC ---
+function handleStepChange(stepId) {
+  if (!openTabs.value.includes(stepId)) openTabs.value.push(stepId);
+  currentStep.value = stepId;
+  persistWorkspace();
+}
+function updateOpenTabs(tabs) {
+  openTabs.value = tabs;
+  if (!openTabs.value.includes(currentStep.value)) {
+    currentStep.value = openTabs.value[0] || defaultStep;
+  }
+  persistWorkspace();
+}
+function closeTab(tabId) {
+  if (openTabs.value.length <= 1) return;
+  const idx = openTabs.value.indexOf(tabId);
+  openTabs.value.splice(idx, 1);
+  if (currentStep.value === tabId) {
+    currentStep.value = openTabs.value[idx - 1] || openTabs.value[0];
+  }
+  persistWorkspace();
+}
+
+// --- PROJECT EDIT LOGIC ---
+const saveProjectEdits = async ({ name, description }) => {
   isSaving.value = true;
   try {
-    const response = await api.put(`/project/${projectId.value}`, editedProject.value);
+    const response = await api.put(`/project/${projectId.value}`, { name, description });
     project.value = response.data;
-    isEditing.value = false;
     toast.success('Project updated successfully');
+    showEditModal.value = false;
   } catch (err) {
     error.value = 'Failed to update project';
     toast.error('Failed to update project');
-    console.error(err);
   } finally {
     isSaving.value = false;
   }
 };
 
-// Cancel editing
-const cancelEditing = () => {
-  editedProject.value = {
-    name: project.value.name,
-    description: project.value.description
-  };
-  isEditing.value = false;
-};
-
-// Show delete confirmation
-const confirmDelete = () => {
-  showDeleteConfirmation.value = true;
-};
-
-// Delete project
+// --- DELETE LOGIC ---
 const deleteProject = async () => {
   try {
     await api.delete(`/project/${projectId.value}`);
@@ -233,18 +265,22 @@ const deleteProject = async () => {
     router.push('/projects');
   } catch (err) {
     toast.error('Failed to delete project');
-    console.error(err);
   } finally {
     showDeleteConfirmation.value = false;
   }
 };
 
-// Refresh project data
-const refreshProject = () => {
-  fetchProject();
-};
-
-onMounted(() => {
-  fetchProject();
-});
+// --- PROVIDE CONTEXT ---
+provide('projectId', projectId);
+provide('availableModels', ref([
+  'Llama-4-Maverick-17B-128E-Instruct-FP8',
+  'GPT-4o',
+  'Claude-3-Opus'
+]));
 </script>
+
+<style scoped>
+/* Modern motion for transitions */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+</style>

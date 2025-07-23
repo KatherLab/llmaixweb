@@ -379,10 +379,10 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { api } from '@/services/api';
+import { api } from '@/services/api.js';
 import { formatDate } from '@/utils/formatters.js';
 import { useToast } from 'vue-toastification';
-import JsonViewer from './JsonViewer.vue';
+import JsonViewer from '../JsonViewer.vue';
 import { marked } from 'marked';
 
 const props = defineProps({

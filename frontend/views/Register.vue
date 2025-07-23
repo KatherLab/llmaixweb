@@ -1,10 +1,17 @@
 <template>
-  <div class="w-full max-w-md">
+  <div class="w-full max-w-md mx-auto">
     <div class="mb-8 text-center">
       <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">LLMAIx-v2</h1>
       <p class="text-base text-gray-500 mt-2">Extract information from documents using LLMs.</p>
     </div>
+    <!-- Registration Closed Message -->
+    <div v-if="!allowRegister && !isLoadingSettings" class="p-8 bg-white border border-gray-100 rounded-xl text-center text-gray-500">
+      Registration is currently closed. Please use an invitation link.
+    </div>
+
+    <!-- Registration Form -->
     <form
+      v-else
       @submit.prevent="handleSubmit"
       class="bg-white border border-gray-200 rounded-xl p-8 shadow-sm flex flex-col gap-5"
       autocomplete="on"
@@ -102,14 +109,38 @@ const error = ref(null)
 const invitationToken = ref('')
 const isEmailFromInvitation = ref(false)
 
-onMounted(() => {
-  // Optional: handle pre-filled email from invitation
+const requireInvitation = ref(true) // Default: invitation required for safety
+const isLoadingSettings = ref(true)
+const allowRegister = computed(() =>
+  !requireInvitation.value || isEmailFromInvitation.value
+)
+
+onMounted(async () => {
+  // Fetch require_invitation from backend
+  try {
+    const res = await api.get('/settings')
+    requireInvitation.value = !!res.data.require_invitation
+  } catch (e) {
+    requireInvitation.value = true // safest default
+  } finally {
+    isLoadingSettings.value = false
+  }
+
+  // Handle invitation logic: validate token and fetch email from backend
   const token = route.query.token
-  const emailParam = route.query.email
-  if (token) invitationToken.value = token
-  if (emailParam) {
-    email.value = emailParam
-    isEmailFromInvitation.value = true
+  if (token) {
+    invitationToken.value = token
+    try {
+      const response = await api.get(`/user/validate-invitation/${token}`)
+      if (response.data && response.data.valid) {
+        email.value = response.data.email
+        isEmailFromInvitation.value = true
+      } else {
+        error.value = 'Invitation is invalid or has already been used'
+      }
+    } catch (err) {
+      error.value = 'Failed to validate invitation. It may be expired or invalid.'
+    }
   }
 })
 
@@ -143,7 +174,7 @@ async function handleSubmit() {
     formData.append('username', email.value)
     formData.append('password', password.value)
 
-    await api.post('/auth/login', formData, {
+    await api.post('/login', formData, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     })
 

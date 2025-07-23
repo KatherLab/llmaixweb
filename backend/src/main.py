@@ -46,11 +46,7 @@ async def root():
     return {"message": "Hello, hello!"}
 
 
-@app.get("/version")
-async def version():
-    return {"version": __version__, "description": "LLMAIx (v2) backend API"}
-
-
 @app.get("/api/v1/version")
+@app.get("/version")
 async def version_api():
     return {"version": __version__, "description": "LLMAIx (v2) backend API"}

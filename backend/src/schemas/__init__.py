@@ -43,12 +43,15 @@ from .project import (
     Trial,
     TrialCreate,
     TrialResult,
+    TrialUpdate,
 )
-from .user import InvitationInfo, InvitationResponse, User, UserCreate, UserResponse
+from .user import InvitationInfo, InvitationResponse, User, UserCreate, UserResponse, PasswordChange, PasswordSet
 
 __all__ = [
     "Token",
     "TokenPayload",
+    "PasswordChange",
+    "PasswordSet",
     "User",
     "UserCreate",
     "UserResponse",
@@ -80,6 +83,7 @@ __all__ = [
     "Trial",
     "TrialResult",
     "TrialCreate",
+    "TrialUpdate",
     "Schema",
     "SchemaCreate",
     "SchemaUpdate",

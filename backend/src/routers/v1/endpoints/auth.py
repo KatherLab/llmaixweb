@@ -1,4 +1,6 @@
+import asyncio
 from datetime import timedelta
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -11,21 +13,30 @@ from ....dependencies import get_db
 
 router = APIRouter()
 
+@router.get("/settings")
+def get_settings():
+    return {
+        "require_invitation": settings.REQUIRE_INVITATION
+    }
+
 
 @router.post("/login", response_model=schemas.Token)
+@router.post("/api/v1/login", response_model=schemas.Token)
 def login(
     db: Session = Depends(get_db),
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> schemas.Token:
     """OAuth2 compatible token login, get an access token for future requests."""
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, str(user.hashed_password)):
+    if not user or not verify_password(form_data.password, str(user.hashed_password)):#
+        time.sleep(0.5)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     elif not user.is_active:
+        time.sleep(0.5)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user"
         )

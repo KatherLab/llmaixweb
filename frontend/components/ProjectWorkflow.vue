@@ -1,97 +1,84 @@
-<!-- src/components/ProjectWorkflow.vue -->
 <template>
-  <div class="w-full">
-    <div class="flex flex-col space-y-4 sm:hidden">
-      <label for="current-step" class="sr-only">Select a step</label>
-      <select
-        id="current-step"
-        v-model="selectedStep"
-        @change="$emit('change-step', selectedStep)"
-        class="block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+  <nav class="w-full flex flex-col items-center py-2" aria-label="Workflow">
+    <ol class="flex w-full max-w-5xl justify-between items-center relative">
+      <li
+        v-for="(step, idx) in steps"
+        :key="step.id"
+        class="relative flex-1 flex flex-col items-center group"
       >
-        <option v-for="step in steps" :key="step.id" :value="step.id">{{ step.name }}</option>
-      </select>
-    </div>
-
-    <nav class="hidden sm:flex" aria-label="Project workflow">
-      <ol class="flex items-center w-full">
-        <li
-          v-for="(step, index) in steps"
-          :key="step.id"
+        <!-- Horizontal connector bar, except for the first step -->
+        <div
+          v-if="idx > 0"
+          class="absolute left-0 top-1/2 h-0.5 w-1/2"
           :class="[
-            'relative flex items-center',
-            index < steps.length - 1 ? 'pr-8 w-full' : ''
+            idx <= currentIdx ? 'bg-blue-400' : 'bg-gray-200'
+          ]"
+          style="transform: translateY(-50%); z-index: 0;"
+        ></div>
+        <div
+          v-if="idx < steps.length - 1"
+          class="absolute right-0 top-1/2 h-0.5 w-1/2"
+          :class="[
+            idx < currentIdx ? 'bg-blue-400' : 'bg-gray-200'
+          ]"
+          style="transform: translateY(-50%); z-index: 0;"
+        ></div>
+
+        <!-- Step circle -->
+        <button
+          @click="$emit('change-step', step.id)"
+          class="relative z-10 flex items-center justify-center w-11 h-11 rounded-full border-2 transition-all duration-200
+            focus:outline-none focus:ring-2 focus:ring-blue-400"
+          :class="[
+            idx < currentIdx
+              ? 'bg-blue-50 border-blue-300 shadow-sm'
+              : idx === currentIdx
+                ? 'bg-white border-blue-500 shadow ring-2 ring-blue-200 scale-105'
+                : 'bg-white border-gray-300 shadow'
           ]"
         >
-          <div
-            class="flex items-center"
-            :class="{ 'group': step.id !== currentStep }"
-            @click="$emit('change-step', step.id)"
-          >
-            <span
-              class="flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium"
-              :class="[
-                step.id === currentStep
-                  ? 'bg-blue-600 text-white'
-                  : isStepComplete(index)
-                    ? 'bg-blue-100 text-blue-600 group-hover:bg-blue-200'
-                    : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
-              ]"
-            >
-              <span v-if="isStepComplete(index) && step.id !== currentStep">
-                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-              </span>
-              <span v-else>{{ index + 1 }}</span>
-            </span>
-            <span
-              class="ml-3 text-sm font-medium cursor-pointer"
-              :class="[
-                step.id === currentStep
-                  ? 'text-blue-600'
-                  : isStepComplete(index)
-                    ? 'text-blue-600 group-hover:text-blue-800'
-                    : 'text-gray-500 group-hover:text-gray-700'
-              ]"
-            >
-              {{ step.name }}
-            </span>
-          </div>
-
-          <div v-if="index < steps.length - 1" class="hidden sm:block w-full bg-gray-200 h-0.5 ml-4"></div>
-        </li>
-      </ol>
-    </nav>
-  </div>
+          <!-- Checkmark for completed -->
+          <span v-if="idx < currentIdx" class="text-blue-500">
+            <svg class="w-5 h-5" viewBox="0 0 20 20" fill="none"><path d="M6 10.5l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <!-- Step number -->
+          <span v-else class="text-base font-bold"
+                :class="idx === currentIdx ? 'text-blue-600' : 'text-blue-400'">
+            {{ idx + 1 }}
+          </span>
+        </button>
+        <!-- Step name -->
+        <div class="mt-1 text-xs font-semibold leading-tight text-center"
+            :class="[
+              idx === currentIdx ? 'text-blue-600'
+                : idx < currentIdx ? 'text-blue-400'
+                : 'text-gray-400'
+            ]">
+          {{ step.name }}
+        </div>
+      </li>
+    </ol>
+  </nav>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
-  currentStep: {
-    type: String,
-    default: 'files'
-  }
+  currentStep: { type: String, required: true }
 });
-
-defineEmits(['change-step']);
+const emit = defineEmits(['change-step']);
 
 const steps = [
   { id: 'files', name: 'Upload Files' },
-  { id: 'preprocessing', name: 'Preprocess Files' },
+  { id: 'preprocessing', name: 'Preprocess' },
   { id: 'documents', name: 'Documents' },
-  { id: 'schemas', name: 'Schemas & Prompts' },
+  { id: 'schemas', name: 'Schemas' },
   { id: 'trials', name: 'Run Trials' },
   { id: 'evaluation', name: 'Evaluation' }
 ];
 
-const selectedStep = ref(props.currentStep);
-
-// Determine which steps are "complete" based on the current step
-const isStepComplete = (stepIndex) => {
-  const currentStepIndex = steps.findIndex(step => step.id === props.currentStep);
-  return stepIndex < currentStepIndex;
-};
+const currentIdx = computed(() =>
+  steps.findIndex(s => s.id === props.currentStep)
+);
 </script>

@@ -330,6 +330,8 @@ class TrialStatus(str, enum.Enum):
 class Trial(Base):
     __tablename__ = "trials"
     id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=True)
+    description: Mapped[str] = mapped_column(String(512), nullable=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"), nullable=False)
     prompt_id: Mapped[str] = mapped_column(ForeignKey("prompts.id"), nullable=False)

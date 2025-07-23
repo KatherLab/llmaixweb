@@ -5,11 +5,67 @@ from sqlalchemy.orm import Session
 
 from .... import models, schemas
 from ....core.config import settings
-from ....core.security import get_admin_user, get_current_user, get_password_hash
+from ....core.security import (
+    get_admin_user,
+    get_current_user,
+    get_password_hash,
+    verify_password,
+)
 from ....dependencies import get_db
+from ....schemas import PasswordSet
 from ....utils.enums import UserRole
 
 router = APIRouter()
+
+
+from fastapi import Body
+
+@router.post("/change-password", response_model=schemas.UserResponse)
+def change_password(
+    password_data: schemas.PasswordChange,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.UserResponse:
+    # Verify old password
+    if not verify_password(password_data.old_password, str(current_user.hashed_password)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Old password is incorrect.",
+        )
+    if password_data.old_password == password_data.new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from the old password.",
+        )
+    current_user.hashed_password = get_password_hash(password_data.new_password)
+    db.commit()
+    db.refresh(current_user)
+    return schemas.UserResponse.model_validate(current_user)
+
+
+@router.post("/{user_id}/set-password", response_model=schemas.UserResponse)
+def admin_set_user_password(
+    user_id: int = Path(...),
+    password_data: PasswordSet = Body(...),
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+) -> schemas.UserResponse:
+    """Set a new password for any user (admin only)."""
+    user = db.get(models.User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    if user.role == UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change password of other admin users",
+        )
+    user.hashed_password = get_password_hash(password_data.new_password)
+    db.commit()
+    db.refresh(user)
+    return schemas.UserResponse.model_validate(user)
 
 
 @router.post("", response_model=schemas.UserResponse)
@@ -17,14 +73,6 @@ def create_user(
     user_in: schemas.UserCreate,
     db: Session = Depends(get_db),
 ) -> schemas.UserResponse:
-    # Check if user already exists
-    user = db.query(models.User).filter(models.User.email == user_in.email).first()
-    if user:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this email already exists in the system.",
-        )
-
     # Prevent creating admin users via API
     if user_in.role == UserRole.admin:
         raise HTTPException(
@@ -38,7 +86,7 @@ def create_user(
         if not user_in.invitation_token:
             raise HTTPException(
                 status_code=400,
-                detail="Invitation token is required for registration.",
+                detail="Unable to create account. Please check your invitation and try again.",
             )
 
         # Validate invitation token
@@ -53,19 +101,37 @@ def create_user(
         if not invitation:
             raise HTTPException(
                 status_code=400,
-                detail="Invalid or expired invitation token.",
+                detail="Unable to create account. Please check your invitation and try again.",
             )
 
         # Optional: Check if the email matches the invitation (if provided)
         if invitation.email and invitation.email != user_in.email:
             raise HTTPException(
                 status_code=400,
-                detail="Email does not match the invitation.",
+                detail="Unable to create account. Please check your invitation and try again.",
+            )
+
+        # Check if user already exists (only after invitation checks)
+        user = db.query(models.User).filter(models.User.email == user_in.email).first()
+        if user:
+            raise HTTPException(
+                status_code=400,
+                detail="Unable to create account. Please check your invitation and try again.",
             )
 
         # Mark the invitation as used
         invitation.is_used = True
         db.add(invitation)
+
+    else:
+        # Open registration mode
+        user = db.query(models.User).filter(models.User.email == user_in.email).first()
+        if user:
+            # Still use a generic error
+            raise HTTPException(
+                status_code=400,
+                detail="Unable to create account. Please check your input and try again.",
+            )
 
     # Create the user
     user = models.User(
@@ -79,6 +145,7 @@ def create_user(
     db.commit()
     db.refresh(user)
     return schemas.UserResponse.model_validate(user)
+
 
 
 @router.get("", response_model=list[schemas.UserResponse])

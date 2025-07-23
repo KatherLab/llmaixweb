@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from ..utils.enums import UserRole
 
@@ -21,13 +21,22 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=8, max_length=128)
     full_name: str
     invitation_token: str | None = None
 
 
 class UserUpdate(UserBase):
-    password: str | None = None
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+
+
+class PasswordChange(BaseModel):
+    old_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+class PasswordSet(BaseModel):
+    new_password: str = Field(..., min_length=8, max_length=128)
 
 
 class UserResponse(BaseModel):

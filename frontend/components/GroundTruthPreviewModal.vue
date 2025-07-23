@@ -2,7 +2,6 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
-import JsonViewer from '@/components/JsonViewer.vue';
 
 const props = defineProps({
   projectId: {

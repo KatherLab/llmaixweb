@@ -19,6 +19,7 @@ from fastapi import (
 from fastapi.responses import Response, StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy import and_, delete, distinct, func, or_, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 from starlette import status
 from thefuzz import fuzz
@@ -1585,6 +1586,7 @@ def get_document(
     return schemas.Document.model_validate(document)
 
 
+
 @router.delete("/{project_id}/document/{document_id}")
 def delete_document(
     *,
@@ -1593,7 +1595,7 @@ def delete_document(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Delete a specific document."""
+    """Delete a specific document, only if not used in any trial, trial result, or evaluation metric."""
     check_project_access(project_id, current_user, db, "write")
 
     document = db.execute(
@@ -1605,14 +1607,48 @@ def delete_document(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # Check if document is part of any document sets
+    # --- NEW: Check for usage in any trial (document_ids is a JSON list) ---
+    trials_with_doc = db.execute(
+        select(models.Trial)
+        .where(
+            models.Trial.project_id == project_id,
+            models.Trial.document_ids.contains([document_id]),
+        )
+    ).scalars().first()
+    if trials_with_doc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Document is referenced in trial '{trials_with_doc.name or trials_with_doc.id}'. Remove from trial(s) first."
+        )
+
+    # --- Check if document is used in any trial results ---
+    trial_result = db.execute(
+        select(models.TrialResult).where(models.TrialResult.document_id == document_id)
+    ).scalar_one_or_none()
+    if trial_result:
+        raise HTTPException(
+            status_code=400,
+            detail="Document is referenced in a trial result. Remove results/trials first."
+        )
+
+    # --- (Optional) Check if document is used in any evaluation metric ---
+    metric = db.execute(
+        select(models.EvaluationMetric).where(models.EvaluationMetric.document_id == document_id)
+    ).scalar_one_or_none()
+    if metric:
+        raise HTTPException(
+            status_code=400,
+            detail="Document is referenced in evaluation metrics. Remove related evaluation/trial first."
+        )
+
+    # --- Existing check: Document sets ---
     if document.document_sets:
         raise HTTPException(
             status_code=400,
             detail=f"Document is part of {len(document.document_sets)} document sets. Remove from sets first.",
         )
 
-    # Delete preprocessed file if exists and not used by other documents
+    # --- Preprocessed file deletion logic as before ---
     if document.preprocessed_file_id:
         other_docs_using_file = db.execute(
             select(models.Document).where(
@@ -1622,16 +1658,13 @@ def delete_document(
         ).scalar_one_or_none()
 
         if not other_docs_using_file:
-            # Safe to delete preprocessed file
             preprocessed_file = db.get(models.File, document.preprocessed_file_id)
             if preprocessed_file:
                 try:
                     from ....dependencies import remove_file
-
                     remove_file(preprocessed_file.file_uuid)
                     db.delete(preprocessed_file)
                 except Exception as e:
-                    # Log error but continue
                     print(f"Error deleting preprocessed file: {e}")
 
     db.delete(document)
@@ -2428,8 +2461,10 @@ def create_trial(
 
     # 4. Create trial object
     trial_db = models.Trial(
+        name=trial.name,
+        description=trial.description,
         schema_id=trial.schema_id,
-        prompt_id=trial.prompt_id,
+        prompt_id=str(trial.prompt_id),
         project_id=project_id,
         llm_model=llm_model,
         api_key=api_key,
@@ -2440,7 +2475,6 @@ def create_trial(
         else None,
         bypass_celery=trial.bypass_celery,
         advanced_options=trial.advanced_options or {},
-        # Add other trial fields as needed...
     )
 
     db.add(trial_db)
@@ -2495,6 +2529,55 @@ def create_trial(
     return schemas.Trial.model_validate(trial_db)
 
 
+@router.patch("/{project_id}/trial/{trial_id}", response_model=schemas.Trial)
+def update_trial(
+    project_id: int,
+    trial_id: int,
+    trial_update: schemas.TrialUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # 1. Project existence and permission check
+    project = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to update trials for this project"
+        )
+
+    # 2. Trial existence check
+    trial = db.execute(
+        select(models.Trial).where(
+            models.Trial.project_id == project_id,
+            models.Trial.id == trial_id
+        )
+    ).scalar_one_or_none()
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+
+    # 3. Update allowed fields
+    updated = False
+    if trial_update.name is not None:
+        trial.name = trial_update.name
+        updated = True
+    if trial_update.description is not None:
+        trial.description = trial_update.description
+        updated = True
+
+    if not updated:
+        raise HTTPException(
+            status_code=400, detail="No updatable fields provided"
+        )
+
+    db.commit()
+    db.refresh(trial)
+    return schemas.Trial.model_validate(trial)
+
+
 @router.delete("/{project_id}/trial/{trial_id}", response_model=schemas.Trial)
 def delete_trial(
     project_id: int,
@@ -2502,6 +2585,7 @@ def delete_trial(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.Trial:
+    # Project and permission checks
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
@@ -2512,32 +2596,41 @@ def delete_trial(
             status_code=403, detail="Not authorized to delete trials for this project"
         )
 
+    # Fetch the trial
     trial: models.Trial | None = db.execute(
         select(models.Trial).where(
             models.Trial.project_id == project_id, models.Trial.id == trial_id
         )
     ).scalar_one_or_none()
-
     if not trial:
         raise HTTPException(status_code=404, detail="Trial not found")
 
-    # Check if the trial has results
-    results = (
-        db.execute(
+    # --- SERIALIZE before delete ---
+    trial_data = schemas.Trial.model_validate(trial)
+
+    try:
+        # Delete all evaluations (and their metrics, via cascade)
+        evaluations = db.execute(
+            select(models.Evaluation).where(models.Evaluation.trial_id == trial_id)
+        ).scalars().all()
+        for evaluation in evaluations:
+            db.delete(evaluation)
+
+        # Delete all trial results for this trial
+        results = db.execute(
             select(models.TrialResult).where(models.TrialResult.trial_id == trial_id)
-        )
-        .scalars()
-        .all()
-    )
-    if results:
-        raise HTTPException(
-            status_code=400, detail="Cannot delete trial with existing results"
-        )
+        ).scalars().all()
+        for result in results:
+            db.delete(result)
 
-    db.delete(trial)
-    db.commit()
+        # Delete the trial itself
+        db.delete(trial)
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error during deletion: {e}")
 
-    return schemas.Trial.model_validate(trial)
+    return trial_data
 
 
 @router.get("/{project_id}/trial", response_model=list[schemas.Trial])
