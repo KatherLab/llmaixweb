@@ -18,6 +18,10 @@ const props = defineProps({
   schemas: {
     type: Array,
     required: true
+  },
+  prompts: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -25,13 +29,16 @@ const emit = defineEmits(['close', 'create']);
 
 const trialData = ref({
   schema_id: '',
+  prompt_id: '',
   document_ids: [],
   llm_model: '',
   api_key: '',
-  base_url: ''
+  base_url: '',
+  advanced_options: {}
 });
 
 const advancedOptionsVisible = ref(false);
+const advancedSettingsVisible = ref(false);
 const searchTerm = ref('');
 const availableModels = ref([]);
 const isLoadingModels = ref(false);
@@ -45,6 +52,9 @@ const systemConfigError = ref(null);
 const customConfigError = ref(null);
 const modelTestError = ref(null);
 const hasSystemConfig = ref(true);
+
+// Advanced options
+const maxCompletionTokens = ref('');
 
 // Test connection first, then load models
 const testAndLoadModels = async (apiKey = '', baseUrl = '') => {
@@ -174,10 +184,15 @@ const resetModelTest = () => {
   modelTestError.value = null;
 };
 
-// Test specific model - MANDATORY before submission
+// Test specific model with schema - MANDATORY before submission
 const testSelectedModel = async () => {
   if (!trialData.value.llm_model) {
     toast.error('Please select a model first');
+    return;
+  }
+
+  if (!trialData.value.schema_id) {
+    toast.error('Please select a schema first');
     return;
   }
 
@@ -188,7 +203,8 @@ const testSelectedModel = async () => {
 
   try {
     const params = {
-      llm_model: trialData.value.llm_model
+      llm_model: trialData.value.llm_model,
+      schema_id: parseInt(trialData.value.schema_id)
     };
 
     if (trialData.value.api_key.trim()) {
@@ -198,8 +214,8 @@ const testSelectedModel = async () => {
       params.base_url = trialData.value.base_url.trim();
     }
 
-    console.log('Testing model with params:', params);
-    const response = await api.post('/project/llm/test-model', null, { params });
+    console.log('Testing model with schema, params:', params);
+    const response = await api.post('/project/llm/test-model-schema', null, { params });
 
     console.log('Model test response:', response.data);
 
@@ -207,13 +223,15 @@ const testSelectedModel = async () => {
 
     if (response.data.success) {
       modelValid.value = true;
-      toast.success(`Model '${trialData.value.llm_model}' is available and working!`);
+      toast.success(`Model '${trialData.value.llm_model}' supports structured output with the selected schema!`);
     } else {
       modelValid.value = false;
       modelTestError.value = response.data.message || 'Model test failed';
 
-      if (response.data.error_type === 'model_not_found') {
-        toast.error(`Model '${trialData.value.llm_model}' is not available. Please select a different model.`);
+      if (response.data.error_type === 'structured_output_not_supported') {
+        toast.error(`Model '${trialData.value.llm_model}' does not support structured output. Please select a different model.`);
+      } else if (response.data.error_type === 'schema_validation_error') {
+        toast.error(`Schema validation failed: ${response.data.message}`);
       } else {
         toast.error(response.data.message || 'Model test failed');
       }
@@ -237,10 +255,12 @@ const initializeForm = () => {
 
   trialData.value = {
     schema_id: props.schemas.length > 0 ? props.schemas[0].id.toString() : '',
+    prompt_id: props.prompts.length > 0 ? props.prompts[0].id.toString() : '',
     document_ids: [],
     llm_model: '',
     api_key: '',
-    base_url: ''
+    base_url: '',
+    advanced_options: {}
   };
 
   searchTerm.value = '';
@@ -250,6 +270,8 @@ const initializeForm = () => {
   customConfigError.value = null;
   hasSystemConfig.value = true;
   availableModels.value = [];
+  advancedSettingsVisible.value = false;
+  maxCompletionTokens.value = '';
   resetModelTest();
 
   // Always test connection and load models when modal opens
@@ -288,9 +310,9 @@ watch([() => trialData.value.api_key, () => trialData.value.base_url], () => {
   }
 });
 
-// Watch for model selection changes - reset model test when model changes
-watch(() => trialData.value.llm_model, (newModel, oldModel) => {
-  if (newModel !== oldModel) {
+// Watch for model or schema selection changes - reset model test when either changes
+watch([() => trialData.value.llm_model, () => trialData.value.schema_id], ([newModel, newSchema], [oldModel, oldSchema]) => {
+  if (newModel !== oldModel || newSchema !== oldSchema) {
     resetModelTest();
   }
 });
@@ -310,6 +332,11 @@ const filteredDocuments = computed(() => {
 const selectedSchema = computed(() => {
   if (!trialData.value.schema_id) return null;
   return props.schemas.find(schema => schema.id.toString() === trialData.value.schema_id);
+});
+
+const selectedPrompt = computed(() => {
+  if (!trialData.value.prompt_id) return null;
+  return props.prompts.find(prompt => prompt.id.toString() === trialData.value.prompt_id);
 });
 
 // Check if custom API settings are provided
@@ -335,6 +362,7 @@ const hasValidConfig = computed(() => {
 // Form validation - NOW REQUIRES MODEL TESTING
 const isFormValid = computed(() => {
   const basicValidation = trialData.value.schema_id &&
+                         trialData.value.prompt_id &&
                          trialData.value.document_ids.length > 0 &&
                          trialData.value.llm_model &&
                          availableModels.value.length > 0;
@@ -389,23 +417,23 @@ const configStatus = computed(() => {
 
 // Get model test status
 const modelTestStatus = computed(() => {
-  if (!trialData.value.llm_model) {
-    return { type: 'none', message: 'Select a model first' };
+  if (!trialData.value.llm_model || !trialData.value.schema_id) {
+    return { type: 'none', message: 'Select a model and schema first' };
   }
 
   if (isTestingModel.value) {
-    return { type: 'loading', message: 'Testing model availability...' };
+    return { type: 'loading', message: 'Testing model with schema...' };
   }
 
   if (!modelTested.value) {
-    return { type: 'warning', message: 'Model must be tested before creating trial' };
+    return { type: 'warning', message: 'Model must be tested with schema before creating trial' };
   }
 
   if (!modelValid.value) {
     return { type: 'error', message: modelTestError.value || 'Model test failed' };
   }
 
-  return { type: 'success', message: `Model '${trialData.value.llm_model}' is available` };
+  return { type: 'success', message: `Model '${trialData.value.llm_model}' supports the selected schema` };
 });
 
 // Toggle document selection
@@ -432,13 +460,14 @@ const clearDocumentSelection = () => {
 const handleSubmit = () => {
   if (!isFormValid.value) {
     if (!modelTested.value || !modelValid.value) {
-      toast.error('Please test the selected model before creating the trial');
+      toast.error('Please test the selected model with the schema before creating the trial');
     }
     return;
   }
 
   const formData = {
     schema_id: parseInt(trialData.value.schema_id),
+    prompt_id: parseInt(trialData.value.prompt_id),
     document_ids: trialData.value.document_ids,
     llm_model: trialData.value.llm_model
   };
@@ -449,6 +478,16 @@ const handleSubmit = () => {
   }
   if (trialData.value.base_url.trim()) {
     formData.base_url = trialData.value.base_url.trim();
+  }
+
+  // Add advanced options if any are set
+  const advancedOptions = {};
+  if (maxCompletionTokens.value && parseInt(maxCompletionTokens.value) > 0) {
+    advancedOptions.max_completion_tokens = parseInt(maxCompletionTokens.value);
+  }
+
+  if (Object.keys(advancedOptions).length > 0) {
+    formData.advanced_options = advancedOptions;
   }
 
   emit('create', formData);
@@ -493,7 +532,7 @@ const handleSubmit = () => {
               </svg>
               <!-- Warning icon -->
               <svg v-else-if="configStatus.type === 'warning'" class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 3 1.732 3z" />
               </svg>
               <!-- Error icon -->
               <svg v-else-if="configStatus.type === 'error'" class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -521,13 +560,54 @@ const handleSubmit = () => {
           </div>
         </div>
 
+        <!-- Prompt Selection (NEW) -->
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Select Prompt <span class="text-red-500">*</span>
+          </label>
+          <select
+            v-model="trialData.prompt_id"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            @change="resetModelTest"
+          >
+            <option value="" disabled>Select a prompt</option>
+            <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id.toString()">
+              {{ prompt.name }}
+            </option>
+          </select>
+
+          <!-- Prompt Preview -->
+          <div v-if="selectedPrompt" class="mt-2 p-3 bg-gray-50 rounded-md text-sm">
+            <div v-if="selectedPrompt.description" class="text-gray-600 mb-2">
+              {{ selectedPrompt.description }}
+            </div>
+            <details class="cursor-pointer">
+              <summary class="font-medium text-gray-700 hover:text-gray-900">View prompt content</summary>
+              <div class="mt-2 space-y-2">
+                <div v-if="selectedPrompt.system_prompt">
+                  <span class="font-medium text-gray-600">System:</span>
+                  <pre class="mt-1 text-xs bg-white p-2 rounded border overflow-auto max-h-24">{{ selectedPrompt.system_prompt }}</pre>
+                </div>
+                <div v-if="selectedPrompt.user_prompt">
+                  <span class="font-medium text-gray-600">User:</span>
+                  <pre class="mt-1 text-xs bg-white p-2 rounded border overflow-auto max-h-24">{{ selectedPrompt.user_prompt }}</pre>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
         <!-- Schema Selection -->
         <div class="mb-6">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Select Schema</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Select Schema <span class="text-red-500">*</span>
+          </label>
           <select
             v-model="trialData.schema_id"
             class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            @change="resetModelTest"
           >
+            <option value="" disabled>Select a schema</option>
             <option v-for="schema in schemas" :key="schema.id" :value="schema.id.toString()">
               {{ schema.schema_name }}
             </option>
@@ -542,7 +622,9 @@ const handleSubmit = () => {
 
         <!-- Model Selection -->
         <div class="mb-6">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Select LLM Model</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Select LLM Model <span class="text-red-500">*</span>
+          </label>
           <div class="relative">
             <select
               v-model="trialData.llm_model"
@@ -567,7 +649,7 @@ const handleSubmit = () => {
         </div>
 
         <!-- Model Test Section - MANDATORY -->
-        <div v-if="trialData.llm_model && hasValidConfig" class="mb-6">
+        <div v-if="trialData.llm_model && trialData.schema_id && hasValidConfig" class="mb-6">
           <div
             :class="[
               'p-4 rounded-md border',
@@ -589,7 +671,7 @@ const handleSubmit = () => {
                 </svg>
                 <!-- Warning icon -->
                 <svg v-else-if="modelTestStatus.type === 'warning'" class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 3 1.732 3z" />
                 </svg>
                 <!-- Error icon -->
                 <svg v-else-if="modelTestStatus.type === 'error'" class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -605,7 +687,7 @@ const handleSubmit = () => {
                 </svg>
 
                 <div>
-                  <h4 class="font-medium text-gray-900">Model Availability Test</h4>
+                  <h4 class="font-medium text-gray-900">Model & Schema Compatibility Test</h4>
                   <p
                     :class="[
                       'text-sm',
@@ -625,7 +707,7 @@ const handleSubmit = () => {
 
               <button
                 @click="testSelectedModel"
-                :disabled="isTestingModel || !trialData.llm_model"
+                :disabled="isTestingModel || !trialData.llm_model || !trialData.schema_id"
                 class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <svg v-if="isTestingModel" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
@@ -638,13 +720,55 @@ const handleSubmit = () => {
 
             <div v-if="modelTestStatus.type === 'warning'" class="mt-3 p-3 bg-yellow-100 border border-yellow-200 rounded-md">
               <p class="text-yellow-800 text-sm">
-                <strong>Required:</strong> You must test the selected model to ensure it's available before creating a trial.
+                <strong>Required:</strong> You must test the selected model with the schema to ensure compatibility before creating a trial.
               </p>
             </div>
           </div>
         </div>
 
-        <!-- Advanced Options Toggle -->
+        <!-- Advanced Settings Section (NEW) -->
+        <div class="mb-6">
+          <button
+            @click="advancedSettingsVisible = !advancedSettingsVisible"
+            class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+          >
+            {{ advancedSettingsVisible ? 'Hide advanced settings' : 'Show advanced settings' }}
+            <span class="ml-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 transition-transform"
+                :class="{ 'rotate-180': advancedSettingsVisible }"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+          </button>
+
+          <!-- Advanced Settings Content -->
+          <div v-if="advancedSettingsVisible" class="mt-3 bg-gray-50 p-4 rounded-md space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Max Completion Tokens
+                <span class="text-gray-500 font-normal">(optional)</span>
+              </label>
+              <input
+                v-model="maxCompletionTokens"
+                type="number"
+                min="1"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g., 4096"
+              />
+              <p class="mt-1 text-xs text-gray-500">
+                Limit the maximum tokens for model responses. Leave empty to use model defaults.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom API Options Toggle -->
         <div class="mb-6">
           <button
             @click="advancedOptionsVisible = !advancedOptionsVisible"
@@ -698,7 +822,9 @@ const handleSubmit = () => {
         <!-- Document Selection -->
         <div class="mb-6">
           <div class="flex justify-between items-center mb-2">
-            <label class="block text-sm font-medium text-gray-700">Select Documents</label>
+            <label class="block text-sm font-medium text-gray-700">
+              Select Documents <span class="text-red-500">*</span>
+            </label>
             <span class="text-sm text-gray-500">{{ trialData.document_ids.length }} selected</span>
           </div>
           <div class="flex gap-2 mb-2">
@@ -764,7 +890,7 @@ const handleSubmit = () => {
           @click="handleSubmit"
           class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md disabled:bg-blue-300 disabled:cursor-not-allowed"
           :disabled="!isFormValid"
-          :title="!isFormValid ? 'Please ensure all fields are filled, model is tested, and configuration is valid' : ''"
+          :title="!isFormValid ? 'Please ensure all required fields are filled, model is tested with schema, and configuration is valid' : ''"
         >
           Start Trial
         </button>

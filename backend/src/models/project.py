@@ -69,6 +69,9 @@ class Project(Base):
     schemas: Mapped[list["Schema"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    prompts: Mapped[list["Prompt"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
     preprocessing_tasks: Mapped[list["PreprocessingTask"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
@@ -258,6 +261,25 @@ class DocumentSet(Base):
     )
 
 
+class Prompt(Base):
+    __tablename__ = "prompts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    system_prompt: Mapped[str] = mapped_column(String, nullable=True)
+    user_prompt: Mapped[str] = mapped_column(String, nullable=True)
+
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    project: Mapped["Project"] = relationship(back_populates="prompts")
+    trials: Mapped[list["Trial"]] = relationship(back_populates="prompt")
+
+
 class Schema(Base):
     __tablename__ = "schemas"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -287,6 +309,7 @@ class Trial(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"), nullable=False)
+    prompt_id: Mapped[str] = mapped_column(ForeignKey("prompts.id"), nullable=False)
     document_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
     document_set: Mapped["DocumentSet"] = relationship(
         back_populates="trial", uselist=False
@@ -299,6 +322,9 @@ class Trial(Base):
     api_key: Mapped[str] = mapped_column(String(100), nullable=False)
     base_url: Mapped[str] = mapped_column(String(100), nullable=False)
     bypass_celery: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    advanced_options: Mapped[dict] = mapped_column(JSON, nullable=True, default=dict)
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -307,6 +333,7 @@ class Trial(Base):
     )
     project: Mapped["Project"] = relationship(back_populates="trials")
     schema: Mapped["Schema"] = relationship(back_populates="trials")
+    prompt: Mapped["Prompt"] = relationship(back_populates="trials")
     results: Mapped[list["TrialResult"]] = relationship(
         back_populates="trial", cascade="all, delete-orphan"
     )

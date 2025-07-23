@@ -167,13 +167,46 @@ class Schema(SchemaBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PromptBase(UTCModel):
+    name: str | None = None
+    description: str | None = None
+    system_prompt: str | None = None
+    user_prompt: str | None = None
+
+
+class PromptCreate(PromptBase):
+    name: str
+    project_id: int
+    description: str | None = None
+    system_prompt: str | None = None
+    user_prompt: str | None = None
+
+
+class PromptUpdate(PromptBase):
+    name: str | None = None
+    description: str | None = None
+    system_prompt: str | None = None
+    user_prompt: str | None = None
+
+
+class Prompt(PromptBase):
+    id: int
+    project_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TrialBase(UTCModel):
     schema_id: int
+    prompt_id: int  # Add this field
     document_ids: list[int]
     llm_model: str | None = settings.OPENAI_API_MODEL
     api_key: str | None = settings.OPENAI_API_KEY
     base_url: str | None = settings.OPENAI_API_BASE
     bypass_celery: bool = False
+    advanced_options: dict | None = None
 
 
 class TrialCreate(TrialBase):
@@ -187,7 +220,10 @@ class Trial(TrialBase):
     created_at: datetime
     updated_at: datetime
     results: list[TrialResult] = []
+    prompt: Prompt | None = None
+    advanced_options: dict | None = None
     model_config = ConfigDict(from_attributes=True)
+
 
 
 class TrialResultBase(UTCModel):

@@ -33,13 +33,13 @@ from ....dependencies import (
     calculate_file_hash,
 )
 from ....utils.enums import FileCreator, FileType, PreprocessingStrategy
-from ....utils.helpers import extract_field_types_from_schema
+from ....utils.helpers import extract_field_types_from_schema, validate_prompt
 from ....utils.info_extraction import (
     get_available_models,
     test_api_connection,
     test_llm_connection,
+    test_model_with_schema,
 )
-from ....utils.preprocessing import find_matching_configuration
 
 router = APIRouter()
 
@@ -1790,6 +1790,170 @@ def delete_schema(
     return schemas.Schema.model_validate(schema)
 
 
+@router.post("/{project_id}/prompt", response_model=schemas.Prompt)
+def create_prompt(
+    project_id: int,
+    prompt: schemas.PromptCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Prompt:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to create prompts for this project"
+        )
+
+    # Validate prompt
+    validate_prompt(prompt)
+
+    prompt_db = models.Prompt(**prompt.model_dump(exclude={"project_id"}), project_id=project_id)
+    db.add(prompt_db)
+    db.commit()
+    db.refresh(prompt_db)
+    return schemas.Prompt.model_validate(prompt_db)
+
+
+@router.get("/{project_id}/prompt", response_model=list[schemas.Prompt])
+def get_prompts(
+    project_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[schemas.Prompt]:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's prompts"
+        )
+
+    prompts_list = list(
+        db.execute(select(models.Prompt).where(models.Prompt.project_id == project_id))
+        .scalars()
+        .all()
+    )
+    return [schemas.Prompt.model_validate(prompt) for prompt in prompts_list]
+
+
+@router.get("/{project_id}/prompt/{prompt_id}", response_model=schemas.Prompt)
+def get_prompt(
+    project_id: int,
+    prompt_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Prompt:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's prompts"
+        )
+
+    prompt: models.Prompt | None = db.execute(
+        select(models.Prompt).where(
+            models.Prompt.project_id == project_id, models.Prompt.id == prompt_id
+        )
+    ).scalar_one_or_none()
+    if not prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+    return schemas.Prompt.model_validate(prompt)
+
+
+@router.put("/{project_id}/prompt/{prompt_id}", response_model=schemas.Prompt)
+def update_prompt(
+    project_id: int,
+    prompt_id: int,
+    prompt: schemas.PromptUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Prompt:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to update prompts for this project"
+        )
+
+    existing_prompt: models.Prompt | None = db.execute(
+        select(models.Prompt).where(
+            models.Prompt.project_id == project_id, models.Prompt.id == prompt_id
+        )
+    ).scalar_one_or_none()
+    if not existing_prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+
+    # Create a temporary object to validate
+    temp_prompt = schemas.PromptUpdate(
+        system_prompt=prompt.system_prompt
+        if prompt.system_prompt is not None
+        else existing_prompt.system_prompt,
+        user_prompt=prompt.user_prompt
+        if prompt.user_prompt is not None
+        else existing_prompt.user_prompt,
+    )
+    validate_prompt(temp_prompt)
+
+    for key, value in prompt.model_dump(exclude_unset=True).items():
+        setattr(existing_prompt, key, value)
+
+    db.add(existing_prompt)
+    db.commit()
+    db.refresh(existing_prompt)
+
+    return schemas.Prompt.model_validate(existing_prompt)
+
+
+@router.delete("/{project_id}/prompt/{prompt_id}", response_model=schemas.Prompt)
+def delete_prompt(
+    project_id: int,
+    prompt_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Prompt:
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete prompts from this project"
+        )
+
+    prompt: models.Prompt | None = db.execute(
+        select(models.Prompt).where(
+            models.Prompt.project_id == project_id, models.Prompt.id == prompt_id
+        )
+    ).scalar_one_or_none()
+    if not prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+
+    # Check if the prompt is referenced by any trials
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(models.Trial.prompt_id == prompt_id)
+    ).scalar_one_or_none()
+    if trial:
+        raise HTTPException(
+            status_code=400, detail="Cannot delete prompt referenced by a trial"
+        )
+
+    db.delete(prompt)
+    db.commit()
+    return schemas.Prompt.model_validate(prompt)
+
+
 @router.post("/{project_id}/trial", response_model=schemas.Trial)
 def create_trial(
     project_id: int,
@@ -1813,6 +1977,13 @@ def create_trial(
     ).scalar_one_or_none()
     if not schema:
         raise HTTPException(status_code=404, detail="Schema not found")
+
+    # Check if the prompt exists
+    prompt: models.Prompt | None = db.execute(
+        select(models.Prompt).where(models.Prompt.id == trial.prompt_id)
+    ).scalar_one_or_none()
+    if not prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
 
     # Check if the documents exist and belong to the project
     existing_documents = (
@@ -1839,11 +2010,12 @@ def create_trial(
 
     # Create the trial
     trial_db = models.Trial(
-        **trial.model_dump(exclude={"llm_model", "api_key", "base_url"}),
+        **trial.model_dump(exclude={"llm_model", "api_key", "base_url", "advanced_options"}),
         project_id=project_id,
         llm_model=llm_model,
         api_key=api_key,
         base_url=base_url,
+        advanced_options=trial.advanced_options or {},
     )
 
     db.add(trial_db)
@@ -1861,8 +2033,10 @@ def create_trial(
                 api_key=api_key,
                 base_url=base_url,
                 schema_id=trial.schema_id,
+                prompt_id=trial.prompt_id,
                 db_session=db,
                 project_id=project_id,
+                advanced_options=trial_db.advanced_options,
             )
         except Exception as e:
             db.delete(trial_db)
@@ -1882,7 +2056,9 @@ def create_trial(
                 api_key=trial.api_key,
                 base_url=trial.base_url,
                 schema_id=trial.schema_id,
+                prompt_id=trial.prompt_id,
                 project_id=project_id,
+                advanced_options=trial_db.advanced_options,
             )
         else:
             raise HTTPException(
@@ -2262,6 +2438,50 @@ def test_llm_model_endpoint(
             "error_type": "incomplete_config",
         }
     return test_llm_connection(api_key, base_url, llm_model)
+
+
+# Add this new endpoint to your router:
+
+
+@router.post("/llm/test-model-schema", response_model=dict[str, Any])
+def test_model_with_schema_endpoint(
+    api_key: str | None = settings.OPENAI_API_KEY,
+    base_url: str | None = settings.OPENAI_API_BASE,
+    llm_model: str | None = settings.OPENAI_API_MODEL,
+    schema_id: int | None = None,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Test if a model supports structured output with a specific schema"""
+    if api_key is None or base_url is None or llm_model is None:
+        return {
+            "success": False,
+            "message": "LLM configuration is incomplete. Please provide API key, base URL, and model.",
+            "error_type": "incomplete_config",
+        }
+
+    if schema_id is None:
+        return {
+            "success": False,
+            "message": "Schema ID is required for testing structured output.",
+            "error_type": "missing_schema",
+        }
+
+    # Get the schema
+    schema = db.execute(
+        select(models.Schema).where(models.Schema.id == schema_id)
+    ).scalar_one_or_none()
+
+    if not schema:
+        return {
+            "success": False,
+            "message": "Schema not found.",
+            "error_type": "schema_not_found",
+        }
+
+    # Test the model with structured output
+    return test_model_with_schema(
+        api_key, base_url, llm_model, schema.schema_definition
+    )
 
 
 # Add these endpoints to your existing projects.py file

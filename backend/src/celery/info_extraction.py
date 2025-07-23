@@ -12,7 +12,9 @@ if celery_app:
         api_key: str,
         base_url: str,
         schema_id: int,
+        prompt_id: int,
         project_id: int,
+        advanced_options: dict | None = None,
     ):
         with next(get_db()) as db_session:
             extract_info(
@@ -22,6 +24,8 @@ if celery_app:
                 api_key=api_key,
                 base_url=base_url,
                 schema_id=schema_id,
+                prompt_id=prompt_id,
                 db_session=db_session,
                 project_id=project_id,
+                advanced_options=advanced_options,
             )

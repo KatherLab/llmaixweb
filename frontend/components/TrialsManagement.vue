@@ -17,7 +17,7 @@
         <button
           @click="openCreateTrialModal"
           class="px-4 py-2 rounded-md font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
-          :disabled="isLoading || schemas.length === 0 || documents.length === 0"
+          :disabled="isLoading || schemas.length === 0 || documents.length === 0 || prompts.length === 0"
         >
           Start New Trial
         </button>
@@ -33,7 +33,7 @@
       description="Run a trial to extract structured information from your documents"
       actionText="Start a Trial"
       @action="openCreateTrialModal"
-      :disabled="schemas.length === 0 || documents.length === 0"
+      :disabled="schemas.length === 0 || documents.length === 0 || prompts.length === 0"
     >
       <template #icon>
         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -211,6 +211,7 @@
       :open="isModalOpen"
       :documents="documents"
       :schemas="schemas"
+      :prompts="prompts"
       @close="isModalOpen = false"
       @create="handleCreateTrial"
     />
@@ -361,8 +362,6 @@ import EmptyState from '@/components/EmptyState.vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
 import ErrorBanner from '@/components/ErrorBanner.vue';
 
-const router = useRouter();
-const route = useRoute();
 const toast = useToast();
 
 const props = defineProps({
@@ -375,6 +374,7 @@ const props = defineProps({
 // Data
 const documents = ref([]);
 const schemas = ref([]);
+const prompts = ref([]);
 const trials = ref([]);
 const isLoading = ref(true);
 const error = ref(null);
@@ -654,14 +654,16 @@ const handleDownload = async () => {
 // Lifecycle
 onMounted(async () => {
   try {
-    const [documentsResponse, schemasResponse, trialsResponse] = await Promise.all([
+    const [documentsResponse, schemasResponse, promptsResponse, trialsResponse] = await Promise.all([
       api.get(`/project/${props.projectId}/document`),
       api.get(`/project/${props.projectId}/schema`),
+      api.get(`/project/${props.projectId}/prompt`),
       api.get(`/project/${props.projectId}/trial`)
     ]);
 
     documents.value = documentsResponse.data;
     schemas.value = schemasResponse.data;
+    prompts.value = promptsResponse.data;
     trials.value = trialsResponse.data;
 
     updateActiveTrials();
