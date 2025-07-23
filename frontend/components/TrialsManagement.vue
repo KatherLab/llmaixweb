@@ -713,6 +713,12 @@ const retryTrial = async (trial) => {
       api_key: trial.api_key,
       base_url: trial.base_url
     };
+
+    // Include advanced_options if they exist
+    if (trial.advanced_options && Object.keys(trial.advanced_options).length > 0) {
+      trialData.advanced_options = trial.advanced_options;
+    }
+
     const response = await api.post(`/project/${props.projectId}/trial`, trialData);
     trials.value.push(response.data);
     toast.success('Trial restarted successfully');
@@ -721,6 +727,7 @@ const retryTrial = async (trial) => {
     toast.error(`Failed to restart trial: ${err.message || 'Unknown error'}`);
   }
 };
+
 
 // Add the missing openDownloadModal method
 const openDownloadModal = (trial) => {
