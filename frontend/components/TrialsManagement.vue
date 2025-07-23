@@ -87,6 +87,13 @@
                   <span>{{ getSchemaForTrial(trial)?.schema_name }}</span>
                 </div>
 
+                <div class="flex items-center gap-2" v-if="getPromptForTrial(trial)">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                  <span>{{ getPromptForTrial(trial)?.name }}</span>
+                </div>
+
                 <div class="flex items-center gap-2">
                   <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -137,8 +144,8 @@
 
         <!-- Actions Footer -->
         <div class="border-t bg-gray-50 px-4 py-3 flex justify-between items-center">
-          <!-- Left side - Schema button -->
-          <div>
+          <!-- Left side - Schema and Prompt buttons -->
+          <div class="flex gap-2">
             <button
               v-if="getSchemaForTrial(trial)"
               @click="viewTrialSchema(trial)"
@@ -148,6 +155,17 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               View Schema
+            </button>
+
+            <button
+              v-if="getPromptForTrial(trial)"
+              @click="viewTrialPrompt(trial)"
+              class="inline-flex items-center gap-2 px-3 py-1.5 text-xs bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+              View Prompt
             </button>
           </div>
 
@@ -232,6 +250,66 @@
       :trialId="selectedTrialId"
       @close="showTrialResultsModal = false"
     />
+
+    <!-- Prompt Viewer Modal (Built-in) -->
+    <div v-if="showPromptModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="showPromptModal = false">
+      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div class="flex justify-between items-center p-6 border-b">
+          <h3 class="text-lg font-semibold">Trial Prompt</h3>
+          <button @click="showPromptModal = false" class="text-gray-500 hover:text-gray-700 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
+          <div class="space-y-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-medium text-gray-900 mb-2">{{ selectedPrompt?.name }}</h4>
+              <p v-if="selectedPrompt?.description" class="text-sm text-gray-600 mb-4">{{ selectedPrompt.description }}</p>
+
+              <div class="space-y-4">
+                <div v-if="selectedPrompt?.system_prompt">
+                  <h5 class="font-medium text-gray-700 mb-2">System Prompt:</h5>
+                  <div class="bg-white border rounded-md">
+                    <pre class="text-sm text-gray-700 p-4 overflow-auto whitespace-pre-wrap">{{ selectedPrompt.system_prompt }}</pre>
+                  </div>
+                </div>
+
+                <div v-if="selectedPrompt?.user_prompt">
+                  <h5 class="font-medium text-gray-700 mb-2">User Prompt:</h5>
+                  <div class="bg-white border rounded-md">
+                    <pre class="text-sm text-gray-700 p-4 overflow-auto whitespace-pre-wrap">{{ selectedPrompt.user_prompt }}</pre>
+                  </div>
+                </div>
+
+                <div v-if="!selectedPrompt?.system_prompt && !selectedPrompt?.user_prompt" class="text-gray-500 text-center py-4">
+                  No prompt content available
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fixed footer with proper spacing -->
+        <div class="flex justify-end gap-3 p-6 border-t bg-gray-50">
+          <button
+            @click="showPromptModal = false"
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Close
+          </button>
+          <button
+            @click="copyPromptToClipboard"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            Copy to Clipboard
+          </button>
+        </div>
+      </div>
+    </div>
+
 
     <!-- Schema Viewer Modal (Built-in) -->
     <div v-if="showSchemaModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click.self="showSchemaModal = false">
@@ -393,6 +471,10 @@ const POLL_INTERVAL_MS = 3000;
 const showSchemaModal = ref(false);
 const selectedSchema = ref(null);
 
+// Prompt modal state
+const showPromptModal = ref(false);
+const selectedPrompt = ref(null);
+
 // Trial results modal state
 const showTrialResultsModal = ref(false);
 const selectedTrialId = ref(null);
@@ -451,6 +533,11 @@ const getResultSummary = (trial) => {
 const getSchemaForTrial = (trial) => {
   return schemas.value.find(schema => schema.id === trial.schema_id);
 };
+
+const getPromptForTrial = (trial) => {
+  return prompts.value.find(prompt => prompt.id === trial.prompt_id);
+};
+
 
 // Improved polling methods
 const updateActiveTrials = () => {
@@ -544,6 +631,25 @@ const viewTrialSchema = (trial) => {
   console.log('showSchemaModal set to:', showSchemaModal.value);
 };
 
+const viewTrialPrompt = (trial) => {
+  const prompt = getPromptForTrial(trial);
+  selectedPrompt.value = prompt;
+  showPromptModal.value = true;
+};
+
+const copyPromptToClipboard = async () => {
+  if (!selectedPrompt.value) return;
+
+  try {
+    const promptText = `System Prompt:\n${selectedPrompt.value.system_prompt || 'N/A'}\n\nUser Prompt:\n${selectedPrompt.value.user_prompt || 'N/A'}`;
+    await navigator.clipboard.writeText(promptText);
+    toast.success('Prompt copied to clipboard');
+  } catch (err) {
+    toast.error('Failed to copy prompt to clipboard');
+  }
+};
+
+
 const formatJsonSchema = (schema) => {
   if (!schema) return '';
   return JSON.stringify(schema, null, 2);
@@ -601,6 +707,7 @@ const retryTrial = async (trial) => {
   try {
     const trialData = {
       schema_id: trial.schema_id,
+      prompt_id: trial.prompt_id,
       document_ids: trial.document_ids,
       llm_model: trial.llm_model,
       api_key: trial.api_key,
