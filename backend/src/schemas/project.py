@@ -638,6 +638,7 @@ class GroundTruth(GroundTruthBase):
     project_id: int
     file_uuid: str
     field_mappings: list[FieldMapping] = []
+    id_column_name: str | None = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

@@ -581,12 +581,26 @@ const onTrialEvaluate = async (evaluationSummary) => {
 const onMappingConfigured = async () => {
   try {
     showGroundTruthPreview.value = false;
-    await fetchGroundTruthFiles(); // Refresh to get updated mappings
+
+    // Refresh the ground truth files
+    await fetchGroundTruthFiles();
+
+    // IMPORTANT: Re-select the current ground truth to update its state
+    if (selectedGroundTruth.value) {
+      const updatedGroundTruth = groundTruthFiles.value.find(
+        gt => gt.id === selectedGroundTruth.value.id
+      );
+      if (updatedGroundTruth) {
+        selectedGroundTruth.value = updatedGroundTruth;
+      }
+    }
+
     toast.success('Field mappings configured successfully');
   } catch (err) {
     handleApiError(err, 'Refreshing after mapping configuration');
   }
 };
+
 
 // Modal actions - UNIFIED
 const previewGroundTruth = () => {

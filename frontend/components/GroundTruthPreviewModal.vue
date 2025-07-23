@@ -31,6 +31,10 @@ const groundTruthPreview = ref(null);
 const fieldMappings = ref([]);
 const existingMappings = ref({}); // Store mappings per schema
 
+const idColumnName = ref('');
+const availableColumns = ref([]);
+
+
 // Debug logging
 const debugLog = (message, data = null) => {
   console.log(`[GroundTruthPreview] ${message}`, data);
@@ -63,11 +67,20 @@ const availableSchemaFields = computed(() => {
 });
 
 const canSave = computed(() => {
-  return selectedSchemaId.value && fieldMappings.value.length > 0 &&
+  // Update the existing canSave to include ID column validation
+  const hasMappings = selectedSchemaId.value && fieldMappings.value.length > 0 &&
          fieldMappings.value.every(mapping =>
            mapping.schema_field && mapping.ground_truth_field
          );
+
+  // For CSV/XLSX, also require ID column selection
+  if (isMultiDocumentFormat.value) {
+    return hasMappings && idColumnName.value;
+  }
+
+  return hasMappings;
 });
+
 
 const canAddMapping = computed(() => {
   return availableSchemaFields.value.length > 0;
@@ -76,6 +89,11 @@ const canAddMapping = computed(() => {
 const hasMappingForSchema = computed(() => {
   return selectedSchemaId.value && existingMappings.value[selectedSchemaId.value]?.length > 0;
 });
+
+const isMultiDocumentFormat = computed(() => {
+  return props.groundTruth?.format === 'csv' || props.groundTruth?.format === 'xlsx';
+});
+
 
 // Load initial data
 const fetchInitialData = async () => {
@@ -97,6 +115,26 @@ const fetchInitialData = async () => {
     debugLog('Schemas loaded:', schemas.value);
     debugLog('Ground truth preview loaded:', groundTruthPreview.value);
 
+    // NEW: Set available columns and auto-detect ID column
+    if (previewResponse.data.available_columns) {
+      availableColumns.value = previewResponse.data.available_columns;
+
+      // Auto-detect ID column if not already set
+      if (!idColumnName.value && previewResponse.data.current_id_column) {
+        idColumnName.value = previewResponse.data.current_id_column;
+      } else if (!idColumnName.value) {
+        // Try to auto-detect from common names
+        const commonIdNames = ['document_id', 'doc_id', 'id', 'filename', 'file_name'];
+        const detectedId = availableColumns.value.find(col =>
+          commonIdNames.includes(col.toLowerCase())
+        );
+        if (detectedId) {
+          idColumnName.value = detectedId;
+          debugLog('Auto-detected ID column:', detectedId);
+        }
+      }
+    }
+
     // Load existing mappings for all schemas
     await loadAllExistingMappings();
 
@@ -108,6 +146,22 @@ const fetchInitialData = async () => {
     isLoading.value = false;
   }
 };
+
+
+const saveIdColumn = async () => {
+  if (!idColumnName.value || !isMultiDocumentFormat.value) return;
+
+  try {
+    await api.put(
+      `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/id-column`,
+      { id_column: idColumnName.value }
+    );
+    debugLog('ID column saved:', idColumnName.value);
+  } catch (err) {
+    throw new Error(`Failed to save ID column: ${err.message}`);
+  }
+};
+
 
 // Load existing mappings for all schemas
 const loadAllExistingMappings = async () => {
@@ -288,6 +342,10 @@ const formatPreviewValue = (value) => {
 // Save mappings for the selected schema
 const saveMappings = async () => {
   if (!canSave.value) {
+    if (isMultiDocumentFormat.value && !idColumnName.value) {
+      toast.warning('Please select an ID column for document identification');
+      return;
+    }
     toast.warning('Please select a schema and configure at least one complete field mapping');
     return;
   }
@@ -296,6 +354,11 @@ const saveMappings = async () => {
 
   isSaving.value = true;
   try {
+    // Save ID column first if it's a multi-document format
+    if (isMultiDocumentFormat.value) {
+      await saveIdColumn();
+    }
+
     const mappingsToSave = fieldMappings.value.map(mapping => ({
       schema_field: mapping.schema_field,
       ground_truth_field: mapping.ground_truth_field,
@@ -446,6 +509,45 @@ watch(fieldMappings, (newMappings) => {
               </div>
             </div>
 
+            <!-- ID Column Selection (only for CSV/XLSX) -->
+            <div v-if="isMultiDocumentFormat && selectedSchemaId" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div class="flex items-start">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                </svg>
+                <div class="flex-1">
+                  <h4 class="text-sm font-medium text-blue-900 mb-2">Document Identification Column</h4>
+                  <p class="text-xs text-blue-700 mb-3">
+                    Select which column contains the unique identifier for each document. This will be used to match documents with your uploaded files.
+                  </p>
+                  <div class="flex gap-3 items-center">
+                    <select
+                      v-model="idColumnName"
+                      class="flex-1 rounded-md border border-blue-300 bg-white shadow-sm py-2 px-3 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                    >
+                      <option value="">Select ID column...</option>
+                      <option v-for="column in availableColumns" :key="column" :value="column">
+                        {{ column }}
+                        <span v-if="column === idColumnName" class="text-blue-600">(current)</span>
+                      </option>
+                    </select>
+                    <div v-if="idColumnName" class="flex items-center text-sm text-blue-700">
+                      <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                      </svg>
+                      ID column selected
+                    </div>
+                  </div>
+                  <div v-if="!idColumnName" class="mt-2 text-xs text-red-600 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    ID column is required for CSV/XLSX files
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Ground Truth Preview -->
             <div v-if="groundTruthPreview" class="mb-6">
               <h4 class="text-md font-medium text-gray-900 mb-3">Ground Truth Preview</h4>
@@ -565,11 +667,14 @@ watch(fieldMappings, (newMappings) => {
                           <option value="">Select field...</option>
                           <option v-for="field in groundTruthFields" :key="field" :value="field">
                             {{ field }}
+                            <span v-if="field === idColumnName" class="text-blue-600">(ID)</span>
                           </option>
                         </select>
                         <div v-if="mapping.ground_truth_field && groundTruthSamples[mapping.ground_truth_field]" class="mt-1 text-xs text-gray-500">
                           Sample: {{ formatPreviewValue(Array.isArray(groundTruthSamples[mapping.ground_truth_field]) ? groundTruthSamples[mapping.ground_truth_field][0] : groundTruthSamples[mapping.ground_truth_field]) }}
+                          <span v-if="mapping.ground_truth_field === idColumnName" class="text-blue-600 ml-1">(ID column)</span>
                         </div>
+
                       </td>
                       <td class="px-4 py-3">
                         <select

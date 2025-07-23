@@ -2159,10 +2159,13 @@ def delete_schema(
         raise HTTPException(status_code=404, detail="Schema not found")
 
     # Check if the schema is referenced by any trials
-    trial: models.Trial | None = db.execute(
-        select(models.Trial).where(models.Trial.schema_id == schema_id)
-    ).scalar_one_or_none()
-    if trial:
+    trials: list[models.Trial] = (
+        db.execute(select(models.Trial).where(models.Trial.schema_id == schema_id))
+        .scalars()
+        .all()
+    )
+
+    if trials:
         raise HTTPException(
             status_code=400, detail="Cannot delete schema referenced by a trial"
         )
@@ -3148,6 +3151,67 @@ def update_groundtruth(
     return schemas.GroundTruth.model_validate(groundtruth)
 
 
+# Add to the ground truth endpoints
+@router.put(
+    "/{project_id}/groundtruth/{groundtruth_id}/id-column",
+    response_model=schemas.GroundTruth,
+)
+def update_ground_truth_id_column(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    id_column: str = Body(..., embed=True),
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruth:
+    """Update the ID column for CSV/XLSX ground truth files."""
+    # Validate project access
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to update ground truth"
+        )
+
+    # Get ground truth
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth not found")
+
+    # Only allow for CSV/XLSX formats
+    if groundtruth.format not in ["csv", "xlsx"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"ID column mapping is only supported for CSV and XLSX formats, not {groundtruth.format}",
+        )
+
+    # Update ID column
+    groundtruth.id_column_name = id_column
+
+    # Clear data cache to force re-parsing with new ID column
+    groundtruth.data_cache = None
+
+    # Invalidate related evaluations
+    db.execute(
+        delete(models.Evaluation).where(
+            models.Evaluation.groundtruth_id == groundtruth_id
+        )
+    )
+
+    db.commit()
+    db.refresh(groundtruth)
+
+    return schemas.GroundTruth.model_validate(groundtruth)
+
+
 @router.post(
     "/{project_id}/groundtruth/{groundtruth_id}/schema/{schema_id}/mapping",
     response_model=schemas.GroundTruth,
@@ -3399,6 +3463,22 @@ def preview_groundtruth(
     engine = EvaluationEngine(db)
     gt_data = engine._load_ground_truth(groundtruth)
     # Get field structure
+
+    # For CSV/XLSX, also get available columns for ID selection
+    available_columns = []
+    if groundtruth.format in ["csv", "xlsx"]:
+        # Load raw file to get all columns
+        from ....dependencies import get_file
+
+        content = get_file(groundtruth.file_uuid)
+
+        if groundtruth.format == "csv":
+            df = pd.read_csv(io.BytesIO(content))
+        else:  # xlsx
+            df = pd.read_excel(io.BytesIO(content))
+
+        available_columns = df.columns.tolist()
+
     all_fields = set()
     field_types = {}
     sample_values = {}
@@ -3430,6 +3510,8 @@ def preview_groundtruth(
         "field_types": field_types,
         "sample_values": sample_values,
         "preview_data": dict(list(gt_data.items())[:limit]),
+        "available_columns": available_columns,
+        "current_id_column": groundtruth.id_column_name,
     }
 
 

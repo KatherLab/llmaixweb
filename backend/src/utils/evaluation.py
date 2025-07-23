@@ -276,67 +276,41 @@ class EvaluationEngine:
     def _find_document_key_enhanced(
         self, doc_id: int, document: models.Document, gt_data: Dict
     ) -> Optional[str]:
-        """Enhanced ground truth key finding with multiple strategies."""
+        """Find ground truth key by matching only on original file filename (case-insensitive, with and without extension)."""
+        if (
+            not document
+            or not document.original_file
+            or not document.original_file.file_name
+        ):
+            return None
 
-        # Strategy 1: Direct ID match (various formats)
-        id_variants = [
-            doc_id,
-            str(doc_id),
-            f"doc_{doc_id}",
-            f"document_{doc_id}",
-            f"doc{doc_id}",
-            f"document{doc_id}",
-        ]
-        for variant in id_variants:
-            if variant in gt_data:
-                return variant
+        filename = document.original_file.file_name
+        filename_stem = Path(filename).stem
+        filename_lower = filename.lower()
+        filename_stem_lower = filename_stem.lower()
 
-        # Strategy 2: Filename matching (if document has original file)
-        if document and document.original_file:
-            filename = document.original_file.file_name
-            filename_variants = [
-                filename,  # full filename
-                Path(filename).stem,  # filename without extension
-                Path(filename).name,  # filename with extension
-                filename.lower(),  # lowercase variants
-                Path(filename).stem.lower(),
-                Path(filename).name.lower(),
-                # Remove common prefixes/suffixes
-                filename.replace("_processed", "").replace("_ocr", ""),
-                Path(filename).stem.replace("_processed", "").replace("_ocr", ""),
-            ]
+        # Prepare all ground truth keys to lower for case-insensitive comparison
+        gt_keys_lower = {str(k).lower(): k for k in gt_data.keys()}
 
-            for variant in filename_variants:
-                if variant in gt_data:
-                    return variant
+        # 1. Try exact filename (case-insensitive, with extension)
+        if filename_lower in gt_keys_lower:
+            return gt_keys_lower[filename_lower]
 
-        # Strategy 3: Fuzzy matching on keys (only if no exact matches found)
-        try:
-            best_match = None
-            best_score = 0
-            threshold = 85
+        # 2. Try filename without extension (case-insensitive)
+        if filename_stem_lower in gt_keys_lower:
+            return gt_keys_lower[filename_stem_lower]
 
-            search_terms = [str(doc_id)]
-            if document and document.original_file:
-                search_terms.extend(
-                    [
-                        document.original_file.file_name,
-                        Path(document.original_file.file_name).stem,
-                    ]
-                )
+        # 3. Try again with just the filename part (in case keys contain full paths)
+        filename_name_lower = Path(filename).name.lower()
+        if filename_name_lower in gt_keys_lower:
+            return gt_keys_lower[filename_name_lower]
 
-            for search_term in search_terms:
-                for gt_key in gt_data.keys():
-                    score = fuzz.ratio(str(search_term).lower(), str(gt_key).lower())
-                    if score > best_score and score >= threshold:
-                        best_score = score
-                        best_match = gt_key
+        # 4. Try only stem of the filename part (no extension, no path)
+        filename_name_stem_lower = Path(filename).stem.lower()
+        if filename_name_stem_lower in gt_keys_lower:
+            return gt_keys_lower[filename_name_stem_lower]
 
-            return best_match
-        except ImportError:
-            # thefuzz not available, skip fuzzy matching
-            pass
-
+        # If still not found, no match
         return None
 
     def _load_ground_truth(self, ground_truth: models.GroundTruth) -> Dict:
@@ -350,7 +324,14 @@ class EvaluationEngine:
 
         content = get_file(ground_truth.file_uuid)
         parser = GroundTruthParser()
-        data = parser.parse(content, ground_truth.format)
+
+        # Pass ID column for CSV/XLSX files
+        if ground_truth.format in ["csv", "xlsx"]:
+            data = parser.parse(
+                content, ground_truth.format, id_column=ground_truth.id_column_name
+            )
+        else:
+            data = parser.parse(content, ground_truth.format)
 
         # Cache parsed data
         ground_truth.data_cache = data
@@ -587,18 +568,19 @@ class EvaluationEngine:
 class GroundTruthParser:
     """Parser for different ground truth formats."""
 
-    def parse(self, content: bytes, format_type: str) -> Dict:
+    def parse(self, content: bytes, format_type: str, id_column: Optional[str] = None) -> Dict:
         """Parse ground truth content based on format."""
         if format_type == "json":
             return self._parse_json(content)
         elif format_type == "csv":
-            return self._parse_csv(content)
+            return self._parse_csv(content, id_column)
         elif format_type == "xlsx":
-            return self._parse_excel(content)
+            return self._parse_excel(content, id_column)
         elif format_type == "zip":
             return self._parse_zip(content)
         else:
             raise ValueError(f"Unsupported format: {format_type}")
+
 
     def _parse_json(self, content: bytes) -> Dict:
         """Parse JSON ground truth."""
@@ -619,20 +601,26 @@ class GroundTruthParser:
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON: {e}")
 
-    def _parse_csv(self, content: bytes) -> Dict:
+    def _parse_csv(self, content: bytes, id_column: Optional[str] = None) -> Dict:
         """Parse CSV ground truth."""
         df = pd.read_csv(io.BytesIO(content))
-        # Find ID column
-        id_columns = ["document_id", "doc_id", "id", "filename", "file_name"]
-        id_col = None
-        for col in id_columns:
-            if col in df.columns:
-                id_col = col
-                break
-        if not id_col:
-            # Use index if no ID column
-            df["_index"] = df.index
-            id_col = "_index"
+
+        # Use configured ID column or try to find one
+        if id_column and id_column in df.columns:
+            id_col = id_column
+        else:
+            # Fallback to auto-detection
+            id_columns = ["document_id", "doc_id", "id", "filename", "file_name"]
+            id_col = None
+            for col in id_columns:
+                if col in df.columns:
+                    id_col = col
+                    break
+            if not id_col:
+                # Use index if no ID column
+                df["_index"] = df.index
+                id_col = "_index"
+
         result = {}
         for _, row in df.iterrows():
             doc_id = row[id_col]
@@ -644,10 +632,13 @@ class GroundTruthParser:
             result[str(doc_id)] = values
         return result
 
-    def _parse_excel(self, content: bytes) -> Dict:
+    def _parse_excel(self, content: bytes, id_column: Optional[str] = None) -> Dict:
         """Parse Excel ground truth."""
         df = pd.read_excel(io.BytesIO(content))
-        return self._parse_csv(df.to_csv().encode("utf-8"))
+        # Convert to CSV and reuse the CSV parser logic
+        csv_content = df.to_csv(index=False).encode("utf-8")
+        return self._parse_csv(csv_content, id_column)
+
 
     def _parse_zip(self, content: bytes) -> Dict:
         """Parse ZIP file with multiple documents."""

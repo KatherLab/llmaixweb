@@ -628,6 +628,7 @@ class GroundTruth(Base):
     data_cache: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON), nullable=True
     )
+    id_column_name: Mapped[str] = mapped_column(String(200), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
