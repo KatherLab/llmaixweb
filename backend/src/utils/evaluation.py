@@ -568,7 +568,9 @@ class EvaluationEngine:
 class GroundTruthParser:
     """Parser for different ground truth formats."""
 
-    def parse(self, content: bytes, format_type: str, id_column: Optional[str] = None) -> Dict:
+    def parse(
+        self, content: bytes, format_type: str, id_column: Optional[str] = None
+    ) -> Dict:
         """Parse ground truth content based on format."""
         if format_type == "json":
             return self._parse_json(content)
@@ -580,7 +582,6 @@ class GroundTruthParser:
             return self._parse_zip(content)
         else:
             raise ValueError(f"Unsupported format: {format_type}")
-
 
     def _parse_json(self, content: bytes) -> Dict:
         """Parse JSON ground truth."""
@@ -638,7 +639,6 @@ class GroundTruthParser:
         # Convert to CSV and reuse the CSV parser logic
         csv_content = df.to_csv(index=False).encode("utf-8")
         return self._parse_csv(csv_content, id_column)
-
 
     def _parse_zip(self, content: bytes) -> Dict:
         """Parse ZIP file with multiple documents."""

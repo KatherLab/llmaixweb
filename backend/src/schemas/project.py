@@ -170,6 +170,7 @@ class DocumentSet(DocumentSetBase):
 
 class DocumentSetFromTrial(BaseModel):
     """Schema for creating a document set from an existing trial"""
+
     name: str
     description: str | None = None
     tags: list[str] = []
@@ -177,6 +178,7 @@ class DocumentSetFromTrial(BaseModel):
 
 class DocumentSetStats(BaseModel):
     """Statistics about document set usage"""
+
     trials_count: int
     extractions_count: int
     last_used: datetime | None
@@ -184,6 +186,7 @@ class DocumentSetStats(BaseModel):
 
 class DocumentFilter(BaseModel):
     """Filter parameters for document queries"""
+
     search: str | None = None
     preprocessing_config_id: int | None = None
     preprocessing_task_id: int | None = None
@@ -196,6 +199,7 @@ class DocumentFilter(BaseModel):
 
 class DocumentBulkAction(BaseModel):
     """Schema for bulk document operations"""
+
     action: str  # 'add_to_set', 'remove_from_set', 'delete', 'reprocess'
     document_ids: list[int]
     target_set_id: int | None = None  # For add_to_set action
@@ -204,6 +208,7 @@ class DocumentBulkAction(BaseModel):
 
 class DocumentSetSummary(BaseModel):
     """Summary information for document set listing"""
+
     id: int
     name: str
     description: str | None
@@ -218,6 +223,7 @@ class DocumentSetSummary(BaseModel):
 
 class DocumentSetDetail(DocumentSet):
     """Detailed document set information including documents"""
+
     documents: list[Document]
     usage_stats: DocumentSetStats
     preprocessing_config: PreprocessingConfiguration | None
@@ -320,7 +326,6 @@ class TrialBase(UTCModel):
         if self.document_ids and self.document_set_id:
             raise ValueError("Cannot provide both document_ids and document_set_id")
         return self
-
 
 
 class TrialCreate(TrialBase):

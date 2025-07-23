@@ -18,7 +18,7 @@ from fastapi import (
 )
 from fastapi.responses import Response, StreamingResponse
 from pydantic import ValidationError
-from sqlalchemy import delete, func, select, distinct, and_, or_
+from sqlalchemy import and_, delete, distinct, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 from starlette import status
 from thefuzz import fuzz
@@ -27,11 +27,11 @@ from .... import models, schemas
 from ....core.config import settings
 from ....core.security import get_current_user
 from ....dependencies import (
+    calculate_file_hash,
     get_db,
     get_file,
     remove_file,
     save_file,
-    calculate_file_hash,
 )
 from ....models.project import document_set_association
 from ....utils.enums import FileCreator, FileType, PreprocessingStrategy
@@ -252,7 +252,7 @@ def get_file_stats(
     current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Get file statistics for the project"""
-    project = check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db)
 
     # Base query
     base_query = select(models.File).where(models.File.project_id == project_id)
@@ -397,7 +397,7 @@ def upload_file(
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    project = check_project_access(project_id, current_user, db, permission="write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     # Read file content
     file_content = file.file.read()
@@ -447,6 +447,7 @@ def upload_file(
     db.refresh(new_file)
     return schemas.File.model_validate(new_file)
 
+
 @router.post("/{project_id}/file/check-duplicates", response_model=list[dict])
 def check_duplicates(
     *,
@@ -456,7 +457,7 @@ def check_duplicates(
     current_user: models.User = Depends(get_current_user),
 ) -> list[dict]:
     """Check for duplicate files before uploading"""
-    project = check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db)
 
     results = []
     for file_info in files:
@@ -497,7 +498,7 @@ def delete_file(
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.File:
     """Delete a file with safety checks"""
-    project = check_project_access(project_id, current_user, db, permission="write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     file = db.execute(
         select(models.File)
@@ -558,14 +559,14 @@ def batch_delete_files(
     current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Delete multiple files at once"""
-    project = check_project_access(project_id, current_user, db, permission="write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     deleted = []
     errors = []
 
     for file_id in file_ids:
         try:
-            file = delete_file(
+            _ = delete_file(
                 db=db,
                 project_id=project_id,
                 file_id=file_id,
@@ -585,6 +586,7 @@ def batch_delete_files(
         "total_errors": len(errors),
     }
 
+
 # Continue the endpoint in project.py
 
 
@@ -598,11 +600,11 @@ async def download_files_as_zip(
     current_user: models.User = Depends(get_current_user),
 ) -> Response:
     """Download multiple files as a ZIP archive"""
-    project = check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db)
 
-    import zipfile
     import io
     import json
+    import zipfile
     from datetime import datetime
 
     # Create ZIP file in memory
@@ -688,10 +690,10 @@ async def move_files(
 ) -> dict:
     """Move files to another project"""
     # Check access to both source and target projects
-    source_project = check_project_access(
+    check_project_access(
         project_id, current_user, db, permission="write"
     )
-    target_project = check_project_access(
+    check_project_access(
         target_project_id, current_user, db, permission="write"
     )
 
@@ -754,7 +756,7 @@ def check_file_links(
     current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Check if a file has any linked resources"""
-    project = check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db)
 
     file = db.execute(
         select(models.File)
@@ -896,7 +898,6 @@ def create_preprocessing_configuration(
     return schemas.PreprocessingConfiguration.model_validate(db_config)
 
 
-
 @router.put(
     "/{project_id}/preprocessing-config/{config_id}",
     response_model=schemas.PreprocessingConfiguration,
@@ -1014,6 +1015,7 @@ def delete_preprocessing_configuration(
     db.commit()
 
     return {"detail": "Configuration deleted successfully"}
+
 
 @router.post("/{project_id}/preprocess", response_model=schemas.PreprocessingTask)
 def preprocess_project_data(
@@ -1732,7 +1734,7 @@ def get_document_sets(
     )
 
     if not include_auto_generated:
-        query = query.where(models.DocumentSet.is_auto_generated == False)
+        query = query.where(~models.DocumentSet.is_auto_generated)
 
     if preprocessing_config_id:
         query = query.where(
@@ -2018,6 +2020,7 @@ def download_all_documents(
         },
     )
 
+
 @router.post("/{project_id}/schema", response_model=schemas.Schema)
 def create_schema(
     project_id: int,
@@ -2195,7 +2198,9 @@ def create_prompt(
     # Validate prompt
     validate_prompt(prompt)
 
-    prompt_db = models.Prompt(**prompt.model_dump(exclude={"project_id"}), project_id=project_id)
+    prompt_db = models.Prompt(
+        **prompt.model_dump(exclude={"project_id"}), project_id=project_id
+    )
     db.add(prompt_db)
     db.commit()
     db.refresh(prompt_db)
@@ -2430,7 +2435,9 @@ def create_trial(
         api_key=api_key,
         base_url=base_url,
         document_ids=document_ids,
-        document_set_id=trial.document_set_id if trial.document_set_id is not None else None,
+        document_set_id=trial.document_set_id
+        if trial.document_set_id is not None
+        else None,
         bypass_celery=trial.bypass_celery,
         advanced_options=trial.advanced_options or {},
         # Add other trial fields as needed...

@@ -163,11 +163,9 @@ def test_model_with_schema(
         client = OpenAI(api_key=api_key, base_url=base_url)
 
         # Try to make a minimal completion with structured output
-        response = client.chat.completions.create(
+        client.chat.completions.create(
             model=llm_model,
-            messages=[
-                {"role": "user", "content": "Test"}
-            ],
+            messages=[{"role": "user", "content": "Test"}],
             max_tokens=1,  # Minimal tokens to test
             response_format={
                 "type": "json_schema",
@@ -211,16 +209,16 @@ def test_model_with_schema(
 
 
 def extract_info(
-        trial_id: int,
-        document_ids: list[int],
-        llm_model: str,
-        api_key: str,
-        base_url: str,
-        schema_id: int,
-        prompt_id: int,
-        db_session: Session,
-        project_id: int,
-        advanced_options: dict | None = None,
+    trial_id: int,
+    document_ids: list[int],
+    llm_model: str,
+    api_key: str,
+    base_url: str,
+    schema_id: int,
+    prompt_id: int,
+    db_session: Session,
+    project_id: int,
+    advanced_options: dict | None = None,
 ):
     trial: models.Trial = db_session.execute(
         select(models.Trial).where(models.Trial.id == trial_id)
@@ -261,7 +259,9 @@ def extract_info(
 
             # Add system prompt if exists
             if prompt.system_prompt:
-                system_content = prompt.system_prompt.replace(placeholder, document.text)
+                system_content = prompt.system_prompt.replace(
+                    placeholder, document.text
+                )
                 messages.append({"role": "system", "content": system_content})
 
             # Add user prompt if exists

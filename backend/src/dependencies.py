@@ -32,9 +32,11 @@ if not settings.LOCAL_DIRECTORY:
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         )
 
+
 def calculate_file_hash(content: bytes) -> str:
     """Calculate SHA-256 hash of file content"""
     return hashlib.sha256(content).hexdigest()
+
 
 def get_file(file_name: str) -> bytes:
     """
