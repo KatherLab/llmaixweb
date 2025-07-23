@@ -126,21 +126,124 @@ class Document(DocumentBase):
 
 
 class DocumentSetBase(UTCModel):
-    pass
+    name: str
+    description: str | None = None
+    tags: list[str] = []
+    is_auto_generated: bool = False
+    preprocessing_config_id: int | None = None
+
+
+class DocumentSetUpdate(UTCModel):
+    name: str | None = None
+    description: str | None = None
+    tags: list[str] | None = None
+    document_ids: list[int] | None = None
 
 
 class DocumentSetCreate(DocumentSetBase):
-    trial_id: int
+    name: str
+    description: str | None = None
+    trial_id: int | None = None  # Optional - for creating from trial
+    document_ids: list[int] = []  # Optional - for creating from documents
+
+    @model_validator(mode="after")
+    def validate_documents_or_trial(self):
+        """Ensure either document_ids or trial_id is provided"""
+        if not self.document_ids and not self.trial_id:
+            raise ValueError("Either document_ids or trial_id must be provided")
+        if self.document_ids and self.trial_id:
+            raise ValueError("Cannot provide both document_ids and trial_id")
+        return self
 
 
 class DocumentSet(DocumentSetBase):
     id: int
     project_id: int
-    trial_id: int
+    name: str
+    description: str | None
     created_at: datetime
     updated_at: datetime
+    documents: list[Document] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentSetFromTrial(BaseModel):
+    """Schema for creating a document set from an existing trial"""
+    name: str
+    description: str | None = None
+    tags: list[str] = []
+
+
+class DocumentSetStats(BaseModel):
+    """Statistics about document set usage"""
+    trials_count: int
+    extractions_count: int
+    last_used: datetime | None
+
+
+class DocumentFilter(BaseModel):
+    """Filter parameters for document queries"""
+    search: str | None = None
+    preprocessing_config_id: int | None = None
+    preprocessing_task_id: int | None = None
+    date_from: datetime | None = None
+    date_to: datetime | None = None
+    file_ids: list[int] | None = None
+    status: str | None = None
+    tags: list[str] | None = None
+
+
+class DocumentBulkAction(BaseModel):
+    """Schema for bulk document operations"""
+    action: str  # 'add_to_set', 'remove_from_set', 'delete', 'reprocess'
+    document_ids: list[int]
+    target_set_id: int | None = None  # For add_to_set action
+    force: bool = False
+
+
+class DocumentSetSummary(BaseModel):
+    """Summary information for document set listing"""
+    id: int
+    name: str
+    description: str | None
+    document_count: int
+    tags: list[str]
+    preprocessing_config_name: str | None
+    is_auto_generated: bool
+    created_at: datetime
+    last_used: datetime | None
+    usage_count: int
+
+
+class DocumentSetDetail(DocumentSet):
+    """Detailed document set information including documents"""
+    documents: list[Document]
+    usage_stats: DocumentSetStats
+    preprocessing_config: PreprocessingConfiguration | None
+
+
+class SmartDocumentSelection(BaseModel):
+    """Parameters for smart document selection"""
+
+    mode: str  # 'previous_trial', 'by_config', 'by_date', 'by_tags'
+
+    # For previous_trial mode
+    source_trial_id: int | None = None
+
+    # For by_config mode
+    preprocessing_config_id: int | None = None
+
+    # For by_date mode
+    date_from: datetime | None = None
+    date_to: datetime | None = None
+
+    # For by_tags mode (documents that have these tags in their sets)
+    tags: list[str] | None = None
+
+    # Common options
+    limit: int | None = None
+    exclude_ids: list[int] = []
 
 
 class SchemaBase(UTCModel):
@@ -200,13 +303,24 @@ class Prompt(PromptBase):
 
 class TrialBase(UTCModel):
     schema_id: int
-    prompt_id: int  # Add this field
-    document_ids: list[int]
+    prompt_id: int
+    document_ids: list[int] | None = None  # Make optional
+    document_set_id: int | None = None  # Add this for selecting entire sets
     llm_model: str | None = settings.OPENAI_API_MODEL
     api_key: str | None = settings.OPENAI_API_KEY
     base_url: str | None = settings.OPENAI_API_BASE
     bypass_celery: bool = False
     advanced_options: dict | None = None
+
+    @model_validator(mode="after")
+    def validate_documents_or_set(self):
+        """Ensure either document_ids or document_set_id is provided"""
+        if not self.document_ids and not self.document_set_id:
+            raise ValueError("Either document_ids or document_set_id must be provided")
+        if self.document_ids and self.document_set_id:
+            raise ValueError("Cannot provide both document_ids and document_set_id")
+        return self
+
 
 
 class TrialCreate(TrialBase):
@@ -221,9 +335,10 @@ class Trial(TrialBase):
     updated_at: datetime
     results: list[TrialResult] = []
     prompt: Prompt | None = None
+    document_set: DocumentSet | None = None  # Add this
     advanced_options: dict | None = None
-    model_config = ConfigDict(from_attributes=True)
 
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TrialResultBase(UTCModel):

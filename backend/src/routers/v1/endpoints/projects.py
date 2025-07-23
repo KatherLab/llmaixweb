@@ -16,10 +16,11 @@ from fastapi import (
     Query,
     UploadFile,
 )
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy import delete, func, select, distinct, and_, or_
 from sqlalchemy.orm import Session, selectinload
+from starlette import status
 from thefuzz import fuzz
 
 from .... import models, schemas
@@ -32,6 +33,7 @@ from ....dependencies import (
     save_file,
     calculate_file_hash,
 )
+from ....models.project import document_set_association
 from ....utils.enums import FileCreator, FileType, PreprocessingStrategy
 from ....utils.helpers import extract_field_types_from_schema, validate_prompt
 from ....utils.info_extraction import (
@@ -1636,6 +1638,386 @@ def delete_document(
     return {"detail": "Document deleted successfully"}
 
 
+@router.post("/{project_id}/document-set", response_model=schemas.DocumentSet)
+def create_document_set(
+    project_id: int,
+    document_set: schemas.DocumentSetCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.DocumentSet:
+    """Create a document set from documents or a trial"""
+    # Check project access
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to create document sets for this project",
+        )
+
+    # Create the document set
+    db_set = models.DocumentSet(
+        project_id=project_id,
+        name=document_set.name,
+        description=document_set.description,
+    )
+
+    db.add(db_set)
+    db.flush()
+
+    # Add documents based on whether it's from trial or direct selection
+    if document_set.trial_id:
+        # Get documents from trial
+        trial: models.Trial | None = db.execute(
+            select(models.Trial).where(
+                models.Trial.id == document_set.trial_id,
+                models.Trial.project_id == project_id,
+            )
+        ).scalar_one_or_none()
+
+        if not trial:
+            raise HTTPException(
+                status_code=404, detail="Trial not found in this project"
+            )
+
+        document_ids = trial.document_ids
+    else:
+        # Use provided document IDs
+        document_ids = document_set.document_ids
+
+    # Add documents to the set
+    for doc_id in document_ids:
+        # Verify document exists in project
+        doc = db.execute(
+            select(models.Document).where(
+                models.Document.id == doc_id, models.Document.project_id == project_id
+            )
+        ).scalar_one_or_none()
+
+        if doc:
+            db.execute(
+                document_set_association.insert().values(
+                    document_id=doc_id, document_set_id=db_set.id
+                )
+            )
+
+    db.commit()
+    db.refresh(db_set)
+
+    return schemas.DocumentSet.model_validate(db_set)
+
+
+@router.get("/{project_id}/document-set", response_model=List[schemas.DocumentSet])
+def get_document_sets(
+    project_id: int,
+    include_auto_generated: bool = Query(
+        False, description="Include auto-generated sets from trials"
+    ),
+    preprocessing_config_id: int = Query(
+        None, description="Filter by preprocessing configuration"
+    ),
+    tag: str = Query(None, description="Filter by tag"),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> List[schemas.DocumentSet]:
+    check_project_access(project_id, current_user, db, "read")
+
+    query = select(models.DocumentSet).where(
+        models.DocumentSet.project_id == project_id
+    )
+
+    if not include_auto_generated:
+        query = query.where(models.DocumentSet.is_auto_generated == False)
+
+    if preprocessing_config_id:
+        query = query.where(
+            models.DocumentSet.preprocessing_config_id == preprocessing_config_id
+        )
+
+    if tag:
+        query = query.where(models.DocumentSet.tags.contains([tag]))
+
+    sets = (
+        db.execute(query.order_by(models.DocumentSet.created_at.desc())).scalars().all()
+    )
+
+    return [schemas.DocumentSet.model_validate(s) for s in sets]
+
+
+@router.patch("/{project_id}/document-set/{set_id}", response_model=schemas.DocumentSet)
+def update_document_set(
+    project_id: int,
+    set_id: int,
+    update_data: schemas.DocumentSetUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.DocumentSet:
+    check_project_access(project_id, current_user, db, "write")
+
+    doc_set = db.execute(
+        select(models.DocumentSet).where(
+            models.DocumentSet.id == set_id, models.DocumentSet.project_id == project_id
+        )
+    ).scalar_one_or_none()
+
+    if not doc_set:
+        raise HTTPException(status_code=404, detail="Document set not found")
+
+    # Update fields
+    for field, value in update_data.model_dump(exclude_unset=True).items():
+        if field == "document_ids":
+            # Handle document updates
+            # Remove existing associations
+            db.execute(
+                document_set_association.delete().where(
+                    document_set_association.c.document_set_id == set_id
+                )
+            )
+            # Add new associations
+            for doc_id in value:
+                db.execute(
+                    document_set_association.insert().values(
+                        document_id=doc_id, document_set_id=set_id
+                    )
+                )
+        else:
+            setattr(doc_set, field, value)
+
+    db.commit()
+    db.refresh(doc_set)
+
+    return schemas.DocumentSet.model_validate(doc_set)
+
+
+@router.delete(
+    "/{project_id}/document-set/{set_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a document set (only if not used by any trial)",
+)
+def delete_document_set(
+    project_id: int,
+    set_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # 1. Permission check
+    check_project_access(project_id, current_user, db, "write")
+
+    # 2. Fetch the document set, ensure it belongs to project
+    doc_set = db.execute(
+        select(models.DocumentSet)
+        .where(
+            models.DocumentSet.id == set_id,
+            models.DocumentSet.project_id == project_id,
+        )
+        .options(selectinload(models.DocumentSet.trials))
+    ).scalar_one_or_none()
+
+    if not doc_set:
+        raise HTTPException(status_code=404, detail="Document set not found")
+
+    # 3. Prevent deletion if any trial references this set
+    if doc_set.trials and len(doc_set.trials) > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete document set: one or more trials reference it.",
+        )
+
+    # 4. Delete the set and its associations
+    # Remove document associations (optional, for clean DB)
+    db.execute(
+        document_set_association.delete().where(
+            document_set_association.c.document_set_id == set_id
+        )
+    )
+    db.delete(doc_set)
+    db.commit()
+    return
+
+
+@router.post(
+    "/{project_id}/document-set/from-trial/{trial_id}",
+    response_model=schemas.DocumentSet,
+)
+def create_document_set_from_trial(
+    project_id: int,
+    trial_id: int,
+    set_data: schemas.DocumentSetFromTrial,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.DocumentSet:
+    """Create a named document set from a trial's documents"""
+    check_project_access(project_id, current_user, db, "write")
+
+    # Get trial
+    trial = db.execute(
+        select(models.Trial).where(
+            models.Trial.id == trial_id, models.Trial.project_id == project_id
+        )
+    ).scalar_one_or_none()
+
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+
+    # Create document set
+    db_set = models.DocumentSet(
+        project_id=project_id,
+        name=set_data.name,
+        description=set_data.description or f"Documents from trial #{trial_id}",
+        tags=set_data.tags or [],
+        is_auto_generated=False,
+    )
+
+    db.add(db_set)
+    db.flush()
+
+    # Add documents
+    for doc_id in trial.document_ids:
+        db.execute(
+            document_set_association.insert().values(
+                document_id=doc_id, document_set_id=db_set.id
+            )
+        )
+
+    db.commit()
+    db.refresh(db_set)
+
+    return schemas.DocumentSet.model_validate(db_set)
+
+
+# Updated document_set_endpoints.py - SQLite compatible version
+
+
+@router.get(
+    "/{project_id}/document-set/{set_id}/stats", response_model=schemas.DocumentSetStats
+)
+def get_document_set_stats(
+    project_id: int,
+    set_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.DocumentSetStats:
+    """Get usage statistics for a document set"""
+    check_project_access(project_id, current_user, db, "read")
+
+    doc_set = db.execute(
+        select(models.DocumentSet)
+        .options(selectinload(models.DocumentSet.documents))
+        .where(
+            models.DocumentSet.id == set_id, models.DocumentSet.project_id == project_id
+        )
+    ).scalar_one_or_none()
+
+    if not doc_set:
+        raise HTTPException(status_code=404, detail="Document set not found")
+
+    # Get document IDs in this set
+    doc_ids = [doc.id for doc in doc_set.documents]
+
+    if not doc_ids:
+        return schemas.DocumentSetStats(
+            trials_count=0, extractions_count=0, last_used=None
+        )
+
+    # For SQLite, we need to check JSON array membership differently
+    # Count trials that contain ANY of these document IDs
+    trials_with_docs = (
+        db.execute(select(models.Trial).where(models.Trial.project_id == project_id))
+        .scalars()
+        .all()
+    )
+
+    # Filter trials that contain any of our document IDs
+    trials_count = 0
+    last_trial_date = None
+
+    for trial in trials_with_docs:
+        if trial.document_ids and any(
+            doc_id in trial.document_ids for doc_id in doc_ids
+        ):
+            trials_count += 1
+            if not last_trial_date or trial.created_at > last_trial_date:
+                last_trial_date = trial.created_at
+
+    # Count total extractions (trial results for these documents)
+    extractions_count = (
+        db.execute(
+            select(func.count(models.TrialResult.id))
+            .join(models.Trial)
+            .where(
+                models.Trial.project_id == project_id,
+                models.TrialResult.document_id.in_(doc_ids),
+            )
+        ).scalar()
+        or 0
+    )
+
+    return schemas.DocumentSetStats(
+        trials_count=trials_count,
+        extractions_count=extractions_count,
+        last_used=last_trial_date,
+    )
+
+
+@router.post("/{project_id}/document-set/{set_id}/download-all")
+def download_all_documents(
+    project_id: int,
+    set_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download all documents in a set as a ZIP file"""
+    check_project_access(project_id, current_user, db, "read")
+
+    doc_set = db.execute(
+        select(models.DocumentSet)
+        .where(
+            models.DocumentSet.id == set_id, models.DocumentSet.project_id == project_id
+        )
+        .options(
+            selectinload(models.DocumentSet.documents).selectinload(
+                models.Document.original_file
+            )
+        )
+    ).scalar_one_or_none()
+
+    if not doc_set:
+        raise HTTPException(status_code=404, detail="Document set not found")
+
+    # Create ZIP file in memory
+    import io
+    import zipfile
+
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for doc in doc_set.documents:
+            if doc.original_file:
+                try:
+                    # Get file content
+                    file_content = get_file(doc.original_file.file_uuid)
+
+                    # Add to ZIP with original filename
+                    zip_file.writestr(doc.original_file.file_name, file_content)
+                except Exception as e:
+                    # Log error but continue with other files
+                    print(f"Error adding file {doc.original_file.file_name}: {e}")
+
+    zip_buffer.seek(0)
+
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename={doc_set.name.replace(' ', '_')}_documents.zip"
+        },
+    )
+
 @router.post("/{project_id}/schema", response_model=schemas.Schema)
 def create_schema(
     project_id: int,
@@ -1961,6 +2343,7 @@ def create_trial(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.Trial:
+    # 1. Project, schema, prompt existence & authorization checks
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
@@ -1971,36 +2354,63 @@ def create_trial(
             status_code=403, detail="Not authorized to create trials for this project"
         )
 
-    # Check if the schema exists
     schema: models.Schema | None = db.execute(
         select(models.Schema).where(models.Schema.id == trial.schema_id)
     ).scalar_one_or_none()
     if not schema:
         raise HTTPException(status_code=404, detail="Schema not found")
 
-    # Check if the prompt exists
     prompt: models.Prompt | None = db.execute(
         select(models.Prompt).where(models.Prompt.id == trial.prompt_id)
     ).scalar_one_or_none()
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
 
-    # Check if the documents exist and belong to the project
-    existing_documents = (
-        db.execute(
-            select(models.Document.id).where(models.Document.project_id == project_id)
-        )
-        .scalars()
-        .all()
-    )
-    for document_id in trial.document_ids:
-        if document_id not in existing_documents:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Document with id {document_id} not found in project {project_id}",
-            )
+    # 2. Decide document IDs to use: either direct list, or from document set
+    document_ids: list[int] = []
 
-    # Use default values from config if not provided
+    if trial.document_set_id is not None:
+        # Document set mode
+        document_set: models.DocumentSet | None = db.execute(
+            select(models.DocumentSet).where(
+                (models.DocumentSet.id == trial.document_set_id)
+                & (models.DocumentSet.project_id == project_id)
+            )
+        ).scalar_one_or_none()
+        if not document_set:
+            raise HTTPException(
+                status_code=404, detail="Document set not found in this project"
+            )
+        # Fetch all doc IDs from set
+        document_ids = [doc.id for doc in document_set.documents]
+        if not document_ids:
+            raise HTTPException(status_code=400, detail="Document set is empty")
+    elif trial.document_ids:
+        # Explicit document IDs
+        document_ids = trial.document_ids
+        # Check all are in project
+        existing_documents = (
+            db.execute(
+                select(models.Document.id).where(
+                    models.Document.project_id == project_id
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for document_id in document_ids:
+            if document_id not in existing_documents:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Document with id {document_id} not found in project {project_id}",
+                )
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Either document_ids or document_set_id must be provided",
+        )
+
+    # 3. Use default config values if not set
     llm_model = trial.llm_model or settings.OPENAI_API_MODEL
     api_key = trial.api_key or settings.OPENAI_API_KEY
     base_url = trial.base_url or settings.OPENAI_API_BASE
@@ -2008,27 +2418,33 @@ def create_trial(
     if llm_model is None or api_key is None or base_url is None:
         raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
 
-    # Create the trial
+    # 4. Create trial object
     trial_db = models.Trial(
-        **trial.model_dump(exclude={"llm_model", "api_key", "base_url", "advanced_options"}),
+        schema_id=trial.schema_id,
+        prompt_id=trial.prompt_id,
         project_id=project_id,
         llm_model=llm_model,
         api_key=api_key,
         base_url=base_url,
+        document_ids=document_ids,
+        document_set_id=trial.document_set_id if trial.document_set_id is not None else None,
+        bypass_celery=trial.bypass_celery,
         advanced_options=trial.advanced_options or {},
+        # Add other trial fields as needed...
     )
 
     db.add(trial_db)
     db.commit()
     db.refresh(trial_db)
 
+    # 5. Information extraction (immediate or Celery)
     if trial.bypass_celery:
         from ....utils.info_extraction import extract_info
 
         try:
             extract_info(
                 trial_id=trial_db.id,
-                document_ids=trial.document_ids,
+                document_ids=document_ids,
                 llm_model=llm_model,
                 api_key=api_key,
                 base_url=base_url,
@@ -2049,12 +2465,12 @@ def create_trial(
         from ....celery.celery_config import celery_app
 
         if celery_app is not None:
-            info_extraction.extract_info_celery.delay(  # type: ignore
+            info_extraction.extract_info_celery.delay(
                 trial_id=trial_db.id,
-                document_ids=trial.document_ids,
-                llm_model=trial.llm_model,
-                api_key=trial.api_key,
-                base_url=trial.base_url,
+                document_ids=document_ids,
+                llm_model=llm_model,
+                api_key=api_key,
+                base_url=base_url,
                 schema_id=trial.schema_id,
                 prompt_id=trial.prompt_id,
                 project_id=project_id,

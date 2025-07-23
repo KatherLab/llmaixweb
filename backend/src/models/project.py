@@ -247,17 +247,40 @@ class DocumentSet(Base):
     __tablename__ = "document_sets"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    trial_id: Mapped[int] = mapped_column(ForeignKey("trials.id"), nullable=False)
+
+    # Add metadata for better organization
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    is_auto_generated: Mapped[bool] = mapped_column(
+        Boolean, default=False
+    )  # True for trial-created sets
+
+    # Tags for categorization
+    tags: Mapped[list[str]] = mapped_column(JSON, default=list)
+
+    # Track preprocessing configuration if all docs share one
+    preprocessing_config_id: Mapped[int] = mapped_column(
+        ForeignKey("preprocessing_configurations.id"), nullable=True
+    )
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    # Relationships
     project: Mapped["Project"] = relationship(back_populates="document_sets")
-    trial: Mapped["Trial"] = relationship(back_populates="document_set")
+    trials: Mapped[list["Trial"]] = relationship(
+        "Trial", back_populates="document_set", cascade="all, delete-orphan"
+    )
+
     documents: Mapped[list["Document"]] = relationship(
         secondary=document_set_association, back_populates="document_sets"
+    )
+    preprocessing_config: Mapped["PreprocessingConfiguration"] = relationship(
+        back_populates="document_sets"
     )
 
 
@@ -311,9 +334,14 @@ class Trial(Base):
     schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"), nullable=False)
     prompt_id: Mapped[str] = mapped_column(ForeignKey("prompts.id"), nullable=False)
     document_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
-    document_set: Mapped["DocumentSet"] = relationship(
-        back_populates="trial", uselist=False
+    document_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("document_sets.id"), nullable=True
     )
+
+    document_set: Mapped["DocumentSet"] = relationship(
+        "DocumentSet", back_populates="trials"
+    )
+
     status: Mapped[TrialStatus] = mapped_column(
         Enum(TrialStatus, native_enum=False, length=20),
         default=TrialStatus.PENDING,
@@ -428,6 +456,9 @@ class PreprocessingConfiguration(Base):
     )
 
     documents: Mapped[list["Document"]] = relationship(
+        back_populates="preprocessing_config"
+    )
+    document_sets: Mapped[list["DocumentSet"]] = relationship(
         back_populates="preprocessing_config"
     )
 

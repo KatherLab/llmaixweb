@@ -208,6 +208,18 @@
               Retry
             </button>
 
+            <button
+              v-if="trial.results && trial.results.length > 0"
+              @click="saveAsDocumentGroup(trial)"
+              class="inline-flex items-center gap-2 px-3 py-1.5 text-xs bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+              title="Save document selection as reusable group"
+            >
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zM6 20h2a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2z" />
+              </svg>
+              Save Document Group
+            </button>
+
             <!-- Delete button -->
             <button
               @click="confirmDeleteTrial(trial)"
@@ -230,6 +242,7 @@
       :documents="documents"
       :schemas="schemas"
       :prompts="prompts"
+      :projectId=props.projectId
       @close="isModalOpen = false"
       @create="handleCreateTrial"
     />
@@ -430,7 +443,6 @@
 
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { api } from '@/services/api';
 import CreateTrialModal from '@/components/CreateTrialModal.vue';
@@ -598,6 +610,28 @@ const stopPolling = () => {
     pollInterval.value = null;
   }
 };
+
+const saveAsDocumentGroup = async (trial) => {
+  const groupName = prompt(`Enter a name for this document group:`, `Trial #${trial.id} Documents`);
+  if (!groupName) return;
+
+  try {
+    const payload = {
+      name: groupName,
+      description: `Documents used in trial #${trial.id} - ${trial.results.length} documents`,
+      document_ids: trial.document_ids,
+      // trial_id: trial.id,
+      tags: ['from-trial', `trial-${trial.id}`]
+    };
+
+    await api.post(`/project/${props.projectId}/document-set`, payload);
+    toast.success('Document group saved successfully');
+  } catch (error) {
+    console.error('Failed to save document group:', error);
+    toast.error(error.response?.data?.detail || 'Failed to save document group');
+  }
+};
+
 
 const updateTrialStatus = async (trialId) => {
   try {

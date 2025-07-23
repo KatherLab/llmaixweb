@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
-import { formatDate } from '@/utils/formatters';
-import { api } from '@/services/api';
-import { useToast } from 'vue-toastification';
+import {ref, computed, watch} from 'vue';
+import {formatDate} from '@/utils/formatters';
+import {api} from '@/services/api';
+import {useToast} from 'vue-toastification';
+import LoadingSpinner from "@/components/common/LoadingSpinner.vue";
 
 const toast = useToast();
 
@@ -22,6 +23,10 @@ const props = defineProps({
   prompts: {
     type: Array,
     default: () => []
+  },
+  projectId: {
+    type: [String, Number],
+    required: true
   }
 });
 
@@ -36,6 +41,121 @@ const trialData = ref({
   base_url: '',
   advanced_options: {}
 });
+
+const documentSelectionMode = ref('individual');
+const documentGroups = ref([]);
+const loadingGroups = ref(false);
+const selectedGroupId = ref(null);
+const previousTrials = ref([]);
+const selectedTrialId = ref('');
+const preprocessingConfigs = ref([]);
+const selectedConfigId = ref('');
+const dateRange = ref({start: '', end: ''});
+
+const loadDocumentGroups = async () => {
+  loadingGroups.value = true;
+  try {
+    const response = await api.get(`/project/${props.projectId}/document-set`);
+    documentGroups.value = response.data;
+  } catch (error) {
+    toast.error('Failed to load document groups');
+    console.error(error);
+  } finally {
+    loadingGroups.value = false;
+  }
+};
+
+const loadPreviousTrials = async () => {
+  try {
+    const response = await api.get(`/project/${props.projectId}/trial`);
+    previousTrials.value = response.data.filter(trial =>
+        trial.status === 'completed' && trial.document_ids.length > 0
+    );
+  } catch (error) {
+    console.error('Failed to load previous trials:', error);
+  }
+};
+
+const loadPreprocessingConfigs = async () => {
+  try {
+    const response = await api.get(`/project/${props.projectId}/preprocessing-config`);
+    preprocessingConfigs.value = response.data;
+  } catch (error) {
+    console.error('Failed to load preprocessing configs:', error);
+  }
+};
+
+const toggleGroupSelection = (group) => {
+  if (selectedGroupId.value === group.id) {
+    selectedGroupId.value = null;
+    trialData.value.document_ids = [];
+  } else {
+    selectedGroupId.value = group.id;
+    trialData.value.document_ids = group.documents.map(doc => doc.id);
+  }
+};
+
+
+const loadDocumentsFromTrial = async () => {
+  if (!selectedTrialId.value) return;
+
+  const trial = previousTrials.value.find(t => t.id === parseInt(selectedTrialId.value));
+  if (trial) {
+    trialData.value.document_ids = [...trial.document_ids];
+    toast.success(`Loaded ${trial.document_ids.length} documents from previous trial`);
+  }
+};
+
+
+const filterByPreprocessingConfig = () => {
+  if (!selectedConfigId.value) {
+    trialData.value.document_ids = [];
+    return;
+  }
+
+  const configId = parseInt(selectedConfigId.value);
+  const filteredDocs = props.documents.filter(doc =>
+      doc.preprocessing_config?.id === configId
+  );
+
+  trialData.value.document_ids = filteredDocs.map(doc => doc.id);
+  toast.success(`Selected ${filteredDocs.length} documents with this configuration`);
+};
+
+const selectRecentDocuments = (days) => {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+
+  const recentDocs = props.documents.filter(doc =>
+      new Date(doc.created_at) >= cutoffDate
+  );
+
+  trialData.value.document_ids = recentDocs.map(doc => doc.id);
+  toast.success(`Selected ${recentDocs.length} documents from the last ${days} days`);
+};
+
+const selectDocumentsByStatus = (status) => {
+  const filteredDocs = props.documents.filter(doc =>
+      doc.preprocessing_status === status
+  );
+
+  trialData.value.document_ids = filteredDocs.map(doc => doc.id);
+  toast.success(`Selected ${filteredDocs.length} ${status} documents`);
+};
+
+watch(documentSelectionMode, (newMode) => {
+  if (newMode === 'groups' && documentGroups.value.length === 0) {
+    loadDocumentGroups();
+  } else if (newMode === 'smart') {
+    if (previousTrials.value.length === 0) loadPreviousTrials();
+    if (preprocessingConfigs.value.length === 0) loadPreprocessingConfigs();
+  }
+});
+
+const createGroupFromSelection = () => {
+  emit('create-group', trialData.value.document_ids);
+};
+
 
 const advancedOptionsVisible = ref(false);
 const advancedSettingsVisible = ref(false);
@@ -58,7 +178,7 @@ const maxCompletionTokens = ref('');
 
 // Test connection first, then load models
 const testAndLoadModels = async (apiKey = '', baseUrl = '') => {
-  console.log('testAndLoadModels called with:', { apiKey: !!apiKey, baseUrl: !!baseUrl });
+  console.log('testAndLoadModels called with:', {apiKey: !!apiKey, baseUrl: !!baseUrl});
 
   isTestingConnection.value = true;
   connectionTested.value = false;
@@ -76,7 +196,7 @@ const testAndLoadModels = async (apiKey = '', baseUrl = '') => {
     if (baseUrl.trim()) params.base_url = baseUrl.trim();
 
     console.log('Testing connection with params:', params);
-    const testResponse = await api.post('/project/llm/test-connection', null, { params });
+    const testResponse = await api.post('/project/llm/test-connection', null, {params});
 
     console.log('Connection test response:', testResponse.data);
 
@@ -141,7 +261,7 @@ const testAndLoadModels = async (apiKey = '', baseUrl = '') => {
 
 // Load models from API
 const loadModels = async (apiKey = '', baseUrl = '') => {
-  console.log('loadModels called with:', { apiKey: !!apiKey, baseUrl: !!baseUrl });
+  console.log('loadModels called with:', {apiKey: !!apiKey, baseUrl: !!baseUrl});
   isLoadingModels.value = true;
 
   try {
@@ -150,7 +270,7 @@ const loadModels = async (apiKey = '', baseUrl = '') => {
     if (baseUrl.trim()) params.base_url = baseUrl.trim();
 
     console.log('Making API call to /project/llm/models with params:', params);
-    const response = await api.get('/project/llm/models', { params });
+    const response = await api.get('/project/llm/models', {params});
 
     console.log('API response:', response.data);
 
@@ -215,7 +335,7 @@ const testSelectedModel = async () => {
     }
 
     console.log('Testing model with schema, params:', params);
-    const response = await api.post('/project/llm/test-model-schema', null, { params });
+    const response = await api.post('/project/llm/test-model-schema', null, {params});
 
     console.log('Model test response:', response.data);
 
@@ -284,7 +404,7 @@ watch(() => props.open, (newValue) => {
   if (newValue) {
     initializeForm();
   }
-}, { immediate: true });
+}, {immediate: true});
 
 // Watch for changes in custom API settings
 watch([() => trialData.value.api_key, () => trialData.value.base_url], () => {
@@ -362,10 +482,10 @@ const hasValidConfig = computed(() => {
 // Form validation - NOW REQUIRES MODEL TESTING
 const isFormValid = computed(() => {
   const basicValidation = trialData.value.schema_id &&
-                         trialData.value.prompt_id &&
-                         trialData.value.document_ids.length > 0 &&
-                         trialData.value.llm_model &&
-                         availableModels.value.length > 0;
+      trialData.value.prompt_id &&
+      trialData.value.document_ids.length > 0 &&
+      trialData.value.llm_model &&
+      availableModels.value.length > 0;
 
   // Must have valid configuration (either system or custom)
   const configValid = hasValidConfig.value;
@@ -387,53 +507,59 @@ const currentError = computed(() => {
 // Get configuration status
 const configStatus = computed(() => {
   if (isTestingConnection.value || isLoadingModels.value) {
-    return { type: 'loading', message: 'Testing configuration...' };
+    return {type: 'loading', message: 'Testing configuration...'};
   }
 
   if (hasCustomApiSettings.value) {
     if (!connectionTested.value) {
-      return { type: 'warning', message: 'Custom API settings need to be tested' };
+      return {type: 'warning', message: 'Custom API settings need to be tested'};
     }
     if (!connectionValid.value) {
-      return { type: 'error', message: customConfigError.value || 'Custom API connection failed' };
+      return {type: 'error', message: customConfigError.value || 'Custom API connection failed'};
     }
     if (availableModels.value.length === 0) {
-      return { type: 'error', message: 'No models available with current settings' };
+      return {type: 'error', message: 'No models available with current settings'};
     }
-    return { type: 'success', message: `Custom API connected - ${availableModels.value.length} models available` };
+    return {type: 'success', message: `Custom API connected - ${availableModels.value.length} models available`};
   } else {
     if (!hasSystemConfig.value) {
-      return { type: 'error', message: 'System configuration incomplete - please contact administrator or use custom settings' };
+      return {
+        type: 'error',
+        message: 'System configuration incomplete - please contact administrator or use custom settings'
+      };
     }
     if (systemConfigError.value) {
-      return { type: 'error', message: `System configuration error - please contact administrator: ${systemConfigError.value}` };
+      return {
+        type: 'error',
+        message: `System configuration error - please contact administrator: ${systemConfigError.value}`
+      };
     }
     if (availableModels.value.length === 0) {
-      return { type: 'error', message: 'No models available - please contact administrator' };
+      return {type: 'error', message: 'No models available - please contact administrator'};
     }
-    return { type: 'success', message: `System configuration active - ${availableModels.value.length} models available` };
+    return {type: 'success', message: `System configuration active - ${availableModels.value.length} models available`};
   }
 });
 
 // Get model test status
 const modelTestStatus = computed(() => {
   if (!trialData.value.llm_model || !trialData.value.schema_id) {
-    return { type: 'none', message: 'Select a model and schema first' };
+    return {type: 'none', message: 'Select a model and schema first'};
   }
 
   if (isTestingModel.value) {
-    return { type: 'loading', message: 'Testing model with schema...' };
+    return {type: 'loading', message: 'Testing model with schema...'};
   }
 
   if (!modelTested.value) {
-    return { type: 'warning', message: 'Model must be tested with schema before creating trial' };
+    return {type: 'warning', message: 'Model must be tested with schema before creating trial'};
   }
 
   if (!modelValid.value) {
-    return { type: 'error', message: modelTestError.value || 'Model test failed' };
+    return {type: 'error', message: modelTestError.value || 'Model test failed'};
   }
 
-  return { type: 'success', message: `Model '${trialData.value.llm_model}' supports the selected schema` };
+  return {type: 'success', message: `Model '${trialData.value.llm_model}' supports the selected schema`};
 });
 
 // Toggle document selection
@@ -496,16 +622,16 @@ const handleSubmit = () => {
 
 <template>
   <div
-    v-if="open"
-    class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
-    @click="emit('close')"
+      v-if="open"
+      class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
+      @click="emit('close')"
   >
     <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col" @click.stop>
       <div class="px-6 py-4 border-b flex justify-between items-center">
         <h3 class="text-xl font-semibold">Start New Trial</h3>
-        <button @click="emit('close')" class="text-gray-500 hover:text-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        <button class="text-gray-500 hover:text-gray-700" @click="emit('close')">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
           </svg>
         </button>
       </div>
@@ -514,7 +640,7 @@ const handleSubmit = () => {
         <!-- Configuration Status -->
         <div class="mb-6">
           <div
-            :class="[
+              :class="[
               'p-4 rounded-md border',
               {
                 'bg-blue-50 border-blue-200': configStatus.type === 'loading',
@@ -526,25 +652,36 @@ const handleSubmit = () => {
           >
             <div class="flex items-center gap-2">
               <!-- Loading spinner -->
-              <svg v-if="configStatus.type === 'loading'" class="animate-spin w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24">
+              <svg v-if="configStatus.type === 'loading'" class="animate-spin w-5 h-5 text-blue-500" fill="none"
+                   viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path class="opacity-75"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      fill="currentColor"></path>
               </svg>
               <!-- Warning icon -->
-              <svg v-else-if="configStatus.type === 'warning'" class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 3 1.732 3z" />
+              <svg v-else-if="configStatus.type === 'warning'" class="w-5 h-5 text-yellow-500" fill="none"
+                   stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 3 1.732 3z"
+                    stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2"/>
               </svg>
               <!-- Error icon -->
-              <svg v-else-if="configStatus.type === 'error'" class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg v-else-if="configStatus.type === 'error'" class="w-5 h-5 text-red-500" fill="none"
+                   stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"/>
               </svg>
               <!-- Success icon -->
               <svg v-else class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"
+                      stroke-width="2"/>
               </svg>
 
               <span
-                :class="[
+                  :class="[
                   'font-medium',
                   {
                     'text-blue-700': configStatus.type === 'loading',
@@ -566,11 +703,11 @@ const handleSubmit = () => {
             Select Prompt <span class="text-red-500">*</span>
           </label>
           <select
-            v-model="trialData.prompt_id"
-            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            @change="resetModelTest"
+              v-model="trialData.prompt_id"
+              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              @change="resetModelTest"
           >
-            <option value="" disabled>Select a prompt</option>
+            <option disabled value="">Select a prompt</option>
             <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id.toString()">
               {{ prompt.name }}
             </option>
@@ -586,11 +723,15 @@ const handleSubmit = () => {
               <div class="mt-2 space-y-2">
                 <div v-if="selectedPrompt.system_prompt">
                   <span class="font-medium text-gray-600">System:</span>
-                  <pre class="mt-1 text-xs bg-white p-2 rounded border overflow-auto max-h-24">{{ selectedPrompt.system_prompt }}</pre>
+                  <pre class="mt-1 text-xs bg-white p-2 rounded border overflow-auto max-h-24">{{
+                      selectedPrompt.system_prompt
+                    }}</pre>
                 </div>
                 <div v-if="selectedPrompt.user_prompt">
                   <span class="font-medium text-gray-600">User:</span>
-                  <pre class="mt-1 text-xs bg-white p-2 rounded border overflow-auto max-h-24">{{ selectedPrompt.user_prompt }}</pre>
+                  <pre class="mt-1 text-xs bg-white p-2 rounded border overflow-auto max-h-24">{{
+                      selectedPrompt.user_prompt
+                    }}</pre>
                 </div>
               </div>
             </details>
@@ -603,11 +744,11 @@ const handleSubmit = () => {
             Select Schema <span class="text-red-500">*</span>
           </label>
           <select
-            v-model="trialData.schema_id"
-            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            @change="resetModelTest"
+              v-model="trialData.schema_id"
+              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              @change="resetModelTest"
           >
-            <option value="" disabled>Select a schema</option>
+            <option disabled value="">Select a schema</option>
             <option v-for="schema in schemas" :key="schema.id" :value="schema.id.toString()">
               {{ schema.schema_name }}
             </option>
@@ -617,7 +758,9 @@ const handleSubmit = () => {
         <!-- Schema Preview -->
         <div v-if="selectedSchema" class="mb-6 p-4 bg-gray-50 rounded-md">
           <h4 class="font-medium mb-2">Schema Definition:</h4>
-          <pre class="text-xs overflow-auto max-h-24">{{ JSON.stringify(selectedSchema.schema_definition, null, 2) }}</pre>
+          <pre class="text-xs overflow-auto max-h-24">{{
+              JSON.stringify(selectedSchema.schema_definition, null, 2)
+            }}</pre>
         </div>
 
         <!-- Model Selection -->
@@ -627,22 +770,27 @@ const handleSubmit = () => {
           </label>
           <div class="relative">
             <select
-              v-model="trialData.llm_model"
-              :disabled="isLoadingModels || isTestingConnection || availableModels.length === 0"
-              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                v-model="trialData.llm_model"
+                :disabled="isLoadingModels || isTestingConnection || availableModels.length === 0"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
             >
-              <option value="" disabled>
-                {{ isLoadingModels || isTestingConnection ? 'Loading models...' :
-                   availableModels.length === 0 ? 'No models available' : 'Select a model' }}
+              <option disabled value="">
+                {{
+                  isLoadingModels || isTestingConnection ? 'Loading models...' :
+                      availableModels.length === 0 ? 'No models available' : 'Select a model'
+                }}
               </option>
               <option v-for="model in availableModels" :key="model" :value="model">
                 {{ model }}
               </option>
             </select>
-            <div v-if="isLoadingModels || isTestingConnection" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <div v-if="isLoadingModels || isTestingConnection"
+                 class="absolute right-3 top-1/2 transform -translate-y-1/2">
               <svg class="animate-spin h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path class="opacity-75"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      fill="currentColor"></path>
               </svg>
             </div>
           </div>
@@ -651,7 +799,7 @@ const handleSubmit = () => {
         <!-- Model Test Section - MANDATORY -->
         <div v-if="trialData.llm_model && trialData.schema_id && hasValidConfig" class="mb-6">
           <div
-            :class="[
+              :class="[
               'p-4 rounded-md border',
               {
                 'bg-blue-50 border-blue-200': modelTestStatus.type === 'loading',
@@ -665,31 +813,45 @@ const handleSubmit = () => {
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <!-- Loading spinner -->
-                <svg v-if="modelTestStatus.type === 'loading'" class="animate-spin w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24">
+                <svg v-if="modelTestStatus.type === 'loading'" class="animate-spin w-5 h-5 text-blue-500" fill="none"
+                     viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path class="opacity-75"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        fill="currentColor"></path>
                 </svg>
                 <!-- Warning icon -->
-                <svg v-else-if="modelTestStatus.type === 'warning'" class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 3 1.732 3z" />
+                <svg v-else-if="modelTestStatus.type === 'warning'" class="w-5 h-5 text-yellow-500" fill="none"
+                     stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 3 1.732 3z"
+                      stroke-linecap="round" stroke-linejoin="round"
+                      stroke-width="2"/>
                 </svg>
                 <!-- Error icon -->
-                <svg v-else-if="modelTestStatus.type === 'error'" class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg v-else-if="modelTestStatus.type === 'error'" class="w-5 h-5 text-red-500" fill="none"
+                     stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"/>
                 </svg>
                 <!-- Success icon -->
-                <svg v-else-if="modelTestStatus.type === 'success'" class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg v-else-if="modelTestStatus.type === 'success'" class="w-5 h-5 text-green-500" fill="none"
+                     stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"
+                        stroke-width="2"/>
                 </svg>
                 <!-- Info icon -->
                 <svg v-else class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"/>
                 </svg>
 
                 <div>
                   <h4 class="font-medium text-gray-900">Model & Schema Compatibility Test</h4>
                   <p
-                    :class="[
+                      :class="[
                       'text-sm',
                       {
                         'text-blue-700': modelTestStatus.type === 'loading',
@@ -706,21 +868,25 @@ const handleSubmit = () => {
               </div>
 
               <button
-                @click="testSelectedModel"
-                :disabled="isTestingModel || !trialData.llm_model || !trialData.schema_id"
-                class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center gap-2"
+                  :disabled="isTestingModel || !trialData.llm_model || !trialData.schema_id"
+                  class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center gap-2"
+                  @click="testSelectedModel"
               >
                 <svg v-if="isTestingModel" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path class="opacity-75"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        fill="currentColor"></path>
                 </svg>
                 {{ isTestingModel ? 'Testing...' : 'Test Model' }}
               </button>
             </div>
 
-            <div v-if="modelTestStatus.type === 'warning'" class="mt-3 p-3 bg-yellow-100 border border-yellow-200 rounded-md">
+            <div v-if="modelTestStatus.type === 'warning'"
+                 class="mt-3 p-3 bg-yellow-100 border border-yellow-200 rounded-md">
               <p class="text-yellow-800 text-sm">
-                <strong>Required:</strong> You must test the selected model with the schema to ensure compatibility before creating a trial.
+                <strong>Required:</strong> You must test the selected model with the schema to ensure compatibility
+                before creating a trial.
               </p>
             </div>
           </div>
@@ -729,20 +895,20 @@ const handleSubmit = () => {
         <!-- Advanced Settings Section (NEW) -->
         <div class="mb-6">
           <button
-            @click="advancedSettingsVisible = !advancedSettingsVisible"
-            class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+              class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+              @click="advancedSettingsVisible = !advancedSettingsVisible"
           >
             {{ advancedSettingsVisible ? 'Hide advanced settings' : 'Show advanced settings' }}
             <span class="ml-1">
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4 transition-transform"
-                :class="{ 'rotate-180': advancedSettingsVisible }"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+                  :class="{ 'rotate-180': advancedSettingsVisible }"
+                  class="h-4 w-4 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
               >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
             </span>
           </button>
@@ -755,11 +921,11 @@ const handleSubmit = () => {
                 <span class="text-gray-500 font-normal">(optional)</span>
               </label>
               <input
-                v-model="maxCompletionTokens"
-                type="number"
-                min="1"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="e.g., 4096"
+                  v-model="maxCompletionTokens"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  min="1"
+                  placeholder="e.g., 4096"
+                  type="number"
               />
               <p class="mt-1 text-xs text-gray-500">
                 Limit the maximum tokens for model responses. Leave empty to use model defaults.
@@ -771,20 +937,20 @@ const handleSubmit = () => {
         <!-- Custom API Options Toggle -->
         <div class="mb-6">
           <button
-            @click="advancedOptionsVisible = !advancedOptionsVisible"
-            class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+              class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+              @click="advancedOptionsVisible = !advancedOptionsVisible"
           >
             {{ advancedOptionsVisible ? 'Hide custom API settings' : 'Use custom API settings' }}
             <span class="ml-1">
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4 transition-transform"
-                :class="{ 'rotate-180': advancedOptionsVisible }"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+                  :class="{ 'rotate-180': advancedOptionsVisible }"
+                  class="h-4 w-4 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
               >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
             </span>
           </button>
@@ -800,19 +966,19 @@ const handleSubmit = () => {
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
                 <input
-                  v-model="trialData.api_key"
-                  type="password"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., sk-1234567890abcdef..."
+                    v-model="trialData.api_key"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., sk-1234567890abcdef..."
+                    type="password"
                 />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
                 <input
-                  v-model="trialData.base_url"
-                  type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., https://api.openai.com/v1"
+                    v-model="trialData.base_url"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., https://api.openai.com/v1"
+                    type="text"
                 />
               </div>
             </div>
@@ -827,73 +993,265 @@ const handleSubmit = () => {
             </label>
             <span class="text-sm text-gray-500">{{ trialData.document_ids.length }} selected</span>
           </div>
-          <div class="flex gap-2 mb-2">
-            <input
-              v-model="searchTerm"
-              type="text"
-              placeholder="Search documents..."
-              class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-            <button
-              @click="selectAllDocuments"
-              class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
-              title="Select all visible documents"
-            >
-              Select All
-            </button>
-            <button
-              @click="clearDocumentSelection"
-              class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
-              title="Clear selection"
-            >
-              Clear
-            </button>
-          </div>
-          <div class="border rounded-md overflow-hidden">
-            <div v-if="filteredDocuments.length === 0" class="p-4 text-center text-gray-500">
-              No documents match your search criteria
-            </div>
-            <div v-else class="max-h-60 overflow-y-auto">
-              <div
-                v-for="doc in filteredDocuments"
-                :key="doc.id"
-                :class="[
-                  'p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 flex items-center',
-                  {'bg-blue-50': trialData.document_ids.includes(doc.id)}
+
+          <!-- Selection Mode Tabs -->
+          <div class="border-b border-gray-200 mb-4">
+            <nav class="-mb-px flex space-x-4">
+              <button
+                  :class="[
+                  'py-2 px-1 border-b-2 font-medium text-sm',
+                  documentSelectionMode === 'individual'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
                 ]"
-                @click="toggleDocumentSelection(doc.id)"
+                  @click="documentSelectionMode = 'individual'"
               >
-                <input
-                  type="checkbox"
-                  :checked="trialData.document_ids.includes(doc.id)"
-                  class="mr-3"
-                  @click.stop
-                />
-                <div class="flex-1">
-                  <div class="font-medium">{{ doc.original_file?.file_name || `Document #${doc.id}` }}</div>
-                  <div class="text-xs text-gray-500">
-                    Method: {{ doc.preprocessing_method || 'N/A' }} •
-                    Created: {{ formatDate(doc.created_at) }}
+                Individual Documents
+              </button>
+              <button
+                  :class="[
+                  'py-2 px-1 border-b-2 font-medium text-sm',
+                  documentSelectionMode === 'groups'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                ]"
+                  @click="documentSelectionMode = 'groups'"
+              >
+                Document Groups
+              </button>
+              <button
+                  :class="[
+                  'py-2 px-1 border-b-2 font-medium text-sm',
+                  documentSelectionMode === 'smart'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                ]"
+                  @click="documentSelectionMode = 'smart'"
+              >
+                Smart Selection
+              </button>
+            </nav>
+          </div>
+
+          <!-- Individual Document Selection -->
+          <div v-if="documentSelectionMode === 'individual'">
+            <!-- Individual Document Selection -->
+            <div class="flex gap-2 mb-2">
+              <input
+                  v-model="searchTerm"
+                  class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Search documents..."
+                  type="text"
+              />
+              <button
+                  class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+                  title="Select all visible documents"
+                  @click="selectAllDocuments"
+              >
+                Select All
+              </button>
+              <button
+                  class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+                  title="Clear selection"
+                  @click="clearDocumentSelection"
+              >
+                Clear
+              </button>
+            </div>
+            <div class="border rounded-md overflow-hidden">
+              <div v-if="filteredDocuments.length === 0" class="p-4 text-center text-gray-500">
+                No documents match your search criteria
+              </div>
+              <div v-else class="max-h-60 overflow-y-auto">
+                <div
+                    v-for="doc in filteredDocuments"
+                    :key="doc.id"
+                    :class="[
+                      'p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 flex items-center',
+                      {'bg-blue-50': trialData.document_ids.includes(doc.id)}
+                    ]"
+                    @click="toggleDocumentSelection(doc.id)"
+                >
+                  <input
+                      :checked="trialData.document_ids.includes(doc.id)"
+                      class="mr-3"
+                      type="checkbox"
+                      @click.stop
+                  />
+                  <div class="flex-1">
+                    <div class="font-medium">{{ doc.original_file?.file_name || `Document #${doc.id}` }}</div>
+                    <div class="text-xs text-gray-500">
+                      Config: {{ doc.preprocessing_config?.name || 'N/A' }} •
+                      Created: {{ formatDate(doc.created_at) }}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div class="px-6 py-4 border-t flex justify-end gap-2">
-        <button @click="emit('close')" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md">
-          Cancel
-        </button>
-        <button
-          @click="handleSubmit"
-          class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md disabled:bg-blue-300 disabled:cursor-not-allowed"
-          :disabled="!isFormValid"
-          :title="!isFormValid ? 'Please ensure all required fields are filled, model is tested with schema, and configuration is valid' : ''"
-        >
-          Start Trial
-        </button>
+          <!-- Document Groups Selection -->
+          <div v-else-if="documentSelectionMode === 'groups'" class="space-y-4">
+            <div v-if="loadingGroups" class="text-center py-8">
+              <LoadingSpinner/>
+            </div>
+
+            <div v-else-if="documentGroups.length === 0" class="text-center py-8 bg-gray-50 rounded-lg">
+              <p class="text-gray-500">No document groups available</p>
+<!--              <button
+                  class="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  @click="$emit('create-group')"
+              >
+                Create Document Group
+              </button>-->
+            </div>
+
+            <div v-else class="space-y-2">
+              <div
+                  v-for="group in documentGroups"
+                  :key="group.id"
+                  :class="{ 'ring-2 ring-blue-500 bg-blue-50': selectedGroupId === group.id }"
+                  class="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  @click="toggleGroupSelection(group)"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <h4 class="font-medium text-gray-900">{{ group.name }}</h4>
+                    <p v-if="group.description" class="text-sm text-gray-600 mt-1">{{ group.description }}</p>
+                    <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                      <span>{{ group.documents.length }} documents</span>
+                      <span v-if="group.preprocessing_config">
+                  Config: {{ group.preprocessing_config.name }}
+                </span>
+                      <span v-if="group.created_at">
+                  Created: {{ formatDate(group.created_at) }}
+                </span>
+                    </div>
+                    <div v-if="group.tags && group.tags.length > 0" class="mt-2 flex flex-wrap gap-1">
+                <span
+                    v-for="tag in group.tags"
+                    :key="tag"
+                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                >
+                  {{ tag }}
+                </span>
+                    </div>
+                  </div>
+                  <div class="ml-4">
+                    <input
+                        :checked="selectedGroupId === group.id"
+                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        type="checkbox"
+                        @change="toggleGroupSelection(group)"
+                        @click.stop
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Smart Selection -->
+          <div v-else-if="documentSelectionMode === 'smart'" class="space-y-4">
+            <!-- Previous Trial Selection -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-2">Load from Previous Trial</h4>
+              <select
+                  v-model="selectedTrialId"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  @change="loadDocumentsFromTrial"
+              >
+                <option value="">Select a previous trial...</option>
+                <option v-for="trial in previousTrials" :key="trial.id" :value="trial.id">
+                  Trial #{{ trial.id }} - {{ formatDate(trial.created_at) }} ({{ trial.document_ids.length }} docs)
+                </option>
+              </select>
+            </div>
+
+            <!-- Preprocessing Configuration Filter -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-2">Filter by Preprocessing Configuration</h4>
+              <select
+                  v-model="selectedConfigId"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  @change="filterByPreprocessingConfig"
+              >
+                <option value="">All configurations...</option>
+                <option v-for="config in preprocessingConfigs" :key="config.id" :value="config.id">
+                  {{ config.name }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Date Range Filter -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-2">Filter by Date Range</h4>
+              <div class="grid grid-cols-2 gap-2">
+                <input
+                    v-model="dateRange.start"
+                    class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    type="date"
+                />
+                <input
+                    v-model="dateRange.end"
+                    class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    type="date"
+                />
+              </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="flex flex-wrap gap-2 pt-2">
+              <button
+                  class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+                  @click="selectRecentDocuments(7)"
+              >
+                Last 7 days
+              </button>
+              <button
+                  class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+                  @click="selectRecentDocuments(30)"
+              >
+                Last 30 days
+              </button>
+              <button
+                  class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+                  @click="selectDocumentsByStatus('success')"
+              >
+                Successfully processed
+              </button>
+            </div>
+
+            <!-- Selected Documents Summary -->
+            <div v-if="trialData.document_ids.length > 0" class="mt-4 p-3 bg-blue-50 rounded-md">
+              <div class="flex items-center justify-between">
+          <span class="text-sm font-medium text-blue-900">
+            {{ trialData.document_ids.length }} documents selected
+          </span>
+                <button
+                    class="text-sm text-blue-600 hover:text-blue-800"
+                    @click="clearDocumentSelection"
+                >
+                  Clear selection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t flex justify-end gap-2">
+          <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md" @click="emit('close')">
+            Cancel
+          </button>
+          <button
+              :disabled="!isFormValid"
+              :title="!isFormValid ? 'Please ensure all required fields are filled, model is tested with schema, and configuration is valid' : ''"
+              class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md disabled:bg-blue-300 disabled:cursor-not-allowed"
+              @click="handleSubmit"
+          >
+            Start Trial
+          </button>
+        </div>
       </div>
     </div>
   </div>

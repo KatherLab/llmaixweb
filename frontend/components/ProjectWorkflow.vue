@@ -82,7 +82,7 @@ const steps = [
   { id: 'files', name: 'Upload Files' },
   { id: 'preprocessing', name: 'Preprocess Files' },
   { id: 'documents', name: 'Documents' },
-  { id: 'schemas', name: 'JSON Schemas' },
+  { id: 'schemas', name: 'Schemas & Prompts' },
   { id: 'trials', name: 'Run Trials' },
   { id: 'evaluation', name: 'Evaluation' }
 ];

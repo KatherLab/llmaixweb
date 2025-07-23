@@ -40,6 +40,9 @@ from .project import (
     Trial,
     TrialCreate,
     TrialResult,
+    DocumentSetUpdate,
+    DocumentSetFromTrial,
+    DocumentSetStats,
 )
 from .user import InvitationInfo, InvitationResponse, User, UserCreate, UserResponse
 
@@ -63,7 +66,10 @@ __all__ = [
     "Document",
     "DocumentSet",
     "DocumentSetCreate",
+    "DocumentSetUpdate",
     "DocumentSetBase",
+    "DocumentSetFromTrial",
+    "DocumentSetStats",
     "PreprocessingTaskBase",
     "PreprocessingTaskCreate",
     "PreprocessingTaskUpdate",
