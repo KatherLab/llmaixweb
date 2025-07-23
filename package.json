@@ -14,7 +14,7 @@
     "@tailwindcss/vite": "^4.1.11",
     "ag-grid-vue3": "^34.0.1",
     "autoprefixer": "^10.4.21",
-    "axios": "^1.10.0",
+    "axios": "^1.11.0",
     "form-data": "^4.0.4",
     "chart.js": "^4.5.0",
     "pinia": "^3.0.3",
