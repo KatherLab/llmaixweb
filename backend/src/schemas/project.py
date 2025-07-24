@@ -52,7 +52,8 @@ class FileBase(UTCModel):
     description: str | None = None
     file_size: int | None = None
     file_hash: str | None = None
-
+    file_metadata: dict | None = None
+    preprocessing_strategy: PreprocessingStrategy | None = None
 
 class FileCreate(FileBase):
     file_name: str

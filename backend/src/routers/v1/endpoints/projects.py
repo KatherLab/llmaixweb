@@ -436,17 +436,142 @@ def upload_file(
     file_uuid = save_file(file_content)
 
     new_file = models.File(
-        **file_info.model_dump(exclude={"file_uuid", "file_size", "file_hash"}),
+        **file_info.model_dump(
+            exclude={"file_uuid", "file_size", "file_hash", "file_metadata"}
+        ),
         project_id=project_id,
         file_uuid=file_uuid,
         file_size=file_size,
         file_hash=file_hash,
+        file_metadata=file_info.file_metadata
+        if hasattr(file_info, "file_metadata")
+        else None,
     )
 
     db.add(new_file)
     db.commit()
     db.refresh(new_file)
     return schemas.File.model_validate(new_file)
+
+
+@router.post("/{project_id}/file/{file_id}/configure", response_model=schemas.File)
+def configure_file_import(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file_id: int,
+    config: dict = Body(...),
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.File:
+    """
+    Set/update import config and preprocessing strategy for a file.
+    """
+    check_project_access(project_id, current_user, db, permission="write")
+
+    file = db.execute(
+        select(models.File)
+        .where(models.File.project_id == project_id, models.File.id == file_id)
+    ).scalar_one_or_none()
+
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # Accept "preprocessing_strategy" and/or "file_metadata"
+    if "preprocessing_strategy" in config:
+        file.preprocessing_strategy = config["preprocessing_strategy"]
+    if "file_metadata" in config:
+        file.file_metadata = config["file_metadata"]
+    elif any(k in config for k in ("delimiter", "has_header", "row_split", "case_id_column", "text_columns")):
+        file.file_metadata = {**(file.file_metadata or {}), **config}
+
+    db.add(file)
+    db.commit()
+    db.refresh(file)
+
+    return schemas.File.model_validate(file)
+
+
+
+@router.get("/{project_id}/file/{file_id}/preview-rows", response_model=dict)
+def preview_structured_file(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file_id: int,
+    delimiter: str = Query(None, description="Delimiter for CSV"),
+    encoding: str = Query("utf-8"),
+    has_header: bool = Query(True),
+    sheet: str = Query(None),
+    max_rows: int = Query(10, ge=1, le=50),
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """
+    Return first N rows from CSV/XLSX for configuration/preview.
+    """
+    check_project_access(project_id, current_user, db)
+    file = db.execute(
+        select(models.File).where(models.File.project_id == project_id, models.File.id == file_id)
+    ).scalar_one_or_none()
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_content = get_file(file.file_uuid)
+    headers, rows, sheets = [], [], []
+    if file.file_type == FileType.TEXT_CSV:
+        # Try auto-detect if not specified
+        sample_bytes = file_content[:16384]
+        try:
+            sample = sample_bytes.decode(encoding, errors="replace")
+        except Exception:
+            sample = sample_bytes.decode("utf-8", errors="replace")
+        sniffer = csv.Sniffer()
+        if not delimiter:
+            try:
+                dialect = sniffer.sniff(sample)
+                delimiter = dialect.delimiter
+            except Exception:
+                delimiter = ","
+        reader = csv.reader(io.StringIO(sample), delimiter=delimiter)
+        all_rows = list(reader)
+        if not all_rows:
+            return {"headers": [], "rows": []}
+        if has_header:
+            headers = all_rows[0]
+            rows = all_rows[1:max_rows+1]
+        else:
+            headers = [f"Column {i+1}" for i in range(len(all_rows[0]))]
+            rows = all_rows[:max_rows]
+        return {
+            "headers": headers,
+            "rows": rows,
+            "detected_delimiter": delimiter,
+            "detected_encoding": encoding
+        }
+    elif file.file_type in [FileType.APPLICATION_VND_MS_EXCEL, FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET]:
+        import openpyxl
+        wb = openpyxl.load_workbook(io.BytesIO(file_content), read_only=True)
+        if not sheet:
+            sheet = wb.sheetnames[0]
+        ws = wb[sheet]
+        sheets = wb.sheetnames
+        rows = []
+        for i, row in enumerate(ws.iter_rows(values_only=True)):
+            rows.append(list(row))
+            if i+1 >= max_rows + (1 if has_header else 0):
+                break
+        if has_header and rows:
+            headers = list(rows[0])
+            rows = rows[1:]
+        else:
+            headers = [f"Column {i+1}" for i in range(len(rows[0]))]
+        return {
+            "headers": headers,
+            "rows": rows,
+            "sheets": sheets
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Preview not supported for this file type")
+
 
 
 @router.post("/{project_id}/file/check-duplicates", response_model=list[dict])
@@ -606,7 +731,6 @@ async def download_files_as_zip(
     import io
     import json
     import zipfile
-    from datetime import datetime
 
     # Create ZIP file in memory
     zip_buffer = io.BytesIO()
@@ -659,7 +783,7 @@ async def download_files_as_zip(
             metadata_json = json.dumps(
                 {
                     "project_id": project_id,
-                    "export_date": datetime.utcnow().isoformat(),
+                    "export_date": datetime.datetime.now(datetime.UTC).isoformat(),
                     "total_files": len(files_metadata),
                     "files": files_metadata,
                 },
@@ -670,7 +794,7 @@ async def download_files_as_zip(
     # Prepare response
     zip_buffer.seek(0)
     filename = (
-        f"project_{project_id}_files_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
+        f"project_{project_id}_files_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')}.zip"
     )
 
     return Response(

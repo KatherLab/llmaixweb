@@ -1,37 +1,62 @@
 <template>
   <div
     :class="[
-      'bg-white border rounded-lg shadow-sm overflow-hidden transition-all duration-200',
+      'bg-white border rounded-lg shadow-sm overflow-hidden transition-all duration-200 flex flex-col h-full',
       selected ? 'ring-2 ring-blue-500 border-blue-500' : 'hover:shadow-md'
     ]"
   >
-    <div class="p-4">
-      <div class="flex items-start justify-between">
-        <div class="flex items-center space-x-3">
-          <input
-            type="checkbox"
-            :checked="selected"
-            @change="$emit('toggle-selection', file.id)"
-            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            @click.stop
-          />
+    <div class="p-4 pb-2">
+      <div class="flex items-start space-x-3 w-full">
+        <input
+          type="checkbox"
+          :checked="selected"
+          @change="$emit('toggle-selection', file.id)"
+          class="h-4 w-4 mt-1 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          @click.stop
+        />
+        <div class="flex-shrink-0 pt-0.5" style="width:52px">
           <FileIcon :fileType="file.file_type" :size="48" />
-          <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-medium text-gray-900 truncate" :title="file.file_name">
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5 min-w-0">
+            <h3
+              class="text-sm font-medium text-gray-900 truncate max-w-[140px] md:max-w-[180px] lg:max-w-[240px]"
+              :title="file.file_name"
+            >
               {{ file.file_name }}
             </h3>
-            <p class="text-xs text-gray-500 mt-1">
-              {{ formatFileSize(file.file_size) }} • {{ formatDate(file.created_at) }}
-            </p>
-            <p v-if="file.description" class="text-xs text-gray-600 mt-1 truncate">
-              {{ file.description }}
-            </p>
+            <template v-if="isCSVXLSX(file)">
+              <span
+                v-if="!file.preprocessing_strategy"
+                class="inline-flex items-center px-2 py-0.5 rounded bg-yellow-200 text-yellow-900 text-xs font-medium"
+              >
+                Needs Import Configuration
+              </span>
+              <span
+                v-else
+                class="inline-flex items-center px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-medium"
+              >
+                Configured
+              </span>
+              <button
+                @click.stop="$emit('configure-import', file)"
+                class="text-blue-600 underline text-xs hover:text-blue-800"
+                title="Edit Import Settings"
+              >
+                {{ file.preprocessing_strategy ? 'Edit Import Settings' : 'Configure Import' }}
+              </button>
+            </template>
           </div>
+          <p class="text-xs text-gray-500 mt-1">
+            {{ formatFileSize(file.file_size) }} • {{ formatDate(file.created_at) }}
+          </p>
+          <p v-if="file.description" class="text-xs text-gray-600 mt-1 truncate">
+            {{ file.description }}
+          </p>
         </div>
       </div>
     </div>
-
-    <div class="bg-gray-50 px-4 py-3 border-t flex justify-between items-center">
+    <div class="bg-gray-50 px-4 py-3 border-t flex justify-between items-center mt-auto">
       <span class="text-xs text-gray-500">
         {{ getFileTypeLabel(file.file_type) }}
       </span>
@@ -72,6 +97,15 @@
 <script setup>
 import FileIcon from '../common/FileIcon.vue';
 
+function isCSVXLSX(file) {
+  if (!file || !file.file_type) return false;
+  return (
+      file.file_type === 'text/csv' ||
+      file.file_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      file.file_type === 'application/vnd.ms-excel'
+  );
+}
+
 defineProps({
   file: {
     type: Object,
@@ -83,7 +117,7 @@ defineProps({
   }
 });
 
-defineEmits(['toggle-selection', 'preview', 'download', 'delete']);
+defineEmits(['toggle-selection', 'preview', 'download', 'delete', 'configure-import']);
 
 const formatFileSize = (bytes) => {
   if (!bytes) return 'Unknown';
@@ -105,6 +139,7 @@ const getFileTypeLabel = (mimeType) => {
     'text/plain': 'Text',
     'text/csv': 'CSV',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
+    'application/vnd.ms-excel': 'Excel',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word'
   };
   return typeMap[mimeType] || 'File';

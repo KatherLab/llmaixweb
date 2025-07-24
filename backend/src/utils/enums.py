@@ -54,6 +54,9 @@ class FileType(str, enum.Enum):
     TEXT_PLAIN = "text/plain"
     TEXT_CSV = "text/csv"
     MIXED = "mixed"
+    APPLICATION_XML = "application/xml"
+    APPLICATION_JSON = "application/json"
+    TEXT_RTF = "text/rtf"
 
 
 class PreprocessingMethod(str, enum.Enum):
@@ -70,7 +73,7 @@ class PreprocessingStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
-class PreprocessingStrategy(str, enum.Enum):
+class PreprocessingStrategy(str, Enum):
     FULL_DOCUMENT = "full_document"
     ROW_BY_ROW = "row_by_row"
     CUSTOM = "custom"

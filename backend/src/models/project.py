@@ -133,7 +133,14 @@ class File(Base):
     )
     description: Mapped[str] = mapped_column(String(500), nullable=True)
 
-    # New fields for better file management
+    file_metadata: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=True
+    )
+
+    preprocessing_strategy: Mapped[PreprocessingStrategy] = mapped_column(
+        Enum(PreprocessingStrategy, native_enum=False, length=20), nullable=True
+    )
+
     file_size: Mapped[int] = mapped_column(nullable=True)  # Size in bytes
     file_hash: Mapped[str] = mapped_column(String(64), nullable=True)  # SHA-256 hash
 

@@ -51,6 +51,24 @@
               <p class="text-sm font-medium text-gray-900 truncate max-w-xs" :title="file.file_name">
                 {{ file.file_name }}
               </p>
+              <div class="flex items-center mt-1">
+                <span v-if="isCSVXLSX(file) && !file.preprocessing_strategy"
+                  class="inline-flex items-center px-2 py-0.5 rounded bg-yellow-200 text-yellow-900 text-xs font-medium mr-2">
+                  Needs Import Configuration
+                </span>
+                <span v-else-if="isCSVXLSX(file) && file.preprocessing_strategy"
+                  class="inline-flex items-center px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-medium mr-2">
+                  Configured
+                </span>
+                <button
+                  v-if="isCSVXLSX(file)"
+                  @click.stop="$emit('configure-import', file)"
+                  class="ml-2 text-blue-600 underline text-xs hover:text-blue-800"
+                  title="Edit Import Settings"
+                >
+                  {{ file.preprocessing_strategy ? 'Edit Import Settings' : 'Configure Import' }}
+                </button>
+              </div>
               <p v-if="file.description" class="text-xs text-gray-500 truncate max-w-xs">
                 {{ file.description }}
               </p>
@@ -108,6 +126,15 @@
 <script setup>
 import FileIcon from '../common/FileIcon.vue';
 
+function isCSVXLSX(file) {
+  if (!file || !file.file_type) return false;
+  return (
+    file.file_type === 'text/csv' ||
+    file.file_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    file.file_type === 'application/vnd.ms-excel'
+  );
+}
+
 defineProps({
   files: {
     type: Array,
@@ -119,7 +146,7 @@ defineProps({
   }
 });
 
-defineEmits(['toggle-selection', 'toggle-all', 'preview', 'download', 'delete']);
+defineEmits(['toggle-selection', 'toggle-all', 'preview', 'download', 'delete', 'configure-import']);
 
 const formatFileSize = (bytes) => {
   if (!bytes) return 'Unknown';
@@ -141,6 +168,7 @@ const getFileTypeLabel = (mimeType) => {
     'text/plain': 'Text',
     'text/csv': 'CSV',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
+    'application/vnd.ms-excel': 'Excel',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word'
   };
   return typeMap[mimeType] || 'File';

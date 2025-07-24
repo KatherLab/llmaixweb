@@ -233,6 +233,7 @@
         @preview="previewFile"
         @download="downloadFile"
         @delete="confirmDeleteFile"
+        @configure-import="handleConfigureImport"
       />
     </div>
 
@@ -246,6 +247,7 @@
         @preview="previewFile"
         @download="downloadFile"
         @delete="confirmDeleteFile"
+        @configure-import="handleConfigureImport"
       />
     </div>
 
@@ -282,6 +284,14 @@
       @close="closeBatchActions"
       @complete="handleBatchComplete"
     />
+    <FileImportConfigModal
+      v-if="showImportConfigModal && importConfigFile"
+      :file="importConfigFile"
+      :project-id="projectId"
+      @close="() => { showImportConfigModal = false; importConfigFile = null; fetchFiles(); }"
+      @saved="fetchFiles"
+    />
+
   </div>
 </template>
 
@@ -301,6 +311,7 @@ import DeleteConfirmationModal from './files/DeleteConfirmationModal.vue';
 import DuplicateFilesModal from './files/DuplicateFilesModal.vue';
 import UploadProgress from './files/UploadProgress.vue';
 import FileDropZone from './files/FileDropZone.vue';
+import FileImportConfigModal from './files/FileImportConfigModal.vue';
 
 
 const props = defineProps({
@@ -359,6 +370,35 @@ const pendingUploads = ref([]);
 const showBatchActionsModal = ref(false);
 const batchAction = ref('');
 
+// File Import Config Modal
+const showImportConfigModal = ref(false)
+const importConfigFile = ref(null)
+
+function isCSVXLSX(file) {
+  if (!file || !file.file_type) return false;
+  return (
+    file.file_type === 'text/csv' ||
+    file.file_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    file.file_type === 'application/vnd.ms-excel'
+  );
+}
+
+function uploadedFileTypeIsCSVXLSX(file) {
+  if (!file) return false;
+  const type = file.type || '';
+  const name = file.name?.toLowerCase() || '';
+  return (
+    type === 'text/csv' ||
+    type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    type === 'application/vnd.ms-excel' ||
+    name.endsWith('.csv') ||
+    name.endsWith('.xlsx') ||
+    name.endsWith('.xls')
+  );
+}
+
+
+
 // Filters
 const filters = ref({
   search: '',
@@ -380,6 +420,23 @@ const debouncedFetch = debounce(() => {
 watch(() => filters.value, () => {
   fetchFiles();
 }, { deep: true });
+
+watch(files, (newFiles, oldFiles) => {
+  // Find unconfigured CSV/XLSX file
+  const unconfigured = newFiles.find(
+    file => isCSVXLSX(file) && !file.preprocessing_strategy
+  );
+  if (unconfigured) {
+    importConfigFile.value = unconfigured;
+    showImportConfigModal.value = true;
+  }
+});
+
+
+const handleConfigureImport = (file) => {
+  importConfigFile.value = file;
+  showImportConfigModal.value = true;
+};
 
 // Format file size
 const formatFileSize = (bytes) => {
@@ -514,6 +571,8 @@ const uploadFiles = async (fileData) => {
   let successCount = 0;
   let failedFiles = [];
 
+  let justUploadedFiles = [];
+
   for (let i = 0; i < fileData.length; i++) {
     const { file, hash } = fileData[i];
     currentUploadingFile.value = file.name;
@@ -534,7 +593,8 @@ const uploadFiles = async (fileData) => {
 
       uploadAbortController.value = new AbortController();
 
-      await api.post(
+      // Actual upload
+      const response = await api.post(
         `/project/${props.projectId}/file`,
         formData,
         {
@@ -547,6 +607,7 @@ const uploadFiles = async (fileData) => {
         }
       );
 
+      justUploadedFiles.push(response.data); // <--- Save uploaded file with backend info (including id)
       successCount++;
     } catch (err) {
       if (err.name === 'CanceledError') {
@@ -591,7 +652,18 @@ const uploadFiles = async (fileData) => {
   await fetchFiles();
   await fetchStats();
   emit('files-changed');
+
+  // ======== OPEN CSV/XLSX IMPORT CONFIG MODAL IF NEEDED =========
+  // For each file just uploaded, if CSV/XLSX and not configured, open config modal
+  for (const uploadedFile of justUploadedFiles) {
+    if (uploadedFileTypeIsCSVXLSX(uploadedFile) && !uploadedFile.preprocessing_strategy) {
+      importConfigFile.value = uploadedFile; // file object from backend, includes id!
+      showImportConfigModal.value = true;
+      break; // Open one at a time (modal flow)
+    }
+  }
 };
+
 
 // Cancel ongoing upload
 const cancelUpload = () => {
