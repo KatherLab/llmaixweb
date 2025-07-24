@@ -1,6 +1,6 @@
 import secrets
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Path, status
+from fastapi import APIRouter, Body, Depends, Form, HTTPException, Path, status
 from sqlalchemy.orm import Session
 
 from .... import models, schemas
@@ -18,8 +18,6 @@ from ....utils.enums import UserRole
 router = APIRouter()
 
 
-from fastapi import Body
-
 @router.post("/change-password", response_model=schemas.UserResponse)
 def change_password(
     password_data: schemas.PasswordChange,
@@ -27,7 +25,9 @@ def change_password(
     db: Session = Depends(get_db),
 ) -> schemas.UserResponse:
     # Verify old password
-    if not verify_password(password_data.old_password, str(current_user.hashed_password)):
+    if not verify_password(
+        password_data.old_password, str(current_user.hashed_password)
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Old password is incorrect.",
@@ -145,7 +145,6 @@ def create_user(
     db.commit()
     db.refresh(user)
     return schemas.UserResponse.model_validate(user)
-
 
 
 @router.get("", response_model=list[schemas.UserResponse])

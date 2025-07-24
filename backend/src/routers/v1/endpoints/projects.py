@@ -469,8 +469,9 @@ def configure_file_import(
     check_project_access(project_id, current_user, db, permission="write")
 
     file = db.execute(
-        select(models.File)
-        .where(models.File.project_id == project_id, models.File.id == file_id)
+        select(models.File).where(
+            models.File.project_id == project_id, models.File.id == file_id
+        )
     ).scalar_one_or_none()
 
     if not file:
@@ -481,7 +482,16 @@ def configure_file_import(
         file.preprocessing_strategy = config["preprocessing_strategy"]
     if "file_metadata" in config:
         file.file_metadata = config["file_metadata"]
-    elif any(k in config for k in ("delimiter", "has_header", "row_split", "case_id_column", "text_columns")):
+    elif any(
+        k in config
+        for k in (
+            "delimiter",
+            "has_header",
+            "row_split",
+            "case_id_column",
+            "text_columns",
+        )
+    ):
         file.file_metadata = {**(file.file_metadata or {}), **config}
 
     db.add(file)
@@ -489,7 +499,6 @@ def configure_file_import(
     db.refresh(file)
 
     return schemas.File.model_validate(file)
-
 
 
 @router.get("/{project_id}/file/{file_id}/preview-rows", response_model=dict)
@@ -510,7 +519,9 @@ def preview_structured_file(
     """
     check_project_access(project_id, current_user, db)
     file = db.execute(
-        select(models.File).where(models.File.project_id == project_id, models.File.id == file_id)
+        select(models.File).where(
+            models.File.project_id == project_id, models.File.id == file_id
+        )
     ).scalar_one_or_none()
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
@@ -537,18 +548,22 @@ def preview_structured_file(
             return {"headers": [], "rows": []}
         if has_header:
             headers = all_rows[0]
-            rows = all_rows[1:max_rows+1]
+            rows = all_rows[1 : max_rows + 1]
         else:
-            headers = [f"Column {i+1}" for i in range(len(all_rows[0]))]
+            headers = [f"Column {i + 1}" for i in range(len(all_rows[0]))]
             rows = all_rows[:max_rows]
         return {
             "headers": headers,
             "rows": rows,
             "detected_delimiter": delimiter,
-            "detected_encoding": encoding
+            "detected_encoding": encoding,
         }
-    elif file.file_type in [FileType.APPLICATION_VND_MS_EXCEL, FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET]:
+    elif file.file_type in [
+        FileType.APPLICATION_VND_MS_EXCEL,
+        FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET,
+    ]:
         import openpyxl
+
         wb = openpyxl.load_workbook(io.BytesIO(file_content), read_only=True)
         if not sheet:
             sheet = wb.sheetnames[0]
@@ -557,21 +572,18 @@ def preview_structured_file(
         rows = []
         for i, row in enumerate(ws.iter_rows(values_only=True)):
             rows.append(list(row))
-            if i+1 >= max_rows + (1 if has_header else 0):
+            if i + 1 >= max_rows + (1 if has_header else 0):
                 break
         if has_header and rows:
             headers = list(rows[0])
             rows = rows[1:]
         else:
-            headers = [f"Column {i+1}" for i in range(len(rows[0]))]
-        return {
-            "headers": headers,
-            "rows": rows,
-            "sheets": sheets
-        }
+            headers = [f"Column {i + 1}" for i in range(len(rows[0]))]
+        return {"headers": headers, "rows": rows, "sheets": sheets}
     else:
-        raise HTTPException(status_code=400, detail="Preview not supported for this file type")
-
+        raise HTTPException(
+            status_code=400, detail="Preview not supported for this file type"
+        )
 
 
 @router.post("/{project_id}/file/check-duplicates", response_model=list[dict])
@@ -793,9 +805,7 @@ async def download_files_as_zip(
 
     # Prepare response
     zip_buffer.seek(0)
-    filename = (
-        f"project_{project_id}_files_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')}.zip"
-    )
+    filename = f"project_{project_id}_files_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')}.zip"
 
     return Response(
         content=zip_buffer.getvalue(),
@@ -815,12 +825,8 @@ async def move_files(
 ) -> dict:
     """Move files to another project"""
     # Check access to both source and target projects
-    check_project_access(
-        project_id, current_user, db, permission="write"
-    )
-    check_project_access(
-        target_project_id, current_user, db, permission="write"
-    )
+    check_project_access(project_id, current_user, db, permission="write")
+    check_project_access(target_project_id, current_user, db, permission="write")
 
     if project_id == target_project_id:
         raise HTTPException(
@@ -1710,7 +1716,6 @@ def get_document(
     return schemas.Document.model_validate(document)
 
 
-
 @router.delete("/{project_id}/document/{document_id}")
 def delete_document(
     *,
@@ -1732,17 +1737,20 @@ def delete_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     # --- NEW: Check for usage in any trial (document_ids is a JSON list) ---
-    trials_with_doc = db.execute(
-        select(models.Trial)
-        .where(
-            models.Trial.project_id == project_id,
-            models.Trial.document_ids.contains([document_id]),
+    trials_with_doc = (
+        db.execute(
+            select(models.Trial).where(
+                models.Trial.project_id == project_id,
+                models.Trial.document_ids.contains([document_id]),
+            )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     if trials_with_doc:
         raise HTTPException(
             status_code=400,
-            detail=f"Document is referenced in trial '{trials_with_doc.name or trials_with_doc.id}'. Remove from trial(s) first."
+            detail=f"Document is referenced in trial '{trials_with_doc.name or trials_with_doc.id}'. Remove from trial(s) first.",
         )
 
     # --- Check if document is used in any trial results ---
@@ -1752,17 +1760,19 @@ def delete_document(
     if trial_result:
         raise HTTPException(
             status_code=400,
-            detail="Document is referenced in a trial result. Remove results/trials first."
+            detail="Document is referenced in a trial result. Remove results/trials first.",
         )
 
     # --- (Optional) Check if document is used in any evaluation metric ---
     metric = db.execute(
-        select(models.EvaluationMetric).where(models.EvaluationMetric.document_id == document_id)
+        select(models.EvaluationMetric).where(
+            models.EvaluationMetric.document_id == document_id
+        )
     ).scalar_one_or_none()
     if metric:
         raise HTTPException(
             status_code=400,
-            detail="Document is referenced in evaluation metrics. Remove related evaluation/trial first."
+            detail="Document is referenced in evaluation metrics. Remove related evaluation/trial first.",
         )
 
     # --- Existing check: Document sets ---
@@ -1786,6 +1796,7 @@ def delete_document(
             if preprocessed_file:
                 try:
                     from ....dependencies import remove_file
+
                     remove_file(preprocessed_file.file_uuid)
                     db.delete(preprocessed_file)
                 except Exception as e:
@@ -2669,15 +2680,13 @@ def update_trial(
         raise HTTPException(status_code=404, detail="Project not found")
     if current_user.role != "admin" and project.owner_id != current_user.id:
         raise HTTPException(
-            status_code=403,
-            detail="Not authorized to update trials for this project"
+            status_code=403, detail="Not authorized to update trials for this project"
         )
 
     # 2. Trial existence check
     trial = db.execute(
         select(models.Trial).where(
-            models.Trial.project_id == project_id,
-            models.Trial.id == trial_id
+            models.Trial.project_id == project_id, models.Trial.id == trial_id
         )
     ).scalar_one_or_none()
     if not trial:
@@ -2693,9 +2702,7 @@ def update_trial(
         updated = True
 
     if not updated:
-        raise HTTPException(
-            status_code=400, detail="No updatable fields provided"
-        )
+        raise HTTPException(status_code=400, detail="No updatable fields provided")
 
     db.commit()
     db.refresh(trial)
@@ -2734,16 +2741,26 @@ def delete_trial(
 
     try:
         # Delete all evaluations (and their metrics, via cascade)
-        evaluations = db.execute(
-            select(models.Evaluation).where(models.Evaluation.trial_id == trial_id)
-        ).scalars().all()
+        evaluations = (
+            db.execute(
+                select(models.Evaluation).where(models.Evaluation.trial_id == trial_id)
+            )
+            .scalars()
+            .all()
+        )
         for evaluation in evaluations:
             db.delete(evaluation)
 
         # Delete all trial results for this trial
-        results = db.execute(
-            select(models.TrialResult).where(models.TrialResult.trial_id == trial_id)
-        ).scalars().all()
+        results = (
+            db.execute(
+                select(models.TrialResult).where(
+                    models.TrialResult.trial_id == trial_id
+                )
+            )
+            .scalars()
+            .all()
+        )
         for result in results:
             db.delete(result)
 
@@ -2752,7 +2769,9 @@ def delete_trial(
         db.commit()
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error during deletion: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Database error during deletion: {e}"
+        )
 
     return trial_data
 

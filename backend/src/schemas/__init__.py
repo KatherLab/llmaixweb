@@ -45,7 +45,15 @@ from .project import (
     TrialResult,
     TrialUpdate,
 )
-from .user import InvitationInfo, InvitationResponse, User, UserCreate, UserResponse, PasswordChange, PasswordSet
+from .user import (
+    InvitationInfo,
+    InvitationResponse,
+    PasswordChange,
+    PasswordSet,
+    User,
+    UserCreate,
+    UserResponse,
+)
 
 __all__ = [
     "Token",

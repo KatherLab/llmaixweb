@@ -55,6 +55,7 @@ class FileBase(UTCModel):
     file_metadata: dict | None = None
     preprocessing_strategy: PreprocessingStrategy | None = None
 
+
 class FileCreate(FileBase):
     file_name: str
     file_type: str | None = None
@@ -333,6 +334,7 @@ class TrialBase(UTCModel):
 
 class TrialCreate(TrialBase):
     pass
+
 
 class TrialUpdate(BaseModel):
     name: str | None = None
