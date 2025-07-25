@@ -3,8 +3,8 @@
     <div class="fixed inset-0 z-50 overflow-hidden">
       <!-- Semi-transparent backdrop with blur -->
       <div
-        class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
-        @click="$emit('close')"
+          class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+          @click="$emit('close')"
       ></div>
 
       <!-- Modal content -->
@@ -21,7 +21,7 @@
           </div>
           <div class="flex items-center space-x-3">
             <span
-              :class="[
+                :class="[
                 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
                 getStatusClass(task.status)
               ]"
@@ -29,12 +29,12 @@
               {{ task.status }}
             </span>
             <button
-              @click="$emit('close')"
-              class="text-gray-400 hover:text-gray-500"
-              aria-label="Close"
+                aria-label="Close"
+                class="text-gray-400 hover:text-gray-500"
+                @click="$emit('close')"
             >
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
             </button>
           </div>
@@ -111,9 +111,12 @@
                 The following files were already processed with this configuration and were skipped:
               </p>
               <div class="space-y-1 max-h-40 overflow-y-auto">
-                <div v-for="fileName in skippedFileNames" :key="fileName" class="text-sm text-gray-600 flex items-center">
-                  <svg class="h-4 w-4 text-yellow-600 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <div v-for="fileName in skippedFileNames" :key="fileName"
+                     class="text-sm text-gray-600 flex items-center">
+                  <svg class="h-4 w-4 text-yellow-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
+                       viewBox="0 0 24 24">
+                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="2"/>
                   </svg>
                   {{ fileName }}
                 </div>
@@ -127,39 +130,39 @@
               <h4 class="font-medium text-gray-900">File Processing Details</h4>
               <div class="flex items-center space-x-2">
                 <button
-                  @click="filterStatus = 'all'"
-                  :class="[
+                    :class="[
                     'px-3 py-1 text-sm rounded-md',
                     filterStatus === 'all' ? 'bg-gray-200 text-gray-900' : 'text-gray-600 hover:text-gray-900'
                   ]"
+                    @click="filterStatus = 'all'"
                 >
                   All
                 </button>
                 <button
-                  @click="filterStatus = 'completed'"
-                  :class="[
+                    :class="[
                     'px-3 py-1 text-sm rounded-md',
                     filterStatus === 'completed' ? 'bg-green-100 text-green-800' : 'text-gray-600 hover:text-gray-900'
                   ]"
+                    @click="filterStatus = 'completed'"
                 >
                   Completed
                 </button>
                 <button
-                  @click="filterStatus = 'failed'"
-                  :class="[
+                    :class="[
                     'px-3 py-1 text-sm rounded-md',
                     filterStatus === 'failed' ? 'bg-red-100 text-red-800' : 'text-gray-600 hover:text-gray-900'
                   ]"
+                    @click="filterStatus = 'failed'"
                 >
                   Failed
                 </button>
                 <button
-                  v-if="skippedCount > 0"
-                  @click="filterStatus = 'skipped'"
-                  :class="[
+                    v-if="skippedCount > 0"
+                    :class="[
                     'px-3 py-1 text-sm rounded-md',
                     filterStatus === 'skipped' ? 'bg-yellow-100 text-yellow-800' : 'text-gray-600 hover:text-gray-900'
                   ]"
+                    @click="filterStatus = 'skipped'"
                 >
                   Skipped
                 </button>
@@ -168,13 +171,13 @@
 
             <div class="space-y-2">
               <div
-                v-for="fileTask in filteredFileTasks"
-                :key="fileTask.id"
-                class="border rounded-lg p-3 hover:bg-gray-50 flex items-center justify-between"
+                  v-for="fileTask in filteredFileTasks"
+                  :key="fileTask.id"
+                  class="border rounded-lg p-3 hover:bg-gray-50 flex items-center justify-between"
               >
                 <div class="flex items-center space-x-3">
                   <div
-                    :class="[
+                      :class="[
                       'h-8 w-8 rounded-full flex items-center justify-center',
                       fileTask.status === 'completed' ? 'bg-green-100' :
                       fileTask.status === 'failed' ? 'bg-red-100' :
@@ -183,40 +186,42 @@
                     ]"
                   >
                     <svg
-                      v-if="fileTask.status === 'completed'"
-                      class="h-5 w-5 text-green-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+                        v-if="fileTask.status === 'completed'"
+                        class="h-5 w-5 text-green-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                     >
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                     </svg>
                     <svg
-                      v-else-if="fileTask.status === 'failed'"
-                      class="h-5 w-5 text-red-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+                        v-else-if="fileTask.status === 'failed'"
+                        class="h-5 w-5 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                     >
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                     </svg>
                     <svg
-                      v-else-if="fileTask.status === 'skipped'"
-                      class="h-5 w-5 text-yellow-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+                        v-else-if="fileTask.status === 'skipped'"
+                        class="h-5 w-5 text-yellow-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                     >
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="2"/>
                     </svg>
                     <svg
-                      v-else
-                      class="h-5 w-5 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+                        v-else
+                        class="h-5 w-5 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                     >
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="2"/>
                     </svg>
                   </div>
                   <div>
@@ -224,18 +229,34 @@
                       {{ fileTask.file_name }}
                     </p>
                     <p class="text-xs text-gray-500">
-                      <span v-if="fileTask.status === 'completed' && fileTask.processing_time">Processed in {{ fileTask.processing_time }}s</span>
-                      <span v-else-if="fileTask.status === 'failed' && fileTask.processing_time">Failed after {{ fileTask.processing_time }}s</span>
+                      <span v-if="fileTask.status === 'completed' && fileTask.processing_time">Processed in {{
+                          fileTask.processing_time
+                        }}s</span>
+                      <span v-else-if="fileTask.status === 'failed' && fileTask.processing_time">Failed after {{
+                          fileTask.processing_time
+                        }}s</span>
                       <span v-else-if="fileTask.status === 'skipped'">Skipped (already processed)</span>
                       <span v-else>Pending</span>
                     </p>
                   </div>
                 </div>
-                <div v-if="fileTask.error_message" class="ml-4 max-w-xs">
-                  <p class="text-xs text-red-600 truncate" :title="fileTask.error_message">
-                    {{ fileTask.error_message.length > 64 ? fileTask.error_message.slice(0, 64) + '…' : fileTask.error_message }}
+                <div v-if="fileTask.error_message" class="ml-4 max-w-xs group relative">
+                  <p :title="fileTask.error_message"
+                     class="text-xs text-red-600 truncate cursor-pointer group-hover:underline">
+                    {{
+                      fileTask.error_message.length > 64 ? fileTask.error_message.slice(0, 64) + '…' : fileTask.error_message
+                    }}
                   </p>
+                  <div
+                      v-if="fileTask.error_message.length > 64"
+                      class="absolute left-0 top-full mt-1 z-20 hidden group-hover:block w-80 max-w-screen-md bg-white border border-red-200 rounded shadow-lg text-xs text-red-700 p-3 break-words"
+                      style="word-break: break-all;"
+                  >
+                    {{ fileTask.error_message }}
+                  </div>
                 </div>
+
+
               </div>
 
               <div v-if="filteredFileTasks.length === 0" class="text-center text-gray-400 py-6">
@@ -257,16 +278,16 @@
             <div v-else></div>
             <div class="flex items-center space-x-3">
               <button
-                v-if="task.status === 'processing'"
-                @click="cancelTask"
-                class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50"
+                  v-if="task.status === 'processing'"
+                  class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50"
+                  @click="cancelTask"
               >
                 Cancel Task
               </button>
               <button
-                v-if="failedCount > 0"
-                @click="$emit('retry-failed', task.id)"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                  v-if="failedCount > 0"
+                  class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                  @click="$emit('retry-failed', task.id)"
               >
                 Retry Failed Files
               </button>
@@ -279,9 +300,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { api } from '@/services/api';
-import { useToast } from 'vue-toastification';
+import {computed, ref} from 'vue';
+import {useToast} from 'vue-toastification';
 
 const props = defineProps({
   task: {

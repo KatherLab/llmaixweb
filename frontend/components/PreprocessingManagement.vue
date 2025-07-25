@@ -8,38 +8,46 @@
       </div>
       <div class="flex items-center space-x-3">
         <button
-          @click="showConfigManager = true"
-          class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            @click="showConfigManager = true"
         >
-          <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+               xmlns="http://www.w3.org/2000/svg">
+            <path
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                stroke-linecap="round" stroke-linejoin="round"
+                stroke-width="2"/>
+            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
           </svg>
           Manage Configurations
         </button>
         <button
-          @click="startQuickPreprocess"
-          class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            @click="startQuickPreprocess"
         >
-          <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+               xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
           </svg>
           Quick Process All
         </button>
         <button
-          @click="fetchPreprocessingTasks"
-          :disabled="isLoadingTasks"
-          class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
-          title="Refresh tasks"
+            :disabled="isLoadingTasks"
+            class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
+            title="Refresh tasks"
+            @click="fetchPreprocessingTasks"
         >
           <svg
-            :class="['h-4 w-4', isLoadingTasks && 'animate-spin']"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+              :class="['h-4 w-4', isLoadingTasks && 'animate-spin']"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <path
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                stroke-linecap="round" stroke-linejoin="round"
+                stroke-width="2"/>
           </svg>
         </button>
 
@@ -48,9 +56,12 @@
 
     <div v-if="isLoadingTasks && allTasks.length === 0" class="flex justify-center items-center py-12">
       <div class="flex items-center space-x-3">
-        <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg class="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24"
+             xmlns="http://www.w3.org/2000/svg">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          <path class="opacity-75"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                fill="currentColor"></path>
         </svg>
         <span class="text-gray-600">Loading preprocessing tasks...</span>
       </div>
@@ -67,108 +78,170 @@
           Active Processing Tasks
         </h3>
         <button
-          @click="cancelAllTasks"
-          class="text-sm text-red-600 hover:text-red-800 font-medium"
+            class="text-sm text-red-600 hover:text-red-800 font-medium"
+            @click="cancelAllTasks"
         >
           Cancel All
         </button>
       </div>
       <div class="space-y-3">
         <TaskCard
-          v-for="task in activeTasks"
-          :key="task.id"
-          :task="task"
-          @cancel="cancelTask"
-          @retry="retryTask"
-          @view-details="viewTaskDetails"
+            v-for="task in activeTasks"
+            :key="task.id"
+            :task="task"
+            @cancel="cancelTask"
+            @retry="retryTask"
+            @view-details="viewTaskDetails"
         />
       </div>
     </div>
 
     <!-- Completed Tasks Summary -->
-    <div v-if="completedTasks.length > 0" class="bg-green-50 rounded-xl p-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center">
-          <svg class="h-5 w-5 text-green-500 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <div v-if="completedTasks.length > 0" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-0 mt-6">
+      <!-- Clickable Header -->
+      <div
+        class="flex items-center justify-between px-6 py-4 cursor-pointer select-none hover:bg-gray-50 active:bg-gray-100 rounded-t-2xl transition group focus:outline-none"
+        @click="showCompletedTasks = !showCompletedTasks"
+        tabindex="0"
+        @keyup.enter.space="showCompletedTasks = !showCompletedTasks"
+        :aria-expanded="showCompletedTasks.toString()"
+        role="button"
+      >
+        <div class="flex items-center gap-2">
+          <svg class="h-6 w-6 text-emerald-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
           </svg>
-          <span class="text-sm font-medium text-green-800">
-            {{ completedTasks.length }} task{{ completedTasks.length !== 1 ? 's' : '' }} completed
+          <h3 class="text-xl font-bold text-gray-900 tracking-tight">
+            Recent Task History
+          </h3>
+          <span class="ml-3 px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-600">
+            {{ completedTasks.length }} total
           </span>
         </div>
-        <button
-          @click="showCompletedTasks = !showCompletedTasks"
-          class="text-sm text-green-700 hover:text-green-900 font-medium"
-        >
-          {{ showCompletedTasks ? 'Hide Details' : 'Show Details' }}
-        </button>
+        <div class="flex items-center gap-2 text-sm font-medium text-gray-500">
+          <span>{{ showCompletedTasks ? 'Hide Details' : 'Show Details' }}</span>
+          <svg
+            class="h-4 w-4 transition-transform duration-300"
+            :class="{ 'rotate-180': showCompletedTasks }"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </svg>
+        </div>
       </div>
 
-      <!-- Always show recent completed tasks when expanded -->
-      <Transition
-        enter-active-class="transition-all duration-300 ease-out"
-        enter-from-class="max-h-0 opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition-all duration-300 ease-in"
-        leave-from-class="opacity-100"
-        leave-to-class="max-h-0 opacity-0"
+      <!-- Animated Expand/Collapse -->
+      <transition
+        name="fade-expand"
+        mode="out-in"
+        appear
       >
-        <div v-if="showCompletedTasks" class="mt-3 space-y-2 overflow-hidden">
-          <!-- Show limited or all tasks based on showAllCompleted -->
+        <div
+          v-show="showCompletedTasks"
+          class="px-4 pb-2 pt-1 space-y-1 overflow-hidden"
+          key="completed-tasks-list"
+        >
+          <!-- Tasks List -->
           <div
             v-for="task in displayedCompletedTasks"
             :key="task.id"
+            class="flex items-center justify-between bg-white/90 border border-gray-100 rounded-lg px-3 py-2 my-1 shadow-xs hover:shadow-md hover:bg-blue-50 transition group cursor-pointer"
             @click="viewTaskDetails(task)"
-            class="bg-white bg-opacity-70 rounded-lg p-3 text-sm cursor-pointer hover:bg-opacity-100 transition-colors"
+            tabindex="0"
+            @keyup.enter.space="viewTaskDetails(task)"
           >
-            <div class="flex justify-between items-center">
-              <span class="text-gray-700 font-medium">
-                Task #{{ task.id }}
-                <span v-if="task.configuration?.name" class="text-gray-500 font-normal">
-                  - {{ task.configuration.name }}
-                </span>
+            <!-- Left: Status Icon, Task Info -->
+            <div class="flex items-center gap-3 min-w-0">
+              <span
+                class="w-6 h-6 flex items-center justify-center rounded-full"
+                :class="{
+                  'bg-green-50': task.status === 'completed',
+                  'bg-red-50': task.status === 'failed',
+                  'bg-yellow-50': task.status === 'cancelled' || task.status === 'errored'
+                }"
+              >
+                <svg v-if="task.status === 'completed'" class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                </svg>
+                <svg v-else-if="task.status === 'failed'" class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                </svg>
+                <svg v-else class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" stroke-width="2" stroke="currentColor" fill="none"/>
+                  <path d="M12 8v4m0 4h.01" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                </svg>
               </span>
-              <span class="text-gray-500">{{ formatRelativeTime(task.completed_at) }}</span>
+              <div class="flex flex-col text-xs min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-gray-900 truncate">Task #{{ task.id }}</span>
+                  <span v-if="task.configuration?.name" class="text-gray-500 truncate">— {{ task.configuration.name }}</span>
+                  <span
+                    v-if="task.status === 'failed'"
+                    class="ml-2 px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-2xs font-semibold uppercase tracking-wide"
+                  >FAILED</span>
+                  <span
+                    v-else-if="task.status === 'cancelled'"
+                    class="ml-2 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 text-2xs font-semibold uppercase tracking-wide"
+                  >CANCELLED</span>
+                  <span
+                    v-else-if="task.status === 'errored'"
+                    class="ml-2 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 text-2xs font-semibold uppercase tracking-wide"
+                  >ERROR</span>
+                  <span
+                    v-else-if="task.status === 'completed'"
+                    class="ml-2 px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-2xs font-semibold uppercase tracking-wide"
+                  >COMPLETED</span>
+                </div>
+                <div class="flex items-center gap-3 mt-0.5">
+                  <span v-if="task.failed_files > 0" class="text-red-500">
+                    ✗ {{ task.failed_files }} failed
+                  </span>
+                  <span v-if="task.processed_files - task.failed_files - (task.skipped_files || 0) > 0" class="text-green-500">
+                    ✓ {{ task.processed_files - task.failed_files - (task.skipped_files || 0) }} succeeded
+                  </span>
+                  <span v-if="task.skipped_files > 0" class="text-yellow-600">
+                    ⚠ {{ task.skipped_files }} skipped
+                  </span>
+                  <span v-if="task.status === 'failed' && task.message" class="text-red-400 truncate max-w-[200px]">
+                    {{ task.message }}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div class="text-xs text-gray-500 mt-1 flex items-center gap-3">
-              <span v-if="task.processed_files - task.failed_files - (task.skipped_files || 0) > 0" class="text-green-600">
-                ✓ {{ task.processed_files - task.failed_files - (task.skipped_files || 0) }} succeeded
-              </span>
-              <span v-if="task.failed_files > 0" class="text-red-600">
-                ✗ {{ task.failed_files }} failed
-              </span>
-              <span v-if="task.skipped_files > 0" class="text-yellow-600">
-                ⚠ {{ task.skipped_files }} skipped
+            <!-- Right: Time -->
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-xs text-gray-400" :title="task.completed_at || task.updated_at">
+                {{ formatRelativeTime(task.completed_at || task.updated_at) }}
               </span>
             </div>
           </div>
-
-          <!-- Show more/less button with inline arrow -->
+          <!-- Show more/less button -->
           <div v-if="completedTasks.length > 5" class="text-center pt-2">
             <button
-              @click="showAllCompleted = !showAllCompleted"
-              class="text-sm text-green-700 hover:text-green-900 font-medium inline-flex items-center gap-1"
+              class="text-sm text-emerald-700 hover:text-emerald-900 font-medium inline-flex items-center gap-1"
+              @click.stop="showAllCompleted = !showAllCompleted"
             >
               <span v-if="!showAllCompleted">
-                Show {{ completedTasks.length - 5 }} more completed {{ completedTasks.length - 5 === 1 ? 'task' : 'tasks' }}
+                Show {{ completedTasks.length - 5 }} more
               </span>
               <span v-else>
                 Show less
               </span>
               <svg
                 :class="['h-4 w-4 transition-transform duration-200', showAllCompleted ? 'rotate-180' : '']"
-                xmlns="http://www.w3.org/2000/svg"
                 fill="none"
-                viewBox="0 0 24 24"
                 stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
             </button>
           </div>
-
         </div>
-      </Transition>
+      </transition>
     </div>
 
 
@@ -186,46 +259,54 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <!-- ... all your configuration buttons ... -->
             <button
-              @click="selectedConfig = 'quick'"
-              :class="[
+                :class="[
                 'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all',
                 selectedConfig === 'quick'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
               ]"
+                @click="selectedConfig = 'quick'"
             >
-              <svg class="h-8 w-8 mb-2" :class="selectedConfig === 'quick' ? 'text-blue-600' : 'text-gray-400'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <svg :class="selectedConfig === 'quick' ? 'text-blue-600' : 'text-gray-400'" class="h-8 w-8 mb-2"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
               <span class="font-medium text-sm">Quick Process</span>
               <span class="text-xs text-gray-500 mt-1">Smart defaults</span>
             </button>
             <button
-              @click="selectedConfig = 'saved'"
-              :class="[
+                :class="[
                 'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all',
                 selectedConfig === 'saved'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
               ]"
+                @click="selectedConfig = 'saved'"
             >
-              <svg class="h-8 w-8 mb-2" :class="selectedConfig === 'saved' ? 'text-blue-600' : 'text-gray-400'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              <svg :class="selectedConfig === 'saved' ? 'text-blue-600' : 'text-gray-400'" class="h-8 w-8 mb-2"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                      stroke-linecap="round" stroke-linejoin="round"
+                      stroke-width="2"/>
               </svg>
               <span class="font-medium text-sm">Saved Config</span>
               <span class="text-xs text-gray-500 mt-1">Reuse settings</span>
             </button>
             <button
-              @click="selectedConfig = 'custom'"
-              :class="[
+                :class="[
                 'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all',
                 selectedConfig === 'custom'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
               ]"
+                @click="selectedConfig = 'custom'"
             >
-              <svg class="h-8 w-8 mb-2" :class="selectedConfig === 'custom' ? 'text-blue-600' : 'text-gray-400'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              <svg :class="selectedConfig === 'custom' ? 'text-blue-600' : 'text-gray-400'" class="h-8 w-8 mb-2"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                    stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2"/>
               </svg>
               <span class="font-medium text-sm">Custom</span>
               <span class="text-xs text-gray-500 mt-1">Fine-tune settings</span>
@@ -237,14 +318,14 @@
             Select Configuration
           </label>
           <select
-            v-model="selectedSavedConfig"
-            class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
+              v-model="selectedSavedConfig"
+              class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
           >
             <option value="">Choose a configuration...</option>
             <option
-              v-for="config in savedConfigs"
-              :key="config.id"
-              :value="config.id"
+                v-for="config in savedConfigs"
+                :key="config.id"
+                :value="config.id"
             >
               {{ config.name }} - {{ config.file_type }}
             </option>
@@ -253,26 +334,30 @@
         <div v-if="selectedConfig === 'custom'" class="space-y-6 mb-6">
           <div class="bg-gray-50 rounded-lg p-4">
             <h4 class="font-medium text-gray-900 mb-4 flex items-center">
-              <svg class="h-5 w-5 mr-2 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2"/>
               </svg>
               OCR Settings
             </h4>
             <div class="space-y-4">
               <label class="flex items-center">
                 <input
-                  v-model="preprocessingConfig.use_ocr"
-                  type="checkbox"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    v-model="preprocessingConfig.use_ocr"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    type="checkbox"
                 />
                 <span class="ml-2 text-sm text-gray-700">Enable OCR</span>
               </label>
               <label class="flex items-center">
                 <input
-                  v-model="preprocessingConfig.force_ocr"
-                  type="checkbox"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  :disabled="!preprocessingConfig.use_ocr"
+                    v-model="preprocessingConfig.force_ocr"
+                    :disabled="!preprocessingConfig.use_ocr"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    type="checkbox"
                 />
                 <span class="ml-2 text-sm text-gray-700">Force OCR (ignore existing text)</span>
               </label>
@@ -281,32 +366,32 @@
                   OCR Languages
                 </label>
                 <Multiselect
-                  v-model="preprocessingConfig.ocr_languages"
-                  :options="ocrLanguagesForSelect"
-                  mode="tags"
-                  :searchable="true"
-                  :close-on-select="false"
-                  :clear-on-select="false"
-                  :preserve-search="true"
-                  :preselect-first="false"
-                  :create-option="false"
-                  :can-clear="true"
-                  :can-deselect="true"
-                  :hide-selected="true"
-                  :object="true"
-                  placeholder="Select languages"
-                  label="label"
-                  valueProp="value"
-                  track-by="value"
-                  class="multiselect-custom"
+                    v-model="preprocessingConfig.ocr_languages"
+                    :can-clear="true"
+                    :can-deselect="true"
+                    :clear-on-select="false"
+                    :close-on-select="false"
+                    :create-option="false"
+                    :hide-selected="true"
+                    :object="true"
+                    :options="ocrLanguagesForSelect"
+                    :preselect-first="false"
+                    :preserve-search="true"
+                    :searchable="true"
+                    class="multiselect-custom"
+                    label="label"
+                    mode="tags"
+                    placeholder="Select languages"
+                    track-by="value"
+                    valueProp="value"
                 >
                   <template #tag="{ option, handleTagRemove, disabled }">
                     <div class="multiselect-tag">
                       {{ option.label }}
                       <span
-                        v-if="!disabled"
-                        @click.stop="handleTagRemove(option, $event)"
-                        class="multiselect-tag-remove"
+                          v-if="!disabled"
+                          class="multiselect-tag-remove"
+                          @click.stop="handleTagRemove(option, $event)"
                       >
                         <span class="multiselect-tag-remove-icon"></span>
                       </span>
@@ -319,8 +404,12 @@
           </div>
           <div class="bg-gray-50 rounded-lg p-4">
             <h4 class="font-medium text-gray-900 mb-4 flex items-center">
-              <svg class="h-5 w-5 mr-2 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                    stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2"/>
               </svg>
               PDF Processing
             </h4>
@@ -329,8 +418,8 @@
                 PDF Backend
               </label>
               <select
-                v-model="preprocessingConfig.pdf_backend"
-                class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
+                  v-model="preprocessingConfig.pdf_backend"
+                  class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
               >
                 <option value="pymupdf4llm">PyMuPDF4LLM (Recommended)</option>
                 <option value="markitdown">MarkItDown</option>
@@ -339,22 +428,103 @@
           </div>
           <div class="flex items-center">
             <input
-              v-model="saveAsConfig"
-              type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                v-model="saveAsConfig"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                type="checkbox"
             />
             <label class="ml-2 text-sm text-gray-700">
               Save as reusable configuration
             </label>
             <input
-              v-if="saveAsConfig"
-              v-model="configName"
-              type="text"
-              placeholder="Configuration name"
-              class="ml-3 flex-1 px-3 py-1 text-sm border-gray-300 rounded-md"
+                v-if="saveAsConfig"
+                v-model="configName"
+                class="ml-3 flex-1 px-3 py-1 text-sm border-gray-300 rounded-md"
+                placeholder="Configuration name"
+                type="text"
             />
           </div>
         </div>
+
+        <!-- Add this section after the OCR settings in PreprocessingManagement.vue -->
+
+        <!-- API Settings (Collapsible) -->
+        <div v-if="selectedConfig === 'custom'" class="bg-gray-50 rounded-lg p-4">
+          <button
+              class="w-full flex items-center justify-between text-left"
+              type="button"
+              @click="showApiSettings = !showApiSettings"
+          >
+            <h4 class="font-medium text-gray-900 flex items-center">
+              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                    stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2"/>
+              </svg>
+              API Settings (Optional)
+            </h4>
+            <svg
+                :class="['h-5 w-5 transition-transform', showApiSettings ? 'rotate-180' : '']"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+            </svg>
+          </button>
+
+          <Transition
+              enter-active-class="transition-all duration-200 ease-out"
+              enter-from-class="max-h-0 opacity-0"
+              enter-to-class="max-h-96 opacity-100"
+              leave-active-class="transition-all duration-200 ease-in"
+              leave-from-class="max-h-96 opacity-100"
+              leave-to-class="max-h-0 opacity-0"
+          >
+            <div v-if="showApiSettings" class="mt-4 space-y-4 overflow-hidden">
+              <p class="text-sm text-gray-600">
+                Provide custom API credentials for LLM-based preprocessing. Leave empty to use default settings.
+              </p>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  API Base URL
+                </label>
+                <input
+                    v-model="apiCredentials.base_url"
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="https://api.openai.com/v1"
+                    type="text"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  API Key
+                </label>
+                <input
+                    v-model="apiCredentials.api_key"
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="sk-..."
+                    type="password"
+                />
+              </div>
+
+              <div class="flex items-center text-sm text-gray-500">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"/>
+                </svg>
+                API credentials are not stored and must be provided for each preprocessing task.
+              </div>
+            </div>
+          </Transition>
+        </div>
+
         <!-- File Selection -->
         <div class="mb-6">
           <div class="flex justify-between items-center mb-3">
@@ -366,29 +536,32 @@
             </div>
           </div>
           <FileSelector
-            v-model:selected="selectedFiles"
-            :files="availableFiles"
-            :show-preview="true"
-            @select-all="selectAllFiles"
-            @clear-selection="selectedFiles = []"
+              v-model:selected="selectedFiles"
+              :files="availableFiles"
+              :show-preview="true"
+              @select-all="selectAllFiles"
+              @clear-selection="selectedFiles = []"
           />
         </div>
         <!-- Action Buttons -->
         <div class="flex justify-end space-x-3">
           <button
-            @click="resetForm"
-            class="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              class="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              @click="resetForm"
           >
             Reset
           </button>
           <button
-            @click="startPreprocessing"
-            :disabled="!canStartProcessing"
-            class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="!canStartProcessing"
+              class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              @click="startPreprocessing"
           >
-            <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                 fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <path class="opacity-75"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    fill="currentColor"></path>
             </svg>
             Start Processing
           </button>
@@ -398,26 +571,26 @@
 
     <!-- Configuration Manager Modal -->
     <ConfigurationManager
-      v-if="showConfigManager"
-      :project-id="projectId"
-      @close="showConfigManager = false"
-      @config-selected="applyConfiguration"
+        v-if="showConfigManager"
+        :project-id="projectId"
+        @close="showConfigManager = false"
+        @config-selected="applyConfiguration"
     />
 
     <!-- Task Details Modal -->
     <TaskDetailsModal
-      v-if="selectedTask"
-      :task="selectedTask"
-      @close="selectedTask = null"
-      @retry-failed="retryFailedFiles"
+        v-if="selectedTask"
+        :task="selectedTask"
+        @close="selectedTask = null"
+        @retry-failed="retryFailedFiles"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { api } from '@/services/api';
-import { useToast } from 'vue-toastification';
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue';
+import {api} from '@/services/api';
+import {useToast} from 'vue-toastification';
 import Multiselect from '@vueform/multiselect';
 
 import TaskCard from './preprocessing/TaskCard.vue';
@@ -448,12 +621,20 @@ const selectedConfig = ref('quick');
 const selectedSavedConfig = ref('');
 const selectedTask = ref(null);
 const showConfigManager = ref(false);
-const showCompletedTasks = ref(true);
+const showCompletedTasks = ref(false);
 const isSubmitting = ref(false);
 const saveAsConfig = ref(false);
 const configName = ref('');
 let pollInterval = null;
 const showAllCompleted = ref(false);
+
+
+const showApiSettings = ref(false);
+const apiCredentials = ref({
+  api_key: '',
+  base_url: ''
+});
+
 
 // Preprocessing configuration
 const preprocessingConfig = ref({
@@ -461,63 +642,72 @@ const preprocessingConfig = ref({
   force_ocr: false,
   ocr_backend: 'ocrmypdf',
   pdf_backend: 'pymupdf4llm',
-  ocr_languages: [{ value: 'eng', label: 'English' }],
+  ocr_languages: [{value: 'eng', label: 'English'}],
 });
 
 // OCR language options
 const ocrLanguagesForSelect = ref([
-  { value: 'eng', label: 'English' },
-  { value: 'spa', label: 'Spanish' },
-  { value: 'fra', label: 'French' },
-  { value: 'deu', label: 'German' },
-  { value: 'ita', label: 'Italian' },
-  { value: 'por', label: 'Portuguese' },
-  { value: 'rus', label: 'Russian' },
-  { value: 'jpn', label: 'Japanese' },
-  { value: 'chi_sim', label: 'Chinese (Simplified)' },
-  { value: 'chi_tra', label: 'Chinese (Traditional)' },
-  { value: 'ara', label: 'Arabic' },
-  { value: 'hin', label: 'Hindi' },
-  { value: 'kor', label: 'Korean' },
-  { value: 'nld', label: 'Dutch' },
-  { value: 'pol', label: 'Polish' },
-  { value: 'tur', label: 'Turkish' },
-  { value: 'vie', label: 'Vietnamese' },
-  { value: 'ces', label: 'Czech' },
-  { value: 'dan', label: 'Danish' },
-  { value: 'fin', label: 'Finnish' },
-  { value: 'gre', label: 'Greek' },
-  { value: 'heb', label: 'Hebrew' },
-  { value: 'hun', label: 'Hungarian' },
-  { value: 'nor', label: 'Norwegian' },
-  { value: 'swe', label: 'Swedish' },
-  { value: 'tha', label: 'Thai' },
-  { value: 'ukr', label: 'Ukrainian' },
+  {value: 'eng', label: 'English'},
+  {value: 'spa', label: 'Spanish'},
+  {value: 'fra', label: 'French'},
+  {value: 'deu', label: 'German'},
+  {value: 'ita', label: 'Italian'},
+  {value: 'por', label: 'Portuguese'},
+  {value: 'rus', label: 'Russian'},
+  {value: 'jpn', label: 'Japanese'},
+  {value: 'chi_sim', label: 'Chinese (Simplified)'},
+  {value: 'chi_tra', label: 'Chinese (Traditional)'},
+  {value: 'ara', label: 'Arabic'},
+  {value: 'hin', label: 'Hindi'},
+  {value: 'kor', label: 'Korean'},
+  {value: 'nld', label: 'Dutch'},
+  {value: 'pol', label: 'Polish'},
+  {value: 'tur', label: 'Turkish'},
+  {value: 'vie', label: 'Vietnamese'},
+  {value: 'ces', label: 'Czech'},
+  {value: 'dan', label: 'Danish'},
+  {value: 'fin', label: 'Finnish'},
+  {value: 'gre', label: 'Greek'},
+  {value: 'heb', label: 'Hebrew'},
+  {value: 'hun', label: 'Hungarian'},
+  {value: 'nor', label: 'Norwegian'},
+  {value: 'swe', label: 'Swedish'},
+  {value: 'tha', label: 'Thai'},
+  {value: 'ukr', label: 'Ukrainian'},
 ]);
 
 // Computed properties
 const activeTasks = computed(() =>
-  allTasks.value.filter(task =>
-    ['pending', 'processing', 'in_progress'].includes(task.status)
-  )
+    allTasks.value.filter(task =>
+        ['pending', 'processing', 'in_progress'].includes(task.status)
+    )
 );
 
 const completedTasks = computed(() =>
-  allTasks.value
-    .filter(task => task.status === 'completed')
-    .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+    allTasks.value
+        .filter(
+            (task) =>
+                ['completed', 'failed', 'cancelled', 'errored'].includes(task.status)
+        )
+        .sort(
+            (a, b) =>
+                new Date(b.completed_at || b.updated_at) -
+                new Date(a.completed_at || a.updated_at)
+        )
 );
 
+
 const displayedCompletedTasks = computed(() => {
+  const filtered = completedTasks.value.filter(Boolean);
   if (showAllCompleted.value) {
-    return completedTasks.value;
+    return filtered;
   }
-  return completedTasks.value.slice(0, 5);
+  return filtered.slice(0, 5);
 });
 
 
 const canStartProcessing = computed(() =>
-  selectedFiles.value.length > 0 && !isSubmitting.value
+    selectedFiles.value.length > 0 && !isSubmitting.value
 );
 
 // API methods
@@ -590,7 +780,7 @@ const setupPolling = () => {
 
   const pollActiveTasks = () => {
     const tasksToUpdate = allTasks.value.filter(
-      task => ['pending', 'processing', 'in_progress'].includes(task.status)
+        task => ['pending', 'processing', 'in_progress'].includes(task.status)
     );
 
     if (tasksToUpdate.length === 0) {
@@ -633,15 +823,15 @@ const findExistingConfiguration = (configSettings) => {
   return savedConfigs.value.find(config => {
     // Compare key settings
     return (
-      config.file_type === (configSettings.file_type || 'mixed') &&
-      config.preprocessing_strategy === (configSettings.preprocessing_strategy || 'full_document') &&
-      config.use_ocr === (configSettings.use_ocr !== undefined ? configSettings.use_ocr : true) &&
-      config.force_ocr === (configSettings.force_ocr || false) &&
-      config.pdf_backend === (configSettings.pdf_backend || 'pymupdf4llm') &&
-      config.ocr_backend === (configSettings.ocr_backend || 'ocrmypdf') &&
-      // Compare OCR languages
-      JSON.stringify(sortLanguages(config.ocr_languages || [])) ===
-      JSON.stringify(sortLanguages(configSettings.ocr_languages || ['eng']))
+        config.file_type === (configSettings.file_type || 'mixed') &&
+        config.preprocessing_strategy === (configSettings.preprocessing_strategy || 'full_document') &&
+        config.use_ocr === (configSettings.use_ocr !== undefined ? configSettings.use_ocr : true) &&
+        config.force_ocr === (configSettings.force_ocr || false) &&
+        config.pdf_backend === (configSettings.pdf_backend || 'pymupdf4llm') &&
+        config.ocr_backend === (configSettings.ocr_backend || 'ocrmypdf') &&
+        // Compare OCR languages
+        JSON.stringify(sortLanguages(config.ocr_languages || [])) ===
+        JSON.stringify(sortLanguages(configSettings.ocr_languages || ['eng']))
     );
   });
 };
@@ -686,7 +876,7 @@ const startPreprocessing = async () => {
         file_type: 'mixed',
         ...preprocessingConfig.value,
         ocr_languages: preprocessingConfig.value.ocr_languages.map(lang =>
-          typeof lang === 'string' ? lang : lang.value
+            typeof lang === 'string' ? lang : lang.value
         ),
       };
 
@@ -711,20 +901,28 @@ const startPreprocessing = async () => {
       }
     }
 
+    // Add API credentials if provided
+    if (apiCredentials.value.api_key && apiCredentials.value.base_url) {
+      taskData.api_key = apiCredentials.value.api_key;
+      taskData.base_url = apiCredentials.value.base_url;
+    }
+
     const response = await api.post(`/project/${props.projectId}/preprocess`, taskData);
     allTasks.value.unshift(response.data);
 
+    // Clear form
     selectedFiles.value = [];
     configName.value = '';
     saveAsConfig.value = false;
+    apiCredentials.value = {api_key: '', base_url: ''};
 
     toast.success('Preprocessing task started successfully');
     setupPolling();
   } catch (error) {
     if (error.response?.data?.detail) {
       const details = Array.isArray(error.response.data.detail)
-        ? error.response.data.detail.map(d => d.msg).join(', ')
-        : error.response.data.detail;
+          ? error.response.data.detail.map(d => d.msg).join(', ')
+          : error.response.data.detail;
       toast.error(`Failed to start preprocessing: ${details}`);
     } else {
       toast.error('Failed to start preprocessing task');
@@ -734,7 +932,6 @@ const startPreprocessing = async () => {
     isSubmitting.value = false;
   }
 };
-
 
 const startQuickPreprocess = async () => {
   const processedIds = new Set();
@@ -767,7 +964,11 @@ const startQuickPreprocess = async () => {
       file_ids: unprocessedFiles.map(f => f.id)
     };
 
-    console.log('DEBUG: Sending quick preprocess request:', taskData);
+    // Add API credentials if provided (though usually not for quick process)
+    if (apiCredentials.value.api_key && apiCredentials.value.base_url) {
+      taskData.api_key = apiCredentials.value.api_key;
+      taskData.base_url = apiCredentials.value.base_url;
+    }
 
     const response = await api.post(`/project/${props.projectId}/preprocess`, taskData);
     allTasks.value.unshift(response.data);
@@ -845,7 +1046,10 @@ const resetForm = () => {
   selectedSavedConfig.value = '';
   configName.value = '';
   saveAsConfig.value = false;
+  apiCredentials.value = {api_key: '', base_url: ''};
+  showApiSettings.value = false;
 };
+
 
 const applyConfiguration = (config) => {
   selectedConfig.value = 'saved';
@@ -871,7 +1075,7 @@ onUnmounted(() => {
 // Watchers
 watch(() => props.files, (newFiles) => {
   availableFiles.value = newFiles;
-}, { immediate: true });
+}, {immediate: true});
 
 watch(() => activeTasks.value.length, (newLength, oldLength) => {
   if (newLength > 0 && !pollInterval) {
@@ -1271,6 +1475,24 @@ watch(() => completedTasks.value.length, () => {
   background-repeat: no-repeat !important;
   background-position: center !important;
 }
+
+.fade-expand-enter-active,
+.fade-expand-leave-active {
+  transition: all 0.3s cubic-bezier(.4,0,.2,1), opacity 0.3s;
+  overflow: hidden;
+}
+.fade-expand-enter-from,
+.fade-expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  padding-bottom: 0 !important;
+}
+.fade-expand-enter-to,
+.fade-expand-leave-from {
+  max-height: 900px;
+  opacity: 1;
+}
+
 
 
 </style>

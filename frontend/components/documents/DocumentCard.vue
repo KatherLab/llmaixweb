@@ -99,7 +99,7 @@ const props = defineProps({
 const emit = defineEmits(['toggle-selection', 'view', 'download']);
 
 const documentTitle = computed(() => {
-  return props.document.original_file?.file_name || `Document #${props.document.id}`;
+  return props.document.document_name || props.document.original_file?.file_name || `Document #${props.document.id}`;
 });
 
 const getStatusClass = (status) => {

@@ -1174,8 +1174,6 @@ def preprocess_project_data(
         # Build query to find matching configuration
         query = db.query(models.PreprocessingConfiguration).filter(
             models.PreprocessingConfiguration.project_id == project_id,
-            models.PreprocessingConfiguration.preprocessing_strategy
-            == config_dict.get("preprocessing_strategy", "full_document"),
             models.PreprocessingConfiguration.pdf_backend
             == config_dict.get("pdf_backend"),
             models.PreprocessingConfiguration.ocr_backend
@@ -1195,14 +1193,6 @@ def preprocess_project_data(
                 == config_dict.get("ocr_model")
             )
 
-        # For file_type, be more flexible - if incoming is 'mixed', match any
-        # Also handle the case where frontend sends 'mixed' but backend might have stored 'pdf'
-        if config_dict.get("file_type") != "mixed":
-            query = query.filter(
-                models.PreprocessingConfiguration.file_type
-                == config_dict.get("file_type")
-            )
-
         # Get all potential matches to check complex fields
         potential_matches = query.all()
 
@@ -1216,13 +1206,8 @@ def preprocess_project_data(
             if config_langs != new_langs:
                 continue
 
-            # Compare table_settings (handle None)
-            if (potential_config.table_settings or {}) != (
-                config_dict.get("table_settings") or {}
-            ):
-                continue
-
             # Compare additional_settings (handle None)
+            # Note: table_settings removed from comparison
             if (potential_config.additional_settings or {}) != (
                 config_dict.get("additional_settings") or {}
             ):
@@ -1255,17 +1240,12 @@ def preprocess_project_data(
                 description=config_dict.get(
                     "description", "Automatically created configuration"
                 ),
-                file_type=config_dict.get("file_type"),
-                preprocessing_strategy=config_dict.get(
-                    "preprocessing_strategy", "full_document"
-                ),
                 pdf_backend=config_dict.get("pdf_backend"),
                 ocr_backend=config_dict.get("ocr_backend"),
                 use_ocr=config_dict.get("use_ocr", True),
                 force_ocr=config_dict.get("force_ocr", False),
                 ocr_languages=config_dict.get("ocr_languages"),
                 ocr_model=config_dict.get("ocr_model"),
-                table_settings=config_dict.get("table_settings"),
                 llm_model=config_dict.get("llm_model"),
                 additional_settings=config_dict.get("additional_settings"),
             )
@@ -1296,17 +1276,6 @@ def preprocess_project_data(
             detail=f"Files not found or don't belong to project: {missing_ids}",
         )
 
-    # Validate file types match configuration
-    for file in files:
-        if (
-            not config.file_type == FileType.MIXED.value
-            and config.file_type != file.file_type
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail=f"File {file.file_name} has type {file.file_type} but configuration expects {config.file_type}",
-            )
-
     # Create preprocessing task
     task = models.PreprocessingTask(
         project_id=project_id,
@@ -1314,6 +1283,15 @@ def preprocess_project_data(
         total_files=len(files),
         rollback_on_cancel=preprocessing_task.rollback_on_cancel,
     )
+
+    # Store API credentials in task metadata if provided
+    if preprocessing_task.api_key and preprocessing_task.base_url:
+        task.task_metadata = {
+            "custom_api_used": True,
+            "api_base_url": preprocessing_task.base_url,
+            # Don't store the actual API key for security
+        }
+
     db.add(task)
     db.commit()
 
@@ -1349,44 +1327,48 @@ def preprocess_project_data(
                 db.delete(doc)
 
         file_task = models.FilePreprocessingTask(
-            preprocessing_task_id=task.id, file_id=file.id
+            preprocessing_task_id=task.id,
+            file_id=file.id,
+            file_name=file.file_name,  # Set file name immediately
         )
         db.add(file_task)
         file_tasks_to_process.append(file_task)
 
     db.commit()
 
+    # Update task with skipped files information
+    if skipped_files > 0:
+        if not task.task_metadata:
+            task.task_metadata = {}
+        task.task_metadata["skipped_files"] = skipped_files
+        task.task_metadata["skipped_file_names"] = skipped_file_names
+        task.skipped_files = skipped_files
+
     if not file_tasks_to_process:
         task.status = models.PreprocessingStatus.COMPLETED
         task.message = f"All files already processed with these settings. {skipped_files} files skipped."
         task.completed_at = datetime.datetime.now(datetime.UTC)
-        # Store skipped files info in task metadata
-        task.skipped_files = skipped_files  # If you have this field
-        # Or use a JSON field to store more details
-        if hasattr(task, "task_metadata"):
-            task.task_metadata = {
-                "skipped_files": skipped_files,
-                "skipped_file_names": skipped_file_names,
-            }
         db.commit()
         db.refresh(task)
         return schemas.PreprocessingTask.model_validate(task)
 
-    # Store initial skipped files info
+    # Set initial message
     if skipped_files > 0:
         task.message = f"Processing {len(file_tasks_to_process)} files. {skipped_files} files already processed and skipped."
-        if hasattr(task, "task_metadata"):
-            task.task_metadata = {
-                "skipped_files": skipped_files,
-                "skipped_file_names": skipped_file_names,
-            }
 
     # Start processing
     if preprocessing_task.bypass_celery:
-        from ....utils.preprocessing import process_files_with_config
+        from ....utils.preprocessing import PreprocessingPipeline
 
         try:
-            process_files_with_config(task.id, db)
+            # Pass API credentials to pipeline
+            pipeline = PreprocessingPipeline(
+                db,
+                task.id,
+                api_key=preprocessing_task.api_key,
+                base_url=preprocessing_task.base_url,
+            )
+            pipeline.process()
         except Exception as e:
             task.status = models.PreprocessingStatus.FAILED
             task.message = f"Processing failed: {str(e)}"
@@ -1395,7 +1377,12 @@ def preprocess_project_data(
     else:
         from ....celery.preprocessing import process_files_async
 
-        result = process_files_async.delay(task.id)
+        # Pass credentials through celery
+        result = process_files_async.delay(
+            task.id,
+            api_key=preprocessing_task.api_key,
+            base_url=preprocessing_task.base_url,
+        )
         task.celery_task_id = result.id
         db.commit()
 

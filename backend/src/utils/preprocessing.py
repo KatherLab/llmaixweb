@@ -30,8 +30,6 @@ def find_matching_configuration(
 
     # Key fields to compare (excluding name and description)
     compare_fields = [
-        "file_type",
-        "preprocessing_strategy",
         "pdf_backend",
         "ocr_backend",
         "use_ocr",
@@ -71,19 +69,34 @@ def find_matching_configuration(
 class PreprocessingPipeline:
     """Flexible preprocessing pipeline for different file types."""
 
-    def __init__(self, db: Session, task_id: int):
+    MAX_ROWS_PER_FILE = 10000  # Fail-safe limit
+    BATCH_SIZE = 1000  # Process documents in batches
+
+    def __init__(
+        self,
+        db: Session,
+        task_id: int,
+        api_key: str | None = None,
+        base_url: str | None = None,
+    ):
         self.db = db
         self.task = db.get(models.PreprocessingTask, task_id)
         self.config = self.task.configuration
         self.cancelled = False
         self.client = None
 
-        # Initialize OpenAI client if needed
-        additional_settings = self.config.additional_settings or {}
-        if additional_settings.get("api_key") and additional_settings.get("base_url"):
+        # Store API credentials in task metadata if custom ones provided
+        if api_key and base_url:
+            self.client = OpenAI(api_key=api_key, base_url=base_url)
+            # Store in task metadata for audit
+            if not self.task.task_metadata:
+                self.task.task_metadata = {}
+            self.task.task_metadata["custom_api_used"] = True
+            self.task.task_metadata["api_base_url"] = base_url
+            self.db.commit()
+        elif settings.OPENAI_API_KEY and settings.OPENAI_API_BASE:
             self.client = OpenAI(
-                api_key=additional_settings["api_key"],
-                base_url=additional_settings["base_url"],
+                api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_API_BASE
             )
 
     def check_cancelled(self):
@@ -150,6 +163,47 @@ class PreprocessingPipeline:
 
         self.db.commit()
 
+    def _validate_csv_metadata(self, file: models.File) -> None:
+        """Validate CSV/XLSX file metadata before processing."""
+        strategy = file.preprocessing_strategy
+        if not strategy:
+            raise ValueError(f"No preprocessing strategy set for file {file.file_name}")
+
+        if strategy == models.PreprocessingStrategy.ROW_BY_ROW:
+            if not file.file_metadata:
+                raise ValueError(
+                    f"No file_metadata found for row-by-row processing of {file.file_name}"
+                )
+
+            text_columns = file.file_metadata.get("text_columns", [])
+            if not text_columns:
+                raise ValueError(
+                    f"No text_columns specified in file_metadata for {file.file_name}"
+                )
+
+    def _check_duplicate_case_ids(self, file: models.File, df: pd.DataFrame) -> None:
+        """Check for duplicate case IDs before processing."""
+        if file.preprocessing_strategy != models.PreprocessingStrategy.ROW_BY_ROW:
+            return
+
+        case_id_column = file.file_metadata.get("case_id_column")
+        if not case_id_column:
+            return
+
+        if case_id_column not in df.columns:
+            raise ValueError(
+                f"Case ID column '{case_id_column}' not found in file {file.file_name}"
+            )
+
+        # Check for duplicates in the case_id column
+        duplicates = df[case_id_column].duplicated()
+        if duplicates.any():
+            duplicate_values = df[case_id_column][duplicates].unique()
+            raise ValueError(
+                f"Duplicate case IDs found in column '{case_id_column}': {duplicate_values[:10]}... "
+                f"File: {file.file_name}"
+            )
+
     def _process_file_task(self, file_task: models.FilePreprocessingTask):
         """Process a single file task."""
         file_task.status = models.PreprocessingStatus.IN_PROGRESS
@@ -162,10 +216,6 @@ class PreprocessingPipeline:
 
         try:
             file = file_task.file
-
-            # Update config file type based on actual file
-            if self.config.file_type != file.file_type:
-                self.config.file_type = file.file_type
 
             # Route to appropriate processor
             if file.file_type in [
@@ -214,65 +264,163 @@ class PreprocessingPipeline:
     def _process_table_file(
         self, file: models.File, file_task: models.FilePreprocessingTask
     ) -> List[models.Document]:
-        """Process CSV/Excel files row by row."""
+        """Process CSV/Excel files using file metadata."""
         documents = []
         file_content = get_file(file.file_uuid)
 
-        table_settings = self.config.table_settings or {}
-        content_columns = table_settings.get("content_columns", [])
-        name_column = table_settings.get("name_column")
-        join_separator = table_settings.get("join_separator", " ")
-        skip_rows = table_settings.get("skip_header_rows", 0)
-        encoding = table_settings.get("encoding", "utf-8")
+        # Validate metadata
+        self._validate_csv_metadata(file)
 
-        # Read file based on type
-        if file.file_type == models.FileType.TEXT_CSV:
-            df = pd.read_csv(
-                io.BytesIO(file_content), encoding=encoding, skiprows=skip_rows
-            )
-        else:
-            df = pd.read_excel(io.BytesIO(file_content), skiprows=skip_rows)
+        # Get preprocessing strategy from file
+        strategy = file.preprocessing_strategy
 
-        # Process each row
-        for idx, row in df.iterrows():
-            if self.check_cancelled():
-                break
-
-            # Build document content
-            if content_columns:
-                content_parts = [str(row[col]) for col in content_columns if col in row]
-                content = join_separator.join(content_parts)
+        # For FULL_DOCUMENT strategy
+        if strategy == models.PreprocessingStrategy.FULL_DOCUMENT:
+            # Read entire file as one document
+            if file.file_type == models.FileType.TEXT_CSV:
+                df = pd.read_csv(io.BytesIO(file_content))
             else:
-                # Use all columns if none specified
-                content = join_separator.join(str(v) for v in row.values)
+                df = pd.read_excel(io.BytesIO(file_content))
 
-            # Build document name
-            if name_column and name_column in row:
-                doc_name = str(row[name_column])
-            else:
-                doc_name = f"{file.file_name}_row_{idx}"
+            # Check row limit
+            if len(df) > self.MAX_ROWS_PER_FILE:
+                raise ValueError(
+                    f"File {file.file_name} has {len(df)} rows, exceeding the maximum limit of {self.MAX_ROWS_PER_FILE}"
+                )
 
-            # Create document
+            # Convert entire dataframe to text
+            text = df.to_string()
+
             doc = models.Document(
                 project_id=self.task.project_id,
                 original_file_id=file.id,
                 file_preprocessing_task_id=file_task.id,
-                text=content,
-                document_name=doc_name,
+                text=text,
+                document_name=file.file_name,
                 preprocessing_config_id=self.config.id,
                 meta_data={
-                    "row_index": idx,
-                    "source_columns": content_columns or list(df.columns),
                     "file_type": "table",
+                    "preprocessing_strategy": "full_document",
+                    "total_rows": len(df),
+                    "columns": list(df.columns),
                 },
             )
-
             self.db.add(doc)
             documents.append(doc)
 
-            # Update progress
-            file_task.progress = (idx + 1) / len(df) * 100
-            self.db.commit()
+        elif strategy == models.PreprocessingStrategy.ROW_BY_ROW:
+            # Get settings from file_metadata
+            file_metadata = file.file_metadata
+
+            # Extract settings
+            delimiter = file_metadata.get("delimiter", ",")
+            encoding = file_metadata.get("encoding", "utf-8")
+            has_header = file_metadata.get("has_header", True)
+            text_columns = file_metadata.get("text_columns", [])
+            case_id_column = file_metadata.get("case_id_column")
+
+            # Read file based on type
+            try:
+                if file.file_type == models.FileType.TEXT_CSV:
+                    df = pd.read_csv(
+                        io.BytesIO(file_content),
+                        encoding=encoding,
+                        delimiter=delimiter,
+                        header=0 if has_header else None,
+                    )
+                else:
+                    df = pd.read_excel(
+                        io.BytesIO(file_content), header=0 if has_header else None
+                    )
+            except Exception as e:
+                raise ValueError(f"Failed to read file {file.file_name}: {str(e)}")
+
+            # Check row limit
+            if len(df) > self.MAX_ROWS_PER_FILE:
+                raise ValueError(
+                    f"File {file.file_name} has {len(df)} rows, exceeding the maximum limit of {self.MAX_ROWS_PER_FILE}"
+                )
+
+            # Validate columns exist
+            missing_columns = [col for col in text_columns if col not in df.columns]
+            if missing_columns:
+                raise ValueError(
+                    f"Text columns {missing_columns} not found in file {file.file_name}. "
+                    f"Available columns: {list(df.columns)}"
+                )
+
+            # Check for duplicate case IDs
+            self._check_duplicate_case_ids(file, df)
+
+            # Process rows in batches
+            batch_documents = []
+            total_rows = len(df)
+
+            for idx, row in df.iterrows():
+                if self.check_cancelled():
+                    break
+
+                # Build document content from specified columns
+                content_parts = []
+                for col in text_columns:
+                    value = row[col]
+                    if pd.notna(value):  # Skip NaN values
+                        content_parts.append(str(value))
+
+                content = " ".join(content_parts)
+
+                # Skip empty documents
+                if not content.strip():
+                    continue
+
+                # Build document name using case_id_column if specified
+                if case_id_column and case_id_column in row:
+                    case_id = row[case_id_column]
+                    doc_name = f"{case_id}"
+                else:
+                    doc_name = f"{file.file_name}_row_{idx}"
+
+                # Create document
+                doc = models.Document(
+                    project_id=self.task.project_id,
+                    original_file_id=file.id,
+                    file_preprocessing_task_id=file_task.id,
+                    text=content,
+                    document_name=doc_name,
+                    preprocessing_config_id=self.config.id,
+                    meta_data={
+                        "row_index": int(idx),  # Convert numpy int to Python int
+                        "source_columns": text_columns,
+                        "case_id": str(row[case_id_column])
+                        if case_id_column and case_id_column in row
+                        else None,
+                        "file_type": "table",
+                        "preprocessing_strategy": "row_by_row",
+                        "all_row_data": row.to_dict(),  # Store full row for reference
+                    },
+                )
+
+                batch_documents.append(doc)
+
+                # Commit in batches for performance
+                if len(batch_documents) >= self.BATCH_SIZE:
+                    self.db.bulk_save_objects(batch_documents)
+                    self.db.commit()
+                    documents.extend(batch_documents)
+                    batch_documents = []
+
+                    # Update progress
+                    file_task.progress = (idx + 1) / total_rows * 100
+                    self.db.commit()
+
+            # Save remaining documents
+            if batch_documents:
+                self.db.bulk_save_objects(batch_documents)
+                self.db.commit()
+                documents.extend(batch_documents)
+
+        else:
+            raise ValueError(f"Unsupported preprocessing strategy: {strategy}")
 
         return documents
 
@@ -289,7 +437,7 @@ class PreprocessingPipeline:
         # Prepare llmaix parameters
         llmaix_params = {
             "filename": file_content,
-            "pdf_backend": self.config.pdf_backend or "pymupdf4llm",
+            "pdf_backend": self.config.pdf_backend or "markitdown",
             "ocr_backend": self.config.ocr_backend or "ocrmypdf",
             "use_ocr": self.config.use_ocr,
             "force_ocr": self.config.force_ocr,
@@ -298,12 +446,15 @@ class PreprocessingPipeline:
             "llm_model": self.config.llm_model,
         }
 
-        # Add client or API credentials if available
+        # Use custom client if available, otherwise use API credentials
         if self.client:
             llmaix_params["client"] = self.client
-        elif additional_settings.get("api_key"):
-            llmaix_params["api_key"] = additional_settings["api_key"]
-            llmaix_params["base_url"] = additional_settings.get("base_url")
+        else:
+            # Use default credentials from settings if available
+            if settings.OPENAI_API_KEY:
+                llmaix_params["api_key"] = settings.OPENAI_API_KEY
+            if settings.OPENAI_API_BASE:
+                llmaix_params["base_url"] = settings.OPENAI_API_BASE
 
         preprocessed_file_id = None
 
@@ -317,7 +468,7 @@ class PreprocessingPipeline:
 
                     # Save preprocessed file
                     preprocessed_file_content = tmp_file_path.read_bytes()
-                    new_file_name = f"preprocessed_{file.id}.pdf"
+                    new_file_name = f"preprocessed_{file.file_name}"
                     new_file_uuid = save_file(preprocessed_file_content)
 
                     file_obj = models.File(
@@ -361,6 +512,7 @@ class PreprocessingPipeline:
 
         self.db.add(doc)
         return [doc]
+
 
     def _process_image_file(
         self, file: models.File, file_task: models.FilePreprocessingTask

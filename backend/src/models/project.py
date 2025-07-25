@@ -291,110 +291,6 @@ class DocumentSet(Base):
     )
 
 
-class Prompt(Base):
-    __tablename__ = "prompts"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    description: Mapped[str] = mapped_column(String(500), nullable=True)
-    system_prompt: Mapped[str] = mapped_column(String, nullable=True)
-    user_prompt: Mapped[str] = mapped_column(String, nullable=True)
-
-    created_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-    project: Mapped["Project"] = relationship(back_populates="prompts")
-    trials: Mapped[list["Trial"]] = relationship(back_populates="prompt")
-
-
-class Schema(Base):
-    __tablename__ = "schemas"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    schema_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    schema_definition: Mapped[dict] = mapped_column(JSON, nullable=False)
-    created_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-    project: Mapped["Project"] = relationship(back_populates="schemas")
-    trials: Mapped[list["Trial"]] = relationship(back_populates="schema")
-    field_mappings: Mapped[list["FieldMapping"]] = relationship(back_populates="schema")
-
-
-class TrialStatus(str, enum.Enum):
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
-class Trial(Base):
-    __tablename__ = "trials"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=True)
-    description: Mapped[str] = mapped_column(String(512), nullable=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"), nullable=False)
-    prompt_id: Mapped[str] = mapped_column(ForeignKey("prompts.id"), nullable=False)
-    document_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
-    document_set_id: Mapped[int | None] = mapped_column(
-        ForeignKey("document_sets.id"), nullable=True
-    )
-
-    document_set: Mapped["DocumentSet"] = relationship(
-        "DocumentSet", back_populates="trials"
-    )
-
-    status: Mapped[TrialStatus] = mapped_column(
-        Enum(TrialStatus, native_enum=False, length=20),
-        default=TrialStatus.PENDING,
-    )
-    llm_model: Mapped[str] = mapped_column(String(100), nullable=False)
-    api_key: Mapped[str] = mapped_column(String(100), nullable=False)
-    base_url: Mapped[str] = mapped_column(String(100), nullable=False)
-    bypass_celery: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-
-    advanced_options: Mapped[dict] = mapped_column(JSON, nullable=True, default=dict)
-
-    created_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-    project: Mapped["Project"] = relationship(back_populates="trials")
-    schema: Mapped["Schema"] = relationship(back_populates="trials")
-    prompt: Mapped["Prompt"] = relationship(back_populates="trials")
-    results: Mapped[list["TrialResult"]] = relationship(
-        back_populates="trial", cascade="all, delete-orphan"
-    )
-    evaluations: Mapped[list["Evaluation"]] = relationship(
-        back_populates="trial", cascade="all, delete-orphan"
-    )
-
-
-class TrialResult(Base):
-    __tablename__ = "trial_results"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    trial_id: Mapped[int] = mapped_column(ForeignKey("trials.id"), nullable=False)
-    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), nullable=False)
-    result: Mapped[dict] = mapped_column(JSON, nullable=False)
-    created_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-    trial: Mapped["Trial"] = relationship(back_populates="results")
-    document: Mapped["Document"] = relationship()
-
-
 class PreprocessingTaskStatus(str, enum.Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
@@ -410,16 +306,6 @@ class PreprocessingConfiguration(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(String(500), nullable=True)
 
-    # File type specific settings
-    file_type: Mapped[FileType] = mapped_column(
-        Enum(FileType, native_enum=False, length=100, default=FileType.MIXED),
-        nullable=False,
-    )
-    preprocessing_strategy: Mapped[PreprocessingStrategy] = mapped_column(
-        Enum(PreprocessingStrategy, native_enum=False, length=50),
-        default=PreprocessingStrategy.FULL_DOCUMENT,
-    )
-
     # PDF/Image settings
     pdf_backend: Mapped[str] = mapped_column(String(50), nullable=True)
     ocr_backend: Mapped[str] = mapped_column(String(50), nullable=True)
@@ -427,17 +313,6 @@ class PreprocessingConfiguration(Base):
     force_ocr: Mapped[bool] = mapped_column(Boolean, default=False)
     ocr_languages: Mapped[list[str]] = mapped_column(JSON, nullable=True)
     ocr_model: Mapped[str] = mapped_column(String(100), nullable=True)
-
-    # Table/CSV settings
-    table_settings: Mapped[dict] = mapped_column(JSON, nullable=True)
-    # Example structure:
-    # {
-    #     "content_columns": ["column1", "column2"],
-    #     "name_column": "document_name",
-    #     "join_separator": " ",
-    #     "skip_header_rows": 1,
-    #     "encoding": "utf-8"
-    # }
 
     # LLM settings (optional)
     llm_model: Mapped[str] = mapped_column(String(100), nullable=True)
@@ -570,6 +445,110 @@ class FilePreprocessingTask(Base):
     documents: Mapped[list["Document"]] = relationship(
         back_populates="file_preprocessing_task", cascade="all, delete-orphan"
     )
+
+
+class Prompt(Base):
+    __tablename__ = "prompts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    system_prompt: Mapped[str] = mapped_column(String, nullable=True)
+    user_prompt: Mapped[str] = mapped_column(String, nullable=True)
+
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    project: Mapped["Project"] = relationship(back_populates="prompts")
+    trials: Mapped[list["Trial"]] = relationship(back_populates="prompt")
+
+
+class Schema(Base):
+    __tablename__ = "schemas"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    schema_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    schema_definition: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    project: Mapped["Project"] = relationship(back_populates="schemas")
+    trials: Mapped[list["Trial"]] = relationship(back_populates="schema")
+    field_mappings: Mapped[list["FieldMapping"]] = relationship(back_populates="schema")
+
+
+class TrialStatus(str, enum.Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class Trial(Base):
+    __tablename__ = "trials"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=True)
+    description: Mapped[str] = mapped_column(String(512), nullable=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"), nullable=False)
+    prompt_id: Mapped[str] = mapped_column(ForeignKey("prompts.id"), nullable=False)
+    document_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
+    document_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("document_sets.id"), nullable=True
+    )
+
+    document_set: Mapped["DocumentSet"] = relationship(
+        "DocumentSet", back_populates="trials"
+    )
+
+    status: Mapped[TrialStatus] = mapped_column(
+        Enum(TrialStatus, native_enum=False, length=20),
+        default=TrialStatus.PENDING,
+    )
+    llm_model: Mapped[str] = mapped_column(String(100), nullable=False)
+    api_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    base_url: Mapped[str] = mapped_column(String(100), nullable=False)
+    bypass_celery: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    advanced_options: Mapped[dict] = mapped_column(JSON, nullable=True, default=dict)
+
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    project: Mapped["Project"] = relationship(back_populates="trials")
+    schema: Mapped["Schema"] = relationship(back_populates="trials")
+    prompt: Mapped["Prompt"] = relationship(back_populates="trials")
+    results: Mapped[list["TrialResult"]] = relationship(
+        back_populates="trial", cascade="all, delete-orphan"
+    )
+    evaluations: Mapped[list["Evaluation"]] = relationship(
+        back_populates="trial", cascade="all, delete-orphan"
+    )
+
+
+class TrialResult(Base):
+    __tablename__ = "trial_results"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trial_id: Mapped[int] = mapped_column(ForeignKey("trials.id"), nullable=False)
+    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), nullable=False)
+    result: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    trial: Mapped["Trial"] = relationship(back_populates="results")
+    document: Mapped["Document"] = relationship()
 
 
 class FieldMapping(Base):

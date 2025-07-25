@@ -376,106 +376,14 @@ class TrialResult(TrialResultBase):
 class PreprocessingConfigurationBase(UTCModel):
     name: str
     description: str | None = None
-    file_type: str
-    preprocessing_strategy: str = "full_document"
     pdf_backend: str | None = None
     ocr_backend: str | None = None
     use_ocr: bool = True
     force_ocr: bool = False
     ocr_languages: list[str] | None = None
     ocr_model: str | None = None
-    table_settings: dict | None = None
     llm_model: str | None = None
     additional_settings: dict | None = None
-
-    @field_validator("file_type")
-    def validate_file_type(cls, v):
-        """Convert file type string to enum value."""
-        if not v:
-            raise ValueError("file_type is required")
-
-        # Map common variations to enum values
-        file_type_mapping = {
-            # Direct enum values
-            "application/pdf": FileType.APPLICATION_PDF,
-            "application/msword": FileType.APPLICATION_MSWORD,
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_WORDPROCESSINGML_DOCUMENT,
-            "application/vnd.ms-excel": FileType.APPLICATION_VND_MS_EXCEL,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET,
-            "image/jpeg": FileType.IMAGE_JPEG,
-            "image/png": FileType.IMAGE_PNG,
-            "image/svg+xml": FileType.IMAGE_SVG,
-            "text/plain": FileType.TEXT_PLAIN,
-            "text/csv": FileType.TEXT_CSV,
-            "mixed": FileType.MIXED,
-            # Common aliases
-            "pdf": FileType.APPLICATION_PDF,
-            "word": FileType.APPLICATION_MSWORD,
-            "docx": FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_WORDPROCESSINGML_DOCUMENT,
-            "excel": FileType.APPLICATION_VND_MS_EXCEL,
-            "xlsx": FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET,
-            "jpg": FileType.IMAGE_JPEG,
-            "jpeg": FileType.IMAGE_JPEG,
-            "png": FileType.IMAGE_PNG,
-            "svg": FileType.IMAGE_SVG,
-            "txt": FileType.TEXT_PLAIN,
-            "csv": FileType.TEXT_CSV,
-        }
-
-        # Convert to lowercase for case-insensitive matching
-        v_lower = v.lower()
-
-        # Check if it's already an enum value
-        try:
-            return FileType(v).value
-        except ValueError:
-            pass
-
-        # Check mapping
-        if v_lower in file_type_mapping:
-            return file_type_mapping[v_lower].value
-
-        # Check if it's an enum name (e.g., "APPLICATION_PDF")
-        for enum_item in FileType:
-            if v_lower == enum_item.name.lower():
-                return enum_item.value
-
-        raise ValueError(
-            f"Invalid file type: {v}. Valid types are: {', '.join([e.value for e in FileType])}"
-        )
-
-    @field_validator("preprocessing_strategy")
-    def validate_preprocessing_strategy(cls, v):
-        """Convert preprocessing strategy string to enum value."""
-        if not v:
-            return PreprocessingStrategy.FULL_DOCUMENT.value
-
-        strategy_mapping = {
-            "full_document": PreprocessingStrategy.FULL_DOCUMENT,
-            "row_by_row": PreprocessingStrategy.ROW_BY_ROW,
-            "custom": PreprocessingStrategy.CUSTOM,
-        }
-
-        v_lower = v.lower()
-
-        # Check if it's already an enum value
-        try:
-            return PreprocessingStrategy(v).value
-        except ValueError:
-            pass
-
-        # Check mapping
-        if v_lower in strategy_mapping:
-            return strategy_mapping[v_lower].value
-
-        # Check if it's an enum name
-        for enum_item in PreprocessingStrategy:
-            if v_lower == enum_item.name.lower():
-                return enum_item.value
-
-        raise ValueError(
-            f"Invalid preprocessing strategy: {v}. Valid strategies are: {', '.join([e.value for e in PreprocessingStrategy])}"
-        )
 
 
 class PreprocessingConfigurationCreate(PreprocessingConfigurationBase):
@@ -485,7 +393,6 @@ class PreprocessingConfigurationCreate(PreprocessingConfigurationBase):
 class PreprocessingConfigurationUpdate(UTCModel):
     name: str | None = None
     description: str | None = None
-    table_settings: dict | None = None
     additional_settings: dict | None = None
 
 
@@ -531,6 +438,10 @@ class PreprocessingTaskCreate(PreprocessingTaskBase):
 
     force_reprocess: bool = False
     bypass_celery: bool = False
+
+    # Optional API credentials for LLM preprocessing
+    api_key: str | None = None
+    base_url: str | None = None
 
     @field_validator("file_ids")
     def file_ids_must_not_be_empty(cls, v):

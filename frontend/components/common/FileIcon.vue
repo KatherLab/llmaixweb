@@ -53,18 +53,42 @@
     </svg>
 
     <svg
-      v-else
+      v-else-if="iconType === 'txt'"
       :width="size"
       :height="size"
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M7 2H17L22 7V20C22 21.1 21.1 22 20 22H4C2.9 22 2 21.1 2 20V4C2 2.9 2.9 2 4 2H7Z" fill="#718096"/>
-      <path d="M17 2V7H22" fill="#4A5568"/>
+      <path d="M7 2H17L22 7V20C22 21.1 21.1 22 20 22H4C2.9 22 2 21.1 2 20V4C2 2.9 2.9 2 4 2H7Z" fill="#A0AEC0"/>
+      <path d="M17 2V7H22" fill="#718096"/>
+      <text x="50%" y="70%" text-anchor="middle" fill="white" font-size="8" font-weight="bold">TXT</text>
     </svg>
+
+    <svg
+  v-else
+  :width="size"
+  :height="size"
+  viewBox="0 0 24 24"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <path d="M7 2H17L22 7V20C22 21.1 21.1 22 20 22H4C2.9 22 2 21.1 2 20V4C2 2.9 2.9 2 4 2H7Z" fill="#718096"/>
+  <path d="M17 2V7H22" fill="#4A5568"/>
+  <text
+    x="50%"
+    y="70%"
+    text-anchor="middle"
+    fill="white"
+    font-size="8"
+    font-weight="bold"
+  >
+    {{ defaultExt }}
+  </text>
+</svg>
   </div>
 </template>
+
 
 <script setup>
 import { computed } from 'vue';
@@ -87,7 +111,16 @@ const iconType = computed(() => {
   if (type.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'bmp'].some(ext => type.includes(ext))) return 'image';
   if (type.includes('excel') || type.includes('xls')) return 'excel';
   if (type.includes('csv')) return 'csv';
+  if (type.includes('text/plain')) return 'txt';
 
   return 'default';
 });
+
+const defaultExt = computed(() => {
+  console.log("defaultExt ", props.fileType);
+  const ext = props.fileType?.split('.').pop()?.toUpperCase() || '';
+  return ext.slice(0, 3); // Show first 3 characters
+});
 </script>
+
+

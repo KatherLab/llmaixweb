@@ -11,18 +11,14 @@
         <div class="flex items-center justify-between p-4 border-b bg-gray-50 rounded-t-lg">
           <div class="flex items-center space-x-4">
             <h3 class="text-lg font-semibold text-gray-900">
-              {{ document.original_file?.file_name || `Document #${document.id}` }}
+              {{ document.document_name || document.original_file?.file_name || `Document #${document.id}` }}
             </h3>
-            <span
-              :class="[
-                'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                document.preprocessing_status === 'success'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-800'
-              ]"
-            >
-              {{ document.preprocessing_status || 'Processed' }}
-            </span>
+
+            <p v-if="document.document_name && document.original_file?.file_name && document.document_name !== document.original_file.file_name"
+               class="text-sm text-gray-500 mt-1">
+              Original File: {{ document.original_file.file_name }}
+            </p>
+
           </div>
           <div class="flex items-center space-x-2">
             <button
