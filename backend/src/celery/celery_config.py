@@ -24,7 +24,7 @@ if not settings.DISABLE_CELERY:
         task_acks_late=True,                     # ACK after the task has succeeded
         task_reject_on_worker_lost=True,         # mark FAILURE if worker seg‑faults / OOMs
         broker_transport_options={
-            "visibility_timeout": 3600,          # re‑queue an un‑acked msg after 1 h
+            "visibility_timeout": 3600,          # re‑queue an un‑acked msg after 1h
         },
         worker_prefetch_multiplier=1,            # one job at a time per child process
     )

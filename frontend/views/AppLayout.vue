@@ -41,6 +41,30 @@
               </router-link>
             </div>
           </div>
+
+          <div v-if="isAdmin" class="ml-4 relative">
+            <button
+              aria-label="Admin menu"
+              @click="showAdminMenu = !showAdminMenu"
+              class="rounded-full p-2 hover:bg-blue-50 dark:hover:bg-slate-800 transition"
+            >
+              <svg class="w-6 h-6 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7zm7-3.5c0-.8.7-1.4 1.5-1.4s1.5.6 1.5 1.4-.7 1.4-1.5 1.4-1.5-.6-1.5-1.4zm-14 0c0-.8.7-1.4 1.5-1.4S8 11.2 8 12s-.7 1.4-1.5 1.4S5 12.8 5 12z" />
+                <circle cx="12" cy="12" r="10" stroke="currentColor"/>
+              </svg>
+            </button>
+            <transition name="fade-slide">
+              <div v-if="showAdminMenu"
+                class="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800 rounded-xl shadow-xl z-50"
+                @click.away="showAdminMenu = false"
+              >
+                <router-link to="/admin/settings" class="block px-5 py-3 text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950">Settings</router-link>
+                <router-link to="/admin/celery" class="block px-5 py-3 text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950">Celery & Queues</router-link>
+                <!-- Add more as needed -->
+              </div>
+            </transition>
+          </div>
+
           <div class="flex items-center">
             <!-- Dark mode toggle -->
             <button
@@ -267,6 +291,7 @@ const currentYear = new Date().getFullYear()
 const authReady = ref(false)
 const toast = useToast()
 
+const showAdminMenu = ref(false)
 const isDark = ref(false)
 
 function setDarkClass(val) {

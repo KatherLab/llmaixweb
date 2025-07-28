@@ -12,29 +12,14 @@ import NotFound from '@/views/NotFound.vue'
 import ProjectOverview from '@/views/ProjectOverview.vue'
 import ProjectDetail from '@/views/ProjectDetail.vue'
 import AdminUserManagement from '@/views/AdminUserManagement.vue'
+import AdminDashboard from '@/views/AdminDashboard.vue'
+import AdminSettings from '@/views/AdminSettings.vue'
+import AdminCelery from '@/views/AdminCelery.vue'
 
 import { useAuthStore } from '@/stores/auth'
 
-// Pages always accessible (landing, login, register, invite, 404)
-const publicRoutes = [
-  {
-    path: '/',
-    component: AuthLayout,
-    children: [
-      { path: '', component: Landing },
-      { path: 'login', component: Login },
-      { path: 'register', component: Register },
-      { path: 'invitation/:token', component: InvitationLanding }
-    ]
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    component: NotFound
-  }
-]
-
-// Authenticated "app" pages (with nav, including landing)
-const appRoutes = [
+const routes = [
+  // Authenticated app routes (navbar visible!)
   {
     path: '/',
     component: AppLayout,
@@ -42,42 +27,61 @@ const appRoutes = [
       { path: '', component: Landing },
       { path: 'projects', component: ProjectOverview, meta: { requiresAuth: true } },
       { path: 'projects/:projectId', component: ProjectDetail, props: true, meta: { requiresAuth: true } },
-      { path: 'admin/user-management', component: AdminUserManagement, meta: { requiresAuth: true } }
+      // Admin routes
+      { path: 'admin/user-management', component: AdminUserManagement, meta: { requiresAuth: true, adminOnly: true } },
+      {
+        path: 'admin',
+        component: AdminDashboard, // <--- this is just the tab layout, not the full page
+        meta: { requiresAuth: true, adminOnly: true },
+        children: [
+          { path: 'settings', component: AdminSettings },
+          { path: 'celery', component: AdminCelery },
+          // ...more admin tabs here
+          { path: '', redirect: '/admin/settings' } // default tab
+        ]
+      }
     ]
-  }
+  },
+
+  // Public routes (no navbar)
+  {
+    path: '/',
+    component: AuthLayout,
+    children: [
+      { path: 'login', component: Login },
+      { path: 'register', component: Register },
+      { path: 'invitation/:token', component: InvitationLanding }
+    ]
+  },
+
+  // 404 fallback
+  { path: '/:pathMatch(.*)*', component: NotFound }
 ]
 
-// Use appRoutes first: logged-in users always get AppLayout and nav, even for /
-const routes = [
-  ...appRoutes,
-  ...publicRoutes
-]
-
+// Router creation
 const router = createRouter({
   history: createWebHistory(),
   routes
 })
 
+// Auth/admin guard
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-
-  // If route requires auth, and not logged in, redirect to login
   if (to.matched.some(record => record.meta.requiresAuth)) {
     if (!authStore.isAuthenticated) {
       return next({ path: '/login', query: { redirect: to.fullPath } })
     }
-    return next()
+    if (to.matched.some(record => record.meta.adminOnly) && !authStore.isAdmin) {
+      return next('/') // Or redirect to a 403 page
+    }
   }
-
-  // If logged in and navigating to /login, /register, or /invitation, show nav (AppLayout)
+  // Prevent logged-in users from seeing login/register pages
   if (
     authStore.isAuthenticated &&
     (to.path === '/login' || to.path === '/register' || to.path.startsWith('/invitation'))
   ) {
     return next('/')
   }
-
-  // All others: continue
   return next()
 })
 

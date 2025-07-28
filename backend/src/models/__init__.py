@@ -25,8 +25,10 @@ from .project import (
     TrialStatus,
 )
 from .user import Invitation, User, UserRole
+from .admin import AppSetting
 
 __all__ = [
+    "AppSetting",
     "Base",
     "User",
     "UserRole",

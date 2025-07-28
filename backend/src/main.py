@@ -10,7 +10,7 @@ from llmaix.__version__ import __version__
 from .celery.celery_config import celery_app
 from .core.config import settings
 from .db.session import init_db
-from .routers.v1.endpoints import auth, projects, users
+from .routers.v1.endpoints import auth, projects, users, admin
 
 
 def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
@@ -72,6 +72,7 @@ api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/user", tags=["users"])
 api_router.include_router(projects.router, prefix="/project", tags=["projects"])
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(api_router)
 
 print("Using custom CORS origins from settings:", settings.BACKEND_CORS_ORIGINS_LIST)
