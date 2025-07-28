@@ -100,15 +100,16 @@
     <div v-if="completedTasks.length > 0" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-0 mt-6">
       <!-- Clickable Header -->
       <div
-        class="flex items-center justify-between px-6 py-4 cursor-pointer select-none hover:bg-gray-50 active:bg-gray-100 rounded-t-2xl transition group focus:outline-none"
-        @click="showCompletedTasks = !showCompletedTasks"
-        tabindex="0"
-        @keyup.enter.space="showCompletedTasks = !showCompletedTasks"
-        :aria-expanded="showCompletedTasks.toString()"
-        role="button"
+          :aria-expanded="showCompletedTasks.toString()"
+          class="flex items-center justify-between px-6 py-4 cursor-pointer select-none hover:bg-gray-50 active:bg-gray-100 rounded-t-2xl transition group focus:outline-none"
+          role="button"
+          tabindex="0"
+          @click="showCompletedTasks = !showCompletedTasks"
+          @keyup.enter.space="showCompletedTasks = !showCompletedTasks"
       >
         <div class="flex items-center gap-2">
-          <svg class="h-6 w-6 text-emerald-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="h-6 w-6 text-emerald-500 transition-transform" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
             <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
           </svg>
@@ -122,11 +123,11 @@
         <div class="flex items-center gap-2 text-sm font-medium text-gray-500">
           <span>{{ showCompletedTasks ? 'Hide Details' : 'Show Details' }}</span>
           <svg
-            class="h-4 w-4 transition-transform duration-300"
-            :class="{ 'rotate-180': showCompletedTasks }"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+              :class="{ 'rotate-180': showCompletedTasks }"
+              class="h-4 w-4 transition-transform duration-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
           >
             <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
           </svg>
@@ -135,71 +136,76 @@
 
       <!-- Animated Expand/Collapse -->
       <transition
-        name="fade-expand"
-        mode="out-in"
-        appear
+          appear
+          mode="out-in"
+          name="fade-expand"
       >
         <div
-          v-show="showCompletedTasks"
-          class="px-4 pb-2 pt-1 space-y-1 overflow-hidden"
-          key="completed-tasks-list"
+            v-show="showCompletedTasks"
+            key="completed-tasks-list"
+            class="px-4 pb-2 pt-1 space-y-1 overflow-hidden"
         >
           <!-- Tasks List -->
           <div
-            v-for="task in displayedCompletedTasks"
-            :key="task.id"
-            class="flex items-center justify-between bg-white/90 border border-gray-100 rounded-lg px-3 py-2 my-1 shadow-xs hover:shadow-md hover:bg-blue-50 transition group cursor-pointer"
-            @click="viewTaskDetails(task)"
-            tabindex="0"
-            @keyup.enter.space="viewTaskDetails(task)"
+              v-for="task in displayedCompletedTasks"
+              :key="task.id"
+              class="flex items-center justify-between bg-white/90 border border-gray-100 rounded-lg px-3 py-2 my-1 shadow-xs hover:shadow-md hover:bg-blue-50 transition group cursor-pointer"
+              tabindex="0"
+              @click="viewTaskDetails(task)"
+              @keyup.enter.space="viewTaskDetails(task)"
           >
             <!-- Left: Status Icon, Task Info -->
             <div class="flex items-center gap-3 min-w-0">
               <span
-                class="w-6 h-6 flex items-center justify-center rounded-full"
-                :class="{
+                  :class="{
                   'bg-green-50': task.status === 'completed',
                   'bg-red-50': task.status === 'failed',
                   'bg-yellow-50': task.status === 'cancelled' || task.status === 'errored'
                 }"
+                  class="w-6 h-6 flex items-center justify-center rounded-full"
               >
-                <svg v-if="task.status === 'completed'" class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-if="task.status === 'completed'" class="w-4 h-4 text-emerald-500" fill="none"
+                     stroke="currentColor" viewBox="0 0 24 24">
                   <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                 </svg>
-                <svg v-else-if="task.status === 'failed'" class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-else-if="task.status === 'failed'" class="w-4 h-4 text-red-500" fill="none" stroke="currentColor"
+                     viewBox="0 0 24 24">
                   <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                 </svg>
                 <svg v-else class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" stroke-width="2" stroke="currentColor" fill="none"/>
+                  <circle cx="12" cy="12" fill="none" r="10" stroke="currentColor" stroke-width="2"/>
                   <path d="M12 8v4m0 4h.01" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                 </svg>
               </span>
               <div class="flex flex-col text-xs min-w-0">
                 <div class="flex items-center gap-2">
                   <span class="font-medium text-gray-900 truncate">Task #{{ task.id }}</span>
-                  <span v-if="task.configuration?.name" class="text-gray-500 truncate">— {{ task.configuration.name }}</span>
+                  <span v-if="task.configuration?.name" class="text-gray-500 truncate">— {{
+                      task.configuration.name
+                    }}</span>
                   <span
-                    v-if="task.status === 'failed'"
-                    class="ml-2 px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-2xs font-semibold uppercase tracking-wide"
+                      v-if="task.status === 'failed'"
+                      class="ml-2 px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-2xs font-semibold uppercase tracking-wide"
                   >FAILED</span>
                   <span
-                    v-else-if="task.status === 'cancelled'"
-                    class="ml-2 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 text-2xs font-semibold uppercase tracking-wide"
+                      v-else-if="task.status === 'cancelled'"
+                      class="ml-2 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 text-2xs font-semibold uppercase tracking-wide"
                   >CANCELLED</span>
                   <span
-                    v-else-if="task.status === 'errored'"
-                    class="ml-2 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 text-2xs font-semibold uppercase tracking-wide"
+                      v-else-if="task.status === 'errored'"
+                      class="ml-2 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 text-2xs font-semibold uppercase tracking-wide"
                   >ERROR</span>
                   <span
-                    v-else-if="task.status === 'completed'"
-                    class="ml-2 px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-2xs font-semibold uppercase tracking-wide"
+                      v-else-if="task.status === 'completed'"
+                      class="ml-2 px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-2xs font-semibold uppercase tracking-wide"
                   >COMPLETED</span>
                 </div>
                 <div class="flex items-center gap-3 mt-0.5">
                   <span v-if="task.failed_files > 0" class="text-red-500">
                     ✗ {{ task.failed_files }} failed
                   </span>
-                  <span v-if="task.processed_files - task.failed_files - (task.skipped_files || 0) > 0" class="text-green-500">
+                  <span v-if="task.processed_files - task.failed_files - (task.skipped_files || 0) > 0"
+                        class="text-green-500">
                     ✓ {{ task.processed_files - task.failed_files - (task.skipped_files || 0) }} succeeded
                   </span>
                   <span v-if="task.skipped_files > 0" class="text-yellow-600">
@@ -213,7 +219,7 @@
             </div>
             <!-- Right: Time -->
             <div class="flex items-center gap-2 shrink-0">
-              <span class="text-xs text-gray-400" :title="task.completed_at || task.updated_at">
+              <span :title="task.completed_at || task.updated_at" class="text-xs text-gray-400">
                 {{ formatRelativeTime(task.completed_at || task.updated_at) }}
               </span>
             </div>
@@ -221,8 +227,8 @@
           <!-- Show more/less button -->
           <div v-if="completedTasks.length > 5" class="text-center pt-2">
             <button
-              class="text-sm text-emerald-700 hover:text-emerald-900 font-medium inline-flex items-center gap-1"
-              @click.stop="showAllCompleted = !showAllCompleted"
+                class="text-sm text-emerald-700 hover:text-emerald-900 font-medium inline-flex items-center gap-1"
+                @click.stop="showAllCompleted = !showAllCompleted"
             >
               <span v-if="!showAllCompleted">
                 Show {{ completedTasks.length - 5 }} more
@@ -231,10 +237,10 @@
                 Show less
               </span>
               <svg
-                :class="['h-4 w-4 transition-transform duration-200', showAllCompleted ? 'rotate-180' : '']"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                  :class="['h-4 w-4 transition-transform duration-200', showAllCompleted ? 'rotate-180' : '']"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
               >
                 <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
@@ -244,145 +250,227 @@
       </transition>
     </div>
 
-
-
-    <!-- Create New Task -->
+    <!-- Update the configuration selection section -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200">
       <div class="p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-6">Create New Preprocessing Task</h3>
-        <!-- Configuration Selection -->
-        <!-- ... keep your config selection as in your original file ... -->
+
+        <!-- Mode Selection -->
         <div class="mb-6">
           <label class="block text-sm font-medium text-gray-700 mb-3">
-            Configuration
+            Processing Mode
           </label>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <!-- ... all your configuration buttons ... -->
             <button
                 :class="[
                 'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all',
-                selectedConfig === 'quick'
+                selectedMode === 'quick'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
               ]"
-                @click="selectedConfig = 'quick'"
+                @click="selectMode('quick')"
             >
-              <svg :class="selectedConfig === 'quick' ? 'text-blue-600' : 'text-gray-400'" class="h-8 w-8 mb-2"
-                   fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-              </svg>
-              <span class="font-medium text-sm">Quick Process</span>
-              <span class="text-xs text-gray-500 mt-1">Smart defaults</span>
-            </button>
-            <button
-                :class="[
-                'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all',
-                selectedConfig === 'saved'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              ]"
-                @click="selectedConfig = 'saved'"
-            >
-              <svg :class="selectedConfig === 'saved' ? 'text-blue-600' : 'text-gray-400'" class="h-8 w-8 mb-2"
-                   fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                      stroke-linecap="round" stroke-linejoin="round"
+              <svg :class="selectedMode === 'quick' ? 'text-blue-600' : 'text-gray-400'"
+                   class="h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"
                       stroke-width="2"/>
               </svg>
-              <span class="font-medium text-sm">Saved Config</span>
-              <span class="text-xs text-gray-500 mt-1">Reuse settings</span>
+              <span class="font-medium text-sm">Quick Process</span>
+              <span class="text-xs text-gray-500 mt-1 text-center">Fast extraction<br/>OCRmyPDF</span>
             </button>
+
             <button
                 :class="[
                 'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all',
-                selectedConfig === 'custom'
+                selectedMode === 'better'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
               ]"
-                @click="selectedConfig = 'custom'"
+                @click="selectMode('better')"
             >
-              <svg :class="selectedConfig === 'custom' ? 'text-blue-600' : 'text-gray-400'" class="h-8 w-8 mb-2"
-                   fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg :class="selectedMode === 'better' ? 'text-blue-600' : 'text-gray-400'"
+                   class="h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              <span class="font-medium text-sm">Better Quality</span>
+              <span class="text-xs text-gray-500 mt-1 text-center">Enhanced OCR<br/>PaddleOCR</span>
+            </button>
+
+            <button
+                :class="[
+                'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all',
+                selectedMode === 'custom'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              ]"
+                @click="selectMode('custom')"
+            >
+              <svg :class="selectedMode === 'custom' ? 'text-blue-600' : 'text-gray-400'"
+                   class="h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                     d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                    stroke-linecap="round" stroke-linejoin="round"
-                    stroke-width="2"/>
+                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
               <span class="font-medium text-sm">Custom</span>
-              <span class="text-xs text-gray-500 mt-1">Fine-tune settings</span>
+              <span class="text-xs text-gray-500 mt-1">Full control</span>
             </button>
           </div>
+
+          <!-- Mode-specific presets -->
+          <div v-if="selectedMode !== 'custom'" class="mt-4 p-4 bg-blue-50 rounded-lg">
+            <div class="flex items-start">
+              <svg class="h-5 w-5 text-blue-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              <div class="text-sm text-blue-900">
+                <p v-if="selectedMode === 'quick'">
+                  <strong>Quick Process:</strong> Uses OCRmyPDF for fast text extraction.
+                  Best for digital PDFs and simple scanned documents.
+                </p>
+                <p v-else-if="selectedMode === 'better'">
+                  <strong>Better Quality:</strong> Uses PaddleOCR for enhanced text recognition.
+                  Recommended for complex layouts, handwritten text, or poor quality scans.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div v-if="selectedConfig === 'saved'" class="mb-6">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Select Configuration
-          </label>
-          <select
-              v-model="selectedSavedConfig"
-              class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
-          >
-            <option value="">Choose a configuration...</option>
-            <option
-                v-for="config in savedConfigs"
-                :key="config.id"
-                :value="config.id"
-            >
-              {{ config.name }} - {{ config.file_type }}
-            </option>
-          </select>
-        </div>
-        <div v-if="selectedConfig === 'custom'" class="space-y-6 mb-6">
+
+        <!-- Custom Settings (shown only in custom mode) -->
+        <div v-if="selectedMode === 'custom'" class="space-y-6 mb-6">
+          <!-- Saved Configuration Selection -->
           <div class="bg-gray-50 rounded-lg p-4">
             <h4 class="font-medium text-gray-900 mb-4 flex items-center">
-              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                   xmlns="http://www.w3.org/2000/svg">
-                <path
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    stroke-linecap="round" stroke-linejoin="round"
-                    stroke-width="2"/>
+              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
-              OCR Settings
+              Load Saved Configuration
             </h4>
-            <div class="space-y-4">
+            <div class="space-y-3">
+              <select
+                v-model="selectedSavedConfig"
+                @change="loadSavedConfiguration"
+                class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
+              >
+                <option value="">Start from scratch...</option>
+                <option
+                  v-for="config in savedConfigs"
+                  :key="config.id"
+                  :value="config.id"
+                >
+                  {{ config.name }}{{ config.description ? ` - ${config.description}` : '' }}
+                </option>
+              </select>
+              <p v-if="selectedSavedConfig" class="text-sm text-gray-600">
+                Configuration loaded. You can modify settings below and save as a new configuration if needed.
+              </p>
+            </div>
+          </div>
+
+          <!-- Processing Mode -->
+          <div class="bg-gray-50 rounded-lg p-4">
+            <h4 class="font-medium text-gray-900 mb-4">Processing Mode</h4>
+            <div class="space-y-3">
               <label class="flex items-center">
                 <input
-                    v-model="preprocessingConfig.use_ocr"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    type="checkbox"
+                    v-model="customSettings.mode"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                    type="radio"
+                    value="fast"
                 />
-                <span class="ml-2 text-sm text-gray-700">Enable OCR</span>
+                <span class="ml-2 text-sm text-gray-700">Fast Mode (PyMuPDF extraction)</span>
               </label>
               <label class="flex items-center">
                 <input
-                    v-model="preprocessingConfig.force_ocr"
-                    :disabled="!preprocessingConfig.use_ocr"
+                    v-model="customSettings.mode"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                    type="radio"
+                    value="advanced"
+                />
+                <span class="ml-2 text-sm text-gray-700">Advanced Mode (Docling extraction)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- OCR Settings -->
+          <div class="bg-gray-50 rounded-lg p-4">
+            <h4 class="font-medium text-gray-900 mb-4 flex items-center">
+              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              OCR Settings
+            </h4>
+
+            <div class="space-y-4">
+              <label class="flex items-center">
+                <input
+                    v-model="customSettings.force_ocr"
                     class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     type="checkbox"
                 />
                 <span class="ml-2 text-sm text-gray-700">Force OCR (ignore existing text)</span>
               </label>
-              <div v-if="preprocessingConfig.use_ocr" class="relative">
+
+              <!-- OCR Engine Selection -->
+              <div v-if="customSettings.mode === 'fast'">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  OCR Engine
+                </label>
+                <select
+                    v-model="customSettings.ocr_engine"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
+                >
+                  <option value="ocrmypdf">OCRmyPDF (Tesseract)</option>
+                  <option value="paddleocr">PaddleOCR</option>
+                  <option value="surya">Surya OCR</option>
+                </select>
+              </div>
+
+              <!-- Docling OCR Engine (for advanced mode) -->
+              <div v-if="customSettings.mode === 'advanced' && !customSettings.use_vlm">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Docling OCR Engine
+                </label>
+                <select
+                    v-model="customSettings.docling_ocr_engine"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
+                >
+                  <option value="rapidocr">RapidOCR (Default)</option>
+                  <option value="easyocr">EasyOCR</option>
+                  <option value="tesseract">Tesseract</option>
+                </select>
+              </div>
+
+              <!-- Language Selection (only for tesseract) -->
+              <div v-if="(customSettings.mode === 'fast' && customSettings.ocr_engine === 'ocrmypdf') ||
+                         (customSettings.mode === 'advanced' && customSettings.docling_ocr_engine === 'tesseract')"
+                   class="relative">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   OCR Languages
                 </label>
                 <Multiselect
-                    v-model="preprocessingConfig.ocr_languages"
-                    :can-clear="true"
-                    :can-deselect="true"
-                    :clear-on-select="false"
-                    :close-on-select="false"
-                    :create-option="false"
-                    :hide-selected="true"
+                    v-model="customSettings.ocr_languages"
+                    :canClear="true"
+                    :canDeselect="true"
+                    :clearOnSelect="false"
+                    :closeOnSelect="false"
+                    :createOption="false"
+                    :hideSelected="true"
                     :object="true"
                     :options="ocrLanguagesForSelect"
                     :preselect-first="false"
-                    :preserve-search="true"
+                    :preserveSearch="true"
                     :searchable="true"
                     class="multiselect-custom"
                     label="label"
                     mode="tags"
                     placeholder="Select languages"
-                    track-by="value"
+                    trackBy="value"
                     valueProp="value"
                 >
                   <template #tag="{ option, handleTagRemove, disabled }">
@@ -398,131 +486,249 @@
                     </div>
                   </template>
                 </Multiselect>
-
               </div>
             </div>
           </div>
-          <div class="bg-gray-50 rounded-lg p-4">
+
+          <!-- Advanced Features (only in advanced mode) -->
+          <div v-if="customSettings.mode === 'advanced' && !customSettings.use_vlm"
+               class="bg-gray-50 rounded-lg p-4">
             <h4 class="font-medium text-gray-900 mb-4 flex items-center">
-              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                   xmlns="http://www.w3.org/2000/svg">
+              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
-                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                    stroke-linecap="round" stroke-linejoin="round"
-                    stroke-width="2"/>
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
-              PDF Processing
+              Advanced Extraction Features
             </h4>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                PDF Backend
+            <div class="space-y-3">
+              <label class="flex items-center">
+                <input
+                    v-model="customSettings.enable_picture_description"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    type="checkbox"
+                />
+                <span class="ml-2 text-sm text-gray-700">Extract picture descriptions</span>
               </label>
-              <select
-                  v-model="preprocessingConfig.pdf_backend"
-                  class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
-              >
-                <option value="pymupdf4llm">PyMuPDF4LLM (Recommended)</option>
-                <option value="markitdown">MarkItDown</option>
-              </select>
+              <label class="flex items-center">
+                <input
+                    v-model="customSettings.enable_formula"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    type="checkbox"
+                />
+                <span class="ml-2 text-sm text-gray-700">Extract formulas</span>
+              </label>
+              <label class="flex items-center">
+                <input
+                    v-model="customSettings.enable_code"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    type="checkbox"
+                />
+                <span class="ml-2 text-sm text-gray-700">Extract code blocks</span>
+              </label>
             </div>
+            <p class="mt-3 text-xs text-gray-500">
+              Note: These features use Docling's internal processing and may increase processing time.
+            </p>
           </div>
-          <div class="flex items-center">
-            <input
-                v-model="saveAsConfig"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                type="checkbox"
-            />
-            <label class="ml-2 text-sm text-gray-700">
-              Save as reusable configuration
-            </label>
-            <input
-                v-if="saveAsConfig"
-                v-model="configName"
-                class="ml-3 flex-1 px-3 py-1 text-sm border-gray-300 rounded-md"
-                placeholder="Configuration name"
-                type="text"
-            />
-          </div>
-        </div>
 
-        <!-- Add this section after the OCR settings in PreprocessingManagement.vue -->
-
-        <!-- API Settings (Collapsible) -->
-        <div v-if="selectedConfig === 'custom'" class="bg-gray-50 rounded-lg p-4">
-          <button
-              class="w-full flex items-center justify-between text-left"
-              type="button"
-              @click="showApiSettings = !showApiSettings"
-          >
-            <h4 class="font-medium text-gray-900 flex items-center">
-              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                   xmlns="http://www.w3.org/2000/svg">
+          <!-- VLM Settings -->
+          <div v-if="customSettings.mode === 'advanced'" class="bg-gray-50 rounded-lg p-4">
+            <h4 class="font-medium text-gray-900 mb-4 flex items-center">
+              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"
+                      stroke-width="2"/>
                 <path
-                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                    stroke-linecap="round" stroke-linejoin="round"
-                    stroke-width="2"/>
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
-              API Settings (Optional)
+              Vision Language Model (VLM) Settings
             </h4>
-            <svg
-                :class="['h-5 w-5 transition-transform', showApiSettings ? 'rotate-180' : '']"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-            </svg>
-          </button>
 
-          <Transition
-              enter-active-class="transition-all duration-200 ease-out"
-              enter-from-class="max-h-0 opacity-0"
-              enter-to-class="max-h-96 opacity-100"
-              leave-active-class="transition-all duration-200 ease-in"
-              leave-from-class="max-h-96 opacity-100"
-              leave-to-class="max-h-0 opacity-0"
-          >
-            <div v-if="showApiSettings" class="mt-4 space-y-4 overflow-hidden">
-              <p class="text-sm text-gray-600">
-                Provide custom API credentials for LLM-based preprocessing. Leave empty to use default settings.
-              </p>
+            <label class="flex items-center mb-4">
+              <input
+                  v-model="customSettings.use_vlm"
+                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  type="checkbox"
+              />
+              <span class="ml-2 text-sm text-gray-700">Use Vision Language Model for enrichment</span>
+            </label>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  API Base URL
+            <div v-if="customSettings.use_vlm" class="space-y-4 ml-6">
+              <!-- VLM Type Selection -->
+              <div class="space-y-3">
+                <label class="flex items-center">
+                  <input
+                      v-model="customSettings.use_local_vlm"
+                      :value="false"
+                      class="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                      type="radio"
+                  />
+                  <span class="ml-2 text-sm text-gray-700">Remote VLM (OpenAI-compatible API)</span>
                 </label>
-                <input
-                    v-model="apiCredentials.base_url"
+
+                <!-- Remote VLM Settings -->
+                <div v-if="!customSettings.use_local_vlm" class="ml-6 space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                    <select
+                        v-model="customSettings.vlm_model"
+                        class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
+                    >
+                      <option value="">Use default model</option>
+                      <option value="gpt-4-vision-preview">GPT-4 Vision</option>
+                      <option value="gpt-4o">GPT-4o</option>
+                      <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                      <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
+                      <option value="custom">Custom model...</option>
+                    </select>
+                    <input
+                        v-if="customSettings.vlm_model === 'custom'"
+                        v-model="customSettings.vlm_custom_model"
+                        class="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        placeholder="Enter model name"
+                        type="text"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      Custom API Base URL (optional)
+                    </label>
+                    <input
+                        v-model="customSettings.vlm_base_url"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        placeholder="https://api.openai.com/v1"
+                        type="text"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      API Key (optional)
+                    </label>
+                    <input
+                        v-model="vlmApiKey"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        placeholder="sk-..."
+                        type="password"
+                    />
+                  </div>
+
+                  <!-- Test Connection Button -->
+                  <div class="flex items-center space-x-3">
+                    <button
+                        :disabled="!canTestVLM || isTestingVLM"
+                        class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        @click="testVLMConnection"
+                    >
+                      <svg v-if="isTestingVLM" class="animate-spin -ml-0.5 mr-2 h-4 w-4" fill="none"
+                           viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                stroke-width="4"></circle>
+                        <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                              fill="currentColor"></path>
+                      </svg>
+                      <span v-else>Test Image Support</span>
+                    </button>
+
+                    <span v-if="vlmTestResult !== null" class="text-sm">
+                      <span v-if="vlmTestResult.supported" class="text-green-600 flex items-center">
+                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                        </svg>
+                        {{ vlmTestResult.message }}
+                      </span>
+                      <span v-else class="text-red-600 flex items-center">
+                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"
+                                stroke-width="2"/>
+                        </svg>
+                        {{ vlmTestResult.message }}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Local VLM Settings (hidden) -->
+                <label v-show="false" class="flex items-center">
+                  <input
+                      v-model="customSettings.use_local_vlm"
+                      :value="true"
+                      class="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                      type="radio"
+                  />
+                  <span class="ml-2 text-sm text-gray-700">Local VLM (HuggingFace)</span>
+                </label>
+
+                <div v-if="customSettings.use_local_vlm" v-show="false" class="ml-6 space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                    <select
+                        v-model="customSettings.local_vlm_repo_id"
+                        class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
+                    >
+                      <option value="HuggingFaceTB/SmolVLM-256M-Instruct">SmolVLM-256M-Instruct</option>
+                      <option value="custom">Custom HuggingFace model...</option>
+                    </select>
+                    <input
+                        v-if="customSettings.local_vlm_repo_id === 'custom'"
+                        v-model="customSettings.local_vlm_custom_repo"
+                        class="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        placeholder="organization/model-name"
+                        type="text"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- VLM Prompt -->
+              <div v-if="customSettings.use_vlm" class="ml-6">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  VLM Prompt (optional)
+                </label>
+                <textarea
+                    v-model="customSettings.vlm_prompt"
                     class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="https://api.openai.com/v1"
-                    type="text"
+                    placeholder="Please perform OCR! Please extract the full text from the document and describe images and figures!"
+                    rows="3"
                 />
               </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  API Key
+              <!-- Max Image Dimension -->
+              <div v-if="customSettings.use_vlm" class="ml-6">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Max Image Dimension (pixels)
                 </label>
                 <input
-                    v-model="apiCredentials.api_key"
+                    v-model.number="customSettings.max_image_dim"
                     class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="sk-..."
-                    type="password"
+                    max="2048"
+                    min="400"
+                    step="100"
+                    type="number"
                 />
-              </div>
-
-              <div class="flex items-center text-sm text-gray-500">
-                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                     xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"/>
-                </svg>
-                API credentials are not stored and must be provided for each preprocessing task.
+                <p class="mt-1 text-xs text-gray-500">
+                  Images will be scaled down to this maximum dimension while preserving aspect ratio
+                </p>
               </div>
             </div>
-          </Transition>
+
+            <div
+                v-if="customSettings.use_vlm && (customSettings.enable_picture_description || customSettings.enable_formula || customSettings.enable_code)"
+                class="mt-3 p-3 bg-yellow-50 rounded-lg">
+              <p class="text-sm text-yellow-800">
+                <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                </svg>
+                Note: Advanced extraction features (picture description, formula, code) cannot be used together with
+                VLM.
+                Please disable VLM to use these features.
+              </p>
+            </div>
+          </div>
         </div>
 
         <!-- File Selection -->
@@ -543,6 +749,7 @@
               @clear-selection="selectedFiles = []"
           />
         </div>
+
         <!-- Action Buttons -->
         <div class="flex justify-end space-x-3">
           <button
@@ -557,11 +764,9 @@
               @click="startPreprocessing"
           >
             <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                 fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                 fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    fill="currentColor"></path>
+              <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor"></path>
             </svg>
             Start Processing
           </button>
@@ -588,9 +793,9 @@
 </template>
 
 <script setup>
-import {computed, onMounted, onUnmounted, ref, watch} from 'vue';
-import {api} from '@/services/api';
-import {useToast} from 'vue-toastification';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { api } from '@/services/api';
+import { useToast } from 'vue-toastification';
 import Multiselect from '@vueform/multiselect';
 
 import TaskCard from './preprocessing/TaskCard.vue';
@@ -617,8 +822,6 @@ const isLoadingTasks = ref(false);
 const savedConfigs = ref([]);
 const availableFiles = ref([]);
 const selectedFiles = ref([]);
-const selectedConfig = ref('quick');
-const selectedSavedConfig = ref('');
 const selectedTask = ref(null);
 const showConfigManager = ref(false);
 const showCompletedTasks = ref(false);
@@ -627,75 +830,120 @@ const saveAsConfig = ref(false);
 const configName = ref('');
 let pollInterval = null;
 const showAllCompleted = ref(false);
-
-
 const showApiSettings = ref(false);
-const apiCredentials = ref({
-  api_key: '',
-  base_url: ''
-});
 
+// New state for preprocessing modes
+const selectedMode = ref('quick');
+const selectedConfig = ref('quick'); // Keep for saved configs
+const selectedSavedConfig = ref('');
 
-// Preprocessing configuration
-const preprocessingConfig = ref({
-  use_ocr: true,
+const customSettings = ref({
+  mode: 'fast',
+  ocr_engine: 'ocrmypdf',
+  docling_ocr_engine: 'rapidocr',
   force_ocr: false,
-  ocr_backend: 'ocrmypdf',
-  pdf_backend: 'pymupdf4llm',
-  ocr_languages: [{value: 'eng', label: 'English'}],
+  ocr_languages: [{ value: 'eng', label: 'English' }],
+  enable_picture_description: false,
+  enable_formula: false,
+  enable_code: false,
+  max_image_dim: 800,
+  use_vlm: false,
+  use_local_vlm: false,
+  local_vlm_repo_id: 'HuggingFaceTB/SmolVLM-256M-Instruct',
+  local_vlm_custom_repo: '',
+  vlm_model: '',
+  vlm_custom_model: '',
+  vlm_base_url: '',
+  vlm_prompt: 'Please perform OCR! Please extract the full text from the document and describe images and figures!'
 });
+
+const vlmApiKey = ref('');
+const vlmTestResult = ref(null);
+const isTestingVLM = ref(false);
 
 // OCR language options
 const ocrLanguagesForSelect = ref([
-  {value: 'eng', label: 'English'},
-  {value: 'spa', label: 'Spanish'},
-  {value: 'fra', label: 'French'},
-  {value: 'deu', label: 'German'},
-  {value: 'ita', label: 'Italian'},
-  {value: 'por', label: 'Portuguese'},
-  {value: 'rus', label: 'Russian'},
-  {value: 'jpn', label: 'Japanese'},
-  {value: 'chi_sim', label: 'Chinese (Simplified)'},
-  {value: 'chi_tra', label: 'Chinese (Traditional)'},
-  {value: 'ara', label: 'Arabic'},
-  {value: 'hin', label: 'Hindi'},
-  {value: 'kor', label: 'Korean'},
-  {value: 'nld', label: 'Dutch'},
-  {value: 'pol', label: 'Polish'},
-  {value: 'tur', label: 'Turkish'},
-  {value: 'vie', label: 'Vietnamese'},
-  {value: 'ces', label: 'Czech'},
-  {value: 'dan', label: 'Danish'},
-  {value: 'fin', label: 'Finnish'},
-  {value: 'gre', label: 'Greek'},
-  {value: 'heb', label: 'Hebrew'},
-  {value: 'hun', label: 'Hungarian'},
-  {value: 'nor', label: 'Norwegian'},
-  {value: 'swe', label: 'Swedish'},
-  {value: 'tha', label: 'Thai'},
-  {value: 'ukr', label: 'Ukrainian'},
+  { value: 'eng', label: 'English' },
+  { value: 'spa', label: 'Spanish' },
+  { value: 'fra', label: 'French' },
+  { value: 'deu', label: 'German' },
+  { value: 'ita', label: 'Italian' },
+  { value: 'por', label: 'Portuguese' },
+  { value: 'rus', label: 'Russian' },
+  { value: 'jpn', label: 'Japanese' },
+  { value: 'chi_sim', label: 'Chinese (Simplified)' },
+  { value: 'chi_tra', label: 'Chinese (Traditional)' },
+  { value: 'ara', label: 'Arabic' },
+  { value: 'hin', label: 'Hindi' },
+  { value: 'kor', label: 'Korean' },
+  { value: 'nld', label: 'Dutch' },
+  { value: 'pol', label: 'Polish' },
+  { value: 'tur', label: 'Turkish' },
+  { value: 'vie', label: 'Vietnamese' },
+  { value: 'ces', label: 'Czech' },
+  { value: 'dan', label: 'Danish' },
+  { value: 'fin', label: 'Finnish' },
+  { value: 'gre', label: 'Greek' },
+  { value: 'heb', label: 'Hebrew' },
+  { value: 'hun', label: 'Hungarian' },
+  { value: 'nor', label: 'Norwegian' },
+  { value: 'swe', label: 'Swedish' },
+  { value: 'tha', label: 'Thai' },
+  { value: 'ukr', label: 'Ukrainian' },
 ]);
+
+// Mode selection handler
+const selectMode = (mode) => {
+  selectedMode.value = mode;
+
+  // Reset settings based on mode
+  if (mode === 'quick') {
+    customSettings.value = {
+      ...customSettings.value,
+      mode: 'fast',
+      ocr_engine: 'ocrmypdf',
+      force_ocr: false,
+      use_vlm: false,
+      enable_picture_description: false,
+      enable_formula: false,
+      enable_code: false
+    };
+  } else if (mode === 'better') {
+    customSettings.value = {
+      ...customSettings.value,
+      mode: 'fast',
+      ocr_engine: 'paddleocr',
+      force_ocr: false,
+      use_vlm: false,
+      enable_picture_description: false,
+      enable_formula: false,
+      enable_code: false
+    };
+  } else if (mode === 'saved') {
+    // Don't reset custom settings when selecting saved config
+  }
+
+  // Reset VLM test result when changing modes
+  vlmTestResult.value = null;
+};
 
 // Computed properties
 const activeTasks = computed(() =>
-    allTasks.value.filter(task =>
-        ['pending', 'processing', 'in_progress'].includes(task.status)
-    )
+  allTasks.value.filter(task =>
+    ['pending', 'processing', 'in_progress'].includes(task.status)
+  )
 );
 
 const completedTasks = computed(() =>
-    allTasks.value
-        .filter(
-            (task) =>
-                ['completed', 'failed', 'cancelled', 'errored'].includes(task.status)
-        )
-        .sort(
-            (a, b) =>
-                new Date(b.completed_at || b.updated_at) -
-                new Date(a.completed_at || a.updated_at)
-        )
+  allTasks.value
+    .filter(task =>
+      ['completed', 'failed', 'cancelled', 'errored'].includes(task.status)
+    )
+    .sort((a, b) =>
+      new Date(b.completed_at || b.updated_at) -
+      new Date(a.completed_at || a.updated_at)
+    )
 );
-
 
 const displayedCompletedTasks = computed(() => {
   const filtered = completedTasks.value.filter(Boolean);
@@ -705,10 +953,34 @@ const displayedCompletedTasks = computed(() => {
   return filtered.slice(0, 5);
 });
 
+const canTestVLM = computed(() => {
+  if (customSettings.value.use_local_vlm) {
+    return customSettings.value.local_vlm_repo_id || customSettings.value.local_vlm_custom_repo;
+  }
 
-const canStartProcessing = computed(() =>
-    selectedFiles.value.length > 0 && !isSubmitting.value
-);
+  const model = customSettings.value.vlm_model === 'custom'
+    ? customSettings.value.vlm_custom_model
+    : customSettings.value.vlm_model;
+
+  return model && (vlmApiKey.value || customSettings.value.vlm_base_url);
+});
+
+const canStartProcessing = computed(() => {
+  if (!selectedFiles.value.length || isSubmitting.value) return false;
+
+  // If using saved config, make sure one is selected
+  if (selectedMode.value === 'saved' && !selectedSavedConfig.value) return false;
+
+  // If using remote VLM, must have successful test
+  if (selectedMode.value === 'custom' &&
+      customSettings.value.mode === 'advanced' &&
+      customSettings.value.use_vlm &&
+      !customSettings.value.use_local_vlm) {
+    return vlmTestResult.value?.supported === true;
+  }
+
+  return true;
+});
 
 // API methods
 const fetchPreprocessingTasks = async () => {
@@ -716,21 +988,14 @@ const fetchPreprocessingTasks = async () => {
 
   isLoadingTasks.value = true;
   try {
-    // Get all tasks, not just active ones
     const response = await api.get(`/project/${props.projectId}/preprocess?limit=50`);
     allTasks.value = response.data;
-    console.log('Fetched tasks:', response.data.map(t => ({
-      id: t.id,
-      status: t.status,
-      file_tasks: t.file_tasks?.length
-    })));
   } catch (error) {
     console.error('Failed to fetch preprocessing tasks:', error);
   } finally {
     isLoadingTasks.value = false;
   }
 };
-
 
 const fetchConfigurations = async () => {
   try {
@@ -750,22 +1015,95 @@ const fetchAvailableFiles = async () => {
   }
 };
 
+const loadSavedConfiguration = () => {
+  if (!selectedSavedConfig.value) {
+    // Reset to defaults
+    customSettings.value = {
+      mode: 'fast',
+      ocr_engine: 'ocrmypdf',
+      docling_ocr_engine: 'rapidocr',
+      force_ocr: false,
+      ocr_languages: [{ value: 'eng', label: 'English' }],
+      enable_picture_description: false,
+      enable_formula: false,
+      enable_code: false,
+      max_image_dim: 800,
+      use_vlm: false,
+      use_local_vlm: false,
+      local_vlm_repo_id: 'HuggingFaceTB/SmolVLM-256M-Instruct',
+      local_vlm_custom_repo: '',
+      vlm_model: '',
+      vlm_custom_model: '',
+      vlm_base_url: '',
+      vlm_prompt: 'Please perform OCR! Please extract the full text from the document and describe images and figures!'
+    };
+    return;
+  }
+
+  const config = savedConfigs.value.find(c => c.id === selectedSavedConfig.value);
+  if (!config) return;
+
+  // Load settings from saved configuration
+  if (config.additional_settings) {
+    customSettings.value = {
+      ...customSettings.value,
+      ...config.additional_settings,
+      force_ocr: config.force_ocr || false,
+      ocr_languages: config.ocr_languages?.map(lang =>
+        typeof lang === 'string'
+          ? ocrLanguagesForSelect.value.find(l => l.value === lang) || { value: lang, label: lang }
+          : lang
+      ) || [{ value: 'eng', label: 'English' }]
+    };
+  }
+
+  // Clear VLM test result when loading new config
+  vlmTestResult.value = null;
+};
+
+
+// VLM test function
+const testVLMConnection = async () => {
+  if (!canTestVLM.value) return;
+
+  isTestingVLM.value = true;
+  vlmTestResult.value = null;
+
+  try {
+    const model = customSettings.value.vlm_model === 'custom'
+      ? customSettings.value.vlm_custom_model
+      : customSettings.value.vlm_model;
+
+    const response = await api.post(`/project/${props.projectId}/test-vlm-image-support`, {
+      base_url: customSettings.value.vlm_base_url || 'https://api.openai.com/v1',
+      model: model,
+      api_key: vlmApiKey.value
+    });
+
+    vlmTestResult.value = response.data;
+  } catch (error) {
+    vlmTestResult.value = {
+      supported: false,
+      message: error.response?.data?.detail || 'Connection test failed'
+    };
+  } finally {
+    isTestingVLM.value = false;
+  }
+};
+
 // Task status updates
 const updateTaskStatus = async (taskId) => {
   try {
     const response = await api.get(`/project/${props.projectId}/preprocess/${taskId}`);
-    console.log(`Task ${taskId} status:`, response.data.status, 'File tasks:', response.data.file_tasks?.length);
 
     const index = allTasks.value.findIndex(task => task.id === taskId);
     if (index !== -1) {
-      // Always update the task, even if completed
       allTasks.value[index] = response.data;
 
       if (selectedTask.value && selectedTask.value.id === taskId) {
         selectedTask.value = response.data;
       }
     } else {
-      // Task not found in our list, add it
       allTasks.value.unshift(response.data);
     }
   } catch (error) {
@@ -773,14 +1111,13 @@ const updateTaskStatus = async (taskId) => {
   }
 };
 
-
 // Polling setup
 const setupPolling = () => {
   if (pollInterval) clearInterval(pollInterval);
 
   const pollActiveTasks = () => {
     const tasksToUpdate = allTasks.value.filter(
-        task => ['pending', 'processing', 'in_progress'].includes(task.status)
+      task => ['pending', 'processing', 'in_progress'].includes(task.status)
     );
 
     if (tasksToUpdate.length === 0) {
@@ -792,22 +1129,11 @@ const setupPolling = () => {
     tasksToUpdate.forEach(task => updateTaskStatus(task.id));
   };
 
-
   pollActiveTasks();
   pollInterval = setInterval(pollActiveTasks, 2000);
 };
 
 // Helper functions
-const getAlreadyProcessedFileIds = () => {
-  const alreadyDone = new Set();
-  allTasks.value.forEach(task => {
-    if (task.status === 'completed' && Array.isArray(task.file_ids)) {
-      task.file_ids.forEach(id => alreadyDone.add(id));
-    }
-  });
-  return selectedFiles.value.filter(fid => alreadyDone.has(fid));
-};
-
 const formatRelativeTime = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -819,110 +1145,110 @@ const formatRelativeTime = (dateString) => {
   return date.toLocaleDateString();
 };
 
-const findExistingConfiguration = (configSettings) => {
-  return savedConfigs.value.find(config => {
-    // Compare key settings
-    return (
-        config.file_type === (configSettings.file_type || 'mixed') &&
-        config.preprocessing_strategy === (configSettings.preprocessing_strategy || 'full_document') &&
-        config.use_ocr === (configSettings.use_ocr !== undefined ? configSettings.use_ocr : true) &&
-        config.force_ocr === (configSettings.force_ocr || false) &&
-        config.pdf_backend === (configSettings.pdf_backend || 'pymupdf4llm') &&
-        config.ocr_backend === (configSettings.ocr_backend || 'ocrmypdf') &&
-        // Compare OCR languages
-        JSON.stringify(sortLanguages(config.ocr_languages || [])) ===
-        JSON.stringify(sortLanguages(configSettings.ocr_languages || ['eng']))
-    );
-  });
-};
-
-const sortLanguages = (langs) => {
-  return langs.map(l => typeof l === 'string' ? l : l.value).sort();
-};
-
-
 // Task actions
 const startPreprocessing = async () => {
   if (!canStartProcessing.value) return;
-
-  const alreadyProcessedIds = getAlreadyProcessedFileIds();
-  if (alreadyProcessedIds.length === selectedFiles.value.length) {
-    toast.info('All selected files were already processed. No new task created.');
-    return;
-  }
-
-  if (alreadyProcessedIds.length > 0) {
-    toast.info(`${alreadyProcessedIds.length} selected file(s) were already processed and will be skipped.`);
-  }
-
-  const filesToProcess = selectedFiles.value.filter(id => !alreadyProcessedIds.includes(id));
-  if (filesToProcess.length === 0) {
-    toast.info('No new files to process.');
-    return;
-  }
 
   isSubmitting.value = true;
   try {
     let taskData;
 
-    if (selectedConfig.value === 'saved' && selectedSavedConfig.value) {
+    if (selectedMode.value === 'quick' || selectedMode.value === 'better') {
+      // Use inline config for quick modes
+      const config = {
+        name: selectedMode.value === 'quick' ? 'Quick Process' : 'Better Quality Quick Process',
+        file_type: 'mixed',
+        preprocessing_strategy: 'full_document',
+        pdf_backend: 'pymupdf4llm',
+        ocr_backend: 'ocrmypdf',
+        use_ocr: true,
+        force_ocr: false,
+        ocr_languages: ['eng'],
+        additional_settings: {
+          mode: 'fast',
+          ocr_engine: selectedMode.value === 'quick' ? 'ocrmypdf' : 'paddleocr'
+        }
+      };
+
+      taskData = {
+        inline_config: config,
+        file_ids: selectedFiles.value
+      };
+    } else if (selectedMode.value === 'saved' && selectedSavedConfig.value) {
       taskData = {
         configuration_id: selectedSavedConfig.value,
-        file_ids: filesToProcess
+        file_ids: selectedFiles.value
       };
     } else {
-      // Build configuration
+      // Custom mode - build full configuration
       const config = {
+        name: saveAsConfig.value && configName.value ? configName.value : 'Custom Process',
         file_type: 'mixed',
-        ...preprocessingConfig.value,
-        ocr_languages: preprocessingConfig.value.ocr_languages.map(lang =>
-            typeof lang === 'string' ? lang : lang.value
+        preprocessing_strategy: 'full_document',
+        pdf_backend: 'pymupdf4llm',
+        ocr_backend: customSettings.value.ocr_engine,
+        use_ocr: true,
+        force_ocr: customSettings.value.force_ocr,
+        ocr_languages: customSettings.value.ocr_languages.map(lang =>
+          typeof lang === 'string' ? lang : lang.value
         ),
+        additional_settings: {
+          mode: customSettings.value.mode,
+          ocr_engine: customSettings.value.ocr_engine,
+          docling_ocr_engine: customSettings.value.docling_ocr_engine,
+          enable_picture_description: customSettings.value.enable_picture_description,
+          enable_formula: customSettings.value.enable_formula,
+          enable_code: customSettings.value.enable_code,
+          max_image_dim: customSettings.value.max_image_dim,
+          use_vlm: customSettings.value.use_vlm,
+          use_local_vlm: customSettings.value.use_local_vlm,
+          local_vlm_repo_id: customSettings.value.use_local_vlm
+            ? (customSettings.value.local_vlm_repo_id === 'custom'
+                ? customSettings.value.local_vlm_custom_repo
+                : customSettings.value.local_vlm_repo_id)
+            : null,
+          vlm_model: customSettings.value.vlm_model === 'custom'
+            ? customSettings.value.vlm_custom_model
+            : customSettings.value.vlm_model,
+          vlm_base_url: customSettings.value.vlm_base_url,
+          vlm_prompt: customSettings.value.vlm_prompt
+        }
       };
 
-      // Only save as a named config if explicitly requested
       if (saveAsConfig.value && configName.value) {
-        config.name = configName.value;
-        config.description = `Created from ${selectedConfig.value} process`;
-
         const configResponse = await api.post(`/project/${props.projectId}/preprocessing-config`, config);
         taskData = {
           configuration_id: configResponse.data.id,
-          file_ids: filesToProcess
+          file_ids: selectedFiles.value
         };
         await fetchConfigurations();
       } else {
-        // Use inline config - backend will find or create matching config
-        config.name = selectedConfig.value === 'quick' ? 'Quick Process' : 'Custom Process';
         taskData = {
           inline_config: config,
-          file_ids: filesToProcess
+          file_ids: selectedFiles.value
         };
       }
     }
 
-    // Add API credentials if provided
-    if (apiCredentials.value.api_key && apiCredentials.value.base_url) {
-      taskData.api_key = apiCredentials.value.api_key;
-      taskData.base_url = apiCredentials.value.base_url;
+    // Add API credentials if using VLM
+    if (customSettings.value.use_vlm && !customSettings.value.use_local_vlm && vlmApiKey.value) {
+      taskData.api_key = vlmApiKey.value;
+      taskData.base_url = customSettings.value.vlm_base_url || 'https://api.openai.com/v1';
     }
 
     const response = await api.post(`/project/${props.projectId}/preprocess`, taskData);
     allTasks.value.unshift(response.data);
 
     // Clear form
-    selectedFiles.value = [];
-    configName.value = '';
-    saveAsConfig.value = false;
-    apiCredentials.value = {api_key: '', base_url: ''};
+    resetForm();
 
     toast.success('Preprocessing task started successfully');
     setupPolling();
   } catch (error) {
     if (error.response?.data?.detail) {
       const details = Array.isArray(error.response.data.detail)
-          ? error.response.data.detail.map(d => d.msg).join(', ')
-          : error.response.data.detail;
+        ? error.response.data.detail.map(d => d.msg).join(', ')
+        : error.response.data.detail;
       toast.error(`Failed to start preprocessing: ${details}`);
     } else {
       toast.error('Failed to start preprocessing task');
@@ -949,7 +1275,6 @@ const startQuickPreprocess = async () => {
 
   isSubmitting.value = true;
   try {
-    // Use inline config - backend will reuse existing "Quick Process" config if it exists
     const taskData = {
       inline_config: {
         name: 'Quick Process',
@@ -959,16 +1284,14 @@ const startQuickPreprocess = async () => {
         ocr_backend: 'ocrmypdf',
         pdf_backend: 'pymupdf4llm',
         ocr_languages: ['eng'],
-        preprocessing_strategy: 'full_document'
+        preprocessing_strategy: 'full_document',
+        additional_settings: {
+          mode: 'fast',
+          ocr_engine: 'ocrmypdf'
+        }
       },
       file_ids: unprocessedFiles.map(f => f.id)
     };
-
-    // Add API credentials if provided (though usually not for quick process)
-    if (apiCredentials.value.api_key && apiCredentials.value.base_url) {
-      taskData.api_key = apiCredentials.value.api_key;
-      taskData.base_url = apiCredentials.value.base_url;
-    }
 
     const response = await api.post(`/project/${props.projectId}/preprocess`, taskData);
     allTasks.value.unshift(response.data);
@@ -982,7 +1305,6 @@ const startQuickPreprocess = async () => {
     isSubmitting.value = false;
   }
 };
-
 
 const cancelTask = async (task) => {
   try {
@@ -1042,20 +1364,97 @@ const selectAllFiles = () => {
 
 const resetForm = () => {
   selectedFiles.value = [];
+  selectedMode.value = 'quick';
   selectedConfig.value = 'quick';
   selectedSavedConfig.value = '';
   configName.value = '';
   saveAsConfig.value = false;
-  apiCredentials.value = {api_key: '', base_url: ''};
+  vlmApiKey.value = '';
+  vlmTestResult.value = null;
   showApiSettings.value = false;
+  customSettings.value = {
+    mode: 'fast',
+    ocr_engine: 'ocrmypdf',
+    docling_ocr_engine: 'rapidocr',
+    force_ocr: false,
+    ocr_languages: [{ value: 'eng', label: 'English' }],
+    enable_picture_description: false,
+    enable_formula: false,
+    enable_code: false,
+    max_image_dim: 800,
+    use_vlm: false,
+    use_local_vlm: false,
+    local_vlm_repo_id: 'HuggingFaceTB/SmolVLM-256M-Instruct',
+    local_vlm_custom_repo: '',
+    vlm_model: '',
+    vlm_custom_model: '',
+    vlm_base_url: '',
+    vlm_prompt: 'Please perform OCR! Please extract the full text from the document and describe images and figures!'
+  };
 };
-
 
 const applyConfiguration = (config) => {
-  selectedConfig.value = 'saved';
+  // Parse the configuration and apply to custom settings
+  selectedMode.value = 'saved';
   selectedSavedConfig.value = config.id;
+
+  if (config.additional_settings) {
+    customSettings.value = {
+      ...customSettings.value,
+      ...config.additional_settings,
+      ocr_languages: config.ocr_languages?.map(lang =>
+        typeof lang === 'string'
+          ? ocrLanguagesForSelect.value.find(l => l.value === lang) || { value: lang, label: lang }
+          : lang
+      ) || [{ value: 'eng', label: 'English' }]
+    };
+  }
+
+  customSettings.value.force_ocr = config.force_ocr || false;
+
   showConfigManager.value = false;
 };
+
+// Watch for VLM settings changes to reset test
+watch([
+  () => customSettings.value.vlm_model,
+  () => customSettings.value.vlm_custom_model,
+  () => customSettings.value.vlm_base_url,
+  () => vlmApiKey.value
+], () => {
+  vlmTestResult.value = null;
+});
+
+// Watch for conflicts between VLM and advanced features
+watch(() => customSettings.value.use_vlm, (useVlm) => {
+  if (useVlm) {
+    customSettings.value.enable_picture_description = false;
+    customSettings.value.enable_formula = false;
+    customSettings.value.enable_code = false;
+  }
+});
+
+// Watch for advanced features to disable VLM
+watch([
+  () => customSettings.value.enable_picture_description,
+  () => customSettings.value.enable_formula,
+  () => customSettings.value.enable_code
+], ([picture, formula, code]) => {
+  if (picture || formula || code) {
+    customSettings.value.use_vlm = false;
+  }
+});
+
+// Watch for advanced features to switch to advanced mode
+watch([
+  () => customSettings.value.enable_picture_description,
+  () => customSettings.value.enable_formula,
+  () => customSettings.value.enable_code
+], ([picture, formula, code]) => {
+  if ((picture || formula || code) && customSettings.value.mode === 'fast') {
+    customSettings.value.mode = 'advanced';
+  }
+});
 
 // Lifecycle hooks
 onMounted(() => {
@@ -1075,7 +1474,7 @@ onUnmounted(() => {
 // Watchers
 watch(() => props.files, (newFiles) => {
   availableFiles.value = newFiles;
-}, {immediate: true});
+}, { immediate: true });
 
 watch(() => activeTasks.value.length, (newLength, oldLength) => {
   if (newLength > 0 && !pollInterval) {
@@ -1084,7 +1483,6 @@ watch(() => activeTasks.value.length, (newLength, oldLength) => {
 });
 
 watch(() => completedTasks.value.length, () => {
-  // Reset to collapsed view when tasks change
   showAllCompleted.value = false;
 });
 </script>
@@ -1478,21 +1876,22 @@ watch(() => completedTasks.value.length, () => {
 
 .fade-expand-enter-active,
 .fade-expand-leave-active {
-  transition: all 0.3s cubic-bezier(.4,0,.2,1), opacity 0.3s;
+  transition: all 0.3s cubic-bezier(.4, 0, .2, 1), opacity 0.3s;
   overflow: hidden;
 }
+
 .fade-expand-enter-from,
 .fade-expand-leave-to {
   max-height: 0;
   opacity: 0;
   padding-bottom: 0 !important;
 }
+
 .fade-expand-enter-to,
 .fade-expand-leave-from {
   max-height: 900px;
   opacity: 1;
 }
-
 
 
 </style>

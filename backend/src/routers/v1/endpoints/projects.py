@@ -990,12 +990,12 @@ def create_preprocessing_configuration(
     check_project_access(project_id, current_user, db, "write")
 
     # Validate file type and preprocessing strategy (keep existing validation)
-    try:
-        FileType(config.file_type)
-    except ValueError:
-        raise HTTPException(
-            status_code=400, detail=f"Invalid file type: {config.file_type}"
-        )
+    # try:
+    #     FileType(config.file_type)
+    # except ValueError:
+    #     raise HTTPException(
+    #         status_code=400, detail=f"Invalid file type: {config.file_type}"
+    #     )
 
     try:
         PreprocessingStrategy(config.preprocessing_strategy)
@@ -3131,6 +3131,38 @@ def test_model_with_schema_endpoint(
     return test_model_with_schema(
         api_key, base_url, llm_model, schema.schema_definition
     )
+
+@router.post("/{project_id}/test-vlm-image-support")
+def test_vlm_image_support(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    test_data: schemas.VLMTestRequest,
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Test if a VLM model supports image input."""
+    check_project_access(project_id, current_user, db, "read")
+
+    try:
+        from llmaix.utils import test_remote_image_support
+
+        # Ensure proper URL format
+        api_url = test_data.base_url
+        if not api_url.endswith("/chat/completions"):
+            api_url = api_url.rstrip("/") + "/chat/completions"
+
+        supported = test_remote_image_support(
+            api_url=api_url, model=test_data.model, api_key=test_data.api_key
+        )
+
+        return {
+            "supported": supported,
+            "message": "Model supports image input"
+            if supported
+            else "Model does not support image input",
+        }
+    except Exception as e:
+        return {"supported": False, "message": f"Test failed: {str(e)}"}
 
 
 # Add these endpoints to your existing projects.py file

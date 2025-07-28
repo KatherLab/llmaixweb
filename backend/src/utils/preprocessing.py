@@ -109,21 +109,25 @@ class PreprocessingPipeline:
 
     def process(self):
         """Main processing method."""
+
+        # ───── mark task as running ──────────────────────────────────────────
         self.task.status = models.PreprocessingStatus.IN_PROGRESS
         self.task.started_at = datetime.datetime.now(datetime.UTC)
         self.db.commit()
 
         try:
+            # ───── process every file task ──────────────────────────────────
             for file_task in self.task.file_tasks:
                 if self.check_cancelled():
                     break
 
+                # skip tasks that were already completed/failed in a re‑run
                 if file_task.status != models.PreprocessingStatus.PENDING:
                     continue
 
                 self._process_file_task(file_task)
 
-                # Update overall progress
+                # update overall counters for the UI
                 self.task.processed_files = sum(
                     1
                     for ft in self.task.file_tasks
@@ -136,31 +140,55 @@ class PreprocessingPipeline:
                 )
                 self.db.commit()
 
-            total = len(self.task.file_tasks)
-            failed = self.task.failed_files
-            completed = self.task.processed_files
+            # ───── after the loop: fail anything still unfinished ───────────
+            unfinished = 0
+            for ft in self.task.file_tasks:
+                if ft.status in (
+                    models.PreprocessingStatus.PENDING,
+                    models.PreprocessingStatus.IN_PROGRESS,
+                ):
+                    unfinished += 1
+                    ft.status = models.PreprocessingStatus.FAILED
+                    ft.error_message = (
+                        "Processing did not complete (worker shut down or crashed)."
+                    )
 
+            # refresh counters after auto‑failing those tasks
+            self.db.commit()
+            total = len(self.task.file_tasks)
+            completed = sum(
+                1
+                for ft in self.task.file_tasks
+                if ft.status == models.PreprocessingStatus.COMPLETED
+            )
+            failed = total - completed  # everything else is FAILED now
+
+            # ───── final status / message ───────────────────────────────────
             if self.cancelled:
-                # Don't overwrite CANCELLED status/message
+                # leave status/message set by the cancel workflow
                 pass
             elif completed == total:
                 self.task.status = models.PreprocessingStatus.COMPLETED
-                self.task.message = "Processing completed successfully"
+                self.task.message = "Processing completed successfully."
             elif failed == total:
                 self.task.status = models.PreprocessingStatus.FAILED
-                self.task.message = "All files failed to preprocess"
+                self.task.message = "All files failed to preprocess."
+                print("set to all failed")
             else:
                 self.task.status = models.PreprocessingStatus.FAILED
                 self.task.message = (
                     f"{completed} of {total} files processed successfully, "
-                    f"{failed} failed"
+                    f"{failed} failed."
                 )
+
             self.task.completed_at = datetime.datetime.now(datetime.UTC)
 
         except Exception as e:
+            # any unhandled exception ⇒ whole preprocessing task failed
             self.task.status = models.PreprocessingStatus.FAILED
             self.task.message = f"Processing failed: {str(e)}"
 
+        # ───── persist final state ──────────────────────────────────────────
         self.db.commit()
 
     def _validate_csv_metadata(self, file: models.File) -> None:
@@ -204,35 +232,149 @@ class PreprocessingPipeline:
                 f"File: {file.file_name}"
             )
 
+    def _process_with_llmaix(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document]:
+        """Process files using the new llmaix DocumentPreprocessor."""
+        from llmaix import DocumentPreprocessor
+
+        file_content = get_file(file.file_uuid)
+        additional_settings = self.config.additional_settings or {}
+
+        # Extract all settings
+        mode = additional_settings.get("mode", "fast")
+        ocr_engine = additional_settings.get("ocr_engine", "ocrmypdf")
+        docling_ocr_engine = additional_settings.get("docling_ocr_engine", "rapidocr")
+        enable_picture_description = additional_settings.get(
+            "enable_picture_description", False
+        )
+        enable_formula = additional_settings.get("enable_formula", False)
+        enable_code = additional_settings.get("enable_code", False)
+        max_image_dim = additional_settings.get("max_image_dim", 800)
+        use_vlm = additional_settings.get("use_vlm", False)
+        use_local_vlm = additional_settings.get("use_local_vlm", False)
+        local_vlm_repo_id = additional_settings.get("local_vlm_repo_id")
+        vlm_model = additional_settings.get("vlm_model")
+        vlm_prompt = additional_settings.get("vlm_prompt")
+        vlm_base_url = additional_settings.get("vlm_base_url")
+
+        # Build DocumentPreprocessor parameters
+        preprocessor_params = {
+            "mode": mode,
+            "ocr_engine": ocr_engine,
+            "enable_picture_description": enable_picture_description,
+            "enable_formula": enable_formula,
+            "enable_code": enable_code,
+            "force_ocr": self.config.force_ocr,
+            "languages": self.config.ocr_languages,
+            "max_image_dim": max_image_dim,
+        }
+
+        # Add docling_ocr_engine when available in llmaix
+        if docling_ocr_engine and mode == "advanced":
+            # Map to the parameter name used in extract_docling
+            preprocessor_params["ocr_engine"] = docling_ocr_engine
+
+        # Handle VLM settings
+        if use_vlm:
+            if use_local_vlm and local_vlm_repo_id:
+                preprocessor_params["use_local_vlm"] = True
+                preprocessor_params["local_vlm_repo_id"] = local_vlm_repo_id
+            else:
+                # Create client for remote VLM
+                api_key = None
+                base_url = vlm_base_url
+
+                # Get API key from task metadata or client
+                if hasattr(self, "task") and self.task.task_metadata:
+                    api_key = self.task.task_metadata.get("api_key")
+                    if not base_url:
+                        base_url = self.task.task_metadata.get("api_base_url")
+
+                if not api_key and hasattr(self, "client") and self.client:
+                    api_key = self.client.api_key
+                    if not base_url:
+                        base_url = self.client.base_url
+
+                if api_key and base_url:
+
+                    class VLMClient:
+                        def __init__(self, base_url, api_key):
+                            self.base_url = base_url
+                            self.api_key = api_key
+
+                    vlm_client = VLMClient(base_url, api_key)
+                    preprocessor_params["llm_client"] = vlm_client
+                    preprocessor_params["llm_model"] = (
+                        vlm_model or self.config.llm_model
+                    )
+
+        if vlm_prompt:
+            preprocessor_params["vlm_prompt"] = vlm_prompt
+
+        # Create preprocessor
+        preprocessor = DocumentPreprocessor(**preprocessor_params)
+
+        # Process file
+        result = preprocessor.process(file_content)
+
+        # Create document
+        doc = models.Document(
+            project_id=self.task.project_id,
+            original_file_id=file.id,
+            file_preprocessing_task_id=file_task.id,
+            text=result,
+            document_name=file.file_name,
+            preprocessing_config_id=self.config.id,
+            meta_data={
+                "file_type": file.file_type,
+                "preprocessing_mode": mode,
+                "ocr_engine": ocr_engine if mode == "fast" else docling_ocr_engine,
+                "vlm_used": use_vlm,
+                "advanced_features": {
+                    "picture_description": enable_picture_description,
+                    "formula_extraction": enable_formula,
+                    "code_extraction": enable_code,
+                }
+                if mode == "advanced"
+                else None,
+            },
+        )
+
+        self.db.add(doc)
+        return [doc]
+
     def _process_file_task(self, file_task: models.FilePreprocessingTask):
         """Process a single file task."""
         file_task.status = models.PreprocessingStatus.IN_PROGRESS
         file_task.started_at = datetime.datetime.now(datetime.UTC)
-
-        # Set the file name for frontend display
         file_task.file_name = file_task.file.file_name
-
         self.db.commit()
 
         try:
             file = file_task.file
 
-            # Route to appropriate processor
+            # Route to appropriate processor based on file type
             if file.file_type in [
                 models.FileType.TEXT_CSV,
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ]:
-                documents = self._process_table_file(file, file_task)
-            elif file.file_type in [models.FileType.APPLICATION_PDF]:
-                documents = self._process_pdf_file(file, file_task)
-            elif file.file_type in [
-                models.FileType.IMAGE_JPEG,
-                models.FileType.IMAGE_PNG,
-            ]:
-                documents = self._process_image_file(file, file_task)
-            else:
+                # For CSV/Excel, check if it needs preprocessing
+                if (
+                    file.preprocessing_strategy
+                    == models.PreprocessingStrategy.ROW_BY_ROW
+                ):
+                    documents = self._process_table_file(file, file_task)
+                else:
+                    # Full document CSV - use simple extraction
+                    documents = self._process_table_file(file, file_task)
+            elif file.file_type in [models.FileType.TEXT_PLAIN]:
+                # Plain text files - no need for llmaix
                 documents = self._process_text_file(file, file_task)
+            else:
+                # All other file types go through llmaix
+                documents = self._process_with_llmaix(file, file_task)
 
             file_task.document_count = len(documents)
             file_task.status = models.PreprocessingStatus.COMPLETED
@@ -243,21 +385,13 @@ class PreprocessingPipeline:
                 processing_time = (
                     _make_aware(datetime.datetime.now())
                     - _make_aware(file_task.started_at)
-                ).total_seconds() / 1000  # Convert to seconds
+                ).total_seconds()
                 file_task.processing_time = round(processing_time, 2)
 
         except Exception as e:
             file_task.status = models.PreprocessingStatus.FAILED
             file_task.error_message = str(e)
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
-
-            # Calculate processing time even for failed tasks
-            if file_task.started_at:
-                processing_time = (
-                    _make_aware(file_task.completed_at)
-                    - _make_aware(file_task.started_at)
-                ).total_seconds() / 1000  # Convert to seconds
-                file_task.processing_time = round(processing_time, 2)
 
         self.db.commit()
 
@@ -424,137 +558,8 @@ class PreprocessingPipeline:
 
         return documents
 
-    def _process_pdf_file(
-        self, file: models.File, file_task: models.FilePreprocessingTask
-    ) -> List[models.Document]:
-        """Process PDF files with OCR support."""
-        from llmaix import preprocess_file as llmaix_preprocess_file
-
-        file_content = get_file(file.file_uuid)
-        additional_settings = self.config.additional_settings or {}
-        output_file = additional_settings.get("output_file", True)
-
-        # Prepare llmaix parameters
-        llmaix_params = {
-            "filename": file_content,
-            "pdf_backend": self.config.pdf_backend or "markitdown",
-            "ocr_backend": self.config.ocr_backend or "ocrmypdf",
-            "use_ocr": self.config.use_ocr,
-            "force_ocr": self.config.force_ocr,
-            "ocr_languages": self.config.ocr_languages,
-            "ocr_model": self.config.ocr_model,
-            "llm_model": self.config.llm_model,
-        }
-
-        # Use custom client if available, otherwise use API credentials
-        if self.client:
-            llmaix_params["client"] = self.client
-        else:
-            # Use default credentials from settings if available
-            if settings.OPENAI_API_KEY:
-                llmaix_params["api_key"] = settings.OPENAI_API_KEY
-            if settings.OPENAI_API_BASE:
-                llmaix_params["base_url"] = settings.OPENAI_API_BASE
-
-        preprocessed_file_id = None
-
-        if output_file:
-            # Process with output file
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
-                tmp_file_path = Path(tmp_file.name)
-                try:
-                    llmaix_params["output"] = tmp_file_path
-                    result = llmaix_preprocess_file(**llmaix_params)
-
-                    # Save preprocessed file
-                    preprocessed_file_content = tmp_file_path.read_bytes()
-                    new_file_name = f"preprocessed_{file.file_name}"
-                    new_file_uuid = save_file(preprocessed_file_content)
-
-                    file_obj = models.File(
-                        project_id=self.task.project_id,
-                        file_name=new_file_name,
-                        file_type=models.FileType.APPLICATION_PDF,
-                        file_storage_type=models.FileStorageType.LOCAL
-                        if settings.LOCAL_DIRECTORY
-                        else models.FileStorageType.S3,
-                        file_uuid=new_file_uuid,
-                        file_creator=FileCreator.system,
-                        description=f"Preprocessed version of {file.file_name}",
-                    )
-                    self.db.add(file_obj)
-                    self.db.commit()
-                    self.db.refresh(file_obj)
-                    preprocessed_file_id = file_obj.id
-
-                finally:
-                    tmp_file_path.unlink()
-        else:
-            # Process without output file
-            result = llmaix_preprocess_file(**llmaix_params)
-
-        # Create document
-        doc = models.Document(
-            project_id=self.task.project_id,
-            original_file_id=file.id,
-            file_preprocessing_task_id=file_task.id,
-            preprocessed_file_id=preprocessed_file_id,
-            text=result,
-            document_name=file.file_name,
-            preprocessing_config_id=self.config.id,
-            meta_data={
-                "file_type": "pdf",
-                "ocr_used": self.config.use_ocr,
-                "ocr_backend": self.config.ocr_backend if self.config.use_ocr else None,
-                "pdf_backend": self.config.pdf_backend,
-            },
-        )
-
-        self.db.add(doc)
-        return [doc]
 
 
-    def _process_image_file(
-        self, file: models.File, file_task: models.FilePreprocessingTask
-    ) -> List[models.Document]:
-        """Process image files with OCR."""
-        from llmaix import preprocess_file as llmaix_preprocess_file
-
-        file_content = get_file(file.file_uuid)
-        additional_settings = self.config.additional_settings or {}
-
-        # Process with llmaix
-        llmaix_params = {
-            "filename": file_content,
-            "ocr_backend": self.config.ocr_backend or "ocrmypdf",
-            "use_ocr": True,  # Always use OCR for images
-            "force_ocr": True,
-            "ocr_languages": self.config.ocr_languages,
-            "ocr_model": self.config.ocr_model,
-        }
-
-        # Add client or API credentials if available
-        if self.client:
-            llmaix_params["client"] = self.client
-        elif additional_settings.get("api_key"):
-            llmaix_params["api_key"] = additional_settings["api_key"]
-            llmaix_params["base_url"] = additional_settings.get("base_url")
-
-        result = llmaix_preprocess_file(**llmaix_params)
-
-        # Create document
-        doc = models.Document(
-            project_id=self.task.project_id,
-            original_file_id=file.id,
-            file_preprocessing_task_id=file_task.id,
-            text=result,
-            document_name=file.file_name,
-            preprocessing_config_id=self.config.id,
-            meta_data={"file_type": "image", "ocr_backend": self.config.ocr_backend},
-        )
-
-        self.db.add(doc)
-        return [doc]
 
     def _process_text_file(
         self, file: models.File, file_task: models.FilePreprocessingTask

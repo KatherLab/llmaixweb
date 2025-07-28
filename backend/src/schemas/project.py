@@ -639,6 +639,11 @@ class EvaluationErrorSummary(BaseModel):
     affected_documents: int
     errors: list[EvaluationError]
 
+class VLMTestRequest(BaseModel):
+    base_url: str
+    model: str
+    api_key: str
+
 
 from .user import User  # noqa: E402, F401
 

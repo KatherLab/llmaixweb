@@ -8,7 +8,7 @@
     >
       <!-- Modal Container -->
       <div
-        class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] border border-gray-200"
+        class="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] border border-gray-200"
         tabindex="0"
         ref="modalRef"
         @keydown.esc="$emit('close')"
@@ -67,41 +67,48 @@
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
+
+              <!-- Processing Mode -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">File Type</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Processing Mode</label>
                 <select
-                  v-model="formConfig.file_type"
+                  v-model="formConfig.additional_settings.mode"
                   :disabled="!!editingConfig && formConfigUsed"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="pdf">PDF Documents</option>
-                  <option value="image">Images (PNG, JPG, etc.)</option>
-                  <option value="mixed">Mixed File Types</option>
+                  <option value="fast">Fast (PyMuPDF extraction)</option>
+                  <option value="advanced">Advanced (Docling extraction)</option>
                 </select>
               </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">PDF Backend</label>
-                  <select
-                    v-model="formConfig.pdf_backend"
-                    :disabled="!!editingConfig && formConfigUsed"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="pymupdf4llm">PyMuPDF4LLM (Recommended)</option>
-                    <option value="markitdown">MarkItDown</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">OCR Backend</label>
-                  <select
-                    v-model="formConfig.ocr_backend"
-                    :disabled="!!editingConfig && formConfigUsed"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="ocrmypdf">OCRmyPDF</option>
-                  </select>
-                </div>
+
+              <!-- OCR Engine -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">OCR Engine</label>
+                <select
+                  v-model="formConfig.additional_settings.ocr_engine"
+                  :disabled="!!editingConfig && formConfigUsed"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="ocrmypdf">OCRmyPDF (Tesseract)</option>
+                  <option value="paddleocr">PaddleOCR</option>
+                  <option value="surya">Surya OCR</option>
+                </select>
               </div>
+
+              <!-- Docling OCR Engine (only in advanced mode) -->
+              <div v-if="formConfig.additional_settings.mode === 'advanced' && !formConfig.additional_settings.use_vlm">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Docling OCR Engine</label>
+                <select
+                  v-model="formConfig.additional_settings.docling_ocr_engine"
+                  :disabled="!!editingConfig && formConfigUsed"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="rapidocr">RapidOCR</option>
+                  <option value="easyocr">EasyOCR</option>
+                  <option value="tesseract">Tesseract</option>
+                </select>
+              </div>
+
               <div class="space-y-2">
                 <label class="flex items-center">
                   <input
@@ -122,9 +129,10 @@
                   <span class="ml-2 text-sm text-gray-700">Force OCR (ignore existing text)</span>
                 </label>
               </div>
-              <div v-if="formConfig.use_ocr">
+
+              <!-- OCR Languages (only for tesseract) -->
+              <div v-if="formConfig.use_ocr && (formConfig.additional_settings.ocr_engine === 'ocrmypdf' || formConfig.additional_settings.docling_ocr_engine === 'tesseract')">
                 <label class="block text-sm font-medium text-gray-700 mb-1">OCR Languages</label>
-                <!-- Your original Multiselect, custom styling and slot -->
                 <Multiselect
                   v-model="formConfig.ocr_languages"
                   :options="ocrLanguagesForSelect"
@@ -159,10 +167,121 @@
                   </template>
                 </Multiselect>
               </div>
+
+              <!-- Advanced Features (only in advanced mode without VLM) -->
+              <div v-if="formConfig.additional_settings.mode === 'advanced' && !formConfig.additional_settings.use_vlm" class="space-y-2">
+                <label class="flex items-center">
+                  <input
+                    v-model="formConfig.additional_settings.enable_picture_description"
+                    type="checkbox"
+                    :disabled="!!editingConfig && formConfigUsed"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span class="ml-2 text-sm text-gray-700">Extract picture descriptions</span>
+                </label>
+                <label class="flex items-center">
+                  <input
+                    v-model="formConfig.additional_settings.enable_formula"
+                    type="checkbox"
+                    :disabled="!!editingConfig && formConfigUsed"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span class="ml-2 text-sm text-gray-700">Extract formulas</span>
+                </label>
+                <label class="flex items-center">
+                  <input
+                    v-model="formConfig.additional_settings.enable_code"
+                    type="checkbox"
+                    :disabled="!!editingConfig && formConfigUsed"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span class="ml-2 text-sm text-gray-700">Extract code blocks</span>
+                </label>
+              </div>
+
+              <!-- VLM Settings (only in advanced mode) -->
+              <div v-if="formConfig.additional_settings.mode === 'advanced'" class="space-y-2">
+                <label class="flex items-center">
+                  <input
+                    v-model="formConfig.additional_settings.use_vlm"
+                    type="checkbox"
+                    :disabled="!!editingConfig && formConfigUsed"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span class="ml-2 text-sm text-gray-700">Use Vision Language Model (VLM)</span>
+                </label>
+
+                <div v-if="formConfig.additional_settings.use_vlm" class="ml-6 space-y-3">
+                  <!-- VLM Type -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">VLM Type</label>
+                    <select
+                      v-model="formConfig.additional_settings.use_local_vlm"
+                      :disabled="!!editingConfig && formConfigUsed"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option :value="false">Remote VLM (API)</option>
+                      <option :value="true" v-show="false">Local VLM (HuggingFace)</option>
+                    </select>
+                  </div>
+
+                  <!-- Remote VLM Settings -->
+                  <div v-if="!formConfig.additional_settings.use_local_vlm">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">VLM Model</label>
+                    <input
+                      v-model="formConfig.additional_settings.vlm_model"
+                      type="text"
+                      placeholder="e.g., gpt-4-vision-preview"
+                      :disabled="!!editingConfig && formConfigUsed"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <!-- Local VLM Settings (hidden) -->
+                  <div v-show="false" v-if="formConfig.additional_settings.use_local_vlm">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Local VLM Model</label>
+                    <input
+                      v-model="formConfig.additional_settings.local_vlm_repo_id"
+                      type="text"
+                      placeholder="e.g., HuggingFaceTB/SmolVLM-256M-Instruct"
+                      :disabled="!!editingConfig && formConfigUsed"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <!-- VLM Prompt -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">VLM Prompt</label>
+                    <textarea
+                      v-model="formConfig.additional_settings.vlm_prompt"
+                      rows="2"
+                      :disabled="!!editingConfig && formConfigUsed"
+                      placeholder="Custom prompt for VLM processing..."
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <!-- Max Image Dimension -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Max Image Dimension</label>
+                    <input
+                      v-model.number="formConfig.additional_settings.max_image_dim"
+                      type="number"
+                      min="400"
+                      max="2048"
+                      step="100"
+                      :disabled="!!editingConfig && formConfigUsed"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
+
             <div v-if="formError" class="mt-2 text-sm text-red-600">
               {{ formError }}
             </div>
+
             <div class="flex justify-end space-x-3 mt-4">
               <button
                 @click="resetForm"
@@ -203,6 +322,7 @@
               </button>
             </div>
           </div>
+
           <!-- Saved Configurations List -->
           <div>
             <h3 class="text-sm font-medium text-gray-900 mb-4">Saved Configurations</h3>
@@ -231,13 +351,17 @@
                   </p>
                   <div class="mt-2 flex flex-wrap gap-2">
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                      {{ config.file_type }}
+                      {{ config.additional_settings?.mode || 'fast' }} mode
                     </span>
                     <span v-if="config.use_ocr" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      OCR: {{ getOcrLangLabels(config.ocr_languages) }}
+                      OCR: {{ config.additional_settings?.ocr_engine || config.ocr_backend }}
                     </span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                      PDF: {{ config.pdf_backend }}
+                    <span v-if="config.additional_settings?.use_vlm" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                      VLM: {{ config.additional_settings?.vlm_model || 'Enabled' }}
+                    </span>
+                    <span v-if="config.additional_settings?.enable_picture_description || config.additional_settings?.enable_formula || config.additional_settings?.enable_code"
+                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                      Advanced extraction
                     </span>
                   </div>
                 </div>
@@ -272,7 +396,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
 import Multiselect from '@vueform/multiselect';
@@ -337,7 +461,22 @@ function getDefaultForm() {
     ocr_backend: 'ocrmypdf',
     use_ocr: true,
     force_ocr: false,
-    ocr_languages: [{ value: 'eng', label: 'English' }]
+    ocr_languages: [{ value: 'eng', label: 'English' }],
+    additional_settings: {
+      mode: 'fast',
+      ocr_engine: 'ocrmypdf',
+      docling_ocr_engine: 'rapidocr',
+      enable_picture_description: false,
+      enable_formula: false,
+      enable_code: false,
+      max_image_dim: 800,
+      use_vlm: false,
+      use_local_vlm: false,
+      local_vlm_repo_id: 'HuggingFaceTB/SmolVLM-256M-Instruct',
+      vlm_model: '',
+      vlm_base_url: '',
+      vlm_prompt: 'Please perform OCR! Please extract the full text from the document and describe images and figures!'
+    }
   };
 }
 
@@ -356,6 +495,37 @@ function toggleCreateOrEdit() {
   }
 }
 
+// Watch for conflicts between VLM and advanced features
+watch(() => formConfig.value.additional_settings.use_vlm, (useVlm) => {
+  if (useVlm) {
+    formConfig.value.additional_settings.enable_picture_description = false;
+    formConfig.value.additional_settings.enable_formula = false;
+    formConfig.value.additional_settings.enable_code = false;
+  }
+});
+
+// Watch for advanced features to disable VLM
+watch([
+  () => formConfig.value.additional_settings.enable_picture_description,
+  () => formConfig.value.additional_settings.enable_formula,
+  () => formConfig.value.additional_settings.enable_code
+], ([picture, formula, code]) => {
+  if (picture || formula || code) {
+    formConfig.value.additional_settings.use_vlm = false;
+  }
+});
+
+// Watch for advanced features to switch to advanced mode
+watch([
+  () => formConfig.value.additional_settings.enable_picture_description,
+  () => formConfig.value.additional_settings.enable_formula,
+  () => formConfig.value.additional_settings.enable_code
+], ([picture, formula, code]) => {
+  if ((picture || formula || code) && formConfig.value.additional_settings.mode === 'fast') {
+    formConfig.value.additional_settings.mode = 'advanced';
+  }
+});
+
 onMounted(() => {
   document.body.style.overflow = 'hidden';
   fetchConfigurations();
@@ -363,6 +533,7 @@ onMounted(() => {
     if (modalRef.value) modalRef.value.focus();
   });
 });
+
 onUnmounted(() => {
   document.body.style.overflow = '';
 });
@@ -400,8 +571,11 @@ const createConfiguration = async () => {
       ...formConfig.value,
       ocr_languages: (formConfig.value.ocr_languages || []).map(lang =>
         typeof lang === 'string' ? lang : lang.value
-      )
+      ),
+      // Ensure additional_settings is included
+      additional_settings: formConfig.value.additional_settings
     };
+
     const response = await api.post(`/project/${props.projectId}/preprocessing-config`, payload);
     configurations.value.unshift(response.data);
     toast.success('Configuration created successfully');
@@ -422,12 +596,21 @@ function editConfiguration(config) {
   formError.value = '';
   let langs = config.ocr_languages || [];
   if (!Array.isArray(langs)) langs = [];
+
+  // Merge existing settings with defaults
+  const defaultSettings = getDefaultForm().additional_settings;
+  const configSettings = config.additional_settings || {};
+
   formConfig.value = {
     ...config,
     ocr_languages: langs.map(code => {
       const found = ocrLanguagesForSelect.value.find(l => l.value === code || l.value === code?.value);
       return found ? { ...found } : (typeof code === 'string' ? { value: code, label: code } : code);
-    })
+    }),
+    additional_settings: {
+      ...defaultSettings,
+      ...configSettings
+    }
   };
 }
 
@@ -445,7 +628,9 @@ const saveEdit = async () => {
         ...formConfig.value,
         ocr_languages: (formConfig.value.ocr_languages || []).map(lang =>
           typeof lang === 'string' ? lang : lang.value
-        )
+        ),
+        // Ensure additional_settings is included
+        additional_settings: formConfig.value.additional_settings
       };
     }
     await api.put(`/project/${props.projectId}/preprocessing-config/${id}`, toSend);
@@ -464,7 +649,7 @@ const saveEdit = async () => {
 };
 
 const deleteConfiguration = async (config) => {
-  if (!confirm(`Delete configuration \"${config.name}\"?`)) return;
+  if (!confirm(`Delete configuration "${config.name}"?`)) return;
   deleteError.value = '';
   try {
     await api.delete(`/project/${props.projectId}/preprocessing-config/${config.id}`);
@@ -477,6 +662,7 @@ const deleteConfiguration = async (config) => {
   }
 };
 </script>
+
 
 <style>
 /* Multiselect Custom Styles - matches your main app */
