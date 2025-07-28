@@ -1,21 +1,18 @@
 <template>
   <Teleport to="body">
-    <!-- Overlay with blur and dark transparent background -->
     <div
       class="fixed inset-0 z-50 flex items-center justify-center"
       @click.self="$emit('close')"
       style="backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(30,30,40,0.27);"
     >
-      <!-- Modal Container -->
       <div
         class="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] border border-gray-200"
         tabindex="0"
         ref="modalRef"
         @keydown.esc="$emit('close')"
       >
-        <!-- Header -->
-        <div class="px-6 py-4 bg-gray-50 border-b rounded-t-2xl flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-gray-900">Preprocessing Configurations</h2>
+        <div class="px-8 py-5 bg-gradient-to-r from-blue-50 to-blue-100 border-b rounded-t-2xl flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-blue-900 tracking-tight">Preprocessing Configurations</h2>
           <button
             @click="$emit('close')"
             class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -26,329 +23,290 @@
             </svg>
           </button>
         </div>
-        <!-- Content (scrollable area) -->
-        <div class="flex-1 overflow-y-auto px-4 pb-6 pt-4">
-          <!-- Create/Edit Form Toggle -->
-          <button
-            @click="toggleCreateOrEdit"
-            class="w-full flex items-center justify-between px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors mb-4"
-          >
-            <span class="font-medium">{{ editingConfig ? 'Cancel Editing' : (showCreateForm ? 'Cancel' : 'Create New Configuration') }}</span>
-            <svg
-              :class="['h-5 w-5 transition-transform', showCreateForm ? 'rotate-180' : '']"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          <!-- Create/Edit Form -->
-          <div v-if="showCreateForm" class="mb-8">
-            <div class="space-y-3">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Configuration Name</label>
-                <input
-                  v-model="formConfig.name"
-                  type="text"
-                  :readonly="!!editingConfig && formConfigUsed"
-                  placeholder="e.g., High Quality OCR for Scanned PDFs"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <span v-if="!!editingConfig && formConfigUsed" class="block text-xs text-gray-400 mt-1">Only the name can be changed as this configuration is already used in tasks.</span>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  v-model="formConfig.description"
-                  rows="2"
-                  :readonly="!!editingConfig && formConfigUsed"
-                  placeholder="Describe when to use this configuration..."
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
 
-              <!-- Processing Mode -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Processing Mode</label>
-                <select
-                  v-model="formConfig.additional_settings.mode"
-                  :disabled="!!editingConfig && formConfigUsed"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="fast">Fast (PyMuPDF extraction)</option>
-                  <option value="advanced">Advanced (Docling extraction)</option>
-                </select>
-              </div>
-
-              <!-- OCR Engine -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">OCR Engine</label>
-                <select
-                  v-model="formConfig.additional_settings.ocr_engine"
-                  :disabled="!!editingConfig && formConfigUsed"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="ocrmypdf">OCRmyPDF (Tesseract)</option>
-                  <option value="paddleocr">PaddleOCR</option>
-                  <option value="surya">Surya OCR</option>
-                </select>
-              </div>
-
-              <!-- Docling OCR Engine (only in advanced mode) -->
-              <div v-if="formConfig.additional_settings.mode === 'advanced' && !formConfig.additional_settings.use_vlm">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Docling OCR Engine</label>
-                <select
-                  v-model="formConfig.additional_settings.docling_ocr_engine"
-                  :disabled="!!editingConfig && formConfigUsed"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="rapidocr">RapidOCR</option>
-                  <option value="easyocr">EasyOCR</option>
-                  <option value="tesseract">Tesseract</option>
-                </select>
-              </div>
-
-              <div class="space-y-2">
-                <label class="flex items-center">
+        <div class="flex-1 overflow-y-auto px-8 pb-8 pt-4">
+          <div class="mb-10">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">1</span>
+              <span class="text-lg font-semibold text-blue-900 tracking-tight">
+                {{ editingConfig ? 'Edit Configuration' : 'Create New Configuration' }}
+              </span>
+              <span v-if="editingConfig" class="ml-2 px-2 py-0.5 rounded-xl bg-emerald-100 text-emerald-700 text-xs font-medium">Editing</span>
+            </div>
+            <transition name="fade-expand">
+              <div v-show="showCreateForm" class="bg-white border border-blue-100 rounded-2xl shadow p-6 space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Configuration Name</label>
                   <input
-                    v-model="formConfig.use_ocr"
-                    type="checkbox"
+                    v-model="formConfig.name"
+                    type="text"
+                    :readonly="!!editingConfig && formConfigUsed"
+                    placeholder="e.g., High Quality OCR for Scanned PDFs"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <span v-if="!!editingConfig && formConfigUsed" class="block text-xs text-gray-400 mt-1">Only the name can be changed as this configuration is already used in tasks.</span>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    v-model="formConfig.description"
+                    rows="2"
+                    :readonly="!!editingConfig && formConfigUsed"
+                    placeholder="Describe when to use this configuration..."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Processing Mode</label>
+                  <select
+                    v-model="formConfig.additional_settings.mode"
                     :disabled="!!editingConfig && formConfigUsed"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span class="ml-2 text-sm text-gray-700">Enable OCR</span>
-                </label>
-                <label class="flex items-center">
-                  <input
-                    v-model="formConfig.force_ocr"
-                    type="checkbox"
-                    :disabled="(!formConfig.use_ocr) || (!!editingConfig && formConfigUsed)"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span class="ml-2 text-sm text-gray-700">Force OCR (ignore existing text)</span>
-                </label>
-              </div>
-
-              <!-- OCR Languages (only for tesseract) -->
-              <div v-if="formConfig.use_ocr && (formConfig.additional_settings.ocr_engine === 'ocrmypdf' || formConfig.additional_settings.docling_ocr_engine === 'tesseract')">
-                <label class="block text-sm font-medium text-gray-700 mb-1">OCR Languages</label>
-                <Multiselect
-                  v-model="formConfig.ocr_languages"
-                  :options="ocrLanguagesForSelect"
-                  mode="tags"
-                  :searchable="true"
-                  :close-on-select="false"
-                  :clear-on-select="false"
-                  :preserve-search="true"
-                  :preselect-first="false"
-                  :create-option="false"
-                  :can-clear="true"
-                  :can-deselect="true"
-                  :hide-selected="true"
-                  :object="true"
-                  placeholder="Select languages"
-                  label="label"
-                  valueProp="value"
-                  track-by="value"
-                  class="multiselect-custom"
-                >
-                  <template #tag="{ option, handleTagRemove, disabled }">
-                    <div class="multiselect-tag">
-                      {{ option.label }}
-                      <span
-                        v-if="!disabled"
-                        @click.stop="handleTagRemove(option, $event)"
-                        class="multiselect-tag-remove"
-                      >
-                        <span class="multiselect-tag-remove-icon"></span>
-                      </span>
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="fast">Fast (PyMuPDF extraction)</option>
+                    <option value="advanced">Advanced (Docling extraction)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">OCR Engine</label>
+                  <select
+                    v-model="formConfig.additional_settings.ocr_engine"
+                    :disabled="!!editingConfig && formConfigUsed"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="ocrmypdf">OCRmyPDF (Tesseract)</option>
+                    <option value="paddleocr">PaddleOCR</option>
+                    <option value="surya">Surya OCR</option>
+                  </select>
+                </div>
+                <div v-if="formConfig.additional_settings.mode === 'advanced' && !formConfig.additional_settings.use_vlm">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Docling OCR Engine</label>
+                  <select
+                    v-model="formConfig.additional_settings.docling_ocr_engine"
+                    :disabled="!!editingConfig && formConfigUsed"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="rapidocr">RapidOCR</option>
+                    <option value="easyocr">EasyOCR</option>
+                    <option value="tesseract">Tesseract</option>
+                  </select>
+                </div>
+                <div class="space-y-2">
+                  <label class="flex items-center">
+                    <input
+                      v-model="formConfig.use_ocr"
+                      type="checkbox"
+                      :disabled="!!editingConfig && formConfigUsed"
+                      class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span class="ml-2 text-sm text-gray-700">Enable OCR</span>
+                  </label>
+                  <label class="flex items-center">
+                    <input
+                      v-model="formConfig.force_ocr"
+                      type="checkbox"
+                      :disabled="(!formConfig.use_ocr) || (!!editingConfig && formConfigUsed)"
+                      class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span class="ml-2 text-sm text-gray-700">Force OCR (ignore existing text)</span>
+                  </label>
+                </div>
+                <div v-if="formConfig.use_ocr && (formConfig.additional_settings.ocr_engine === 'ocrmypdf' || formConfig.additional_settings.docling_ocr_engine === 'tesseract')">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">OCR Languages</label>
+                  <Multiselect
+                    v-model="formConfig.ocr_languages"
+                    :options="ocrLanguagesForSelect"
+                    mode="tags"
+                    :searchable="true"
+                    :close-on-select="false"
+                    :clear-on-select="false"
+                    :preserve-search="true"
+                    :preselect-first="false"
+                    :create-option="false"
+                    :can-clear="true"
+                    :can-deselect="true"
+                    :hide-selected="true"
+                    :object="true"
+                    placeholder="Select languages"
+                    label="label"
+                    valueProp="value"
+                    track-by="value"
+                    class="multiselect-custom"
+                  >
+                    <template #tag="{ option, handleTagRemove, disabled }">
+                      <div class="multiselect-tag">
+                        {{ option.label }}
+                        <span
+                          v-if="!disabled"
+                          @click.stop="handleTagRemove(option, $event)"
+                          class="multiselect-tag-remove"
+                        >
+                          <span class="multiselect-tag-remove-icon"></span>
+                        </span>
+                      </div>
+                    </template>
+                  </Multiselect>
+                </div>
+                <div v-if="formConfig.additional_settings.mode === 'advanced' && !formConfig.additional_settings.use_vlm" class="space-y-2">
+                  <label class="flex items-center">
+                    <input
+                      v-model="formConfig.additional_settings.enable_picture_description"
+                      type="checkbox"
+                      :disabled="!!editingConfig && formConfigUsed"
+                      class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span class="ml-2 text-sm text-gray-700">Extract picture descriptions</span>
+                  </label>
+                  <label class="flex items-center">
+                    <input
+                      v-model="formConfig.additional_settings.enable_formula"
+                      type="checkbox"
+                      :disabled="!!editingConfig && formConfigUsed"
+                      class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span class="ml-2 text-sm text-gray-700">Extract formulas</span>
+                  </label>
+                  <label class="flex items-center">
+                    <input
+                      v-model="formConfig.additional_settings.enable_code"
+                      type="checkbox"
+                      :disabled="!!editingConfig && formConfigUsed"
+                      class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span class="ml-2 text-sm text-gray-700">Extract code blocks</span>
+                  </label>
+                </div>
+                <div v-if="formConfig.additional_settings.mode === 'advanced'" class="space-y-2">
+                  <label class="flex items-center">
+                    <input
+                      v-model="formConfig.additional_settings.use_vlm"
+                      type="checkbox"
+                      :disabled="!!editingConfig && formConfigUsed"
+                      class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span class="ml-2 text-sm text-gray-700">Use Vision Language Model (VLM)</span>
+                  </label>
+                  <div v-if="formConfig.additional_settings.use_vlm" class="ml-6 space-y-3">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">VLM Model</label>
+                      <input
+                        v-model="formConfig.additional_settings.vlm_model"
+                        type="text"
+                        placeholder="e.g., gpt-4-vision-preview"
+                        :disabled="!!editingConfig && formConfigUsed"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
                     </div>
-                  </template>
-                </Multiselect>
-              </div>
-
-              <!-- Advanced Features (only in advanced mode without VLM) -->
-              <div v-if="formConfig.additional_settings.mode === 'advanced' && !formConfig.additional_settings.use_vlm" class="space-y-2">
-                <label class="flex items-center">
-                  <input
-                    v-model="formConfig.additional_settings.enable_picture_description"
-                    type="checkbox"
-                    :disabled="!!editingConfig && formConfigUsed"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span class="ml-2 text-sm text-gray-700">Extract picture descriptions</span>
-                </label>
-                <label class="flex items-center">
-                  <input
-                    v-model="formConfig.additional_settings.enable_formula"
-                    type="checkbox"
-                    :disabled="!!editingConfig && formConfigUsed"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span class="ml-2 text-sm text-gray-700">Extract formulas</span>
-                </label>
-                <label class="flex items-center">
-                  <input
-                    v-model="formConfig.additional_settings.enable_code"
-                    type="checkbox"
-                    :disabled="!!editingConfig && formConfigUsed"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span class="ml-2 text-sm text-gray-700">Extract code blocks</span>
-                </label>
-              </div>
-
-              <!-- VLM Settings (only in advanced mode) -->
-              <div v-if="formConfig.additional_settings.mode === 'advanced'" class="space-y-2">
-                <label class="flex items-center">
-                  <input
-                    v-model="formConfig.additional_settings.use_vlm"
-                    type="checkbox"
-                    :disabled="!!editingConfig && formConfigUsed"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span class="ml-2 text-sm text-gray-700">Use Vision Language Model (VLM)</span>
-                </label>
-
-                <div v-if="formConfig.additional_settings.use_vlm" class="ml-6 space-y-3">
-                  <!-- VLM Type -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">VLM Type</label>
-                    <select
-                      v-model="formConfig.additional_settings.use_local_vlm"
-                      :disabled="!!editingConfig && formConfigUsed"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option :value="false">Remote VLM (API)</option>
-                      <option :value="true" v-show="false">Local VLM (HuggingFace)</option>
-                    </select>
-                  </div>
-
-                  <!-- Remote VLM Settings -->
-                  <div v-if="!formConfig.additional_settings.use_local_vlm">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">VLM Model</label>
-                    <input
-                      v-model="formConfig.additional_settings.vlm_model"
-                      type="text"
-                      placeholder="e.g., gpt-4-vision-preview"
-                      :disabled="!!editingConfig && formConfigUsed"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <!-- Local VLM Settings (hidden) -->
-                  <div v-show="false" v-if="formConfig.additional_settings.use_local_vlm">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Local VLM Model</label>
-                    <input
-                      v-model="formConfig.additional_settings.local_vlm_repo_id"
-                      type="text"
-                      placeholder="e.g., HuggingFaceTB/SmolVLM-256M-Instruct"
-                      :disabled="!!editingConfig && formConfigUsed"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <!-- VLM Prompt -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">VLM Prompt</label>
-                    <textarea
-                      v-model="formConfig.additional_settings.vlm_prompt"
-                      rows="2"
-                      :disabled="!!editingConfig && formConfigUsed"
-                      placeholder="Custom prompt for VLM processing..."
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <!-- Max Image Dimension -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Max Image Dimension</label>
-                    <input
-                      v-model.number="formConfig.additional_settings.max_image_dim"
-                      type="number"
-                      min="400"
-                      max="2048"
-                      step="100"
-                      :disabled="!!editingConfig && formConfigUsed"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">VLM Prompt</label>
+                      <textarea
+                        v-model="formConfig.additional_settings.vlm_prompt"
+                        rows="2"
+                        :disabled="!!editingConfig && formConfigUsed"
+                        placeholder="Custom prompt for VLM processing..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Max Image Dimension</label>
+                      <input
+                        v-model.number="formConfig.additional_settings.max_image_dim"
+                        type="number"
+                        min="400"
+                        max="2048"
+                        step="100"
+                        :disabled="!!editingConfig && formConfigUsed"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
                   </div>
                 </div>
+                <div v-if="formError" class="mt-2 text-sm text-red-600">
+                  {{ formError }}
+                </div>
+                <div class="flex justify-end space-x-3 mt-4">
+                  <button
+                    @click="resetForm"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                    :disabled="isSaving"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    v-if="!editingConfig"
+                    @click="createConfiguration"
+                    :disabled="!formConfig.name || isSaving"
+                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span v-if="isSaving" class="flex items-center">
+                      <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                      </svg>
+                      Creating...
+                    </span>
+                    <span v-else>Create Configuration</span>
+                  </button>
+                  <button
+                    v-else
+                    @click="saveEdit"
+                    :disabled="!formConfig.name || isSaving"
+                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span v-if="isSaving" class="flex items-center">
+                      <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                      </svg>
+                      Saving...
+                    </span>
+                    <span v-else>Save Changes</span>
+                  </button>
+                </div>
               </div>
-            </div>
-
-            <div v-if="formError" class="mt-2 text-sm text-red-600">
-              {{ formError }}
-            </div>
-
-            <div class="flex justify-end space-x-3 mt-4">
-              <button
-                @click="resetForm"
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                :disabled="isSaving"
+            </transition>
+            <button
+              @click="toggleCreateOrEdit"
+              class="w-full flex items-center justify-between px-4 py-3 mt-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <span class="font-medium">{{ editingConfig ? 'Cancel Editing' : (showCreateForm ? 'Cancel' : 'Create New Configuration') }}</span>
+              <svg
+                :class="['h-5 w-5 transition-transform', showCreateForm ? 'rotate-180' : '']"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                Cancel
-              </button>
-              <button
-                v-if="!editingConfig"
-                @click="createConfiguration"
-                :disabled="!formConfig.name || isSaving"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span v-if="isSaving" class="flex items-center">
-                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                  </svg>
-                  Creating...
-                </span>
-                <span v-else>Create Configuration</span>
-              </button>
-              <button
-                v-else
-                @click="saveEdit"
-                :disabled="!formConfig.name || isSaving"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span v-if="isSaving" class="flex items-center">
-                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                  </svg>
-                  Saving...
-                </span>
-                <span v-else>Save Changes</span>
-              </button>
-            </div>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
           </div>
 
-          <!-- Saved Configurations List -->
           <div>
-            <h3 class="text-sm font-medium text-gray-900 mb-4">Saved Configurations</h3>
+            <div class="flex items-center gap-3 mb-3">
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">2</span>
+              <span class="text-lg font-semibold text-blue-900 tracking-tight">Saved Configurations</span>
+            </div>
             <div v-if="isLoading" class="flex justify-center py-8">
               <svg class="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
               </svg>
             </div>
-            <div v-else-if="configurations.length === 0" class="text-center py-8">
+            <div v-else-if="configurations.length === 0" class="text-center py-8 text-gray-600">
               <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
-              <p class="mt-2 text-sm text-gray-600">No saved configurations yet</p>
+              <p class="mt-2 text-sm">No saved configurations yet</p>
             </div>
             <div v-else class="space-y-3">
               <div
                 v-for="config in configurations"
                 :key="config.id"
-                class="border rounded-lg p-4 hover:border-blue-300 transition-colors bg-white flex justify-between items-center"
+                class="border rounded-xl p-4 hover:border-blue-400 transition-colors bg-white flex justify-between items-center"
               >
                 <div class="flex-1">
-                  <h4 class="font-medium text-gray-900">{{ config.name }}</h4>
-                  <p v-if="config.description" class="text-sm text-gray-500 mt-1">
-                    {{ config.description }}
-                  </p>
+                  <h4 class="font-semibold text-gray-900">{{ config.name }}</h4>
+                  <p v-if="config.description" class="text-sm text-gray-500 mt-1">{{ config.description }}</p>
                   <div class="mt-2 flex flex-wrap gap-2">
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
                       {{ config.additional_settings?.mode || 'fast' }} mode

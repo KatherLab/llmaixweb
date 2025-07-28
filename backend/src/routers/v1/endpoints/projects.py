@@ -989,22 +989,6 @@ def create_preprocessing_configuration(
     """Create a reusable preprocessing configuration."""
     check_project_access(project_id, current_user, db, "write")
 
-    # Validate file type and preprocessing strategy (keep existing validation)
-    # try:
-    #     FileType(config.file_type)
-    # except ValueError:
-    #     raise HTTPException(
-    #         status_code=400, detail=f"Invalid file type: {config.file_type}"
-    #     )
-
-    try:
-        PreprocessingStrategy(config.preprocessing_strategy)
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid preprocessing strategy: {config.preprocessing_strategy}",
-        )
-
     # Check for duplicate names
     existing = db.execute(
         select(models.PreprocessingConfiguration).where(
@@ -1054,7 +1038,7 @@ def update_preprocessing_configuration(
     if not config:
         raise HTTPException(status_code=404, detail="Configuration not found")
 
-    # Check if configuration is in use
+    # Check if configuration is in use by active task
     active_tasks = (
         db.execute(
             select(models.PreprocessingTask).where(
@@ -1077,30 +1061,39 @@ def update_preprocessing_configuration(
             detail="Cannot update configuration while it's being used in active tasks",
         )
 
-    # Update fields
+    # Is config referenced by any document?
     in_use = (
         db.query(models.Document)
         .filter(models.Document.preprocessing_config_id == config.id)
         .count()
         > 0
     )
+
+    allowed_fields = {"name", "description"}
+    changes = config_update.model_dump(exclude_unset=True)
+
     if in_use:
-        allowed_fields = {"name", "description"}
-        for field, value in config_update.model_dump(exclude_unset=True).items():
-            if field not in allowed_fields:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Cannot edit a configuration in use by existing documents (except name/description)",
-                )
-            setattr(config, field, value)
-    else:
-        # Proceed as before for unused configs
-        for field, value in config_update.model_dump(exclude_unset=True).items():
-            setattr(config, field, value)
+        # Find which *disallowed* fields are *actually being changed*
+        disallowed_changed = [
+            field for field, value in changes.items()
+            if field not in allowed_fields and getattr(config, field) != value
+        ]
+        if disallowed_changed:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Cannot edit a configuration in use by existing documents "
+                    "(except name/description). The following fields would change: "
+                    f"{', '.join(disallowed_changed)}"
+                ),
+            )
+
+    # Apply the changes
+    for field, value in changes.items():
+        setattr(config, field, value)
 
     db.commit()
     db.refresh(config)
-
     return schemas.PreprocessingConfiguration.model_validate(config)
 
 
@@ -3132,27 +3125,39 @@ def test_model_with_schema_endpoint(
         api_key, base_url, llm_model, schema.schema_definition
     )
 
-@router.post("/{project_id}/test-vlm-image-support")
+@router.get("/llm/test-vlm-image-support")
 def test_vlm_image_support(
     *,
     db: Session = Depends(get_db),
-    project_id: int,
-    test_data: schemas.VLMTestRequest,
+    model: str,
+    api_key: str | None = None,
+    base_url: str | None = None,
     current_user: models.User = Depends(get_current_user),
 ) -> dict:
-    """Test if a VLM model supports image input."""
-    check_project_access(project_id, current_user, db, "read")
+    """
+    Test if a VLM model supports image input.
+    All params are optional (except model).
+    """
+
+    # Use default settings if not provided
+    api_key = api_key or settings.OPENAI_API_KEY
+    base_url = base_url or settings.OPENAI_API_BASE
+
+    if not api_key or not base_url or not model:
+        return {
+            "supported": False,
+            "message": "Configuration incomplete: api_key, base_url, and model are required"
+        }
 
     try:
-        from llmaix.utils import test_remote_image_support
+        from ....utils.helpers import test_remote_image_support
 
-        # Ensure proper URL format
-        api_url = test_data.base_url
+        api_url = base_url
         if not api_url.endswith("/chat/completions"):
             api_url = api_url.rstrip("/") + "/chat/completions"
 
         supported = test_remote_image_support(
-            api_url=api_url, model=test_data.model, api_key=test_data.api_key
+            api_url=api_url, model=model, api_key=api_key
         )
 
         return {
@@ -3163,6 +3168,7 @@ def test_vlm_image_support(
         }
     except Exception as e:
         return {"supported": False, "message": f"Test failed: {str(e)}"}
+
 
 
 # Add these endpoints to your existing projects.py file

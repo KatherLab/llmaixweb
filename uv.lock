@@ -1433,7 +1433,7 @@ wheels = [
 
 [[package]]
 name = "llmaix"
-version = "0.0.19"
+version = "0.0.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1446,9 +1446,9 @@ dependencies = [
     { name = "pymupdf4llm" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/46/0a/01a6c075a24454fd2cdb6885db472e19e48289bd414a99c07bc939fbd587/llmaix-0.0.19.tar.gz", hash = "sha256:068b84cb65e0d6f6a9d28fadc4438f852469e48a1e560b7703efd83b478a4606", size = 1738613, upload-time = "2025-07-28T15:46:58.204Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/36/35/529b2bf4c6e2055577a6ef6de761361c75e8347befd50834ec596b57fe68/llmaix-0.0.20.tar.gz", hash = "sha256:13c001632d35469416f948512984646dfede350bda7d05429c5d1e7cdda63dec", size = 1738905, upload-time = "2025-07-28T17:32:50.075Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/8a/d74b8783b5792129254eda517b4a179b3e0503ddc5426eb2e58db304f775/llmaix-0.0.19-py3-none-any.whl", hash = "sha256:ae23905a871f852928f4fa17b3ec5a4d33b02ab2633c9dcda16f670b2be7d1d2", size = 26903, upload-time = "2025-07-28T15:46:56.31Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/c3/2e5b9c8ca8665f2ebb3a47b273efcf48d2446551f7344724e43349312283/llmaix-0.0.20-py3-none-any.whl", hash = "sha256:f3a8523e91f1a82c5413915f62f8f9303992da91fb65b6ab615e0187e6f02403", size = 27143, upload-time = "2025-07-28T17:32:48.573Z" },
 ]
 
 [package.optional-dependencies]
@@ -1510,7 +1510,7 @@ requires-dist = [
     { name = "celery-types", specifier = "==0.23.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.116.1" },
     { name = "jsonschema", specifier = "~=4.25.0" },
-    { name = "llmaix", extras = ["all"], specifier = "~=0.0.19" },
+    { name = "llmaix", extras = ["all"], specifier = "~=0.0.20" },
     { name = "openai", specifier = "~=1.97.1" },
     { name = "pandas", specifier = ">=2.3.1" },
     { name = "pandas-stubs", specifier = ">=2.3.0.250703" },

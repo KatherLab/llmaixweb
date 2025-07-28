@@ -390,6 +390,8 @@ class PreprocessingPipeline:
 
         except Exception as e:
             file_task.status = models.PreprocessingStatus.FAILED
+            import traceback
+            print(f"Error processing file {file_task.file.file_name}: {traceback.format_exc()}")
             file_task.error_message = str(e)
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
 

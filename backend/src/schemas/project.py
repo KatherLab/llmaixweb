@@ -12,7 +12,7 @@ from pydantic import (
 )
 
 from ..core.config import settings
-from ..utils.enums import FileCreator, FileType, PreprocessingStrategy
+from ..utils.enums import FileCreator, PreprocessingStrategy
 from .other import UTCModel
 
 if TYPE_CHECKING:
@@ -638,12 +638,6 @@ class EvaluationErrorSummary(BaseModel):
     error_types: dict[str, int]
     affected_documents: int
     errors: list[EvaluationError]
-
-class VLMTestRequest(BaseModel):
-    base_url: str
-    model: str
-    api_key: str
-
 
 from .user import User  # noqa: E402, F401
 

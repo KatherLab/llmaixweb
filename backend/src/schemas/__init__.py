@@ -44,7 +44,6 @@ from .project import (
     TrialCreate,
     TrialResult,
     TrialUpdate,
-VLMTestRequest
 )
 from .user import (
     InvitationInfo,
@@ -110,5 +109,4 @@ __all__ = [
     "EvaluationSummary",
     "EvaluationMetricDetail",
     "DocumentEvaluationDetail",
-    "VLMTestRequest",
 ]

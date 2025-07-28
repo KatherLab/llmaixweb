@@ -339,397 +339,501 @@
         </div>
 
         <!-- Custom Settings (shown only in custom mode) -->
-        <div v-if="selectedMode === 'custom'" class="space-y-6 mb-6">
-          <!-- Saved Configuration Selection -->
-          <div class="bg-gray-50 rounded-lg p-4">
-            <h4 class="font-medium text-gray-900 mb-4 flex items-center">
-              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-              </svg>
-              Load Saved Configuration
-            </h4>
-            <div class="space-y-3">
+        <div v-if="selectedMode === 'custom'"
+             class="bg-gradient-to-br from-blue-50/60 to-white border border-blue-200 rounded-2xl px-8 py-8 space-y-10 mt-4 mb-4">
+
+          <!-- Step 1: Configuration Preset -->
+          <div>
+            <div class="flex items-center gap-3 mb-3">
+              <span
+                  class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">1</span>
+              <span class="text-base font-semibold text-blue-900 tracking-tight">Configuration Preset</span>
+              <span v-if="selectedSavedConfig"
+                    class="ml-2 px-2 py-0.5 rounded-xl bg-emerald-100 text-emerald-700 text-xs font-medium">Preset Loaded</span>
+            </div>
+            <div class="flex gap-3 items-center">
               <select
-                v-model="selectedSavedConfig"
-                @change="loadSavedConfiguration"
-                class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
+                  v-model="selectedSavedConfig"
+                  class="w-full max-w-md border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 transition"
+                  @change="loadSavedConfiguration"
               >
                 <option value="">Start from scratch...</option>
-                <option
-                  v-for="config in savedConfigs"
-                  :key="config.id"
-                  :value="config.id"
-                >
-                  {{ config.name }}{{ config.description ? ` - ${config.description}` : '' }}
+                <option v-for="config in savedConfigs" :key="config.id" :value="config.id">
+                  {{ config.name }}{{ config.description ? ` – ${config.description}` : '' }}
                 </option>
               </select>
-              <p v-if="selectedSavedConfig" class="text-sm text-gray-600">
-                Configuration loaded. You can modify settings below and save as a new configuration if needed.
-              </p>
+
+
+
+              <button
+                  class="inline-flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50"
+                  type="button"
+                  @click="showConfigManager = true"
+              >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                        stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                </svg>
+                Manage
+              </button>
+            </div>
+            <!-- Save as Preset UI -->
+            <div class="mt-5 flex flex-col md:flex-row md:items-end md:gap-4 gap-3 rounded-xl bg-blue-50/50 border border-blue-100 p-5 shadow-sm">
+  <div class="flex-1">
+    <label class="block text-xs font-medium text-gray-700 mb-1">Preset Name</label>
+    <input
+      v-model="presetName"
+      type="text"
+      class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+      maxlength="100"
+      placeholder="e.g., 'High Quality VLM Scan'"
+      :disabled="isSavingPreset || isUpdatingPreset"
+    />
+  </div>
+  <div class="flex-1">
+    <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+    <input
+      v-model="presetDescription"
+      type="text"
+      class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+      maxlength="250"
+      placeholder="(optional)"
+      :disabled="isSavingPreset || isUpdatingPreset"
+    />
+  </div>
+  <div class="flex flex-col gap-2 min-w-[9rem]">
+    <button
+      class="px-4 py-2 rounded-lg text-white bg-blue-600 font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+      @click="saveAsPreset"
+      :disabled="!presetName || isSavingPreset"
+      type="button"
+    >
+      <svg v-if="isSavingPreset" class="animate-spin h-4 w-4 inline-block mr-2" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor"></path>
+      </svg>
+      <span v-else>Save as Preset</span>
+    </button>
+    <button
+      v-if="selectedSavedConfig"
+      class="px-4 py-2 rounded-lg text-white bg-emerald-600 font-medium hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+      @click="updatePreset"
+      :disabled="!presetName || isUpdatingPreset"
+      type="button"
+    >
+      <svg v-if="isUpdatingPreset" class="animate-spin h-4 w-4 inline-block mr-2" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor"></path>
+      </svg>
+      <span v-else>Update Selected</span>
+    </button>
+  </div>
+</div>
+
+
+            <div class="mt-2 text-xs text-gray-500 ml-1">
+              Load a preset or start with blank settings below.
             </div>
           </div>
 
-          <!-- Processing Mode -->
-          <div class="bg-gray-50 rounded-lg p-4">
-            <h4 class="font-medium text-gray-900 mb-4">Processing Mode</h4>
-            <div class="space-y-3">
-              <label class="flex items-center">
-                <input
-                    v-model="customSettings.mode"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                    type="radio"
-                    value="fast"
-                />
-                <span class="ml-2 text-sm text-gray-700">Fast Mode (PyMuPDF extraction)</span>
-              </label>
-              <label class="flex items-center">
-                <input
-                    v-model="customSettings.mode"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                    type="radio"
-                    value="advanced"
-                />
-                <span class="ml-2 text-sm text-gray-700">Advanced Mode (Docling extraction)</span>
-              </label>
+          <!-- Step 2: Extraction & OCR -->
+          <div>
+            <div class="flex items-center gap-3 mb-3">
+              <span
+                  class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">2</span>
+              <span class="text-base font-semibold text-blue-900 tracking-tight">Extraction & OCR</span>
             </div>
-          </div>
+            <div class="grid md:grid-cols-2 gap-8">
 
-          <!-- OCR Settings -->
-          <div class="bg-gray-50 rounded-lg p-4">
-            <h4 class="font-medium text-gray-900 mb-4 flex items-center">
-              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-              </svg>
-              OCR Settings
-            </h4>
-
-            <div class="space-y-4">
-              <label class="flex items-center">
-                <input
-                    v-model="customSettings.force_ocr"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    type="checkbox"
-                />
-                <span class="ml-2 text-sm text-gray-700">Force OCR (ignore existing text)</span>
-              </label>
-
-              <!-- OCR Engine Selection -->
-              <div v-if="customSettings.mode === 'fast'">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  OCR Engine
-                </label>
-                <select
-                    v-model="customSettings.ocr_engine"
-                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
-                >
-                  <option value="ocrmypdf">OCRmyPDF (Tesseract)</option>
-                  <option value="paddleocr">PaddleOCR</option>
-                  <option value="surya">Surya OCR</option>
-                </select>
+              <!-- Extraction Mode and advanced features -->
+              <div>
+                <div class="mb-4">
+                  <div class="text-sm font-medium text-gray-700 mb-2">Extraction Mode</div>
+                  <div class="flex gap-2">
+                    <label :class="[
+              'flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border transition',
+              customSettings.mode === 'fast'
+                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
+                : 'border-gray-200 bg-white hover:bg-gray-100'
+            ]">
+                      <input v-model="customSettings.mode" class="accent-blue-600" type="radio" value="fast"/>
+                      Fast (PyMuPDF)
+                    </label>
+                    <label :class="[
+              'flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border transition',
+              customSettings.mode === 'advanced'
+                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
+                : 'border-gray-200 bg-white hover:bg-gray-100'
+            ]">
+                      <input v-model="customSettings.mode" class="accent-blue-600" type="radio" value="advanced"/>
+                      Advanced (Docling)
+                    </label>
+                  </div>
+                </div>
+                <div v-if="customSettings.mode === 'advanced'" class="space-y-2">
+                  <label class="flex items-center gap-2">
+                    <input v-model="customSettings.enable_picture_description" :disabled="customSettings.use_vlm" class="accent-blue-600"
+                           type="checkbox"/>
+                    Extract picture descriptions
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input v-model="customSettings.enable_formula" :disabled="customSettings.use_vlm" class="accent-blue-600"
+                           type="checkbox"/>
+                    Extract formulas
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input v-model="customSettings.enable_code" :disabled="customSettings.use_vlm" class="accent-blue-600"
+                           type="checkbox"/>
+                    Extract code blocks
+                  </label>
+                  <p v-if="customSettings.use_vlm"
+                     class="text-xs text-yellow-700 bg-yellow-50 border border-yellow-100 rounded px-2 py-1 mt-1">
+                    <svg class="inline h-4 w-4 -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                    </svg>
+                    Advanced extraction options can't be used together with Vision Language Model.
+                  </p>
+                </div>
               </div>
 
-              <!-- Docling OCR Engine (for advanced mode) -->
-              <div v-if="customSettings.mode === 'advanced' && !customSettings.use_vlm">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Docling OCR Engine
-                </label>
-                <select
-                    v-model="customSettings.docling_ocr_engine"
-                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
-                >
-                  <option value="rapidocr">RapidOCR (Default)</option>
-                  <option value="easyocr">EasyOCR</option>
-                  <option value="tesseract">Tesseract</option>
-                </select>
-              </div>
-
-              <!-- Language Selection (only for tesseract) -->
-              <div v-if="(customSettings.mode === 'fast' && customSettings.ocr_engine === 'ocrmypdf') ||
-                         (customSettings.mode === 'advanced' && customSettings.docling_ocr_engine === 'tesseract')"
-                   class="relative">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  OCR Languages
-                </label>
-                <Multiselect
-                    v-model="customSettings.ocr_languages"
-                    :canClear="true"
-                    :canDeselect="true"
-                    :clearOnSelect="false"
-                    :closeOnSelect="false"
-                    :createOption="false"
-                    :hideSelected="true"
-                    :object="true"
-                    :options="ocrLanguagesForSelect"
-                    :preselect-first="false"
-                    :preserveSearch="true"
-                    :searchable="true"
-                    class="multiselect-custom"
-                    label="label"
-                    mode="tags"
-                    placeholder="Select languages"
-                    trackBy="value"
-                    valueProp="value"
-                >
-                  <template #tag="{ option, handleTagRemove, disabled }">
-                    <div class="multiselect-tag">
-                      {{ option.label }}
-                      <span
-                          v-if="!disabled"
-                          class="multiselect-tag-remove"
-                          @click.stop="handleTagRemove(option, $event)"
-                      >
-                        <span class="multiselect-tag-remove-icon"></span>
-                      </span>
-                    </div>
-                  </template>
-                </Multiselect>
+              <!-- OCR settings -->
+              <div>
+                <div class="mb-4">
+                  <div class="text-sm font-medium text-gray-700 mb-2">OCR Settings</div>
+                  <label class="flex items-center gap-2 mb-2">
+                    <input v-model="customSettings.force_ocr" class="accent-blue-600" type="checkbox"/>
+                    Force OCR (ignore existing text)
+                  </label>
+                  <div v-if="customSettings.mode === 'fast'" class="mb-2">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">OCR Engine</label>
+                    <select v-model="customSettings.ocr_engine"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                      <option value="ocrmypdf">OCRmyPDF (Tesseract)</option>
+                      <option value="paddleocr">PaddleOCR</option>
+                      <option value="surya">Surya OCR</option>
+                    </select>
+                  </div>
+                  <div v-if="customSettings.mode === 'advanced' && !customSettings.use_vlm" class="mb-2">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Docling OCR Engine</label>
+                    <select v-model="customSettings.docling_ocr_engine"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                      <option value="rapidocr">RapidOCR (Default)</option>
+                      <option value="easyocr">EasyOCR</option>
+                      <option value="tesseract">Tesseract</option>
+                    </select>
+                  </div>
+                  <div
+                      v-if="(customSettings.mode === 'fast' && customSettings.ocr_engine === 'ocrmypdf') ||
+                    (customSettings.mode === 'advanced' && customSettings.docling_ocr_engine === 'tesseract')"
+                  >
+                    <label class="block text-xs font-medium text-gray-700 mb-1">OCR Languages</label>
+                    <Multiselect
+                        v-model="customSettings.ocr_languages"
+                        :object="true"
+                        :options="ocrLanguagesForSelect"
+                        class="multiselect-custom"
+                        label="label"
+                        mode="tags"
+                        placeholder="Select languages"
+                        trackBy="value"
+                        valueProp="value"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Advanced Features (only in advanced mode) -->
-          <div v-if="customSettings.mode === 'advanced' && !customSettings.use_vlm"
-               class="bg-gray-50 rounded-lg p-4">
-            <h4 class="font-medium text-gray-900 mb-4 flex items-center">
-              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-              </svg>
-              Advanced Extraction Features
-            </h4>
-            <div class="space-y-3">
-              <label class="flex items-center">
-                <input
-                    v-model="customSettings.enable_picture_description"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    type="checkbox"
-                />
-                <span class="ml-2 text-sm text-gray-700">Extract picture descriptions</span>
-              </label>
-              <label class="flex items-center">
-                <input
-                    v-model="customSettings.enable_formula"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    type="checkbox"
-                />
-                <span class="ml-2 text-sm text-gray-700">Extract formulas</span>
-              </label>
-              <label class="flex items-center">
-                <input
-                    v-model="customSettings.enable_code"
-                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    type="checkbox"
-                />
-                <span class="ml-2 text-sm text-gray-700">Extract code blocks</span>
-              </label>
+          <!-- Step 3: Vision Language Model (only in advanced mode) -->
+          <div v-if="customSettings.mode === 'advanced'">
+            <div class="flex items-center gap-3 mb-3">
+              <span
+                  class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">3</span>
+              <span class="text-base font-semibold text-blue-900 tracking-tight">Vision Language Model (optional)</span>
+              <span v-if="customSettings.use_vlm && vlmModelTested && vlmModelValid"
+                    class="ml-2 px-2 py-0.5 rounded-xl bg-green-100 text-green-700 text-xs font-medium">VLM Ready</span>
             </div>
-            <p class="mt-3 text-xs text-gray-500">
-              Note: These features use Docling's internal processing and may increase processing time.
-            </p>
-          </div>
+            <div class="space-y-2 bg-blue-50/40 border border-blue-100 rounded-xl p-6">
+              <label class="flex items-center gap-2 mb-2">
+                <input v-model="customSettings.use_vlm" :disabled="customSettings.enable_picture_description || customSettings.enable_formula || customSettings.enable_code" class="accent-blue-600"
+                       type="checkbox"/>
+                Use Vision Language Model for enrichment
+                <span
+                    v-if="customSettings.enable_picture_description || customSettings.enable_formula || customSettings.enable_code"
+                    class="ml-2 text-xs bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded border border-yellow-100"
+                >Disable advanced extraction above to enable VLM</span>
+              </label>
 
-          <!-- VLM Settings -->
-          <div v-if="customSettings.mode === 'advanced'" class="bg-gray-50 rounded-lg p-4">
-            <h4 class="font-medium text-gray-900 mb-4 flex items-center">
-              <svg class="h-5 w-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div v-if="customSettings.use_vlm" class="mt-3">
+                <!-- VLM Model Stepper Card -->
+                <div
+                    class="relative bg-gradient-to-br from-blue-50 via-white to-gray-50 border border-blue-200 rounded-xl shadow-lg px-6 py-6 mt-6 space-y-6">
+                  <div class="flex items-center gap-3 mb-4">
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+              <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"
                       stroke-width="2"/>
                 <path
                     d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                     stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
-              Vision Language Model (VLM) Settings
-            </h4>
-
-            <label class="flex items-center mb-4">
-              <input
-                  v-model="customSettings.use_vlm"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  type="checkbox"
-              />
-              <span class="ml-2 text-sm text-gray-700">Use Vision Language Model for enrichment</span>
-            </label>
-
-            <div v-if="customSettings.use_vlm" class="space-y-4 ml-6">
-              <!-- VLM Type Selection -->
-              <div class="space-y-3">
-                <label class="flex items-center">
-                  <input
-                      v-model="customSettings.use_local_vlm"
-                      :value="false"
-                      class="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                      type="radio"
-                  />
-                  <span class="ml-2 text-sm text-gray-700">Remote VLM (OpenAI-compatible API)</span>
-                </label>
-
-                <!-- Remote VLM Settings -->
-                <div v-if="!customSettings.use_local_vlm" class="ml-6 space-y-3">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
-                    <select
-                        v-model="customSettings.vlm_model"
-                        class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
-                    >
-                      <option value="">Use default model</option>
-                      <option value="gpt-4-vision-preview">GPT-4 Vision</option>
-                      <option value="gpt-4o">GPT-4o</option>
-                      <option value="claude-3-opus-20240229">Claude 3 Opus</option>
-                      <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
-                      <option value="custom">Custom model...</option>
-                    </select>
-                    <input
-                        v-if="customSettings.vlm_model === 'custom'"
-                        v-model="customSettings.vlm_custom_model"
-                        class="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        placeholder="Enter model name"
-                        type="text"
-                    />
+            </span>
+                    <span class="text-lg font-semibold text-blue-800 tracking-tight">Select Vision Model</span>
+                    <span v-if="vlmModelTested && vlmModelValid"
+                          class="ml-2 px-2 py-0.5 rounded-xl bg-green-100 text-green-700 text-xs font-medium inline-flex items-center gap-1">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              Model Tested
+            </span>
                   </div>
+                  <div class="space-y-5">
 
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      Custom API Base URL (optional)
-                    </label>
-                    <input
-                        v-model="customSettings.vlm_base_url"
-                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        placeholder="https://api.openai.com/v1"
-                        type="text"
-                    />
-                  </div>
+                    <!-- Step 1: Select API source -->
+                    <div>
+                      <div class="mb-2 text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <span class="rounded bg-blue-200 text-blue-900 px-2 py-0.5 text-xs font-semibold">Step 1</span>
+                        Choose Model Source
+                      </div>
+                      <div class="flex gap-3 mb-2">
+                        <button
+                            :class="[
+                    !showCustomVLMSettings
+                      ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
+                      : 'border-gray-300 bg-white hover:bg-gray-50'
+                  ]"
+                            class="flex-1 flex items-center gap-2 border rounded-lg px-4 py-2 font-medium transition-all focus:outline-none"
+                            type="button"
+                            @click="showCustomVLMSettings = false"
+                        >
+                          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M20 13V7a2 2 0 00-2-2H6a2 2 0 00-2 2v6" stroke-linecap="round"
+                                  stroke-linejoin="round" stroke-width="2"/>
+                            <path d="M9 17v4h6v-4M17 17a2 2 0 002-2V7a2 2 0 00-2-2" stroke-linecap="round"
+                                  stroke-linejoin="round" stroke-width="2"/>
+                          </svg>
+                          <span>System Default</span>
+                        </button>
+                        <button
+                            :class="[
+                    showCustomVLMSettings
+                      ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
+                      : 'border-gray-300 bg-white hover:bg-gray-50'
+                  ]"
+                            class="flex-1 flex items-center gap-2 border rounded-lg px-4 py-2 font-medium transition-all focus:outline-none"
+                            type="button"
+                            @click="showCustomVLMSettings = true"
+                        >
+                          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"
+                                  stroke-width="2"/>
+                            <path
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                          </svg>
+                          <span>Custom API</span>
+                        </button>
+                      </div>
+                      <div class="text-xs text-gray-500 ml-1">
+                <span v-if="!showCustomVLMSettings">
+                  Uses your organization's default VLM/OpenAI API settings. No configuration needed.
+                </span>
+                        <span v-else>
+                  Allows you to connect to your own API endpoint. Enter your key and base URL.
+                </span>
+                      </div>
+                    </div>
 
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      API Key (optional)
-                    </label>
-                    <input
-                        v-model="vlmApiKey"
-                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        placeholder="sk-..."
-                        type="password"
-                    />
-                  </div>
+                    <!-- Step 2: Custom API settings -->
+                    <transition name="fade-expand">
+                      <div v-show="showCustomVLMSettings"
+                           class="bg-white border border-blue-100 rounded-xl px-4 py-4 mt-2 space-y-3">
+                        <div class="text-sm font-medium text-blue-800 mb-2 flex items-center gap-1">
+                          <svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 12h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                          </svg>
+                          Custom API Settings
+                        </div>
+                        <div>
+                          <label class="block text-xs font-semibold text-gray-700 mb-1">API Key</label>
+                          <input
+                              v-model="vlmApiKey"
+                              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                              placeholder="e.g., sk-1234..."
+                              type="password"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-semibold text-gray-700 mb-1">Base URL</label>
+                          <input
+                              v-model="vlmBaseUrl"
+                              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                              placeholder="e.g., https://my-company-openai-proxy/api/v1"
+                              type="text"
+                          />
+                        </div>
+                      </div>
+                    </transition>
 
-                  <!-- Test Connection Button -->
-                  <div class="flex items-center space-x-3">
-                    <button
-                        :disabled="!canTestVLM || isTestingVLM"
-                        class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        @click="testVLMConnection"
-                    >
-                      <svg v-if="isTestingVLM" class="animate-spin -ml-0.5 mr-2 h-4 w-4" fill="none"
-                           viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                stroke-width="4"></circle>
-                        <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                              fill="currentColor"></path>
-                      </svg>
-                      <span v-else>Test Image Support</span>
-                    </button>
-
-                    <span v-if="vlmTestResult !== null" class="text-sm">
-                      <span v-if="vlmTestResult.supported" class="text-green-600 flex items-center">
-                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                    <!-- Step 3: Select Model -->
+                    <div>
+                      <div class="mb-2 text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <span class="rounded bg-blue-200 text-blue-900 px-2 py-0.5 text-xs font-semibold">Step 2</span>
+                        Pick Vision Model
+                      </div>
+                      <div class="flex gap-2 items-center">
+                        <svg v-if="isLoadingVLMModels" class="animate-spin h-5 w-5 text-blue-400" fill="none"
+                             viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                  stroke-width="4"></circle>
+                          <path class="opacity-75"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                fill="currentColor"></path>
                         </svg>
-                        {{ vlmTestResult.message }}
-                      </span>
-                      <span v-else class="text-red-600 flex items-center">
-                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <select
+                            v-model="vlmModel"
+                            :disabled="isLoadingVLMModels || vlmModels.length === 0"
+                            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition disabled:bg-gray-100"
+                            @change="resetVLMModelTest"
+                        >
+                          <option disabled value="">
+                            {{
+                              isLoadingVLMModels
+                                  ? 'Loading models...'
+                                  : vlmModels.length === 0
+                                      ? 'No models available'
+                                      : 'Select a model'
+                            }}
+                          </option>
+                          <option v-for="model in vlmModels" :key="model" :value="model">
+                            {{ model }}
+                          </option>
+                        </select>
+                        <button v-if="!isLoadingVLMModels"
+                                class="inline-flex items-center px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 ml-1"
+                                title="Reload models"
+                                type="button"
+                                @click="loadVLMModels">
+                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                          </svg>
+                        </button>
+                      </div>
+                      <div v-if="vlmModelError" class="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"
                                 stroke-width="2"/>
                         </svg>
-                        {{ vlmTestResult.message }}
-                      </span>
-                    </span>
+                        {{ vlmModelError }}
+                      </div>
+                      <div v-if="vlmModel && !vlmModelError" class="text-xs text-gray-500 mt-1">
+                <span>
+                  Selected: <span class="font-semibold text-blue-700">{{ vlmModel }}</span>
+                </span>
+                      </div>
+                    </div>
+
+                    <!-- Step 4: Test Model -->
+                    <div>
+                      <div class="mb-2 text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <span class="rounded bg-blue-200 text-blue-900 px-2 py-0.5 text-xs font-semibold">Step 3</span>
+                        Test Model Compatibility
+                      </div>
+                      <div class="flex gap-2 items-center">
+                        <button
+                            :disabled="!vlmModel || isTestingVLMModel"
+                            class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md font-semibold text-sm hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition"
+                            type="button"
+                            @click="testVLMModel"
+                        >
+                          <svg v-if="isTestingVLMModel" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4"></circle>
+                            <path class="opacity-75"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                  fill="currentColor"></path>
+                          </svg>
+                          <span>{{ isTestingVLMModel ? 'Testing...' : 'Test Model' }}</span>
+                        </button>
+                        <div>
+                  <span v-if="vlmModelTestStatus.type === 'success'"
+                        class="text-green-700 font-semibold flex items-center gap-1">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                    </svg>
+                    {{ vlmModelTestStatus.message }}
+                  </span>
+                          <span v-else-if="vlmModelTestStatus.type === 'error'"
+                                class="text-red-600 flex items-center gap-1">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                    </svg>
+                    {{ vlmModelTestStatus.message }}
+                  </span>
+                          <span v-else-if="vlmModelTestStatus.type === 'warning'"
+                                class="text-yellow-700 flex items-center gap-1">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                      <path d="M12 8v4m0 4h.01" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                    </svg>
+                    {{ vlmModelTestStatus.message }}
+                  </span>
+                        </div>
+                      </div>
+                      <div v-if="vlmModelTested && vlmModelValid" class="mt-3">
+                        <div class="flex gap-2 items-center">
+                  <span
+                      class="px-3 py-1 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium flex items-center gap-1">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="2"/>
+                      <path
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                    </svg>
+                    Ready to use!
+                  </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
+                <!-- End VLM Model Stepper Card -->
 
-                <!-- Local VLM Settings (hidden) -->
-                <label v-show="false" class="flex items-center">
-                  <input
-                      v-model="customSettings.use_local_vlm"
-                      :value="true"
-                      class="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                      type="radio"
-                  />
-                  <span class="ml-2 text-sm text-gray-700">Local VLM (HuggingFace)</span>
-                </label>
-
-                <div v-if="customSettings.use_local_vlm" v-show="false" class="ml-6 space-y-3">
+                <div class="grid md:grid-cols-2 gap-6 mt-6">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
-                    <select
-                        v-model="customSettings.local_vlm_repo_id"
-                        class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-lg"
-                    >
-                      <option value="HuggingFaceTB/SmolVLM-256M-Instruct">SmolVLM-256M-Instruct</option>
-                      <option value="custom">Custom HuggingFace model...</option>
-                    </select>
-                    <input
-                        v-if="customSettings.local_vlm_repo_id === 'custom'"
-                        v-model="customSettings.local_vlm_custom_repo"
-                        class="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        placeholder="organization/model-name"
-                        type="text"
+                    <label class="block text-xs font-medium text-gray-700 mb-1">VLM Prompt (optional)</label>
+                    <textarea
+                        v-model="customSettings.vlm_prompt"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                        placeholder="Describe how the VLM should process and explain images, etc"
+                        rows="2"
                     />
                   </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Max Image Dimension (pixels)</label>
+                    <input
+                        v-model.number="customSettings.max_image_dim"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                        max="2048"
+                        min="400"
+                        placeholder="e.g. 800"
+                        step="100"
+                        type="number"
+                    />
+                    <p class="mt-1 text-xs text-gray-500">Images will be scaled down to this dimension before VLM
+                      analysis.</p>
+                  </div>
                 </div>
               </div>
-
-              <!-- VLM Prompt -->
-              <div v-if="customSettings.use_vlm" class="ml-6">
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  VLM Prompt (optional)
-                </label>
-                <textarea
-                    v-model="customSettings.vlm_prompt"
-                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Please perform OCR! Please extract the full text from the document and describe images and figures!"
-                    rows="3"
-                />
-              </div>
-
-              <!-- Max Image Dimension -->
-              <div v-if="customSettings.use_vlm" class="ml-6">
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  Max Image Dimension (pixels)
-                </label>
-                <input
-                    v-model.number="customSettings.max_image_dim"
-                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    max="2048"
-                    min="400"
-                    step="100"
-                    type="number"
-                />
-                <p class="mt-1 text-xs text-gray-500">
-                  Images will be scaled down to this maximum dimension while preserving aspect ratio
-                </p>
-              </div>
-            </div>
-
-            <div
-                v-if="customSettings.use_vlm && (customSettings.enable_picture_description || customSettings.enable_formula || customSettings.enable_code)"
-                class="mt-3 p-3 bg-yellow-50 rounded-lg">
-              <p class="text-sm text-yellow-800">
-                <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-                </svg>
-                Note: Advanced extraction features (picture description, formula, code) cannot be used together with
-                VLM.
-                Please disable VLM to use these features.
-              </p>
             </div>
           </div>
         </div>
+
 
         <!-- File Selection -->
         <div class="mb-6">
@@ -793,9 +897,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { api } from '@/services/api';
-import { useToast } from 'vue-toastification';
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue';
+import {api} from '@/services/api';
+import {useToast} from 'vue-toastification';
 import Multiselect from '@vueform/multiselect';
 
 import TaskCard from './preprocessing/TaskCard.vue';
@@ -842,7 +946,7 @@ const customSettings = ref({
   ocr_engine: 'ocrmypdf',
   docling_ocr_engine: 'rapidocr',
   force_ocr: false,
-  ocr_languages: [{ value: 'eng', label: 'English' }],
+  ocr_languages: [{value: 'eng', label: 'English'}],
   enable_picture_description: false,
   enable_formula: false,
   enable_code: false,
@@ -857,39 +961,225 @@ const customSettings = ref({
   vlm_prompt: 'Please perform OCR! Please extract the full text from the document and describe images and figures!'
 });
 
+const presetName = ref('');
+const presetDescription = ref('');
+const isSavingPreset = ref(false);
+const isUpdatingPreset = ref(false);
+
+const showCustomVLMSettings = ref(false);
 const vlmApiKey = ref('');
-const vlmTestResult = ref(null);
-const isTestingVLM = ref(false);
+const vlmBaseUrl = ref('');
+const vlmModel = ref('');
+const vlmModels = ref([]);
+const isLoadingVLMModels = ref(false);
+const vlmModelError = ref('');
+const isTestingVLMModel = ref(false);
+const vlmModelTested = ref(false);
+const vlmModelValid = ref(false);
+const vlmModelTestError = ref('');
+const vlmModelTestStatus = computed(() => {
+  if (isTestingVLMModel.value) {
+    return {type: 'loading', message: 'Testing model...'};
+  }
+  if (!vlmModelTested.value) {
+    return {type: 'warning', message: 'You must test the selected model before processing.'};
+  }
+  if (vlmModelValid.value) {
+    return {type: 'success', message: 'Model is compatible and supports vision input.'};
+  }
+  if (vlmModelTestError.value) {
+    return {type: 'error', message: vlmModelTestError.value};
+  }
+  return {type: 'none', message: ''};
+});
+
+
+const saveAsPreset = async () => {
+  if (!presetName.value || isSavingPreset.value) return;
+  isSavingPreset.value = true;
+  try {
+    const configPayload = {
+      name: presetName.value,
+      description: presetDescription.value,
+      file_type: 'mixed',
+      pdf_backend: 'pymupdf4llm',
+      ocr_backend: customSettings.value.ocr_engine,
+      use_ocr: true,
+      force_ocr: customSettings.value.force_ocr,
+      ocr_languages: (customSettings.value.ocr_languages || []).map(lang =>
+        typeof lang === 'string' ? lang : lang.value
+      ),
+      additional_settings: { ...customSettings.value }
+    };
+    const response = await api.post(`/project/${props.projectId}/preprocessing-config`, configPayload);
+    await fetchConfigurations();
+    selectedSavedConfig.value = response.data.id;
+    presetName.value = '';
+    presetDescription.value = '';
+    toast.success('Preset saved!');
+  } catch (e) {
+    toast.error(e.response?.data?.detail || 'Failed to save preset');
+  } finally {
+    isSavingPreset.value = false;
+  }
+};
+
+const updatePreset = async () => {
+  if (!presetName.value || !selectedSavedConfig.value || isUpdatingPreset.value) return;
+  isUpdatingPreset.value = true;
+  try {
+    const configPayload = {
+      name: presetName.value,
+      description: presetDescription.value,
+      file_type: 'mixed',
+      pdf_backend: 'pymupdf4llm',
+      ocr_backend: customSettings.value.ocr_engine,
+      use_ocr: true,
+      force_ocr: customSettings.value.force_ocr,
+      ocr_languages: (customSettings.value.ocr_languages || []).map(lang =>
+        typeof lang === 'string' ? lang : lang.value
+      ),
+      additional_settings: { ...customSettings.value }
+    };
+    await api.put(`/project/${props.projectId}/preprocessing-config/${selectedSavedConfig.value}`, configPayload);
+    await fetchConfigurations();
+    toast.success('Preset updated!');
+  } catch (e) {
+    toast.error(e.response?.data?.detail || 'Failed to update preset');
+  } finally {
+    isUpdatingPreset.value = false;
+  }
+};
+
+
+watch(selectedSavedConfig, id => {
+  // Populate fields when user picks a config
+  if (!id) {
+    presetName.value = '';
+    presetDescription.value = '';
+    return;
+  }
+  const config = savedConfigs.value.find(c => c.id === id);
+  if (config) {
+    presetName.value = config.name || '';
+    presetDescription.value = config.description || '';
+  }
+});
+
+
+
+const loadVLMModels = async () => {
+  isLoadingVLMModels.value = true;
+  vlmModels.value = [];
+  vlmModelError.value = '';
+  try {
+    const res = await api.get(`/project/llm/models`, {
+      params: {
+        api_key: vlmApiKey.value || undefined,
+        base_url: vlmBaseUrl.value || undefined
+      }
+    });
+    if (res.data.success && Array.isArray(res.data.models)) {
+      vlmModels.value = res.data.models;
+      if (!vlmModels.value.includes(vlmModel.value)) {
+        vlmModel.value = '';
+      }
+    } else {
+      vlmModelError.value = res.data.message || 'No models available';
+      vlmModels.value = [];
+      vlmModel.value = '';
+    }
+  } catch (e) {
+    vlmModelError.value = e.response?.data?.message || 'Failed to load models.';
+    vlmModels.value = [];
+    vlmModel.value = '';
+  } finally {
+    isLoadingVLMModels.value = false;
+  }
+};
+
+
+
+// Watch for API settings changes and reload model list (debounced)
+let vlmModelDebounce = null;
+watch([showCustomVLMSettings, vlmApiKey, vlmBaseUrl], () => {
+  clearTimeout(vlmModelDebounce);
+  vlmModelDebounce = setTimeout(() => {
+    loadVLMModels();
+    resetVLMModelTest();
+  }, 600);
+}, {immediate: true});
+
+// When the model changes, user must re-test
+const resetVLMModelTest = () => {
+  vlmModelTested.value = false;
+  vlmModelValid.value = false;
+  vlmModelTestError.value = '';
+};
+
+// Test selected VLM model for compatibility/support
+const testVLMModel = async () => {
+  if (!vlmModel.value) return;
+  isTestingVLMModel.value = true;
+  vlmModelTested.value = false;
+  vlmModelValid.value = false;
+  vlmModelTestError.value = '';
+  try {
+    const res = await api.get(`/project/llm/test-vlm-image-support`, {
+      params: {
+        model: vlmModel.value,
+        api_key: vlmApiKey.value || undefined,
+        base_url: vlmBaseUrl.value || undefined
+      }
+    });
+
+    if (res.data.supported) {
+      vlmModelTested.value = true;
+      vlmModelValid.value = true;
+      vlmModelTestError.value = '';
+    } else {
+      vlmModelTested.value = true;
+      vlmModelValid.value = false;
+      vlmModelTestError.value = res.data.message || 'Model does not support image input.';
+    }
+  } catch (e) {
+    vlmModelTested.value = true;
+    vlmModelValid.value = false;
+    vlmModelTestError.value = e.response?.data?.message || 'Test failed.';
+  } finally {
+    isTestingVLMModel.value = false;
+  }
+};
 
 // OCR language options
 const ocrLanguagesForSelect = ref([
-  { value: 'eng', label: 'English' },
-  { value: 'spa', label: 'Spanish' },
-  { value: 'fra', label: 'French' },
-  { value: 'deu', label: 'German' },
-  { value: 'ita', label: 'Italian' },
-  { value: 'por', label: 'Portuguese' },
-  { value: 'rus', label: 'Russian' },
-  { value: 'jpn', label: 'Japanese' },
-  { value: 'chi_sim', label: 'Chinese (Simplified)' },
-  { value: 'chi_tra', label: 'Chinese (Traditional)' },
-  { value: 'ara', label: 'Arabic' },
-  { value: 'hin', label: 'Hindi' },
-  { value: 'kor', label: 'Korean' },
-  { value: 'nld', label: 'Dutch' },
-  { value: 'pol', label: 'Polish' },
-  { value: 'tur', label: 'Turkish' },
-  { value: 'vie', label: 'Vietnamese' },
-  { value: 'ces', label: 'Czech' },
-  { value: 'dan', label: 'Danish' },
-  { value: 'fin', label: 'Finnish' },
-  { value: 'gre', label: 'Greek' },
-  { value: 'heb', label: 'Hebrew' },
-  { value: 'hun', label: 'Hungarian' },
-  { value: 'nor', label: 'Norwegian' },
-  { value: 'swe', label: 'Swedish' },
-  { value: 'tha', label: 'Thai' },
-  { value: 'ukr', label: 'Ukrainian' },
+  {value: 'eng', label: 'English'},
+  {value: 'spa', label: 'Spanish'},
+  {value: 'fra', label: 'French'},
+  {value: 'deu', label: 'German'},
+  {value: 'ita', label: 'Italian'},
+  {value: 'por', label: 'Portuguese'},
+  {value: 'rus', label: 'Russian'},
+  {value: 'jpn', label: 'Japanese'},
+  {value: 'chi_sim', label: 'Chinese (Simplified)'},
+  {value: 'chi_tra', label: 'Chinese (Traditional)'},
+  {value: 'ara', label: 'Arabic'},
+  {value: 'hin', label: 'Hindi'},
+  {value: 'kor', label: 'Korean'},
+  {value: 'nld', label: 'Dutch'},
+  {value: 'pol', label: 'Polish'},
+  {value: 'tur', label: 'Turkish'},
+  {value: 'vie', label: 'Vietnamese'},
+  {value: 'ces', label: 'Czech'},
+  {value: 'dan', label: 'Danish'},
+  {value: 'fin', label: 'Finnish'},
+  {value: 'gre', label: 'Greek'},
+  {value: 'heb', label: 'Hebrew'},
+  {value: 'hun', label: 'Hungarian'},
+  {value: 'nor', label: 'Norwegian'},
+  {value: 'swe', label: 'Swedish'},
+  {value: 'tha', label: 'Thai'},
+  {value: 'ukr', label: 'Ukrainian'},
 ]);
 
 // Mode selection handler
@@ -924,25 +1214,27 @@ const selectMode = (mode) => {
   }
 
   // Reset VLM test result when changing modes
-  vlmTestResult.value = null;
+  vlmModelTested.value = false;
+  vlmModelValid.value = false;
+  vlmModelTestError.value = '';
 };
 
 // Computed properties
 const activeTasks = computed(() =>
-  allTasks.value.filter(task =>
-    ['pending', 'processing', 'in_progress'].includes(task.status)
-  )
+    allTasks.value.filter(task =>
+        ['pending', 'processing', 'in_progress'].includes(task.status)
+    )
 );
 
 const completedTasks = computed(() =>
-  allTasks.value
-    .filter(task =>
-      ['completed', 'failed', 'cancelled', 'errored'].includes(task.status)
-    )
-    .sort((a, b) =>
-      new Date(b.completed_at || b.updated_at) -
-      new Date(a.completed_at || a.updated_at)
-    )
+    allTasks.value
+        .filter(task =>
+            ['completed', 'failed', 'cancelled', 'errored'].includes(task.status)
+        )
+        .sort((a, b) =>
+            new Date(b.completed_at || b.updated_at) -
+            new Date(a.completed_at || a.updated_at)
+        )
 );
 
 const displayedCompletedTasks = computed(() => {
@@ -959,8 +1251,8 @@ const canTestVLM = computed(() => {
   }
 
   const model = customSettings.value.vlm_model === 'custom'
-    ? customSettings.value.vlm_custom_model
-    : customSettings.value.vlm_model;
+      ? customSettings.value.vlm_custom_model
+      : customSettings.value.vlm_model;
 
   return model && (vlmApiKey.value || customSettings.value.vlm_base_url);
 });
@@ -968,19 +1260,27 @@ const canTestVLM = computed(() => {
 const canStartProcessing = computed(() => {
   if (!selectedFiles.value.length || isSubmitting.value) return false;
 
-  // If using saved config, make sure one is selected
-  if (selectedMode.value === 'saved' && !selectedSavedConfig.value) return false;
-
-  // If using remote VLM, must have successful test
-  if (selectedMode.value === 'custom' &&
-      customSettings.value.mode === 'advanced' &&
-      customSettings.value.use_vlm &&
-      !customSettings.value.use_local_vlm) {
-    return vlmTestResult.value?.supported === true;
+  if (selectedMode.value === 'saved') {
+    return !!selectedSavedConfig.value;
   }
 
+  if (selectedMode.value === 'custom') {
+    if (
+        customSettings.value.mode === 'advanced' &&
+        customSettings.value.use_vlm &&
+        !customSettings.value.use_local_vlm
+    ) {
+      // Remote VLM
+      return !!vlmModel.value && vlmModelTested.value && vlmModelValid.value;
+    }
+    // Custom, but not VLM: can always proceed
+    return true;
+  }
+
+  // Quick/better always possible if files selected
   return true;
 });
+
 
 // API methods
 const fetchPreprocessingTasks = async () => {
@@ -1023,7 +1323,7 @@ const loadSavedConfiguration = () => {
       ocr_engine: 'ocrmypdf',
       docling_ocr_engine: 'rapidocr',
       force_ocr: false,
-      ocr_languages: [{ value: 'eng', label: 'English' }],
+      ocr_languages: [{value: 'eng', label: 'English'}],
       enable_picture_description: false,
       enable_formula: false,
       enable_code: false,
@@ -1050,45 +1350,17 @@ const loadSavedConfiguration = () => {
       ...config.additional_settings,
       force_ocr: config.force_ocr || false,
       ocr_languages: config.ocr_languages?.map(lang =>
-        typeof lang === 'string'
-          ? ocrLanguagesForSelect.value.find(l => l.value === lang) || { value: lang, label: lang }
-          : lang
-      ) || [{ value: 'eng', label: 'English' }]
+          typeof lang === 'string'
+              ? ocrLanguagesForSelect.value.find(l => l.value === lang) || {value: lang, label: lang}
+              : lang
+      ) || [{value: 'eng', label: 'English'}]
     };
   }
 
   // Clear VLM test result when loading new config
-  vlmTestResult.value = null;
-};
-
-
-// VLM test function
-const testVLMConnection = async () => {
-  if (!canTestVLM.value) return;
-
-  isTestingVLM.value = true;
-  vlmTestResult.value = null;
-
-  try {
-    const model = customSettings.value.vlm_model === 'custom'
-      ? customSettings.value.vlm_custom_model
-      : customSettings.value.vlm_model;
-
-    const response = await api.post(`/project/${props.projectId}/test-vlm-image-support`, {
-      base_url: customSettings.value.vlm_base_url || 'https://api.openai.com/v1',
-      model: model,
-      api_key: vlmApiKey.value
-    });
-
-    vlmTestResult.value = response.data;
-  } catch (error) {
-    vlmTestResult.value = {
-      supported: false,
-      message: error.response?.data?.detail || 'Connection test failed'
-    };
-  } finally {
-    isTestingVLM.value = false;
-  }
+  vlmModelTested.value = false;
+  vlmModelValid.value = false;
+  vlmModelTestError.value = '';
 };
 
 // Task status updates
@@ -1117,7 +1389,7 @@ const setupPolling = () => {
 
   const pollActiveTasks = () => {
     const tasksToUpdate = allTasks.value.filter(
-      task => ['pending', 'processing', 'in_progress'].includes(task.status)
+        task => ['pending', 'processing', 'in_progress'].includes(task.status)
     );
 
     if (tasksToUpdate.length === 0) {
@@ -1190,7 +1462,7 @@ const startPreprocessing = async () => {
         use_ocr: true,
         force_ocr: customSettings.value.force_ocr,
         ocr_languages: customSettings.value.ocr_languages.map(lang =>
-          typeof lang === 'string' ? lang : lang.value
+            typeof lang === 'string' ? lang : lang.value
         ),
         additional_settings: {
           mode: customSettings.value.mode,
@@ -1203,13 +1475,13 @@ const startPreprocessing = async () => {
           use_vlm: customSettings.value.use_vlm,
           use_local_vlm: customSettings.value.use_local_vlm,
           local_vlm_repo_id: customSettings.value.use_local_vlm
-            ? (customSettings.value.local_vlm_repo_id === 'custom'
-                ? customSettings.value.local_vlm_custom_repo
-                : customSettings.value.local_vlm_repo_id)
-            : null,
+              ? (customSettings.value.local_vlm_repo_id === 'custom'
+                  ? customSettings.value.local_vlm_custom_repo
+                  : customSettings.value.local_vlm_repo_id)
+              : null,
           vlm_model: customSettings.value.vlm_model === 'custom'
-            ? customSettings.value.vlm_custom_model
-            : customSettings.value.vlm_model,
+              ? customSettings.value.vlm_custom_model
+              : customSettings.value.vlm_model,
           vlm_base_url: customSettings.value.vlm_base_url,
           vlm_prompt: customSettings.value.vlm_prompt
         }
@@ -1247,8 +1519,8 @@ const startPreprocessing = async () => {
   } catch (error) {
     if (error.response?.data?.detail) {
       const details = Array.isArray(error.response.data.detail)
-        ? error.response.data.detail.map(d => d.msg).join(', ')
-        : error.response.data.detail;
+          ? error.response.data.detail.map(d => d.msg).join(', ')
+          : error.response.data.detail;
       toast.error(`Failed to start preprocessing: ${details}`);
     } else {
       toast.error('Failed to start preprocessing task');
@@ -1370,14 +1642,16 @@ const resetForm = () => {
   configName.value = '';
   saveAsConfig.value = false;
   vlmApiKey.value = '';
-  vlmTestResult.value = null;
+  vlmModelTested.value = false;
+  vlmModelValid.value = false;
+  vlmModelTestError.value = '';
   showApiSettings.value = false;
   customSettings.value = {
     mode: 'fast',
     ocr_engine: 'ocrmypdf',
     docling_ocr_engine: 'rapidocr',
     force_ocr: false,
-    ocr_languages: [{ value: 'eng', label: 'English' }],
+    ocr_languages: [{value: 'eng', label: 'English'}],
     enable_picture_description: false,
     enable_formula: false,
     enable_code: false,
@@ -1403,10 +1677,10 @@ const applyConfiguration = (config) => {
       ...customSettings.value,
       ...config.additional_settings,
       ocr_languages: config.ocr_languages?.map(lang =>
-        typeof lang === 'string'
-          ? ocrLanguagesForSelect.value.find(l => l.value === lang) || { value: lang, label: lang }
-          : lang
-      ) || [{ value: 'eng', label: 'English' }]
+          typeof lang === 'string'
+              ? ocrLanguagesForSelect.value.find(l => l.value === lang) || {value: lang, label: lang}
+              : lang
+      ) || [{value: 'eng', label: 'English'}]
     };
   }
 
@@ -1415,14 +1689,15 @@ const applyConfiguration = (config) => {
   showConfigManager.value = false;
 };
 
-// Watch for VLM settings changes to reset test
 watch([
   () => customSettings.value.vlm_model,
   () => customSettings.value.vlm_custom_model,
   () => customSettings.value.vlm_base_url,
   () => vlmApiKey.value
 ], () => {
-  vlmTestResult.value = null;
+  vlmModelTested.value = false;
+  vlmModelValid.value = false;
+  vlmModelTestError.value = '';
 });
 
 // Watch for conflicts between VLM and advanced features
@@ -1474,7 +1749,7 @@ onUnmounted(() => {
 // Watchers
 watch(() => props.files, (newFiles) => {
   availableFiles.value = newFiles;
-}, { immediate: true });
+}, {immediate: true});
 
 watch(() => activeTasks.value.length, (newLength, oldLength) => {
   if (newLength > 0 && !pollInterval) {
