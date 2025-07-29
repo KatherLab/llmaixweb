@@ -384,6 +384,7 @@ class PreprocessingConfigurationBase(UTCModel):
     ocr_model: str | None = None
     llm_model: str | None = None
     additional_settings: dict | None = None
+    bypass_celery: bool = False
 
 
 class PreprocessingConfigurationCreate(PreprocessingConfigurationBase):

@@ -6,7 +6,7 @@ from pathlib import Path
 import boto3
 import openai
 from botocore.exceptions import ClientError
-from pydantic import ValidationError
+from pydantic import ValidationError, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     DISABLE_CELERY: bool = False
 
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
+
+    CELERY_PREPROCESS_POOL: str = Field(
+        default="auto",  # auto | solo | prefork
+        description="How to start the preprocess worker pool",
+    ) # Has to be solo for MacOS to avoid
 
     @property
     def BACKEND_CORS_ORIGINS_LIST(self):
@@ -167,3 +172,28 @@ except ValidationError as e:
 
 # Appease ty - otherwise it will complain about a possible unbound variable
 settings: Settings = Settings()
+
+
+SETTINGS_META = {
+    "PROJECT_NAME":      {"type": "str",   "secret": False, "readonly": False, "category": "General", "label": "Project Name"},
+    "API_V1_STR":        {"type": "str",   "secret": False, "readonly": True, "category": "General", "label": "API Prefix"},
+    "SECRET_KEY":        {"type": "str",   "secret": True,  "readonly": True,  "category": "Security", "label": "Secret Key"},
+    "ACCESS_TOKEN_EXPIRE_MINUTES": {"type": "int", "secret": False, "readonly": False, "category": "Security", "label": "Token Expiry (min)"},
+    "REQUIRE_INVITATION":{"type": "bool",  "secret": False, "readonly": False, "category": "Security", "label": "Require Invitation"},
+    "POSTGRES_SERVER":   {"type": "str",   "secret": False, "readonly": True,  "category": "Database", "label": "DB Host"},
+    "POSTGRES_USER":     {"type": "str",   "secret": False, "readonly": True,  "category": "Database", "label": "DB User"},
+    "POSTGRES_PASSWORD": {"type": "str",   "secret": True,  "readonly": True,  "category": "Database", "label": "DB Password"},
+    "POSTGRES_DB":       {"type": "str",   "secret": False, "readonly": True,  "category": "Database", "label": "DB Name"},
+    "SQLALCHEMY_DATABASE_URI": {"type": "str", "secret": False, "readonly": True, "category": "Database", "label": "DB URI"},
+    "AWS_ACCESS_KEY_ID": {"type": "str",   "secret": True,  "readonly": True,  "category": "Storage", "label": "AWS Access Key"},
+    "AWS_SECRET_ACCESS_KEY": {"type": "str", "secret": True, "readonly": True, "category": "Storage", "label": "AWS Secret Key"},
+    "S3_ENDPOINT_URL":   {"type": "str",   "secret": False, "readonly": True,  "category": "Storage", "label": "S3 Endpoint"},
+    "S3_BUCKET_NAME":    {"type": "str",   "secret": False, "readonly": True,  "category": "Storage", "label": "S3 Bucket"},
+    "LOCAL_DIRECTORY":   {"type": "str",   "secret": False, "readonly": True,  "category": "Storage", "label": "Local Directory"},
+    "OPENAI_API_KEY":    {"type": "str",   "secret": True,  "readonly": False, "category": "OpenAI", "label": "OpenAI API Key"},
+    "OPENAI_API_BASE":   {"type": "str",   "secret": False, "readonly": False, "category": "OpenAI", "label": "OpenAI API Base URL"},
+    "OPENAI_API_MODEL":  {"type": "str",   "secret": False, "readonly": False, "category": "OpenAI", "label": "OpenAI API Model"},
+    "OPENAI_NO_API_CHECK":{"type": "bool", "secret": False, "readonly": False, "category": "OpenAI", "label": "Skip OpenAI Check"},
+    "DISABLE_CELERY":    {"type": "bool",  "secret": False, "readonly": False, "category": "Celery", "label": "Disable Celery"},
+    "BACKEND_CORS_ORIGINS":{"type": "str", "secret": False, "readonly": True, "category": "General", "label": "CORS Origins"},
+}

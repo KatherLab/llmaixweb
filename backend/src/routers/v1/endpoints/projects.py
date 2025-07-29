@@ -26,7 +26,7 @@ from thefuzz import fuzz
 
 from .... import models, schemas
 from ....core.config import settings
-from ....core.security import get_current_user
+from ....core.security import get_current_user, get_admin_user
 from ....dependencies import (
     calculate_file_hash,
     get_db,
@@ -1142,7 +1142,7 @@ def delete_preprocessing_configuration(
 
 
 @router.post("/{project_id}/preprocess", response_model=schemas.PreprocessingTask)
-def preprocess_project_data(
+async def preprocess_project_data(
     *,
     project_id: int,
     preprocessing_task: schemas.PreprocessingTaskCreate,
@@ -1349,8 +1349,21 @@ def preprocess_project_data(
     if skipped_files > 0:
         task.message = f"Processing {len(file_tasks_to_process)} files. {skipped_files} files already processed and skipped."
 
+    bypass_celery = False
+
+    if await get_admin_user(current_user):
+        # Admins may set bypass_celery in the root or inline config
+        bypass_celery = getattr(preprocessing_task, "bypass_celery", False)
+        if preprocessing_task.inline_config:
+            inline_cfg = preprocessing_task.inline_config
+            if hasattr(inline_cfg, "bypass_celery"):
+                bypass_celery = getattr(inline_cfg, "bypass_celery", False)
+            elif isinstance(inline_cfg, dict):
+                bypass_celery = inline_cfg.get("bypass_celery", False)
+
     # Start processing
-    if preprocessing_task.bypass_celery:
+    if bypass_celery:
+        print("Bypassing Celery for preprocessing task")
         from ....utils.preprocessing import PreprocessingPipeline
 
         try:

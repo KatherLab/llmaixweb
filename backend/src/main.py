@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import platform
+import sys
 from contextlib import asynccontextmanager
 import multiprocessing as mp
 
@@ -15,54 +18,48 @@ from .routers.v1.endpoints import auth, projects, users, admin
 
 def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
     """
-    Start one Celery worker in a **separate OS process**.
-
-    queue        – name of the queue to listen on
-    concurrency  – number of child processes the worker should spawn
+    Start ONE Celery worker process listening on <queue> using Celery’s
+    default prefork pool (so logs go straight to your terminal).
     """
     argv = [
         "worker",
         "-Q", queue,
         "-c", str(concurrency),
-        "--max-tasks-per-child", "5",     # recycle workers to limit RAM growth
+        "--max-tasks-per-child", "5",
         "--loglevel", "info",
+        "-n", f"{queue}@%(hostname)s",    # unique node‑name → no warnings
     ]
-    process = mp.Process(
+
+    proc = mp.Process(
         target=celery_app.worker_main,
         args=(argv,),
-        daemon=True,                      # dies with the parent process
+        daemon=True,                      # dies with parent
         name=f"celery-{queue}-worker",
     )
-    process.start()
-    return process
+    proc.start()
+    return proc
 
 
+# ───────────────────────── FastAPI lifespan ──────────────────────
 @asynccontextmanager
 async def lifespan(app):
-    """
-    FastAPI lifespan context:
-        • initialise the DB
-        • launch two dedicated Celery worker **processes**
-    """
     init_db()
 
-    worker_processes: list[mp.Process] = []
-
+    workers: list[mp.Process] = []
     if celery_app is not None:
-        # general‑purpose tasks → 4 child processes
-        worker_processes.append(_spawn_celery_worker("default", 4))
+        # 1) general‑purpose tasks
+        workers.append(_spawn_celery_worker("default", concurrency=4))
 
-        # OCR / preprocessing tasks → 1 child process
-        worker_processes.append(_spawn_celery_worker("preprocess", 1))
+        # 2) heavy OCR / preprocessing tasks
+        workers.append(_spawn_celery_worker("preprocess", concurrency=1))
 
     try:
         yield
     finally:
-        # graceful shutdown
-        for p in worker_processes:
+        for p in workers:
             if p.is_alive():
                 p.terminate()
-                p.join(timeout=5)
+                p.join(5)
 
 
 

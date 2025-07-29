@@ -546,6 +546,18 @@
             </div>
           </div>
 
+          <div v-if="isAdmin" class="flex items-center gap-2 mb-4">
+            <input
+              id="bypass-celery"
+              type="checkbox"
+              v-model="bypassCelery"
+              class="accent-blue-600"
+            />
+            <label for="bypass-celery" class="text-sm text-gray-700">
+              Bypass Celery (run synchronously in backend, for debugging)
+            </label>
+          </div>
+
           <!-- Step 3: Vision Language Model (only in advanced mode) -->
           <div v-if="customSettings.mode === 'advanced'">
             <div class="flex items-center gap-3 mb-3">
@@ -835,6 +847,9 @@
         </div>
 
 
+
+
+
         <!-- File Selection -->
         <div class="mb-6">
           <div class="flex justify-between items-center mb-3">
@@ -899,6 +914,7 @@
 <script setup>
 import {computed, onMounted, onUnmounted, ref, watch} from 'vue';
 import {api} from '@/services/api';
+import {useAuthStore} from '@/stores/auth'
 import {useToast} from 'vue-toastification';
 import Multiselect from '@vueform/multiselect';
 
@@ -935,6 +951,9 @@ const configName = ref('');
 let pollInterval = null;
 const showAllCompleted = ref(false);
 const showApiSettings = ref(false);
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.isAdmin)
+const bypassCelery = ref(false);
 
 // New state for preprocessing modes
 const selectedMode = ref('quick');
@@ -1486,6 +1505,10 @@ const startPreprocessing = async () => {
           vlm_prompt: customSettings.value.vlm_prompt
         }
       };
+      if (isAdmin.value && bypassCelery.value) {
+        config.bypass_celery = true;
+      }
+
 
       if (saveAsConfig.value && configName.value) {
         const configResponse = await api.post(`/project/${props.projectId}/preprocessing-config`, config);
@@ -1665,6 +1688,7 @@ const resetForm = () => {
     vlm_base_url: '',
     vlm_prompt: 'Please perform OCR! Please extract the full text from the document and describe images and figures!'
   };
+  bypassCelery.value = false;
 };
 
 const applyConfiguration = (config) => {
