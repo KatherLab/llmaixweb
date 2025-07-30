@@ -364,35 +364,44 @@ class EvaluationEngine:
         field_mappings: Dict,
         document_data: Dict,
     ) -> Dict:
-        """Evaluate results in parallel with session isolation."""
-        detailed_metrics = []
-        doc_evaluations = []
+        """
+        Evaluate all TrialResult objects in parallel **without passing ORM
+        instances to worker threads**.  Each worker receives only primitive
+        data (document_id + prediction JSON) so no SQLAlchemy session is ever
+        touched outside the main thread.
+        """
+        detailed_metrics: List[Dict] = []
+        doc_evaluations: List[Dict] = []
 
-        # Use smaller thread pool to avoid overwhelming the database
+        # A modest pool avoids exhausting the Postgres connection pool
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = []
+
             for result in results:
+                # Build a plain‑Python payload
+                payload = {
+                    "document_id": result.document_id,
+                    "prediction": result.result,  # already a dict
+                }
                 future = executor.submit(
                     self._evaluate_document_isolated,
-                    result,
+                    payload,
                     gt_data,
                     field_mappings,
                     document_data,
                 )
                 futures.append((result.document_id, future))
 
+            # Collect results
             for doc_id, future in futures:
                 try:
                     doc_eval = future.result()
                     doc_evaluations.append(doc_eval)
                     detailed_metrics.extend(doc_eval["detailed_metrics"])
-                except Exception as e:
-                    print(f"Error evaluating document {doc_id}: {e}")
-                    # Add error document to results
+                except Exception as exc:  # noqa: BLE001
+                    print(f"[EvaluationEngine] error on doc {doc_id}: {exc}")
                     doc_evaluations.append(
-                        self._create_error_result(
-                            doc_id, f"Evaluation failed: {str(e)}"
-                        )
+                        self._create_error_result(doc_id, f"Evaluation failed: {exc}")
                     )
 
         return {
@@ -402,67 +411,73 @@ class EvaluationEngine:
 
     def _evaluate_document_isolated(
         self,
-        result: models.TrialResult,
+        result_payload: Dict,  # ← primitive payload (no ORM)
         gt_data: Dict,
         field_mappings: Dict,
         document_data: Dict,
     ) -> Dict:
-        """Evaluate a single document using pre-loaded data to avoid session issues."""
-        doc_id = result.document_id
+        """
+        Evaluate a single document.  All DB look‑ups were done up‑front and
+        delivered via `document_data`; this function is *database‑free* and thus
+        thread‑safe.
+        """
+        doc_id = result_payload["document_id"]
 
-        # Ensure doc_id is properly formatted
+        # Ensure numeric ID
         try:
-            doc_id = int(doc_id)
+            doc_id_int = int(doc_id)
         except (ValueError, TypeError):
             return self._create_error_result(doc_id, f"Invalid document ID: {doc_id}")
 
-        # Use pre-loaded document data
-        if doc_id not in document_data or not document_data[doc_id].get(
-            "exists", False
-        ):
+        # Check we have pre‑loaded metadata for this document
+        if not document_data.get(doc_id_int, {}).get("exists", False):
             return self._create_error_result(doc_id, "Document not found in database")
 
-        doc_info = document_data[doc_id]
+        doc_info = document_data[doc_id_int]
 
-        # Get ground truth for this document using filename from pre-loaded data
-        gt_key = self._find_document_key_by_data(doc_id, doc_info, gt_data)
+        # Locate ground‑truth record (by ID or filename, already lower‑cased)
+        gt_key = self._find_document_key_by_data(doc_id_int, doc_info, gt_data)
         if gt_key is None or gt_key not in gt_data:
             filename = doc_info.get("filename", "Unknown")
             return self._create_error_result(
                 doc_id,
-                f"No ground truth found for document {doc_id} (filename: {filename}). "
-                f"Available ground truth keys: {list(gt_data.keys())[:5]}...",
+                (
+                    f"No ground truth found for document {doc_id} "
+                    f"(filename: {filename}). "
+                    f"Available ground‑truth keys: {list(gt_data.keys())[:5]} ..."
+                ),
             )
 
         gt_values = gt_data[gt_key]
 
-        # Validate that we have trial results
-        if not result.result:
+        # Ensure prediction JSON exists
+        if not result_payload["prediction"]:
             return self._create_error_result(
                 doc_id, "No trial results found for document"
             )
 
-        pred_values = flatten_dict(result.result)
+        # Flatten prediction; use the same separator your schema expects
+        pred_values = flatten_dict(result_payload["prediction"], sep=".")
 
-        # Evaluate each field
-        detailed_metrics = []
+        # Evaluate field‑by‑field
+        detailed_metrics: List[Dict] = []
         correct_count = 0
         total_count = 0
-        missing_fields = []
-        incorrect_fields = []
+        missing_fields: List[str] = []
+        incorrect_fields: List[str] = []
 
         for schema_field, mapping in field_mappings.items():
             gt_field = mapping["gt_field"]
             if gt_field not in gt_values:
-                continue
+                continue  # this ground‑truth value is not present
 
             total_count += 1
-            gt_value = gt_values[gt_field]
-            pred_value = pred_values.get(schema_field)
+            gt_val = gt_values[gt_field]
+            pred_val = pred_values.get(schema_field)
 
             comparison = self._compare_values(
-                gt_value,
-                pred_value,
+                gt_val,
+                pred_val,
                 mapping["type"],
                 mapping["method"],
                 mapping["options"],
@@ -471,28 +486,25 @@ class EvaluationEngine:
             if comparison["is_correct"]:
                 correct_count += 1
             else:
-                if comparison["error_type"] == "missing":
-                    missing_fields.append(schema_field)
-                else:
-                    incorrect_fields.append(schema_field)
+                (
+                    missing_fields
+                    if comparison["error_type"] == "missing"
+                    else incorrect_fields
+                ).append(schema_field)
 
             detailed_metrics.append(
                 {
                     "document_id": doc_id,
                     "field_name": schema_field,
-                    "ground_truth_value": str(gt_value)
-                    if gt_value is not None
-                    else None,
-                    "predicted_value": str(pred_value)
-                    if pred_value is not None
-                    else None,
+                    "ground_truth_value": str(gt_val) if gt_val is not None else None,
+                    "predicted_value": str(pred_val) if pred_val is not None else None,
                     "is_correct": comparison["is_correct"],
                     "error_type": comparison["error_type"],
                     "confidence_score": comparison.get("confidence_score"),
                 }
             )
 
-        accuracy = correct_count / total_count if total_count > 0 else 0
+        accuracy = correct_count / total_count if total_count else 0.0
 
         return {
             "document_id": doc_id,
