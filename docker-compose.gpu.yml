@@ -13,6 +13,7 @@ services:
     ports: ["8000:8000"]
     volumes:
       - ./backend:/app/backend
+      - .env:/app/backend/.env
     deploy:                                   # ← GPU reservation
       resources:
         reservations:
@@ -27,7 +28,9 @@ services:
     command: >
       celery -A backend.src.celery.celery_config
       worker -Q default -c 4 --loglevel=info
-    volumes: [ ./backend:/app/backend ]
+    volumes:
+      - ./backend:/app/backend
+      - .env:/app/backend/.env
     deploy:
       resources:
         reservations:
@@ -42,7 +45,9 @@ services:
     command: >
       celery -A backend.src.celery.celery_config
       worker -Q preprocess -c 1 --loglevel=info
-    volumes: [ ./backend:/app/backend ]
+    volumes:
+      - ./backend:/app/backend
+      - .env:/app/backend/.env
     deploy:
       resources:
         reservations:

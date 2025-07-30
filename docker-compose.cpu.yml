@@ -13,6 +13,7 @@ services:
     ports: ["8000:8000"]
     volumes:
       - ./backend:/app/backend
+      - .env:/app/backend/.env
     depends_on: [postgres, redis, minio]
 
   worker_default:
@@ -21,7 +22,9 @@ services:
     command: >
       celery -A backend.src.celery.celery_config
       worker -Q default -c 4 --loglevel=info
-    volumes: [ ./backend:/app/backend ]
+    volumes:
+      - ./backend:/app/backend
+      - .env:/app/backend/.env
     depends_on: [redis]
 
   worker_preprocess:
@@ -30,7 +33,9 @@ services:
     command: >
       celery -A backend.src.celery.celery_config
       worker -Q preprocess -c 1 --loglevel=info
-    volumes: [ ./backend:/app/backend ]
+    volumes:
+      - ./backend:/app/backend
+      - .env:/app/backend/.env
     depends_on: [redis]
 
 # ─────────── Vue / Vite front‑end ───────────

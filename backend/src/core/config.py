@@ -68,6 +68,7 @@ class Settings(BaseSettings):
         case_sensitive=True,
         env_file=os.getenv("ENV_PATH", "backend/.env"),
         env_file_encoding="utf-8",
+        extra="ignore",  # Ignore extra fields not defined in the model
     )
 
     def __init__(self, **kwargs):
