@@ -4,6 +4,7 @@ database.db
 .idea
 .coverage
 .venv
+.env
 
 # frontend
 .DS_Store
