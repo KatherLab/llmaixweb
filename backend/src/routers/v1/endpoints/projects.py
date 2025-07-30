@@ -1349,17 +1349,21 @@ async def preprocess_project_data(
     if skipped_files > 0:
         task.message = f"Processing {len(file_tasks_to_process)} files. {skipped_files} files already processed and skipped."
 
-    bypass_celery = False
+    bypass_celery = getattr(preprocessing_task, "bypass_celery", False)
+    inline_cfg = getattr(preprocessing_task, "inline_config", None)
+    if inline_cfg:
+        if hasattr(inline_cfg, "bypass_celery"):
+            bypass_celery = getattr(inline_cfg, "bypass_celery", False)
+        elif isinstance(inline_cfg, dict):
+            bypass_celery = inline_cfg.get("bypass_celery", False)
 
-    if await get_admin_user(current_user):
-        # Admins may set bypass_celery in the root or inline config
-        bypass_celery = getattr(preprocessing_task, "bypass_celery", False)
-        if preprocessing_task.inline_config:
-            inline_cfg = preprocessing_task.inline_config
-            if hasattr(inline_cfg, "bypass_celery"):
-                bypass_celery = getattr(inline_cfg, "bypass_celery", False)
-            elif isinstance(inline_cfg, dict):
-                bypass_celery = inline_cfg.get("bypass_celery", False)
+    # 2. Only check admin if someone tried to set bypass_celery
+    if bypass_celery:
+        if not await get_admin_user(current_user):
+            # Not an admin, so do not allow bypass
+            bypass_celery = False
+            # Optionally, raise error instead:
+            raise HTTPException(403, "Only admins may set bypass_celery")
 
     # Start processing
     if bypass_celery:
