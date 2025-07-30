@@ -1452,19 +1452,18 @@ wheels = [
 ]
 
 [package.optional-dependencies]
-all = [
+docling = [
     { name = "docling" },
-    { name = "isort" },
     { name = "onnxruntime" },
-    { name = "paddleocr" },
-    { name = "paddlepaddle" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
     { name = "rapidocr" },
     { name = "rapidocr-onnxruntime" },
-    { name = "ruff" },
+]
+paddleocr = [
+    { name = "paddleocr" },
+    { name = "paddlepaddle" },
+]
+surya = [
     { name = "surya-ocr" },
-    { name = "ty" },
 ]
 
 [[package]]
@@ -1479,7 +1478,7 @@ dependencies = [
     { name = "celery-types" },
     { name = "fastapi", extra = ["standard"] },
     { name = "jsonschema" },
-    { name = "llmaix", extra = ["all"] },
+    { name = "llmaix", extra = ["docling", "paddleocr", "surya"] },
     { name = "openai" },
     { name = "pandas" },
     { name = "pandas-stubs" },
@@ -1511,7 +1510,7 @@ requires-dist = [
     { name = "celery-types", specifier = "==0.23.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.116.1" },
     { name = "jsonschema", specifier = "~=4.25.0" },
-    { name = "llmaix", extras = ["all"], specifier = "~=0.0.21" },
+    { name = "llmaix", extras = ["surya", "docling", "paddleocr"], specifier = "~=0.0.21" },
     { name = "openai", specifier = "~=1.97.1" },
     { name = "pandas", specifier = ">=2.3.1" },
     { name = "pandas-stubs", specifier = ">=2.3.0.250703" },
