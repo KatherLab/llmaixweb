@@ -26,7 +26,8 @@
     "jsonschema": "^1.5.0",
     "@vueform/multiselect": "^2.6.11",
     "marked": "^16.1.1",
-    "dompurify": "^3.2.6"
+    "dompurify": "^3.2.6",
+    "crypto-js": "^4.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",

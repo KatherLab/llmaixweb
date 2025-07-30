@@ -297,7 +297,7 @@
 
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
 import { debounce } from 'perfect-debounce';
@@ -489,6 +489,20 @@ const applyDateFilter = () => {
   }
 };
 
+async function sha256Hex(buffer) {
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle && typeof subtle.digest === 'function') {
+    const hashBuf = await subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(hashBuf))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  // Fallback: load crypto-js only when needed (npm install crypto-js)
+  const CryptoJS = (await import('crypto-js')).default;
+  const wordArray = CryptoJS.lib.WordArray.create(new Uint8Array(buffer));
+  return CryptoJS.SHA256(wordArray).toString(CryptoJS.enc.Hex);
+}
+
 // Enhanced file upload with duplicate detection
 const handleFileUpload = async (event) => {
   const selectedFiles = Array.from(event.target.files);
@@ -498,9 +512,7 @@ const handleFileUpload = async (event) => {
   const fileHashes = await Promise.all(
     selectedFiles.map(async (file) => {
       const buffer = await file.arrayBuffer();
-      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      const hashHex = await sha256Hex(buffer);
       return {
         filename: file.name,
         hash: hashHex,
