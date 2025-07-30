@@ -6,7 +6,7 @@
       style="backdrop-filter: blur(8px); background: rgba(30,30,40,0.27);"
       @click.self="$emit('close')"
     >
-      <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border p-6 flex flex-col">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 flex flex-col max-h-[80vh] overflow-auto">
         <div class="flex justify-between items-center mb-3">
           <h3 class="text-lg font-semibold text-gray-900">Trial Schema</h3>
           <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600">
@@ -29,15 +29,34 @@
   </Teleport>
 </template>
 <script setup>
+import { watch, onMounted, onBeforeUnmount } from 'vue';
 import { useToast } from 'vue-toastification';
+
 const props = defineProps({
   open: Boolean,
   schema: Object
 });
 const toast = useToast();
+
 function copyToClipboard() {
   if (!props.schema) return;
   navigator.clipboard.writeText(JSON.stringify(props.schema.schema_definition, null, 2));
   toast.success('Schema copied!');
 }
+
+// --- BODY SCROLL LOCK ---
+function lockBodyScroll() {
+  document.body.style.overflow = 'hidden';
+}
+function unlockBodyScroll() {
+  document.body.style.overflow = '';
+}
+watch(() => props.open, (open) => {
+  if (open) lockBodyScroll();
+  else unlockBodyScroll();
+});
+onMounted(() => {
+  if (props.open) lockBodyScroll();
+});
+onBeforeUnmount(unlockBodyScroll);
 </script>

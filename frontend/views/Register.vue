@@ -95,10 +95,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api } from '@/services/api'
 import { useToast } from 'vue-toastification'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
+const authStore = useAuthStore() // NEW: import and initialize
 
 const fullName = ref('')
 const email = ref('')
@@ -118,7 +120,7 @@ const allowRegister = computed(() =>
 onMounted(async () => {
   // Fetch require_invitation from backend
   try {
-    const res = await api.get('/settings')
+    const res = await api.get('/auth/settings')
     requireInvitation.value = !!res.data.require_invitation
   } catch (e) {
     requireInvitation.value = true // safest default
@@ -169,17 +171,20 @@ async function handleSubmit() {
 
     await api.post('/user', payload)
 
-    // Auto-login
+    // Auto-login (save token + fetch user, just like login page)
     const formData = new URLSearchParams()
     formData.append('username', email.value)
     formData.append('password', password.value)
 
-    await api.post('/login', formData, {
+    const loginResponse = await api.post('/auth/login', formData.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     })
 
+    await authStore.setToken(loginResponse.data.access_token)
+    await authStore.fetchUser()
+
     toast.success('Registration successful! Logging you in...')
-    router.push('/')
+    router.push(authStore.isAdmin ? '/' : '/')
   } catch (err) {
     error.value = err.response?.data?.detail || 'Registration failed. Please try again.'
     toast.error(error.value)

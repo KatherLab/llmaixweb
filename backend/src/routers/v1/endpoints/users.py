@@ -130,7 +130,7 @@ def create_user(
             # Still use a generic error
             raise HTTPException(
                 status_code=400,
-                detail="Unable to create account. Please check your input and try again.",
+                detail="Unable to create account. The user might already exist.",
             )
 
     # Create the user

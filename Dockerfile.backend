@@ -1,0 +1,36 @@
+###################  LLMAIx ‑ backend  ###################
+# CUDA‑enabled base image
+FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04
+
+# --- base env (split lines = no inline‑comment issues) ---
+ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
+
+# --- system deps ---
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        python3 python3-pip git curl build-essential \
+        tesseract-ocr-* \
+        ocrmypdf && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# --- install uv via official script ---
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Ensure uv is on PATH for this layer and all following ones
+ENV PATH="/root/.local/bin:${PATH}"
+
+# --- dependency install ---
+COPY pyproject.toml uv.lock* ./
+RUN uv sync                    # creates .venv and installs deps
+
+# Activate the virtual‑env for runtime
+ENV PATH="/app/.venv/bin:/root/.local/bin:${PATH}"
+
+# --- copy application code last for better caching ---
+COPY backend ./backend
+
+# --- default command (dev: autoreload) ---
+CMD ["uvicorn", "backend.src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

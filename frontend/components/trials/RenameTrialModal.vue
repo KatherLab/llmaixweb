@@ -6,7 +6,9 @@
       style="backdrop-filter: blur(8px); background: rgba(30,30,40,0.27);"
       @click.self="$emit('close')"
     >
-      <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full border p-6 flex flex-col">
+      <div
+        class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 flex flex-col max-h-[80vh] overflow-auto"
+      >
         <h3 class="text-lg font-semibold text-gray-900 mb-2">Rename Trial</h3>
         <label class="block text-xs font-semibold text-gray-700 mb-1">Name</label>
         <input v-model="name" maxlength="100" class="w-full border border-gray-300 rounded px-2 py-1 mb-3" />
@@ -20,20 +22,42 @@
     </div>
   </Teleport>
 </template>
+
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
+
 const props = defineProps({
   open: Boolean,
   trial: Object,
 });
 const emit = defineEmits(['close', 'rename']);
+
 const name = ref('');
 const description = ref('');
+
 watch(() => props.trial, (t) => {
   name.value = t?.name || `Trial #${t?.id}` || '';
   description.value = t?.description || '';
 }, { immediate: true });
+
 function submit() {
   emit('rename', { id: props.trial.id, name: name.value.trim(), description: description.value.trim() });
 }
+
+// --- BODY SCROLL LOCK ---
+function lockBodyScroll() {
+  document.body.style.overflow = 'hidden';
+}
+function unlockBodyScroll() {
+  document.body.style.overflow = '';
+}
+watch(() => props.open, (open) => {
+  if (open) lockBodyScroll();
+  else unlockBodyScroll();
+});
+// In case of component unmount while modal is open
+onBeforeUnmount(unlockBodyScroll);
+onMounted(() => {
+  if (props.open) lockBodyScroll();
+});
 </script>

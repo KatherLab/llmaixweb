@@ -45,8 +45,10 @@ def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
 async def lifespan(app):
     init_db()
 
+
+
     workers: list[mp.Process] = []
-    if celery_app is not None:
+    if celery_app is not None and settings.INITIALIZE_CELERY:
         # 1) general‑purpose tasks
         workers.append(_spawn_celery_worker("default", concurrency=4))
 

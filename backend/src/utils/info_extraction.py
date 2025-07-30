@@ -297,10 +297,15 @@ def extract_info(
 
             result = json.loads(response.choices[0].message.content)
 
+            reasoning_content = None
+            if hasattr(response.choices[0].message, "reasoning_content"):
+                reasoning_content = response.choices[0].message.reasoning_content
+
             trial_result = models.TrialResult(
                 trial_id=trial_id,
                 document_id=document.id,
                 result=result,
+                additional_content={"reasoning": reasoning_content} if reasoning_content else {},
             )
             db_session.add(trial_result)
             db_session.commit()

@@ -541,6 +541,9 @@ class TrialResult(Base):
     trial_id: Mapped[int] = mapped_column(ForeignKey("trials.id"), nullable=False)
     document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), nullable=False)
     result: Mapped[dict] = mapped_column(JSON, nullable=False)
+    additional_content: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=True
+    )
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

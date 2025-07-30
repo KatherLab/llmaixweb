@@ -8,7 +8,7 @@
       >
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
         <div
-          class="relative bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col border overflow-hidden ring-1 ring-blue-100"
+          class="relative bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col overflow-hidden ring-1 ring-blue-100"
           @click.stop
         >
           <div class="px-8 py-6 border-b flex justify-between items-center rounded-t-3xl bg-white">

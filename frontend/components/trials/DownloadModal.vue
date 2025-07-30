@@ -6,7 +6,7 @@
       style="backdrop-filter: blur(8px); background: rgba(30,30,40,0.27);"
       @click.self="$emit('close')"
     >
-      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full border p-6 flex flex-col">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 flex flex-col max-h-[80vh] overflow-auto">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Download Trial Results</h3>
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-1">Format</label>
@@ -47,7 +47,7 @@
   </Teleport>
 </template>
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
 
@@ -67,8 +67,23 @@ watch(() => props.open, (open) => {
   if (open) {
     format.value = 'json';
     includeContent.value = true;
+    lockBodyScroll();
+  } else {
+    unlockBodyScroll();
   }
 });
+
+// --- BODY SCROLL LOCK ---
+function lockBodyScroll() {
+  document.body.style.overflow = 'hidden';
+}
+function unlockBodyScroll() {
+  document.body.style.overflow = '';
+}
+onMounted(() => {
+  if (props.open) lockBodyScroll();
+});
+onBeforeUnmount(unlockBodyScroll);
 
 async function download() {
   if (isDownloading.value) return;

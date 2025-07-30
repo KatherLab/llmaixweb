@@ -1,151 +1,154 @@
 <template>
-  <div class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50" @click="$emit('close')">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-[95vw] max-h-[95vh] flex flex-col" @click.stop>
-      <!-- Header -->
-      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <div>
-          <h3 class="text-lg font-medium text-gray-900">Evaluation Analysis</h3>
-          <p v-if="evaluation" class="text-sm text-gray-500">Trial #{{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}</p>
-        </div>
-        <button @click="$emit('close')" class="text-gray-400 hover:text-gray-500">
-          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Tab Navigation -->
-      <div class="px-6 py-3 border-b border-gray-200 bg-gray-50">
-        <nav class="flex space-x-8">
-          <button
-            v-for="tab in availableTabs"
-            :key="tab.id"
-            @click="activeTab = tab.id"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200"
-            :class="{
-              'border-blue-500 text-blue-600': activeTab === tab.id,
-              'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== tab.id
-            }"
-          >
-            <div class="flex items-center gap-2">
-              <span class="text-lg">{{ tab.icon }}</span>
-              {{ tab.name }}
-              <span v-if="tab.badge" class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
-                {{ tab.badge }}
-              </span>
-            </div>
+  <teleport to="body">
+    <div
+      class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      @click.self="$emit('close')"
+    >
+      <div class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-all"></div>
+      <div
+        class="relative bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden"
+        @click.stop
+      >
+        <!-- Header -->
+        <div class="px-8 py-6 border-b flex justify-between items-center rounded-t-3xl bg-white/90">
+          <div>
+            <h3 class="text-2xl font-bold text-gray-900">Evaluation Analysis</h3>
+            <p v-if="evaluation" class="text-sm text-gray-500">
+              Trial #{{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}
+            </p>
+          </div>
+          <button @click="$emit('close')" class="text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Close">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
           </button>
-        </nav>
-      </div>
+        </div>
 
-      <!-- Error Display -->
-      <div v-if="error" class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-        <div class="flex items-start">
-          <span class="text-red-400 text-lg mr-3">⚠️</span>
-          <div class="flex-1">
-            <h4 class="text-sm font-medium text-red-800">Loading Error</h4>
-            <p class="mt-1 text-sm text-red-700">{{ error }}</p>
-            <div class="mt-3 flex gap-2">
-              <button
-                @click="retryLoad"
-                class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
-                :disabled="isRetrying"
-              >
-                {{ isRetrying ? 'Retrying...' : 'Retry' }}
-              </button>
-              <button @click="clearError" class="text-sm text-red-600 hover:text-red-800">
-                Dismiss
-              </button>
+        <!-- Tab Navigation -->
+        <div class="px-8 py-3 border-b bg-gradient-to-r from-blue-50/70 to-white/80">
+          <nav class="flex space-x-8">
+            <button
+              v-for="tab in availableTabs"
+              :key="tab.id"
+              @click="activeTab = tab.id"
+              class="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200"
+              :class="{
+                'border-blue-500 text-blue-700': activeTab === tab.id,
+                'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== tab.id
+              }"
+            >
+              <span class="flex items-center gap-2">
+                <span class="text-lg">{{ tab.icon }}</span>
+                {{ tab.name }}
+                <span v-if="tab.badge" class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs ml-1">
+                  {{ tab.badge }}
+                </span>
+              </span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Error Display -->
+        <div v-if="error" class="mx-8 mt-5 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div class="flex items-start">
+            <span class="text-red-400 text-lg mr-3">⚠️</span>
+            <div class="flex-1">
+              <h4 class="text-sm font-semibold text-red-800">Loading Error</h4>
+              <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+              <div class="mt-3 flex gap-2">
+                <button
+                  @click="retryLoad"
+                  class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
+                  :disabled="isRetrying"
+                >
+                  {{ isRetrying ? 'Retrying...' : 'Retry' }}
+                </button>
+                <button @click="clearError" class="text-sm text-red-600 hover:text-red-800">
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Tab Content -->
-      <div class="flex-1 overflow-y-auto">
-        <!-- Loading State -->
-        <div v-if="isLoading" class="text-center py-12">
-          <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-          <p class="mt-2 text-gray-500">Loading evaluation details...</p>
+        <!-- Tab Content -->
+        <div class="flex-1 overflow-y-auto bg-white/60">
+          <div v-if="isLoading" class="text-center py-16">
+            <span class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-3"></span>
+            <span class="text-gray-500">Loading evaluation details...</span>
+          </div>
+
+          <div v-else-if="activeTab === 'overview' && evaluationDetail" class="p-8">
+            <EvaluationOverview
+              :evaluation-detail="evaluationDetail"
+              :document-stats="documentStats"
+              @view-field-errors="viewFieldErrors"
+              @view-document-details="switchToDocumentsTab"
+            />
+          </div>
+
+          <div v-else-if="activeTab === 'documents'" class="p-8">
+            <DocumentAnalysis
+              :project-id="projectId"
+              :evaluation="evaluation"
+              :document-evaluations="documentEvaluations"
+              :document-contents="documentContents"
+              :document-names="documentNames"
+              :loading-documents="loadingDocuments"
+              @load-document-content="loadDocumentContent"
+              @view-document-details="viewIndividualDocument"
+            />
+          </div>
+
+          <div v-else-if="activeTab === 'field-errors'" class="p-8">
+            <FieldErrorAnalysis
+              :project-id="projectId"
+              :evaluation="evaluation"
+              :field-errors="fieldErrors"
+              :selected-field="selectedFieldName"
+              @select-field="selectFieldForErrors"
+            />
+          </div>
+
+          <div v-else-if="activeTab === 'document-detail' && selectedDocument" class="p-8">
+            <IndividualDocumentView
+              :project-id="projectId"
+              :evaluation="evaluation"
+              :document="selectedDocument"
+              :document-content="documentContents[selectedDocument?.document_id]"
+              :loading-content="loadingDocuments[selectedDocument?.document_id]"
+              @load-content="loadDocumentContent"
+              @back-to-documents="switchToDocumentsTab"
+            />
+          </div>
+
+          <div v-else class="text-center py-16 text-gray-500">
+            <span class="text-4xl text-gray-300 mb-2 block">📊</span>
+            <p>No data available for this view</p>
+          </div>
         </div>
 
-        <!-- Overview Tab -->
-        <div v-else-if="activeTab === 'overview' && evaluationDetail" class="p-6">
-          <EvaluationOverview
-            :evaluation-detail="evaluationDetail"
-            :document-stats="documentStats"
-            @view-field-errors="viewFieldErrors"
-            @view-document-details="switchToDocumentsTab"
-          />
-        </div>
-
-        <!-- Documents Tab -->
-        <div v-else-if="activeTab === 'documents'" class="p-6">
-          <DocumentAnalysis
-            :project-id="projectId"
-            :evaluation="evaluation"
-            :document-evaluations="documentEvaluations"
-            :document-contents="documentContents"
-            :document-names="documentNames"
-            :loading-documents="loadingDocuments"
-            @load-document-content="loadDocumentContent"
-            @view-document-details="viewIndividualDocument"
-          />
-        </div>
-
-        <!-- Field Errors Tab -->
-        <div v-else-if="activeTab === 'field-errors'" class="p-6">
-          <FieldErrorAnalysis
-            :project-id="projectId"
-            :evaluation="evaluation"
-            :field-errors="fieldErrors"
-            :selected-field="selectedFieldName"
-            @select-field="selectFieldForErrors"
-          />
-        </div>
-
-        <!-- Individual Document Tab -->
-        <div v-else-if="activeTab === 'document-detail' && selectedDocument" class="p-6">
-          <IndividualDocumentView
-            :project-id="projectId"
-            :evaluation="evaluation"
-            :document="selectedDocument"
-            :document-content="documentContents[selectedDocument?.document_id]"
-            :loading-content="loadingDocuments[selectedDocument?.document_id]"
-            @load-content="loadDocumentContent"
-            @back-to-documents="switchToDocumentsTab"
-          />
-        </div>
-
-        <!-- Fallback for no data -->
-        <div v-else class="text-center py-12 text-gray-500">
-          <span class="text-4xl text-gray-400 mb-2 block">📊</span>
-          <p>No data available for this view</p>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-        <div class="text-sm text-gray-500">
-          {{ evaluationDetail?.document_count || 0 }} documents •
-          {{ evaluationDetail ? (evaluationDetail.metrics.accuracy * 100).toFixed(1) : '0.0' }}% accuracy
-        </div>
-
-        <div class="flex gap-3">
+        <!-- Footer -->
+        <div class="px-8 py-6 border-t flex justify-between items-center bg-white/90 rounded-b-3xl">
+          <div class="text-sm text-gray-500">
+            {{ evaluationDetail?.document_count || 0 }} documents •
+            {{ evaluationDetail ? (evaluationDetail.metrics.accuracy * 100).toFixed(1) : '0.0' }}% accuracy
+          </div>
           <button
             @click="$emit('close')"
-            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+            class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow"
           >
             Close
           </button>
         </div>
       </div>
     </div>
-  </div>
+  </teleport>
 </template>
 
+
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { api } from '@/services/api';
 import { formatDate } from '@/utils/formatters';
 import { useToast } from 'vue-toastification';
@@ -408,6 +411,9 @@ const viewIndividualDocument = async (documentId) => {
     }
   }
 };
+
+watch(() => true, () => { document.body.style.overflow = 'hidden'; }, { immediate: true });
+onUnmounted(() => { document.body.style.overflow = ''; });
 
 onMounted(() => {
   fetchAllData();

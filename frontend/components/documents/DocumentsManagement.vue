@@ -58,7 +58,7 @@
     <!-- Tab Content -->
     <div v-if="activeTab === 'documents'">
       <!-- Filters and Search -->
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <!-- Search -->
           <div class="md:col-span-2">
@@ -168,7 +168,7 @@
       </div>
 
       <!-- View Toggle and Actions -->
-      <div class="flex justify-between items-center">
+      <div class="flex justify-between items-center mb-4">
         <div class="flex items-center space-x-2">
           <button
             @click="viewMode = 'grid'"

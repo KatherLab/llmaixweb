@@ -1,0 +1,113 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend          # CUDA image
+    image: llmaix-backend:gpu
+    env_file: .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DISABLE_CELERY=false
+      - INITIALIZE_CELERY=false
+      - REQUIRE_INVITATION=false
+    ports: ["8000:8000"]
+    volumes:
+      - ./backend:/app/backend
+    deploy:                                   # ← GPU reservation
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    depends_on: [postgres, redis, minio]
+
+  worker_default:
+    image: llmaix-backend:gpu
+    env_file: .env
+    command: >
+      celery -A backend.src.celery.celery_config
+      worker -Q default -c 4 --loglevel=info
+    volumes: [ ./backend:/app/backend ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    depends_on: [redis]
+
+  worker_preprocess:
+    image: llmaix-backend:gpu
+    env_file: .env
+    command: >
+      celery -A backend.src.celery.celery_config
+      worker -Q preprocess -c 1 --loglevel=info
+    volumes: [ ./backend:/app/backend ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    depends_on: [redis]
+
+# ─────────── Vue / Vite front‑end ───────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: llmaix-frontend:latest
+    env_file: .env
+    ports: ["5173:80"]            # http://localhost:5173
+    depends_on: [backend]
+
+  # ─────────── PostgreSQL ───────────
+  postgres:
+    image: postgres:16-alpine
+    env_file: .env                # supplies user/pass/db
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # ─────────── Redis (Celery broker) ───────────
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes:
+      - redis-data:/data
+
+  # ─────────── MinIO (S3‑compatible) ───────────
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    env_file: .env
+    ports:
+      - "9000:9000"     # S3 API
+      - "9001:9001"     # Web console
+    volumes:
+      - minio-data:/data
+  # ─────────── one‑shot bucket creator ───────────
+  minio-init:
+    image: minio/mc            # MinIO CLI
+    depends_on: [ minio ]
+    env_file: .env             # <- brings in MINIO_* and S3_BUCKET_NAME
+    entrypoint: >
+      /bin/sh -c "
+        # wait until MinIO is reachable
+        until mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; do
+          sleep 3;
+        done;
+        # create bucket if it doesn’t already exist
+        mc mb -p local/${S3_BUCKET_NAME} || true;
+        # (optional) make it publicly readable
+        mc policy set download local/${S3_BUCKET_NAME};
+        echo '✅  Bucket '${S3_BUCKET_NAME}' ready';
+      "
+    restart: "no"
+
+
+
+volumes:
+  pgdata:
+  redis-data:
+  minio-data:

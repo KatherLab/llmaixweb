@@ -74,7 +74,7 @@ async def get_current_user(
     except PyJWTError:
         raise credentials_exception
 
-    user = db.execute(select(User).where(User.id == user_id)).scalars().one()
+    user = db.execute(select(User).where(User.id == int(user_id))).scalars().one()
     if user is None:
         raise credentials_exception
     return user

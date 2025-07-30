@@ -1,383 +1,193 @@
 <template>
-  <div
-    v-if="isModal"
-    class="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 z-50"
-    @click="$emit('close')"
-  >
-    <div
-      class="bg-white rounded-lg shadow-2xl max-w-8xl w-full max-h-[95vh] flex flex-col"
-      @click.stop
-    >
-      <div class="px-6 py-4 border-b flex justify-between items-center bg-gradient-to-r from-blue-50 to-white">
-        <h3 class="text-xl font-semibold text-gray-800">Trial Results</h3>
-        <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700 transition-colors duration-200">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <div class="overflow-y-auto flex-1 p-6">
-        <div v-if="isLoading" class="text-center py-12">
-          <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-          <p class="mt-2 text-gray-500">Loading trial results...</p>
-        </div>
-
-        <div v-else-if="error" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-r-md">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clip-rule="evenodd" />
+  <teleport to="body">
+    <transition name="fade">
+      <div
+        v-if="isModal"
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+        @click="handleBackdropClick"
+      >
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div
+          class="relative bg-white rounded-3xl shadow-2xl max-w-8xl w-full max-h-[95vh] flex flex-col ring-1 ring-blue-100 overflow-hidden"
+          @click.stop
+        >
+          <div class="flex items-center justify-between gap-4 px-8 py-6 border-b rounded-t-3xl bg-white/90">
+            <h3 class="text-2xl font-bold tracking-tight text-gray-800">Trial Results</h3>
+            <button
+              @click="$emit('close')"
+              class="text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-full p-2 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Close"
+              autofocus
+            >
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
-            </div>
-            <div class="ml-3">
-              <p class="text-sm text-red-700">{{ error }}</p>
-            </div>
+            </button>
           </div>
-        </div>
-
-        <template v-else-if="trial">
-          <!-- Trial information -->
-          <div class="bg-white shadow-sm rounded-lg p-5 mb-6 border border-gray-100">
-            <div class="flex flex-col md:flex-row md:justify-between">
-              <div>
-                <h2 class="text-lg font-medium text-gray-800">Trial #{{ trial.id }}</h2>
-                <div class="text-sm text-gray-500 mt-2">
-                  <div class="mb-1">Started: {{ formatDate(trial.created_at, true) }}</div>
-                  <div class="mb-1">Status:
-                    <span class="px-2 py-1 rounded-full text-xs font-medium"
-                      :class="{
-                        'bg-green-100 text-green-800': trial.status === 'completed',
-                        'bg-blue-100 text-blue-800': trial.status === 'processing',
-                        'bg-yellow-100 text-yellow-800': trial.status === 'pending',
-                        'bg-red-100 text-red-800': trial.status === 'failed'
-                      }">{{ trial.status }}</span>
-                  </div>
-                  <div>Model: <span class="font-medium text-gray-700">{{ trial.llm_model }}</span></div>
-                </div>
-              </div>
-              <div class="mt-4 md:mt-0">
-                <div class="text-sm bg-blue-50 px-4 py-2 rounded-lg">
-                  <div class="font-medium text-blue-800">{{ trial.results?.length || 0 }} documents processed</div>
-                </div>
-              </div>
+          <div class="flex-1 overflow-y-auto p-8 bg-white/70">
+            <div v-if="isLoading" class="flex flex-col items-center justify-center py-16">
+              <span class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-3"></span>
+              <span class="mt-2 text-gray-500">Loading trial results…</span>
             </div>
-          </div>
-
-          <!-- No results message -->
-          <div v-if="!trial.results || trial.results.length === 0" class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p class="text-gray-500 mt-3">No results available for this trial.</p>
-            <p v-if="trial.status === 'processing' || trial.status === 'pending'" class="text-sm mt-2 text-gray-400">
-              Please wait for the trial to complete.
-            </p>
-          </div>
-
-          <!-- Accordion-style results -->
-          <div v-else class="grid grid-cols-1 gap-4">
-            <div v-for="(result, index) in trial.results" :key="index"
-                 class="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-100 hover:shadow-md transition-shadow duration-200">
-              <div
-                @click="toggleResultExpansion(index)"
-                class="p-4 cursor-pointer border-b flex justify-between items-center hover:bg-gray-50 transition-colors duration-150"
-              >
-                <div class="flex flex-col">
-                  <div class="flex items-center mb-1">
-                    <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center mr-2 text-sm font-bold">
-                      {{ index + 1 }}
-                    </span>
-                    <h3 class="font-medium text-gray-800">Document #{{ index + 1 }}</h3>
-                  </div>
-                  <p class="text-sm text-gray-500 ml-9 line-clamp-1">
-                    {{ documentNames[index] || 'Loading document name...' }}
-                  </p>
-                </div>
-                <svg
-                  class="w-5 h-5 transition-transform duration-200 text-gray-500"
-                  :class="{ 'transform rotate-180': expandedResults[index] }"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-              </div>
-
-              <div v-if="expandedResults[index]" class="p-5">
-                <div
-                  class="flex gap-5"
-                  :class="viewMode[index] === 'vertical' ? 'flex-col' : 'flex-col lg:flex-row'"
-                >
-                  <!-- Document content panel -->
-                  <div class="bg-gray-50 p-5 rounded-md overflow-auto flex-1 max-h-[500px] border border-gray-200">
-                    <h4 class="text-sm font-medium mb-3 text-gray-700 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Document Content
-                    </h4>
-                    <div v-if="isMarkdown(documentContents[index])" class="markdown-content" v-html="renderMarkdown(documentContents[index])"></div>
-                    <pre v-else class="text-xs text-gray-800 whitespace-pre-wrap">{{ documentContents[index] }}</pre>
-                  </div>
-
-                  <!-- Extracted data panel -->
-                  <div class="bg-gray-50 p-5 rounded-md overflow-auto flex-1 max-h-[500px] border border-gray-200">
-                    <h4 class="text-sm font-medium mb-3 text-gray-700 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      Extracted Information
-                    </h4>
-                    <JsonViewer :data="result.result" />
-                  </div>
-
-                  <!-- Original document panel -->
-                  <div v-if="showDocumentPanel[index]" class="bg-gray-50 p-5 rounded-md overflow-auto flex-1 max-h-[500px] border border-gray-200">
-                    <h4 class="text-sm font-medium mb-3 text-gray-700 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                      </svg>
-                      Original Document
-                    </h4>
-                    <iframe v-if="documentPdfUrls[index]" :src="documentPdfUrls[index]" frameborder="0" width="100%" height="400px" class="rounded-md"></iframe>
-                    <div v-else-if="documentPdfLoading[index]" class="text-center py-12">
-                      <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-                      <p class="mt-2 text-gray-500">Loading PDF...</p>
+            <div v-else-if="error" class="bg-red-50 border-l-4 border-red-400 p-5 mb-5 rounded-lg flex items-start gap-2">
+              <svg class="h-6 w-6 mt-1 text-red-400" fill="none" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.7 7.3a1 1 0 00-1.4 1.4L8.6 10l-1.3 1.3a1 1 0 101.4 1.4L10 11.4l1.3 1.3a1 1 0 001.4-1.4L11.4 10l1.3-1.3a1 1 0 00-1.4-1.4L10 8.6 8.7 7.3z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-sm text-red-700">{{ error }}</span>
+            </div>
+            <template v-else-if="trial">
+              <div class="bg-gradient-to-br from-white via-blue-50 to-white shadow-inner rounded-xl p-6 mb-7 border border-gray-100">
+                <div class="flex flex-col md:flex-row md:justify-between gap-4">
+                  <div>
+                    <h2 class="text-lg font-medium text-gray-800">Trial #{{ trial.id }}</h2>
+                    <div class="text-sm text-gray-500 mt-2 flex flex-col gap-1">
+                      <span>Started: {{ formatDate(trial.created_at, true) }}</span>
+                      <span>Status:
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold shadow-sm"
+                          :class="{
+                            'bg-green-100 text-green-700': trial.status === 'completed',
+                            'bg-blue-100 text-blue-700': trial.status === 'processing',
+                            'bg-yellow-100 text-yellow-700': trial.status === 'pending',
+                            'bg-red-100 text-red-700': trial.status === 'failed'
+                          }"
+                        >{{ trial.status }}</span>
+                      </span>
+                      <span>Model: <span class="font-semibold text-gray-700">{{ trial.llm_model }}</span></span>
                     </div>
-                    <p v-else class="text-gray-500">Failed to load PDF</p>
+                  </div>
+                  <div class="flex items-center md:items-end">
+                    <span class="text-sm bg-blue-50 px-4 py-2 rounded-lg font-medium text-blue-800 shadow-sm">
+                      {{ trial.results?.length || 0 }} documents processed
+                    </span>
                   </div>
                 </div>
-
-                <div class="mt-5 flex justify-end gap-3">
-                  <button
-                    @click="toggleViewMode(index)"
-                    class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-md text-sm flex items-center transition-colors duration-150"
+              </div>
+              <div v-if="!trial.results || trial.results.length === 0" class="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-lg border border-gray-200">
+                <svg class="h-14 w-14 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="text-gray-500 mt-3">No results available for this trial.</span>
+                <span v-if="trial.status === 'processing' || trial.status === 'pending'" class="text-sm mt-2 text-gray-400">Please wait for the trial to complete.</span>
+              </div>
+              <div v-else class="grid grid-cols-1 gap-5">
+                <div
+                  v-for="(result, index) in trial.results"
+                  :key="index"
+                  class="bg-white shadow border border-gray-100 rounded-xl transition-shadow hover:shadow-lg"
+                >
+                  <div
+                    @click="toggleResultExpansion(index)"
+                    class="cursor-pointer flex items-center justify-between px-6 py-4 border-b hover:bg-gray-50/70 transition-colors rounded-t-xl select-none"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                    <div class="flex flex-col gap-0.5">
+                      <div class="flex items-center">
+                        <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-3 text-base font-bold">{{ index + 1 }}</span>
+                        <span class="font-medium text-gray-800">Document #{{ index + 1 }}</span>
+                      </div>
+                      <span class="text-xs text-gray-500 ml-10 truncate max-w-xs">
+                        {{ documentNames[index] || 'Loading document name...' }}
+                      </span>
+                    </div>
+                    <svg
+                      class="w-5 h-5 text-gray-400 transition-transform duration-200"
+                      :class="{ 'rotate-180': expandedResults[index] }"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
                     </svg>
-                    {{ viewMode[index] === 'vertical' ? 'Side by Side View' : 'Vertical View' }}
-                  </button>
-                  <button
-                    @click="toggleDocumentPanel(index)"
-                    class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md text-sm flex items-center transition-colors duration-150"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" v-if="showDocumentPanel[index]" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" v-else d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" v-else d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    {{ showDocumentPanel[index] ? 'Hide Original Document' : 'View Original Document' }}
-                  </button>
+                  </div>
+                  <div v-if="expandedResults[index]" class="p-6 bg-gradient-to-b from-white to-blue-50/20">
+                    <div
+                      class="flex gap-6"
+                      :class="viewMode[index] === 'vertical' ? 'flex-col' : 'flex-col md:flex-row'"
+                    >
+                      <div class="bg-gray-50 p-5 rounded-xl overflow-auto flex-1 max-h-[480px] border border-gray-100">
+                        <h4 class="text-sm font-semibold mb-3 text-gray-700 flex items-center gap-1.5">
+                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Document Content
+                        </h4>
+                        <div v-if="isMarkdown(documentContents[index])" class="markdown-content" v-html="renderMarkdown(documentContents[index])"></div>
+                        <pre v-else class="text-xs text-gray-800 whitespace-pre-wrap">{{ documentContents[index] }}</pre>
+                      </div>
+                      <div class="bg-gray-50 p-5 rounded-xl overflow-auto flex-1 max-h-[480px] border border-gray-100">
+                        <h4 class="text-sm font-semibold mb-3 text-gray-700 flex items-center gap-1.5">
+                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                          Extracted Information
+                        </h4>
+                        <JsonViewer :data="result.result" />
+                      </div>
+                      <div v-if="showDocumentPanel[index]" class="bg-gray-50 p-5 rounded-xl overflow-auto flex-1 max-h-[480px] border border-gray-100">
+                        <h4 class="text-sm font-semibold mb-3 text-gray-700 flex items-center gap-1.5">
+                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                          </svg>
+                          Original Document
+                        </h4>
+                        <iframe v-if="documentPdfUrls[index]" :src="documentPdfUrls[index]" frameborder="0" width="100%" height="400px" class="rounded-md"></iframe>
+                        <div v-else-if="documentPdfLoading[index]" class="text-center py-10">
+                          <span class="inline-block animate-spin h-8 w-8 border-4 border-blue-400 border-t-transparent rounded-full"></span>
+                          <span class="mt-2 text-gray-500 block">Loading PDF…</span>
+                        </div>
+                        <span v-else class="text-gray-500">Failed to load PDF</span>
+                      </div>
+                    </div>
+                    <div class="mt-6 flex flex-wrap gap-3 justify-end">
+                      <button
+                        @click="toggleViewMode(index)"
+                        class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
+                      >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                        {{ viewMode[index] === 'vertical' ? 'Side by Side View' : 'Vertical View' }}
+                      </button>
+                      <button
+                        @click="toggleDocumentPanel(index)"
+                        class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
+                      >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            v-if="showDocumentPanel[index]"
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            v-else
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            v-else
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        {{ showDocumentPanel[index] ? 'Hide Original Document' : 'View Original Document' }}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </template>
-
-        <div v-else class="text-center py-12">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p class="text-gray-500 mt-3">Trial not found</p>
-          <button @click="$emit('close')" class="mt-4 inline-block px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors duration-150">
-            Return to trials
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div v-else class="trial-results container mx-auto px-4 py-6">
-    <div class="mb-6 flex items-center">
-      <button @click="goBack" class="mr-4 text-gray-500 hover:text-gray-700 transition-colors duration-150">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd"
-            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-            clip-rule="evenodd" />
-        </svg>
-      </button>
-      <h1 class="text-2xl font-bold text-gray-800">Trial Results</h1>
-    </div>
-
-    <div v-if="isLoading" class="text-center py-12">
-      <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-      <p class="mt-2 text-gray-500">Loading trial results...</p>
-    </div>
-
-    <div v-else-if="error" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-r-md">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clip-rule="evenodd" />
-          </svg>
-        </div>
-        <div class="ml-3">
-          <p class="text-sm text-red-700">{{ error }}</p>
-        </div>
-      </div>
-    </div>
-
-    <template v-else-if="trial">
-      <!-- Trial information -->
-      <div class="bg-white shadow-sm rounded-lg p-5 mb-6 border border-gray-100">
-        <div class="flex flex-col md:flex-row md:justify-between">
-          <div>
-            <h2 class="text-lg font-medium text-gray-800">Trial #{{ trial.id }}</h2>
-            <div class="text-sm text-gray-500 mt-2">
-              <div class="mb-1">Started: {{ formatDate(trial.created_at, true) }}</div>
-              <div class="mb-1">Status:
-                <span class="px-2 py-1 rounded-full text-xs font-medium"
-                  :class="{
-                    'bg-green-100 text-green-800': trial.status === 'completed',
-                    'bg-blue-100 text-blue-800': trial.status === 'processing',
-                    'bg-yellow-100 text-yellow-800': trial.status === 'pending',
-                    'bg-red-100 text-red-800': trial.status === 'failed'
-                  }">{{ trial.status }}</span>
-              </div>
-              <div>Model: <span class="font-medium text-gray-700">{{ trial.llm_model }}</span></div>
-            </div>
-          </div>
-          <div class="mt-4 md:mt-0">
-            <div class="text-sm bg-blue-50 px-4 py-2 rounded-lg">
-              <div class="font-medium text-blue-800">{{ trial.results?.length || 0 }} documents processed</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- No results message -->
-      <div v-if="!trial.results || trial.results.length === 0" class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <p class="text-gray-500 mt-3">No results available for this trial.</p>
-        <p v-if="trial.status === 'processing' || trial.status === 'pending'" class="text-sm mt-2 text-gray-400">
-          Please wait for the trial to complete.
-        </p>
-      </div>
-
-      <!-- Accordion-style results -->
-      <div v-else class="grid grid-cols-1 gap-4">
-        <div v-for="(result, index) in trial.results" :key="index"
-            class="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-100 hover:shadow-md transition-shadow duration-200">
-          <div
-            @click="toggleResultExpansion(index)"
-            class="p-4 cursor-pointer border-b flex justify-between items-center hover:bg-gray-50 transition-colors duration-150"
-          >
-            <div class="flex flex-col">
-              <div class="flex items-center mb-1">
-                <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center mr-2 text-sm font-bold">
-                  {{ index + 1 }}
-                </span>
-                <h3 class="font-medium text-gray-800">Document #{{ index + 1 }}</h3>
-              </div>
-              <p class="text-sm text-gray-500 ml-9 line-clamp-1">
-                {{ documentNames[index] || 'Loading document name...' }}
-              </p>
-            </div>
-            <svg
-              class="w-5 h-5 transition-transform duration-200 text-gray-500"
-              :class="{ 'transform rotate-180': expandedResults[index] }"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
-          </div>
-
-          <div v-if="expandedResults[index]" class="p-5">
-            <div
-              class="flex gap-5"
-              :class="viewMode[index] === 'vertical' ? 'flex-col' : 'flex-col md:flex-row'"
-            >
-              <!-- Document content panel -->
-              <div class="bg-gray-50 p-5 rounded-md overflow-auto flex-1 max-h-[500px] border border-gray-200">
-                <h4 class="text-sm font-medium mb-3 text-gray-700 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Document Content
-                </h4>
-                <div v-if="isMarkdown(documentContents[index])" class="markdown-content" v-html="renderMarkdown(documentContents[index])"></div>
-                <pre v-else class="text-xs text-gray-800 whitespace-pre-wrap">{{ documentContents[index] }}</pre>
-              </div>
-
-              <!-- Extracted data panel -->
-              <div class="bg-gray-50 p-5 rounded-md overflow-auto flex-1 max-h-[500px] border border-gray-200">
-                <h4 class="text-sm font-medium mb-3 text-gray-700 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                  Extracted Information
-                </h4>
-                <JsonViewer :data="result.result" />
-              </div>
-
-              <!-- Original document panel (only in non-modal view) -->
-              <div v-if="showDocumentPanel[index]" class="bg-gray-50 p-5 rounded-md overflow-auto flex-1 max-h-[500px] border border-gray-200">
-                <h4 class="text-sm font-medium mb-3 text-gray-700 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                  </svg>
-                  Original Document
-                </h4>
-                <iframe v-if="documentPdfUrls[index]" :src="documentPdfUrls[index]" frameborder="0" width="100%" height="400px" class="rounded-md"></iframe>
-                <div v-else-if="documentPdfLoading[index]" class="text-center py-12">
-                  <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-                  <p class="mt-2 text-gray-500">Loading PDF...</p>
-                </div>
-                <p v-else class="text-gray-500">Failed to load PDF</p>
-              </div>
-            </div>
-
-            <div class="mt-5 flex justify-end gap-3">
-              <button
-                @click="toggleViewMode(index)"
-                class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-md text-sm flex items-center transition-colors duration-150"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-                </svg>
-                {{ viewMode[index] === 'vertical' ? 'Side by Side View' : 'Vertical View' }}
-              </button>
-              <button
-                @click="toggleDocumentPanel(index)"
-                class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md text-sm flex items-center transition-colors duration-150"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" v-if="showDocumentPanel[index]" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" v-else d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" v-else d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                {{ showDocumentPanel[index] ? 'Hide Original Document' : 'View Original Document' }}
+            </template>
+            <div v-else class="flex flex-col items-center justify-center py-16">
+              <svg class="h-14 w-14 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span class="text-gray-500 mt-3">Trial not found</span>
+              <button @click="$emit('close')" class="mt-6 inline-block px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors duration-150 shadow">
+                Return to trials
               </button>
             </div>
           </div>
         </div>
       </div>
-    </template>
-
-    <div v-else class="text-center py-12">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <p class="text-gray-500 mt-3">Trial not found</p>
-      <router-link :to="`/projects/${props.projectId}/trials`" class="mt-4 inline-block px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors duration-150">
-        Return to trials
-      </router-link>
-    </div>
-  </div>
+    </transition>
+  </teleport>
 </template>
 
+
+
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '@/services/api.js';
 import { formatDate } from '@/utils/formatters.js';
@@ -567,9 +377,19 @@ const toggleDocumentPanel = async (index) => {
   }
 };
 
-// Load data on mount
+watch(() => props.isModal, (v) => {
+  if (v) document.body.style.overflow = 'hidden';
+  else document.body.style.overflow = '';
+});
+
 onMounted(() => {
   fetchData();
+  if (props.isModal) document.body.style.overflow = 'hidden';
+});
+
+
+onUnmounted(() => {
+  document.body.style.overflow = '';
 });
 </script>
 

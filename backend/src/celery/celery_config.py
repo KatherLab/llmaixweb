@@ -12,7 +12,7 @@ celery_app: Celery | None = None
 if not settings.DISABLE_CELERY:
     celery_app = Celery(
         "tasks",
-        broker="redis://localhost:6379/0",
+        broker=settings.CELERY_BROKER_URL,
         include=[
             "backend.src.celery.preprocessing",
             "backend.src.celery.info_extraction",

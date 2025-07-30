@@ -37,7 +37,9 @@ class Settings(BaseSettings):
     OPENAI_API_MODEL: str = ""
     OPENAI_NO_API_CHECK: bool = False
 
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     DISABLE_CELERY: bool = False
+    INITIALIZE_CELERY: bool = True  # Whether to initialize Celery workers on startup
 
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
 
