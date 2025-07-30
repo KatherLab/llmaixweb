@@ -43,8 +43,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        - VITE_API_BACKEND_URL=${VITE_API_BACKEND_URL}
     image: llmaix-frontend:latest
     env_file: .env
+    volumes:
+      - .env:/app/frontend/.env
     ports: ["5173:80"]            # http://localhost:5173
     depends_on: [backend]
 
@@ -52,7 +56,6 @@ services:
   postgres:
     image: postgres:16-alpine
     env_file: .env                # supplies user/pass/db
-    ports: ["5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
 
