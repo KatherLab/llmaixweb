@@ -126,7 +126,7 @@ def test_register_user(client, api_url):
     }
     response = client.post(f"{api_url}/user", json=user_data)
     assert response.status_code == 400
-    assert response.json()["detail"] == "Email does not match the invitation."
+    assert response.json()["detail"] == "Unable to create account. Please check your invitation and try again."
 
     user_data = {
         "email": "inviteduser@example.com",

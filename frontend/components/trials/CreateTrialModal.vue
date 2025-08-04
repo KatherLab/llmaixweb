@@ -2,18 +2,18 @@
   <teleport to="body">
     <transition name="fade">
       <div
-        v-if="open"
-        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-        @click="handleBackdropClick"
+          v-if="open"
+          class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          @click="handleBackdropClick"
       >
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
         <div
-          class="relative bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col overflow-hidden ring-1 ring-blue-100"
-          @click.stop
+            class="relative bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col overflow-hidden ring-1 ring-blue-100"
+            @click.stop
         >
           <div class="px-8 py-6 border-b flex justify-between items-center rounded-t-3xl bg-white">
             <h3 class="text-2xl font-bold tracking-tight">Start New Trial</h3>
-            <button class="text-gray-500 hover:text-gray-700" @click="tryClose" aria-label="Close modal">
+            <button aria-label="Close modal" class="text-gray-500 hover:text-gray-700" @click="tryClose">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
               </svg>
@@ -22,31 +22,36 @@
           <div class="flex-1 overflow-y-auto p-0 md:p-8 bg-white">
             <div class="grid md:grid-cols-2 gap-8">
               <div>
-                <div class="mb-8 bg-gradient-to-br from-blue-50 to-gray-50 rounded-xl border border-blue-100 shadow flex items-center px-6 py-5 gap-4">
+                <div
+                    class="mb-8 bg-gradient-to-br from-blue-50 to-gray-50 rounded-xl border border-blue-100 shadow flex items-center px-6 py-5 gap-4">
                   <div class="flex-shrink-0">
                     <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"/>
                     </svg>
                   </div>
                   <div class="w-full">
                     <div class="grid grid-cols-1 gap-4">
                       <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1 tracking-wide">Trial Name <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1 tracking-wide">Trial Name <span
+                            class="text-gray-400 font-normal">(optional)</span></label>
                         <input
-                          v-model="trialData.name"
-                          maxlength="100"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                          placeholder="E.g. Contract Extraction Run Q3"
+                            v-model="trialData.name"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            maxlength="100"
+                            placeholder="E.g. Contract Extraction Run Q3"
                         />
                       </div>
                       <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1 tracking-wide">Description <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1 tracking-wide">Description <span
+                            class="text-gray-400 font-normal">(optional)</span></label>
                         <textarea
-                          v-model="trialData.description"
-                          maxlength="512"
-                          rows="2"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                          placeholder="Short summary for this trial (e.g. doc type, goal, changes etc)"
+                            v-model="trialData.description"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            maxlength="512"
+                            placeholder="Short summary for this trial (e.g. doc type, goal, changes etc)"
+                            rows="2"
                         ></textarea>
                       </div>
                     </div>
@@ -54,11 +59,12 @@
                 </div>
                 <div class="mb-8 bg-white border rounded-xl p-6 shadow">
                   <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Prompt <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Prompt <span
+                        class="text-red-500">*</span></label>
                     <select
-                      v-model="trialData.prompt_id"
-                      class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                      @change="resetModelTest"
+                        v-model="trialData.prompt_id"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                        @change="resetModelTest"
                     >
                       <option disabled value="">Select a prompt</option>
                       <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id.toString()">
@@ -67,19 +73,26 @@
                     </select>
                     <details class="mt-1 text-xs">
                       <summary class="text-blue-700 cursor-pointer">Preview Prompt</summary>
-                      <div class="mt-2 bg-gray-50 border rounded p-2" v-if="selectedPrompt">
-                        <p v-if="selectedPrompt.description" class="mb-1 text-gray-600">{{ selectedPrompt.description }}</p>
-                        <div v-if="selectedPrompt.system_prompt" class="font-mono text-xs mb-1">Sys: {{ selectedPrompt.system_prompt }}</div>
-                        <div v-if="selectedPrompt.user_prompt" class="font-mono text-xs">User: {{ selectedPrompt.user_prompt }}</div>
+                      <div v-if="selectedPrompt" class="mt-2 bg-gray-50 border rounded p-2">
+                        <p v-if="selectedPrompt.description" class="mb-1 text-gray-600">{{
+                            selectedPrompt.description
+                          }}</p>
+                        <div v-if="selectedPrompt.system_prompt" class="font-mono text-xs mb-1">Sys:
+                          {{ selectedPrompt.system_prompt }}
+                        </div>
+                        <div v-if="selectedPrompt.user_prompt" class="font-mono text-xs">User:
+                          {{ selectedPrompt.user_prompt }}
+                        </div>
                       </div>
                     </details>
                   </div>
                   <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Schema <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Schema <span
+                        class="text-red-500">*</span></label>
                     <select
-                      v-model="trialData.schema_id"
-                      class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                      @change="resetModelTest"
+                        v-model="trialData.schema_id"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                        @change="resetModelTest"
                     >
                       <option disabled value="">Select a schema</option>
                       <option v-for="schema in schemas" :key="schema.id" :value="schema.id.toString()">
@@ -88,17 +101,19 @@
                     </select>
                     <details class="mt-1 text-xs">
                       <summary class="text-blue-700 cursor-pointer">Preview Schema</summary>
-                      <pre class="bg-gray-50 border rounded p-2 mt-1 max-h-32 overflow-auto font-mono text-xs" v-if="selectedSchema">
+                      <pre v-if="selectedSchema"
+                           class="bg-gray-50 border rounded p-2 mt-1 max-h-32 overflow-auto font-mono text-xs">
                         {{ JSON.stringify(selectedSchema.schema_definition, null, 2) }}
                       </pre>
                     </details>
                   </div>
                   <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">LLM Model <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">LLM Model <span
+                        class="text-red-500">*</span></label>
                     <select
-                      v-model="trialData.llm_model"
-                      :disabled="isLoadingModels || isTestingConnection || availableModels.length === 0"
-                      class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        v-model="trialData.llm_model"
+                        :disabled="isLoadingModels || isTestingConnection || availableModels.length === 0"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                     >
                       <option disabled value="">
                         {{
@@ -110,28 +125,33 @@
                         {{ model }}
                       </option>
                     </select>
-                    <div v-if="configStatus.type === 'error'" class="text-xs text-red-500 mt-1">{{ configStatus.message }}</div>
+                    <div v-if="configStatus.type === 'error'" class="text-xs text-red-500 mt-1">{{
+                        configStatus.message
+                      }}
+                    </div>
                   </div>
                 </div>
                 <div>
                   <div class="flex items-center gap-4 mb-2">
                     <button
-                      class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
-                      @click="advancedSettingsVisible = !advancedSettingsVisible"
-                      type="button"
+                        class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                        type="button"
+                        @click="advancedSettingsVisible = !advancedSettingsVisible"
                     >
                       <span>{{ advancedSettingsVisible ? 'Hide' : 'Show' }} Advanced Settings</span>
-                      <svg :class="{ 'rotate-180': advancedSettingsVisible }" class="h-4 w-4 ml-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg :class="{ 'rotate-180': advancedSettingsVisible }" class="h-4 w-4 ml-1 transition-transform"
+                           fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                       </svg>
                     </button>
                     <button
-                      class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
-                      @click="advancedOptionsVisible = !advancedOptionsVisible"
-                      type="button"
+                        class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                        type="button"
+                        @click="advancedOptionsVisible = !advancedOptionsVisible"
                     >
                       <span>{{ advancedOptionsVisible ? 'Hide' : 'Use' }} Custom API Settings</span>
-                      <svg :class="{ 'rotate-180': advancedOptionsVisible }" class="h-4 w-4 ml-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg :class="{ 'rotate-180': advancedOptionsVisible }" class="h-4 w-4 ml-1 transition-transform"
+                           fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                       </svg>
                     </button>
@@ -142,14 +162,31 @@
                         Max Completion Tokens <span class="text-gray-400 font-normal">(optional)</span>
                       </label>
                       <input
-                        v-model="maxCompletionTokens"
-                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        min="1"
-                        placeholder="e.g., 4096"
-                        type="number"
+                          v-model="maxCompletionTokens"
+                          class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          min="1"
+                          placeholder="e.g., 4096"
+                          type="number"
                       />
                       <p class="mt-1 text-xs text-gray-500">
                         Limit the maximum tokens for model responses. Leave empty to use model defaults.
+                      </p>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Temperature <span class="text-gray-400 font-normal">(optional)</span>
+                      </label>
+                      <input
+                        v-model="temperature"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        min="0"
+                        max="2"
+                        step="0.01"
+                        placeholder="e.g., 0.7"
+                        type="number"
+                      />
+                      <p class="mt-1 text-xs text-gray-500">
+                        Controls randomness. Lower values make outputs more focused; higher values make them more random. Typical: 0.1–1.0
                       </p>
                     </div>
                   </div>
@@ -157,26 +194,26 @@
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
                       <input
-                        v-model="trialData.api_key"
-                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="e.g., sk-1234567890abcdef..."
-                        type="password"
+                          v-model="trialData.api_key"
+                          class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="e.g., sk-1234567890abcdef..."
+                          type="password"
                       />
                     </div>
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
                       <input
-                        v-model="trialData.base_url"
-                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="e.g., https://api.openai.com/v1"
-                        type="text"
+                          v-model="trialData.base_url"
+                          class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="e.g., https://api.openai.com/v1"
+                          type="text"
                       />
                     </div>
                   </div>
                 </div>
                 <div v-if="trialData.llm_model && trialData.schema_id && hasValidConfig" class="my-6">
                   <div
-                    :class="[
+                      :class="[
                       'p-4 rounded-md border',
                       {
                         'bg-blue-50 border-blue-200': modelTestStatus.type === 'loading',
@@ -189,28 +226,38 @@
                   >
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-2">
-                        <svg v-if="modelTestStatus.type === 'loading'" class="animate-spin w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24">
-                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <svg v-if="modelTestStatus.type === 'loading'" class="animate-spin w-5 h-5 text-blue-500"
+                             fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                  stroke-width="4"></circle>
                           <path class="opacity-75"
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                 fill="currentColor"></path>
                         </svg>
-                        <svg v-else-if="modelTestStatus.type === 'warning'" class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                        <svg v-else-if="modelTestStatus.type === 'warning'" class="w-5 h-5 text-yellow-500" fill="none"
+                             stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 3 1.732 3z"
+                              stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                         </svg>
-                        <svg v-else-if="modelTestStatus.type === 'error'" class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                        <svg v-else-if="modelTestStatus.type === 'error'" class="w-5 h-5 text-red-500" fill="none"
+                             stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"
+                                stroke-linejoin="round" stroke-width="2"/>
                         </svg>
-                        <svg v-else-if="modelTestStatus.type === 'success'" class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                        <svg v-else-if="modelTestStatus.type === 'success'" class="w-5 h-5 text-green-500" fill="none"
+                             stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"
+                                stroke-linejoin="round" stroke-width="2"/>
                         </svg>
                         <svg v-else class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                          <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"
+                                stroke-linejoin="round" stroke-width="2"/>
                         </svg>
                         <div>
                           <h4 class="font-medium text-gray-900">Model & Schema Compatibility Test</h4>
                           <p
-                            :class="[
+                              :class="[
                               'text-sm',
                               {
                                 'text-blue-700': modelTestStatus.type === 'loading',
@@ -226,12 +273,13 @@
                         </div>
                       </div>
                       <button
-                        :disabled="isTestingModel || !trialData.llm_model || !trialData.schema_id"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center gap-2"
-                        @click="testSelectedModel"
+                          :disabled="isTestingModel || !trialData.llm_model || !trialData.schema_id"
+                          class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center gap-2"
+                          @click="testSelectedModel"
                       >
                         <svg v-if="isTestingModel" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                  stroke-width="4"></circle>
                           <path class="opacity-75"
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                 fill="currentColor"></path>
@@ -239,9 +287,11 @@
                         {{ isTestingModel ? 'Testing...' : 'Test Model' }}
                       </button>
                     </div>
-                    <div v-if="modelTestStatus.type === 'warning'" class="mt-3 p-3 bg-yellow-100 border border-yellow-200 rounded-md">
+                    <div v-if="modelTestStatus.type === 'warning'"
+                         class="mt-3 p-3 bg-yellow-100 border border-yellow-200 rounded-md">
                       <p class="text-yellow-800 text-sm">
-                        <strong>Required:</strong> You must test the selected model with the schema to ensure compatibility before creating a trial.
+                        <strong>Required:</strong> You must test the selected model with the schema to ensure
+                        compatibility before creating a trial.
                       </p>
                     </div>
                   </div>
@@ -255,35 +305,35 @@
                   </div>
                   <div class="border-b mb-4 flex space-x-4">
                     <button
-                      :class="[
+                        :class="[
                         'py-2 px-1 border-b-2 font-medium text-sm transition-all',
                         documentSelectionMode === 'individual'
                           ? 'border-blue-500 text-blue-600'
                           : 'border-transparent text-gray-500 hover:text-gray-700'
                       ]"
-                      @click="documentSelectionMode = 'individual'"
+                        @click="documentSelectionMode = 'individual'"
                     >
                       Individual
                     </button>
                     <button
-                      :class="[
+                        :class="[
                         'py-2 px-1 border-b-2 font-medium text-sm transition-all',
                         documentSelectionMode === 'groups'
                           ? 'border-blue-500 text-blue-600'
                           : 'border-transparent text-gray-500 hover:text-gray-700'
                       ]"
-                      @click="documentSelectionMode = 'groups'"
+                        @click="documentSelectionMode = 'groups'"
                     >
                       Groups
                     </button>
                     <button
-                      :class="[
+                        :class="[
                         'py-2 px-1 border-b-2 font-medium text-sm transition-all',
                         documentSelectionMode === 'smart'
                           ? 'border-blue-500 text-blue-600'
                           : 'border-transparent text-gray-500 hover:text-gray-700'
                       ]"
-                      @click="documentSelectionMode = 'smart'"
+                        @click="documentSelectionMode = 'smart'"
                     >
                       Smart
                     </button>
@@ -291,57 +341,68 @@
                   <div v-if="documentSelectionMode === 'individual'" class="mt-4 flex-1 flex flex-col">
                     <div class="flex gap-2 mb-3">
                       <input
-                        v-model="searchTerm"
-                        class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Search documents..."
-                        type="text"
+                          v-model="searchTerm"
+                          class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Search documents..."
+                          type="text"
                       />
                       <button
-                        class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
-                        title="Select all visible documents"
-                        @click="selectAllDocuments"
+                          class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+                          title="Select all visible documents"
+                          @click="selectAllDocuments"
                       >
                         Select All
                       </button>
                       <button
-                        class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
-                        title="Clear selection"
-                        @click="clearDocumentSelection"
+                          class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+                          title="Clear selection"
+                          @click="clearDocumentSelection"
                       >
                         Clear
                       </button>
                     </div>
 
                     <div class="border rounded-md overflow-hidden flex-1 min-h-[100px] flex flex-col">
-  <div v-if="filteredDocuments.length === 0" class="p-4 text-center text-gray-500">
-    No documents match your search criteria
-  </div>
-  <div v-else class="max-h-[400px] overflow-y-auto">
-    <div
-      v-for="doc in filteredDocuments"
-      :key="doc.id"
-      :class="[
-        'p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 flex items-center',
-        {'bg-blue-50': trialData.document_ids.includes(doc.id)}
-      ]"
-      @click="toggleDocumentSelection(doc.id)"
-    >
-      <input
-        :checked="trialData.document_ids.includes(doc.id)"
-        class="mr-3"
-        type="checkbox"
-        @click.stop
-      />
-      <div class="flex-1">
-        <div class="font-medium">{{ doc.original_file?.file_name || `Document #${doc.id}` }}</div>
-        <div class="text-xs text-gray-500">
-          Config: {{ doc.preprocessing_config?.name || 'N/A' }} •
-          Created: {{ formatDate(doc.created_at) }}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+                      <div v-if="filteredDocuments.length === 0" class="p-4 text-center text-gray-500">
+                        No documents match your search criteria
+                      </div>
+                      <div v-else class="max-h-[400px] overflow-y-auto">
+                        <div
+                            v-for="doc in filteredDocuments"
+                            :key="doc.id"
+                            :class="[
+                              'p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 flex items-center',
+                              {'bg-blue-50': trialData.document_ids.includes(doc.id)}
+                            ]"
+                            @click="toggleDocumentSelection(doc.id)"
+                        >
+                          <input
+                              :checked="trialData.document_ids.includes(doc.id)"
+                              class="mr-3"
+                              type="checkbox"
+                              @click.stop
+                          />
+                          <div class="flex-1">
+                            <!-- Main Document Name -->
+                            <div class="font-medium">
+                              {{ doc.document_name || doc.original_file?.file_name || `Document #${doc.id}` }}
+                            </div>
+
+                            <!-- Show original filename if different from document_name -->
+                            <div v-if="doc.document_name && doc.original_file?.file_name && doc.document_name !== doc.original_file.file_name" class="text-xs text-gray-400 italic">
+                              (Original: {{ doc.original_file.file_name }})
+                            </div>
+
+                            <!-- Existing info row -->
+                            <div class="text-xs text-gray-500">
+                              Config: {{ doc.preprocessing_config?.name || 'N/A' }} •
+                              Created: {{ formatDate(doc.created_at) }}
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div v-else-if="documentSelectionMode === 'groups'" class="mt-4 flex-1 flex flex-col">
                     <div v-if="loadingGroups" class="text-center py-8">
@@ -352,11 +413,11 @@
                     </div>
                     <div v-else class="space-y-2">
                       <div
-                        v-for="group in documentGroups"
-                        :key="group.id"
-                        :class="{ 'ring-2 ring-blue-500 bg-blue-50': selectedGroupId === group.id }"
-                        class="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                        @click="toggleGroupSelection(group)"
+                          v-for="group in documentGroups"
+                          :key="group.id"
+                          :class="{ 'ring-2 ring-blue-500 bg-blue-50': selectedGroupId === group.id }"
+                          class="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                          @click="toggleGroupSelection(group)"
                       >
                         <div class="flex items-center justify-between">
                           <div class="flex-1">
@@ -373,9 +434,9 @@
                             </div>
                             <div v-if="group.tags && group.tags.length > 0" class="mt-2 flex flex-wrap gap-1">
                               <span
-                                v-for="tag in group.tags"
-                                :key="tag"
-                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                                  v-for="tag in group.tags"
+                                  :key="tag"
+                                  class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
                               >
                                 {{ tag }}
                               </span>
@@ -383,11 +444,11 @@
                           </div>
                           <div class="ml-4">
                             <input
-                              :checked="selectedGroupId === group.id"
-                              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                              type="checkbox"
-                              @change="toggleGroupSelection(group)"
-                              @click.stop
+                                :checked="selectedGroupId === group.id"
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                type="checkbox"
+                                @change="toggleGroupSelection(group)"
+                                @click.stop
                             />
                           </div>
                         </div>
@@ -398,22 +459,23 @@
                     <div>
                       <h4 class="text-sm font-medium text-gray-700 mb-2">Load from Previous Trial</h4>
                       <select
-                        v-model="selectedTrialId"
-                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        @change="loadDocumentsFromTrial"
+                          v-model="selectedTrialId"
+                          class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          @change="loadDocumentsFromTrial"
                       >
                         <option value="">Select a previous trial...</option>
                         <option v-for="trial in previousTrials" :key="trial.id" :value="trial.id">
-                          Trial #{{ trial.id }} - {{ formatDate(trial.created_at) }} ({{ trial.document_ids.length }} docs)
+                          Trial #{{ trial.id }} - {{ formatDate(trial.created_at) }} ({{ trial.document_ids.length }}
+                          docs)
                         </option>
                       </select>
                     </div>
                     <div>
                       <h4 class="text-sm font-medium text-gray-700 mb-2">Filter by Preprocessing Configuration</h4>
                       <select
-                        v-model="selectedConfigId"
-                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        @change="filterByPreprocessingConfig"
+                          v-model="selectedConfigId"
+                          class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          @change="filterByPreprocessingConfig"
                       >
                         <option value="">All configurations...</option>
                         <option v-for="config in preprocessingConfigs" :key="config.id" :value="config.id">
@@ -425,33 +487,33 @@
                       <h4 class="text-sm font-medium text-gray-700 mb-2">Filter by Date Range</h4>
                       <div class="grid grid-cols-2 gap-2">
                         <input
-                          v-model="dateRange.start"
-                          class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          type="date"
+                            v-model="dateRange.start"
+                            class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            type="date"
                         />
                         <input
-                          v-model="dateRange.end"
-                          class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          type="date"
+                            v-model="dateRange.end"
+                            class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            type="date"
                         />
                       </div>
                     </div>
                     <div class="flex flex-wrap gap-2 pt-2">
                       <button
-                        class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
-                        @click="selectRecentDocuments(7)"
+                          class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+                          @click="selectRecentDocuments(7)"
                       >
                         Last 7 days
                       </button>
                       <button
-                        class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
-                        @click="selectRecentDocuments(30)"
+                          class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+                          @click="selectRecentDocuments(30)"
                       >
                         Last 30 days
                       </button>
                       <button
-                        class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
-                        @click="selectDocumentsByStatus('success')"
+                          class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+                          @click="selectDocumentsByStatus('success')"
                       >
                         Successfully processed
                       </button>
@@ -463,30 +525,32 @@
                         </span>
                         <div class="flex items-center gap-2">
                           <button
-                            class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                            @click="showSelectedDocs = !showSelectedDocs"
-                            type="button"
+                              class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                              type="button"
+                              @click="showSelectedDocs = !showSelectedDocs"
                           >
                             <span v-if="!showSelectedDocs">Show</span>
                             <span v-else>Hide</span>
-                            <svg :class="{ 'rotate-180': showSelectedDocs }" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg :class="{ 'rotate-180': showSelectedDocs }" class="w-4 h-4 transition-transform"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
                             </svg>
                           </button>
                           <button
-                            class="text-sm text-blue-600 hover:text-blue-800"
-                            @click="clearDocumentSelection"
+                              class="text-sm text-blue-600 hover:text-blue-800"
+                              @click="clearDocumentSelection"
                           >
                             Clear
                           </button>
                         </div>
                       </div>
                       <transition name="fade">
-                        <div v-show="showSelectedDocs" class="mt-2 bg-white rounded shadow p-2 max-h-40 overflow-y-auto border border-blue-100">
+                        <div v-show="showSelectedDocs"
+                             class="mt-2 bg-white rounded shadow p-2 max-h-40 overflow-y-auto border border-blue-100">
                           <ul class="text-xs text-gray-800 space-y-1">
                             <li
-                              v-for="docId in trialData.document_ids"
-                              :key="docId"
+                                v-for="docId in trialData.document_ids"
+                                :key="docId"
                             >
                               {{
                                 (documents.find(d => d.id === docId)?.original_file?.file_name) ||
@@ -507,10 +571,10 @@
               Cancel
             </button>
             <button
-              :disabled="!isFormValid"
-              :title="!isFormValid ? 'Please ensure all required fields are filled, model is tested with schema, and configuration is valid' : ''"
-              class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md disabled:bg-blue-300 disabled:cursor-not-allowed"
-              @click="handleSubmit"
+                :disabled="!isFormValid"
+                :title="!isFormValid ? 'Please ensure all required fields are filled, model is tested with schema, and configuration is valid' : ''"
+                class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md disabled:bg-blue-300 disabled:cursor-not-allowed"
+                @click="handleSubmit"
             >
               Start Trial
             </button>
@@ -523,7 +587,7 @@
 
 
 <script setup>
-import {ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue';
 import {formatDate} from '@/utils/formatters.js';
 import {api} from '@/services/api.js';
 import {useToast} from 'vue-toastification';
@@ -577,8 +641,12 @@ const selectedConfigId = ref('');
 const dateRange = ref({start: '', end: ''});
 const showSelectedDocs = ref(false);
 
-const lockScroll = () => { document.body.style.overflow = 'hidden'; };
-const unlockScroll = () => { document.body.style.overflow = ''; };
+const lockScroll = () => {
+  document.body.style.overflow = 'hidden';
+};
+const unlockScroll = () => {
+  document.body.style.overflow = '';
+};
 
 
 const loadDocumentGroups = async () => {
@@ -704,6 +772,7 @@ const hasSystemConfig = ref(true);
 
 // Advanced options
 const maxCompletionTokens = ref('');
+const temperature = ref('');
 
 // Test connection first, then load models
 const testAndLoadModels = async (apiKey = '', baseUrl = '') => {
@@ -924,6 +993,7 @@ const initializeForm = () => {
   availableModels.value = [];
   advancedSettingsVisible.value = false;
   maxCompletionTokens.value = '';
+  temperature.value = '';
   resetModelTest();
 
   // Always test connection and load models when modal opens
@@ -1146,6 +1216,11 @@ const handleSubmit = () => {
     advancedOptions.max_completion_tokens = parseInt(maxCompletionTokens.value);
   }
 
+  if (temperature.value !== '' && !isNaN(Number(temperature.value))) {
+    advancedOptions.temperature = Number(temperature.value);
+  }
+
+
   if (Object.keys(advancedOptions).length > 0) {
     formData.advanced_options = advancedOptions;
   }
@@ -1161,7 +1236,9 @@ watch(() => open, (show) => {
   }
 });
 
-onMounted(() => { if (props.open) lockScroll(); });
+onMounted(() => {
+  if (props.open) lockScroll();
+});
 watch(() => props.open, v => v ? lockScroll() : unlockScroll());
 onUnmounted(unlockScroll);
 
@@ -1169,14 +1246,14 @@ onUnmounted(unlockScroll);
 const isDirty = computed(() => {
   // Example: check if anything in trialData is non-empty
   return !!(
-    trialData.value.name ||
-    trialData.value.description ||
-    trialData.value.schema_id ||
-    trialData.value.prompt_id ||
-    trialData.value.document_ids.length > 0 ||
-    trialData.value.llm_model ||
-    trialData.value.api_key ||
-    trialData.value.base_url
+      trialData.value.name ||
+      trialData.value.description ||
+      trialData.value.schema_id ||
+      trialData.value.prompt_id ||
+      trialData.value.document_ids.length > 0 ||
+      trialData.value.llm_model ||
+      trialData.value.api_key ||
+      trialData.value.base_url
   );
 });
 
@@ -1206,6 +1283,7 @@ const handleBackdropClick = (e) => {
 .fade-leave-active {
   transition: opacity .2s;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;

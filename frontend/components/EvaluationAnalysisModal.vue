@@ -332,24 +332,20 @@ const loadDocumentNames = async () => {
       const response = await api.get(`/project/${props.projectId}/document/${docEval.document_id}`);
       const doc = response.data;
 
-      let name = '';
-      if (doc.original_file?.file_name) {
-        name = doc.original_file.file_name;
-      } else if (doc.meta_data?.title) {
-        name = doc.meta_data.title;
-      } else {
-        name = `Document ${docEval.document_id}`;
-      }
-
-      documentNames.value[docEval.document_id] = name;
+      documentNames.value[docEval.document_id] = {
+        name: doc.document_name || doc.original_file?.file_name || `Document ${docEval.document_id}`,
+        original: doc.original_file?.file_name || ''
+      };
     } catch (err) {
-      console.error(`Failed to load document name for ${docEval.document_id}:`, err);
-      documentNames.value[docEval.document_id] = `Document ${docEval.document_id}`;
+      documentNames.value[docEval.document_id] = {
+        name: `Document ${docEval.document_id}`,
+        original: ''
+      };
     }
   });
-
   await Promise.all(promises);
 };
+
 
 const loadFieldErrors = async () => {
   const fieldNames = Object.keys(evaluationDetail.value.fields);

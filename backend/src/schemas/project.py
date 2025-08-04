@@ -322,6 +322,7 @@ class TrialBase(UTCModel):
     bypass_celery: bool = False
     advanced_options: dict | None = None
 
+class TrialCreate(TrialBase):
     @model_validator(mode="after")
     def validate_documents_or_set(self):
         """Ensure either document_ids or document_set_id is provided"""
@@ -330,10 +331,6 @@ class TrialBase(UTCModel):
         if self.document_ids and self.document_set_id:
             raise ValueError("Cannot provide both document_ids and document_set_id")
         return self
-
-
-class TrialCreate(TrialBase):
-    pass
 
 
 class TrialUpdate(BaseModel):
@@ -384,7 +381,6 @@ class PreprocessingConfigurationBase(UTCModel):
     ocr_model: str | None = None
     llm_model: str | None = None
     additional_settings: dict | None = None
-    bypass_celery: bool = False
 
 
 class PreprocessingConfigurationCreate(PreprocessingConfigurationBase):

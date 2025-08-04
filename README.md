@@ -58,6 +58,6 @@ minio server miniodata
 
 **Run Backend Tests**
 ```bash
-ENV_PATH=backend/.env uv run pytest
+ENV_PATH=backend/.env uv run pytest --verbose
 --cov=backend --cov-report=html
 ```

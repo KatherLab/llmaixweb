@@ -59,8 +59,8 @@ class EvaluationEngine:
                 return existing
 
         # Load validated data
-        trial = self.db.query(models.Trial).get(trial_id)
-        ground_truth = self.db.query(models.GroundTruth).get(groundtruth_id)
+        trial = self.db.get(models.Trial, trial_id)
+        ground_truth = self.db.get(models.GroundTruth, groundtruth_id)
         results = self.db.query(models.TrialResult).filter_by(trial_id=trial_id).all()
 
         # Load and validate ground truth data
@@ -114,7 +114,7 @@ class EvaluationEngine:
         warnings = []
 
         # Check trial exists
-        trial = self.db.query(models.Trial).get(trial_id)
+        trial = self.db.get(models.Trial, trial_id)
         if not trial:
             errors.append(f"Trial {trial_id} not found")
             return {"valid": False, "errors": errors}
@@ -124,7 +124,7 @@ class EvaluationEngine:
             errors.append(f"Trial {trial_id} is not completed (status: {trial.status})")
 
         # Check ground truth exists
-        ground_truth = self.db.query(models.GroundTruth).get(groundtruth_id)
+        ground_truth = self.db.get(models.GroundTruth, groundtruth_id)
         if not ground_truth:
             errors.append(f"Ground truth {groundtruth_id} not found")
             return {"valid": False, "errors": errors}
@@ -171,7 +171,7 @@ class EvaluationEngine:
         document_lookup = {}
         for result in results:
             doc_id = result.document_id
-            document = self.db.query(models.Document).get(doc_id)
+            document = self.db.get(models.Document, doc_id)
             if document:
                 document_lookup[doc_id] = document
 
@@ -187,13 +187,16 @@ class EvaluationEngine:
 
             # Try to find ground truth key
             gt_key = self._find_document_key_enhanced(doc_id, document, gt_data)
-            if gt_key is None:
-                filename = (
-                    document.original_file.file_name
-                    if document.original_file
+            if not gt_key:
+                gt_key = (
+                    document.document_name
+                    if document.document_name
                     else "Unknown"
                 )
-                unmatched_documents.append({"doc_id": doc_id, "filename": filename})
+                if gt_key == "Unknown":
+                    unmatched_documents.append({"doc_id": doc_id, "filename": gt_key})
+                else:
+                    matched_count += 1
             else:
                 matched_count += 1
 
@@ -247,7 +250,7 @@ class EvaluationEngine:
             doc_id = result.document_id
             try:
                 doc_id = int(doc_id)
-                document = self.db.query(models.Document).get(doc_id)
+                document = self.db.get(models.Document, doc_id)
                 if document:
                     # Store relevant document data
                     document_data[doc_id] = {
@@ -255,6 +258,7 @@ class EvaluationEngine:
                         "filename": document.original_file.file_name
                         if document.original_file
                         else None,
+                        "document_name": document.document_name if document.document_name else None,
                         "exists": True,
                     }
                 else:
@@ -519,28 +523,57 @@ class EvaluationEngine:
     def _find_document_key_by_data(
         self, doc_id: int, doc_info: Dict, gt_data: Dict
     ) -> Optional[str]:
-        """Find document key using pre-loaded document data."""
-        # Strategy 1: Direct ID match
-        id_variants = [doc_id, str(doc_id), f"doc_{doc_id}", f"document_{doc_id}"]
-        for variant in id_variants:
-            if variant in gt_data:
-                return variant
+        """
+        Find document key using pre-loaded document data, prioritizing document_name.
 
-        # Strategy 2: Filename matching
+        Tries the following, in order:
+        1. document_name (case-insensitive, with and without file extension)
+        2. filename (case-insensitive, with and without extension)
+        3. doc_id (int and str)
+        """
+        # Get both document_name and filename
+        document_name = doc_info.get("document_name")
         filename = doc_info.get("filename")
+
+        # Prepare all GT keys for lower-case matching
+        gt_keys_lower = {str(k).lower(): k for k in gt_data.keys()}
+
+        # 1. Try document_name (with and without extension)
+        if document_name:
+            docname_lower = document_name.lower()
+            docname_stem_lower = Path(document_name).stem.lower()
+
+            # With extension
+            if docname_lower in gt_keys_lower:
+                return gt_keys_lower[docname_lower]
+            # Without extension
+            if docname_stem_lower in gt_keys_lower:
+                return gt_keys_lower[docname_stem_lower]
+
+        # 2. Try filename (with and without extension)
         if filename:
-            filename_variants = [
-                filename,
-                Path(filename).stem,
-                Path(filename).name,
-                filename.lower(),
-                Path(filename).stem.lower(),
-            ]
+            filename_lower = filename.lower()
+            filename_stem_lower = Path(filename).stem.lower()
+            # With extension
+            if filename_lower in gt_keys_lower:
+                return gt_keys_lower[filename_lower]
+            # Without extension
+            if filename_stem_lower in gt_keys_lower:
+                return gt_keys_lower[filename_stem_lower]
+            # Also try only the base filename (in case of folders in path)
+            filename_name_lower = Path(filename).name.lower()
+            filename_name_stem_lower = Path(filename).stem.lower()
+            if filename_name_lower in gt_keys_lower:
+                return gt_keys_lower[filename_name_lower]
+            if filename_name_stem_lower in gt_keys_lower:
+                return gt_keys_lower[filename_name_stem_lower]
 
-            for variant in filename_variants:
-                if variant in gt_data:
-                    return variant
+        # 3. Try doc_id as str (sometimes in GT CSVs)
+        for variant in [doc_id, str(doc_id), f"doc_{doc_id}", f"document_{doc_id}"]:
+            if str(variant).lower() in gt_keys_lower:
+                return gt_keys_lower[str(variant).lower()]
 
+        # No match found
         return None
 
     def _create_error_result(self, doc_id: Any, error_message: str) -> Dict:

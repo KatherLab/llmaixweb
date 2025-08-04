@@ -93,8 +93,15 @@
             </div>
             <div>
               <h3 class="font-medium text-gray-800">
-                {{ documentNames[docEval.document_id] || `Document ${docEval.document_id}` }}
+                {{ documentNames[docEval.document_id]?.name || `Document ${docEval.document_id}` }}
               </h3>
+              <div
+                v-if="documentNames[docEval.document_id]?.original
+                      && documentNames[docEval.document_id]?.original !== documentNames[docEval.document_id]?.name"
+                class="text-xs text-gray-400 italic mt-0.5 truncate max-w-xs"
+              >
+                (Original: {{ documentNames[docEval.document_id].original }})
+              </div>
               <div class="flex items-center gap-4 mt-1 text-sm text-gray-500">
                 <span>{{ docEval.correct_fields }}/{{ docEval.total_fields }} fields correct</span>
                 <span>{{ (docEval.accuracy * 100).toFixed(1) }}% accuracy</span>

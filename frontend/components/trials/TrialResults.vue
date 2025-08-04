@@ -36,32 +36,76 @@
               <span class="text-sm text-red-700">{{ error }}</span>
             </div>
             <template v-else-if="trial">
-              <div class="bg-gradient-to-br from-white via-blue-50 to-white shadow-inner rounded-xl p-6 mb-7 border border-gray-100">
-                <div class="flex flex-col md:flex-row md:justify-between gap-4">
-                  <div>
-                    <h2 class="text-lg font-medium text-gray-800">Trial #{{ trial.id }}</h2>
-                    <div class="text-sm text-gray-500 mt-2 flex flex-col gap-1">
-                      <span>Started: {{ formatDate(trial.created_at, true) }}</span>
-                      <span>Status:
-                        <span class="px-2 py-1 rounded-full text-xs font-semibold shadow-sm"
-                          :class="{
-                            'bg-green-100 text-green-700': trial.status === 'completed',
-                            'bg-blue-100 text-blue-700': trial.status === 'processing',
-                            'bg-yellow-100 text-yellow-700': trial.status === 'pending',
-                            'bg-red-100 text-red-700': trial.status === 'failed'
-                          }"
-                        >{{ trial.status }}</span>
-                      </span>
-                      <span>Model: <span class="font-semibold text-gray-700">{{ trial.llm_model }}</span></span>
-                    </div>
-                  </div>
-                  <div class="flex items-center md:items-end">
-                    <span class="text-sm bg-blue-50 px-4 py-2 rounded-lg font-medium text-blue-800 shadow-sm">
-                      {{ trial.results?.length || 0 }} documents processed
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <!-- Enhanced Trial Information Card -->
+<div class="bg-gradient-to-br from-white via-blue-50 to-white shadow-inner rounded-xl p-6 mb-7 border border-gray-100">
+  <div class="flex flex-col md:flex-row md:justify-between gap-6">
+    <!-- Trial Details Column -->
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2 mb-1">
+        <h2 class="text-xl font-bold text-blue-900 truncate">
+          {{ trial.name || `Trial #${trial.id}` }}
+        </h2>
+        <span v-if="trial.status"
+          class="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold shadow"
+          :class="{
+            'bg-green-100 text-green-700': trial.status === 'completed',
+            'bg-blue-100 text-blue-700': trial.status === 'processing',
+            'bg-yellow-100 text-yellow-700': trial.status === 'pending',
+            'bg-red-100 text-red-700': trial.status === 'failed'
+          }"
+        >
+          {{ trial.status }}
+        </span>
+      </div>
+      <div v-if="trial.description" class="text-gray-700 text-sm mb-1">
+        {{ trial.description }}
+      </div>
+      <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600 mt-1">
+        <span>
+          <span class="font-semibold">Started:</span> {{ formatDate(trial.created_at, true) }}
+        </span>
+        <span>
+          <span class="font-semibold">Model:</span> {{ trial.llm_model }}
+        </span>
+        <span v-if="trial.prompt">
+          <span class="font-semibold">Prompt:</span>
+          <span class="text-gray-800">{{ trial.prompt.name || '[unnamed prompt]' }}</span>
+        </span>
+        <span v-if="trial.document_set">
+          <span class="font-semibold">Document Set:</span>
+          <span class="text-gray-800">{{ trial.document_set.name || ('Set #' + trial.document_set.id) }}</span>
+        </span>
+        <span>
+          <span class="font-semibold">Documents:</span> {{ trial.document_ids?.length || 0 }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Advanced Options & Doc Count -->
+    <div class="flex flex-col items-start md:items-end gap-2 min-w-[200px]">
+      <span class="text-sm bg-blue-50 px-4 py-2 rounded-lg font-medium text-blue-800 shadow-sm">
+        {{ trial.results?.length || 0 }} documents processed
+      </span>
+      <div
+        v-if="trial.advanced_options && Object.keys(trial.advanced_options).length"
+        class="mt-2 bg-white rounded-lg border border-blue-100 px-4 py-2 shadow text-xs max-w-xs"
+      >
+        <div class="text-xs font-semibold text-blue-700 mb-1">LLM Advanced Options</div>
+        <ul>
+          <li
+            v-for="(value, key) in trial.advanced_options"
+            :key="key"
+            class="flex items-center gap-1 mb-0.5"
+          >
+            <span class="font-medium capitalize">{{ key.replace(/_/g, ' ') }}:</span>
+            <span class="text-blue-900">{{ value }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
               <div v-if="!trial.results || trial.results.length === 0" class="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-lg border border-gray-200">
                 <svg class="h-14 w-14 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -82,10 +126,15 @@
                     <div class="flex flex-col gap-0.5">
                       <div class="flex items-center">
                         <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-3 text-base font-bold">{{ index + 1 }}</span>
-                        <span class="font-medium text-gray-800">Document #{{ index + 1 }}</span>
+                        <span class="font-medium text-gray-800">
+                          <!-- Main Name -->
+                          {{ documentLabels[index]?.name || 'Loading document name...' }}
+                        </span>
                       </div>
-                      <span class="text-xs text-gray-500 ml-10 truncate max-w-xs">
-                        {{ documentNames[index] || 'Loading document name...' }}
+                      <!-- Show original only if it exists and is different -->
+                      <span v-if="documentLabels[index]?.original && documentLabels[index]?.original !== documentLabels[index]?.name"
+                            class="text-xs text-gray-400 italic ml-10 truncate max-w-xs">
+                        (Original: {{ documentLabels[index].original }})
                       </span>
                     </div>
                     <svg
@@ -226,6 +275,7 @@ const selectedResultIndex = ref(0);
 const expandedResults = ref({});
 const documentContents = ref({});
 const documentNames = ref({});
+const documentLabels = ref({});
 const viewMode = ref({}); // 'vertical' or 'horizontal'
 const documentPdfUrls = ref({});
 const documentPdfLoading = ref({});
@@ -286,21 +336,18 @@ const loadDocumentNames = async () => {
     try {
       const docId = trial.value.document_ids[i];
       const response = await api.get(`/project/${props.projectId}/document/${docId}`);
+      const doc = response.data;
 
-      // Extract filename from either original_file or metadata
-      let documentName = '';
-      if (response.data.original_file && response.data.original_file.file_name) {
-        documentName = response.data.original_file.file_name;
-      } else if (response.data.metadata && response.data.metadata.title) {
-        documentName = response.data.metadata.title;
-      } else {
-        documentName = `Document ${docId}`;
-      }
-
-      documentNames.value[i] = documentName;
+      documentLabels.value[i] = {
+        name: doc.document_name || doc.original_file?.file_name || `Document ${docId}`,
+        original: doc.original_file?.file_name || '',
+      };
     } catch (err) {
-      console.error(`Error loading document name for index ${i}:`, err);
-      documentNames.value[i] = `Document (ID: ${trial.value.document_ids[i]})`;
+      console.error(`Error loading document label for index ${i}:`, err);
+      documentLabels.value[i] = {
+        name: `Document (ID: ${trial.value.document_ids[i]})`,
+        original: '',
+      };
     }
   }
 };

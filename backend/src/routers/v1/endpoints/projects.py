@@ -1162,7 +1162,7 @@ async def preprocess_project_data(
             raise HTTPException(status_code=404, detail="Configuration not found")
     elif preprocessing_task.inline_config:
         # Check if a matching configuration already exists
-        config_dict = preprocessing_task.inline_config.model_dump()
+        config_dict = preprocessing_task.inline_config.model_dump(exclude={"bypass_celery"})
 
         # Build query to find matching configuration
         query = db.query(models.PreprocessingConfiguration).filter(
@@ -1200,7 +1200,6 @@ async def preprocess_project_data(
                 continue
 
             # Compare additional_settings (handle None)
-            # Note: table_settings removed from comparison
             if (potential_config.additional_settings or {}) != (
                 config_dict.get("additional_settings") or {}
             ):
@@ -2613,6 +2612,8 @@ def create_trial(
     db.commit()
     db.refresh(trial_db)
 
+
+    trial.bypass_celery = True
     # 5. Information extraction (immediate or Celery)
     if trial.bypass_celery:
         from ....utils.info_extraction import extract_info
@@ -4241,7 +4242,7 @@ def evaluate_trial(
             error_documents.append(doc_id)
 
         # Get document name
-        document = db.query(models.Document).get(doc_id)
+        document = db.get(models.Document, doc_id)
         document_name = None
         if document and document.original_file:
             document_name = document.original_file.file_name

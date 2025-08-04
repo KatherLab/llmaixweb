@@ -287,10 +287,13 @@ def extract_info(
 
             # Add advanced options if provided
             if advanced_options:
+                print("Using advanced options:", advanced_options)
                 if "max_completion_tokens" in advanced_options:
                     completion_kwargs["max_completion_tokens"] = advanced_options[
                         "max_completion_tokens"
                     ]
+                if "temperature" in advanced_options:
+                    completion_kwargs["temperature"] = advanced_options["temperature"]
                 # TODO: Add more advanced options here in the future
 
             response = client.chat.completions.create(**completion_kwargs)
