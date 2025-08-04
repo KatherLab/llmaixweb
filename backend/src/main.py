@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import os
-import platform
-import sys
-from contextlib import asynccontextmanager
 import multiprocessing as mp
+from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,7 +10,7 @@ from llmaix.__version__ import __version__
 from .celery.celery_config import celery_app
 from .core.config import settings
 from .db.session import init_db
-from .routers.v1.endpoints import auth, projects, users, admin
+from .routers.v1.endpoints import admin, auth, projects, users
 
 
 def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
@@ -23,17 +20,22 @@ def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
     """
     argv = [
         "worker",
-        "-Q", queue,
-        "-c", str(concurrency),
-        "--max-tasks-per-child", "5",
-        "--loglevel", "info",
-        "-n", f"{queue}@%(hostname)s",    # unique node‑name → no warnings
+        "-Q",
+        queue,
+        "-c",
+        str(concurrency),
+        "--max-tasks-per-child",
+        "5",
+        "--loglevel",
+        "info",
+        "-n",
+        f"{queue}@%(hostname)s",  # unique node‑name → no warnings
     ]
 
     proc = mp.Process(
         target=celery_app.worker_main,
         args=(argv,),
-        daemon=True,                      # dies with parent
+        daemon=True,  # dies with parent
         name=f"celery-{queue}-worker",
     )
     proc.start()
@@ -44,8 +46,6 @@ def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
 @asynccontextmanager
 async def lifespan(app):
     init_db()
-
-
 
     workers: list[mp.Process] = []
     if celery_app is not None and settings.INITIALIZE_CELERY:
@@ -62,7 +62,6 @@ async def lifespan(app):
             if p.is_alive():
                 p.terminate()
                 p.join(5)
-
 
 
 app = FastAPI(lifespan=lifespan)

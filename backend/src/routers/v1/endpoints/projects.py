@@ -26,7 +26,7 @@ from thefuzz import fuzz
 
 from .... import models, schemas
 from ....core.config import settings
-from ....core.security import get_current_user, get_admin_user
+from ....core.security import get_admin_user, get_current_user
 from ....dependencies import (
     calculate_file_hash,
     get_db,
@@ -35,7 +35,7 @@ from ....dependencies import (
     save_file,
 )
 from ....models.project import document_set_association
-from ....utils.enums import FileCreator, FileType, PreprocessingStrategy
+from ....utils.enums import FileCreator, FileType
 from ....utils.helpers import extract_field_types_from_schema, validate_prompt
 from ....utils.info_extraction import (
     get_available_models,
@@ -1075,7 +1075,8 @@ def update_preprocessing_configuration(
     if in_use:
         # Find which *disallowed* fields are *actually being changed*
         disallowed_changed = [
-            field for field, value in changes.items()
+            field
+            for field, value in changes.items()
             if field not in allowed_fields and getattr(config, field) != value
         ]
         if disallowed_changed:
@@ -1162,7 +1163,9 @@ async def preprocess_project_data(
             raise HTTPException(status_code=404, detail="Configuration not found")
     elif preprocessing_task.inline_config:
         # Check if a matching configuration already exists
-        config_dict = preprocessing_task.inline_config.model_dump(exclude={"bypass_celery"})
+        config_dict = preprocessing_task.inline_config.model_dump(
+            exclude={"bypass_celery"}
+        )
 
         # Build query to find matching configuration
         query = db.query(models.PreprocessingConfiguration).filter(
@@ -2612,7 +2615,6 @@ def create_trial(
     db.commit()
     db.refresh(trial_db)
 
-
     trial.bypass_celery = True
     # 5. Information extraction (immediate or Celery)
     if trial.bypass_celery:
@@ -3143,6 +3145,7 @@ def test_model_with_schema_endpoint(
         api_key, base_url, llm_model, schema.schema_definition
     )
 
+
 @router.get("/llm/test-vlm-image-support")
 def test_vlm_image_support(
     *,
@@ -3164,7 +3167,7 @@ def test_vlm_image_support(
     if not api_key or not base_url or not model:
         return {
             "supported": False,
-            "message": "Configuration incomplete: api_key, base_url, and model are required"
+            "message": "Configuration incomplete: api_key, base_url, and model are required",
         }
 
     try:
@@ -3186,7 +3189,6 @@ def test_vlm_image_support(
         }
     except Exception as e:
         return {"supported": False, "message": f"Test failed: {str(e)}"}
-
 
 
 # Add these endpoints to your existing projects.py file

@@ -3,8 +3,8 @@ import io
 from datetime import timezone
 
 import requests
-from PIL import Image
 from fastapi import HTTPException
+from PIL import Image
 
 from backend.src import schemas
 
@@ -104,8 +104,8 @@ def test_remote_image_support(api_url: str, model: str, api_key: str) -> bool:
                 "role": "user",
                 "content": [
                     {"type": "text", "text": "Describe this image in one word."},
-                    {"type": "image_url", "image_url": f"data:image/png;base64,{b64}"}
-                ]
+                    {"type": "image_url", "image_url": f"data:image/png;base64,{b64}"},
+                ],
             }
         ],
         "max_tokens": 3,
@@ -117,7 +117,12 @@ def test_remote_image_support(api_url: str, model: str, api_key: str) -> bool:
             return False
         reply = data["choices"][0].get("message", {}).get("content", "").lower()
         # You may want to adjust the check below based on expected behavior
-        if "white" in reply or "blank" in reply or "cannot" in reply or "empty" in reply:
+        if (
+            "white" in reply
+            or "blank" in reply
+            or "cannot" in reply
+            or "empty" in reply
+        ):
             return True
         return False
     except Exception:

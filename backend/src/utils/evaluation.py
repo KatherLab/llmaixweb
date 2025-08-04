@@ -188,11 +188,7 @@ class EvaluationEngine:
             # Try to find ground truth key
             gt_key = self._find_document_key_enhanced(doc_id, document, gt_data)
             if not gt_key:
-                gt_key = (
-                    document.document_name
-                    if document.document_name
-                    else "Unknown"
-                )
+                gt_key = document.document_name if document.document_name else "Unknown"
                 if gt_key == "Unknown":
                     unmatched_documents.append({"doc_id": doc_id, "filename": gt_key})
                 else:
@@ -258,7 +254,9 @@ class EvaluationEngine:
                         "filename": document.original_file.file_name
                         if document.original_file
                         else None,
-                        "document_name": document.document_name if document.document_name else None,
+                        "document_name": document.document_name
+                        if document.document_name
+                        else None,
                         "exists": True,
                     }
                 else:

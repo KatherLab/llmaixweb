@@ -3,14 +3,13 @@ from ..dependencies import get_db
 from ..utils.preprocessing import PreprocessingPipeline
 from .celery_config import celery_app
 
-
 if celery_app:
 
     @celery_app.task(
         autoretry_for=(Exception,),
         retry_backoff=True,
         max_retries=3,
-        queue="preprocess",          # heavy OCR queue
+        queue="preprocess",  # heavy OCR queue
     )
     def process_files_async(
         task_id: int,

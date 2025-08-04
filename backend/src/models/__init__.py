@@ -1,4 +1,5 @@
 from ..db.base import Base
+from .admin import AppSetting
 from .project import (
     Document,
     DocumentSet,
@@ -25,7 +26,6 @@ from .project import (
     TrialStatus,
 )
 from .user import Invitation, User, UserRole
-from .admin import AppSetting
 
 __all__ = [
     "AppSetting",

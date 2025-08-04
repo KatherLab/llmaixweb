@@ -9,17 +9,19 @@ Celery signal hooks + sweeper for the preprocessing pipeline.
 from __future__ import annotations
 
 import datetime
-from celery import signals
-from celery.exceptions import WorkerLostError, SoftTimeLimitExceeded
-from sqlalchemy.orm import Session
 
-from ..dependencies import get_db
+from celery import signals
+from celery.exceptions import SoftTimeLimitExceeded, WorkerLostError
+
 from .. import models
+from ..dependencies import get_db
 from .celery_config import celery_app
 
 
 # ────────────────── helpers ──────────────────
-def _update(task_db_id: int, status: models.PreprocessingStatus, message: str | None = None):
+def _update(
+    task_db_id: int, status: models.PreprocessingStatus, message: str | None = None
+):
     """Safely update the PreprocessingTask row."""
     with next(get_db()) as db:  # type: Session
         task = db.get(models.PreprocessingTask, task_db_id)
@@ -38,7 +40,9 @@ def _update(task_db_id: int, status: models.PreprocessingStatus, message: str | 
 
 def _is_preprocess_task(sender_name: str) -> bool:
     """True for the heavy preprocessing tasks only."""
-    return sender_name.endswith("process_files_async") or sender_name.endswith("preprocess_file_celery")
+    return sender_name.endswith("process_files_async") or sender_name.endswith(
+        "preprocess_file_celery"
+    )
 
 
 # ────────────────── Celery signal handlers ──────────────────
@@ -98,14 +102,14 @@ def sweep_orphans():
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(minutes=30)
     with next(get_db()) as db:
         # 1) fail orphaned file tasks
-        q = (
-            db.query(models.FilePreprocessingTask)
-            .filter(
-                models.FilePreprocessingTask.status.in_(
-                    [models.PreprocessingStatus.PENDING, models.PreprocessingStatus.IN_PROGRESS]
-                ),
-                models.FilePreprocessingTask.started_at < cutoff,
-            )
+        q = db.query(models.FilePreprocessingTask).filter(
+            models.FilePreprocessingTask.status.in_(
+                [
+                    models.PreprocessingStatus.PENDING,
+                    models.PreprocessingStatus.IN_PROGRESS,
+                ]
+            ),
+            models.FilePreprocessingTask.started_at < cutoff,
         )
         affected = 0
         parent_ids: set[int] = set()
@@ -126,7 +130,8 @@ def sweep_orphans():
 
             total = len(parent.file_tasks)
             completed = sum(
-                1 for ft in parent.file_tasks
+                1
+                for ft in parent.file_tasks
                 if ft.status == models.PreprocessingStatus.COMPLETED
             )
             failed = total - completed

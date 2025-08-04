@@ -1,18 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from celery.result import AsyncResult
+from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.src.models import PreprocessingTask
-from ....dependencies import get_db
-from ....core.security import get_admin_user
-from ....models import AppSetting
-from ....celery.celery_config import celery_app
-from ....core.config import Settings, SETTINGS_META
-from ....core.dynamic_settings import (
-    reload_settings_cache,
-    get_settings,
-)
 
-from celery.result import AsyncResult
+from ....celery.celery_config import celery_app
+from ....core.config import SETTINGS_META, Settings
+from ....core.dynamic_settings import reload_settings_cache
+from ....core.security import get_admin_user
+from ....dependencies import get_db
+from ....models import AppSetting
 
 router = APIRouter()
 
@@ -20,6 +17,7 @@ router = APIRouter()
 # --------------------------
 # Settings endpoints
 # --------------------------
+
 
 @router.get("/settings")
 def read_settings(current_user=Depends(get_admin_user), db: Session = Depends(get_db)):
@@ -55,18 +53,19 @@ def read_settings(current_user=Depends(get_admin_user), db: Session = Depends(ge
         }
     return result
 
+
 @router.put("/settings")
 def update_settings(
     updates: dict = Body(...),
     current_user=Depends(get_admin_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     for key, value in updates.items():
         meta = SETTINGS_META.get(key)
         if not meta or meta.get("readonly", False):
             raise HTTPException(400, f"Cannot edit setting: {key}")
         if meta.get("secret", False):
-            raise HTTPException(400, f"Cannot update secret settings here.")
+            raise HTTPException(400, "Cannot update secret settings here.")
         # Validation
         typ = meta.get("type")
         try:
@@ -101,11 +100,10 @@ def update_settings(
     reload_settings_cache()
     return {"updated": True}
 
+
 @router.delete("/settings/{key}")
 def delete_setting(
-    key: str,
-    current_user=Depends(get_admin_user),
-    db: Session = Depends(get_db)
+    key: str, current_user=Depends(get_admin_user), db: Session = Depends(get_db)
 ):
     meta = SETTINGS_META.get(key)
     if not meta or meta.get("readonly", False):
@@ -118,9 +116,11 @@ def delete_setting(
     reload_settings_cache()
     return {"deleted": key}
 
+
 # --------------------------
 # Celery endpoints
 # --------------------------
+
 
 @router.get("/celery/workers")
 def get_celery_workers(current_user=Depends(get_admin_user)):
@@ -133,6 +133,7 @@ def get_celery_workers(current_user=Depends(get_admin_user)):
         "ping": i.ping(),
     }
 
+
 @router.get("/celery/queues")
 def get_celery_queues(current_user=Depends(get_admin_user)):
     """Show queue/task status."""
@@ -142,6 +143,7 @@ def get_celery_queues(current_user=Depends(get_admin_user)):
         "scheduled": i.scheduled(),
         "active": i.active(),
     }
+
 
 @router.get("/celery/tasks/{task_id}")
 def get_task_status(task_id: str, current_user=Depends(get_admin_user)):
@@ -155,22 +157,31 @@ def get_task_status(task_id: str, current_user=Depends(get_admin_user)):
     }
     return out
 
+
 @router.post("/celery/revoke/{task_id}")
 def revoke_task(
-    task_id: str,
-    terminate: bool = False,
-    current_user=Depends(get_admin_user)
+    task_id: str, terminate: bool = False, current_user=Depends(get_admin_user)
 ):
     """Revoke (cancel) a running celery task."""
     celery_app.control.revoke(task_id, terminate=terminate)
     return {"revoked": task_id, "terminate": terminate}
 
+
 # (Optional) List failed tasks from your DB (example below assumes PreprocessingTask table)
 @router.get("/celery/failed-tasks")
 def get_failed_tasks(
-    current_user=Depends(get_admin_user),
-    db: Session = Depends(get_db)
+    current_user=Depends(get_admin_user), db: Session = Depends(get_db)
 ):
-    failed = db.query(PreprocessingTask).filter(PreprocessingTask.status == 'failed').all()
+    failed = (
+        db.query(PreprocessingTask).filter(PreprocessingTask.status == "failed").all()
+    )
     # Format as desired
-    return [{"id": t.id, "message": t.message, "started_at": t.started_at, "completed_at": t.completed_at} for t in failed]
+    return [
+        {
+            "id": t.id,
+            "message": t.message,
+            "started_at": t.started_at,
+            "completed_at": t.completed_at,
+        }
+        for t in failed
+    ]

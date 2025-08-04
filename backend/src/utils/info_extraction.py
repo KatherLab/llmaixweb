@@ -308,7 +308,9 @@ def extract_info(
                 trial_id=trial_id,
                 document_id=document.id,
                 result=result,
-                additional_content={"reasoning": reasoning_content} if reasoning_content else {},
+                additional_content={"reasoning": reasoning_content}
+                if reasoning_content
+                else {},
             )
             db_session.add(trial_result)
             db_session.commit()

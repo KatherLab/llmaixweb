@@ -2,8 +2,6 @@
 
 import datetime
 import io
-import tempfile
-from pathlib import Path
 from typing import List
 
 import pandas as pd
@@ -12,8 +10,7 @@ from sqlalchemy.orm import Session
 
 from .. import models
 from ..core.config import settings
-from ..dependencies import get_file, save_file
-from ..utils.enums import FileCreator
+from ..dependencies import get_file
 from .helpers import _make_aware
 
 
@@ -391,7 +388,10 @@ class PreprocessingPipeline:
         except Exception as e:
             file_task.status = models.PreprocessingStatus.FAILED
             import traceback
-            print(f"Error processing file {file_task.file.file_name}: {traceback.format_exc()}")
+
+            print(
+                f"Error processing file {file_task.file.file_name}: {traceback.format_exc()}"
+            )
             file_task.error_message = str(e)
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
 
@@ -559,9 +559,6 @@ class PreprocessingPipeline:
             raise ValueError(f"Unsupported preprocessing strategy: {strategy}")
 
         return documents
-
-
-
 
     def _process_text_file(
         self, file: models.File, file_task: models.FilePreprocessingTask

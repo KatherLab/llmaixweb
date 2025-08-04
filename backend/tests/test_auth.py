@@ -1,39 +1,5 @@
-import os
-import shutil
-
 import pytest
 from fastapi.testclient import TestClient
-
-
-@pytest.fixture(scope="session", autouse=True)
-def set_working_directory():
-    os.chdir(os.path.dirname(__file__))
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_and_teardown_test_dir():
-    test_dir = "test_local_storage"
-    db_file = "database.db"
-
-    print("Current working directory:", os.getcwd())
-
-    # Create the test directory
-    if not os.path.exists(test_dir):
-        os.makedirs(test_dir)
-
-    yield
-
-    # Teardown: Delete the database file and the test directory
-    try:
-        if os.path.exists(db_file):
-            os.remove(db_file)
-    except Exception as e:
-        print(f"Error deleting database file: {e}")
-
-    try:
-        shutil.rmtree(test_dir)
-    except Exception as e:
-        print(f"Error deleting test directory: {e}")
 
 
 @pytest.fixture
@@ -46,48 +12,6 @@ def client():
     from ..src.main import app
 
     return TestClient(app)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_db():
-    from ..src.core.security import get_password_hash
-    from ..src.db.base import Base
-    from ..src.db.session import SessionLocal, engine
-    from ..src.models.user import User, UserRole
-
-    print("Current working directory:", os.getcwd())
-    # Create admin user
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    admin_user = db.query(User).filter(User.role == UserRole.admin).first()
-    if not admin_user:
-        admin_user = User(
-            email="admin@example.com",
-            full_name="Admin User",
-            hashed_password=get_password_hash("adminpassword"),
-            role=UserRole.admin.value,
-            is_active=True,
-        )
-
-        test_user = User(
-            email="test@example.com",
-            full_name="Test User",
-            hashed_password=get_password_hash("testpassword"),
-            role=UserRole.user.value,
-            is_active=True,
-        )
-        test_user_to_delete = User(
-            email="delete@example.com",
-            full_name="Delete User",
-            hashed_password=get_password_hash("testpassword"),
-            role=UserRole.user.value,
-            is_active=True,
-        )
-        db.add(test_user)
-        db.add(test_user_to_delete)
-        db.add(admin_user)
-        db.commit()
-    db.close()
 
 
 # Test Register User
@@ -126,7 +50,10 @@ def test_register_user(client, api_url):
     }
     response = client.post(f"{api_url}/user", json=user_data)
     assert response.status_code == 400
-    assert response.json()["detail"] == "Unable to create account. Please check your invitation and try again."
+    assert (
+        response.json()["detail"]
+        == "Unable to create account. Please check your invitation and try again."
+    )
 
     user_data = {
         "email": "inviteduser@example.com",
@@ -328,6 +255,7 @@ def test_delete_invitation(client, api_url):
 
 # Test Toggle User Status (admin only)
 def test_toggle_user_status(client, api_url):
+    # Admin user login
     admin_user_data = {
         "username": "admin@example.com",
         "password": "adminpassword",
@@ -336,31 +264,85 @@ def test_toggle_user_status(client, api_url):
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {access_token}"}
-    user_id = 2  # Assuming the test user has ID 2
-    response = client.patch(
-        f"{api_url}/user/{user_id}/toggle-status", headers=admin_headers
+
+    # Create a new test user with unique email
+    toggle_test_email = "toggletest@example.com"
+    test_password = "toggletestpassword"
+
+    # Admin invites the new user
+    invitation_data = {"email": toggle_test_email}
+    response = client.post(
+        f"{api_url}/user/invite", headers=admin_headers, data=invitation_data
     )
     assert response.status_code == 200
-    assert not response.json()["is_active"]
-    # Test with invalid user id
+    invitation_token = response.json()["token"]
+
+    # User registers themselves
+    user_register_data = {
+        "email": toggle_test_email,
+        "full_name": "Toggle Test User",
+        "password": test_password,
+        "invitation_token": invitation_token,
+    }
+    response = client.post(f"{api_url}/user", json=user_register_data)
+    assert response.status_code == 200
+
+    # Get the ID of our new user
+    response = client.get(f"{api_url}/user", headers=admin_headers)
+    assert response.status_code == 200
+    toggle_test_user = next(
+        (user for user in response.json() if user["email"] == toggle_test_email),
+        None,
+    )
+    toggle_test_user_id = toggle_test_user["id"]
+    assert toggle_test_user is not None, "Test user not found"
+
+    # Toggle the status to inactive
     response = client.patch(
-        f"{api_url}/user/99999/toggle-status", headers=admin_headers
+        f"{api_url}/user/{toggle_test_user_id}/toggle-status", headers=admin_headers
+    )
+    assert response.status_code == 200
+    toggled_user = response.json()
+    assert not toggled_user["is_active"]
+
+    # Toggle back to active
+    response = client.patch(
+        f"{api_url}/user/{toggle_test_user_id}/toggle-status", headers=admin_headers
+    )
+    assert response.status_code == 200
+    assert response.json()["is_active"]
+
+    # Test invalid user ID
+    invalid_user_id = 99999
+    response = client.patch(
+        f"{api_url}/user/{invalid_user_id}/toggle-status", headers=admin_headers
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "User not found"
-    # Test with user role
-    user_data = {
-        "username": "test@example.com",
-        "password": "testpassword",
+
+    # Test with user role (should fail)
+    # Log in as the test user
+    test_user_login = {
+        "username": toggle_test_email,
+        "password": test_password,
     }
-    response = client.post(f"{api_url}/auth/login", data=user_data)
+    response = client.post(f"{api_url}/auth/login", data=test_user_login)
     assert response.status_code == 200
-    access_token = response.json()["access_token"]
-    user_headers = {"Authorization": f"Bearer {access_token}"}
+    test_user_token = response.json()["access_token"]
+    test_headers = {"Authorization": f"Bearer {test_user_token}"}
+
+    # Try to toggle own status
     response = client.patch(
-        f"{api_url}/user/{user_id}/toggle-status", headers=user_headers
+        f"{api_url}/user/{toggle_test_user_id}/toggle-status", headers=test_headers
     )
     assert response.status_code == 403  # Forbidden
+
+    # Restore the test user to active in case they were deactivated
+    from backend.src.utils.enums import UserRole
+
+    from .helpers import restore_user
+
+    restore_user(toggle_test_email, test_password, UserRole.user, True)
 
 
 # Test Reset Password
@@ -373,7 +355,7 @@ def test_reset_password(client, api_url):
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
-    new_password = "newpassword"
+    new_password = "testpassword"
     response = client.post(
         f"{api_url}/user/reset-password?new_password={new_password}", headers=headers
     )
@@ -423,3 +405,9 @@ def test_delete_user(client, api_url):
     user_headers = {"Authorization": f"Bearer {access_token}"}
     response = client.delete(f"{api_url}/user/{user_id}", headers=user_headers)
     assert response.status_code == 403  # Forbidden
+
+    from backend.src.utils.enums import UserRole
+
+    from .helpers import restore_user
+
+    restore_user("delete@example.com", "testpassword", UserRole.user, True)

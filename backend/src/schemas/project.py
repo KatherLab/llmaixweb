@@ -322,6 +322,7 @@ class TrialBase(UTCModel):
     bypass_celery: bool = False
     advanced_options: dict | None = None
 
+
 class TrialCreate(TrialBase):
     @model_validator(mode="after")
     def validate_documents_or_set(self):
@@ -635,6 +636,7 @@ class EvaluationErrorSummary(BaseModel):
     error_types: dict[str, int]
     affected_documents: int
     errors: list[EvaluationError]
+
 
 from .user import User  # noqa: E402, F401
 
