@@ -2615,7 +2615,6 @@ def create_trial(
     db.commit()
     db.refresh(trial_db)
 
-    trial.bypass_celery = True
     # 5. Information extraction (immediate or Celery)
     if trial.bypass_celery:
         from ....utils.info_extraction import extract_info
