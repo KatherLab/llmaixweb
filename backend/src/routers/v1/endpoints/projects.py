@@ -2611,41 +2611,26 @@ def create_trial(
         advanced_options=trial.advanced_options or {},
     )
 
+    # 5. Kick-off extraction ----------------------------------------------------
+    trial_db.status = models.TrialStatus.PROCESSING
+    trial_db.started_at = datetime.datetime.now(datetime.UTC)
+    trial_db.progress = 0.0
     db.add(trial_db)
     db.commit()
     db.refresh(trial_db)
 
-    # 5. Information extraction (immediate or Celery)
     if trial.bypass_celery:
-        from ....utils.info_extraction import extract_info
+        # synchronous (debug)
+        from ....utils.info_extraction import (
+            extract_info_single_doc,
+            update_trial_progress,
+        )
 
-        try:
-            extract_info(
-                trial_id=trial_db.id,
-                document_ids=document_ids,
-                llm_model=llm_model,
-                api_key=api_key,
-                base_url=base_url,
-                schema_id=trial.schema_id,
-                prompt_id=trial.prompt_id,
+        for doc_id in document_ids:
+            extract_info_single_doc(
                 db_session=db,
-                project_id=project_id,
-                advanced_options=trial_db.advanced_options,
-            )
-        except Exception as e:
-            db.delete(trial_db)
-            db.commit()
-            raise HTTPException(
-                status_code=500, detail="Information extraction failed: " + str(e)
-            )
-    else:
-        from ....celery import info_extraction
-        from ....celery.celery_config import celery_app
-
-        if celery_app is not None:
-            info_extraction.extract_info_celery.delay(
                 trial_id=trial_db.id,
-                document_ids=document_ids,
+                document_id=doc_id,
                 llm_model=llm_model,
                 api_key=api_key,
                 base_url=base_url,
@@ -2654,11 +2639,26 @@ def create_trial(
                 project_id=project_id,
                 advanced_options=trial_db.advanced_options,
             )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail="Celery task for information extraction is not available.",
-            )
+            update_trial_progress(db, trial_db.id, increment=1)
+
+        trial_db.status = models.TrialStatus.COMPLETED
+        trial_db.finished_at = datetime.datetime.now(datetime.UTC)
+        db.commit()
+    else:
+        from ....celery.info_extraction import extract_info_celery
+
+        extract_info_celery.delay(
+            trial_id=trial_db.id,
+            document_ids=document_ids,
+            llm_model=llm_model,
+            api_key=api_key,
+            base_url=base_url,
+            schema_id=trial.schema_id,
+            prompt_id=trial.prompt_id,
+            project_id=project_id,
+            advanced_options=trial_db.advanced_options,
+        )
+
 
     return schemas.Trial.model_validate(trial_db)
 

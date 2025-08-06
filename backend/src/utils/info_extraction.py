@@ -1,5 +1,9 @@
 import json
+import sqlite3
+import traceback
+from sqlite3 import IntegrityError
 from typing import Any, cast
+import datetime as dt
 
 import requests
 from openai import (
@@ -8,10 +12,12 @@ from openai import (
     AuthenticationError,
     OpenAI,
     RateLimitError,
+    AsyncOpenAI,
 )
-from sqlalchemy import select
+from sqlalchemy import select, insert, func, update
 from sqlalchemy.orm import Session
 
+from .helpers import make_naive_fields_timezone_aware
 from .. import models
 
 
@@ -208,115 +214,156 @@ def test_model_with_schema(
             return test_llm_connection(api_key, base_url, llm_model)
 
 
-def extract_info(
+def _now_utc() -> dt.datetime:
+    """Return an offset-aware datetime in UTC."""
+    return dt.datetime.now(dt.UTC)
+
+
+def _to_utc(dt_obj: dt.datetime) -> dt.datetime:
+    """Return an offset-aware UTC datetime (attach/convert if needed)."""
+    if dt_obj.tzinfo is None or dt_obj.tzinfo.utcoffset(dt_obj) is None:
+        return dt_obj.replace(tzinfo=dt.UTC)
+    return dt_obj.astimezone(dt.UTC)
+
+
+# utils/info_extraction.py
+def update_trial_progress(db, trial_id: int) -> None:
+    from sqlalchemy import func, select
+    done = db.scalar(
+        select(func.count())
+        .select_from(models.TrialResult)
+        .where(models.TrialResult.trial_id == trial_id)
+    )
+    trial = db.get(models.Trial, trial_id)
+    total = len(trial.document_ids or [])
+    progress = done / total if total else 1.0
+
+    trial.docs_done = done
+    trial.progress = progress
+
+    # ETA logic - always present and correct
+    if trial.started_at and done:
+        elapsed = (_now_utc() - _to_utc(trial.started_at)).total_seconds()
+        eta = int(elapsed / progress - elapsed) if progress and done < total else 0
+        trial.meta = (trial.meta or {}) | {"eta_seconds": eta}
+    else:
+        trial.meta = (trial.meta or {}) | {"eta_seconds": 0}
+    db.commit()
+
+
+
+def _build_messages(prompt: models.Prompt, document_text: str) -> list[dict]:
+    """Inject the document text into user/system prompt templates."""
+    placeholder = "{document_content}"
+    msgs: list[dict[str, str]] = []
+    if prompt.system_prompt:
+        msgs.append({"role": "system", "content": prompt.system_prompt.replace(placeholder, document_text)})
+    if prompt.user_prompt:
+        msgs.append({"role": "user", "content": prompt.user_prompt.replace(placeholder, document_text)})
+    return msgs
+
+
+def _completion_kwargs(model: str, schema_def: dict, messages: list[dict], adv: dict | None) -> dict:
+    kwargs = {
+        "model": model,
+        "messages": messages,
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "extraction_schema",
+                "schema": schema_def,
+                "strict": True,
+            },
+        },
+    }
+    if adv:
+        kwargs.update({k: v for k, v in adv.items() if k in {"max_completion_tokens", "temperature"}})
+    return kwargs
+
+async def extract_info_single_doc_async(
+    *,
+    client: AsyncOpenAI,
+    db_session: Session,
     trial_id: int,
-    document_ids: list[int],
+    document_id: int,
+    llm_model: str,
+    schema_id: int,
+    prompt_id: int,
+    project_id: int,          # kept for signature parity; not used here
+    advanced_options: dict | None = None,
+) -> None:
+    """Async version used inside the Celery worker."""
+    schema:  models.Schema   = db_session.get(models.Schema,   schema_id)
+    prompt:  models.Prompt   = db_session.get(models.Prompt,   prompt_id)
+    document: models.Document = db_session.get(models.Document, document_id)
+    if not (schema and prompt and document):
+        raise ValueError("schema / prompt / document not found")
+
+    response = await client.chat.completions.create(
+        **_completion_kwargs(
+            llm_model,
+            schema.schema_definition,
+            _build_messages(prompt, document.text),
+            advanced_options,
+        )
+    )
+    _store_result(db_session, trial_id, document_id, response)
+
+
+def extract_info_single_doc(
+    *,
+    db_session: Session,
+    trial_id: int,
+    document_id: int,
     llm_model: str,
     api_key: str,
     base_url: str,
     schema_id: int,
     prompt_id: int,
-    db_session: Session,
-    project_id: int,
+    project_id: int,          # kept for signature parity; not used here
     advanced_options: dict | None = None,
-):
-    trial: models.Trial = db_session.execute(
-        select(models.Trial).where(models.Trial.id == trial_id)
-    ).scalar_one_or_none()
-    if not trial:
-        raise ValueError(f"Trial with ID {trial_id} not found.")
+) -> None:
+    """Synchronous variant, used when bypass_celery=True."""
+    schema:  models.Schema   = db_session.get(models.Schema,   schema_id)
+    prompt:  models.Prompt   = db_session.get(models.Prompt,   prompt_id)
+    document: models.Document = db_session.get(models.Document, document_id)
+    if not (schema and prompt and document):
+        raise ValueError("schema / prompt / document not found")
 
-    schema: models.Schema = db_session.execute(
-        select(models.Schema).where(models.Schema.id == schema_id)
-    ).scalar_one_or_none()
-    if not schema:
-        raise ValueError(f"Schema with ID {schema_id} not found.")
-
-    prompt: models.Prompt = db_session.execute(
-        select(models.Prompt).where(models.Prompt.id == prompt_id)
-    ).scalar_one_or_none()
-    if not prompt:
-        raise ValueError(f"Prompt with ID {prompt_id} not found.")
-
-    documents: list[models.Document] = cast(
-        list[models.Document],
-        (
-            db_session.execute(
-                select(models.Document).where(models.Document.id.in_(document_ids))
-            )
-            .scalars()
-            .all()
-        ),
+    client = OpenAI(api_key=api_key, base_url=base_url)
+    response = client.chat.completions.create(
+        **_completion_kwargs(
+            llm_model,
+            schema.schema_definition,
+            _build_messages(prompt, document.text),
+            advanced_options,
+        )
     )
+    _store_result(db_session, trial_id, document_id, response)
 
-    for document in documents:
-        try:
-            # Replace the placeholder with document content
-            placeholder = "{document_content}"
 
-            # Prepare the messages for the LLM
-            messages = []
 
-            # Add system prompt if exists
-            if prompt.system_prompt:
-                system_content = prompt.system_prompt.replace(
-                    placeholder, document.text
-                )
-                messages.append({"role": "system", "content": system_content})
-
-            # Add user prompt if exists
-            if prompt.user_prompt:
-                user_content = prompt.user_prompt.replace(placeholder, document.text)
-                messages.append({"role": "user", "content": user_content})
-
-            # Use OpenAI client directly for structured output
-            client = OpenAI(api_key=api_key, base_url=base_url)
-
-            completion_kwargs = {
-                "model": llm_model,
-                "messages": messages,
-                "response_format": {
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "extraction_schema",
-                        "schema": schema.schema_definition,
-                        "strict": True,
-                    },
-                },
-            }
-
-            # Add advanced options if provided
-            if advanced_options:
-                print("Using advanced options:", advanced_options)
-                if "max_completion_tokens" in advanced_options:
-                    completion_kwargs["max_completion_tokens"] = advanced_options[
-                        "max_completion_tokens"
-                    ]
-                if "temperature" in advanced_options:
-                    completion_kwargs["temperature"] = advanced_options["temperature"]
-                # TODO: Add more advanced options here in the future
-
-            response = client.chat.completions.create(**completion_kwargs)
-
-            result = json.loads(response.choices[0].message.content)
-
-            reasoning_content = None
-            if hasattr(response.choices[0].message, "reasoning_content"):
-                reasoning_content = response.choices[0].message.reasoning_content
-
-            trial_result = models.TrialResult(
+def _store_result(db_session, trial_id: int, document_id: int, response) -> None:
+    import json
+    # Check for existing row first (universal, safe)
+    exists = db_session.scalar(
+        select(models.TrialResult.id).where(
+            models.TrialResult.trial_id == trial_id,
+            models.TrialResult.document_id == document_id,
+        )
+    )
+    if exists:
+        return  # Already stored!
+    result_json = json.loads(response.choices[0].message.content)
+    try:
+        db_session.add(
+            models.TrialResult(
                 trial_id=trial_id,
-                document_id=document.id,
-                result=result,
-                additional_content={"reasoning": reasoning_content}
-                if reasoning_content
-                else {},
+                document_id=document_id,
+                result=result_json,
+                additional_content={},
             )
-            db_session.add(trial_result)
-            db_session.commit()
-        except Exception as e:
-            db_session.rollback()
-            raise e
-
-    trial.status = models.TrialStatus.COMPLETED
-    db_session.commit()
+        )
+        db_session.commit()
+    except IntegrityError:
+        db_session.rollback()

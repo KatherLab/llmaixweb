@@ -25,25 +25,49 @@
         <span><strong>Schema:</strong> {{ schema?.schema_name || '-' }}</span>
         <span v-if="prompt"><strong>Prompt:</strong> {{ prompt.name }}</span>
         <span><strong>LLM:</strong> {{ trial.llm_model }}</span>
-        <!--<span><strong>Docs:</strong> {{ trial.document_ids?.length || 0 }}</span>-->
         <span><strong>Started:</strong> {{ formatDate(trial.created_at) }}</span>
       </div>
-      <div v-if="isActive" class="flex items-center gap-2 mt-2">
-        <span class="text-xs text-blue-600 font-medium">Processing</span>
-        <span class="text-xs text-gray-500">{{ progressPercent }}%</span>
-        <div class="w-full h-1 bg-gray-200 rounded-full overflow-hidden flex-1">
-          <div class="h-full bg-blue-500 transition-all duration-500" :style="{ width: progressPercent + '%' }"></div>
+
+      <!-- Live progress / ETA ----------------------------------------------------->
+      <div v-if="isActive" class="flex flex-col gap-1 mt-2">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="font-medium text-blue-600">{{ docsDone }}/{{ totalDocs }} docs</span>
+          <span class="text-gray-500">{{ pretty(elapsedSeconds) }} elapsed</span>
+          <span v-if="etaSeconds && etaSeconds > 0" class="text-gray-500">• ≈ {{ pretty(etaSeconds) }} left</span>
+        </div>
+        <div class="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+          <div class="h-full bg-blue-500 transition-all duration-500"
+               :style="{ width: progressPercent + '%' }">
+          </div>
         </div>
       </div>
-      <div v-else-if="trial.status === 'failed'" class="mt-2 flex items-center gap-2 text-red-600 font-medium text-xs">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        Failed
-      </div>
-      <div v-else-if="trial.results && trial.results.length > 0" class="mt-2 flex items-center gap-2 text-green-600 font-medium text-xs">
+
+      <!-- Results when done -->
+      <div v-else-if="trial.status === 'completed' && trial.results && trial.results.length > 0"
+           class="mt-2 flex items-center gap-2 text-green-600 font-medium text-xs">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         {{ trial.results.length }} results
       </div>
+
+      <!-- Failure details -->
+      <div v-else-if="trial.status === 'failed'" class="mt-2 flex flex-col gap-1 text-red-600 text-xs">
+        <div class="flex items-center gap-2 font-medium">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Failed<span v-if="failuresCount > 0">&nbsp;({{ failuresCount }} doc{{ failuresCount === 1 ? '' : 's' }})</span>
+        </div>
+        <ul v-if="failuresCount > 0" class="list-disc list-inside pl-2 mt-1">
+          <li v-for="(err, docId) in trial.meta.failures" :key="docId" class="break-all">
+            <span class="font-semibold">Doc {{ docId }}:</span>
+            <span>{{ err }}</span>
+          </li>
+        </ul>
+      </div>
     </div>
+
+    <!-- Footer buttons -->
     <div class="border-t bg-gray-50 px-4 py-3 flex items-center justify-between rounded-b-xl gap-2">
       <div class="flex gap-2 flex-wrap">
         <button @click.stop="emit('view-results', trial)" v-if="trial.results && trial.results.length > 0"
@@ -75,33 +99,95 @@
     </div>
   </div>
 </template>
+
 <script setup>
 import { computed } from 'vue';
+
+/* props / emits */
 const props = defineProps({
-  trial: { type: Object, required: true },
-  schemas: { type: Array, required: true },
-  prompts: { type: Array, required: true },
+  trial:   { type: Object, required: true },
+  schemas: { type: Array,  required: true },
+  prompts: { type: Array,  required: true },
   selected: Boolean,
 });
-const emit = defineEmits(['select', 'rename', 'delete', 'retry', 'download', 'view-results', 'view-schema', 'view-prompt']);
 
-const schema = computed(() => props.schemas.find(s => s.id === props.trial.schema_id));
-const prompt = computed(() => props.prompts.find(p => p.id === props.trial.prompt_id));
+const emit = defineEmits([
+  'select',
+  'rename',
+  'delete',
+  'retry',
+  'download',
+  'view-results',
+  'view-schema',
+  'view-prompt',
+]);
 
-const statusClass = computed(() => ({
-  'pending': 'bg-yellow-100 text-yellow-800',
-  'processing': 'bg-blue-100 text-blue-800',
-  'completed': 'bg-green-100 text-green-800',
-  'failed': 'bg-red-100 text-red-800'
-}[props.trial.status] || 'bg-gray-100 text-gray-800'));
-
-const isActive = computed(() => !['completed', 'failed'].includes(props.trial.status));
-const progressPercent = computed(() =>
-  props.trial.progress != null ? Math.round(props.trial.progress * 100) : (isActive.value ? 25 : 0)
+/* helpers */
+const schema = computed(() =>
+  props.schemas.find((s) => s.id === props.trial.schema_id)
 );
+
+const prompt = computed(() =>
+  props.prompts.find((p) => p.id === props.trial.prompt_id)
+);
+
+const statusClass = computed(
+  () =>
+    ({
+      pending:    'bg-yellow-100 text-yellow-800',
+      processing: 'bg-blue-100 text-blue-800',
+      completed:  'bg-green-100 text-green-800',
+      failed:     'bg-red-100 text-red-800',
+    }[props.trial.status] || 'bg-gray-100 text-gray-800')
+);
+
+const isActive = computed(
+  () => !['completed', 'failed'].includes(props.trial.status)
+);
+
+/* progress */
+const docsDone = computed(() => {
+  if (props.trial.docs_done != null) return props.trial.docs_done;
+  if (props.trial.progress != null) {
+    const total = props.trial.document_ids?.length ?? 0;
+    return Math.round(props.trial.progress * total);
+  }
+  return 0;
+});
+
+const totalDocs = computed(
+  () => props.trial.document_ids?.length ?? 0
+);
+
+const progressPercent = computed(() =>
+  props.trial.progress != null ? Math.round(props.trial.progress * 100) : 0
+);
+
+/* timing */
+const elapsedSeconds = computed(() => {
+  if (!props.trial.started_at) return 0;
+  return (Date.now() - Date.parse(props.trial.started_at)) / 1000;
+});
+
+const etaSeconds = computed(() => props.trial.meta?.eta_seconds ?? 0);
+
+/* error/failure info */
+const failuresCount = computed(() =>
+  props.trial.meta?.failures ? Object.keys(props.trial.meta.failures).length : 0
+);
+
+/* utils */
+function pretty(sec) {
+  if (!sec || isNaN(sec)) return "00:00:00";
+  // returns HH:MM:SS irrespective of timezone offset
+  return new Date(sec * 1000).toISOString().substring(11, 19);
+}
+
 function formatDate(dateString) {
+  if (!dateString) return "-";
   return new Date(dateString).toLocaleString();
 }
+
 function toggleSelect() {
   emit('select', props.trial.id);
 }

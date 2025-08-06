@@ -350,6 +350,12 @@ class Trial(TrialBase):
     document_set: DocumentSet | None = None  # Add this
     advanced_options: dict | None = None
 
+    docs_done: int | None = None  # number of documents already processed
+    progress: float | None = None  # 0.0 – 1.0
+    started_at: datetime | None = None  # set when the first doc starts
+    finished_at: datetime | None = None  # set when everything is done
+    meta: dict | None = None  # currently holds {"eta_seconds": …}
+
     model_config = ConfigDict(from_attributes=True)
 
 

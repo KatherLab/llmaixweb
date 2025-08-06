@@ -1,6 +1,7 @@
 import base64
 import io
-from datetime import timezone
+from datetime import timezone, datetime
+from typing import Any
 
 import requests
 from fastapi import HTTPException
@@ -8,6 +9,15 @@ from PIL import Image
 
 from backend.src import schemas
 
+
+def make_naive_fields_timezone_aware(value: Any) -> Any:
+    # Only process datetime instances that are naive
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        # Optional: normalize to UTC if already tz-aware but not UTC
+        # return value.astimezone(timezone.utc)
+    return value
 
 def validate_prompt(prompt: schemas.PromptCreate | schemas.PromptUpdate) -> None:
     """Validate that the prompt contains the required placeholder and at least one prompt is present."""

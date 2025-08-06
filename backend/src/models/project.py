@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Table,
     UniqueConstraint,
+    Integer,
 )
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -485,48 +486,56 @@ class Schema(Base):
 
 class TrialStatus(str, enum.Enum):
     PENDING = "pending"
-    IN_PROGRESS = "in_progress"
+    PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
 
 
 class Trial(Base):
     __tablename__ = "trials"
+
+    # ── identity ────────────────────────────────────────────────────────────────
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=True)
-    description: Mapped[str] = mapped_column(String(512), nullable=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"), nullable=False)
-    prompt_id: Mapped[str] = mapped_column(ForeignKey("prompts.id"), nullable=False)
-    document_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
-    document_set_id: Mapped[int | None] = mapped_column(
-        ForeignKey("document_sets.id"), nullable=True
-    )
+    name: Mapped[str | None] = mapped_column(String(100))
+    description: Mapped[str | None] = mapped_column(String(512))
 
-    document_set: Mapped["DocumentSet"] = relationship(
-        "DocumentSet", back_populates="trials"
-    )
+    # ── foreign keys ────────────────────────────────────────────────────────────
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"))
+    prompt_id: Mapped[int] = mapped_column(ForeignKey("prompts.id"))
+    document_set_id: Mapped[int | None] = mapped_column(ForeignKey("document_sets.id"))
 
+    # ── config ──────────────────────────────────────────────────────────────────
+    document_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
     status: Mapped[TrialStatus] = mapped_column(
-        Enum(TrialStatus, native_enum=False, length=20),
-        default=TrialStatus.PENDING,
+        Enum(TrialStatus, native_enum=False, length=20), default=TrialStatus.PENDING
     )
-    llm_model: Mapped[str] = mapped_column(String(100), nullable=False)
-    api_key: Mapped[str] = mapped_column(String(100), nullable=False)
-    base_url: Mapped[str] = mapped_column(String(100), nullable=False)
-    bypass_celery: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    llm_model: Mapped[str] = mapped_column(String(100))
+    api_key: Mapped[str] = mapped_column(String(100))
+    base_url: Mapped[str] = mapped_column(String(100))
+    bypass_celery: Mapped[bool] = mapped_column(Boolean, default=False)
+    advanced_options: Mapped[dict] = mapped_column(JSON, default=dict)
 
-    advanced_options: Mapped[dict] = mapped_column(JSON, nullable=True, default=dict)
+    # ── progress tracking ───────────────────────────────────────────────────────
+    docs_done: Mapped[int] = mapped_column(Integer, default=0)
+    progress: Mapped[float] = mapped_column(Float, default=0.0)  # 0.0-1.0
+    started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)       # ETA etc.
 
+    # ── timestamps ──────────────────────────────────────────────────────────────
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    # ── relationships ───────────────────────────────────────────────────────────
     project: Mapped["Project"] = relationship(back_populates="trials")
     schema: Mapped["Schema"] = relationship(back_populates="trials")
     prompt: Mapped["Prompt"] = relationship(back_populates="trials")
+    document_set: Mapped["DocumentSet"] = relationship(back_populates="trials")
     results: Mapped[list["TrialResult"]] = relationship(
         back_populates="trial", cascade="all, delete-orphan"
     )
@@ -552,6 +561,14 @@ class TrialResult(Base):
     )
     trial: Mapped["Trial"] = relationship(back_populates="results")
     document: Mapped["Document"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint(
+            "trial_id",
+            "document_id",
+            name="uq_trial_document",  # <-- prevents duplicates
+        ),
+    )
 
 
 class FieldMapping(Base):
