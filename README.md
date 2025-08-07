@@ -23,24 +23,14 @@ Setup the environment variables in `.env` file:
 cp `.env.example` to `.env` and set the environment variables as needed.
 ```
 
-Build the Docker image:
+Build the Docker image (either for GPU or CPU):
 
 ```
-# GPU stack (requires NVIDIA driver + container toolkit)
+# GPU (requires NVIDIA driver + container toolkit), faster preprocessing
 docker compose -f docker-compose.gpu.yml up -d --build
 
-# CPU stack
+# CPU
 docker compose -f docker-compose.cpu.yml up -d --build
-```
-
-Create the database and populate it with initial users (interactive):
-```bash
-## REPLACE `docker-compose.gpu.yml` with `docker-compose.cpu.yml` for CPU stack
-# Currently running stack
-docker compose -f docker-compose.gpu.yml exec -it backend python -m backend.scripts.populate_users
-
-# For a currently stopped stack, run:
-docker compose -f docker-compose.gpu.yml run --rm -it backend python -m backend.scripts.populate_users
 ```
 
 
@@ -56,6 +46,17 @@ Visit the web interface at [http://localhost:5173](http://localhost:5173).
 **Initialize Users**
 ```bash
 python -m backend.scripts.populate_users
+```
+
+In Docker Installation:
+
+```bash
+## REPLACE `docker-compose.gpu.yml` with `docker-compose.cpu.yml` for CPU stack
+# Currently running stack
+docker compose -f docker-compose.gpu.yml exec -it backend python -m backend.scripts.populate_users
+
+# For a currently stopped stack, run:
+docker compose -f docker-compose.gpu.yml run --rm -it backend python -m backend.scripts.populate_users
 ```
 
 **Install Minio**
