@@ -6,6 +6,10 @@
 
 Provides a web interface for the LLMAIx framework, allowing users to interact with the library through a user-friendly interface.
 
+## In Action
+
+![action.png](static/action.png)
+
 
 ## Features
 
@@ -42,6 +46,13 @@ docker compose -f docker-compose.gpu.yml run --rm -it backend python -m backend.
 
 ## Get started
 
+Visit the web interface at [http://localhost:5173](http://localhost:5173).
+
+1. Create a Admin user account.
+2. Log in with the created account.
+
+## Development
+
 **Initialize Users**
 ```bash
 python -m backend.scripts.populate_users
@@ -53,8 +64,6 @@ Start on MacOS:
 ```bash
 minio server miniodata
 ```
-
-## Development
 
 **Run Backend Tests**
 ```bash
