@@ -96,11 +96,13 @@ import { useRouter, useRoute } from 'vue-router'
 import { api } from '@/services/api'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
+import { useFirstAdminStore } from '@/stores/firstAdmin'
 
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
-const authStore = useAuthStore() // NEW: import and initialize
+const authStore = useAuthStore()
+const firstAdminStore = useFirstAdminStore()
 
 const fullName = ref('')
 const email = ref('')
@@ -111,19 +113,27 @@ const error = ref(null)
 const invitationToken = ref('')
 const isEmailFromInvitation = ref(false)
 
-const requireInvitation = ref(true) // Default: invitation required for safety
+const requireInvitation = ref(true)
 const isLoadingSettings = ref(true)
 const allowRegister = computed(() =>
   !requireInvitation.value || isEmailFromInvitation.value
 )
 
 onMounted(async () => {
+  // If first-admin flow is needed, redirect to it (extra safe)
+  if (!firstAdminStore.checked) {
+    await firstAdminStore.checkFirstAdmin()
+  }
+  if (firstAdminStore.needsFirstAdmin) {
+    router.replace('/first-admin')
+    return
+  }
   // Fetch require_invitation from backend
   try {
     const res = await api.get('/auth/settings')
     requireInvitation.value = !!res.data.require_invitation
   } catch (e) {
-    requireInvitation.value = true // safest default
+    requireInvitation.value = true
   } finally {
     isLoadingSettings.value = false
   }
@@ -193,6 +203,7 @@ async function handleSubmit() {
   }
 }
 </script>
+
 
 <style scoped>
 .fade-enter-active, .fade-leave-active {

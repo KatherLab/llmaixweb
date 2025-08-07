@@ -67,42 +67,52 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { api } from "@/services/api.js";
+import { api } from "@/services/api.js"
 import { useToast } from 'vue-toastification'
+import { useFirstAdminStore } from '@/stores/firstAdmin'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()
+const firstAdminStore = useFirstAdminStore()
 
 const email = ref('')
 const password = ref('')
 const isLoading = ref(false)
 const error = ref(null)
 
+onMounted(async () => {
+  // If first-admin flow is needed, redirect to it (extra safe)
+  if (!firstAdminStore.checked) {
+    await firstAdminStore.checkFirstAdmin()
+  }
+  if (firstAdminStore.needsFirstAdmin) {
+    router.replace('/first-admin')
+  }
+})
+
 async function handleSubmit() {
-  if (isLoading.value) return;
-  isLoading.value = true;
-  error.value = null;
+  if (isLoading.value) return
+  isLoading.value = true
+  error.value = null
 
   try {
-    const formData = new URLSearchParams();
-    formData.append('username', email.value);
-    formData.append('password', password.value);
+    const formData = new URLSearchParams()
+    formData.append('username', email.value)
+    formData.append('password', password.value)
 
     const response = await api.post('/auth/login', formData.toString(), {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
 
-    await authStore.setToken(response.data.access_token);
-    await authStore.fetchUser();
-    router.push(authStore.isAdmin ? '/' : '/');
+    await authStore.setToken(response.data.access_token)
+    await authStore.fetchUser()
+    router.push(authStore.isAdmin ? '/' : '/')
   } catch (err) {
-    error.value = 'Invalid email or password';
+    error.value = 'Invalid email or password'
     toast.error('Invalid email or password', {
       timeout: 3500,
       position: 'top-right',
@@ -110,10 +120,10 @@ async function handleSubmit() {
       hideProgressBar: false,
       icon: true,
       draggable: true,
-    });
-    console.error('Login error:', err);
+    })
+    console.error('Login error:', err)
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
 }
 </script>

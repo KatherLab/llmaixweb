@@ -12,8 +12,13 @@ from sqlalchemy.orm import Session
 from ..core.config import settings
 from ..dependencies import get_db
 from ..models.user import User
+from ..utils.enums import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+
+
+def any_admin_exists(db: Session) -> bool:
+    return db.query(User).filter(User.role == UserRole.admin).count() > 0
 
 
 def create_access_token(
