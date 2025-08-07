@@ -86,6 +86,7 @@ class Settings(BaseSettings):
             if not self.OPENAI_API_KEY:
                 print("OPENAI_API_KEY is not set. Please set it in your .env file.")
                 sys.exit(1)
+            print("Initializing OpenAI client with BASE URL:", self.OPENAI_API_BASE)
             client = openai.OpenAI(
                 api_key=self.OPENAI_API_KEY, base_url=self.OPENAI_API_BASE
             )

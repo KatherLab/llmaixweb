@@ -3,6 +3,7 @@ import datetime
 import io
 import json
 import re
+import zipfile
 from typing import Any, List, cast
 
 import pandas as pd
@@ -36,7 +37,11 @@ from ....dependencies import (
 )
 from ....models.project import document_set_association
 from ....utils.enums import FileCreator, FileType
-from ....utils.helpers import extract_field_types_from_schema, validate_prompt
+from ....utils.helpers import (
+    extract_field_types_from_schema,
+    validate_prompt,
+    flatten_dict,
+)
 from ....utils.info_extraction import (
     get_available_models,
     test_api_connection,
@@ -2849,80 +2854,160 @@ def download_trial_results(
     trial_id: int,
     format: str = Query("json", enum=["json", "csv"]),
     include_content: bool = Query(True),
-    current_user: models.User = Depends(get_current_user),
+    current_user: 'models.User' = Depends(get_current_user),
 ) -> Response:
-    """Download trial results in specified format."""
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
+    """
+    Download trial results, with a separate metadata.json for trial/prompt/schema metadata.
+    """
+
+    def filter_sensitive_keys(d, blacklist=("api_key",)):
+        if not d:
+            return {}
+        return {k: v for k, v in d.items() if k not in blacklist}
+
+    # --- Permissions ---
+    project = db.execute(select(models.Project).where(models.Project.id == project_id)).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's trials"
-        )
-    trial: models.Trial | None = db.execute(
-        select(models.Trial).where(
-            models.Trial.project_id == project_id, models.Trial.id == trial_id
-        )
-    ).scalar_one_or_none()
+        raise HTTPException(status_code=403, detail="Not authorized to access this project's trials")
+    trial = db.execute(select(models.Trial).where(
+        models.Trial.project_id == project_id, models.Trial.id == trial_id
+    )).scalar_one_or_none()
     if not trial:
         raise HTTPException(status_code=404, detail="Trial not found")
-    # Get trial results
+
+    # --- Related: prompt, schema ---
+    prompt = db.execute(select(models.Prompt).where(models.Prompt.id == trial.prompt_id)).scalar_one_or_none()
+    schema = db.execute(select(models.Schema).where(models.Schema.id == trial.schema_id)).scalar_one_or_none()
+
     results = list(
         db.execute(
             select(models.TrialResult).where(models.TrialResult.trial_id == trial_id)
-        )
-        .scalars()
-        .all()
+        ).scalars().all()
     )
     if not results:
         raise HTTPException(status_code=404, detail="No results found for this trial")
-    # Handle different format types
-    if format == "json":
-        # For JSON, create a JSON file for each document result
-        import io
-        import zipfile
 
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
-            added_files = set()
-            for i, result in enumerate(results):
-                # Get document content if needed
-                document: models.Document | None = db.execute(
-                    select(models.Document).where(
-                        models.Document.id == result.document_id
+    document_cache = {}
+    file_cache = {}
+    preprocessing_config_cache = {}
+    all_meta_keys = set()
+    all_result_keys = set()
+    all_prep_keys = set()
+    all_trial_keys = set()
+    all_prompt_keys = set()
+    all_schema_keys = set()
+
+    for result in results:
+        doc = db.execute(select(models.Document).where(models.Document.id == result.document_id)).scalar_one_or_none()
+        document_cache[result.document_id] = doc
+        if doc:
+            if doc.original_file_id and doc.original_file_id not in file_cache:
+                file_cache[doc.original_file_id] = db.execute(
+                    select(models.File).where(models.File.id == doc.original_file_id)
+                ).scalar_one_or_none()
+            prep_conf = None
+            if doc.preprocessing_config_id:
+                prep_conf = db.execute(
+                    select(models.PreprocessingConfiguration).where(
+                        models.PreprocessingConfiguration.id == doc.preprocessing_config_id
                     )
                 ).scalar_one_or_none()
+                if prep_conf:
+                    preprocessing_config_cache[doc.preprocessing_config_id] = prep_conf
+                    all_prep_keys.update(_extract_keys(filter_sensitive_keys(prep_conf.__dict__)))
+            all_meta_keys.update(_extract_keys(doc.meta_data or {}))
+            all_result_keys.update(_extract_keys(result.result or {}))
+
+    # Prepare metadata for metadata.json (top-level only, filter sensitive)
+    trial_dict = filter_sensitive_keys({
+        k: v for k, v in trial.__dict__.items()
+        if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+    })
+    prompt_dict = filter_sensitive_keys({
+        k: v for k, v in (prompt.__dict__ if prompt else {}).items()
+        if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+    })
+    schema_dict = filter_sensitive_keys({
+        k: v for k, v in (schema.__dict__ if schema else {}).items()
+        if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+    })
+
+    # Remove fields that don't serialize well (e.g. relationships)
+    for d in (trial_dict, prompt_dict, schema_dict):
+        for key in list(d.keys()):
+            if isinstance(d[key], (dict, list)):
+                continue
+            try:
+                json.dumps(d[key])
+            except Exception:
+                d.pop(key)
+
+    # --- JSON Format: Each Document as JSON in ZIP, metadata.json separate ---
+    if format == "json":
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+            # Write metadata.json first
+            metadata_json = {
+                "trial": trial_dict,
+                "prompt": prompt_dict,
+                "schema": schema_dict,
+            }
+            zipf.writestr("metadata.json", json.dumps(metadata_json, indent=2, ensure_ascii=False))
+
+            added_files = set()
+            for result in results:
+                document = document_cache.get(result.document_id)
                 if not document:
                     continue
 
-                # Create result data
+                file = None
+                document_name = document.document_name
+                if document.original_file_id:
+                    file = file_cache.get(document.original_file_id)
+                    if not document_name and file:
+                        document_name = file.file_name
+
+                prep_conf = None
+                if document.preprocessing_config_id:
+                    prep_obj = preprocessing_config_cache.get(document.preprocessing_config_id)
+                    if prep_obj:
+                        prep_conf = filter_sensitive_keys({
+                            k: v for k, v in prep_obj.__dict__.items()
+                            if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+                        })
+
                 result_data = {
                     "result": result.result,
-                    "metadata": {
-                        "trial_id": trial.id,
-                        "document_id": result.document_id,
-                        "created_at": result.created_at.isoformat(),
-                    },
+                    "document_id": result.document_id,
+                    "document_name": document_name,
+                    "file_name": file.file_name if file else None,
+                    "created_at": result.created_at.isoformat(),
+                    "document_metadata": document.meta_data or {},
+                    "preprocessing": prep_conf or {},
                 }
                 if include_content:
                     result_data["content"] = document.text
-                    # Add preprocessed or original file to zip
                     file_id = document.preprocessed_file_id or document.original_file_id
-                    file: models.File | None = db.execute(
-                        select(models.File).where(models.File.id == file_id)
-                    ).scalar_one_or_none()
-                    if file and file_id not in added_files:
-                        added_files.add(file_id)
-                        file_content = get_file(file.file_uuid)
-                        file_path = f"files/{file.file_uuid}_{file.file_name}"
-                        zipf.writestr(file_path, file_content)
+                    if file_id:
+                        file_to_add = db.execute(
+                            select(models.File).where(models.File.id == file_id)
+                        ).scalar_one_or_none()
+                        if file_to_add and file_id not in added_files:
+                            added_files.add(file_id)
+                            file_content = get_file(file_to_add.file_uuid)
+                            file_path = f"files/{file_to_add.file_uuid}_{file_to_add.file_name}"
+                            zipf.writestr(file_path, file_content)
 
-                # Add to ZIP
+                file_base = document_name or f"document_{result.document_id}"
+                safe_base = "".join(c for c in file_base if c.isalnum() or c in " ._-").rstrip()
+                if not safe_base:
+                    safe_base = f"document_{result.document_id}"
+                json_filename = f"{safe_base}.json"
                 zipf.writestr(
-                    f"document_{result.document_id}.json",
-                    json.dumps(result_data, indent=2),
+                    json_filename,
+                    json.dumps(result_data, indent=2, ensure_ascii=False),
                 )
         zip_buffer.seek(0)
         return Response(
@@ -2932,61 +3017,104 @@ def download_trial_results(
                 "Content-Disposition": f"attachment; filename=trial_{trial_id}_results.zip"
             },
         )
+
+    # --- CSV Format ---
     elif format == "csv":
-        # For CSV, flatten the structure
-        import csv
-        import io
-        import zipfile
+        meta_keys = sorted(all_meta_keys)
+        prep_keys = sorted(all_prep_keys)
+        result_keys = sorted(all_result_keys)
+        trial_keys = sorted(_extract_keys(trial_dict))
+        prompt_keys = sorted(_extract_keys(prompt_dict))
+        schema_keys = sorted(_extract_keys(schema_dict))
+
+        def meta_flatten(md):
+            return flatten_dict(md or {})
+
+        def result_flatten(res):
+            return flatten_dict(res or {})
+
+        def prep_flatten(pc):
+            return flatten_dict(pc or {})
+
+        def flatten_one(d):
+            return flatten_dict(d or {})
 
         if include_content:
             output = io.BytesIO()
             with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zipf:
-                # Extract all keys from all results to create CSV columns
-                all_keys = set()
-                for result in results:
-                    all_keys.update(_extract_keys(result.result))
-                # Sort keys
-                all_keys = sorted(list(all_keys))
-                # Create header row
-                header = ["document_id", "trial_id", "created_at"]
-                header.append("document_content")
-                header.extend(all_keys)
+                header = (
+                    ["document_id", "document_name", "file_name", "created_at", "document_content"]
+                    + [f"meta.{k}" for k in meta_keys]
+                    + [f"preprocessing.{k}" for k in prep_keys]
+                    + [f"trial.{k}" for k in trial_keys]
+                    + [f"prompt.{k}" for k in prompt_keys]
+                    + [f"schema.{k}" for k in schema_keys]
+                    + [f"result.{k}" for k in result_keys]
+                )
                 csv_output = io.StringIO()
                 writer = csv.DictWriter(csv_output, fieldnames=header)
                 writer.writeheader()
                 added_files = set()
-                # Write data rows
                 for result in results:
                     row = {
                         "document_id": result.document_id,
-                        "trial_id": trial.id,
+                        "document_name": "",
+                        "file_name": "",
                         "created_at": result.created_at.isoformat(),
+                        "document_content": "",
                     }
-                    # Add document content if needed
-                    document: models.Document | None = db.execute(
-                        select(models.Document).where(
-                            models.Document.id == result.document_id
-                        )
-                    ).scalar_one_or_none()
-                    row["document_content"] = document.text if document else ""
-                    # Add preprocessed or original file to zip
+                    document = document_cache.get(result.document_id)
+                    file = None
+                    document_name = ""
+                    file_name = ""
+                    prep_conf = {}
                     if document:
-                        file_id = (
-                            document.preprocessed_file_id or document.original_file_id
-                        )
-                        file: models.File | None = db.execute(
-                            select(models.File).where(models.File.id == file_id)
-                        ).scalar_one_or_none()
-                        if file and file_id not in added_files:
-                            added_files.add(file_id)
-                            file_content = get_file(file.file_uuid)
-                            file_path = f"files/{file.file_uuid}_{file.file_name}"
-                            zipf.writestr(file_path, file_content)
-
-                    # Add flattened result data
-                    flattened = _flatten_dict(result.result)
-                    for key, value in flattened.items():
-                        row[key] = value
+                        document_name = document.document_name
+                        if document.original_file_id:
+                            file = file_cache.get(document.original_file_id)
+                            if not document_name and file:
+                                document_name = file.file_name
+                        file_name = file.file_name if file else ""
+                        row["document_content"] = document.text or ""
+                        if document.preprocessing_config_id:
+                            prep_obj = preprocessing_config_cache.get(document.preprocessing_config_id)
+                            if prep_obj:
+                                prep_conf = filter_sensitive_keys({
+                                    k: v for k, v in prep_obj.__dict__.items()
+                                    if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+                                })
+                        file_id = document.preprocessed_file_id or document.original_file_id
+                        if file_id:
+                            file_to_add = db.execute(
+                                select(models.File).where(models.File.id == file_id)
+                            ).scalar_one_or_none()
+                            if file_to_add and file_id not in added_files:
+                                added_files.add(file_id)
+                                file_content = get_file(file_to_add.file_uuid)
+                                file_path = f"files/{file_to_add.file_uuid}_{file_to_add.file_name}"
+                                zipf.writestr(file_path, file_content)
+                    row["document_name"] = document_name or ""
+                    row["file_name"] = file_name or ""
+                    # Add metadata
+                    meta_flat = meta_flatten(document.meta_data if document else {})
+                    for k in meta_keys:
+                        row[f"meta.{k}"] = meta_flat.get(k, "")
+                    prep_flat = prep_flatten(prep_conf)
+                    for k in prep_keys:
+                        row[f"preprocessing.{k}"] = prep_flat.get(k, "")
+                    # Add trial, prompt, schema (same for all)
+                    trial_flat = flatten_one(trial_dict)
+                    for k in trial_keys:
+                        row[f"trial.{k}"] = trial_flat.get(k, "")
+                    prompt_flat = flatten_one(prompt_dict)
+                    for k in prompt_keys:
+                        row[f"prompt.{k}"] = prompt_flat.get(k, "")
+                    schema_flat = flatten_one(schema_dict)
+                    for k in schema_keys:
+                        row[f"schema.{k}"] = schema_flat.get(k, "")
+                    res_flat = result_flatten(result.result)
+                    for k in result_keys:
+                        row[f"result.{k}"] = res_flat.get(k, "")
                     writer.writerow(row)
                 zipf.writestr("results.csv", csv_output.getvalue())
             output.seek(0)
@@ -2999,28 +3127,63 @@ def download_trial_results(
             )
         else:
             output = io.StringIO()
-            # Extract all keys from all results to create CSV columns
-            all_keys = set()
-            for result in results:
-                all_keys.update(_extract_keys(result.result))
-            # Sort keys
-            all_keys = sorted(list(all_keys))
-            # Create header row
-            header = ["document_id", "trial_id", "created_at"]
-            header.extend(all_keys)
+            header = (
+                ["document_id", "document_name", "file_name", "created_at"]
+                + [f"meta.{k}" for k in meta_keys]
+                + [f"preprocessing.{k}" for k in prep_keys]
+                + [f"trial.{k}" for k in trial_keys]
+                + [f"prompt.{k}" for k in prompt_keys]
+                + [f"schema.{k}" for k in schema_keys]
+                + [f"result.{k}" for k in result_keys]
+            )
             writer = csv.DictWriter(output, fieldnames=header)
             writer.writeheader()
-            # Write data rows
             for result in results:
                 row = {
                     "document_id": result.document_id,
-                    "trial_id": trial.id,
+                    "document_name": "",
+                    "file_name": "",
                     "created_at": result.created_at.isoformat(),
                 }
-                # Add flattened result data
-                flattened = _flatten_dict(result.result)
-                for key, value in flattened.items():
-                    row[key] = value
+                document = document_cache.get(result.document_id)
+                file = None
+                document_name = ""
+                file_name = ""
+                prep_conf = {}
+                if document:
+                    document_name = document.document_name
+                    if document.original_file_id:
+                        file = file_cache.get(document.original_file_id)
+                        if not document_name and file:
+                            document_name = file.file_name
+                    file_name = file.file_name if file else ""
+                    if document.preprocessing_config_id:
+                        prep_obj = preprocessing_config_cache.get(document.preprocessing_config_id)
+                        if prep_obj:
+                            prep_conf = filter_sensitive_keys({
+                                k: v for k, v in prep_obj.__dict__.items()
+                                if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+                            })
+                row["document_name"] = document_name or ""
+                row["file_name"] = file_name or ""
+                meta_flat = flatten_dict(document.meta_data if document else {})
+                for k in meta_keys:
+                    row[f"meta.{k}"] = meta_flat.get(k, "")
+                prep_flat = flatten_dict(prep_conf)
+                for k in prep_keys:
+                    row[f"preprocessing.{k}"] = prep_flat.get(k, "")
+                trial_flat = flatten_dict(trial_dict)
+                for k in trial_keys:
+                    row[f"trial.{k}"] = trial_flat.get(k, "")
+                prompt_flat = flatten_dict(prompt_dict)
+                for k in prompt_keys:
+                    row[f"prompt.{k}"] = prompt_flat.get(k, "")
+                schema_flat = flatten_dict(schema_dict)
+                for k in schema_keys:
+                    row[f"schema.{k}"] = schema_flat.get(k, "")
+                res_flat = flatten_dict(result.result)
+                for k in result_keys:
+                    row[f"result.{k}"] = res_flat.get(k, "")
                 writer.writerow(row)
             return Response(
                 content=output.getvalue(),

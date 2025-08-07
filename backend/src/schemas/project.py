@@ -371,6 +371,7 @@ class TrialResult(TrialResultBase):
     id: int
     trial_id: int
     document_id: int
+    additional_content: dict | None = None
     created_at: datetime
     updated_at: datetime
 

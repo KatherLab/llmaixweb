@@ -345,7 +345,8 @@ def extract_info_single_doc(
 
 def _store_result(db_session, trial_id: int, document_id: int, response) -> None:
     import json
-    # Check for existing row first (universal, safe)
+
+    # Skip if a result for this document already exists
     exists = db_session.scalar(
         select(models.TrialResult.id).where(
             models.TrialResult.trial_id == trial_id,
@@ -353,15 +354,43 @@ def _store_result(db_session, trial_id: int, document_id: int, response) -> None
         )
     )
     if exists:
-        return  # Already stored!
+        return
+
+    # Main JSON payload
     result_json = json.loads(response.choices[0].message.content)
+
+    # Optional extra fields
+    additional: dict = {}
+
+    # reasoning_content (if present)
+    reasoning = getattr(response.choices[0].message, "reasoning_content", None)
+    if reasoning is not None:
+        additional["reasoning_content"] = reasoning
+
+    # finish_reason (if present)
+    finish = getattr(response.choices[0], "finish_reason", None)
+    if finish is not None:
+        additional["finish_reason"] = finish
+
+    # usage (if present)
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        # Most OpenAI objects support .model_dump() (pydantic v2) or .dict() (v1)
+        if hasattr(usage, "model_dump"):
+            additional["usage"] = usage.model_dump()
+        elif hasattr(usage, "dict"):
+            additional["usage"] = usage.dict()
+        else:
+            additional["usage"] = {k: getattr(usage, k) for k in dir(usage) if not k.startswith("_")}
+
+    # Persist the result
     try:
         db_session.add(
             models.TrialResult(
                 trial_id=trial_id,
                 document_id=document_id,
                 result=result_json,
-                additional_content={},
+                additional_content=additional,
             )
         )
         db_session.commit()

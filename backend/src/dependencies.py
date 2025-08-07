@@ -13,7 +13,6 @@ from .db.session import SessionLocal
 if settings.OPENAI_NO_API_CHECK:
     openai_client: OpenAI | None = None
 else:
-    print("Initializing OpenAI client with URL:", settings.OPENAI_API_BASE)
     openai_client: OpenAI | None = OpenAI(
         api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_API_BASE
     )

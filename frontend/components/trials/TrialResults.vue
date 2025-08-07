@@ -81,10 +81,20 @@
                     </div>
                   </div>
 
-                  <!-- Advanced Options & Doc Count -->
+                  <!-- Advanced Options & Doc Count & Total Usage -->
                   <div class="flex flex-col items-start md:items-end gap-2 min-w-[200px]">
                     <span class="text-sm bg-blue-50 px-4 py-2 rounded-lg font-medium text-blue-800 shadow-sm">
                       {{ trial.results?.length || 0 }} documents processed
+                    </span>
+                    <!-- TOTAL USAGE BADGE -->
+                    <span
+                      v-if="totalUsage.total_tokens !== undefined"
+                      class="text-xs bg-blue-100 px-3 py-1 rounded-lg font-semibold text-blue-800 mt-1"
+                      title="Sum of prompt and completion tokens across all results"
+                    >
+                      Usage: {{ totalUsage.prompt_tokens || 0 }} prompt /
+                      {{ totalUsage.completion_tokens || 0 }} completion /
+                      <b>{{ totalUsage.total_tokens || 0 }}</b> total tokens
                     </span>
                     <div
                       v-if="trial.advanced_options && Object.keys(trial.advanced_options).length"
@@ -127,11 +137,9 @@
                       <div class="flex items-center">
                         <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-3 text-base font-bold">{{ index + 1 }}</span>
                         <span class="font-medium text-gray-800">
-                          <!-- Main Name -->
                           {{ documentLabels[index]?.name || 'Loading document name...' }}
                         </span>
                       </div>
-                      <!-- Show original only if it exists and is different -->
                       <span v-if="documentLabels[index]?.original && documentLabels[index]?.original !== documentLabels[index]?.name"
                             class="text-xs text-gray-400 italic ml-10 truncate max-w-xs">
                         (Original: {{ documentLabels[index].original }})
@@ -185,6 +193,40 @@
                         <span v-else class="text-gray-500">Failed to load PDF</span>
                       </div>
                     </div>
+
+                    <!-- Reasoning & Usage Panel -->
+                    <div v-if="getReasoningContent(index) || getAdditionalContent(index)?.usage || getAdditionalContent(index)?.finish_reason" class="mt-6">
+                      <button
+                        @click="showReasoningPanel[index] = !showReasoningPanel[index]"
+                        class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
+                      >
+                        <svg :class="showReasoningPanel[index] ? 'rotate-90' : ''" class="h-4 w-4 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span>
+                          {{ showReasoningPanel[index] ? 'Hide' : 'Show' }} LLM Reasoning & Metadata
+                        </span>
+                      </button>
+                      <div v-if="showReasoningPanel[index]" class="bg-blue-50/60 border border-blue-100 rounded-lg mt-3 p-5">
+                        <div v-if="getReasoningContent(index)" class="mb-4">
+                          <h5 class="font-semibold text-blue-800 mb-2">Reasoning</h5>
+                          <div class="markdown-content" v-html="renderMarkdown(getReasoningContent(index))"></div>
+                        </div>
+                        <div v-if="getAdditionalContent(index)?.usage" class="mb-2">
+                          <h5 class="font-semibold text-blue-800 mb-1">Token Usage</h5>
+                          <ul class="text-xs text-blue-900 ml-2">
+                            <li v-for="(v, k) in getAdditionalContent(index).usage" :key="k">
+                              <span class="font-medium">{{ k.replace(/_/g, ' ') }}:</span> {{ v }}
+                            </li>
+                          </ul>
+                        </div>
+                        <div v-if="getAdditionalContent(index)?.finish_reason">
+                          <h5 class="font-semibold text-blue-800 mb-1">Finish Reason</h5>
+                          <span class="text-xs text-blue-900">{{ getAdditionalContent(index).finish_reason }}</span>
+                        </div>
+                      </div>
+                    </div>
+
                     <div class="mt-6 flex flex-wrap gap-3 justify-end">
                       <button
                         @click="toggleViewMode(index)"
@@ -271,15 +313,15 @@ const error = ref(null);
 const trial = ref(null);
 const selectedResultIndex = ref(0);
 
-// New state variables for accordion and document content
 const expandedResults = ref({});
 const documentContents = ref({});
 const documentNames = ref({});
 const documentLabels = ref({});
-const viewMode = ref({}); // 'vertical' or 'horizontal'
+const viewMode = ref({});
 const documentPdfUrls = ref({});
 const documentPdfLoading = ref({});
 const showDocumentPanel = ref({});
+const showReasoningPanel = ref({}); // For reasoning/metadata accordion
 
 const renderMarkdown = (text) => {
   try {
@@ -291,32 +333,64 @@ const renderMarkdown = (text) => {
 
 const isMarkdown = (text) => {
   if (!text) return false;
-
   try {
-    // Simple check for markdown patterns
     return text.includes('#') ||
            text.includes('**') ||
            text.includes('*') ||
            text.includes('[') ||
            text.includes('```') ||
-           /\n\s*-\s/.test(text) ||  // Bullet points
-           /\n\s*\d+\.\s/.test(text); // Numbered lists
+           /\n\s*-\s/.test(text) ||
+           /\n\s*\d+\.\s/.test(text);
   } catch (e) {
     return false;
   }
 };
 
+// Helper to parse additional_content (may be JSON string or object)
+const getAdditionalContent = (index) => {
+  const result = trial.value?.results?.[index];
+  if (!result || !result.additional_content) return null;
+  if (typeof result.additional_content === 'string') {
+    try { return JSON.parse(result.additional_content); } catch { return null; }
+  }
+  return result.additional_content;
+};
+// Helper for reasoning content
+const getReasoningContent = (index) => {
+  const ac = getAdditionalContent(index);
+  if (!ac) return null;
+  return ac.reasoning_content || null;
+};
+
+// Compute total token usage for the trial
+const totalUsage = computed(() => {
+  const usageTotals = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+  if (!trial.value?.results?.length) return usageTotals;
+
+  for (const result of trial.value.results) {
+    let ac = result.additional_content;
+    if (!ac) continue;
+    if (typeof ac === 'string') {
+      try { ac = JSON.parse(ac); } catch { continue; }
+    }
+    if (!ac.usage) continue;
+    // Accept numbers or strings for tokens, fallback to 0
+    for (const key of ['prompt_tokens', 'completion_tokens', 'total_tokens']) {
+      if (ac.usage[key] !== undefined) {
+        usageTotals[key] += Number(ac.usage[key]) || 0;
+      }
+    }
+  }
+  return usageTotals;
+});
+
 // Fetch trial data
 const fetchData = async () => {
   isLoading.value = true;
   error.value = null;
-
   try {
-    // Load trial data
     const response = await api.get(`/project/${props.projectId}/trial/${trialId.value}`);
     trial.value = response.data;
-
-    // Start loading document names
     if (trial.value?.document_ids) {
       loadDocumentNames();
     }
@@ -331,13 +405,11 @@ const fetchData = async () => {
 // Load document names
 const loadDocumentNames = async () => {
   if (!trial.value?.document_ids) return;
-
   for (let i = 0; i < trial.value.document_ids.length; i++) {
     try {
       const docId = trial.value.document_ids[i];
       const response = await api.get(`/project/${props.projectId}/document/${docId}`);
       const doc = response.data;
-
       documentLabels.value[i] = {
         name: doc.document_name || doc.original_file?.file_name || `Document ${docId}`,
         original: doc.original_file?.file_name || '',
@@ -352,7 +424,6 @@ const loadDocumentNames = async () => {
   }
 };
 
-// Navigation functions
 const goBack = () => {
   if (props.isModal) {
     $emit('close');
@@ -361,17 +432,11 @@ const goBack = () => {
   }
 };
 
-// Toggle results expansion
 const toggleResultExpansion = async (index) => {
-  // Toggle expansion state
   expandedResults.value[index] = !expandedResults.value[index];
-
-  // Set default view mode if not set
   if (viewMode.value[index] === undefined) {
     viewMode.value[index] = 'horizontal';
   }
-
-  // Load document content if expanded and not already loaded
   if (expandedResults.value[index] && !documentContents.value[index]) {
     try {
       const docId = trial.value.document_ids[index];
@@ -384,15 +449,12 @@ const toggleResultExpansion = async (index) => {
   }
 };
 
-// Toggle view mode between vertical and horizontal
 const toggleViewMode = (index) => {
   viewMode.value[index] = viewMode.value[index] === 'vertical' ? 'horizontal' : 'vertical';
 };
 
-// Toggle document panel with proper authentication
 const toggleDocumentPanel = async (index) => {
   showDocumentPanel.value[index] = !showDocumentPanel.value[index];
-
   if (showDocumentPanel.value[index] && !documentPdfUrls.value[index] && !documentPdfLoading.value[index]) {
     documentPdfLoading.value[index] = true;
     try {
@@ -400,15 +462,12 @@ const toggleDocumentPanel = async (index) => {
       const response = await api.get(`/project/${props.projectId}/document/${docId}`);
       const document = response.data;
       let fileId;
-
       if (document.preprocessed_file_id && document.preprocessed_file.file_type === 'application/pdf') {
         fileId = document.preprocessed_file_id;
       } else if (['application/pdf', 'image/png', 'image/jpeg'].includes(document.original_file.file_type)) {
         fileId = document.original_file_id;
       }
-
       if (fileId) {
-        // Create a blob URL using an authenticated request
         const fileResponse = await api.get(`/project/${props.projectId}/file/${fileId}/content?preview=true`, {
           responseType: 'blob'
         });
@@ -433,8 +492,6 @@ onMounted(() => {
   fetchData();
   if (props.isModal) document.body.style.overflow = 'hidden';
 });
-
-
 onUnmounted(() => {
   document.body.style.overflow = '';
 });
@@ -445,37 +502,12 @@ onUnmounted(() => {
   font-family: monospace;
   font-size: 14px;
 }
-
-.json-item {
-  margin: 2px 0;
-}
-
-.json-key {
-  cursor: pointer;
-  display: flex;
-  align-items: flex-start;
-}
-
-.toggle-icon {
-  width: 16px;
-  display: inline-block;
-}
-
-.key-name {
-  color: #881391;
-  margin-right: 5px;
-}
-
-.json-value {
-  color: #1a1aa6;
-}
-
-.json-children {
-  border-left: 1px dashed #ccc;
-  padding-left: 1rem;
-}
-
-/* Truncate text on a single line */
+.json-item { margin: 2px 0; }
+.json-key { cursor: pointer; display: flex; align-items: flex-start; }
+.toggle-icon { width: 16px; display: inline-block; }
+.key-name { color: #881391; margin-right: 5px; }
+.json-value { color: #1a1aa6; }
+.json-children { border-left: 1px dashed #ccc; padding-left: 1rem; }
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -483,14 +515,11 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* Markdown styling */
 .markdown-content {
   font-size: 0.875rem;
   line-height: 1.5;
   color: #333;
 }
-
 .markdown-content h1,
 .markdown-content h2,
 .markdown-content h3,
@@ -502,25 +531,13 @@ onUnmounted(() => {
   font-weight: 600;
   line-height: 1.25;
 }
-
 .markdown-content h1 { font-size: 1.5em; }
 .markdown-content h2 { font-size: 1.25em; }
 .markdown-content h3 { font-size: 1.125em; }
-
-.markdown-content p {
-  margin-bottom: 1em;
-}
-
+.markdown-content p { margin-bottom: 1em; }
 .markdown-content ul,
-.markdown-content ol {
-  margin-bottom: 1em;
-  padding-left: 1.5em;
-}
-
-.markdown-content li {
-  margin-bottom: 0.25em;
-}
-
+.markdown-content ol { margin-bottom: 1em; padding-left: 1.5em; }
+.markdown-content li { margin-bottom: 0.25em; }
 .markdown-content code {
   background-color: #f0f0f0;
   padding: 0.2em 0.4em;
@@ -528,7 +545,6 @@ onUnmounted(() => {
   font-size: 85%;
   font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
 }
-
 .markdown-content pre {
   background-color: #f6f8fa;
   border-radius: 3px;
@@ -536,42 +552,21 @@ onUnmounted(() => {
   overflow: auto;
   margin-bottom: 1em;
 }
-
-.markdown-content pre code {
-  background-color: transparent;
-  padding: 0;
-}
-
-.markdown-content a {
-  color: #0366d6;
-  text-decoration: none;
-}
-
-.markdown-content a:hover {
-  text-decoration: underline;
-}
-
-.markdown-content img {
-  max-width: 100%;
-}
-
+.markdown-content pre code { background-color: transparent; padding: 0; }
+.markdown-content a { color: #0366d6; text-decoration: none; }
+.markdown-content a:hover { text-decoration: underline; }
+.markdown-content img { max-width: 100%; }
 .markdown-content table {
   border-collapse: collapse;
   width: 100%;
   margin-bottom: 1em;
 }
-
 .markdown-content table th,
 .markdown-content table td {
   border: 1px solid #ddd;
   padding: 0.5em;
 }
-
-.markdown-content table th {
-  background-color: #f6f8fa;
-  font-weight: 600;
-}
-
+.markdown-content table th { background-color: #f6f8fa; font-weight: 600; }
 .markdown-content blockquote {
   border-left: 4px solid #dfe2e5;
   padding-left: 1em;
