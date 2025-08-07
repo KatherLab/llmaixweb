@@ -348,7 +348,7 @@
                       </div>
                     </div>
                     <p class="text-sm text-slate-400 mt-3">
-                      Create complex nested structures with drag-and-drop
+                      Create complex nested structures
                     </p>
                   </div>
                   <div>
@@ -583,7 +583,7 @@
         </transition>
       </div>
 
-      <!-- Interactive Demo Section -->
+            <!-- Interactive Demo Section -->
       <div class="mb-24">
         <h2 class="text-center text-3xl font-bold mb-12 text-white">See It In Action</h2>
 
@@ -634,6 +634,8 @@
               <span class="text-2xl font-mono text-emerald-400">{}</span>
               Extracted Structured Data
             </h3>
+
+            <!-- LLM Extracted Data -->
             <div class="rounded-lg border border-slate-700 bg-slate-900/50 backdrop-blur-sm overflow-hidden">
               <div class="flex items-center justify-between border-b border-slate-700 bg-slate-800/50 px-4 py-2">
                 <div class="flex items-center space-x-2">
@@ -641,12 +643,15 @@
                   <div class="h-3 w-3 rounded-full bg-yellow-500"></div>
                   <div class="h-3 w-3 rounded-full bg-green-500"></div>
                 </div>
-                <div class="text-sm text-slate-400">output.json</div>
+                <div class="flex items-center gap-4">
+                  <span class="text-xs text-emerald-400 font-medium">LLM Output</span>
+                  <div class="text-sm text-slate-400">output.json</div>
+                </div>
                 <button class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded hover:bg-emerald-500/30 transition-colors">
                   Copy
                 </button>
               </div>
-              <div class="p-4 overflow-auto max-h-96">
+              <div class="p-4 overflow-auto max-h-64">
                 <pre class="font-mono text-xs text-slate-300"><code>{
   <span class="text-emerald-400">"patient"</span>: {
     <span class="text-emerald-400">"name"</span>: <span class="text-yellow-300 highlight-target-patient">"Sarah Lee"</span>,
@@ -661,25 +666,82 @@
     <span class="text-emerald-400">"shortness_of_breath"</span>: <span class="text-blue-300">true</span>,
     <span class="text-emerald-400">"chest_pain"</span>: <span class="text-blue-300">true</span>,
     <span class="text-emerald-400">"leg_pain_or_swelling"</span>: <span class="text-blue-300">false</span>
-  },
-  <span class="text-emerald-400">"extraction_metadata"</span>: {
-    <span class="text-emerald-400">"model"</span>: <span class="text-yellow-300">"gpt-4"</span>,
-    <span class="text-emerald-400">"confidence"</span>: <span class="text-orange-400">0.92</span>,
-    <span class="text-emerald-400">"processing_time"</span>: <span class="text-yellow-300">"1.2s"</span>,
-    <span class="text-emerald-400">"tokens_used"</span>: <span class="text-orange-400">2769</span>
   }
 }</code></pre>
               </div>
             </div>
 
-            <!-- Connection lines animation -->
-            <div class="mt-4 flex justify-center">
-              <div class="flex items-center gap-2 text-sm text-slate-400">
-                <svg class="w-4 h-4 animate-pulse text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-                <span>Extraction complete with 92% accuracy</span>
+            <!-- Extraction Metadata -->
+            <div class="mt-4 grid grid-cols-2 gap-4">
+              <!-- Processing Info Card -->
+              <div class="rounded-lg bg-slate-800/50 border border-slate-700 p-4">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                  </svg>
+                  <h4 class="text-sm font-semibold text-white">Processing Details</h4>
+                </div>
+                <div class="space-y-1">
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-slate-400">Model</span>
+                    <span class="text-xs text-indigo-300 font-mono">gpt-4</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-slate-400">Processing Time</span>
+                    <span class="text-xs text-indigo-300 font-mono">1.2s</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-slate-400">Tokens Used</span>
+                    <span class="text-xs text-indigo-300 font-mono">2,769</span>
+                  </div>
+                </div>
               </div>
+
+              <!-- Accuracy Card -->
+              <div class="rounded-lg bg-slate-800/50 border border-slate-700 p-4">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                  </svg>
+                  <h4 class="text-sm font-semibold text-white">Accuracy Metrics</h4>
+                </div>
+                <div class="space-y-2">
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <span class="text-xs text-slate-400">Overall Accuracy</span>
+                      <span class="text-sm font-bold text-emerald-400">92.2%</span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-1.5">
+                      <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-1.5 rounded-full transition-all duration-1000" style="width: 92.2%"></div>
+                    </div>
+                  </div>
+                  <div class="text-xs text-slate-500 italic">
+                    Based on 8 documents evaluated
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Visual Flow Indicator -->
+            <div class="mt-4 flex items-center justify-center gap-2 text-xs text-slate-400">
+              <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <span>Document</span>
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+              </svg>
+              <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
+              <span>LLM Processing</span>
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+              </svg>
+              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span>Validated Output</span>
             </div>
           </div>
         </div>
@@ -829,20 +891,6 @@
             </svg>
             View on KatherLab GitHub
           </a>
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="relative z-10 mt-24 border-t border-slate-800 py-8">
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <div class="text-sm text-slate-400">
-            © 2025 LLMAIx-v2. Developed by KatherLab for the medical research community.
-          </div>
-          <div class="flex items-center gap-6 text-sm text-slate-400">
-            <span>Privacy-First Medical Data Extraction</span>
-          </div>
         </div>
       </div>
     </div>
