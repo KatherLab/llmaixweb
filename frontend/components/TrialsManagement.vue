@@ -11,10 +11,22 @@
           <input type="checkbox" v-model="showCompleted" class="rounded border-gray-300" />
           <span class="text-gray-700">Show completed</span>
         </label>
+        <Tooltip v-if="trialDisabled" :text="trialDisabledReason">
+          <button
+            @click="openCreateTrialModal"
+            class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition disabled:bg-blue-300 disabled:cursor-not-allowed"
+            :disabled="trialDisabled"
+            type="button"
+          >
+            Start New Trial
+          </button>
+        </Tooltip>
         <button
+          v-else
           @click="openCreateTrialModal"
           class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition"
-          :disabled="isLoading || schemas.length === 0 || documents.length === 0 || prompts.length === 0"
+          :disabled="trialDisabled"
+          type="button"
         >
           Start New Trial
         </button>
@@ -148,7 +160,8 @@
       description="Try changing your filters or create a new trial."
       actionText="Start a Trial"
       @action="openCreateTrialModal"
-      :disabled="schemas.length === 0 || documents.length === 0 || prompts.length === 0"
+      :disabled="trialDisabled"
+      :disabledReason="trialDisabledReason"
     >
       <template #icon>
         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -256,6 +269,7 @@ import LoadingSpinner from '@/components/LoadingSpinner.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
 import ErrorBanner from '@/components/ErrorBanner.vue';
+import Tooltip from '@/components/Tooltip.vue'
 
 const props = defineProps({
   projectId: {
@@ -293,6 +307,22 @@ const trialToDownload = ref(null);
 const pollInterval = ref(null);
 const isPollingActive = ref(false);
 const POLL_INTERVAL_MS = 3000;
+
+const trialDisabled = computed(() =>
+  isLoading.value ||
+  schemas.value.length === 0 ||
+  documents.value.length === 0 ||
+  prompts.value.length === 0
+);
+
+
+const trialDisabledReason = computed(() => {
+  if (isLoading.value) return 'Loading project resources…'
+  if (schemas.value.length === 0) return 'You need at least one schema to start a trial.'
+  if (documents.value.length === 0) return 'You need to upload at least one document to start a trial.'
+  if (prompts.value.length === 0) return 'You need to create at least one prompt to start a trial.'
+  return ''
+})
 
 
 const filters = ref({

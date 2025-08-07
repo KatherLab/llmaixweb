@@ -27,7 +27,8 @@
     "@vueform/multiselect": "^2.6.11",
     "marked": "^16.1.2",
     "dompurify": "^3.2.6",
-    "crypto-js": "^4.2.0"
+    "crypto-js": "^4.2.0",
+    "@floating-ui/vue": "1.1.8"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",

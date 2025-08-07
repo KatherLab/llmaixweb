@@ -1,22 +1,14 @@
+<!-- src/components/EmptyState.vue -->
 <script setup>
+import Tooltip from '@/components/Tooltip.vue'
+
 defineProps({
-  title: {
-    type: String,
-    required: true
-  },
-  description: {
-    type: String,
-    default: ''
-  },
-  actionText: {
-    type: String,
-    default: 'Get Started'
-  },
-  disabled: {
-    type: Boolean,
-    default: false
-  }
-});
+  title: { type: String, required: true },
+  description: { type: String, default: '' },
+  actionText: { type: String, default: 'Get Started' },
+  disabled: { type: Boolean, default: false },
+  disabledReason: { type: String, default: '' }
+})
 
 const emit = defineEmits(['action']);
 </script>
@@ -29,12 +21,20 @@ const emit = defineEmits(['action']);
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
       </svg>
     </slot>
-
     <h3 class="mt-4 text-lg font-medium text-gray-900">{{ title }}</h3>
     <p class="mt-1 text-sm text-gray-500">{{ description }}</p>
-
-    <div class="mt-6">
+    <div class="mt-6 flex flex-col items-center">
+      <Tooltip v-if="disabled && disabledReason" :text="disabledReason">
+        <button
+          @click="emit('action')"
+          :disabled="disabled"
+          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+        >
+          {{ actionText }}
+        </button>
+      </Tooltip>
       <button
+        v-else
         @click="emit('action')"
         :disabled="disabled"
         class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"

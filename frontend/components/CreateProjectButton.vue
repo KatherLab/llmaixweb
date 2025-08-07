@@ -11,6 +11,7 @@
     </svg>
     <span>Create Project</span>
   </button>
+
   <Teleport to="body">
     <transition name="fade">
       <div
@@ -19,7 +20,7 @@
         @click="closeModal"
       >
         <div
-          class="bg-white rounded-xl border border-gray-200 shadow-sm w-full max-w-md p-6 flex flex-col gap-6"
+          class="bg-white rounded-xl border border-gray-200 shadow-sm w-full max-w-md p-6 flex flex-col gap-6 overflow-y-auto max-h-[90vh]"
           @click.stop
         >
           <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-2">
@@ -39,7 +40,7 @@
                 class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-900 shadow-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
                 required
                 autocomplete="off"
-                placeholder="e.g. MyApp Redesign"
+                placeholder="e.g. Medical Document IE"
               />
             </div>
             <div>
@@ -83,7 +84,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '@/services/api';
 
@@ -94,6 +95,15 @@ const error = ref('');
 const projectData = ref({
   name: '',
   description: ''
+});
+
+// Disable background scrolling when modal is open
+const stop = watch(isModalOpen, (open) => {
+  document.body.classList.toggle('overflow-hidden', open);
+});
+onUnmounted(() => {
+  document.body.classList.remove('overflow-hidden');
+  stop();
 });
 
 const createProject = async () => {
