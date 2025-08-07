@@ -22,8 +22,10 @@ router = APIRouter()
 def first_admin_check(db: Session = Depends(get_db)):
     """Returns True if no admin exists and first-admin setup is allowed."""
     from ....core.security import any_admin_exists
+
     return {
-        "allow_first_admin_setup": settings.ALLOW_FIRST_ADMIN_SETUP and not any_admin_exists(db)
+        "allow_first_admin_setup": settings.ALLOW_FIRST_ADMIN_SETUP
+        and not any_admin_exists(db)
     }
 
 
@@ -41,11 +43,15 @@ def create_first_admin(
 
     # Validate and create admin user (role must be 'admin')
     if user_in.role != UserRole.admin:
-        raise HTTPException(status_code=400, detail="Role must be admin for this endpoint.")
+        raise HTTPException(
+            status_code=400, detail="Role must be admin for this endpoint."
+        )
 
     user = db.query(models.User).filter(models.User.email == user_in.email).first()
     if user:
-        raise HTTPException(status_code=400, detail="User with this email already exists.")
+        raise HTTPException(
+            status_code=400, detail="User with this email already exists."
+        )
 
     new_user = models.User(
         email=user_in.email,
@@ -58,7 +64,6 @@ def create_first_admin(
     db.commit()
     db.refresh(new_user)
     return schemas.UserResponse.model_validate(new_user)
-
 
 
 @router.post("/change-password", response_model=schemas.UserResponse)

@@ -1,6 +1,6 @@
 import base64
 import io
-from datetime import timezone, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import requests
@@ -18,6 +18,7 @@ def make_naive_fields_timezone_aware(value: Any) -> Any:
         # Optional: normalize to UTC if already tz-aware but not UTC
         # return value.astimezone(timezone.utc)
     return value
+
 
 def validate_prompt(prompt: schemas.PromptCreate | schemas.PromptUpdate) -> None:
     """Validate that the prompt contains the required placeholder and at least one prompt is present."""

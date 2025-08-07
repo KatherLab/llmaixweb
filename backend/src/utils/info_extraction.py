@@ -1,23 +1,20 @@
-import json
-import sqlite3
-import traceback
-from sqlite3 import IntegrityError
-from typing import Any, cast
 import datetime as dt
+import json
+from sqlite3 import IntegrityError
+from typing import Any
 
 import requests
 from openai import (
     APIConnectionError,
     APIError,
+    AsyncOpenAI,
     AuthenticationError,
     OpenAI,
     RateLimitError,
-    AsyncOpenAI,
 )
-from sqlalchemy import select, insert, func, update
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .helpers import make_naive_fields_timezone_aware
 from .. import models
 
 
@@ -228,7 +225,6 @@ def _to_utc(dt_obj: dt.datetime) -> dt.datetime:
 
 # utils/info_extraction.py
 def update_trial_progress(db, trial_id: int) -> None:
-    from sqlalchemy import func, select
     done = db.scalar(
         select(func.count())
         .select_from(models.TrialResult)
@@ -251,19 +247,30 @@ def update_trial_progress(db, trial_id: int) -> None:
     db.commit()
 
 
-
 def _build_messages(prompt: models.Prompt, document_text: str) -> list[dict]:
     """Inject the document text into user/system prompt templates."""
     placeholder = "{document_content}"
     msgs: list[dict[str, str]] = []
     if prompt.system_prompt:
-        msgs.append({"role": "system", "content": prompt.system_prompt.replace(placeholder, document_text)})
+        msgs.append(
+            {
+                "role": "system",
+                "content": prompt.system_prompt.replace(placeholder, document_text),
+            }
+        )
     if prompt.user_prompt:
-        msgs.append({"role": "user", "content": prompt.user_prompt.replace(placeholder, document_text)})
+        msgs.append(
+            {
+                "role": "user",
+                "content": prompt.user_prompt.replace(placeholder, document_text),
+            }
+        )
     return msgs
 
 
-def _completion_kwargs(model: str, schema_def: dict, messages: list[dict], adv: dict | None) -> dict:
+def _completion_kwargs(
+    model: str, schema_def: dict, messages: list[dict], adv: dict | None
+) -> dict:
     kwargs = {
         "model": model,
         "messages": messages,
@@ -277,8 +284,15 @@ def _completion_kwargs(model: str, schema_def: dict, messages: list[dict], adv: 
         },
     }
     if adv:
-        kwargs.update({k: v for k, v in adv.items() if k in {"max_completion_tokens", "temperature"}})
+        kwargs.update(
+            {
+                k: v
+                for k, v in adv.items()
+                if k in {"max_completion_tokens", "temperature"}
+            }
+        )
     return kwargs
+
 
 async def extract_info_single_doc_async(
     *,
@@ -289,12 +303,12 @@ async def extract_info_single_doc_async(
     llm_model: str,
     schema_id: int,
     prompt_id: int,
-    project_id: int,          # kept for signature parity; not used here
+    project_id: int,  # kept for signature parity; not used here
     advanced_options: dict | None = None,
 ) -> None:
     """Async version used inside the Celery worker."""
-    schema:  models.Schema   = db_session.get(models.Schema,   schema_id)
-    prompt:  models.Prompt   = db_session.get(models.Prompt,   prompt_id)
+    schema: models.Schema = db_session.get(models.Schema, schema_id)
+    prompt: models.Prompt = db_session.get(models.Prompt, prompt_id)
     document: models.Document = db_session.get(models.Document, document_id)
     if not (schema and prompt and document):
         raise ValueError("schema / prompt / document not found")
@@ -320,12 +334,12 @@ def extract_info_single_doc(
     base_url: str,
     schema_id: int,
     prompt_id: int,
-    project_id: int,          # kept for signature parity; not used here
+    project_id: int,  # kept for signature parity; not used here
     advanced_options: dict | None = None,
 ) -> None:
     """Synchronous variant, used when bypass_celery=True."""
-    schema:  models.Schema   = db_session.get(models.Schema,   schema_id)
-    prompt:  models.Prompt   = db_session.get(models.Prompt,   prompt_id)
+    schema: models.Schema = db_session.get(models.Schema, schema_id)
+    prompt: models.Prompt = db_session.get(models.Prompt, prompt_id)
     document: models.Document = db_session.get(models.Document, document_id)
     if not (schema and prompt and document):
         raise ValueError("schema / prompt / document not found")
@@ -342,10 +356,7 @@ def extract_info_single_doc(
     _store_result(db_session, trial_id, document_id, response)
 
 
-
 def _store_result(db_session, trial_id: int, document_id: int, response) -> None:
-    import json
-
     # Skip if a result for this document already exists
     exists = db_session.scalar(
         select(models.TrialResult.id).where(
@@ -381,7 +392,9 @@ def _store_result(db_session, trial_id: int, document_id: int, response) -> None
         elif hasattr(usage, "dict"):
             additional["usage"] = usage.dict()
         else:
-            additional["usage"] = {k: getattr(usage, k) for k in dir(usage) if not k.startswith("_")}
+            additional["usage"] = {
+                k: getattr(usage, k) for k in dir(usage) if not k.startswith("_")
+            }
 
     # Persist the result
     try:

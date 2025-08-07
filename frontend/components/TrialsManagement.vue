@@ -184,6 +184,7 @@
         @delete="confirmDeleteTrial(trial)"
         @retry="retryTrial(trial)"
         @download="openDownloadModal(trial)"
+        @cancel="cancelTrial"
         @view-results="viewTrialResults(trial)"
         @view-schema="viewTrialSchema(trial)"
         @view-prompt="viewTrialPrompt(trial)"
@@ -452,6 +453,22 @@ function handleBatchActionComplete(updated = false) {
   showBatchModal.value = false;
   if (updated) {
     fetchTrials().then(() => startPolling());
+  }
+}
+
+
+async function cancelTrial(trial) {
+  try {
+    await api.post(`/project/${props.projectId}/trial/${trial.id}/cancel`);
+    // Refresh the trial status in UI
+    const idx = trials.value.findIndex(t => t.id === trial.id);
+    if (idx !== -1) {
+      trials.value[idx].status = 'cancelled';
+      trials.value[idx].is_cancelled = true;
+    }
+    toast.success('Trial cancelled');
+  } catch (e) {
+    toast.error('Failed to cancel trial');
   }
 }
 

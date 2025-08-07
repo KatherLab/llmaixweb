@@ -39,8 +39,8 @@ from ....models.project import document_set_association
 from ....utils.enums import FileCreator, FileType
 from ....utils.helpers import (
     extract_field_types_from_schema,
-    validate_prompt,
     flatten_dict,
+    validate_prompt,
 )
 from ....utils.info_extraction import (
     get_available_models,
@@ -1479,7 +1479,10 @@ def get_preprocessing_task(
     return schemas.PreprocessingTask.model_validate(task)
 
 
-@router.post("/{project_id}/preprocess/{task_id}/cancel")
+@router.post(
+    "/{project_id}/preprocess/{task_id}/cancel",
+    response_model=schemas.PreprocessingTask,
+)
 def cancel_preprocessing_task(
     *,
     project_id: int,
@@ -1489,14 +1492,17 @@ def cancel_preprocessing_task(
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Cancel a preprocessing task with option to keep or rollback processed files."""
+
     check_project_access(project_id, current_user, db, "write")
 
-    task = db.execute(
-        select(models.PreprocessingTask).where(
+    task = (
+        db.query(models.PreprocessingTask)
+        .filter(
             models.PreprocessingTask.id == task_id,
             models.PreprocessingTask.project_id == project_id,
         )
-    ).scalar_one_or_none()
+        .first()
+    )
 
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -1509,29 +1515,17 @@ def cancel_preprocessing_task(
             status_code=400, detail=f"Cannot cancel task in {task.status} status"
         )
 
-    # Cancel celery task if exists
-    if task.celery_task_id:
-        from celery.result import AsyncResult
-
-        try:
-            AsyncResult(task.celery_task_id).revoke(terminate=True)
-        except Exception as e:
-            # Log error but continue
-            print(f"Error revoking celery task: {e}")
-
-    # Update task status
+    # Set cancellation flag
     task.is_cancelled = True
     task.status = models.PreprocessingStatus.CANCELLED
     task.completed_at = datetime.datetime.now(datetime.UTC)
 
-    # Handle rollback
+    # Rollback logic: remove processed docs if requested
     if not keep_processed and task.rollback_on_cancel:
-        # Delete documents created by this task
         deleted_count = 0
         for file_task in task.file_tasks:
             if file_task.status == models.PreprocessingStatus.COMPLETED:
                 for doc in file_task.documents:
-                    # Remove from document sets first
                     doc.document_sets.clear()
                     db.delete(doc)
                     deleted_count += 1
@@ -1541,13 +1535,14 @@ def cancel_preprocessing_task(
     else:
         task.message = "Task cancelled, keeping processed documents"
 
-    # Update file task statuses
+    # Mark all still-pending/in-progress file tasks as cancelled
     for file_task in task.file_tasks:
         if file_task.status in [
             models.PreprocessingStatus.PENDING,
             models.PreprocessingStatus.IN_PROGRESS,
         ]:
             file_task.status = models.PreprocessingStatus.CANCELLED
+            file_task.completed_at = datetime.datetime.now(datetime.UTC)
 
     db.commit()
     db.refresh(task)
@@ -2664,7 +2659,6 @@ def create_trial(
             advanced_options=trial_db.advanced_options,
         )
 
-
     return schemas.Trial.model_validate(trial_db)
 
 
@@ -2708,6 +2702,27 @@ def update_trial(
     if not updated:
         raise HTTPException(status_code=400, detail="No updatable fields provided")
 
+    db.commit()
+    db.refresh(trial)
+    return schemas.Trial.model_validate(trial)
+
+
+@router.post("/{project_id}/trial/{trial_id}/cancel", response_model=schemas.Trial)
+def cancel_trial(
+    project_id: int,
+    trial_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    check_project_access(project_id, current_user, db)
+    trial = db.get(models.Trial, trial_id)
+    if not trial or trial.project_id != project_id:
+        raise HTTPException(status_code=404, detail="Trial not found")
+    if trial.is_cancelled or trial.status in ("completed", "failed", "cancelled"):
+        raise HTTPException(status_code=400, detail="Trial cannot be cancelled")
+
+    trial.is_cancelled = True
+    trial.status = models.TrialStatus.CANCELLED
     db.commit()
     db.refresh(trial)
     return schemas.Trial.model_validate(trial)
@@ -2854,7 +2869,7 @@ def download_trial_results(
     trial_id: int,
     format: str = Query("json", enum=["json", "csv"]),
     include_content: bool = Query(True),
-    current_user: 'models.User' = Depends(get_current_user),
+    current_user: "models.User" = Depends(get_current_user),
 ) -> Response:
     """
     Download trial results, with a separate metadata.json for trial/prompt/schema metadata.
@@ -2866,25 +2881,37 @@ def download_trial_results(
         return {k: v for k, v in d.items() if k not in blacklist}
 
     # --- Permissions ---
-    project = db.execute(select(models.Project).where(models.Project.id == project_id)).scalar_one_or_none()
+    project = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this project's trials")
-    trial = db.execute(select(models.Trial).where(
-        models.Trial.project_id == project_id, models.Trial.id == trial_id
-    )).scalar_one_or_none()
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this project's trials"
+        )
+    trial = db.execute(
+        select(models.Trial).where(
+            models.Trial.project_id == project_id, models.Trial.id == trial_id
+        )
+    ).scalar_one_or_none()
     if not trial:
         raise HTTPException(status_code=404, detail="Trial not found")
 
     # --- Related: prompt, schema ---
-    prompt = db.execute(select(models.Prompt).where(models.Prompt.id == trial.prompt_id)).scalar_one_or_none()
-    schema = db.execute(select(models.Schema).where(models.Schema.id == trial.schema_id)).scalar_one_or_none()
+    prompt = db.execute(
+        select(models.Prompt).where(models.Prompt.id == trial.prompt_id)
+    ).scalar_one_or_none()
+    schema = db.execute(
+        select(models.Schema).where(models.Schema.id == trial.schema_id)
+    ).scalar_one_or_none()
 
     results = list(
         db.execute(
             select(models.TrialResult).where(models.TrialResult.trial_id == trial_id)
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
     if not results:
         raise HTTPException(status_code=404, detail="No results found for this trial")
@@ -2895,12 +2922,14 @@ def download_trial_results(
     all_meta_keys = set()
     all_result_keys = set()
     all_prep_keys = set()
-    all_trial_keys = set()
-    all_prompt_keys = set()
-    all_schema_keys = set()
+    # all_trial_keys = set()
+    # all_prompt_keys = set()
+    # all_schema_keys = set()
 
     for result in results:
-        doc = db.execute(select(models.Document).where(models.Document.id == result.document_id)).scalar_one_or_none()
+        doc = db.execute(
+            select(models.Document).where(models.Document.id == result.document_id)
+        ).scalar_one_or_none()
         document_cache[result.document_id] = doc
         if doc:
             if doc.original_file_id and doc.original_file_id not in file_cache:
@@ -2911,28 +2940,43 @@ def download_trial_results(
             if doc.preprocessing_config_id:
                 prep_conf = db.execute(
                     select(models.PreprocessingConfiguration).where(
-                        models.PreprocessingConfiguration.id == doc.preprocessing_config_id
+                        models.PreprocessingConfiguration.id
+                        == doc.preprocessing_config_id
                     )
                 ).scalar_one_or_none()
                 if prep_conf:
                     preprocessing_config_cache[doc.preprocessing_config_id] = prep_conf
-                    all_prep_keys.update(_extract_keys(filter_sensitive_keys(prep_conf.__dict__)))
+                    all_prep_keys.update(
+                        _extract_keys(filter_sensitive_keys(prep_conf.__dict__))
+                    )
             all_meta_keys.update(_extract_keys(doc.meta_data or {}))
             all_result_keys.update(_extract_keys(result.result or {}))
 
     # Prepare metadata for metadata.json (top-level only, filter sensitive)
-    trial_dict = filter_sensitive_keys({
-        k: v for k, v in trial.__dict__.items()
-        if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
-    })
-    prompt_dict = filter_sensitive_keys({
-        k: v for k, v in (prompt.__dict__ if prompt else {}).items()
-        if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
-    })
-    schema_dict = filter_sensitive_keys({
-        k: v for k, v in (schema.__dict__ if schema else {}).items()
-        if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
-    })
+    trial_dict = filter_sensitive_keys(
+        {
+            k: v
+            for k, v in trial.__dict__.items()
+            if not k.startswith("_")
+            and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+        }
+    )
+    prompt_dict = filter_sensitive_keys(
+        {
+            k: v
+            for k, v in (prompt.__dict__ if prompt else {}).items()
+            if not k.startswith("_")
+            and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+        }
+    )
+    schema_dict = filter_sensitive_keys(
+        {
+            k: v
+            for k, v in (schema.__dict__ if schema else {}).items()
+            if not k.startswith("_")
+            and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+        }
+    )
 
     # Remove fields that don't serialize well (e.g. relationships)
     for d in (trial_dict, prompt_dict, schema_dict):
@@ -2954,7 +2998,9 @@ def download_trial_results(
                 "prompt": prompt_dict,
                 "schema": schema_dict,
             }
-            zipf.writestr("metadata.json", json.dumps(metadata_json, indent=2, ensure_ascii=False))
+            zipf.writestr(
+                "metadata.json", json.dumps(metadata_json, indent=2, ensure_ascii=False)
+            )
 
             added_files = set()
             for result in results:
@@ -2971,12 +3017,20 @@ def download_trial_results(
 
                 prep_conf = None
                 if document.preprocessing_config_id:
-                    prep_obj = preprocessing_config_cache.get(document.preprocessing_config_id)
+                    prep_obj = preprocessing_config_cache.get(
+                        document.preprocessing_config_id
+                    )
                     if prep_obj:
-                        prep_conf = filter_sensitive_keys({
-                            k: v for k, v in prep_obj.__dict__.items()
-                            if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
-                        })
+                        prep_conf = filter_sensitive_keys(
+                            {
+                                k: v
+                                for k, v in prep_obj.__dict__.items()
+                                if not k.startswith("_")
+                                and isinstance(
+                                    v, (str, int, float, bool, dict, list, type(None))
+                                )
+                            }
+                        )
 
                 result_data = {
                     "result": result.result,
@@ -2997,11 +3051,15 @@ def download_trial_results(
                         if file_to_add and file_id not in added_files:
                             added_files.add(file_id)
                             file_content = get_file(file_to_add.file_uuid)
-                            file_path = f"files/{file_to_add.file_uuid}_{file_to_add.file_name}"
+                            file_path = (
+                                f"files/{file_to_add.file_uuid}_{file_to_add.file_name}"
+                            )
                             zipf.writestr(file_path, file_content)
 
                 file_base = document_name or f"document_{result.document_id}"
-                safe_base = "".join(c for c in file_base if c.isalnum() or c in " ._-").rstrip()
+                safe_base = "".join(
+                    c for c in file_base if c.isalnum() or c in " ._-"
+                ).rstrip()
                 if not safe_base:
                     safe_base = f"document_{result.document_id}"
                 json_filename = f"{safe_base}.json"
@@ -3043,7 +3101,13 @@ def download_trial_results(
             output = io.BytesIO()
             with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zipf:
                 header = (
-                    ["document_id", "document_name", "file_name", "created_at", "document_content"]
+                    [
+                        "document_id",
+                        "document_name",
+                        "file_name",
+                        "created_at",
+                        "document_content",
+                    ]
                     + [f"meta.{k}" for k in meta_keys]
                     + [f"preprocessing.{k}" for k in prep_keys]
                     + [f"trial.{k}" for k in trial_keys]
@@ -3077,13 +3141,32 @@ def download_trial_results(
                         file_name = file.file_name if file else ""
                         row["document_content"] = document.text or ""
                         if document.preprocessing_config_id:
-                            prep_obj = preprocessing_config_cache.get(document.preprocessing_config_id)
+                            prep_obj = preprocessing_config_cache.get(
+                                document.preprocessing_config_id
+                            )
                             if prep_obj:
-                                prep_conf = filter_sensitive_keys({
-                                    k: v for k, v in prep_obj.__dict__.items()
-                                    if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
-                                })
-                        file_id = document.preprocessed_file_id or document.original_file_id
+                                prep_conf = filter_sensitive_keys(
+                                    {
+                                        k: v
+                                        for k, v in prep_obj.__dict__.items()
+                                        if not k.startswith("_")
+                                        and isinstance(
+                                            v,
+                                            (
+                                                str,
+                                                int,
+                                                float,
+                                                bool,
+                                                dict,
+                                                list,
+                                                type(None),
+                                            ),
+                                        )
+                                    }
+                                )
+                        file_id = (
+                            document.preprocessed_file_id or document.original_file_id
+                        )
                         if file_id:
                             file_to_add = db.execute(
                                 select(models.File).where(models.File.id == file_id)
@@ -3158,12 +3241,21 @@ def download_trial_results(
                             document_name = file.file_name
                     file_name = file.file_name if file else ""
                     if document.preprocessing_config_id:
-                        prep_obj = preprocessing_config_cache.get(document.preprocessing_config_id)
+                        prep_obj = preprocessing_config_cache.get(
+                            document.preprocessing_config_id
+                        )
                         if prep_obj:
-                            prep_conf = filter_sensitive_keys({
-                                k: v for k, v in prep_obj.__dict__.items()
-                                if not k.startswith("_") and isinstance(v, (str, int, float, bool, dict, list, type(None)))
-                            })
+                            prep_conf = filter_sensitive_keys(
+                                {
+                                    k: v
+                                    for k, v in prep_obj.__dict__.items()
+                                    if not k.startswith("_")
+                                    and isinstance(
+                                        v,
+                                        (str, int, float, bool, dict, list, type(None)),
+                                    )
+                                }
+                            )
                 row["document_name"] = document_name or ""
                 row["file_name"] = file_name or ""
                 meta_flat = flatten_dict(document.meta_data if document else {})
@@ -3224,6 +3316,7 @@ def _extract_keys(d, parent_key="", sep="_"):
 def get_available_llm_models(
     api_key: str | None = settings.OPENAI_API_KEY,
     base_url: str | None = settings.OPENAI_API_BASE,
+    current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if api_key is None or base_url is None:
         return {
@@ -3239,6 +3332,7 @@ def get_available_llm_models(
 def test_api_connection_endpoint(
     api_key: str | None = settings.OPENAI_API_KEY,
     base_url: str | None = settings.OPENAI_API_BASE,
+    current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if api_key is None or base_url is None:
         return {
@@ -3254,6 +3348,7 @@ def test_llm_model_endpoint(
     api_key: str | None = settings.OPENAI_API_KEY,
     base_url: str | None = settings.OPENAI_API_BASE,
     llm_model: str | None = settings.OPENAI_API_MODEL,
+    current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if api_key is None or base_url is None or llm_model is None:
         return {
@@ -3274,6 +3369,7 @@ def test_model_with_schema_endpoint(
     llm_model: str | None = settings.OPENAI_API_MODEL,
     schema_id: int | None = None,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Test if a model supports structured output with a specific schema"""
     if api_key is None or base_url is None or llm_model is None:

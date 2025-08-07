@@ -10,10 +10,10 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Integer,
     String,
     Table,
     UniqueConstraint,
-    Integer,
 )
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -296,6 +296,7 @@ class PreprocessingTaskStatus(str, enum.Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+    CANCELLED = "cancelled"
     FAILED = "failed"
 
 
@@ -384,6 +385,7 @@ class PreprocessingTask(Base):
     estimated_completion: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)  # ETA, etc.
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -489,6 +491,7 @@ class TrialStatus(str, enum.Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class Trial(Base):
@@ -520,8 +523,14 @@ class Trial(Base):
     docs_done: Mapped[int] = mapped_column(Integer, default=0)
     progress: Mapped[float] = mapped_column(Float, default=0.0)  # 0.0-1.0
     started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
-    finished_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
-    meta: Mapped[dict] = mapped_column(JSON, default=dict)       # ETA etc.
+    finished_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)  # ETA etc.
+
+    # Cancellation settings
+    is_cancelled: Mapped[bool] = mapped_column(Boolean, default=False)
+    rollback_on_cancel: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # ── timestamps ──────────────────────────────────────────────────────────────
     created_at: Mapped[DateTime] = mapped_column(
@@ -542,6 +551,10 @@ class Trial(Base):
     evaluations: Mapped[list["Evaluation"]] = relationship(
         back_populates="trial", cascade="all, delete-orphan"
     )
+
+    def cancel(self):
+        self.is_cancelled = True
+        self.status = TrialStatus.CANCELLED
 
 
 class TrialResult(Base):

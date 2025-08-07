@@ -1,16 +1,17 @@
-# celery/info_extraction.py
 import asyncio
 import datetime as dt
-from typing import List, Dict, Any
-from sqlalchemy import select, func
-from openai import AsyncOpenAI
+from typing import Any, Dict, List
 
-from ..dependencies import get_db
+from openai import AsyncOpenAI
+from sqlalchemy import func, select
+
 from .. import models
+from ..dependencies import get_db
 from ..utils.info_extraction import extract_info_single_doc_async, update_trial_progress
 from .celery_config import celery_app
 
 if celery_app:
+
     @celery_app.task(
         bind=True,
         autoretry_for=(Exception,),
@@ -31,13 +32,16 @@ if celery_app:
     ) -> None:
         async def _run():
             async with AsyncOpenAI(api_key=api_key, base_url=base_url) as client:
-                sem = asyncio.Semaphore(5)
                 failures = {}
+                doc_tasks = {}
 
-                # Launch all extraction tasks
+                # Processing for each document
                 async def _process(doc_id: int):
                     try:
                         with next(get_db()) as db:
+                            trial = db.get(models.Trial, trial_id)
+                            if trial and trial.is_cancelled:
+                                raise asyncio.CancelledError("Trial was cancelled")
                             exists = db.scalar(
                                 select(models.TrialResult.id).where(
                                     models.TrialResult.trial_id == trial_id,
@@ -57,35 +61,57 @@ if celery_app:
                             project_id=project_id,
                             advanced_options=advanced_options,
                         )
+                    except asyncio.CancelledError:
+                        print(f"[Trial {trial_id}] Doc {doc_id} was force-cancelled!")
+                        failures[str(doc_id)] = "Cancelled"
+                        # You could choose not to count this as failure, or not store at all.
+                        raise
                     except Exception as exc:
                         failures[str(doc_id)] = str(exc)
                         print(f"[Trial {trial_id}] Doc {doc_id} failed: {exc}")
 
-                tasks = [
-                    asyncio.create_task(_process(doc_id))
-                    for doc_id in document_ids
-                ]
+                # Launch all doc tasks, with high concurrency
+                for doc_id in document_ids:
+                    doc_tasks[doc_id] = asyncio.create_task(_process(doc_id))
 
-                # Heartbeat coroutine: update progress every N seconds
+                # Progress heartbeat coroutine
                 async def _progress_heartbeat():
                     while True:
-                        await asyncio.sleep(5)  # Update every 5 seconds
+                        await asyncio.sleep(5)
                         with next(get_db()) as db:
                             update_trial_progress(db, trial_id)
-                        # Exit when all tasks are done
-                        if all(t.done() for t in tasks):
+                        # Stop heartbeat if all tasks done
+                        if all(t.done() for t in doc_tasks.values()):
                             break
 
-                # Run both gather and heartbeat concurrently
+                # Cancellation watcher
+                async def _cancellation_watcher():
+                    while True:
+                        await asyncio.sleep(1)
+                        with next(get_db()) as db:
+                            trial = db.get(models.Trial, trial_id)
+                            if trial and trial.is_cancelled:
+                                print(
+                                    f"[Trial {trial_id}] Cancellation detected, aborting in-flight tasks..."
+                                )
+                                for t in doc_tasks.values():
+                                    if not t.done():
+                                        t.cancel()
+                                break
+                        if all(t.done() for t in doc_tasks.values()):
+                            break
+
+                # Run all together
                 await asyncio.gather(
-                    asyncio.gather(*tasks, return_exceptions=True),
+                    asyncio.gather(*doc_tasks.values(), return_exceptions=True),
                     _progress_heartbeat(),
+                    _cancellation_watcher(),
                 )
 
-            # Finalize state at end (update status, final progress, failures)
+            # Finalize state
             with next(get_db()) as db:
                 trial: models.Trial = db.get(models.Trial, trial_id)
-                update_trial_progress(db, trial_id)  # Will set ETA to 0 if done
+                update_trial_progress(db, trial_id)
                 trial.finished_at = dt.datetime.now(dt.UTC)
                 total = len(trial.document_ids or [])
                 done = db.scalar(
@@ -93,9 +119,15 @@ if celery_app:
                     .select_from(models.TrialResult)
                     .where(models.TrialResult.trial_id == trial_id)
                 )
-                if done == total and not failures:
+                cancelled = trial.is_cancelled if trial else False
+                if cancelled:
+                    trial.status = models.TrialStatus.CANCELLED
+                    trial.meta = (trial.meta or {}) | {
+                        "failures": failures,
+                        "eta_seconds": 0,
+                    }
+                elif done == total and not failures:
                     trial.status = models.TrialStatus.COMPLETED
-                    # Always include failures and eta_seconds
                     trial.meta = (trial.meta or {}) | {"failures": {}, "eta_seconds": 0}
                 else:
                     trial.status = models.TrialStatus.FAILED

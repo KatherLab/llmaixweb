@@ -89,7 +89,7 @@
             v-for="task in activeTasks"
             :key="task.id"
             :task="task"
-            @cancel="cancelTask"
+            @cancel="showCancelTaskDialog"
             @retry="retryTask"
             @view-details="viewTaskDetails"
         />
@@ -908,6 +908,21 @@
         @close="selectedTask = null"
         @retry-failed="retryFailedFiles"
     />
+
+    <ConfirmationDialog
+      v-if="showCancelDialog"
+      :open="showCancelDialog"
+      title="Cancel Preprocessing Task"
+      :message="cancelDeleteMode
+          ? 'Are you sure you want to cancel and DELETE already processed files? This cannot be undone.'
+          : 'Do you want to keep already processed files when cancelling this task?'
+        "
+      :confirmText="cancelDeleteMode ? 'Delete Processed and Cancel' : 'Keep Processed and Cancel'"
+      :cancelText="cancelDeleteMode ? 'Back' : 'Delete Processed'"
+      :confirmVariant="cancelDeleteMode ? 'danger' : 'primary'"
+      @confirm="() => doCancelTask(cancelTaskPending, !cancelDeleteMode)"
+      @cancel="handleCancelDialogSecondary"
+    />
   </div>
 </template>
 
@@ -922,6 +937,7 @@ import TaskCard from './preprocessing/TaskCard.vue';
 import FileSelector from './preprocessing/FileSelector.vue';
 import ConfigurationManager from './preprocessing/ConfigurationManager.vue';
 import TaskDetailsModal from './preprocessing/TaskDetailsModal.vue';
+import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
 
 const props = defineProps({
   projectId: {
@@ -945,6 +961,9 @@ const selectedFiles = ref([]);
 const selectedTask = ref(null);
 const showConfigManager = ref(false);
 const showCompletedTasks = ref(false);
+const showCancelDialog = ref(false);
+const cancelTaskPending = ref(null);
+const cancelDeleteMode = ref(false);
 const isSubmitting = ref(false);
 const saveAsConfig = ref(false);
 const configName = ref('');
@@ -1011,6 +1030,12 @@ const vlmModelTestStatus = computed(() => {
   }
   return {type: 'none', message: ''};
 });
+
+const showCancelTaskDialog = (task) => {
+  cancelTaskPending.value = task;
+  cancelDeleteMode.value = false; // default to "keep"
+  showCancelDialog.value = true;
+};
 
 
 const saveAsPreset = async () => {
@@ -1601,7 +1626,36 @@ const startQuickPreprocess = async () => {
   }
 };
 
-const cancelTask = async (task) => {
+function handleCancelDialogSecondary() {
+  // If already on "delete" mode, just close
+  if (cancelDeleteMode.value) {
+    showCancelDialog.value = false;
+    cancelTaskPending.value = null;
+    cancelDeleteMode.value = false;
+  } else {
+    // Switch to "delete mode"
+    cancelDeleteMode.value = true;
+  }
+}
+
+
+const doCancelTask = async (task, keepProcessed) => {
+  showCancelDialog.value = false;
+  cancelDeleteMode.value = false;
+  if (!task) return;
+  try {
+    await api.post(`/project/${props.projectId}/preprocess/${task.id}/cancel?keep_processed=${!!keepProcessed}`);
+    toast.success('Task cancelled');
+    fetchPreprocessingTasks();
+  } catch (error) {
+    toast.error('Failed to cancel task');
+  } finally {
+    cancelTaskPending.value = null;
+  }
+};
+
+
+const cancelTask = async (task, done) => {
   try {
     const keepProcessed = await confirm('Keep already processed files?');
     await api.post(`/project/${props.projectId}/preprocess/${task.id}/cancel?keep_processed=${keepProcessed}`);
@@ -1609,8 +1663,11 @@ const cancelTask = async (task) => {
     fetchPreprocessingTasks();
   } catch (error) {
     toast.error('Failed to cancel task');
+  } finally {
+    if (done) done(); // Resets button
   }
 };
+
 
 const retryTask = async (task) => {
   try {

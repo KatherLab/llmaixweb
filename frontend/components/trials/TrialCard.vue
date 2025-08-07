@@ -70,6 +70,13 @@
     <!-- Footer buttons -->
     <div class="border-t bg-gray-50 px-4 py-3 flex items-center justify-between rounded-b-xl gap-2">
       <div class="flex gap-2 flex-wrap">
+        <button
+          v-if="isActive && trial.status !== 'cancelled'"
+          @click.stop="emit('cancel', trial)"
+          class="rounded-md bg-yellow-100 text-yellow-700 px-3 py-1 text-xs font-medium hover:bg-yellow-200 transition"
+        >
+          Cancel
+        </button>
         <button @click.stop="emit('view-results', trial)" v-if="trial.results && trial.results.length > 0"
           class="rounded-md bg-blue-600 text-white px-3 py-1 text-xs font-medium hover:bg-blue-700 transition">
           Results
@@ -138,11 +145,12 @@ const statusClass = computed(
       processing: 'bg-blue-100 text-blue-800',
       completed:  'bg-green-100 text-green-800',
       failed:     'bg-red-100 text-red-800',
+      cancelled:  'bg-gray-200 text-gray-500',
     }[props.trial.status] || 'bg-gray-100 text-gray-800')
 );
 
 const isActive = computed(
-  () => !['completed', 'failed'].includes(props.trial.status)
+  () => !['completed', 'failed', 'cancelled'].includes(props.trial.status)
 );
 
 /* progress */
