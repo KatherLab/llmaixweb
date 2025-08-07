@@ -447,146 +447,145 @@
           </div>
 
           <form @submit.prevent="showEditPromptModal ? updatePrompt() : createPrompt()" class="flex flex-col flex-1 min-h-0">
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
-              <!-- Prompt Name and Description -->
-              <div class="grid grid-cols-1 gap-4">
+            <div class="flex-1 overflow-y-auto p-6 space-y-8">
+
+              <!-- Name & Description -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label for="prompt-name" class="block text-sm font-medium text-gray-700 mb-1">
-                    Prompt Name <span class="text-red-500">*</span>
-                  </label>
+                  <label for="prompt-name" class="block text-sm font-semibold text-gray-800 mb-1">Prompt Name <span class="text-red-500">*</span></label>
                   <input
                     id="prompt-name"
                     v-model="promptForm.name"
-                    class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    class="block w-full border border-gray-300 rounded-lg shadow focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base px-3 py-2"
                     :class="{ 'border-red-300': !promptForm.name && isSubmitting }"
                     placeholder="e.g., Medical Document Extraction"
                     required
-                    @blur="() => { if (!promptForm.name) toast.warning('Prompt name is required') }"
                   />
-                  <p v-if="!promptForm.name && isSubmitting" class="mt-1 text-sm text-red-600">
-                    This field is required
-                  </p>
+                  <p v-if="!promptForm.name && isSubmitting" class="mt-1 text-xs text-red-600">This field is required</p>
                 </div>
-
                 <div>
-                  <label for="prompt-description" class="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
+                  <label for="prompt-description" class="block text-sm font-semibold text-gray-800 mb-1">Description</label>
                   <textarea
                     id="prompt-description"
                     v-model="promptForm.description"
                     rows="2"
-                    class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    class="block w-full border border-gray-300 rounded-lg shadow focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base px-3 py-2"
                     placeholder="Describe what this prompt is designed to extract..."
                   />
                 </div>
               </div>
 
-              <!-- Placeholder Info Banner -->
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div class="flex">
-                  <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                  <div class="ml-3">
-                    <h3 class="text-sm font-medium text-blue-800">Document Content Placeholder</h3>
-                    <p class="mt-1 text-sm text-blue-700">
-                      Use <code class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded font-mono text-xs">{document_content}</code>
-                      in your prompts where you want the document text to be inserted.
-                    </p>
-                  </div>
+              <!-- Info Banner -->
+              <div class="flex items-start bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex-shrink-0 mt-0.5">
+                  <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-blue-900">Document Content Placeholder</h3>
+                  <p class="text-sm text-blue-800">
+                    Use <code class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded font-mono text-xs">{document_content}</code>
+                    in your prompts where you want the document text to be inserted.
+                  </p>
                 </div>
               </div>
 
-              <!-- System Prompt -->
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <label for="system-prompt" class="block text-sm font-medium text-gray-700">
-                    System Prompt
-                  </label>
-                  <span v-if="promptForm.system_prompt?.includes('{document_content}')"
-                        class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
-                    <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Contains placeholder
-                  </span>
-                </div>
-                <div class="relative">
+              <!-- Prompt Sections -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                <!-- System Prompt -->
+                <div>
+                  <div class="mb-2 flex items-center gap-2">
+                    <label for="system-prompt" class="block text-sm font-medium text-gray-800 flex-1">System Prompt</label>
+                    <span v-if="promptForm.system_prompt?.includes('{document_content}')" class="inline-flex items-center text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                      <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Contains placeholder
+                    </span>
+                    <button
+                      v-if="!hasDocumentContentPlaceholder"
+                      type="button"
+                      @click="insertPlaceholder('system')"
+                      class="ml-2 px-2 py-0.5 text-xs bg-indigo-50 hover:bg-indigo-100 rounded text-indigo-700 border border-indigo-200 transition"
+                      title="Insert {document_content} at cursor"
+                    >+ Insert {document_content}</button>
+                  </div>
                   <textarea
                     id="system-prompt"
+                    ref="systemPromptRef"
                     v-model="promptForm.system_prompt"
                     @input="validatePromptPlaceholder"
-                    rows="6"
-                    class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono text-sm"
+                    rows="7"
+                    class="block w-full border border-gray-200 rounded-lg shadow focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono px-3 py-2 transition"
                     :class="{
-                      'pr-20': showPreviewSystem,
                       'border-amber-300': promptError && !promptForm.system_prompt?.includes('{document_content}') && !promptForm.user_prompt?.includes('{document_content}')
                     }"
                     placeholder="You are an AI assistant specialized in extracting structured information from documents..."
                   />
-                  <button
-                    v-if="promptForm.system_prompt"
-                    type="button"
-                    @click="togglePreview('system')"
-                    class="absolute top-2 right-2 text-xs text-indigo-600 hover:text-indigo-800 bg-white px-2 py-1 rounded border border-gray-300"
-                  >
-                    {{ showPreviewSystem ? 'Hide' : 'Preview' }}
-                  </button>
+                  <div class="flex justify-end mt-2">
+                    <button
+                      v-if="promptForm.system_prompt"
+                      type="button"
+                      @click="togglePreview('system')"
+                      class="px-3 py-1 text-xs font-medium bg-white border border-gray-300 rounded hover:bg-gray-50 text-indigo-600"
+                    >{{ showPreviewSystem ? 'Hide' : 'Preview' }}</button>
+                  </div>
                 </div>
-              </div>
 
-
-              <!-- User Prompt -->
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <label for="user-prompt" class="block text-sm font-medium text-gray-700">
-                    User Prompt
-                  </label>
-                  <span v-if="promptForm.user_prompt?.includes('{document_content}')"
-                        class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
-                    <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Contains placeholder
-                  </span>
-                </div>
-                <div class="relative">
+                <!-- User Prompt -->
+                <div>
+                  <div class="mb-2 flex items-center gap-2">
+                    <label for="user-prompt" class="block text-sm font-medium text-gray-800 flex-1">User Prompt</label>
+                    <span v-if="promptForm.user_prompt?.includes('{document_content}')" class="inline-flex items-center text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                      <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Contains placeholder
+                    </span>
+                    <button
+                      v-if="!hasDocumentContentPlaceholder"
+                      type="button"
+                      @click="insertPlaceholder('user')"
+                      class="ml-2 px-2 py-0.5 text-xs bg-indigo-50 hover:bg-indigo-100 rounded text-indigo-700 border border-indigo-200 transition"
+                      title="Insert {document_content} at cursor"
+                    >+ Insert {document_content}</button>
+                  </div>
                   <textarea
                     id="user-prompt"
+                    ref="userPromptRef"
                     v-model="promptForm.user_prompt"
                     @input="validatePromptPlaceholder"
-                    rows="6"
-                    class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono text-sm"
-                    :class="{ 'pr-20': showPreviewUser }"
-                    placeholder="Extract the following information from this document:&#10;&#10;{document_content}"
+                    rows="7"
+                    class="block w-full border border-gray-200 rounded-lg shadow focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono px-3 py-2 transition"
+                    placeholder="Extract the following information from this document:\n\n{document_content}"
                   />
-                  <button
-                    v-if="promptForm.user_prompt"
-                    type="button"
-                    @click="togglePreview('user')"
-                    class="absolute top-2 right-2 text-xs text-indigo-600 hover:text-indigo-800 bg-white px-2 py-1 rounded border border-gray-300"
-                  >
-                    {{ showPreviewUser ? 'Hide' : 'Preview' }}
-                  </button>
+                  <div class="flex justify-end mt-2">
+                    <button
+                      v-if="promptForm.user_prompt"
+                      type="button"
+                      @click="togglePreview('user')"
+                      class="px-3 py-1 text-xs font-medium bg-white border border-gray-300 rounded hover:bg-gray-50 text-indigo-600"
+                    >{{ showPreviewUser ? 'Hide' : 'Preview' }}</button>
+                  </div>
                 </div>
+
               </div>
 
               <!-- Preview Section -->
-              <div v-if="showPreviewSystem || showPreviewUser" class="space-y-4">
-                <h4 class="text-sm font-medium text-gray-700">Preview with Sample Document</h4>
-                <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <div v-if="showPreviewSystem && promptForm.system_prompt" class="space-y-2">
-                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">System Message Preview</span>
-                    <div class="bg-white rounded-lg p-3 text-sm text-gray-700 whitespace-pre-wrap border border-gray-200">
+              <div v-if="showPreviewSystem || showPreviewUser" class="mt-4 space-y-4">
+                <h4 class="text-sm font-medium text-gray-800">Preview with Sample Document</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div v-if="showPreviewSystem && promptForm.system_prompt" class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">System Message Preview</span>
+                    <div class="mt-2 whitespace-pre-wrap text-sm text-gray-700 font-mono">
                       {{ promptForm.system_prompt.replace('{document_content}', sampleDocument) }}
                     </div>
                   </div>
-                  <div v-if="showPreviewUser && promptForm.user_prompt" class="space-y-2">
-                    <span class="text-xs font-medium text-blue-600 uppercase tracking-wider">User Message Preview</span>
-                    <div class="bg-blue-50 rounded-lg p-3 text-sm text-gray-700 whitespace-pre-wrap border border-blue-200">
+                  <div v-if="showPreviewUser && promptForm.user_prompt" class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <span class="text-xs font-semibold text-blue-600 uppercase tracking-wider">User Message Preview</span>
+                    <div class="mt-2 whitespace-pre-wrap text-sm text-gray-700 font-mono">
                       {{ promptForm.user_prompt.replace('{document_content}', sampleDocument) }}
                     </div>
                   </div>
@@ -594,11 +593,11 @@
               </div>
 
               <!-- Validation Error -->
-              <div v-if="promptError" class="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div v-if="promptError" class="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
                 <div class="flex">
                   <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                     </svg>
                   </div>
                   <div class="ml-3">
@@ -606,65 +605,43 @@
                   </div>
                 </div>
               </div>
+
             </div>
 
             <!-- Modal Footer -->
-            <div class="px-6 py-4 bg-gray-50 border-t flex justify-between items-center flex-shrink-0">
-              <div class="flex items-center space-x-2">
-                <button
-                  type="button"
-                  @click="useTemplate"
-                  class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center"
-                >
-                  <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Use Template
-                </button>
-              </div>
+            <div class="px-6 py-4 bg-gray-50 border-t flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0 md:space-x-3 flex-shrink-0">
+              <button
+                type="button"
+                @click="useTemplate"
+                class="inline-flex items-center px-3 py-2 border border-indigo-100 text-sm font-medium rounded-lg text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition"
+              >
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Use Template
+              </button>
               <div class="flex space-x-3">
                 <button
                   type="button"
-                  class="inline-flex justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
+                  class="inline-flex justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition"
                   @click="cancelPromptModal"
+                >Cancel</button>
+                <button
+                  :disabled="isSubmitting || !isPromptValid"
+                  class="inline-flex justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  type="submit"
                 >
-                  Cancel
+                  <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="currentColor"/>
+                  </svg>
+                  {{ showEditPromptModal ? 'Update' : 'Create' }}
                 </button>
-                <div class="relative inline-flex">
-                  <button
-                      :disabled="isSubmitting || !isPromptValid"
-                      class="inline-flex justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      type="submit"
-                      @mouseenter="showButtonTooltip = !isPromptValid"
-                      @mouseleave="showButtonTooltip = false"
-                  >
-                    <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                         fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            fill="currentColor"></path>
-                    </svg>
-                    {{ showEditPromptModal ? 'Update' : 'Create' }}
-                  </button>
-
-                  <!-- Tooltip -->
-                  <div v-if="showButtonTooltip && formErrors.length > 0"
-                       class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-10">
-                    <div class="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 max-w-xs">
-                      <div class="font-semibold mb-1">Please fix the following:</div>
-                      <ul class="list-disc list-inside">
-                        <li v-for="error in formErrors" :key="error">{{ error }}</li>
-                      </ul>
-                      <div class="absolute top-full left-1/2 transform -translate-x-1/2">
-                        <div class="border-4 border-transparent border-t-gray-900"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
             </div>
           </form>
+
+
         </div>
       </div>
     </Teleport>
@@ -878,6 +855,9 @@ const promptError = ref('');
 const showPreviewSystem = ref(false);
 const showPreviewUser = ref(false);
 const showButtonTooltip = ref(false);
+
+const systemPromptRef = ref(null);
+const userPromptRef = ref(null);
 
 const promptForm = ref({
   name: '',
@@ -1123,6 +1103,52 @@ const fetchPrompts = async () => {
     isLoadingPrompts.value = false;
   }
 };
+
+const hasDocumentContentPlaceholder = computed(() =>
+  (promptForm.value.system_prompt && promptForm.value.system_prompt.includes('{document_content}')) ||
+  (promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}'))
+);
+
+
+function insertPlaceholder(type) {
+  if (hasDocumentContentPlaceholder.value) return; // Defensive, shouldn't show if true.
+
+  let refObj, modelValue, setter;
+  if (type === 'system') {
+    refObj = systemPromptRef.value;
+    modelValue = promptForm.value.system_prompt || '';
+    setter = v => (promptForm.value.system_prompt = v);
+  } else {
+    refObj = userPromptRef.value;
+    modelValue = promptForm.value.user_prompt || '';
+    setter = v => (promptForm.value.user_prompt = v);
+  }
+
+  // If either prompt already has the placeholder, bail
+  if (
+    (promptForm.value.system_prompt && promptForm.value.system_prompt.includes('{document_content}')) ||
+    (promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}'))
+  ) {
+    return;
+  }
+
+  // Insert at cursor if focused, else at end
+  let insertPos = modelValue.length;
+  if (refObj && document.activeElement === refObj) {
+    insertPos = refObj.selectionStart;
+    const before = modelValue.slice(0, insertPos);
+    const after = modelValue.slice(insertPos);
+    setter(before + '{document_content}' + after);
+    nextTick(() => {
+      refObj.focus();
+      const newPos = insertPos + '{document_content}'.length;
+      refObj.setSelectionRange(newPos, newPos);
+    });
+  } else {
+    setter(modelValue + '{document_content}');
+  }
+  validatePromptPlaceholder();
+}
 
 
 const validatePromptPlaceholder = () => {
