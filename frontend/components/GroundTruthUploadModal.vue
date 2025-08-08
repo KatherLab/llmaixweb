@@ -5,7 +5,7 @@
       @click="$emit('close')"
     >
       <div
-        class="bg-white rounded-lg shadow-lg w-full max-w-lg overflow-hidden"
+        class="bg-white rounded-lg shadow-lg w-full max-w-lg overflow-auto max-h-[90vh]"
         @click.stop
       >
         <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
@@ -134,7 +134,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
 
@@ -202,17 +202,14 @@ const uploadGroundTruth = async () => {
     let response;
 
     if (groundTruthFormat.value === 'json' && selectedFiles.value.length > 1) {
-      // Multiple JSON files - create a ZIP in memory
       const { default: JSZip } = await import('jszip');
       const zip = new JSZip();
 
-      // Add each JSON file to the ZIP
       for (const file of selectedFiles.value) {
         const content = await file.text();
         zip.file(file.name, content);
       }
 
-      // Generate ZIP blob
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const zipFile = new File([zipBlob], 'ground_truth.zip', { type: 'application/zip' });
 
@@ -222,21 +219,16 @@ const uploadGroundTruth = async () => {
       formData.append('format', 'zip');
 
       response = await api.post(`/project/${props.projectId}/groundtruth`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
     } else {
-      // Single file upload (CSV, ZIP, or single JSON)
       const formData = new FormData();
       formData.append('file', selectedFiles.value[0]);
       formData.append('name', groundTruthName.value || selectedFiles.value[0].name);
       formData.append('format', groundTruthFormat.value);
 
       response = await api.post(`/project/${props.projectId}/groundtruth`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
     }
 
@@ -250,4 +242,13 @@ const uploadGroundTruth = async () => {
     isUploading.value = false;
   }
 };
+
+// Disable background scroll when modal is mounted, re-enable on unmount
+onMounted(() => {
+  document.body.style.overflow = 'hidden';
+});
+
+onBeforeUnmount(() => {
+  document.body.style.overflow = '';
+});
 </script>
