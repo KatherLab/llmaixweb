@@ -2,7 +2,7 @@
   <Teleport to="body">
     <div
       class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
-      @click="$emit('close')"
+      @click="handleClose"
     >
       <div
         class="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col"
@@ -10,14 +10,14 @@
       >
         <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h3 class="text-lg font-medium text-gray-900">Evaluate Trial</h3>
-          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-500">
+          <button @click="handleClose" class="text-gray-400 hover:text-gray-500">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <!-- Enhanced Error Display -->
+        <!-- Error Display -->
         <div v-if="error" class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
           <div class="flex items-start">
             <svg class="w-5 h-5 text-red-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,8 +92,6 @@
             <div class="mb-4">
               <h4 class="font-medium text-gray-900 mb-2">Select a trial to evaluate</h4>
               <p class="text-sm text-gray-600">Choose from completed trials to compare against your ground truth data.</p>
-
-              <!-- Summary Stats -->
               <div class="mt-3 flex gap-4 text-sm">
                 <span class="text-gray-600">
                   Total trials: <span class="font-medium">{{ availableTrials.length }}</span>
@@ -132,7 +130,6 @@
                       <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         {{ trial.status }}
                       </span>
-                      <!-- Enhanced Mapping Status -->
                       <span
                         v-if="trial.hasMappings"
                         class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
@@ -180,7 +177,7 @@
         <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
           <button
             type="button"
-            @click="$emit('close')"
+            @click="handleClose"
             class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancel
@@ -215,7 +212,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { api } from '@/services/api';
 import { formatDate } from '@/utils/formatters';
 import { useToast } from 'vue-toastification';
@@ -500,8 +497,37 @@ const onMappingConfigured = async () => {
   }
 };
 
-// Initialize component
+/** BODY SCROLL LOCK LOGIC **/
+const lockBodyScroll = () => {
+  if (typeof window !== 'undefined') {
+    document.body.classList.add('no-scroll');
+  }
+};
+const unlockBodyScroll = () => {
+  if (typeof window !== 'undefined') {
+    document.body.classList.remove('no-scroll');
+  }
+};
+
+// Close handler to always remove scroll lock and emit
+const handleClose = () => {
+  unlockBodyScroll();
+  emit('close');
+};
+
+// Mount/unmount lifecycle for scroll locking
 onMounted(() => {
+  lockBodyScroll();
   fetchData();
 });
+onBeforeUnmount(() => {
+  unlockBodyScroll();
+});
 </script>
+
+<style>
+/* Add this to your global CSS (or include in a style tag if allowed globally) */
+.no-scroll {
+  overflow: hidden !important;
+}
+</style>
