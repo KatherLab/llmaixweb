@@ -1,6 +1,5 @@
 import base64
 import io
-import json
 from datetime import datetime, timezone
 from typing import Any
 
@@ -9,7 +8,6 @@ from fastapi import HTTPException
 from PIL import Image
 
 from backend.src import schemas
-
 
 
 def extract_leaf_paths_from_dict(data, parent=""):
@@ -28,6 +26,7 @@ def extract_leaf_paths_from_dict(data, parent=""):
             new_parent = f"{parent}[{i}]"
             fields.extend(extract_leaf_paths_from_dict(item, new_parent))
     return fields
+
 
 def extract_required_fields_from_schema(
     schema_def: dict, prefix: str = ""
@@ -139,6 +138,7 @@ def find_extra_fields_nested(
     check_data_fields(data)
     return extra
 
+
 def check_field_types(data: dict, schema_def: dict, prefix: str = "") -> list[str]:
     """Check if data types in the JSON match the schema definition."""
     type_errors = []
@@ -228,7 +228,6 @@ def check_value_type(value: Any, expected_type: str, field_path: str) -> str | N
 
 def find_extra_fields(data: dict, schema_def: dict) -> list[str]:
     """Find fields in data that aren't defined in the schema."""
-    extra = []
 
     # Use the existing find_extra_fields_nested function
     extra_fields = find_extra_fields_nested(data, schema_def)
@@ -317,11 +316,12 @@ def extract_field_types_from_schema(schema_def: dict, result: dict, prefix: str 
                         "number": "number",
                         "string": "string",
                     }
-                    result[full_path] = type_mapping.get(prop_def.get("type", "string"), "string")
+                    result[full_path] = type_mapping.get(
+                        prop_def.get("type", "string"), "string"
+                    )
 
             if prop_def.get("format") in ["date", "date-time"]:
                 result[full_path] = "date"
-
 
 
 # As sqlite does not support timezone-aware datetimes, we have to do this manually.

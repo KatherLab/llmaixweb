@@ -4486,7 +4486,12 @@ def validate_json_ground_truth(
     errors = []
     warnings = []
 
-    from ....utils.helpers import extract_required_fields_from_schema, check_missing_fields_nested, check_field_types, find_extra_fields
+    from ....utils.helpers import (
+        check_field_types,
+        check_missing_fields_nested,
+        extract_required_fields_from_schema,
+        find_extra_fields,
+    )
 
     # Validate structure matches schema
     schema_def = schema.schema_definition

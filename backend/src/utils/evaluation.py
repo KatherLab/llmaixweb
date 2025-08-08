@@ -11,8 +11,8 @@ from pandas.errors import ParserError
 from sqlalchemy.orm import Session
 from thefuzz import fuzz
 
-from .helpers import flatten_dict
 from .. import models
+from .helpers import flatten_dict
 
 
 class EvaluationEngine:
@@ -725,7 +725,6 @@ class GroundTruthParser:
                 raise ValueError("JSON must be an object or array")
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON: {e}")
-
 
     def _parse_zip(self, content: bytes) -> Dict:
         """Parse ZIP file with multiple JSON documents."""
