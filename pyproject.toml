@@ -1,6 +1,6 @@
 [project]
 name = "llmaixweb"
-version = "0.1.1"
+version = "0.1.2"
 description = "LLM Information Extraction Web Application"
 requires-python = ">=3.13"
 dependencies = [
@@ -10,10 +10,10 @@ dependencies = [
     "sqlalchemy~=2.0.42",
     "psycopg[binary,pool]>=3.2.9",
     "pydantic_settings~=2.10.1",
-    "openai~=1.99.1",
+    "openai~=1.99.4",
     "bcrypt~=4.3.0",
-    "boto3~=1.40.4",
-    "boto3-stubs==1.40.4",
+    "boto3~=1.40.5",
+    "boto3-stubs==1.40.5",
     "llmaix[surya,docling,paddleocr]~=0.0.24",
     "redis~=6.4.0",
     "celery~=5.5.3",
