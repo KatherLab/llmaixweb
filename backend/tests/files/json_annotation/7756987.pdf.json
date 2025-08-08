@@ -1,0 +1,11 @@
+{
+  "patient_id": "7756987.pdf",
+  "shortness_of_breath": true,
+  "chest_pain": true,
+  "leg_pain_or_swelling": true,
+  "heart_palpitations": true,
+  "cough": false,
+  "dizziness": true,
+  "location": "segmental",
+  "side": "bilateral"
+}

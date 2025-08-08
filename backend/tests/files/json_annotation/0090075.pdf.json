@@ -1,0 +1,11 @@
+{
+  "patient_id": "0090075.pdf",
+  "shortness_of_breath": true,
+  "chest_pain": true,
+  "leg_pain_or_swelling": true,
+  "heart_palpitations": false,
+  "cough": true,
+  "dizziness": false,
+  "location": "main",
+  "side": "right"
+}

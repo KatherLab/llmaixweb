@@ -1,5 +1,6 @@
 import base64
 import io
+import json
 from datetime import datetime, timezone
 from typing import Any
 
@@ -8,6 +9,213 @@ from fastapi import HTTPException
 from PIL import Image
 
 from backend.src import schemas
+
+
+def extract_required_fields_from_schema(
+    schema_def: dict, prefix: str = ""
+) -> list[str]:
+    """Extract required fields from JSON schema using dot notation."""
+    required = []
+
+    if "properties" in schema_def:
+        # Get fields marked as required at this level
+        required_at_level = schema_def.get("required", [])
+
+        for prop, prop_def in schema_def["properties"].items():
+            field_path = f"{prefix}.{prop}" if prefix else prop
+
+            # Check if this field is required
+            if prop in required_at_level:
+                required.append(field_path)
+
+            # Recurse for nested objects
+            if prop_def.get("type") == "object":
+                required.extend(
+                    extract_required_fields_from_schema(prop_def, field_path)
+                )
+
+            # Handle arrays of objects
+            elif (
+                prop_def.get("type") == "array"
+                and prop_def.get("items", {}).get("type") == "object"
+            ):
+                # For arrays, we check the items schema
+                required.extend(
+                    extract_required_fields_from_schema(
+                        prop_def["items"], f"{field_path}[]"
+                    )
+                )
+
+    return required
+
+
+def check_missing_fields_nested(
+    data: dict, required_fields: list[str], prefix: str = ""
+) -> list[str]:
+    """Check for missing required fields in nested structure using dot notation."""
+    missing = []
+
+    for field_path in required_fields:
+        # Skip array notation for now
+        if "[]" in field_path:
+            continue
+
+        keys = field_path.split(".")
+        current = data
+        found = True
+
+        for key in keys:
+            if isinstance(current, dict) and key in current:
+                current = current[key]
+            else:
+                found = False
+                break
+
+        if not found:
+            missing.append(field_path)
+
+    return missing
+
+
+def find_extra_fields_nested(
+    data: dict, schema_def: dict, prefix: str = ""
+) -> list[str]:
+    """Find fields in data that aren't in schema."""
+    extra = []
+
+    # Special fields to ignore
+    ignore_fields = {"id", "document_id", "_id"}
+
+    def get_schema_fields(schema: dict, prefix: str = "") -> set[str]:
+        """Extract all field paths from schema."""
+        fields = set()
+
+        if "properties" in schema:
+            for prop, prop_def in schema["properties"].items():
+                field_path = f"{prefix}.{prop}" if prefix else prop
+                fields.add(field_path)
+
+                # Recurse for nested objects
+                if prop_def.get("type") == "object":
+                    fields.update(get_schema_fields(prop_def, field_path))
+
+        return fields
+
+    # Get all schema fields
+    schema_fields = get_schema_fields(schema_def)
+
+    def check_data_fields(data: dict, prefix: str = ""):
+        """Check data fields against schema."""
+        for key, value in data.items():
+            if key in ignore_fields:
+                continue
+
+            field_path = f"{prefix}.{key}" if prefix else key
+
+            if field_path not in schema_fields:
+                extra.append(field_path)
+            elif isinstance(value, dict):
+                # Recurse for nested objects
+                check_data_fields(value, field_path)
+
+    check_data_fields(data)
+    return extra
+
+def check_field_types(data: dict, schema_def: dict, prefix: str = "") -> list[str]:
+    """Check if data types in the JSON match the schema definition."""
+    type_errors = []
+
+    if "properties" in schema_def:
+        for prop, prop_def in schema_def["properties"].items():
+            field_path = f"{prefix}.{prop}" if prefix else prop
+
+            # Check if field exists in data
+            if prop not in data:
+                continue  # Missing fields are handled separately
+
+            value = data[prop]
+            expected_type = prop_def.get("type")
+
+            # Check type compatibility
+            if expected_type:
+                type_error = check_value_type(value, expected_type, field_path)
+                if type_error:
+                    type_errors.append(type_error)
+
+            # Recurse for nested objects
+            if expected_type == "object" and isinstance(value, dict):
+                nested_errors = check_field_types(value, prop_def, field_path)
+                type_errors.extend(nested_errors)
+
+            # Handle arrays
+            elif expected_type == "array" and isinstance(value, list):
+                items_schema = prop_def.get("items", {})
+                for i, item in enumerate(value):
+                    if items_schema.get("type") == "object":
+                        nested_errors = check_field_types(
+                            item, items_schema, f"{field_path}[{i}]"
+                        )
+                        type_errors.extend(nested_errors)
+
+    return type_errors
+
+
+def check_value_type(value: Any, expected_type: str, field_path: str) -> str | None:
+    """Check if a value matches the expected JSON schema type."""
+    if value is None:
+        return None  # Null values are generally acceptable
+
+    type_mapping = {
+        "string": str,
+        "number": (int, float),
+        "integer": int,
+        "boolean": bool,
+        "array": list,
+        "object": dict,
+    }
+
+    expected_python_type = type_mapping.get(expected_type)
+
+    if expected_python_type is None:
+        return None  # Unknown type, skip validation
+
+    if not isinstance(value, expected_python_type):
+        # Special handling for numbers
+        if expected_type == "number" and isinstance(value, (int, float)):
+            return None  # Both int and float are acceptable for number
+
+        # Special handling for integer vs float
+        if (
+            expected_type == "integer"
+            and isinstance(value, float)
+            and value.is_integer()
+        ):
+            return None  # Float with no decimal part is acceptable as integer
+
+        # Generate user-friendly error message
+        actual_type = type(value).__name__
+
+        # Make error messages more intuitive
+        if isinstance(value, str) and expected_type in ["number", "integer"]:
+            return f"Field '{field_path}' expects a {expected_type} but got text '{value}'. Please use a numeric value without quotes."
+        elif isinstance(value, (int, float)) and expected_type == "string":
+            return f"Field '{field_path}' expects text but got number {value}. Please wrap the value in quotes."
+        elif expected_type == "boolean":
+            return f"Field '{field_path}' expects true/false but got {actual_type} '{value}'. Use true or false without quotes."
+        else:
+            return f"Field '{field_path}' expects {expected_type} but got {actual_type}"
+
+    return None
+
+
+def find_extra_fields(data: dict, schema_def: dict) -> list[str]:
+    """Find fields in data that aren't defined in the schema."""
+    extra = []
+
+    # Use the existing find_extra_fields_nested function
+    extra_fields = find_extra_fields_nested(data, schema_def)
+
+    return extra_fields
 
 
 def make_naive_fields_timezone_aware(value: Any) -> Any:
@@ -45,19 +253,19 @@ def validate_prompt(prompt: schemas.PromptCreate | schemas.PromptUpdate) -> None
         )
 
 
-def flatten_dict(d: dict, parent_key: str = "", sep: str = "_") -> dict:
-    """Flatten a nested dictionary."""
-    items = {}
+def flatten_dict(d, parent_key="", sep="."):
+    """Flatten dictionary with dot notation for nested fields."""
+    flat_dict = {}
     for k, v in d.items():
         new_key = f"{parent_key}{sep}{k}" if parent_key else k
         if isinstance(v, dict):
-            items.update(flatten_dict(v, new_key, sep=sep))
+            flat_dict.update(flatten_dict(v, new_key, sep))
         elif isinstance(v, list):
             # Handle lists by converting to string representation
-            items[new_key] = str(v)
+            flat_dict[new_key] = json.dumps(v) if v else "[]"
         else:
-            items[new_key] = v
-    return items
+            flat_dict[new_key] = v
+    return flat_dict
 
 
 def extract_field_types_from_schema(schema_def: dict, result: dict, prefix: str = ""):

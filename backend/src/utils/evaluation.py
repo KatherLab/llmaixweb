@@ -11,18 +11,8 @@ from pandas.errors import ParserError
 from sqlalchemy.orm import Session
 from thefuzz import fuzz
 
+from .helpers import flatten_dict
 from .. import models
-
-
-def flatten_dict(d, parent_key="", sep="_"):
-    flat_dict = {}
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            flat_dict.update(flatten_dict(v, new_key, sep))
-        else:
-            flat_dict[new_key] = v
-    return flat_dict
 
 
 class EvaluationEngine:
@@ -359,6 +349,39 @@ class EvaluationEngine:
 
         return mappings
 
+    def validate_json_against_schema(
+        self, json_data: Dict, schema_def: Dict
+    ) -> Dict[str, List[str]]:
+        """Validate JSON ground truth against schema definition."""
+        errors = []
+        warnings = []
+
+        # Extract required fields from schema
+        required_fields = self._extract_required_fields(schema_def)
+
+        # Check for missing required fields
+        for field in required_fields:
+            if field not in json_data:
+                errors.append(f"Missing required field: {field}")
+
+        # Validate data types
+        for field, value in json_data.items():
+            expected_type = self._get_expected_type(field, schema_def)
+            if expected_type and not self._validate_type(value, expected_type):
+                errors.append(
+                    f"Field '{field}' has wrong type. Expected {expected_type}"
+                )
+
+        # Extra fields are OK (warnings only)
+        schema_fields = self._extract_all_fields(schema_def)
+        for field in json_data:
+            if field not in schema_fields and field not in ["id", "document_id"]:
+                warnings.append(
+                    f"Extra field '{field}' not in schema (will be ignored)"
+                )
+
+        return {"errors": errors, "warnings": warnings}
+
     def _evaluate_parallel(
         self,
         results: List[models.TrialResult],
@@ -413,16 +436,12 @@ class EvaluationEngine:
 
     def _evaluate_document_isolated(
         self,
-        result_payload: Dict,  # ← primitive payload (no ORM)
+        result_payload: Dict,
         gt_data: Dict,
         field_mappings: Dict,
         document_data: Dict,
     ) -> Dict:
-        """
-        Evaluate a single document.  All DB look‑ups were done up‑front and
-        delivered via `document_data`; this function is *database‑free* and thus
-        thread‑safe.
-        """
+        """Evaluate a single document with proper JSON nested structure handling."""
         doc_id = result_payload["document_id"]
 
         # Ensure numeric ID
@@ -431,23 +450,19 @@ class EvaluationEngine:
         except (ValueError, TypeError):
             return self._create_error_result(doc_id, f"Invalid document ID: {doc_id}")
 
-        # Check we have pre‑loaded metadata for this document
+        # Check we have pre-loaded metadata for this document
         if not document_data.get(doc_id_int, {}).get("exists", False):
             return self._create_error_result(doc_id, "Document not found in database")
 
         doc_info = document_data[doc_id_int]
 
-        # Locate ground‑truth record (by ID or filename, already lower‑cased)
+        # Locate ground-truth record
         gt_key = self._find_document_key_by_data(doc_id_int, doc_info, gt_data)
         if gt_key is None or gt_key not in gt_data:
             filename = doc_info.get("filename", "Unknown")
             return self._create_error_result(
                 doc_id,
-                (
-                    f"No ground truth found for document {doc_id} "
-                    f"(filename: {filename}). "
-                    f"Available ground‑truth keys: {list(gt_data.keys())[:5]} ..."
-                ),
+                f"No ground truth found for document {doc_id} (filename: {filename})",
             )
 
         gt_values = gt_data[gt_key]
@@ -458,24 +473,42 @@ class EvaluationEngine:
                 doc_id, "No trial results found for document"
             )
 
-        # Flatten prediction; use the same separator your schema expects
-        pred_values = flatten_dict(result_payload["prediction"], sep=".")
+        # Check if ground truth is JSON (nested) or CSV (flattened)
+        is_json_gt = isinstance(gt_values, dict) and any(
+            isinstance(v, dict) for v in gt_values.values()
+        )
 
-        # Evaluate field‑by‑field
-        detailed_metrics: List[Dict] = []
+        # Prepare prediction values
+        pred_values = result_payload["prediction"]
+
+        # Evaluate field-by-field
+        detailed_metrics = []
         correct_count = 0
         total_count = 0
-        missing_fields: List[str] = []
-        incorrect_fields: List[str] = []
+        missing_fields = []
+        incorrect_fields = []
 
         for schema_field, mapping in field_mappings.items():
             gt_field = mapping["gt_field"]
-            if gt_field not in gt_values:
-                continue  # this ground‑truth value is not present
+
+            # For JSON ground truth, use direct nested access
+            if is_json_gt:
+                gt_val = self._get_nested_value(gt_values, gt_field)
+                pred_val = self._get_nested_value(pred_values, schema_field)
+            else:
+                # For CSV ground truth, use flattened access with dots
+                if gt_field not in gt_values:
+                    continue
+                gt_val = gt_values[gt_field]
+
+                # Flatten prediction for CSV comparison
+                pred_values_flat = flatten_dict(pred_values, sep=".")
+                pred_val = pred_values_flat.get(schema_field)
+
+            if gt_val is None:
+                continue  # Skip if ground truth doesn't have this field
 
             total_count += 1
-            gt_val = gt_values[gt_field]
-            pred_val = pred_values.get(schema_field)
 
             comparison = self._compare_values(
                 gt_val,
@@ -488,11 +521,10 @@ class EvaluationEngine:
             if comparison["is_correct"]:
                 correct_count += 1
             else:
-                (
-                    missing_fields
-                    if comparison["error_type"] == "missing"
-                    else incorrect_fields
-                ).append(schema_field)
+                if comparison["error_type"] == "missing":
+                    missing_fields.append(schema_field)
+                else:
+                    incorrect_fields.append(schema_field)
 
             detailed_metrics.append(
                 {
@@ -517,6 +549,29 @@ class EvaluationEngine:
             "incorrect_fields": incorrect_fields,
             "detailed_metrics": detailed_metrics,
         }
+
+    def _get_nested_value(self, data: Dict, path: str, default=None):
+        """Get value from nested dict using dot notation."""
+        keys = path.split(".")
+        value = data
+
+        for i, key in enumerate(keys):
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            elif isinstance(value, list):
+                # Handle array notation like "items.0.name"
+                try:
+                    index = int(key)
+                    if 0 <= index < len(value):
+                        value = value[index]
+                    else:
+                        return default
+                except ValueError:
+                    return default
+            else:
+                return default
+
+        return value
 
     def _find_document_key_by_data(
         self, doc_id: int, doc_info: Dict, gt_data: Dict
@@ -627,26 +682,84 @@ class GroundTruthParser:
             raise ValueError(f"Unsupported format: {format_type}")
 
     def _parse_json(self, content: bytes) -> Dict:
-        """Parse JSON ground truth."""
+        """Parse JSON ground truth - maintains nested structures."""
         try:
             data = json.loads(content.decode("utf-8"))
-            # Handle both single JSON and document map
-            if isinstance(data, dict) and all(
-                isinstance(v, dict) for v in data.values()
-            ):
-                # Document map format
+
+            # Handle different JSON formats
+            if isinstance(data, dict):
+                # Check if it's a document map (keys are document IDs)
+                if all(isinstance(v, dict) for v in data.values()):
+                    # Document map format - check for ID fields
+                    result = {}
+                    for key, doc_data in data.items():
+                        # Validate that each document has an 'id' field
+                        if "id" not in doc_data:
+                            raise ValueError(
+                                f"Document with key '{key}' missing required 'id' field"
+                            )
+                        # Use the id field as the key
+                        doc_id = str(doc_data["id"])
+                        # Keep nested structure for JSON - DON'T flatten
+                        result[doc_id] = doc_data
+                    return result
+                else:
+                    # Single document - require ID field
+                    if "id" not in data:
+                        raise ValueError("Single JSON document must have an 'id' field")
+                    return {str(data["id"]): data}
+            elif isinstance(data, list):
+                # Array of documents - each must have an ID
                 result = {}
-                for key, values in data.items():
-                    result[key] = flatten_dict(values)
+                for i, doc in enumerate(data):
+                    if not isinstance(doc, dict):
+                        raise ValueError(f"Document at index {i} is not an object")
+                    if "id" not in doc:
+                        raise ValueError(
+                            f"Document at index {i} missing required 'id' field"
+                        )
+                    result[str(doc["id"])] = doc
                 return result
             else:
-                # Single document
-                return {"default": flatten_dict(data)}
+                raise ValueError("JSON must be an object or array")
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON: {e}")
 
+    def _parse_zip(self, content: bytes) -> Dict:
+        """Parse ZIP file with multiple JSON documents."""
+        result = {}
+        with zipfile.ZipFile(io.BytesIO(content)) as zf:
+            json_files = [
+                f
+                for f in zf.namelist()
+                if f.endswith(".json") and not f.startswith("__MACOSX/")
+            ]
+
+            if not json_files:
+                raise ValueError("No JSON files found in ZIP archive")
+
+            for filename in json_files:
+                with zf.open(filename) as f:
+                    try:
+                        doc_data = json.loads(f.read().decode("utf-8"))
+
+                        # Require ID field
+                        if "id" not in doc_data:
+                            # Use filename without extension as ID
+                            doc_id = Path(filename).stem
+                            doc_data["id"] = doc_id
+                        else:
+                            doc_id = str(doc_data["id"])
+
+                        # Store WITHOUT flattening for JSON
+                        result[doc_id] = doc_data
+                    except json.JSONDecodeError as e:
+                        raise ValueError(f"Invalid JSON in file {filename}: {e}")
+
+        return result
+
     def _parse_csv(self, content: bytes, id_column: Optional[str] = None) -> Dict:
-        """Parse CSV ground truth."""
+        """Parse CSV ground truth with dot notation for nested fields."""
         df = pd.read_csv(io.BytesIO(content))
 
         # Use configured ID column or try to find one
@@ -668,32 +781,20 @@ class GroundTruthParser:
         result = {}
         for _, row in df.iterrows():
             doc_id = row[id_col]
-            values = {
-                col: row[col]
-                for col in df.columns
-                if col != id_col and pd.notna(row[col])
-            }
+            values = {}
+
+            for col in df.columns:
+                if col != id_col and pd.notna(row[col]):
+                    # Convert dot notation to nested structure
+                    keys = col.split(".")
+                    current = values
+                    for key in keys[:-1]:
+                        if key not in current:
+                            current[key] = {}
+                        current = current[key]
+                    current[keys[-1]] = row[col]
+
             result[str(doc_id)] = values
-        return result
-
-    def _parse_excel(self, content: bytes, id_column: Optional[str] = None) -> Dict:
-        """Parse Excel ground truth."""
-        df = pd.read_excel(io.BytesIO(content))
-        # Convert to CSV and reuse the CSV parser logic
-        csv_content = df.to_csv(index=False).encode("utf-8")
-        return self._parse_csv(csv_content, id_column)
-
-    def _parse_zip(self, content: bytes) -> Dict:
-        """Parse ZIP file with multiple documents."""
-        result = {}
-        with zipfile.ZipFile(io.BytesIO(content)) as zf:
-            for filename in zf.namelist():
-                if filename.endswith(".json"):
-                    with zf.open(filename) as f:
-                        doc_data = json.loads(f.read().decode("utf-8"))
-                        # Extract document ID from filename
-                        base_name = Path(filename).stem
-                        result[base_name] = flatten_dict(doc_data)
         return result
 
 

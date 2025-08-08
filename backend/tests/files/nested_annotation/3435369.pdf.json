@@ -1,0 +1,14 @@
+{
+  "patient_id": "3435369.pdf",
+  "patient_name": "Julia Thompson",
+  "clinical": {
+    "shortness_of_breath": false,
+    "chest_pain": false,
+    "leg_pain_or_swelling": false,
+    "heart_palpitations": false,
+    "cough": false,
+    "dizziness": false,
+    "location": "segmental",
+    "side": "right"
+  }
+}

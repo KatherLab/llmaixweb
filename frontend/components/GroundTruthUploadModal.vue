@@ -36,12 +36,22 @@
                   v-model="groundTruthFormat"
                   class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
                 >
-                  <option value="csv">CSV (flattened fields with underscores)</option>
-                  <option value="zip">ZIP (JSON files per document)</option>
+                  <option value="csv">CSV (flattened fields with dots)</option>
+                  <option value="json">JSON (single file with document map or multiple files)</option>
+                  <option value="zip">ZIP (multiple JSON files)</option>
                 </select>
               </div>
+
+              <!-- Add info box for JSON -->
+              <div v-if="groundTruthFormat === 'json' || groundTruthFormat === 'zip'"
+                   class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p class="text-sm text-blue-700">
+                  <strong>Important:</strong> Each document must have an 'id' field that matches your document identifiers.
+                </p>
+              </div>
+
               <div>
-                <label for="file-upload" class="block text-sm font-medium text-gray-700">File</label>
+                <label for="file-upload" class="block text-sm font-medium text-gray-700">File(s)</label>
                 <div
                   class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
                   @dragover.prevent
@@ -53,25 +63,43 @@
                     </svg>
                     <div class="flex text-sm text-gray-600 justify-center">
                       <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                        <span>Upload a file</span>
+                        <span>Upload file(s)</span>
                         <input
                           id="file-upload"
                           name="file-upload"
                           type="file"
                           class="sr-only"
-                          :accept="groundTruthFormat === 'zip' ? '.zip' : '.csv'"
+                          :accept="acceptedFileTypes"
+                          :multiple="groundTruthFormat === 'json'"
                           @change="handleFileSelect"
                         />
                       </label>
                       <p class="pl-1">or drag and drop</p>
                     </div>
                     <p class="text-xs text-gray-500">
-                      {{ groundTruthFormat === 'zip' ? 'ZIP file containing JSON files' : 'CSV file with flattened fields' }}
+                      <template v-if="groundTruthFormat === 'csv'">CSV file with flattened fields (dots for nesting)</template>
+                      <template v-else-if="groundTruthFormat === 'json'">JSON file(s) - single file or multiple files</template>
+                      <template v-else-if="groundTruthFormat === 'zip'">ZIP file containing JSON files</template>
                     </p>
                   </div>
                 </div>
-                <div v-if="selectedFile" class="mt-2 text-sm text-gray-600">
-                  Selected: {{ selectedFile.name }}
+                <div v-if="selectedFiles.length > 0" class="mt-2">
+                  <p class="text-sm font-medium text-gray-700 mb-1">Selected files:</p>
+                  <ul class="text-sm text-gray-600 space-y-1">
+                    <li v-for="(file, index) in selectedFiles" :key="index" class="flex items-center justify-between">
+                      <span>{{ file.name }}</span>
+                      <button
+                        v-if="groundTruthFormat === 'json' && selectedFiles.length > 1"
+                        @click="removeFile(index)"
+                        type="button"
+                        class="text-red-600 hover:text-red-800"
+                      >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -86,7 +114,7 @@
               <button
                 type="submit"
                 class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                :disabled="isUploading || !selectedFile"
+                :disabled="isUploading || selectedFiles.length === 0"
               >
                 <span v-if="isUploading" class="flex items-center">
                   <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -104,53 +132,119 @@
     </div>
   </Teleport>
 </template>
+
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
+
 const props = defineProps({
   projectId: {
     type: [String, Number],
     required: true
   }
 });
+
 const emit = defineEmits(['close', 'uploaded']);
 const toast = useToast();
+
 const groundTruthName = ref('');
 const groundTruthFormat = ref('csv');
-const selectedFile = ref(null);
+const selectedFiles = ref([]);
 const isUploading = ref(false);
+
+const acceptedFileTypes = computed(() => {
+  switch (groundTruthFormat.value) {
+    case 'json':
+      return '.json';
+    case 'zip':
+      return '.zip';
+    case 'csv':
+      return '.csv';
+    default:
+      return '.csv,.json,.zip';
+  }
+});
+
 const handleFileSelect = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    selectedFile.value = file;
+  const files = Array.from(event.target.files);
+  if (groundTruthFormat.value === 'json') {
+    // For JSON, allow multiple files
+    selectedFiles.value = files;
+  } else {
+    // For CSV and ZIP, only allow single file
+    selectedFiles.value = files.slice(0, 1);
   }
 };
+
 const handleFileDrop = (event) => {
-  const file = event.dataTransfer.files[0];
-  if (file) {
-    selectedFile.value = file;
+  const files = Array.from(event.dataTransfer.files);
+  if (groundTruthFormat.value === 'json') {
+    selectedFiles.value = files.filter(f => f.name.endsWith('.json'));
+  } else {
+    selectedFiles.value = files.slice(0, 1);
   }
 };
+
+const removeFile = (index) => {
+  selectedFiles.value.splice(index, 1);
+};
+
 const uploadGroundTruth = async () => {
-  if (!selectedFile.value) {
-    toast.warning('Please select a file to upload');
+  if (selectedFiles.value.length === 0) {
+    toast.warning('Please select at least one file to upload');
     return;
   }
+
   isUploading.value = true;
-  const formData = new FormData();
-  formData.append('file', selectedFile.value);
-  formData.append('name', groundTruthName.value || selectedFile.value.name);
-  formData.append('format', groundTruthFormat.value);
+
   try {
-    const response = await api.post(`/project/${props.projectId}/groundtruth`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
+    let response;
+
+    if (groundTruthFormat.value === 'json' && selectedFiles.value.length > 1) {
+      // Multiple JSON files - create a ZIP in memory
+      const { default: JSZip } = await import('jszip');
+      const zip = new JSZip();
+
+      // Add each JSON file to the ZIP
+      for (const file of selectedFiles.value) {
+        const content = await file.text();
+        zip.file(file.name, content);
       }
-    });
+
+      // Generate ZIP blob
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipFile = new File([zipBlob], 'ground_truth.zip', { type: 'application/zip' });
+
+      const formData = new FormData();
+      formData.append('file', zipFile);
+      formData.append('name', groundTruthName.value || 'JSON Ground Truth');
+      formData.append('format', 'zip');
+
+      response = await api.post(`/project/${props.projectId}/groundtruth`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+    } else {
+      // Single file upload (CSV, ZIP, or single JSON)
+      const formData = new FormData();
+      formData.append('file', selectedFiles.value[0]);
+      formData.append('name', groundTruthName.value || selectedFiles.value[0].name);
+      formData.append('format', groundTruthFormat.value);
+
+      response = await api.post(`/project/${props.projectId}/groundtruth`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+    }
+
     emit('uploaded', response.data);
+    toast.success('Ground truth uploaded successfully');
   } catch (err) {
-    toast.error(`Failed to upload ground truth file: ${err.message}`);
+    const errorMessage = err.response?.data?.detail || err.message;
+    toast.error(`Failed to upload ground truth: ${errorMessage}`);
     console.error(err);
   } finally {
     isUploading.value = false;

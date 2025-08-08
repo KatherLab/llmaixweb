@@ -1,0 +1,14 @@
+{
+  "patient_id": "1122334.pdf",
+  "patient_name": "Veronica Cougar",
+  "clinical": {
+    "shortness_of_breath": true,
+    "chest_pain": false,
+    "leg_pain_or_swelling": true,
+    "heart_palpitations": false,
+    "cough": true,
+    "dizziness": true,
+    "location": "segmental",
+    "side": "left"
+  }
+}

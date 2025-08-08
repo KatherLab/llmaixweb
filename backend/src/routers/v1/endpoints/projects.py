@@ -3288,18 +3288,6 @@ def download_trial_results(
     raise HTTPException(status_code=404, detail="No results found for this trial")
 
 
-def _flatten_dict(d, parent_key="", sep="_"):
-    """Flatten a nested dictionary."""
-    items = {}
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.update(_flatten_dict(v, new_key, sep=sep))
-        else:
-            items[new_key] = v
-    return items
-
-
 def _extract_keys(d, parent_key="", sep="_"):
     """Extract all keys from a nested dictionary."""
     keys = []
@@ -3449,15 +3437,16 @@ def test_vlm_image_support(
         return {"supported": False, "message": f"Test failed: {str(e)}"}
 
 
-# Add these endpoints to your existing projects.py file
 @router.post("/{project_id}/groundtruth", response_model=schemas.GroundTruth)
-def upload_groundtruth(
+async def upload_groundtruth(
     *,
     db: Session = Depends(get_db),
     project_id: int,
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(None),  # For multiple files
+    file: UploadFile = File(None),  # For single file (backward compatibility)
     name: str = Form(None),
-    format: str = Form(...),  # 'json', 'csv', 'xlsx', 'zip'
+    format: str = Form(...),
+    multiple_json: bool = Form(False),
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.GroundTruth:
     """Upload ground truth file for evaluation."""
@@ -3477,7 +3466,34 @@ def upload_groundtruth(
             status_code=400, detail="Invalid format. Must be json, csv, xlsx, or zip"
         )
     # Save the file
-    file_content = file.file.read()
+    if multiple_json and files:
+        # Create a ZIP file in memory containing all JSON files
+        import io
+        import zipfile
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
+            for idx, json_file in enumerate(files):
+                content = await json_file.read()
+                # Validate it's valid JSON
+                try:
+                    json.loads(content)
+                except json.JSONDecodeError:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"File {json_file.filename} is not valid JSON",
+                    )
+                zf.writestr(json_file.filename, content)
+
+        zip_buffer.seek(0)
+        file_content = zip_buffer.read()
+        format = "zip"  # Treat as ZIP internally
+    else:
+        # Single file upload (existing logic)
+        upload_file = file or (files[0] if files else None)
+        if not upload_file:
+            raise HTTPException(status_code=400, detail="No file provided")
+        file_content = await upload_file.read()
     file_uuid = save_file(file_content)
     # Create ground truth record
     gt = models.GroundTruth(
@@ -4353,6 +4369,64 @@ def _get_comparison_method(field_type: str) -> str:
         "string": "exact",
     }
     return type_to_method.get(field_type, "exact")
+
+
+@router.post(
+    "/{project_id}/groundtruth/{groundtruth_id}/schema/{schema_id}/validate-json",
+    response_model=dict,
+)
+def validate_json_ground_truth(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    schema_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Validate JSON ground truth against schema definition."""
+    # ... access checks ...
+
+    groundtruth = db.get(models.GroundTruth, groundtruth_id)
+    schema = db.get(models.Schema, schema_id)
+
+    # Only for JSON format
+    if groundtruth.format not in ["json", "zip"]:
+        return {"errors": [], "warnings": ["Validation only applies to JSON format"]}
+
+    # Load ground truth data
+    from ....utils.evaluation import EvaluationEngine
+
+    engine = EvaluationEngine(db)
+    gt_data = engine._load_ground_truth(groundtruth)
+
+    errors = []
+    warnings = []
+
+    from ....utils.helpers import extract_required_fields_from_schema, check_missing_fields_nested, check_field_types, find_extra_fields
+
+    # Validate structure matches schema
+    schema_def = schema.schema_definition
+    required_fields = extract_required_fields_from_schema(schema_def)
+
+    # Check a sample of documents
+    sample_size = min(10, len(gt_data))
+    for i, (doc_id, doc_data) in enumerate(list(gt_data.items())[:sample_size]):
+        # Check required fields
+        missing = check_missing_fields_nested(doc_data, required_fields, "")
+        if missing:
+            errors.extend([f"Document {doc_id}: Missing {field}" for field in missing])
+
+        # Check data types
+        type_errors = check_field_types(doc_data, schema_def, "")
+        if type_errors:
+            errors.extend([f"Document {doc_id}: {err}" for err in type_errors])
+
+    # Extra fields are warnings
+    extra = find_extra_fields(doc_data, schema_def)
+    if extra:
+        warnings.extend([f"Extra field '{field}' not in schema" for field in extra])
+
+    return {"errors": errors[:10], "warnings": warnings[:10]}  # Limit to 10 each
 
 
 @router.post(

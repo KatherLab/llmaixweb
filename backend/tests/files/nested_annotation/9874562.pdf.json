@@ -1,0 +1,14 @@
+{
+  "patient_id": "9874562.pdf",
+  "patient_name": "Ashley Park",
+  "clinical": {
+    "shortness_of_breath": true,
+    "chest_pain": true,
+    "leg_pain_or_swelling": true,
+    "heart_palpitations": true,
+    "cough": false,
+    "dizziness": false,
+    "location": "main",
+    "side": "left"
+  }
+}

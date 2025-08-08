@@ -1,7 +1,479 @@
+<template>
+  <Teleport to="body">
+    <div
+      class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
+      @click="$emit('close')"
+    >
+      <div
+        class="bg-white rounded-lg shadow-lg w-full max-w-6xl max-h-[95vh] flex flex-col"
+        @click.stop
+      >
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h3 class="text-lg font-medium text-gray-900">Configure Field Mappings</h3>
+          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-500">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto">
+          <div v-if="isLoading" class="text-center py-12">
+            <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+            <p class="mt-2 text-gray-500">Loading ground truth preview...</p>
+          </div>
+
+          <div v-else-if="error" class="p-6">
+            <div class="bg-red-50 border border-red-200 rounded-md p-4">
+              <div class="flex">
+                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+                <div class="ml-3">
+                  <p class="text-sm text-red-700">{{ error }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="p-6">
+            <!-- Schema Selection -->
+            <div class="mb-6">
+              <label for="schema-select" class="block text-sm font-medium text-gray-700 mb-2">
+                Select Schema for Mapping
+              </label>
+              <div class="flex gap-3 items-center">
+                <select
+                  id="schema-select"
+                  v-model="selectedSchemaId"
+                  @change="onSchemaChange"
+                  class="flex-1 rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                >
+                  <option value="">Select a schema...</option>
+                  <option v-for="schema in schemas" :key="schema.id" :value="schema.id">
+                    {{ schema.schema_name }}
+                    <span v-if="existingMappings[schema.id]?.length" class="text-green-600">
+                      ({{ existingMappings[schema.id].length }} mappings)
+                    </span>
+                  </option>
+                </select>
+
+                <div v-if="selectedSchemaId" class="flex gap-2">
+                  <span
+                    v-if="hasMappingForSchema"
+                    class="px-3 py-2 bg-green-100 text-green-800 rounded-md text-sm font-medium"
+                  >
+                    {{ existingMappings[selectedSchemaId].length }} mappings configured
+                  </span>
+                  <span
+                    v-else
+                    class="px-3 py-2 bg-yellow-100 text-yellow-800 rounded-md text-sm font-medium"
+                  >
+                    No mappings yet
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- JSON Validation Section (NEW) -->
+            <div v-if="isJsonFormat && selectedSchemaId" class="mb-4">
+              <div class="flex items-center justify-between">
+                <button
+                  @click="validateJsonStructure"
+                  class="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-md text-sm hover:bg-purple-100 transition-colors"
+                  :disabled="isValidating"
+                >
+                  <span v-if="isValidating" class="flex items-center">
+                    <svg class="animate-spin -ml-1 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Validating...
+                  </span>
+                  <span v-else>Validate JSON Structure</span>
+                </button>
+
+                <!-- Auto-map button (only show after validation) -->
+                <button
+                  v-if="validationStatus && !validationStatus.hasErrors"
+                  @click="autoMapValidatedFields"
+                  class="px-3 py-1.5 bg-green-50 text-green-700 rounded-md text-sm hover:bg-green-100 transition-colors"
+                >
+                  Auto-map Validated Fields
+                </button>
+              </div>
+
+              <!-- Persistent validation status (NEW) -->
+              <div v-if="validationStatus" class="mt-3">
+                <!-- Success state -->
+                <div v-if="!validationStatus.hasErrors && !validationStatus.hasWarnings"
+                     class="p-3 bg-green-50 border border-green-200 rounded-md">
+                  <div class="flex items-start">
+                    <svg class="w-5 h-5 text-green-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-green-800">Perfect match!</p>
+                      <p class="text-xs text-green-700 mt-1">JSON structure matches schema exactly. Click "Auto-map Validated Fields" to configure mappings automatically.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Errors -->
+                <div v-if="validationStatus.hasErrors" class="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <div class="flex items-start">
+                    <svg class="w-5 h-5 text-red-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-red-800">Validation errors found</p>
+                      <ul class="mt-2 text-xs text-red-700 list-disc list-inside space-y-1">
+                        <li v-for="(error, idx) in validationStatus.errors.slice(0, 5)" :key="idx">{{ error }}</li>
+                        <li v-if="validationStatus.errors.length > 5" class="text-red-600">
+                          ... and {{ validationStatus.errors.length - 5 }} more errors
+                        </li>
+                      </ul>
+                      <p class="text-xs text-red-700 mt-2">You can still configure field mappings manually below.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Warnings -->
+                <div v-if="!validationStatus.hasErrors && validationStatus.hasWarnings"
+                     class="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <div class="flex items-start">
+                    <svg class="w-5 h-5 text-yellow-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-yellow-800">Validation passed with warnings</p>
+                      <ul class="mt-2 text-xs text-yellow-700 list-disc list-inside space-y-1">
+                        <li v-for="(warning, idx) in validationStatus.warnings.slice(0, 5)" :key="idx">{{ warning }}</li>
+                        <li v-if="validationStatus.warnings.length > 5" class="text-yellow-600">
+                          ... and {{ validationStatus.warnings.length - 5 }} more warnings
+                        </li>
+                      </ul>
+                      <p class="text-xs text-yellow-700 mt-2">Extra fields will be ignored during evaluation.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ID Column Selection (only for CSV/XLSX) -->
+            <div v-if="isMultiDocumentFormat && selectedSchemaId" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div class="flex items-start">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                </svg>
+                <div class="flex-1">
+                  <h4 class="text-sm font-medium text-blue-900 mb-2">Document Identification Column</h4>
+                  <p class="text-xs text-blue-700 mb-3">
+                    Select which column contains the unique identifier for each document. This will be used to match documents with your uploaded files.
+                  </p>
+                  <div class="flex gap-3 items-center">
+                    <select
+                      v-model="idColumnName"
+                      class="flex-1 rounded-md border border-blue-300 bg-white shadow-sm py-2 px-3 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                    >
+                      <option value="">Select ID column...</option>
+                      <option v-for="column in availableColumns" :key="column" :value="column">
+                        {{ column }}
+                        <span v-if="column === idColumnName" class="text-blue-600">(current)</span>
+                      </option>
+                    </select>
+                    <div v-if="idColumnName" class="flex items-center text-sm text-blue-700">
+                      <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                      </svg>
+                      ID column selected
+                    </div>
+                  </div>
+                  <div v-if="!idColumnName" class="mt-2 text-xs text-red-600 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    ID column is required for CSV/XLSX files
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ground Truth Preview -->
+            <div v-if="groundTruthPreview" class="mb-6">
+              <h4 class="text-md font-medium text-gray-900 mb-3">Ground Truth Preview</h4>
+
+              <!-- JSON Tree View for JSON format -->
+              <div v-if="isJsonFormat && previewData.length > 0" class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-auto">
+                <JsonTreeView :data="previewData[0]" :max-depth="3" />
+              </div>
+
+              <!-- Table view for CSV format -->
+              <div v-else class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-auto">
+                <div class="overflow-x-auto">
+                  <table class="min-w-full text-xs">
+                    <thead>
+                      <tr class="border-b">
+                        <th v-for="field in groundTruthFields" :key="field" class="text-left p-2 font-medium text-gray-700">
+                          {{ field }}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(row, idx) in previewData.slice(0, 3)" :key="idx" class="border-b">
+                        <td v-for="field in groundTruthFields" :key="field" class="p-2 text-gray-600">
+                          {{ formatPreviewValue(row[field]) }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p v-if="previewData.length > 3" class="text-xs text-gray-500 mt-2">
+                    ... and {{ previewData.length - 3 }} more rows
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Field Mapping Configuration -->
+            <div v-if="selectedSchemaId && schemaFields">
+              <div class="flex justify-between items-center mb-4">
+                <h4 class="text-md font-medium text-gray-900">
+                  Field Mappings for "{{ schemas.find(s => s.id == selectedSchemaId)?.schema_name }}"
+                </h4>
+                <div class="flex gap-2">
+                  <button
+                    @click="suggestMappings"
+                    class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm hover:bg-blue-100 transition-colors"
+                    :disabled="isLoadingSuggestions"
+                  >
+                    <span v-if="isLoadingSuggestions" class="flex items-center">
+                      <svg class="animate-spin -ml-1 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Suggesting...
+                    </span>
+                    <span v-else>Auto-suggest Mappings</span>
+                  </button>
+                  <button
+                    @click="addMapping"
+                    class="px-3 py-1.5 bg-green-50 text-green-700 rounded-md text-sm hover:bg-green-100 transition-colors"
+                    :disabled="!canAddMapping"
+                  >
+                    Add Mapping
+                  </button>
+                  <button
+                    v-if="hasMappingForSchema"
+                    @click="deleteMappings"
+                    class="px-3 py-1.5 bg-red-50 text-red-700 rounded-md text-sm hover:bg-red-100 transition-colors"
+                  >
+                    Delete All
+                  </button>
+                </div>
+              </div>
+
+              <!-- Mapping Table -->
+              <div class="bg-white border rounded-lg overflow-hidden">
+                <table v-if="fieldMappings.length > 0" class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                        Schema Field
+                      </th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                        Ground Truth Field
+                      </th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                        Type
+                      </th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                        Comparison
+                      </th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                        Options
+                      </th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    <tr v-for="(mapping, index) in fieldMappings" :key="index" class="hover:bg-gray-50">
+                      <td class="px-4 py-3">
+                        <select
+                          v-model="mapping.schema_field"
+                          class="block w-full rounded-md border border-gray-300 shadow-sm py-1.5 px-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                        >
+                          <option value="">Select field...</option>
+                          <optgroup v-for="(group, groupName) in groupedSchemaFields" :key="groupName" :label="groupName">
+                            <option
+                              v-for="field in group"
+                              :key="field"
+                              :value="field"
+                              :class="{'pl-4': getFieldDepth(field) > 0}"
+                            >
+                              {{ formatFieldDisplay(field) }}
+                            </option>
+                          </optgroup>
+                          <!-- Include the currently selected field even if it's used -->
+                          <option v-if="mapping.schema_field && !isFieldAvailable(mapping.schema_field)" :value="mapping.schema_field">
+                            {{ mapping.schema_field }}
+                          </option>
+                        </select>
+                        <div v-if="mapping.schema_field" class="mt-1 text-xs text-gray-500">
+                          Type: {{ schemaFields[mapping.schema_field] }}
+                        </div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <select
+                          v-model="mapping.ground_truth_field"
+                          class="block w-full rounded-md border border-gray-300 shadow-sm py-1.5 px-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                        >
+                          <option value="">Select field...</option>
+                          <option v-for="field in groundTruthFields" :key="field" :value="field">
+                            {{ field }}
+                            <span v-if="field === idColumnName" class="text-blue-600">(ID)</span>
+                          </option>
+                        </select>
+                        <div v-if="mapping.ground_truth_field && groundTruthSamples[mapping.ground_truth_field]" class="mt-1 text-xs text-gray-500">
+                          Sample: {{ formatPreviewValue(Array.isArray(groundTruthSamples[mapping.ground_truth_field]) ? groundTruthSamples[mapping.ground_truth_field][0] : groundTruthSamples[mapping.ground_truth_field]) }}
+                          <span v-if="mapping.ground_truth_field === idColumnName" class="text-blue-600 ml-1">(ID column)</span>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <select
+                          v-model="mapping.field_type"
+                          class="block w-full rounded-md border border-gray-300 shadow-sm py-1.5 px-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                        >
+                          <option value="string">String</option>
+                          <option value="number">Number</option>
+                          <option value="boolean">Boolean</option>
+                          <option value="date">Date</option>
+                          <option value="category">Category</option>
+                        </select>
+                      </td>
+                      <td class="px-4 py-3">
+                        <select
+                          v-model="mapping.comparison_method"
+                          @change="updateComparisonOptions(mapping)"
+                          class="block w-full rounded-md border border-gray-300 shadow-sm py-1.5 px-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                        >
+                          <option value="exact">Exact</option>
+                          <option value="fuzzy">Fuzzy</option>
+                          <option value="numeric">Numeric</option>
+                          <option value="boolean">Boolean</option>
+                          <option value="category">Category</option>
+                          <option value="date">Date</option>
+                        </select>
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="space-y-1">
+                          <!-- Fuzzy matching threshold -->
+                          <div v-if="mapping.comparison_method === 'fuzzy'" class="flex items-center">
+                            <label class="text-xs text-gray-600 mr-2">Threshold:</label>
+                            <input
+                              v-model.number="mapping.comparison_options.threshold"
+                              type="number"
+                              min="0"
+                              max="100"
+                              class="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                            />
+                            <span class="text-xs text-gray-500 ml-1">%</span>
+                          </div>
+                          <!-- Numeric tolerance -->
+                          <div v-if="mapping.comparison_method === 'numeric'" class="space-y-1">
+                            <div class="flex items-center">
+                              <label class="text-xs text-gray-600 mr-2">Tolerance:</label>
+                              <input
+                                v-model.number="mapping.comparison_options.tolerance"
+                                type="number"
+                                step="0.001"
+                                class="w-20 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                              />
+                            </div>
+                            <div class="flex items-center">
+                              <input
+                                v-model="mapping.comparison_options.relative"
+                                type="checkbox"
+                                class="h-3 w-3 text-blue-600"
+                              />
+                              <label class="text-xs text-gray-600 ml-1">Relative</label>
+                            </div>
+                          </div>
+                          <!-- Case sensitivity -->
+                          <div v-if="mapping.comparison_method === 'exact'" class="flex items-center">
+                            <input
+                              v-model="mapping.comparison_options.case_sensitive"
+                              type="checkbox"
+                              class="h-3 w-3 text-blue-600"
+                            />
+                            <label class="text-xs text-gray-600 ml-1">Case sensitive</label>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <button
+                          @click="removeMapping(index)"
+                          class="text-red-600 hover:text-red-800 p-1"
+                        >
+                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div v-else class="text-center py-8 text-gray-500">
+                  <p>No field mappings configured yet.</p>
+                  <p class="text-sm mt-1">Click "Auto-suggest Mappings" or "Add Mapping" to get started.</p>
+                </div>
+              </div>
+
+              <!-- Info about remaining fields -->
+              <div v-if="!canAddMapping" class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p class="text-sm text-yellow-800">
+                  All available schema fields have been mapped. Remove a mapping to add a new one.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+                <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+          <button
+            type="button"
+            @click="$emit('close')"
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            @click="saveMappings"
+            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+            :disabled="isSaving || !canSave"
+          >
+            <span v-if="isSaving" class="flex items-center">
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Saving...
+            </span>
+            <span v-else>Save Mappings</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+</template>
+
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
+import JsonTreeView from '@/components/evaluate/JsonTreeView.vue';
 
 const props = defineProps({
   projectId: {
@@ -33,6 +505,9 @@ const existingMappings = ref({}); // Store mappings per schema
 const idColumnName = ref('');
 const availableColumns = ref([]);
 
+// JSON validation state (NEW)
+const isValidating = ref(false);
+const validationStatus = ref(null);
 
 // Debug logging
 const debugLog = (message, data = null) => {
@@ -40,6 +515,10 @@ const debugLog = (message, data = null) => {
 };
 
 // Computed properties
+const isJsonFormat = computed(() => {
+  return props.groundTruth?.format === 'json' || props.groundTruth?.format === 'zip';
+});
+
 const groundTruthFields = computed(() => {
   if (!groundTruthPreview.value?.fields) return [];
   return groundTruthPreview.value.fields;
@@ -80,7 +559,6 @@ const canSave = computed(() => {
   return hasMappings;
 });
 
-
 const canAddMapping = computed(() => {
   return availableSchemaFields.value.length > 0;
 });
@@ -93,6 +571,49 @@ const isMultiDocumentFormat = computed(() => {
   return props.groundTruth?.format === 'csv' || props.groundTruth?.format === 'xlsx';
 });
 
+// Hierarchical field display (NEW)
+const groupedSchemaFields = computed(() => {
+  const fields = availableSchemaFields.value;
+  const grouped = { 'Root Fields': [], 'Nested Fields': [] };
+
+  fields.forEach(field => {
+    if (field.includes('.')) {
+      grouped['Nested Fields'].push(field);
+    } else {
+      grouped['Root Fields'].push(field);
+    }
+  });
+
+  // Sort nested fields by their path
+  grouped['Nested Fields'].sort();
+
+  return grouped;
+});
+
+// Helper functions for hierarchical display (NEW)
+const formatFieldDisplay = (fieldPath) => {
+  const parts = fieldPath.split('.');
+  if (parts.length === 1) return fieldPath;
+
+  const indent = '  '.repeat(parts.length - 1);
+  return `${indent}└─ ${parts[parts.length - 1]}`;
+};
+
+const getFieldDepth = (fieldPath) => {
+  return fieldPath.split('.').length - 1;
+};
+
+// Default comparison method based on field type (NEW)
+const getDefaultComparisonMethod = (fieldType) => {
+  const typeMethodMap = {
+    'boolean': 'boolean',
+    'number': 'numeric',
+    'integer': 'numeric',
+    'date': 'date',
+    'string': 'exact'
+  };
+  return typeMethodMap[fieldType] || 'exact';
+};
 
 // Load initial data
 const fetchInitialData = async () => {
@@ -146,7 +667,6 @@ const fetchInitialData = async () => {
   }
 };
 
-
 const saveIdColumn = async () => {
   if (!idColumnName.value || !isMultiDocumentFormat.value) return;
 
@@ -160,7 +680,6 @@ const saveIdColumn = async () => {
     throw new Error(`Failed to save ID column: ${err.message}`);
   }
 };
-
 
 // Load existing mappings for all schemas
 const loadAllExistingMappings = async () => {
@@ -187,6 +706,9 @@ const loadAllExistingMappings = async () => {
 // Load schema fields when schema is selected
 const onSchemaChange = async () => {
   debugLog('Schema changed to:', selectedSchemaId.value);
+
+  // Clear validation status when schema changes
+  validationStatus.value = null;
 
   if (!selectedSchemaId.value) {
     schemaFields.value = {};
@@ -240,6 +762,76 @@ const loadExistingMappings = async () => {
     fieldMappings.value = [];
     debugLog('No existing mappings found, starting fresh');
   }
+};
+
+// JSON validation (NEW)
+const validateJsonStructure = async () => {
+  if (!isJsonFormat.value || !selectedSchemaId.value) return;
+
+  isValidating.value = true;
+  validationStatus.value = null; // Clear previous status
+
+  try {
+    const response = await api.post(
+      `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/schema/${selectedSchemaId.value}/validate-json`,
+      {}
+    );
+
+    // Store validation status
+    validationStatus.value = {
+      errors: response.data.errors || [],
+      warnings: response.data.warnings || [],
+      hasErrors: (response.data.errors || []).length > 0,
+      hasWarnings: (response.data.warnings || []).length > 0
+    };
+
+    // Still show toast for immediate feedback
+    if (validationStatus.value.hasErrors) {
+      toast.error(`Validation found ${validationStatus.value.errors.length} error(s)`);
+    } else if (validationStatus.value.hasWarnings) {
+      toast.warning(`Validation passed with ${validationStatus.value.warnings.length} warning(s)`);
+    } else {
+      toast.success('JSON structure matches schema perfectly!');
+    }
+  } catch (err) {
+    toast.error(`Validation failed: ${err.message}`);
+    validationStatus.value = {
+      errors: [`Validation failed: ${err.message}`],
+      warnings: [],
+      hasErrors: true,
+      hasWarnings: false
+    };
+  } finally {
+    isValidating.value = false;
+  }
+};
+
+// Auto-map validated fields (NEW)
+const autoMapValidatedFields = async () => {
+  if (!selectedSchemaId.value || !schemaFields.value) return;
+
+  debugLog('Auto-mapping validated fields...');
+
+  // Clear existing mappings
+  fieldMappings.value = [];
+
+  // Create 1:1 mapping for all schema fields
+  for (const [fieldName, fieldType] of Object.entries(schemaFields.value)) {
+    // For JSON, we expect exact field name matches
+    if (groundTruthFields.value.includes(fieldName)) {
+      fieldMappings.value.push({
+        schema_field: fieldName,
+        ground_truth_field: fieldName,
+        schema_id: parseInt(selectedSchemaId.value),
+        field_type: fieldType || 'string',
+        comparison_method: getDefaultComparisonMethod(fieldType),
+        comparison_options: getDefaultComparisonOptions(getDefaultComparisonMethod(fieldType))
+      });
+    }
+  }
+
+  toast.success(`Auto-mapped ${fieldMappings.value.length} fields`);
+  debugLog('Auto-mapped fields:', fieldMappings.value);
 };
 
 // Auto-suggest mappings
@@ -412,6 +1004,11 @@ const deleteMappings = async () => {
   }
 };
 
+// Clear validation status when schema changes
+watch(selectedSchemaId, () => {
+  validationStatus.value = null;
+});
+
 onMounted(() => {
   fetchInitialData();
 });
@@ -420,387 +1017,9 @@ onMounted(() => {
 watch(fieldMappings, (newMappings) => {
   debugLog('Field mappings changed:', newMappings);
 }, { deep: true });
+
+// Check if field is available (not already mapped)
+const isFieldAvailable = (fieldName) => {
+  return availableSchemaFields.value.includes(fieldName);
+};
 </script>
-
-<template>
-  <!-- The template remains the same as in the previous implementation -->
-  <Teleport to="body">
-    <div
-      class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
-      @click="$emit('close')"
-    >
-      <div
-        class="bg-white rounded-lg shadow-lg w-full max-w-6xl max-h-[95vh] flex flex-col"
-        @click.stop
-      >
-        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 class="text-lg font-medium text-gray-900">Configure Field Mappings</h3>
-          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-500">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto">
-          <div v-if="isLoading" class="text-center py-12">
-            <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-            <p class="mt-2 text-gray-500">Loading ground truth preview...</p>
-          </div>
-
-          <div v-else-if="error" class="p-6">
-            <div class="bg-red-50 border border-red-200 rounded-md p-4">
-              <div class="flex">
-                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                </svg>
-                <div class="ml-3">
-                  <p class="text-sm text-red-700">{{ error }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="p-6">
-            <!-- Debug info (remove in production) -->
-            <div v-if="false" class="mb-4 p-4 bg-gray-100 rounded text-xs">
-              <div><strong>Selected Schema ID:</strong> {{ selectedSchemaId }}</div>
-              <div><strong>Field Mappings Count:</strong> {{ fieldMappings.length }}</div>
-              <div><strong>Available Schema Fields:</strong> {{ availableSchemaFields.length }}</div>
-              <div><strong>Ground Truth Fields:</strong> {{ groundTruthFields.length }}</div>
-            </div>
-
-            <!-- Schema Selection -->
-            <div class="mb-6">
-              <label for="schema-select" class="block text-sm font-medium text-gray-700 mb-2">
-                Select Schema for Mapping
-              </label>
-              <div class="flex gap-3 items-center">
-                <select
-                  id="schema-select"
-                  v-model="selectedSchemaId"
-                  @change="onSchemaChange"
-                  class="flex-1 rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                >
-                  <option value="">Select a schema...</option>
-                  <option v-for="schema in schemas" :key="schema.id" :value="schema.id">
-                    {{ schema.schema_name }}
-                    <span v-if="existingMappings[schema.id]?.length" class="text-green-600">
-                      ({{ existingMappings[schema.id].length }} mappings)
-                    </span>
-                  </option>
-                </select>
-
-                <div v-if="selectedSchemaId" class="flex gap-2">
-                  <span
-                    v-if="hasMappingForSchema"
-                    class="px-3 py-2 bg-green-100 text-green-800 rounded-md text-sm font-medium"
-                  >
-                    {{ existingMappings[selectedSchemaId].length }} mappings configured
-                  </span>
-                  <span
-                    v-else
-                    class="px-3 py-2 bg-yellow-100 text-yellow-800 rounded-md text-sm font-medium"
-                  >
-                    No mappings yet
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- ID Column Selection (only for CSV/XLSX) -->
-            <div v-if="isMultiDocumentFormat && selectedSchemaId" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div class="flex items-start">
-                <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-                </svg>
-                <div class="flex-1">
-                  <h4 class="text-sm font-medium text-blue-900 mb-2">Document Identification Column</h4>
-                  <p class="text-xs text-blue-700 mb-3">
-                    Select which column contains the unique identifier for each document. This will be used to match documents with your uploaded files.
-                  </p>
-                  <div class="flex gap-3 items-center">
-                    <select
-                      v-model="idColumnName"
-                      class="flex-1 rounded-md border border-blue-300 bg-white shadow-sm py-2 px-3 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                    >
-                      <option value="">Select ID column...</option>
-                      <option v-for="column in availableColumns" :key="column" :value="column">
-                        {{ column }}
-                        <span v-if="column === idColumnName" class="text-blue-600">(current)</span>
-                      </option>
-                    </select>
-                    <div v-if="idColumnName" class="flex items-center text-sm text-blue-700">
-                      <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                      </svg>
-                      ID column selected
-                    </div>
-                  </div>
-                  <div v-if="!idColumnName" class="mt-2 text-xs text-red-600 flex items-center">
-                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                    </svg>
-                    ID column is required for CSV/XLSX files
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Ground Truth Preview -->
-            <div v-if="groundTruthPreview" class="mb-6">
-              <h4 class="text-md font-medium text-gray-900 mb-3">Ground Truth Preview</h4>
-              <div class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-auto">
-                <div class="overflow-x-auto">
-                  <table class="min-w-full text-xs">
-                    <thead>
-                      <tr class="border-b">
-                        <th v-for="field in groundTruthFields" :key="field" class="text-left p-2 font-medium text-gray-700">
-                          {{ field }}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(row, idx) in previewData.slice(0, 3)" :key="idx" class="border-b">
-                        <td v-for="field in groundTruthFields" :key="field" class="p-2 text-gray-600">
-                          {{ formatPreviewValue(row[field]) }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <p v-if="previewData.length > 3" class="text-xs text-gray-500 mt-2">
-                    ... and {{ previewData.length - 3 }} more rows
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Field Mapping Configuration -->
-            <div v-if="selectedSchemaId && schemaFields">
-              <div class="flex justify-between items-center mb-4">
-                <h4 class="text-md font-medium text-gray-900">
-                  Field Mappings for "{{ schemas.find(s => s.id == selectedSchemaId)?.schema_name }}"
-                </h4>
-                <div class="flex gap-2">
-                  <button
-                    @click="suggestMappings"
-                    class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm hover:bg-blue-100 transition-colors"
-                    :disabled="isLoadingSuggestions"
-                  >
-                    <span v-if="isLoadingSuggestions" class="flex items-center">
-                      <svg class="animate-spin -ml-1 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Suggesting...
-                    </span>
-                    <span v-else>Auto-suggest Mappings</span>
-                  </button>
-                  <button
-                    @click="addMapping"
-                    class="px-3 py-1.5 bg-green-50 text-green-700 rounded-md text-sm hover:bg-green-100 transition-colors"
-                    :disabled="!canAddMapping"
-                  >
-                    Add Mapping
-                  </button>
-                  <button
-                    v-if="hasMappingForSchema"
-                    @click="deleteMappings"
-                    class="px-3 py-1.5 bg-red-50 text-red-700 rounded-md text-sm hover:bg-red-100 transition-colors"
-                  >
-                    Delete All
-                  </button>
-                </div>
-              </div>
-
-              <!-- Mapping Table -->
-              <div class="bg-white border rounded-lg overflow-hidden">
-                <table v-if="fieldMappings.length > 0" class="min-w-full divide-y divide-gray-200">
-                  <thead class="bg-gray-50">
-                    <tr>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                        Schema Field
-                      </th>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                        Ground Truth Field
-                      </th>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                        Type
-                      </th>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                        Comparison
-                      </th>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
-                        Options
-                      </th>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody class="bg-white divide-y divide-gray-200">
-                    <tr v-for="(mapping, index) in fieldMappings" :key="index" class="hover:bg-gray-50">
-                      <td class="px-4 py-3">
-                        <select
-                          v-model="mapping.schema_field"
-                          class="block w-full rounded-md border border-gray-300 shadow-sm py-1.5 px-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                        >
-                          <option value="">Select field...</option>
-                          <option v-for="field in availableSchemaFields" :key="field" :value="field">
-                            {{ field }}
-                          </option>
-                          <!-- Include the currently selected field even if it's used -->
-                          <option v-if="mapping.schema_field && !availableSchemaFields.includes(mapping.schema_field)" :value="mapping.schema_field">
-                            {{ mapping.schema_field }}
-                          </option>
-                        </select>
-                        <div v-if="mapping.schema_field" class="mt-1 text-xs text-gray-500">
-                          Type: {{ schemaFields[mapping.schema_field] }}
-                        </div>
-                      </td>
-                      <td class="px-4 py-3">
-                        <select
-                          v-model="mapping.ground_truth_field"
-                          class="block w-full rounded-md border border-gray-300 shadow-sm py-1.5 px-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                        >
-                          <option value="">Select field...</option>
-                          <option v-for="field in groundTruthFields" :key="field" :value="field">
-                            {{ field }}
-                            <span v-if="field === idColumnName" class="text-blue-600">(ID)</span>
-                          </option>
-                        </select>
-                        <div v-if="mapping.ground_truth_field && groundTruthSamples[mapping.ground_truth_field]" class="mt-1 text-xs text-gray-500">
-                          Sample: {{ formatPreviewValue(Array.isArray(groundTruthSamples[mapping.ground_truth_field]) ? groundTruthSamples[mapping.ground_truth_field][0] : groundTruthSamples[mapping.ground_truth_field]) }}
-                          <span v-if="mapping.ground_truth_field === idColumnName" class="text-blue-600 ml-1">(ID column)</span>
-                        </div>
-
-                      </td>
-                      <td class="px-4 py-3">
-                        <select
-                          v-model="mapping.field_type"
-                          class="block w-full rounded-md border border-gray-300 shadow-sm py-1.5 px-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                        >
-                          <option value="string">String</option>
-                          <option value="number">Number</option>
-                          <option value="boolean">Boolean</option>
-                          <option value="date">Date</option>
-                          <option value="category">Category</option>
-                        </select>
-                      </td>
-                      <td class="px-4 py-3">
-                        <select
-                          v-model="mapping.comparison_method"
-                          @change="updateComparisonOptions(mapping)"
-                          class="block w-full rounded-md border border-gray-300 shadow-sm py-1.5 px-2 text-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                        >
-                          <option value="exact">Exact</option>
-                          <option value="fuzzy">Fuzzy</option>
-                          <option value="numeric">Numeric</option>
-                          <option value="boolean">Boolean</option>
-                          <option value="category">Category</option>
-                          <option value="date">Date</option>
-                        </select>
-                      </td>
-                      <td class="px-4 py-3">
-                        <div class="space-y-1">
-                          <!-- Fuzzy matching threshold -->
-                          <div v-if="mapping.comparison_method === 'fuzzy'" class="flex items-center">
-                            <label class="text-xs text-gray-600 mr-2">Threshold:</label>
-                            <input
-                              v-model.number="mapping.comparison_options.threshold"
-                              type="number"
-                              min="0"
-                              max="100"
-                              class="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded"
-                            />
-                            <span class="text-xs text-gray-500 ml-1">%</span>
-                          </div>
-                          <!-- Numeric tolerance -->
-                          <div v-if="mapping.comparison_method === 'numeric'" class="space-y-1">
-                            <div class="flex items-center">
-                              <label class="text-xs text-gray-600 mr-2">Tolerance:</label>
-                              <input
-                                v-model.number="mapping.comparison_options.tolerance"
-                                type="number"
-                                step="0.001"
-                                class="w-20 px-1 py-0.5 text-xs border border-gray-300 rounded"
-                              />
-                            </div>
-                            <div class="flex items-center">
-                              <input
-                                v-model="mapping.comparison_options.relative"
-                                type="checkbox"
-                                class="h-3 w-3 text-blue-600"
-                              />
-                              <label class="text-xs text-gray-600 ml-1">Relative</label>
-                            </div>
-                          </div>
-                          <!-- Case sensitivity -->
-                          <div v-if="mapping.comparison_method === 'exact'" class="flex items-center">
-                            <input
-                              v-model="mapping.comparison_options.case_sensitive"
-                              type="checkbox"
-                              class="h-3 w-3 text-blue-600"
-                            />
-                            <label class="text-xs text-gray-600 ml-1">Case sensitive</label>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="px-4 py-3">
-                        <button
-                          @click="removeMapping(index)"
-                          class="text-red-600 hover:text-red-800 p-1"
-                        >
-                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                <div v-else class="text-center py-8 text-gray-500">
-                  <p>No field mappings configured yet.</p>
-                  <p class="text-sm mt-1">Click "Auto-suggest Mappings" or "Add Mapping" to get started.</p>
-                </div>
-              </div>
-
-              <!-- Info about remaining fields -->
-              <div v-if="!canAddMapping" class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <p class="text-sm text-yellow-800">
-                  All available schema fields have been mapped. Remove a mapping to add a new one.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-          <button
-            type="button"
-            @click="$emit('close')"
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            @click="saveMappings"
-            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-            :disabled="isSaving || !canSave"
-          >
-            <span v-if="isSaving" class="flex items-center">
-              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Saving...
-            </span>
-            <span v-else>Save Mappings</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
-</template>
-

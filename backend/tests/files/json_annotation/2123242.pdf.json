@@ -1,0 +1,11 @@
+{
+  "patient_id": "2123242.pdf",
+  "shortness_of_breath": true,
+  "chest_pain": true,
+  "leg_pain_or_swelling": false,
+  "heart_palpitations": false,
+  "cough": false,
+  "dizziness": false,
+  "location": "unknown",
+  "side": "bilateral"
+}
