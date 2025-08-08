@@ -1938,24 +1938,42 @@ def test_delete_schema_referenced_by_trial(client, api_url):
 # Test Get Available LLM Models
 def test_get_available_llm_models(client, api_url):
     from backend.src.core.config import settings
+    if settings.OPENAI_NO_API_CHECK:          # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
-    if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
-    response = client.get(f"{api_url}/project/llm/models")
-    assert response.status_code == 200
-    assert len(response.json()) > 0
+    login = client.post(
+        f"{api_url}/auth/login",
+        data={"username": "test@example.com", "password": "testpassword"},
+    )
+    assert login.status_code == 200, login.text
+    token = login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    resp = client.get(f"{api_url}/project/llm/models", headers=headers)
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data.get("success") is True
+    models = data.get("models")
+    assert isinstance(models, list) and len(models) > 0
 
 
 # Test Test LLM Connection
 def test_test_llm_connection(client, api_url):
     from backend.src.core.config import settings
+    if settings.OPENAI_NO_API_CHECK:          # type: ignore
+        pytest.skip("Skipping LLM connection test due to OPENAI_NO_API_CHECK setting")
 
-    if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
-    response = client.post(f"{api_url}/project/llm/test-connection")
-    assert response.status_code == 200
-    assert "success" in response.json()
-    assert response.json()["success"]
+    user_data = {"username": "test@example.com", "password": "testpassword"}
+    login = client.post(f"{api_url}/auth/login", data=user_data)
+    assert login.status_code == 200, login.text
+
+    token = login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    resp = client.post(f"{api_url}/project/llm/test-connection", headers=headers)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body.get("success") in (True, "success")
 
 
 def test_trial_crud_and_extraction(client, api_url):

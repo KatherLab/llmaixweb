@@ -2639,7 +2639,7 @@ def create_trial(
                 project_id=project_id,
                 advanced_options=trial_db.advanced_options,
             )
-            update_trial_progress(db, trial_db.id, increment=1)
+            update_trial_progress(db, trial_db.id)
 
         trial_db.status = models.TrialStatus.COMPLETED
         trial_db.finished_at = datetime.datetime.now(datetime.UTC)
