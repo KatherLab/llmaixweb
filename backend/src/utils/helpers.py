@@ -11,6 +11,24 @@ from PIL import Image
 from backend.src import schemas
 
 
+
+def extract_leaf_paths_from_dict(data, parent=""):
+    """Recursively extracts all leaf field paths from a nested dict using dot notation."""
+    fields = []
+    if isinstance(data, dict):
+        for k, v in data.items():
+            new_parent = f"{parent}.{k}" if parent else k
+            if isinstance(v, dict):
+                fields.extend(extract_leaf_paths_from_dict(v, new_parent))
+            else:
+                fields.append(new_parent)
+    elif isinstance(data, list):
+        # List: treat as array, add [*] to path (optionally)
+        for i, item in enumerate(data):
+            new_parent = f"{parent}[{i}]"
+            fields.extend(extract_leaf_paths_from_dict(item, new_parent))
+    return fields
+
 def extract_required_fields_from_schema(
     schema_def: dict, prefix: str = ""
 ) -> list[str]:
@@ -256,47 +274,54 @@ def validate_prompt(prompt: schemas.PromptCreate | schemas.PromptUpdate) -> None
 def flatten_dict(d, parent_key="", sep="."):
     """Flatten dictionary with dot notation for nested fields."""
     flat_dict = {}
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            flat_dict.update(flatten_dict(v, new_key, sep))
-        elif isinstance(v, list):
-            # Handle lists by converting to string representation
-            flat_dict[new_key] = json.dumps(v) if v else "[]"
-        else:
-            flat_dict[new_key] = v
+    if isinstance(d, dict):
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                flat_dict.update(flatten_dict(v, new_key, sep))
+            elif isinstance(v, list):
+                # Recursively flatten lists of dicts
+                for i, item in enumerate(v):
+                    flat_dict.update(flatten_dict(item, f"{new_key}[{i}]", sep))
+            else:
+                flat_dict[new_key] = v
+    else:
+        flat_dict[parent_key] = d
     return flat_dict
 
 
 def extract_field_types_from_schema(schema_def: dict, result: dict, prefix: str = ""):
-    """Extract field types from JSON schema."""
+    """Extract all field types from a JSON schema as dot notation (leaf paths)."""
     if "properties" in schema_def:
         for prop_name, prop_def in schema_def["properties"].items():
-            full_path = f"{prefix}_{prop_name}" if prefix else prop_name
+            full_path = f"{prefix}.{prop_name}" if prefix else prop_name
 
-            if "type" in prop_def:
-                if prop_def["type"] == "object" and "properties" in prop_def:
-                    extract_field_types_from_schema(prop_def, result, full_path)
-                elif prop_def["type"] == "array" and "items" in prop_def:
-                    if "type" in prop_def["items"]:
-                        result[full_path] = f"array[{prop_def['items']['type']}]"
-                    else:
-                        result[full_path] = "array"
+            if prop_def.get("type") == "object" and "properties" in prop_def:
+                extract_field_types_from_schema(prop_def, result, full_path)
+            elif prop_def.get("type") == "array" and "items" in prop_def:
+                if prop_def["items"].get("type") == "object":
+                    # For arrays of objects, list the full path with []
+                    extract_field_types_from_schema(
+                        prop_def["items"], result, f"{full_path}[]"
+                    )
                 else:
-                    if "enum" in prop_def:
-                        result[full_path] = "category"
-                    else:
-                        type_mapping = {
-                            "boolean": "boolean",
-                            "integer": "number",
-                            "number": "number",
-                            "string": "string",
-                        }
-                        result[full_path] = type_mapping.get(prop_def["type"], "string")
+                    result[full_path + "[]"] = prop_def["items"].get("type", "string")
+            else:
+                # Primitive type or enum
+                if "enum" in prop_def:
+                    result[full_path] = "category"
+                else:
+                    type_mapping = {
+                        "boolean": "boolean",
+                        "integer": "number",
+                        "number": "number",
+                        "string": "string",
+                    }
+                    result[full_path] = type_mapping.get(prop_def.get("type", "string"), "string")
 
-            if "format" in prop_def:
-                if prop_def["format"] in ["date", "date-time"]:
-                    result[full_path] = "date"
+            if prop_def.get("format") in ["date", "date-time"]:
+                result[full_path] = "date"
+
 
 
 # As sqlite does not support timezone-aware datetimes, we have to do this manually.

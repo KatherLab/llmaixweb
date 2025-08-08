@@ -467,12 +467,6 @@ class EvaluationEngine:
 
         gt_values = gt_data[gt_key]
 
-        # Ensure prediction JSON exists
-        if not result_payload["prediction"]:
-            return self._create_error_result(
-                doc_id, "No trial results found for document"
-            )
-
         # Check if ground truth is JSON (nested) or CSV (flattened)
         is_json_gt = isinstance(gt_values, dict) and any(
             isinstance(v, dict) for v in gt_values.values()
@@ -550,28 +544,21 @@ class EvaluationEngine:
             "detailed_metrics": detailed_metrics,
         }
 
-    def _get_nested_value(self, data: Dict, path: str, default=None):
-        """Get value from nested dict using dot notation."""
-        keys = path.split(".")
+    def _get_nested_value(self, data: dict, path: str, default=None):
+        keys = path.replace("[]", ".0").split(
+            "."
+        )  # crude handling for first array element
         value = data
-
-        for i, key in enumerate(keys):
-            if isinstance(value, dict) and key in value:
-                value = value[key]
-            elif isinstance(value, list):
-                # Handle array notation like "items.0.name"
-                try:
-                    index = int(key)
-                    if 0 <= index < len(value):
-                        value = value[index]
-                    else:
-                        return default
-                except ValueError:
-                    return default
-            else:
-                return default
-
-        return value
+        try:
+            for key in keys:
+                # List index?
+                if key.isdigit():
+                    value = value[int(key)]
+                elif key:
+                    value = value[key]
+            return value
+        except Exception:
+            return default
 
     def _find_document_key_by_data(
         self, doc_id: int, doc_info: Dict, gt_data: Dict
@@ -686,44 +673,59 @@ class GroundTruthParser:
         try:
             data = json.loads(content.decode("utf-8"))
 
-            # Handle different JSON formats
             if isinstance(data, dict):
-                # Check if it's a document map (keys are document IDs)
                 if all(isinstance(v, dict) for v in data.values()):
                     # Document map format - check for ID fields
                     result = {}
                     for key, doc_data in data.items():
-                        # Validate that each document has an 'id' field
-                        if "id" not in doc_data:
-                            raise ValueError(
-                                f"Document with key '{key}' missing required 'id' field"
-                            )
-                        # Use the id field as the key
-                        doc_id = str(doc_data["id"])
-                        # Keep nested structure for JSON - DON'T flatten
+                        # Look for ID field (support both 'id' and 'patient_id')
+                        doc_id = None
+                        if "id" in doc_data:
+                            doc_id = str(doc_data["id"])
+                        elif "patient_id" in doc_data:
+                            doc_id = str(doc_data["patient_id"])
+                        else:
+                            doc_id = str(key)
+
+                        # Keep nested structure - DON'T flatten
                         result[doc_id] = doc_data
                     return result
                 else:
-                    # Single document - require ID field
-                    if "id" not in data:
-                        raise ValueError("Single JSON document must have an 'id' field")
-                    return {str(data["id"]): data}
+                    # Single document
+                    if "id" in data:
+                        doc_id = str(data["id"])
+                    elif "patient_id" in data:
+                        doc_id = str(data["patient_id"])
+                    else:
+                        raise ValueError(
+                            "JSON document must have an 'id' or 'patient_id' field"
+                        )
+                    return {doc_id: data}
             elif isinstance(data, list):
-                # Array of documents - each must have an ID
+                # Array of documents
                 result = {}
                 for i, doc in enumerate(data):
                     if not isinstance(doc, dict):
                         raise ValueError(f"Document at index {i} is not an object")
-                    if "id" not in doc:
+
+                    # Look for ID field
+                    doc_id = None
+                    if "id" in doc:
+                        doc_id = str(doc["id"])
+                    elif "patient_id" in doc:
+                        doc_id = str(doc["patient_id"])
+                    else:
                         raise ValueError(
-                            f"Document at index {i} missing required 'id' field"
+                            f"Document at index {i} missing required 'id' or 'patient_id' field"
                         )
-                    result[str(doc["id"])] = doc
+
+                    result[doc_id] = doc
                 return result
             else:
                 raise ValueError("JSON must be an object or array")
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON: {e}")
+
 
     def _parse_zip(self, content: bytes) -> Dict:
         """Parse ZIP file with multiple JSON documents."""

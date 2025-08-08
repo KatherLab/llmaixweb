@@ -3713,7 +3713,6 @@ def update_groundtruth(
     return schemas.GroundTruth.model_validate(groundtruth)
 
 
-# Add to the ground truth endpoints
 @router.put(
     "/{project_id}/groundtruth/{groundtruth_id}/id-column",
     response_model=schemas.GroundTruth,
@@ -3726,17 +3725,13 @@ def update_ground_truth_id_column(
     id_column: str = Body(..., embed=True),
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.GroundTruth:
-    """Update the ID column for CSV/XLSX ground truth files."""
+    """
+    Update the ID column/field for any ground truth file.
+    - For CSV/XLSX: the column used as the document ID.
+    - For JSON/ZIP: the field from each JSON object to use as document ID, or set empty to use filename.
+    """
     # Validate project access
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to update ground truth"
-        )
+    check_project_access(project_id, current_user, db)
 
     # Get ground truth
     groundtruth: models.GroundTruth | None = db.execute(
@@ -3748,17 +3743,10 @@ def update_ground_truth_id_column(
     if not groundtruth:
         raise HTTPException(status_code=404, detail="Ground truth not found")
 
-    # Only allow for CSV/XLSX formats
-    if groundtruth.format not in ["csv", "xlsx"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"ID column mapping is only supported for CSV and XLSX formats, not {groundtruth.format}",
-        )
-
-    # Update ID column
+    # Update ID column/field (can be column name for CSV/XLSX, field for JSON, or empty for "filename")
     groundtruth.id_column_name = id_column
 
-    # Clear data cache to force re-parsing with new ID column
+    # Clear data cache to force re-parsing with new ID column/field logic
     groundtruth.data_cache = None
 
     # Invalidate related evaluations
@@ -4025,6 +4013,56 @@ def preview_groundtruth(
     engine = EvaluationEngine(db)
     gt_data = engine._load_ground_truth(groundtruth)
     # Get field structure
+
+    if groundtruth.format in ["json", "zip"]:
+        # Extract all nested paths from samples
+        all_fields = set()
+        field_types = {}
+        sample_values = {}
+
+        def extract_paths_and_types(data, prefix=""):
+            if isinstance(data, dict):
+                for k, v in data.items():
+                    field_path = f"{prefix}.{k}" if prefix else k
+                    if isinstance(v, dict):
+                        extract_paths_and_types(v, field_path)
+                    else:
+                        all_fields.add(field_path)
+                        # Infer type
+                        if isinstance(v, bool):
+                            field_types[field_path] = "boolean"
+                        elif isinstance(v, (int, float)):
+                            field_types[field_path] = "number"
+                        elif isinstance(v, list):
+                            field_types[field_path] = "array"
+                        else:
+                            field_types[field_path] = "string"
+                        # Save samples
+                        if field_path not in sample_values:
+                            sample_values[field_path] = []
+                        if (
+                            v not in sample_values[field_path]
+                            and len(sample_values[field_path]) < 5
+                        ):
+                            sample_values[field_path].append(v)
+
+        for doc_id, doc_data in list(gt_data.items())[:limit]:
+            extract_paths_and_types(doc_data)
+
+        # Remove 'id' field from the fields list as it's special
+        all_fields.discard("id")
+        all_fields.discard("patient_id")
+
+        return {
+            "document_count": len(gt_data),
+            "fields": sorted(list(all_fields)),
+            "field_types": field_types,
+            "sample_values": sample_values,
+            "preview_data": dict(list(gt_data.items())[:limit]),
+            "format": groundtruth.format,
+            "available_columns": [],  # Not applicable for JSON
+            "current_id_column": groundtruth.id_column_name,  # Not applicable for JSON
+        }
 
     # For CSV/XLSX, also get available columns for ID selection
     available_columns = []
@@ -4305,58 +4343,104 @@ def suggest_field_mappings(
     engine = EvaluationEngine(db)
     gt_data = engine._load_ground_truth(groundtruth)
 
-    # Extract schema fields
+    # Check if ground truth is JSON format
+    is_json_format = groundtruth.format in ["json", "zip"]
+
+    # Extract schema fields with dot notation
     schema_fields = {}
     extract_field_types_from_schema(schema.schema_definition, schema_fields)
 
-    # Get ground truth fields
-    gt_fields = set()
-    for fields in gt_data.values():
-        gt_fields.update(fields.keys())
+    if is_json_format:
+        # For JSON, create exact matches for nested fields
+        suggestions = []
 
-    # Suggest mappings
-    suggestions = []
-    for schema_field, field_type in schema_fields.items():
-        # Try exact match
-        if schema_field in gt_fields:
-            suggestions.append(
-                {
-                    "id": 0,
-                    "ground_truth_id": groundtruth_id,
-                    "schema_id": schema_id,
-                    "schema_field": schema_field,
-                    "ground_truth_field": schema_field,
-                    "field_type": field_type,
-                    "comparison_method": _get_comparison_method(field_type),
-                    "confidence": 1.0,
-                }
-            )
-            continue
+        # Get ground truth fields with dot notation from first document
+        gt_fields_flat = set()
+        sample_doc = next(iter(gt_data.values())) if gt_data else {}
 
-        # Try fuzzy matching
-        best_match = None
-        best_score = 0
-        for gt_field in gt_fields:
-            score = fuzz.ratio(schema_field.lower(), gt_field.lower())
-            if score > best_score and score > 70:
-                best_score = score
-                best_match = gt_field
+        def extract_gt_fields(data, prefix=""):
+            """Extract fields with dot notation from nested dict."""
+            for key, value in data.items():
+                if key in ["id", "patient_id"]:  # Skip ID fields
+                    continue
+                field_path = f"{prefix}.{key}" if prefix else key
+                if isinstance(value, dict):
+                    extract_gt_fields(value, field_path)
+                else:
+                    gt_fields_flat.add(field_path)
 
-        if best_match:
-            suggestions.append(
-                {
-                    "id": 0,
-                    "ground_truth_id": groundtruth_id,
-                    "schema_id": schema_id,
-                    "schema_field": schema_field,
-                    "ground_truth_field": best_match,
-                    "field_type": field_type,
-                    "comparison_method": _get_comparison_method(field_type),
-                    "confidence": best_score / 100.0,
-                }
-            )
+        if isinstance(sample_doc, dict):
+            extract_gt_fields(sample_doc)
 
-    return suggestions
+        # Match schema fields to ground truth fields
+        for schema_field, field_type in schema_fields.items():
+            if schema_field in gt_fields_flat:
+                # Exact match found
+                suggestions.append(
+                    {
+                        "id": 0,
+                        "ground_truth_id": groundtruth_id,
+                        "schema_id": schema_id,
+                        "schema_field": schema_field,
+                        "ground_truth_field": schema_field,
+                        "field_type": field_type,
+                        "comparison_method": _get_comparison_method(field_type),
+                        "comparison_options": {},
+                        "confidence": 1.0,
+                    }
+                )
+
+        return suggestions
+    else:
+        # Use existing fuzzy matching for CSV
+        # Get ground truth fields
+        gt_fields = set()
+        for fields in gt_data.values():
+            gt_fields.update(fields.keys())
+
+        # Suggest mappings
+        suggestions = []
+        for schema_field, field_type in schema_fields.items():
+            # Try exact match
+            if schema_field in gt_fields:
+                suggestions.append(
+                    {
+                        "id": 0,
+                        "ground_truth_id": groundtruth_id,
+                        "schema_id": schema_id,
+                        "schema_field": schema_field,
+                        "ground_truth_field": schema_field,
+                        "field_type": field_type,
+                        "comparison_method": _get_comparison_method(field_type),
+                        "confidence": 1.0,
+                    }
+                )
+                continue
+
+            # Try fuzzy matching
+            best_match = None
+            best_score = 0
+            for gt_field in gt_fields:
+                score = fuzz.ratio(schema_field.lower(), gt_field.lower())
+                if score > best_score and score > 70:
+                    best_score = score
+                    best_match = gt_field
+
+            if best_match:
+                suggestions.append(
+                    {
+                        "id": 0,
+                        "ground_truth_id": groundtruth_id,
+                        "schema_id": schema_id,
+                        "schema_field": schema_field,
+                        "ground_truth_field": best_match,
+                        "field_type": field_type,
+                        "comparison_method": _get_comparison_method(field_type),
+                        "confidence": best_score / 100.0,
+                    }
+                )
+
+        return suggestions
 
 
 def _get_comparison_method(field_type: str) -> str:

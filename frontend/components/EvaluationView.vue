@@ -245,7 +245,7 @@
       @uploaded="onGroundTruthUploaded"
     />
     <GroundTruthManager
-      v-if="showGroundTruthManager"
+      :open="showGroundTruthManager"
       :project-id="projectId"
       :ground-truth-files="groundTruthFiles"
       @close="showGroundTruthManager = false"
