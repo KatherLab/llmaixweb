@@ -4810,16 +4810,38 @@ def download_evaluations_report(
     db: Session = Depends(get_db),
     project_id: int,
     evaluation_ids: str = Query(...),
-    format: str = Query("csv", enum=["csv", "xlsx"]),
+    format: str = Query("csv", enum=["csv", "xlsx", "zip"]),
     include_details: bool = Query(True),
-    current_user: models.User = Depends(get_current_user),
+    include_field_details: bool = Query(False),
+    include_errors: bool = Query(False),
+    include_document_content: bool = Query(False),
+    include_ground_truth_content: bool = Query(False),
+    current_user: "models.User" = Depends(get_current_user),
 ) -> Response:
-    """Download evaluation report in CSV or Excel format."""
+    """
+    Download evaluation report in CSV, XLSX, or ZIP format.
+    ZIP: includes summary, per-field, per-doc content as separate files.
+    """
+    import csv
+    import io
+    import zipfile
+
+    import pandas as pd
+
+    from ....utils.helpers import (
+        build_evaluation_zipfiles,
+        collect_evaluation_field_level_details,
+        collect_trial_document_metadata,
+    )
+
+    # Parse IDs
     try:
         evaluation_ids_list = [int(i) for i in evaluation_ids.split(",")]
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid evaluation_ids")
-    project: models.Project | None = db.execute(
+
+    # Fetch project and permission check
+    project = db.execute(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
@@ -4829,14 +4851,14 @@ def download_evaluations_report(
             status_code=403,
             detail="Not authorized to access this project's evaluations",
         )
-    # Get evaluations
+
+    # Gather evaluations (and their trials)
     evaluations = []
     for eval_id in evaluation_ids_list:
         eval_obj = db.execute(
             select(models.Evaluation).where(models.Evaluation.id == eval_id)
         ).scalar_one_or_none()
         if eval_obj:
-            # Verify it belongs to project
             trial = db.execute(
                 select(models.Trial).where(
                     models.Trial.id == eval_obj.trial_id,
@@ -4847,11 +4869,38 @@ def download_evaluations_report(
                 evaluations.append((eval_obj, trial))
     if not evaluations:
         raise HTTPException(status_code=404, detail="No evaluations found")
-    # Create report data
+
+    # --- ZIP Export ---
+    if format == "zip":
+        files = build_evaluation_zipfiles(
+            db,
+            evaluations,
+            include_details=include_details,
+            include_field_details=include_field_details,
+            include_errors=include_errors,
+            include_document_content=include_document_content,
+            include_ground_truth_content=include_ground_truth_content,
+            zip_format="csv",  # Change to "xlsx" if you want Excel files in the ZIP
+        )
+        out = io.BytesIO()
+        with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for arcname, data in files:
+                zf.writestr(arcname, data)
+        out.seek(0)
+        content = out.getvalue()
+        media_type = "application/zip"
+        filename = f"evaluation_export_{project_id}.zip"
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    # --- CSV Export ---
     if format == "csv":
         output = io.StringIO()
         writer = csv.writer(output)
-        # Summary sheet
+        # Summary
         writer.writerow(
             [
                 "Evaluation ID",
@@ -4867,25 +4916,26 @@ def download_evaluations_report(
                 "Created At",
             ]
         )
-        for eval, trial in evaluations:
-            gt = db.query(models.GroundTruth).get(eval.groundtruth_id)
+        for eval_obj, trial in evaluations:
+            gt = db.query(models.GroundTruth).get(eval_obj.groundtruth_id)
             writer.writerow(
                 [
-                    eval.id,
-                    eval.trial_id,
+                    eval_obj.id,
+                    eval_obj.trial_id,
                     trial.llm_model,
                     gt.name if gt else "Unknown",
-                    eval.metrics.get("accuracy", 0),
-                    eval.metrics.get("precision", 0),
-                    eval.metrics.get("recall", 0),
-                    eval.metrics.get("f1_score", 0),
-                    eval.metrics.get("total_documents", 0),
-                    eval.metrics.get("total_fields", 0),
-                    eval.created_at.isoformat(),
+                    eval_obj.metrics.get("accuracy", 0),
+                    eval_obj.metrics.get("precision", 0),
+                    eval_obj.metrics.get("recall", 0),
+                    eval_obj.metrics.get("f1_score", 0),
+                    eval_obj.metrics.get("total_documents", 0),
+                    eval_obj.metrics.get("total_fields", 0),
+                    eval_obj.created_at.isoformat(),
                 ]
             )
+        # Field metrics
         if include_details:
-            writer.writerow([])  # Empty row
+            writer.writerow([])
             writer.writerow(["Field-Level Metrics"])
             writer.writerow(
                 [
@@ -4896,82 +4946,203 @@ def download_evaluations_report(
                     "Correct Count",
                 ]
             )
-            for eval, _ in evaluations:
-                for field, metrics in eval.field_metrics.items():
+            for eval_obj, _ in evaluations:
+                for field, metrics in (eval_obj.field_metrics or {}).items():
                     writer.writerow(
                         [
-                            eval.id,
+                            eval_obj.id,
                             field,
                             metrics.get("accuracy", 0),
                             metrics.get("total_count", 0),
                             metrics.get("correct_count", 0),
                         ]
                     )
+        # Field-by-field details
+        if include_field_details:
+            writer.writerow([])
+            writer.writerow(["Field-by-Field Details"])
+            headers = [
+                "Evaluation ID",
+                "Document ID",
+                "Field Name",
+                "Ground Truth",
+                "Prediction",
+                "Is Correct",
+            ]
+            if include_errors:
+                headers += ["Error Type", "Confidence"]
+            writer.writerow(headers)
+            for eval_obj, _ in evaluations:
+                details = collect_evaluation_field_level_details(
+                    db, eval_obj, include_errors
+                )
+                for detail in details:
+                    row = [
+                        detail.get("Evaluation ID", ""),
+                        detail.get("Document ID", ""),
+                        detail.get("Field Name", ""),
+                        detail.get("Ground Truth", ""),
+                        detail.get("Prediction", ""),
+                        detail.get("Is Correct", ""),
+                    ]
+                    if include_errors:
+                        row += [
+                            detail.get("Error Type", ""),
+                            detail.get("Confidence", ""),
+                        ]
+                    writer.writerow(row)
+        # Document metrics
+        if include_details:
+            writer.writerow([])
+            writer.writerow(["Document-Level Metrics"])
+            writer.writerow(
+                [
+                    "Evaluation ID",
+                    "Document ID",
+                    "Accuracy",
+                    "Correct Fields",
+                    "Total Fields",
+                    "Missing Fields",
+                    "Incorrect Fields",
+                    "Error",
+                ]
+            )
+            for eval_obj, _ in evaluations:
+                for doc_metrics in eval_obj.document_metrics:
+                    writer.writerow(
+                        [
+                            eval_obj.id,
+                            doc_metrics.get("document_id"),
+                            doc_metrics.get("accuracy"),
+                            doc_metrics.get("correct_fields"),
+                            doc_metrics.get("total_fields"),
+                            ";".join(doc_metrics.get("missing_fields", [])),
+                            ";".join(doc_metrics.get("incorrect_fields", [])),
+                            doc_metrics.get("error", ""),
+                        ]
+                    )
+        # Document metadata/content/GT per doc
+        if include_document_content or include_ground_truth_content:
+            writer.writerow([])
+            writer.writerow(["Document Metadata and Content"])
+            doc_header_written = False
+            for eval_obj, trial in evaluations:
+                docs = collect_trial_document_metadata(
+                    db,
+                    trial,
+                    include_content=include_document_content,
+                    include_ground_truth=include_ground_truth_content,
+                )
+                if docs and not doc_header_written:
+                    writer.writerow(docs[0].keys())
+                    doc_header_written = True
+                for doc in docs:
+                    writer.writerow([doc.get(col, "") for col in docs[0].keys()])
+
         content = output.getvalue()
         media_type = "text/csv"
         filename = f"evaluation_report_{project_id}.csv"
-    else:  # xlsx
+
+    # --- XLSX Export ---
+    else:  # format == "xlsx"
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-            # Summary sheet
+            # Summary
             summary_data = []
-            for eval, trial in evaluations:
-                gt = db.query(models.GroundTruth).get(eval.groundtruth_id)
+            for eval_obj, trial in evaluations:
+                gt = db.query(models.GroundTruth).get(eval_obj.groundtruth_id)
                 summary_data.append(
                     {
-                        "Evaluation ID": eval.id,
-                        "Trial ID": eval.trial_id,
+                        "Evaluation ID": eval_obj.id,
+                        "Trial ID": eval_obj.trial_id,
                         "Model": trial.llm_model,
                         "Ground Truth": gt.name if gt else "Unknown",
-                        "Accuracy": eval.metrics.get("accuracy", 0),
-                        "Precision": eval.metrics.get("precision", 0),
-                        "Recall": eval.metrics.get("recall", 0),
-                        "F1 Score": eval.metrics.get("f1_score", 0),
-                        "Total Documents": eval.metrics.get("total_documents", 0),
-                        "Total Fields": eval.metrics.get("total_fields", 0),
-                        "Created At": eval.created_at.isoformat(),
+                        "Accuracy": eval_obj.metrics.get("accuracy", 0),
+                        "Precision": eval_obj.metrics.get("precision", 0),
+                        "Recall": eval_obj.metrics.get("recall", 0),
+                        "F1 Score": eval_obj.metrics.get("f1_score", 0),
+                        "Total Documents": eval_obj.metrics.get("total_documents", 0),
+                        "Total Fields": eval_obj.metrics.get("total_fields", 0),
+                        "Created At": eval_obj.created_at.isoformat(),
                     }
                 )
             pd.DataFrame(summary_data).to_excel(
                 writer, sheet_name="Summary", index=False
             )
+            # Field metrics
             if include_details:
-                # Field metrics sheet
                 field_data = []
-                for eval, _ in evaluations:
-                    for field, metrics in eval.field_metrics.items():
+                for eval_obj, _ in evaluations:
+                    for field, metrics in (eval_obj.field_metrics or {}).items():
                         field_data.append(
                             {
-                                "Evaluation ID": eval.id,
+                                "Evaluation ID": eval_obj.id,
                                 "Field Name": field,
                                 "Accuracy": metrics.get("accuracy", 0),
                                 "Total Count": metrics.get("total_count", 0),
                                 "Correct Count": metrics.get("correct_count", 0),
                             }
                         )
-                pd.DataFrame(field_data).to_excel(
-                    writer, sheet_name="Field Metrics", index=False
-                )
-                # Document metrics sheet
+                if field_data:
+                    pd.DataFrame(field_data).to_excel(
+                        writer, sheet_name="Field Metrics", index=False
+                    )
+            # Field-by-field details
+            if include_field_details:
+                all_details = []
+                for eval_obj, _ in evaluations:
+                    all_details.extend(
+                        collect_evaluation_field_level_details(
+                            db, eval_obj, include_errors
+                        )
+                    )
+                if all_details:
+                    pd.DataFrame(all_details).to_excel(
+                        writer, sheet_name="Field Details", index=False
+                    )
+            # Document metrics
+            if include_details:
                 doc_data = []
-                for eval, _ in evaluations:
-                    for doc_metrics in eval.document_metrics:
+                for eval_obj, _ in evaluations:
+                    for doc_metrics in eval_obj.document_metrics:
                         doc_data.append(
                             {
-                                "Evaluation ID": eval.id,
-                                "Document ID": doc_metrics["document_id"],
-                                "Accuracy": doc_metrics["accuracy"],
-                                "Correct Fields": doc_metrics["correct_fields"],
-                                "Total Fields": doc_metrics["total_fields"],
+                                "Evaluation ID": eval_obj.id,
+                                "Document ID": doc_metrics.get("document_id"),
+                                "Accuracy": doc_metrics.get("accuracy"),
+                                "Correct Fields": doc_metrics.get("correct_fields"),
+                                "Total Fields": doc_metrics.get("total_fields"),
+                                "Missing Fields": ";".join(
+                                    doc_metrics.get("missing_fields", [])
+                                ),
+                                "Incorrect Fields": ";".join(
+                                    doc_metrics.get("incorrect_fields", [])
+                                ),
+                                "Error": doc_metrics.get("error", ""),
                             }
                         )
-                pd.DataFrame(doc_data).to_excel(
-                    writer, sheet_name="Document Metrics", index=False
-                )
+                if doc_data:
+                    pd.DataFrame(doc_data).to_excel(
+                        writer, sheet_name="Document Metrics", index=False
+                    )
+            # Document metadata/content/GT per doc
+            if include_document_content or include_ground_truth_content:
+                for eval_obj, trial in evaluations:
+                    docs = collect_trial_document_metadata(
+                        db,
+                        trial,
+                        include_content=include_document_content,
+                        include_ground_truth=include_ground_truth_content,
+                    )
+                    if docs:
+                        pd.DataFrame(docs).to_excel(
+                            writer, sheet_name=f"Trial {trial.id} Docs", index=False
+                        )
         output.seek(0)
         content = output.getvalue()
         media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         filename = f"evaluation_report_{project_id}.xlsx"
+
     return Response(
         content=content,
         media_type=media_type,

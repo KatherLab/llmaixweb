@@ -1,13 +1,284 @@
 import base64
 import io
+import json
 from datetime import datetime, timezone
 from typing import Any
 
 import requests
 from fastapi import HTTPException
 from PIL import Image
+from sqlalchemy.orm import Session
 
-from backend.src import schemas
+from backend.src import models, schemas
+
+
+def build_evaluation_zipfiles(
+    db,
+    evaluations,
+    *,
+    include_details,
+    include_field_details,
+    include_errors,
+    include_document_content,
+    include_ground_truth_content,
+    zip_format="csv",  # or "xlsx"
+):
+    """
+    Prepares files (filename, bytes) for a ZIP, using the export helpers and pandas.
+    Returns: List of (arcname, bytes)
+    """
+    import csv
+    import io
+
+    import pandas as pd
+
+    files = []
+
+    # --- Summary CSV/XLSX ---
+    if zip_format == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(
+            [
+                "Evaluation ID",
+                "Trial ID",
+                "Model",
+                "Ground Truth",
+                "Accuracy",
+                "Precision",
+                "Recall",
+                "F1 Score",
+                "Total Documents",
+                "Total Fields",
+                "Created At",
+            ]
+        )
+        for eval_obj, trial in evaluations:
+            gt = db.query(models.GroundTruth).get(eval_obj.groundtruth_id)
+            writer.writerow(
+                [
+                    eval_obj.id,
+                    eval_obj.trial_id,
+                    trial.llm_model,
+                    gt.name if gt else "Unknown",
+                    eval_obj.metrics.get("accuracy", 0),
+                    eval_obj.metrics.get("precision", 0),
+                    eval_obj.metrics.get("recall", 0),
+                    eval_obj.metrics.get("f1_score", 0),
+                    eval_obj.metrics.get("total_documents", 0),
+                    eval_obj.metrics.get("total_fields", 0),
+                    eval_obj.created_at.isoformat(),
+                ]
+            )
+        files.append(("summary.csv", output.getvalue().encode("utf-8")))
+
+    else:
+        output = io.BytesIO()
+        summary_data = []
+        for eval_obj, trial in evaluations:
+            gt = db.query(models.GroundTruth).get(eval_obj.groundtruth_id)
+            summary_data.append(
+                {
+                    "Evaluation ID": eval_obj.id,
+                    "Trial ID": eval_obj.trial_id,
+                    "Model": trial.llm_model,
+                    "Ground Truth": gt.name if gt else "Unknown",
+                    "Accuracy": eval_obj.metrics.get("accuracy", 0),
+                    "Precision": eval_obj.metrics.get("precision", 0),
+                    "Recall": eval_obj.metrics.get("recall", 0),
+                    "F1 Score": eval_obj.metrics.get("f1_score", 0),
+                    "Total Documents": eval_obj.metrics.get("total_documents", 0),
+                    "Total Fields": eval_obj.metrics.get("total_fields", 0),
+                    "Created At": eval_obj.created_at.isoformat(),
+                }
+            )
+        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+            pd.DataFrame(summary_data).to_excel(
+                writer, sheet_name="Summary", index=False
+            )
+        output.seek(0)
+        files.append(("summary.xlsx", output.getvalue()))
+
+    # --- Field-by-field Details (CSV or Excel sheet) ---
+    if include_field_details:
+        details = []
+        for eval_obj, _ in evaluations:
+            details.extend(
+                collect_evaluation_field_level_details(db, eval_obj, include_errors)
+            )
+        if details:
+            if zip_format == "csv":
+                out = io.StringIO()
+                w = csv.writer(out)
+                headers = list(details[0].keys())
+                w.writerow(headers)
+                for row in details:
+                    w.writerow([row.get(h, "") for h in headers])
+                files.append(("field_details.csv", out.getvalue().encode("utf-8")))
+            else:
+                out = io.BytesIO()
+                with pd.ExcelWriter(out, engine="xlsxwriter") as writer:
+                    pd.DataFrame(details).to_excel(
+                        writer, sheet_name="Field Details", index=False
+                    )
+                out.seek(0)
+                files.append(("field_details.xlsx", out.getvalue()))
+
+    # --- Document-level metrics ---
+    if include_details:
+        doc_data = []
+        for eval_obj, _ in evaluations:
+            for doc_metrics in eval_obj.document_metrics:
+                doc_data.append(
+                    {
+                        "Evaluation ID": eval_obj.id,
+                        "Document ID": doc_metrics.get("document_id"),
+                        "Accuracy": doc_metrics.get("accuracy"),
+                        "Correct Fields": doc_metrics.get("correct_fields"),
+                        "Total Fields": doc_metrics.get("total_fields"),
+                        "Missing Fields": ";".join(
+                            doc_metrics.get("missing_fields", [])
+                        ),
+                        "Incorrect Fields": ";".join(
+                            doc_metrics.get("incorrect_fields", [])
+                        ),
+                        "Error": doc_metrics.get("error", ""),
+                    }
+                )
+        if doc_data:
+            if zip_format == "csv":
+                out = io.StringIO()
+                w = csv.writer(out)
+                headers = list(doc_data[0].keys())
+                w.writerow(headers)
+                for row in doc_data:
+                    w.writerow([row.get(h, "") for h in headers])
+                files.append(("document_metrics.csv", out.getvalue().encode("utf-8")))
+            else:
+                out = io.BytesIO()
+                with pd.ExcelWriter(out, engine="xlsxwriter") as writer:
+                    pd.DataFrame(doc_data).to_excel(
+                        writer, sheet_name="Doc Metrics", index=False
+                    )
+                out.seek(0)
+                files.append(("document_metrics.xlsx", out.getvalue()))
+
+    # --- Per-document JSONs/Texts/GT (optional) ---
+    if include_document_content or include_ground_truth_content:
+        # Put all docs in a subfolder, one JSON per document
+        for eval_obj, trial in evaluations:
+            docs = collect_trial_document_metadata(
+                db,
+                trial,
+                include_content=include_document_content,
+                include_ground_truth=include_ground_truth_content,
+            )
+            for doc in docs:
+                doc_id = (
+                    doc.get("Document ID") or doc.get("document_id") or doc.get("id")
+                )
+                arcname = f"docs/{doc_id}.json"
+                files.append(
+                    (
+                        arcname,
+                        json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8"),
+                    )
+                )
+                # Optionally: export text/GT as plain .txt
+                if (
+                    include_document_content
+                    and "Document Content" in doc
+                    and doc["Document Content"]
+                ):
+                    files.append(
+                        (f"docs/{doc_id}.txt", doc["Document Content"].encode("utf-8"))
+                    )
+                if (
+                    include_ground_truth_content
+                    and "Ground Truth" in doc
+                    and doc["Ground Truth"]
+                ):
+                    gt = doc["Ground Truth"]
+                    if isinstance(gt, str):
+                        files.append((f"docs/{doc_id}_gt.txt", gt.encode("utf-8")))
+                    else:
+                        files.append(
+                            (
+                                f"docs/{doc_id}_gt.json",
+                                json.dumps(gt, ensure_ascii=False, indent=2).encode(
+                                    "utf-8"
+                                ),
+                            )
+                        )
+    return files
+
+
+def collect_evaluation_field_level_details(
+    db: Session, evaluation: models.Evaluation, include_errors=False
+) -> list[dict[str, Any]]:
+    """
+    Returns list of dicts: one per field per document, with gt/pred/error info.
+    """
+    details = []
+    for metric in evaluation.detailed_metrics:
+        row = {
+            "Evaluation ID": metric.evaluation_id,
+            "Document ID": metric.document_id,
+            "Field Name": metric.field_name,
+            "Ground Truth": metric.ground_truth_value,
+            "Prediction": metric.predicted_value,
+            "Is Correct": metric.is_correct,
+        }
+        if include_errors:
+            row["Error Type"] = metric.error_type
+            row["Confidence"] = metric.confidence_score
+        details.append(row)
+    return details
+
+
+def collect_trial_document_metadata(
+    db: Session,
+    trial: models.Trial,
+    include_content: bool = False,
+    include_ground_truth: bool = False,
+) -> list[dict[str, Any]]:
+    """
+    Collects metadata for all documents in a trial. Optionally includes document text and ground truth.
+    """
+    # Fetch all TrialResults for the trial
+    results = db.query(models.TrialResult).filter_by(trial_id=trial.id).all()
+    docs = []
+    gt_cache = {}
+    # For each result/document, gather metadata
+    for result in results:
+        doc = db.get(models.Document, result.document_id)
+        if not doc:
+            continue
+        entry = {
+            "Document ID": doc.id,
+            "Document Name": doc.document_name,
+            "File Name": doc.original_file.file_name if doc.original_file else None,
+            "Trial Result": result.result,
+        }
+        if include_content:
+            entry["Document Content"] = doc.text
+        # Optionally attach ground truth for that doc
+        if include_ground_truth and trial.evaluations:
+            eval_obj = trial.evaluations[0]  # usually one evaluation per trial/gt
+            gt = db.get(models.GroundTruth, eval_obj.groundtruth_id)
+            if gt:
+                if gt.id not in gt_cache:
+                    gt_cache[gt.id] = gt.data_cache or {}
+                gt_data = gt_cache[gt.id]
+                # Try to match the document by doc_name or file_name
+                key = (
+                    str(doc.document_name)
+                    if doc.document_name in gt_data
+                    else str(doc.id)
+                )
+                entry["Ground Truth"] = gt_data.get(key)
+        docs.append(entry)
+    return docs
 
 
 def extract_leaf_paths_from_dict(data, parent=""):

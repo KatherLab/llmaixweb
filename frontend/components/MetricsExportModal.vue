@@ -17,12 +17,13 @@
           </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-6">
+        <!-- Fixed height container with scroll -->
+        <div class="flex-1 overflow-y-auto p-6 min-h-[600px]">
           <div class="space-y-6">
             <!-- Export format selection -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Export Format</label>
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-3 gap-3">
                 <div
                   class="relative flex cursor-pointer rounded-lg border p-4 focus:outline-none"
                   :class="exportFormat === 'csv' ? 'border-blue-600 ring-2 ring-blue-600' : 'border-gray-300'"
@@ -57,6 +58,24 @@
                   <div class="ml-3">
                     <div class="text-sm font-medium text-gray-900">Excel</div>
                     <div class="text-sm text-gray-500">Excel spreadsheet</div>
+                  </div>
+                </div>
+                <div
+                  class="relative flex cursor-pointer rounded-lg border p-4 focus:outline-none"
+                  :class="exportFormat === 'zip' ? 'border-blue-600 ring-2 ring-blue-600' : 'border-gray-300'"
+                  @click="exportFormat = 'zip'"
+                >
+                  <div class="flex h-5 items-center">
+                    <input
+                      type="radio"
+                      value="zip"
+                      v-model="exportFormat"
+                      class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div class="ml-3">
+                    <div class="text-sm font-medium text-gray-900">ZIP</div>
+                    <div class="text-sm text-gray-500">ZIP archive (advanced)</div>
                   </div>
                 </div>
               </div>
@@ -146,6 +165,28 @@
                     Include error analysis and examples
                   </label>
                 </div>
+                <div v-if="exportFormat === 'zip'" class="flex items-center">
+                  <input
+                    id="include-document-content"
+                    v-model="includeDocumentContent"
+                    type="checkbox"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label for="include-document-content" class="ml-2 text-sm text-gray-700">
+                    Include document content (in docs/)
+                  </label>
+                </div>
+                <div v-if="exportFormat === 'zip'" class="flex items-center">
+                  <input
+                    id="include-gt-content"
+                    v-model="includeGroundTruthContent"
+                    type="checkbox"
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label for="include-gt-content" class="ml-2 text-sm text-gray-700">
+                    Include ground truth content (in docs/)
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -158,6 +199,8 @@
                 <div v-if="includeDetails">• Document-level metrics included</div>
                 <div v-if="includeFieldDetails">• Field comparison data included</div>
                 <div v-if="includeErrors">• Error analysis included</div>
+                <div v-if="exportFormat === 'zip' && includeDocumentContent">• Document content files included</div>
+                <div v-if="exportFormat === 'zip' && includeGroundTruthContent">• Ground truth files included</div>
                 <div class="text-xs text-gray-500 mt-2">
                   Estimated file size: {{ estimatedFileSize }}
                 </div>
@@ -200,7 +243,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { api } from '@/services/api';
 import { formatDate } from '@/utils/formatters';
 import { useToast } from 'vue-toastification';
@@ -217,18 +260,17 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close']);
-
 const toast = useToast();
 const isExporting = ref(false);
 
-// Export settings
 const exportFormat = ref('csv');
 const selectedEvaluations = ref([]);
 const includeDetails = ref(true);
 const includeFieldDetails = ref(false);
 const includeErrors = ref(false);
+const includeDocumentContent = ref(false);
+const includeGroundTruthContent = ref(false);
 
-// Computed properties
 const allSelected = computed(() => {
   return props.evaluations.length > 0 && selectedEvaluations.value.length === props.evaluations.length;
 });
@@ -241,17 +283,19 @@ const totalDocuments = computed(() => {
 });
 
 const estimatedFileSize = computed(() => {
-  let baseSize = selectedEvaluations.value.length * 2; // Base metrics per evaluation
-  if (includeDetails.value) baseSize += totalDocuments.value * 1; // Document details
-  if (includeFieldDetails.value) baseSize += totalDocuments.value * 5; // Field comparisons
-  if (includeErrors.value) baseSize += totalDocuments.value * 2; // Error details
-
+  let baseSize = selectedEvaluations.value.length * 2;
+  if (includeDetails.value) baseSize += totalDocuments.value * 1;
+  if (includeFieldDetails.value) baseSize += totalDocuments.value * 5;
+  if (includeErrors.value) baseSize += totalDocuments.value * 2;
+  if (exportFormat.value === 'zip') {
+    if (includeDocumentContent.value) baseSize += totalDocuments.value * 30;
+    if (includeGroundTruthContent.value) baseSize += totalDocuments.value * 15;
+  }
   if (baseSize < 1) return '< 1 KB';
   if (baseSize < 1024) return `${Math.round(baseSize)} KB`;
   return `${Math.round(baseSize / 1024 * 10) / 10} MB`;
 });
 
-// Toggle select all
 const toggleSelectAll = () => {
   if (allSelected.value) {
     selectedEvaluations.value = [];
@@ -260,47 +304,59 @@ const toggleSelectAll = () => {
   }
 };
 
-// Export report
+// Lock background scroll when modal is open
+const lockScroll = () => {
+  document.body.style.overflow = 'hidden';
+};
+const unlockScroll = () => {
+  document.body.style.overflow = '';
+};
+
+onMounted(() => {
+  lockScroll();
+});
+onBeforeUnmount(() => {
+  unlockScroll();
+});
+
+// Also unlock scroll when modal closes via emit
+watch(() => emit, (val, oldVal) => {
+  if (!val) unlockScroll();
+});
+
 const exportReport = async () => {
   if (selectedEvaluations.value.length === 0) {
     toast.warning('Please select at least one evaluation to export');
     return;
   }
-
   isExporting.value = true;
   try {
     const params = new URLSearchParams({
       format: exportFormat.value,
-      include_details: includeDetails.value.toString()
+      include_details: includeDetails.value.toString(),
+      include_field_details: includeFieldDetails.value.toString(),
+      include_errors: includeErrors.value.toString(),
     });
-
-    // Add evaluation IDs
     selectedEvaluations.value.forEach(id => {
       params.append('evaluation_ids', id.toString());
     });
-
-    // Add optional parameters
-    if (includeFieldDetails.value) {
-      params.append('include_field_details', 'true');
-    }
-    if (includeErrors.value) {
-      params.append('include_errors', 'true');
-    }
+    if (exportFormat.value === 'zip' || includeDocumentContent.value)
+      params.append('include_document_content', includeDocumentContent.value ? 'true' : 'false');
+    if (exportFormat.value === 'zip' || includeGroundTruthContent.value)
+      params.append('include_ground_truth_content', includeGroundTruthContent.value ? 'true' : 'false');
 
     const response = await api.get(
       `/project/${props.projectId}/evaluations/download?${params.toString()}`,
       { responseType: 'blob' }
     );
 
-    // Create download link
     const url = window.URL.createObjectURL(new Blob([response.data]));
+    const timestamp = new Date().toISOString().split('T')[0];
+    let extension = exportFormat.value === 'zip' ? 'zip' : exportFormat.value;
+    const filename = `evaluation_report_${timestamp}.${extension}`;
     const link = document.createElement('a');
     link.href = url;
-
-    const timestamp = new Date().toISOString().split('T')[0];
-    const filename = `evaluation_report_${timestamp}.${exportFormat.value}`;
     link.setAttribute('download', filename);
-
     document.body.appendChild(link);
     link.click();
     link.remove();
