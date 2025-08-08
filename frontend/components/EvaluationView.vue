@@ -295,7 +295,7 @@ import TrialSelectorModal from './TrialSelectorModal.vue';
 import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue';
 import MetricsExportModal from './MetricsExportModal.vue';
 
-import EvaluationAnalysisModal from './EvaluationAnalysisModal.vue';
+import EvaluationAnalysisModal from './evaluation/EvaluationAnalysisModal.vue';
 
 const props = defineProps({
   projectId: {

@@ -240,11 +240,11 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useToast } from "vue-toastification";
 import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/vue";
-import FieldTree from "@/components/evaluate/FieldTree.vue";
-import MappingList from "@/components/evaluate/MappingList.vue";
-import ValidationBanner from "@/components/evaluate/ValidationBanner.vue";
-import GroundTruthSample from "@/components/evaluate/GroundTruthSample.vue";
-import IdFieldSelector from "@/components/evaluate/IdFieldSelector.vue";
+import FieldTree from "@/components/groundtruth/FieldTree.vue";
+import MappingList from "@/components/groundtruth/MappingList.vue";
+import ValidationBanner from "@/components/groundtruth/ValidationBanner.vue";
+import GroundTruthSample from "@/components/groundtruth/GroundTruthSample.vue";
+import IdFieldSelector from "@/components/groundtruth/IdFieldSelector.vue";
 import { api } from "@/services/api";
 
 const props = defineProps({

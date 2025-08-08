@@ -4794,6 +4794,8 @@ def get_document_evaluation(
         missing_fields=doc_metrics.get("missing_fields", []),
         incorrect_fields=doc_metrics.get("incorrect_fields", []),
         field_details=field_details,
+        error=doc_metrics.get("error"),
+        has_error=doc_metrics.get("has_error"),
     )
 
 

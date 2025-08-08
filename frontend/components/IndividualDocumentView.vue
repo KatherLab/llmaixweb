@@ -22,8 +22,14 @@
         </div>
       </div>
 
+      <!-- Show error prominently if exists -->
+      <div v-if="document.error" class="my-4 p-3 bg-pink-50 border border-pink-300 rounded flex items-center gap-2 text-pink-800 font-semibold">
+        <span class="text-xl">⚠️</span>
+        <span>{{ document.error }}</span>
+      </div>
+
       <!-- Summary stats -->
-      <div class="grid grid-cols-3 gap-4">
+      <div class="grid grid-cols-3 gap-4" v-if="!document.error">
         <div class="bg-white rounded-lg p-4 text-center border shadow-sm">
           <div class="text-lg font-semibold text-green-600">{{ document.correct_fields }}</div>
           <div class="text-sm text-gray-500">Correct Fields</div>
@@ -40,7 +46,7 @@
     </div>
 
     <!-- Field-by-field analysis -->
-    <div class="bg-white rounded-lg border p-6 shadow-sm">
+    <div class="bg-white rounded-lg border p-6 shadow-sm" v-if="!document.error">
       <h3 class="text-lg font-semibold text-gray-800 mb-4">Field-by-Field Analysis</h3>
       <div class="space-y-4">
         <div

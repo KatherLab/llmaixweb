@@ -24,6 +24,14 @@
           </button>
         </div>
 
+        <!-- Error Documents Warning Banner -->
+        <div v-if="errorDocuments.length > 0" class="mx-8 mt-5 p-4 bg-yellow-50 border border-yellow-300 rounded-lg flex items-center gap-2">
+          <span class="text-yellow-500 text-xl">⚠️</span>
+          <span>
+            {{ errorDocuments.length }} document<span v-if="errorDocuments.length > 1">s</span> could not be evaluated due to missing or invalid ground truth. Please review the errors in the "Documents" tab.
+          </span>
+        </div>
+
         <!-- Tab Navigation -->
         <div class="px-8 py-3 border-b bg-gradient-to-r from-blue-50/70 to-white/80">
           <nav class="flex space-x-8">
@@ -146,17 +154,16 @@
   </teleport>
 </template>
 
-
 <script setup>
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
-import { api } from '@/services/api';
-import { formatDate } from '@/utils/formatters';
+import { api } from '@/services/api.js';
+import { formatDate } from '@/utils/formatters.js';
 import { useToast } from 'vue-toastification';
 
 // Import sub-components
 import EvaluationOverview from '@/components/EvaluationOverview.vue';
-import DocumentAnalysis from '@/components/DocumentAnalysis.vue';
-import FieldErrorAnalysis from '@/components/FieldErrorAnalysis.vue';
+import DocumentAnalysis from '@/components/evaluation/DocumentAnalysis.vue';
+import FieldErrorAnalysis from '@/components/evaluation/FieldErrorAnalysis.vue';
 import IndividualDocumentView from '@/components/IndividualDocumentView.vue';
 
 const props = defineProps({
@@ -188,6 +195,15 @@ const loadingDocuments = ref({});
 const fieldErrors = ref({});
 const selectedFieldName = ref(null);
 const selectedDocument = ref(null);
+
+// Computed: documents with errors
+const errorDocuments = computed(() => {
+  return documentEvaluations.value.filter(d =>
+    !!d.error ||
+    d.has_error ||
+    (d.accuracy === 0 && d.correct_fields === 0 && d.total_fields === 0)
+  );
+});
 
 // Tab configuration
 const availableTabs = computed(() => {
@@ -233,22 +249,25 @@ const availableTabs = computed(() => {
 // Computed properties
 const documentStats = computed(() => {
   if (!documentEvaluations.value.length) {
-    return { perfect: 0, good: 0, poor: 0, perfectPercent: 0, goodPercent: 0, poorPercent: 0 };
+    return { perfect: 0, good: 0, poor: 0, error: 0, perfectPercent: 0, goodPercent: 0, poorPercent: 0, errorPercent: 0 };
   }
 
-  const docs = documentEvaluations.value.filter(d => !d.error);
-  const perfect = docs.filter(d => d.accuracy >= 0.9).length;
-  const good = docs.filter(d => d.accuracy >= 0.7 && d.accuracy < 0.9).length;
-  const poor = docs.filter(d => d.accuracy < 0.7).length;
+  const docs = documentEvaluations.value;
+  const error = docs.filter(d => !!d.error || d.has_error).length;
+  const perfect = docs.filter(d => !d.error && d.accuracy >= 0.9).length;
+  const good = docs.filter(d => !d.error && d.accuracy >= 0.7 && d.accuracy < 0.9).length;
+  const poor = docs.filter(d => !d.error && d.accuracy < 0.7).length;
   const total = docs.length;
 
   return {
+    error,
     perfect,
     good,
     poor,
     perfectPercent: total > 0 ? (perfect / total) * 100 : 0,
     goodPercent: total > 0 ? (good / total) * 100 : 0,
-    poorPercent: total > 0 ? (poor / total) * 100 : 0
+    poorPercent: total > 0 ? (poor / total) * 100 : 0,
+    errorPercent: total > 0 ? (error / total) * 100 : 0
   };
 });
 
