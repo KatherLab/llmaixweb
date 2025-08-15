@@ -81,7 +81,9 @@ if celery_app:
                                 )
 
                         except asyncio.CancelledError:
-                            print(f"[Trial {trial_id}] Doc {doc_id} was force-cancelled!")
+                            print(
+                                f"[Trial {trial_id}] Doc {doc_id} was force-cancelled!"
+                            )
                             failures[str(doc_id)] = "Cancelled"
                             raise
                         except Exception as exc:
@@ -135,7 +137,9 @@ if celery_app:
             # Finalize state in a short-lived session
             with db_session() as db:
                 trial: models.Trial = db.get(models.Trial, trial_id)
-                update_trial_progress(db, trial_id)  # ensure docs_done/progress are up to date
+                update_trial_progress(
+                    db, trial_id
+                )  # ensure docs_done/progress are up to date
                 if trial:
                     trial.finished_at = dt.datetime.now(dt.UTC)
                     total = len(trial.document_ids or [])
