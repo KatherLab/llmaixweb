@@ -218,7 +218,7 @@ def get_project_files(
     max_size: int | None = Query(None, description="Maximum file size in bytes"),
     # Pagination
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(0, ge=0, le=1000),
     current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.File]:
     """Get project files with advanced filtering"""
@@ -243,7 +243,10 @@ def get_project_files(
         query = query.where(models.File.file_size <= max_size)
 
     # Order by created_at desc and apply pagination
-    query = query.order_by(models.File.created_at.desc()).offset(skip).limit(limit)
+    if limit == 0:
+        query.order_by(models.File.created_at.desc()).offset(skip)
+    else:
+        query = query.order_by(models.File.created_at.desc()).offset(skip).limit(limit)
 
     files = list(db.execute(query).scalars().all())
     return [schemas.File.model_validate(file) for file in files]
