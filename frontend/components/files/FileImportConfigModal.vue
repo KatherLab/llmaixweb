@@ -189,10 +189,17 @@ const emit = defineEmits(['close', 'saved']);
 const toast = useToast();
 
 const isEdit = ref(!!props.file.preprocessing_strategy);
-const isCSV = props.file.file_type === 'text/csv';
-const isXLSX =
-  props.file.file_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-  props.file.file_type === 'application/vnd.ms-excel';
+const isCSV = computed(() => {
+  const t = (props.file.file_type || '').toLowerCase();
+  const n = (props.file.file_name || '').toLowerCase();
+  return t === 'text/csv' || (t === 'application/vnd.ms-excel' && n.endsWith('.csv'));
+});
+
+const isXLSX = computed(() => {
+  const t = (props.file.file_type || '').toLowerCase();
+  const n = (props.file.file_name || '').toLowerCase();
+  return t === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || n.endsWith('.xlsx');
+});
 
 const preview = ref({ headers: [], rows: [] });
 const detectedDelimiters = ref([',', ';', '\t']);

@@ -274,10 +274,18 @@ function copyToClipboard() {
   });
 }
 
-const isCSV = computed(() => props.file.file_type === 'text/csv');
-const isXLSX = computed(() =>
-  ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(props.file.file_type)
-);
+const isCSV = computed(() => {
+  const t = (props.file.file_type || '').toLowerCase();
+  const n = (props.file.file_name || '').toLowerCase();
+  return t === 'text/csv' || (t === 'application/vnd.ms-excel' && n.endsWith('.csv'));
+});
+
+const isXLSX = computed(() => {
+  const t = (props.file.file_type || '').toLowerCase();
+  const n = (props.file.file_name || '').toLowerCase();
+  return t === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || n.endsWith('.xlsx');
+});
+
 
 const loadPreview = async () => {
   isLoading.value = true;

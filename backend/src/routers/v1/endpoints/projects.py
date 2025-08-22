@@ -525,11 +525,13 @@ def preview_structured_file(
     """
     Return first N rows from CSV/XLSX for configuration/preview.
     Robust handling for:
+      - Ambiguous MIME types (application/vnd.ms-excel often used for CSV)
       - Empty sheets
       - Blank headers / None cells
       - Invalid sheet names
       - Truncated CSV samples mid-line
       - Very long cells (clipped in preview)
+      - Legacy XLS explicitly marked unsupported for preview
     """
     check_project_access(project_id, current_user, db)
 
@@ -542,57 +544,94 @@ def preview_structured_file(
         raise HTTPException(status_code=404, detail="File not found")
 
     file_content = get_file(file.file_uuid)
+    filename = (file.file_name or "").lower()
+    mime = str(file.file_type or "")
 
+    import io as _io
+    import csv as _csv
+
+    # ---- Helpers ----
     def _dedupe_headers(headers: list[str]) -> list[str]:
-        """Ensure headers are unique by suffixing duplicates with (2), (3), ..."""
         seen: dict[str, int] = {}
-        result: list[str] = []
+        out: list[str] = []
         for h in headers:
             if h in seen:
                 seen[h] += 1
-                result.append(f"{h} ({seen[h]})")
+                out.append(f"{h} ({seen[h]})")
             else:
                 seen[h] = 1
-                result.append(h)
-        return result
-
-    def _coerce_to_str_cells(row: list) -> list:
-        """Convert None to empty string; leave other values as-is (numbers ok)."""
-        out = []
-        for v in row:
-            if v is None:
-                out.append("")
-            else:
-                out.append(v)
+                out.append(h)
         return out
 
-    def _normalize_headers(
-        raw_headers: list, width_fallback: int | None = None
-    ) -> list[str]:
-        """Turn blank/None headers into 'Column N', then dedupe."""
+    def _coerce_row(row: list) -> list:
+        return [("" if v is None else v) for v in row]
+
+    def _normalize_headers(raw_headers: list, width_fallback: int | None = None) -> list[str]:
         if not raw_headers and width_fallback:
-            headers = [f"Column {i + 1}" for i in range(width_fallback)]
+            headers = [f"Column {i+1}" for i in range(width_fallback)]
         else:
             headers = []
             for idx, h in enumerate(raw_headers):
                 if isinstance(h, str) and h.strip():
                     headers.append(h)
                 else:
-                    headers.append(f"Column {idx + 1}")
+                    headers.append(f"Column {idx+1}")
         return _dedupe_headers(headers)
 
-    # Limit the size of any single cell in preview payloads to avoid huge responses
+    def _is_zip_xlsx(buf: bytes) -> bool:
+        # XLSX is a ZIP: PK\x03\x04
+        return len(buf) >= 4 and buf[:4] == b"PK\x03\x04"
+
+    def _is_ole_xls(buf: bytes) -> bool:
+        # Legacy XLS is OLE2/CFB: D0 CF 11 E0 A1 B1 1A 1E
+        sig = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\x1E"
+        return len(buf) >= len(sig) and buf[: len(sig)] == sig
+
+    def _decide_format() -> str:
+        """
+        Decide 'csv' | 'xlsx' | 'xls' based on magic bytes and filename.
+        Treat application/vnd.ms-excel as ambiguous.
+        """
+        head = file_content[:16]
+        # Strong magic checks
+        if _is_zip_xlsx(head) or filename.endswith(".xlsx"):
+            return "xlsx"
+        if _is_ole_xls(head) or filename.endswith(".xls"):
+            return "xls"
+
+        # CSV by extension or by elimination
+        if filename.endswith(".csv"):
+            return "csv"
+
+        # MIME heuristics (browser may lie)
+        if str(mime).lower() == "text/csv":
+            return "csv"
+        if str(mime).lower() == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+            # Still double-check: if it's not a real ZIP, fallback to CSV
+            return "xlsx" if _is_zip_xlsx(head) else "csv"
+        if str(mime).lower() == "application/vnd.ms-excel":
+            # Ambiguous; prefer magic: ZIP -> xlsx, OLE -> xls, else CSV
+            if _is_zip_xlsx(head):
+                return "xlsx"
+            if _is_ole_xls(head):
+                return "xls"
+            return "csv"
+
+        # Default: try CSV
+        return "csv"
+
+    # Limit single cell payload size
     CLIP = 5000
 
-    if file.file_type == FileType.TEXT_CSV:
-        # --- CSV PREVIEW ---
-        # Take a larger sample to help the sniffer; then trim to last newline to avoid mid-row truncation
+    decided = _decide_format()
+
+    # ---------------- CSV ----------------
+    if decided == "csv":
         sample_bytes = file_content[:131072]  # 128 KiB
         try:
             sample = sample_bytes.decode(encoding, errors="replace")
             detected_encoding = encoding
         except Exception:
-            # Fallback if user-provided encoding is invalid
             sample = sample_bytes.decode("utf-8", errors="replace")
             detected_encoding = "utf-8"
 
@@ -601,7 +640,7 @@ def preview_structured_file(
             sample = sample[: last_nl + 1]
 
         # Detect delimiter if not provided
-        sniffer = csv.Sniffer()
+        sniffer = _csv.Sniffer()
         detected_delimiter = delimiter
         if not delimiter:
             try:
@@ -610,7 +649,7 @@ def preview_structured_file(
             except Exception:
                 detected_delimiter = ","
 
-        reader = csv.reader(io.StringIO(sample), delimiter=detected_delimiter)
+        reader = _csv.reader(_io.StringIO(sample), delimiter=detected_delimiter)
         all_rows = list(reader)
 
         if not all_rows:
@@ -623,9 +662,8 @@ def preview_structured_file(
                 "truncated": False,
             }
 
-        # Determine headers and rows
         if has_header:
-            raw_headers = _coerce_to_str_cells(all_rows[0])
+            raw_headers = _coerce_row(all_rows[0])
             headers = _normalize_headers(raw_headers)
             data_rows = all_rows[1 : 1 + max_rows]
         else:
@@ -633,38 +671,32 @@ def preview_structured_file(
             headers = _normalize_headers([], width_fallback=width)
             data_rows = all_rows[:max_rows]
 
-        # Coerce and clip cells
         preview_rows = []
         for r in data_rows:
-            r = _coerce_to_str_cells(r)
-            clipped = [
+            r = _coerce_row(r)
+            preview_rows.append([
                 (c if not isinstance(c, str) or len(c) <= CLIP else (c[:CLIP] + "…"))
                 for c in r
-            ]
-            preview_rows.append(clipped)
+            ])
 
-        # We don't know total rows without scanning the file; approximate by sample length
-        total_rows = len(all_rows) if not has_header else max(0, len(all_rows) - 1)
-        truncated = len(all_rows) >= (max_rows + (1 if has_header else 0))
+        total_rows = len(all_rows) - (1 if has_header else 0)
+        truncated = len(all_rows) > (max_rows + (1 if has_header else 0))
 
         return {
             "headers": headers,
             "rows": preview_rows,
             "detected_delimiter": detected_delimiter,
             "detected_encoding": detected_encoding,
-            "total_rows": total_rows,
+            "total_rows": max(0, total_rows),
             "truncated": truncated,
         }
 
-    elif file.file_type in [
-        FileType.APPLICATION_VND_MS_EXCEL,
-        FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET,
-    ]:
-        # --- XLS/XLSX PREVIEW ---
+    # --------------- XLSX ----------------
+    if decided == "xlsx":
         import openpyxl
 
         wb = openpyxl.load_workbook(
-            io.BytesIO(file_content), read_only=True, data_only=True
+            _io.BytesIO(file_content), read_only=True, data_only=True
         )
 
         # Guard sheet selection
@@ -673,15 +705,13 @@ def preview_structured_file(
         ws = wb[sheet]
         sheets = wb.sheetnames
 
-        # Collect rows; coerce None to "", stop after header + max_rows
         rows: list[list] = []
         take = max_rows + (1 if has_header else 0)
         for i, row in enumerate(ws.iter_rows(values_only=True)):
-            rows.append(_coerce_to_str_cells(list(row)))
+            rows.append(_coerce_row(list(row)))
             if i + 1 >= take:
                 break
 
-        # Count total rows (best-effort without scanning entire sheet: rely on ws.max_row)
         try:
             total_rows_raw = int(ws.max_row or 0)
         except Exception:
@@ -690,37 +720,22 @@ def preview_structured_file(
         truncated = total_rows > max_rows
 
         if not rows:
-            return {
-                "headers": [],
-                "rows": [],
-                "sheets": sheets,
-                "total_rows": 0,
-                "truncated": False,
-            }
+            return {"headers": [], "rows": [], "sheets": sheets, "total_rows": 0, "truncated": False}
 
-        # Headers and data rows
         if has_header:
-            raw_headers = rows[0]
-            headers = _normalize_headers(raw_headers)
+            headers = _normalize_headers(rows[0])
             data_rows = rows[1:]
         else:
             width = len(rows[0])
             headers = _normalize_headers([], width_fallback=width)
             data_rows = rows
 
-        # Clip large cells
         preview_rows = []
         for r in data_rows[:max_rows]:
-            preview_rows.append(
-                [
-                    (
-                        c
-                        if not isinstance(c, str) or len(c) <= CLIP
-                        else (c[:CLIP] + "…")
-                    )
-                    for c in r
-                ]
-            )
+            preview_rows.append([
+                (c if not isinstance(c, str) or len(c) <= CLIP else (c[:CLIP] + "…"))
+                for c in r
+            ])
 
         return {
             "headers": headers,
@@ -730,10 +745,21 @@ def preview_structured_file(
             "truncated": truncated,
         }
 
-    else:
+    # --------------- Legacy XLS (binary) ----------------
+    # Not supported by openpyxl. Be explicit to avoid misleading errors.
+    if decided == "xls":
         raise HTTPException(
-            status_code=400, detail="Preview not supported for this file type"
+            status_code=400,
+            detail=(
+                "Preview for legacy .xls (binary) files is not supported. "
+                "Please convert the file to .xlsx or .csv and try again."
+            ),
         )
+
+    # Fallback
+    raise HTTPException(
+        status_code=400, detail="Preview not supported for this file type"
+    )
 
 
 @router.post("/{project_id}/file/check-duplicates", response_model=list[dict])
