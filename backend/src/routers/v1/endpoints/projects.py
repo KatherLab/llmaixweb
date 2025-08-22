@@ -40,7 +40,7 @@ from ....utils.enums import FileCreator, FileType
 from ....utils.helpers import (
     extract_field_types_from_schema,
     flatten_dict,
-    validate_prompt,
+    validate_prompt, detect_structured_mime,
 )
 from ....utils.info_extraction import (
     get_available_models,
@@ -398,7 +398,7 @@ def upload_file(
     file_info: str = Form(...),
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.File:
-    """Upload a file with duplicate detection"""
+    """Upload a file with duplicate detection and *server-side MIME normalization*"""
     try:
         file_info = schemas.FileCreate.model_validate_json(file_info)
     except json.JSONDecodeError:
@@ -408,12 +408,21 @@ def upload_file(
 
     check_project_access(project_id, current_user, db, permission="write")
 
-    # Read file content
+    # Read file content *once*
     file_content = file.file.read()
     file_size = len(file_content)
     file_hash = calculate_file_hash(file_content)
 
-    # Check for duplicates
+    # --- Normalize MIME based on content + filename (fixes CSV mislabeled as vnd.ms-excel) ---
+    # Prefer the originally submitted file name if present in the upload field; otherwise use the JSON's file_name.
+    incoming_name = file.filename or file_info.file_name
+    normalized_mime = detect_structured_mime(
+        file_name=incoming_name,
+        content=file_content,
+        provided_mime=file.content_type or getattr(file_info, "file_type", None),
+    )
+
+    # Check duplicates by hash
     existing_file = db.execute(
         select(models.File).where(
             and_(
@@ -435,12 +444,14 @@ def upload_file(
             },
         )
 
-    # Read MIME type from the uploaded file
-    file_info.file_type = (
-        file.content_type or file_info.file_type or "application/octet-stream"
-    )
+    # Finalize file info:
+    # - Name: prefer actual upload name
+    # - Type: normalized
+    # - Store file_metadata from JSON if present
+    file_info.file_name = incoming_name
+    file_info.file_type = normalized_mime or "application/octet-stream"
 
-    # Save the file
+    # Save the file bytes and persist DB row
     file_uuid = save_file(file_content)
 
     new_file = models.File(
@@ -451,9 +462,7 @@ def upload_file(
         file_uuid=file_uuid,
         file_size=file_size,
         file_hash=file_hash,
-        file_metadata=file_info.file_metadata
-        if hasattr(file_info, "file_metadata")
-        else None,
+        file_metadata=getattr(file_info, "file_metadata", None),
     )
 
     db.add(new_file)
@@ -525,13 +534,13 @@ def preview_structured_file(
     """
     Return first N rows from CSV/XLSX for configuration/preview.
     Robust handling for:
-      - Ambiguous MIME types (application/vnd.ms-excel often used for CSV)
+      - Ambiguous MIME types (e.g., CSV uploaded as application/vnd.ms-excel)
       - Empty sheets
       - Blank headers / None cells
       - Invalid sheet names
       - Truncated CSV samples mid-line
       - Very long cells (clipped in preview)
-      - Legacy XLS explicitly marked unsupported for preview
+      - Legacy XLS explicitly unsupported for preview
     """
     check_project_access(project_id, current_user, db)
 
@@ -545,7 +554,12 @@ def preview_structured_file(
 
     file_content = get_file(file.file_uuid)
     filename = (file.file_name or "").lower()
-    mime = str(file.file_type or "")
+
+    # IMPORTANT: get Enum value string, not str(Enum)
+    try:
+        mime = (file.file_type.value or "").lower()
+    except AttributeError:
+        mime = (str(file.file_type or "")).lower()
 
     import io as _io
     import csv as _csv
@@ -590,10 +604,11 @@ def preview_structured_file(
     def _decide_format() -> str:
         """
         Decide 'csv' | 'xlsx' | 'xls' based on magic bytes and filename.
-        Treat application/vnd.ms-excel as ambiguous.
+        Treat application/vnd.ms-excel as ambiguous (often CSV).
         """
         head = file_content[:16]
-        # Strong magic checks
+
+        # Strong magic checks first
         if _is_zip_xlsx(head) or filename.endswith(".xlsx"):
             return "xlsx"
         if _is_ole_xls(head) or filename.endswith(".xls"):
@@ -603,13 +618,13 @@ def preview_structured_file(
         if filename.endswith(".csv"):
             return "csv"
 
-        # MIME heuristics (browser may lie)
-        if str(mime).lower() == "text/csv":
+        # MIME heuristics (browsers lie on Windows)
+        if mime == "text/csv":
             return "csv"
-        if str(mime).lower() == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-            # Still double-check: if it's not a real ZIP, fallback to CSV
+        if mime == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+            # Double-check it's a real ZIP, else fall back to CSV
             return "xlsx" if _is_zip_xlsx(head) else "csv"
-        if str(mime).lower() == "application/vnd.ms-excel":
+        if mime == "application/vnd.ms-excel":
             # Ambiguous; prefer magic: ZIP -> xlsx, OLE -> xls, else CSV
             if _is_zip_xlsx(head):
                 return "xlsx"
@@ -617,12 +632,11 @@ def preview_structured_file(
                 return "xls"
             return "csv"
 
-        # Default: try CSV
+        # Default: treat as CSV
         return "csv"
 
     # Limit single cell payload size
     CLIP = 5000
-
     decided = _decide_format()
 
     # ---------------- CSV ----------------
@@ -746,7 +760,6 @@ def preview_structured_file(
         }
 
     # --------------- Legacy XLS (binary) ----------------
-    # Not supported by openpyxl. Be explicit to avoid misleading errors.
     if decided == "xls":
         raise HTTPException(
             status_code=400,
@@ -756,7 +769,6 @@ def preview_structured_file(
             ),
         )
 
-    # Fallback
     raise HTTPException(
         status_code=400, detail="Preview not supported for this file type"
     )

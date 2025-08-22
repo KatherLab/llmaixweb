@@ -12,6 +12,88 @@ from sqlalchemy.orm import Session
 from backend.src import models, schemas
 
 
+import io
+import mimetypes
+import zipfile
+
+# If your enums/constants are here:
+from .enums import FileType  # adjust import if needed
+
+CSV_MIME = "text/csv"
+XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+XLS_MIME = "application/vnd.ms-excel"
+
+def _is_zip(buffer: bytes) -> bool:
+    # Fast check: PK\x03\x04
+    return len(buffer) >= 4 and buffer[:4] == b"PK\x03\x04"
+
+def _looks_like_xlsx(buffer: bytes) -> bool:
+    """
+    XLSX is a ZIP with 'xl/workbook.xml' (and usually '[Content_Types].xml').
+    We only open a tiny zipfile view (ZipFile can read from bytes).
+    """
+    if not _is_zip(buffer):
+        return False
+    try:
+        with zipfile.ZipFile(io.BytesIO(buffer)) as zf:
+            names = set(zf.namelist())
+            # Minimal XLSX signature
+            return "xl/workbook.xml" in names or "[Content_Types].xml" in names
+    except zipfile.BadZipFile:
+        return False
+
+def _looks_like_ole_xls(buffer: bytes) -> bool:
+    # Legacy XLS is OLE2/CFB: D0 CF 11 E0 A1 B1 1A 1E
+    sig = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\x1E"
+    return len(buffer) >= len(sig) and buffer[: len(sig)] == sig
+
+def detect_structured_mime(file_name: str, content: bytes, provided_mime: str | None) -> str:
+    """
+    Decide the *best* MIME for structured files (CSV/XLSX/XLS), ignoring browser quirks.
+    Priority:
+      1) Magic bytes (XLSX/ZIP vs XLS/OLE)
+      2) Filename extension (.xlsx / .xls / .csv)
+      3) Provided MIME (as a hint)
+      4) mimetypes.guess_type fallback
+    """
+    name = (file_name or "").lower()
+    provided = (provided_mime or "").lower()
+
+    # Magic bytes first (most reliable)
+    head = content[:4096]  # enough for signatures and Zip listing
+    if _looks_like_xlsx(head):
+        return XLSX_MIME
+    if _looks_like_ole_xls(head):
+        return XLS_MIME
+
+    # Extension next
+    if name.endswith(".xlsx"):
+        return XLSX_MIME
+    if name.endswith(".xls"):
+        return XLS_MIME
+    if name.endswith(".csv"):
+        return CSV_MIME
+
+    # Provided MIME as a hint; Windows often lies (vnd.ms-excel for CSV)
+    # Only trust it if it is text/csv or real XLSX
+    if provided == CSV_MIME:
+        return CSV_MIME
+    if provided == XLSX_MIME:
+        return XLSX_MIME
+    if provided == XLS_MIME:
+        # Could still be CSV mislabeled; but we already checked magic/extension above.
+        return XLS_MIME
+
+    # Fallback to python's mimetypes (by extension)
+    guessed, _ = mimetypes.guess_type(name)
+    if guessed:
+        return guessed
+
+    # Last resort: keep the original or use octet-stream
+    return provided or "application/octet-stream"
+
+
+
 def build_evaluation_zipfiles(
     db,
     evaluations,

@@ -29,7 +29,7 @@
 
         <!-- Content -->
         <div class="flex-1 overflow-y-auto px-8 py-6">
-          <!-- Wide Table Preview -->
+          <!-- Preview -->
           <h3 class="font-semibold text-gray-800 text-sm mb-3">Preview (first 10 rows)</h3>
           <div class="overflow-x-auto border rounded bg-gray-50 p-2 max-h-72 mb-5">
             <table v-if="headerLabels.length" class="min-w-full text-sm">
@@ -100,7 +100,7 @@
             </div>
 
             <div v-if="preprocessingStrategy === 'row_by_row' && headerLabels.length" class="space-y-3">
-              <!-- Multi-select for text columns -->
+              <!-- Text columns -->
               <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Text Columns <span class="text-red-500">*</span></label>
                 <select v-model="textColumns" multiple class="w-full border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent py-2">
@@ -123,7 +123,7 @@
                 </div>
               </div>
 
-              <!-- ID column selection -->
+              <!-- ID column -->
               <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Case/Document ID Column</label>
                 <select v-model="caseIdColumn" class="w-full border rounded py-2">
@@ -189,12 +189,13 @@ const emit = defineEmits(['close', 'saved']);
 const toast = useToast();
 
 const isEdit = ref(!!props.file.preprocessing_strategy);
+
+// Robust format checks (extension + MIME)
 const isCSV = computed(() => {
   const t = (props.file.file_type || '').toLowerCase();
   const n = (props.file.file_name || '').toLowerCase();
-  return t === 'text/csv' || (t === 'application/vnd.ms-excel' && n.endsWith('.csv'));
+  return t === 'text/csv' || (t === 'application/vnd.ms-excel' && n.endsWith('.csv')) || n.endsWith('.csv');
 });
-
 const isXLSX = computed(() => {
   const t = (props.file.file_type || '').toLowerCase();
   const n = (props.file.file_name || '').toLowerCase();
@@ -219,7 +220,7 @@ const modalRef = ref(null);
 const showConfirm = ref(false);
 const initialConfig = ref({});
 
-// === Derived header labels (no null/empty headers) ===
+// Derived header labels (no null/empty headers)
 const headerLabels = computed(() =>
   (preview.value.headers || []).map((h, idx) => {
     if (h == null || (typeof h === 'string' && h.trim() === '')) {
@@ -245,14 +246,12 @@ function isRecommendedId(col) {
 function guessIdColumn(headers) {
   if (!headers) return '';
   const idCandidates = ['id', 'case_id', 'patient_id', 'identifier', 'studyid', 'record_id'];
-  // exact
   for (const candidate of idCandidates) {
     const match = headers.find(
       h => h && typeof h === 'string' && h.trim().toLowerCase() === candidate
     );
     if (match) return match;
   }
-  // contains
   for (const candidate of idCandidates) {
     const match = headers.find(
       h => h && typeof h === 'string' && h.toLowerCase().includes(candidate)
@@ -262,7 +261,7 @@ function guessIdColumn(headers) {
   return '';
 }
 
-// Save initial config for unsaved change detection
+// Unsaved change detection
 function getConfigSnapshot() {
   return JSON.stringify({
     delimiter: delimiter.value,
@@ -284,8 +283,8 @@ function hasUnsavedChanges() {
 const loadPreview = async () => {
   try {
     let params = new URLSearchParams({ encoding: encoding.value });
-    if (isCSV && delimiter.value) params.append('delimiter', delimiter.value);
-    if (isXLSX && sheet.value) params.append('sheet', sheet.value);
+    if (isCSV.value && delimiter.value) params.append('delimiter', delimiter.value);
+    if (isXLSX.value && sheet.value) params.append('sheet', sheet.value);
     params.append('has_header', hasHeader.value);
     params.append('max_rows', 10);
 
@@ -296,10 +295,9 @@ const loadPreview = async () => {
     preview.value = data;
     if (data.sheets) sheets.value = data.sheets;
 
-    // Normalize selections against headerLabels (never null)
     const labels = headerLabels.value;
 
-    // Case ID column: try from raw headers detection; then ensure validity in labels
+    // Case ID
     let guessed = guessIdColumn(data.headers || []);
     if (!guessed || !labels.includes(guessed)) {
       guessed = guessIdColumn(labels) || '';
@@ -308,13 +306,13 @@ const loadPreview = async () => {
       caseIdColumn.value = guessed || '';
     }
 
-    // Text columns: if empty or invalid, default to first labeled header
+    // Text columns default
     if ((!textColumns.value.length || textColumns.value.some(tc => !labels.includes(tc))) && labels.length) {
       textColumns.value = [labels[0]];
     }
 
-    // For XLSX: auto-pick first sheet if none selected
-    if (isXLSX && !sheet.value && data.sheets && data.sheets.length) sheet.value = data.sheets[0];
+    // XLSX sheet default
+    if (isXLSX.value && !sheet.value && data.sheets && data.sheets.length) sheet.value = data.sheets[0];
 
   } catch (err) {
     toast.error('Failed to load preview');
@@ -338,13 +336,12 @@ onMounted(async () => {
 
   nextTick(() => {
     if (modalRef.value) modalRef.value.focus();
-    // Lock background scroll
     document.body.style.overflow = 'hidden';
   });
   resetInitialConfig();
 });
 
-// Re-load preview on these changes
+// Re-load preview when these change
 watch([delimiter, encoding, sheet, hasHeader], async () => {
   await loadPreview();
 });
@@ -363,10 +360,10 @@ const saveConfig = async () => {
     const payload = {
       preprocessing_strategy: preprocessingStrategy.value,
       file_metadata: {
-        delimiter: isCSV ? delimiter.value : undefined,
+        delimiter: isCSV.value ? delimiter.value : undefined,
         encoding: encoding.value,
         has_header: hasHeader.value,
-        sheet: isXLSX ? sheet.value : undefined,
+        sheet: isXLSX.value ? sheet.value : undefined,
         text_columns: cleanTextCols,
         case_id_column: (preprocessingStrategy.value === 'row_by_row' && caseIdColumn.value) ? String(caseIdColumn.value) : undefined
       }

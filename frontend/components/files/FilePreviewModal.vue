@@ -147,7 +147,7 @@
             <pre class="text-sm font-mono whitespace-pre-wrap bg-white rounded-lg shadow p-6 border border-gray-100">{{ previewContent }}</pre>
           </div>
 
-          <!-- Fallback / Unsupported File Type -->
+          <!-- Fallback -->
           <div v-else class="flex items-center justify-center h-full">
             <div class="text-center">
               <FileIcon :fileType="file.file_type" :size="64" />
@@ -167,7 +167,7 @@
           </div>
         </div>
 
-        <!-- File Info Footer -->
+        <!-- Footer -->
         <div class="border-t bg-gray-50 px-6 py-3 rounded-b-2xl">
           <div class="flex items-center justify-between text-xs">
             <div class="flex items-center gap-6 text-gray-500">
@@ -205,7 +205,7 @@
           >
             Copy
           </button>
-          <span v-if="copied" class="ml-2 text-green-700 text-xs">Copied!</span>
+            <span v-if="copied" class="ml-2 text-green-700 text-xs">Copied!</span>
         </div>
       </div>
     </div>
@@ -235,9 +235,20 @@ const tabularData = ref(null);
 const truncated = ref(false);
 const totalRows = ref(0);
 
-// Metadata from backend / file metadata
 const idColumn = ref('');
 const textColumns = ref([]);
+
+// Robust format checks (extension + MIME)
+const isCSV = computed(() => {
+  const t = (props.file.file_type || '').toLowerCase();
+  const n = (props.file.file_name || '').toLowerCase();
+  return t === 'text/csv' || (t === 'application/vnd.ms-excel' && n.endsWith('.csv')) || n.endsWith('.csv');
+});
+const isXLSX = computed(() => {
+  const t = (props.file.file_type || '').toLowerCase();
+  const n = (props.file.file_name || '').toLowerCase();
+  return t === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || n.endsWith('.xlsx');
+});
 
 // Modal for showing full text content
 const showModal = ref(false);
@@ -245,7 +256,7 @@ const modalContent = ref('');
 const modalHeader = ref('');
 const copied = ref(false);
 
-// Derive header labels (no null/empty headers)
+// Header labels (no null/empty headers)
 const headerLabels = computed(() =>
   (tabularData.value?.headers || []).map((h, idx) => {
     if (h == null || (typeof h === 'string' && h.trim() === '')) {
@@ -274,19 +285,6 @@ function copyToClipboard() {
   });
 }
 
-const isCSV = computed(() => {
-  const t = (props.file.file_type || '').toLowerCase();
-  const n = (props.file.file_name || '').toLowerCase();
-  return t === 'text/csv' || (t === 'application/vnd.ms-excel' && n.endsWith('.csv'));
-});
-
-const isXLSX = computed(() => {
-  const t = (props.file.file_type || '').toLowerCase();
-  const n = (props.file.file_name || '').toLowerCase();
-  return t === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || n.endsWith('.xlsx');
-});
-
-
 const loadPreview = async () => {
   isLoading.value = true;
   error.value = '';
@@ -299,6 +297,7 @@ const loadPreview = async () => {
   try {
     if (isCSV.value || isXLSX.value) {
       const params = new URLSearchParams({ max_rows: 50 });
+      // (Optional) You could pass ?sheet= for XLSX if you expose sheet selection here.
       const { data } = await api.get(
         `/project/${props.projectId}/file/${props.file.id}/preview-rows?${params}`
       );
@@ -316,13 +315,13 @@ const loadPreview = async () => {
         { responseType: 'blob' }
       );
       previewContent.value = await response.data.text();
-    } else if (props.file.file_type === 'application/pdf') {
+    } else if (props.file.file_type.startsWith('image/')) {
       const response = await api.get(
         `/project/${props.projectId}/file/${props.file.id}/content?preview=true`,
         { responseType: 'blob' }
       );
       previewUrl.value = URL.createObjectURL(response.data);
-    } else if (props.file.file_type.startsWith('image/')) {
+    } else if (props.file.file_type === 'application/pdf') {
       const response = await api.get(
         `/project/${props.projectId}/file/${props.file.id}/content?preview=true`,
         { responseType: 'blob' }
