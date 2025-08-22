@@ -39,6 +39,7 @@
                   <option value="csv">CSV (flattened fields with dots)</option>
                   <option value="json">JSON (single file with document map or multiple files)</option>
                   <option value="zip">ZIP (multiple JSON files)</option>
+                + <option value="xlsx">Excel (.xlsx, dot-paths build nesting)</option>
                 </select>
               </div>
 
@@ -161,10 +162,13 @@ const acceptedFileTypes = computed(() => {
       return '.zip';
     case 'csv':
       return '.csv';
+    case 'xlsx':
+      return '.xlsx,.xls';
     default:
-      return '.csv,.json,.zip';
+      return '.csv,.json,.zip,.xlsx,.xls';
   }
 });
+
 
 const handleFileSelect = (event) => {
   const files = Array.from(event.target.files);
@@ -177,12 +181,16 @@ const handleFileSelect = (event) => {
   }
 };
 
+
 const handleFileDrop = (event) => {
   const files = Array.from(event.dataTransfer.files);
   if (groundTruthFormat.value === 'json') {
     selectedFiles.value = files.filter(f => f.name.endsWith('.json'));
   } else {
-    selectedFiles.value = files.slice(0, 1);
+    // CSV / ZIP / XLSX are single-file
+    const allowed = ['.csv', '.zip', '.xlsx', '.xls'];
+    const picked = files.find(f => allowed.some(ext => f.name.toLowerCase().endsWith(ext)));
+    selectedFiles.value = picked ? [picked] : [];
   }
 };
 

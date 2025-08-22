@@ -83,9 +83,9 @@
             />
           </div>
 
-          <!-- CSV/XLSX Modern Table Preview -->
+          <!-- CSV/XLSX Table Preview -->
           <div
-            v-else-if="tabularData && tabularData.headers.length"
+            v-else-if="tabularData && headerLabels.length"
             class="h-full overflow-auto p-6"
           >
             <div class="bg-white rounded-2xl shadow border border-gray-100 overflow-x-auto">
@@ -93,7 +93,7 @@
                 <thead class="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th
-                      v-for="(header, idx) in tabularData.headers"
+                      v-for="(header, idx) in headerLabels"
                       :key="header || idx"
                       class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider border-b border-gray-100 whitespace-nowrap sticky top-0 bg-gray-50"
                       :class="cellClasses(header)"
@@ -108,16 +108,15 @@
                       v-for="(cell, cidx) in row"
                       :key="cidx"
                       class="px-4 py-2 border-b border-gray-50 max-w-[260px] align-top"
-                      :class="cellClasses(tabularData.headers[cidx])"
+                      :class="cellClasses(headerLabels[cidx])"
                     >
                       <span v-if="cell === '' || cell == null" class="text-gray-300 italic">empty</span>
-                      <!-- Truncate long text columns, show modal on click -->
-                      <template v-else-if="isTextColumn(tabularData.headers[cidx]) && cell.length > 80">
+                      <template v-else-if="isTextColumn(headerLabels[cidx]) && String(cell).length > 80">
                         <span
                           class="truncate cursor-pointer text-green-900"
-                          :title="cell"
-                          @click="showFullCell(cell, tabularData.headers[cidx])"
-                        >{{ cell.slice(0, 80) }}<span class="font-semibold text-blue-600 ml-1">…more</span></span>
+                          :title="String(cell)"
+                          @click="showFullCell(String(cell), headerLabels[cidx])"
+                        >{{ String(cell).slice(0, 80) }}<span class="font-semibold text-blue-600 ml-1">…more</span></span>
                       </template>
                       <template v-else>
                         {{ cell }}
@@ -231,9 +230,12 @@ const isLoading = ref(true);
 const error = ref('');
 const previewUrl = ref('');
 const previewContent = ref('');
+
 const tabularData = ref(null);
 const truncated = ref(false);
 const totalRows = ref(0);
+
+// Metadata from backend / file metadata
 const idColumn = ref('');
 const textColumns = ref([]);
 
@@ -242,6 +244,16 @@ const showModal = ref(false);
 const modalContent = ref('');
 const modalHeader = ref('');
 const copied = ref(false);
+
+// Derive header labels (no null/empty headers)
+const headerLabels = computed(() =>
+  (tabularData.value?.headers || []).map((h, idx) => {
+    if (h == null || (typeof h === 'string' && h.trim() === '')) {
+      return `Column ${idx + 1}`;
+    }
+    return String(h);
+  })
+);
 
 function showFullCell(cell, header) {
   modalContent.value = cell;
@@ -286,8 +298,8 @@ const loadPreview = async () => {
         headers: data.headers || [],
         rows: data.rows || []
       };
-      truncated.value = !!data.truncated;
-      totalRows.value = data.totalRows || data.total_rows || (data.rows?.length ?? 0);
+      truncated.value = !!(data.truncated);
+      totalRows.value = data.total_rows || data.totalRows || 0;
       idColumn.value = data.idColumn || data.id_column || props.file.file_metadata?.case_id_column || '';
       textColumns.value = data.textColumns || data.text_columns || props.file.file_metadata?.text_columns || [];
     } else if (props.file.file_type === 'text/plain') {
@@ -362,22 +374,22 @@ onUnmounted(() => {
   document.body.style.overflow = '';
 });
 
-function cellClasses(header) {
-  if (header === idColumn.value && idColumn.value) {
+function cellClasses(headerLabel) {
+  if (headerLabel === idColumn.value && idColumn.value) {
     return 'bg-blue-100 text-blue-700 font-semibold border-blue-200 shadow-sm';
   }
-  if (textColumns.value && textColumns.value.includes(header)) {
+  if (textColumns.value && textColumns.value.includes(headerLabel)) {
     return 'bg-green-50 text-green-900 font-medium border-green-200';
   }
   return '';
 }
-function headerLabel(header) {
-  if (!header) return '';
-  if (header === idColumn.value) return `${header} (ID)`;
-  if (textColumns.value && textColumns.value.includes(header)) return `${header} (Text)`;
-  return header;
+function headerLabel(headerLabel) {
+  if (!headerLabel) return '';
+  if (headerLabel === idColumn.value) return `${headerLabel} (ID)`;
+  if (textColumns.value && textColumns.value.includes(headerLabel)) return `${headerLabel} (Text)`;
+  return headerLabel;
 }
-function isTextColumn(header) {
-  return textColumns.value && textColumns.value.includes(header);
+function isTextColumn(headerLabel) {
+  return textColumns.value && textColumns.value.includes(headerLabel);
 }
 </script>

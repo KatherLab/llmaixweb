@@ -26,22 +26,26 @@
             </svg>
           </button>
         </div>
+
         <!-- Content -->
         <div class="flex-1 overflow-y-auto px-8 py-6">
           <!-- Wide Table Preview -->
           <h3 class="font-semibold text-gray-800 text-sm mb-3">Preview (first 10 rows)</h3>
           <div class="overflow-x-auto border rounded bg-gray-50 p-2 max-h-72 mb-5">
-            <table v-if="preview.headers.length" class="min-w-full text-sm">
+            <table v-if="headerLabels.length" class="min-w-full text-sm">
               <thead>
                 <tr>
-                  <th v-for="(col, idx) in preview.headers" :key="col || idx" class="px-2 py-1 bg-gray-200 font-normal text-gray-700 text-xs">
-                    {{ col || 'Column ' + (idx+1) }}
+                  <th v-for="(col, idx) in headerLabels" :key="col || idx" class="px-2 py-1 bg-gray-200 font-normal text-gray-700 text-xs">
+                    {{ col }}
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(row, ridx) in preview.rows" :key="ridx">
-                  <td v-for="(cell, cidx) in row" :key="cidx" class="px-2 py-1">{{ cell }}</td>
+                  <td v-for="(cell, cidx) in row" :key="cidx" class="px-2 py-1">
+                    <span v-if="cell === '' || cell == null" class="text-gray-300 italic">empty</span>
+                    <span v-else>{{ cell }}</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -50,7 +54,8 @@
             </div>
           </div>
           <div class="text-xs text-gray-400 mb-4">Previewing first {{ preview.rows.length }} rows</div>
-          <!-- Config form below -->
+
+          <!-- Config form -->
           <div class="space-y-6">
             <div class="flex flex-wrap gap-4">
               <div>
@@ -59,16 +64,19 @@
                   <option v-for="enc in detectedEncodings" :key="enc" :value="enc">{{ enc }}</option>
                 </select>
               </div>
+
               <div v-if="isCSV">
                 <label class="block text-xs font-medium text-gray-600 mb-1">Delimiter</label>
                 <select v-model="delimiter" class="w-full border rounded px-2 py-1">
                   <option v-for="d in detectedDelimiters" :key="d" :value="d">{{ displayDelimiter(d) }}</option>
                 </select>
               </div>
+
               <div v-if="isCSV || isXLSX">
                 <label class="block text-xs font-medium text-gray-600 mb-1">Header Row</label>
                 <input type="checkbox" v-model="hasHeader" /> <span class="text-sm">File contains header row</span>
               </div>
+
               <div v-if="isXLSX && sheets.length">
                 <label class="block text-xs font-medium text-gray-600 mb-1">Sheet</label>
                 <select v-model="sheet" class="w-full border rounded px-2 py-1">
@@ -76,6 +84,7 @@
                 </select>
               </div>
             </div>
+
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Import Strategy</label>
               <div class="flex items-center gap-4">
@@ -89,17 +98,18 @@
                 </label>
               </div>
             </div>
-            <div v-if="preprocessingStrategy === 'row_by_row' && preview.headers.length" class="space-y-3">
+
+            <div v-if="preprocessingStrategy === 'row_by_row' && headerLabels.length" class="space-y-3">
               <!-- Multi-select for text columns -->
               <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Text Columns <span class="text-red-500">*</span></label>
                 <select v-model="textColumns" multiple class="w-full border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent py-2">
                   <option
-                    v-for="(col, idx) in preview.headers"
-                    :key="col || idx"
+                    v-for="(col, idx) in headerLabels"
+                    :key="idx"
                     :value="col"
                   >
-                    {{ col || 'Column ' + (idx+1) }}
+                    {{ col }}
                   </option>
                 </select>
                 <div class="flex flex-wrap gap-1 mt-2">
@@ -112,17 +122,18 @@
                   </span>
                 </div>
               </div>
+
               <!-- ID column selection -->
               <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Case/Document ID Column</label>
                 <select v-model="caseIdColumn" class="w-full border rounded py-2">
                   <option value="">(Row number)</option>
                   <option
-                    v-for="(col, idx) in preview.headers"
-                    :key="col || idx"
+                    v-for="(col, idx) in headerLabels"
+                    :key="idx"
                     :value="col"
                   >
-                    {{ col || 'Column ' + (idx+1) }}<span v-if="isRecommendedId(col)"> (Recommended)</span>
+                    {{ col }}<span v-if="isRecommendedId(col)"> (Recommended)</span>
                   </option>
                 </select>
                 <div class="text-xs text-gray-400 mt-1">Optional: Used for document naming</div>
@@ -130,6 +141,7 @@
             </div>
           </div>
         </div>
+
         <!-- Footer -->
         <div class="px-8 py-6 border-t flex justify-end gap-3 bg-gray-50 rounded-b-2xl">
           <button @click="tryClose" class="px-4 py-2 rounded text-gray-600 bg-white border border-gray-200 hover:bg-gray-100">
@@ -143,6 +155,7 @@
             {{ saving ? "Saving..." : (isEdit ? "Save Changes" : "Save") }}
           </button>
         </div>
+
         <!-- Confirm unsaved changes -->
         <div
           v-if="showConfirm"
@@ -189,14 +202,25 @@ const detectedEncodings = ref(['utf-8', 'latin1']);
 const hasHeader = ref(true);
 const sheet = ref('');
 const sheets = ref([]);
+
 const preprocessingStrategy = ref('row_by_row');
 const textColumns = ref([]);
 const caseIdColumn = ref('');
+
 const saving = ref(false);
 const modalRef = ref(null);
 const showConfirm = ref(false);
-
 const initialConfig = ref({});
+
+// === Derived header labels (no null/empty headers) ===
+const headerLabels = computed(() =>
+  (preview.value.headers || []).map((h, idx) => {
+    if (h == null || (typeof h === 'string' && h.trim() === '')) {
+      return `Column ${idx + 1}`;
+    }
+    return String(h);
+  })
+);
 
 function displayDelimiter(d) {
   if (d === '\t') return 'Tab';
@@ -214,12 +238,14 @@ function isRecommendedId(col) {
 function guessIdColumn(headers) {
   if (!headers) return '';
   const idCandidates = ['id', 'case_id', 'patient_id', 'identifier', 'studyid', 'record_id'];
+  // exact
   for (const candidate of idCandidates) {
     const match = headers.find(
       h => h && typeof h === 'string' && h.trim().toLowerCase() === candidate
     );
     if (match) return match;
   }
+  // contains
   for (const candidate of idCandidates) {
     const match = headers.find(
       h => h && typeof h === 'string' && h.toLowerCase().includes(candidate)
@@ -255,18 +281,34 @@ const loadPreview = async () => {
     if (isXLSX && sheet.value) params.append('sheet', sheet.value);
     params.append('has_header', hasHeader.value);
     params.append('max_rows', 10);
+
     const { data } = await api.get(
       `/project/${props.projectId}/file/${props.file.id}/preview-rows?${params}`
     );
+
     preview.value = data;
     if (data.sheets) sheets.value = data.sheets;
-    if (!caseIdColumn.value || !data.headers.includes(caseIdColumn.value)) {
-      caseIdColumn.value = guessIdColumn(data.headers);
+
+    // Normalize selections against headerLabels (never null)
+    const labels = headerLabels.value;
+
+    // Case ID column: try from raw headers detection; then ensure validity in labels
+    let guessed = guessIdColumn(data.headers || []);
+    if (!guessed || !labels.includes(guessed)) {
+      guessed = guessIdColumn(labels) || '';
     }
-    if ((!textColumns.value.length || textColumns.value.some(tc => !data.headers.includes(tc))) && data.headers.length) {
-      textColumns.value = [data.headers[0]];
+    if (!caseIdColumn.value || !labels.includes(caseIdColumn.value)) {
+      caseIdColumn.value = guessed || '';
     }
+
+    // Text columns: if empty or invalid, default to first labeled header
+    if ((!textColumns.value.length || textColumns.value.some(tc => !labels.includes(tc))) && labels.length) {
+      textColumns.value = [labels[0]];
+    }
+
+    // For XLSX: auto-pick first sheet if none selected
     if (isXLSX && !sheet.value && data.sheets && data.sheets.length) sheet.value = data.sheets[0];
+
   } catch (err) {
     toast.error('Failed to load preview');
     preview.value = { headers: [], rows: [] };
@@ -280,10 +322,13 @@ onMounted(async () => {
   if (meta.has_header !== undefined) hasHeader.value = meta.has_header;
   if (meta.encoding) encoding.value = meta.encoding;
   if (meta.sheet) sheet.value = meta.sheet;
-  if (meta.text_columns) textColumns.value = meta.text_columns;
-  if (meta.case_id_column !== undefined) caseIdColumn.value = meta.case_id_column;
+  if (meta.text_columns) textColumns.value = meta.text_columns.map(String).filter(Boolean);
+  if (meta.case_id_column !== undefined) caseIdColumn.value = String(meta.case_id_column || '');
+
   if (props.file.preprocessing_strategy) preprocessingStrategy.value = props.file.preprocessing_strategy;
+
   await loadPreview();
+
   nextTick(() => {
     if (modalRef.value) modalRef.value.focus();
     // Lock background scroll
@@ -291,9 +336,12 @@ onMounted(async () => {
   });
   resetInitialConfig();
 });
+
+// Re-load preview on these changes
 watch([delimiter, encoding, sheet, hasHeader], async () => {
   await loadPreview();
 });
+
 onUnmounted(() => {
   document.body.style.overflow = '';
 });
@@ -301,6 +349,10 @@ onUnmounted(() => {
 const saveConfig = async () => {
   saving.value = true;
   try {
+    const cleanTextCols = (preprocessingStrategy.value === 'row_by_row')
+      ? (textColumns.value || []).map(String).filter(Boolean)
+      : [];
+
     const payload = {
       preprocessing_strategy: preprocessingStrategy.value,
       file_metadata: {
@@ -308,10 +360,11 @@ const saveConfig = async () => {
         encoding: encoding.value,
         has_header: hasHeader.value,
         sheet: isXLSX ? sheet.value : undefined,
-        text_columns: preprocessingStrategy.value === 'row_by_row' ? textColumns.value : [],
-        case_id_column: preprocessingStrategy.value === 'row_by_row' ? caseIdColumn.value : undefined
+        text_columns: cleanTextCols,
+        case_id_column: (preprocessingStrategy.value === 'row_by_row' && caseIdColumn.value) ? String(caseIdColumn.value) : undefined
       }
     };
+
     await api.post(
       `/project/${props.projectId}/file/${props.file.id}/configure`,
       payload

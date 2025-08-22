@@ -13,6 +13,7 @@ from thefuzz import fuzz
 
 from .. import models
 from .helpers import flatten_dict
+from .json_utils import make_jsonable
 
 
 class EvaluationEngine:
@@ -325,9 +326,14 @@ class EvaluationEngine:
         else:
             data = parser.parse(content, ground_truth.format)
 
+        data = make_jsonable(data)
+
         # Cache parsed data
         ground_truth.data_cache = data
-        self.db.commit()
+        try:
+            self.db.commit()
+        except TypeError as e:
+            raise ValueError(f"Ground truth contains non-JSON-serializable values: {e}")
 
         return data
 
@@ -650,6 +656,20 @@ class EvaluationEngine:
 # Keep existing GroundTruthParser, ValueComparator, and MetricsCalculator classes unchanged
 
 
+# utils/evaluation.py  (excerpt, replace the existing class)
+
+import io
+import json
+import zipfile
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import pandas as pd
+from pandas.errors import ParserError
+
+from .json_utils import make_jsonable
+
+
 class GroundTruthParser:
     """Parser for different ground truth formats."""
 
@@ -675,21 +695,17 @@ class GroundTruthParser:
 
             if isinstance(data, dict):
                 if all(isinstance(v, dict) for v in data.values()):
-                    # Document map format - check for ID fields
+                    # Document map format
                     result = {}
                     for key, doc_data in data.items():
-                        # Look for ID field (support both 'id' and 'patient_id')
-                        doc_id = None
                         if "id" in doc_data:
                             doc_id = str(doc_data["id"])
                         elif "patient_id" in doc_data:
                             doc_id = str(doc_data["patient_id"])
                         else:
                             doc_id = str(key)
-
-                        # Keep nested structure - DON'T flatten
                         result[doc_id] = doc_data
-                    return result
+                    return make_jsonable(result)
                 else:
                     # Single document
                     if "id" in data:
@@ -697,30 +713,21 @@ class GroundTruthParser:
                     elif "patient_id" in data:
                         doc_id = str(data["patient_id"])
                     else:
-                        raise ValueError(
-                            "JSON document must have an 'id' or 'patient_id' field"
-                        )
-                    return {doc_id: data}
+                        raise ValueError("JSON document must have 'id' or 'patient_id'")
+                    return make_jsonable({doc_id: data})
             elif isinstance(data, list):
-                # Array of documents
                 result = {}
                 for i, doc in enumerate(data):
                     if not isinstance(doc, dict):
                         raise ValueError(f"Document at index {i} is not an object")
-
-                    # Look for ID field
-                    doc_id = None
                     if "id" in doc:
                         doc_id = str(doc["id"])
                     elif "patient_id" in doc:
                         doc_id = str(doc["patient_id"])
                     else:
-                        raise ValueError(
-                            f"Document at index {i} missing required 'id' or 'patient_id' field"
-                        )
-
+                        raise ValueError(f"Doc at {i} missing 'id' or 'patient_id'")
                     result[doc_id] = doc
-                return result
+                return make_jsonable(result)
             else:
                 raise ValueError("JSON must be an object or array")
         except json.JSONDecodeError as e:
@@ -735,7 +742,6 @@ class GroundTruthParser:
                 for f in zf.namelist()
                 if f.endswith(".json") and not f.startswith("__MACOSX/")
             ]
-
             if not json_files:
                 raise ValueError("No JSON files found in ZIP archive")
 
@@ -743,60 +749,107 @@ class GroundTruthParser:
                 with zf.open(filename) as f:
                     try:
                         doc_data = json.loads(f.read().decode("utf-8"))
-
-                        # Require ID field
                         if "id" not in doc_data:
-                            # Use filename without extension as ID
                             doc_id = Path(filename).stem
                             doc_data["id"] = doc_id
                         else:
                             doc_id = str(doc_data["id"])
-
-                        # Store WITHOUT flattening for JSON
                         result[doc_id] = doc_data
                     except json.JSONDecodeError as e:
-                        raise ValueError(f"Invalid JSON in file {filename}: {e}")
-
-        return result
+                        raise ValueError(f"Invalid JSON in {filename}: {e}")
+        return make_jsonable(result)
 
     def _parse_csv(self, content: bytes, id_column: Optional[str] = None) -> Dict:
-        """Parse CSV ground truth with dot notation for nested fields."""
+        """Parse CSV ground truth."""
         df = pd.read_csv(io.BytesIO(content))
+        df = df.convert_dtypes()
+        df = df.where(pd.notna(df), None)
 
-        # Use configured ID column or try to find one
+        # Choose ID column
         if id_column and id_column in df.columns:
             id_col = id_column
         else:
-            # Fallback to auto-detection
-            id_columns = ["document_id", "doc_id", "id", "filename", "file_name"]
-            id_col = None
-            for col in id_columns:
-                if col in df.columns:
-                    id_col = col
-                    break
-            if not id_col:
-                # Use index if no ID column
+            candidates = ["document_id", "doc_id", "id", "filename", "file_name"]
+            id_col = next((c for c in candidates if c in df.columns), "_index")
+            if id_col == "_index":
                 df["_index"] = df.index
-                id_col = "_index"
 
         result = {}
         for _, row in df.iterrows():
             doc_id = row[id_col]
             values = {}
-
             for col in df.columns:
-                if col != id_col and pd.notna(row[col]):
-                    # Convert dot notation to nested structure
-                    keys = col.split(".")
+                if col == id_col or row[col] is None:
+                    continue
+                keys = col.split(".")
+                current = values
+                for key in keys[:-1]:
+                    if key not in current:
+                        current[key] = {}
+                    current = current[key]
+                current[keys[-1]] = row[col]
+            if values:
+                result[str(doc_id)] = make_jsonable(values)
+        return result
+
+    def _parse_excel(self, content: bytes, id_column: Optional[str] = None) -> Dict:
+        """Parse XLSX ground truth (multi-sheet, dot notation)."""
+
+        def _deep_merge(dst: Dict, src: Dict) -> None:
+            for k, v in src.items():
+                if k in dst and isinstance(dst[k], dict) and isinstance(v, dict):
+                    _deep_merge(dst[k], v)
+                else:
+                    dst[k] = v
+
+        try:
+            xls = pd.ExcelFile(io.BytesIO(content))
+        except Exception as e:
+            raise ValueError(f"Invalid Excel file: {e}")
+
+        result: Dict[str, Dict] = {}
+        for sheet_name in xls.sheet_names:
+            try:
+                df = xls.parse(sheet_name)
+            except Exception as e:
+                raise ValueError(f"Failed to read sheet '{sheet_name}': {e}")
+            if df is None or df.empty:
+                continue
+
+            df = df.convert_dtypes()
+            df = df.where(pd.notna(df), None)
+
+            if id_column and id_column in df.columns:
+                id_col = id_column
+            else:
+                candidates = ["document_id", "doc_id", "id", "filename", "file_name"]
+                id_col = next((c for c in candidates if c in df.columns), "_index")
+                if id_col == "_index":
+                    df["_index"] = df.index
+
+            for _, row in df.iterrows():
+                doc_id_val = row.get(id_col)
+                if doc_id_val is None:
+                    continue
+                doc_id = str(doc_id_val)
+                values: Dict[str, Any] = {}
+                for col in df.columns:
+                    if col == id_col or row[col] is None:
+                        continue
+                    keys = str(col).split(".")
                     current = values
                     for key in keys[:-1]:
-                        if key not in current:
+                        if key not in current or not isinstance(current[key], dict):
                             current[key] = {}
                         current = current[key]
                     current[keys[-1]] = row[col]
+                if values:
+                    if doc_id not in result:
+                        result[doc_id] = make_jsonable(values)
+                    else:
+                        _deep_merge(result[doc_id], make_jsonable(values))
 
-            result[str(doc_id)] = values
-        return result
+        return make_jsonable(result)
 
 
 class ValueComparator:

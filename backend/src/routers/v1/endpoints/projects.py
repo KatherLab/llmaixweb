@@ -244,7 +244,7 @@ def get_project_files(
 
     # Order by created_at desc and apply pagination
     if limit == 0:
-        query.order_by(models.File.created_at.desc()).offset(skip)
+        query = query.order_by(models.File.created_at.desc()).offset(skip)
     else:
         query = query.order_by(models.File.created_at.desc()).offset(skip).limit(limit)
 
@@ -524,8 +524,15 @@ def preview_structured_file(
 ) -> dict:
     """
     Return first N rows from CSV/XLSX for configuration/preview.
+    Robust handling for:
+      - Empty sheets
+      - Blank headers / None cells
+      - Invalid sheet names
+      - Truncated CSV samples mid-line
+      - Very long cells (clipped in preview)
     """
     check_project_access(project_id, current_user, db)
+
     file = db.execute(
         select(models.File).where(
             models.File.project_id == project_id, models.File.id == file_id
@@ -535,59 +542,194 @@ def preview_structured_file(
         raise HTTPException(status_code=404, detail="File not found")
 
     file_content = get_file(file.file_uuid)
-    headers, rows, sheets = [], [], []
+
+    def _dedupe_headers(headers: list[str]) -> list[str]:
+        """Ensure headers are unique by suffixing duplicates with (2), (3), ..."""
+        seen: dict[str, int] = {}
+        result: list[str] = []
+        for h in headers:
+            if h in seen:
+                seen[h] += 1
+                result.append(f"{h} ({seen[h]})")
+            else:
+                seen[h] = 1
+                result.append(h)
+        return result
+
+    def _coerce_to_str_cells(row: list) -> list:
+        """Convert None to empty string; leave other values as-is (numbers ok)."""
+        out = []
+        for v in row:
+            if v is None:
+                out.append("")
+            else:
+                out.append(v)
+        return out
+
+    def _normalize_headers(
+        raw_headers: list, width_fallback: int | None = None
+    ) -> list[str]:
+        """Turn blank/None headers into 'Column N', then dedupe."""
+        if not raw_headers and width_fallback:
+            headers = [f"Column {i + 1}" for i in range(width_fallback)]
+        else:
+            headers = []
+            for idx, h in enumerate(raw_headers):
+                if isinstance(h, str) and h.strip():
+                    headers.append(h)
+                else:
+                    headers.append(f"Column {idx + 1}")
+        return _dedupe_headers(headers)
+
+    # Limit the size of any single cell in preview payloads to avoid huge responses
+    CLIP = 5000
+
     if file.file_type == FileType.TEXT_CSV:
-        # Try auto-detect if not specified
-        sample_bytes = file_content[:16384]
+        # --- CSV PREVIEW ---
+        # Take a larger sample to help the sniffer; then trim to last newline to avoid mid-row truncation
+        sample_bytes = file_content[:131072]  # 128 KiB
         try:
             sample = sample_bytes.decode(encoding, errors="replace")
+            detected_encoding = encoding
         except Exception:
+            # Fallback if user-provided encoding is invalid
             sample = sample_bytes.decode("utf-8", errors="replace")
+            detected_encoding = "utf-8"
+
+        last_nl = sample.rfind("\n")
+        if last_nl != -1:
+            sample = sample[: last_nl + 1]
+
+        # Detect delimiter if not provided
         sniffer = csv.Sniffer()
+        detected_delimiter = delimiter
         if not delimiter:
             try:
                 dialect = sniffer.sniff(sample)
-                delimiter = dialect.delimiter
+                detected_delimiter = dialect.delimiter
             except Exception:
-                delimiter = ","
-        reader = csv.reader(io.StringIO(sample), delimiter=delimiter)
+                detected_delimiter = ","
+
+        reader = csv.reader(io.StringIO(sample), delimiter=detected_delimiter)
         all_rows = list(reader)
+
         if not all_rows:
-            return {"headers": [], "rows": []}
+            return {
+                "headers": [],
+                "rows": [],
+                "detected_delimiter": detected_delimiter,
+                "detected_encoding": detected_encoding,
+                "total_rows": 0,
+                "truncated": False,
+            }
+
+        # Determine headers and rows
         if has_header:
-            headers = all_rows[0]
-            rows = all_rows[1 : max_rows + 1]
+            raw_headers = _coerce_to_str_cells(all_rows[0])
+            headers = _normalize_headers(raw_headers)
+            data_rows = all_rows[1 : 1 + max_rows]
         else:
-            headers = [f"Column {i + 1}" for i in range(len(all_rows[0]))]
-            rows = all_rows[:max_rows]
+            width = len(all_rows[0])
+            headers = _normalize_headers([], width_fallback=width)
+            data_rows = all_rows[:max_rows]
+
+        # Coerce and clip cells
+        preview_rows = []
+        for r in data_rows:
+            r = _coerce_to_str_cells(r)
+            clipped = [
+                (c if not isinstance(c, str) or len(c) <= CLIP else (c[:CLIP] + "…"))
+                for c in r
+            ]
+            preview_rows.append(clipped)
+
+        # We don't know total rows without scanning the file; approximate by sample length
+        total_rows = len(all_rows) if not has_header else max(0, len(all_rows) - 1)
+        truncated = len(all_rows) >= (max_rows + (1 if has_header else 0))
+
         return {
             "headers": headers,
-            "rows": rows,
-            "detected_delimiter": delimiter,
-            "detected_encoding": encoding,
+            "rows": preview_rows,
+            "detected_delimiter": detected_delimiter,
+            "detected_encoding": detected_encoding,
+            "total_rows": total_rows,
+            "truncated": truncated,
         }
+
     elif file.file_type in [
         FileType.APPLICATION_VND_MS_EXCEL,
         FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET,
     ]:
+        # --- XLS/XLSX PREVIEW ---
         import openpyxl
 
-        wb = openpyxl.load_workbook(io.BytesIO(file_content), read_only=True)
-        if not sheet:
+        wb = openpyxl.load_workbook(
+            io.BytesIO(file_content), read_only=True, data_only=True
+        )
+
+        # Guard sheet selection
+        if not sheet or sheet not in wb.sheetnames:
             sheet = wb.sheetnames[0]
         ws = wb[sheet]
         sheets = wb.sheetnames
-        rows = []
+
+        # Collect rows; coerce None to "", stop after header + max_rows
+        rows: list[list] = []
+        take = max_rows + (1 if has_header else 0)
         for i, row in enumerate(ws.iter_rows(values_only=True)):
-            rows.append(list(row))
-            if i + 1 >= max_rows + (1 if has_header else 0):
+            rows.append(_coerce_to_str_cells(list(row)))
+            if i + 1 >= take:
                 break
-        if has_header and rows:
-            headers = list(rows[0])
-            rows = rows[1:]
+
+        # Count total rows (best-effort without scanning entire sheet: rely on ws.max_row)
+        try:
+            total_rows_raw = int(ws.max_row or 0)
+        except Exception:
+            total_rows_raw = 0
+        total_rows = max(0, total_rows_raw - (1 if has_header else 0))
+        truncated = total_rows > max_rows
+
+        if not rows:
+            return {
+                "headers": [],
+                "rows": [],
+                "sheets": sheets,
+                "total_rows": 0,
+                "truncated": False,
+            }
+
+        # Headers and data rows
+        if has_header:
+            raw_headers = rows[0]
+            headers = _normalize_headers(raw_headers)
+            data_rows = rows[1:]
         else:
-            headers = [f"Column {i + 1}" for i in range(len(rows[0]))]
-        return {"headers": headers, "rows": rows, "sheets": sheets}
+            width = len(rows[0])
+            headers = _normalize_headers([], width_fallback=width)
+            data_rows = rows
+
+        # Clip large cells
+        preview_rows = []
+        for r in data_rows[:max_rows]:
+            preview_rows.append(
+                [
+                    (
+                        c
+                        if not isinstance(c, str) or len(c) <= CLIP
+                        else (c[:CLIP] + "…")
+                    )
+                    for c in r
+                ]
+            )
+
+        return {
+            "headers": headers,
+            "rows": preview_rows,
+            "sheets": sheets,
+            "total_rows": total_rows,
+            "truncated": truncated,
+        }
+
     else:
         raise HTTPException(
             status_code=400, detail="Preview not supported for this file type"
@@ -3982,26 +4124,30 @@ def get_evaluation_detail(
     return evaluation_detail
 
 
-@router.get("/{project_id}/groundtruth/{groundtruth_id}/preview", response_model=dict)
+@router.get(
+    "/{project_id}/groundtruth/{groundtruth_id}/preview",
+    response_model=dict,
+)
 def preview_groundtruth(
     *,
     db: Session = Depends(get_db),
     project_id: int,
     groundtruth_id: int,
-    limit: int = Query(10, description="Number of documents to preview"),
     current_user: models.User = Depends(get_current_user),
-) -> dict:
-    """Preview ground truth data and field structure."""
+):
+    """
+    Preview parsed ground truth: return field paths, field types, available ID columns,
+    and a sample of parsed data.
+    """
+    # Security: only owner or admin
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's ground truth",
-        )
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     groundtruth: models.GroundTruth | None = db.execute(
         select(models.GroundTruth).where(
             models.GroundTruth.project_id == project_id,
@@ -4010,109 +4156,59 @@ def preview_groundtruth(
     ).scalar_one_or_none()
     if not groundtruth:
         raise HTTPException(status_code=404, detail="Ground truth not found")
-    # Load ground truth data
+
     from ....utils.evaluation import EvaluationEngine
 
     engine = EvaluationEngine(db)
-    gt_data = engine._load_ground_truth(groundtruth)
-    # Get field structure
 
-    if groundtruth.format in ["json", "zip"]:
-        # Extract all nested paths from samples
-        all_fields = set()
-        field_types = {}
-        sample_values = {}
+    try:
+        gt_data = engine._load_ground_truth(groundtruth)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load ground truth: {e}")
 
-        def extract_paths_and_types(data, prefix=""):
-            if isinstance(data, dict):
-                for k, v in data.items():
-                    field_path = f"{prefix}.{k}" if prefix else k
-                    if isinstance(v, dict):
-                        extract_paths_and_types(v, field_path)
-                    else:
-                        all_fields.add(field_path)
-                        # Infer type
-                        if isinstance(v, bool):
-                            field_types[field_path] = "boolean"
-                        elif isinstance(v, (int, float)):
-                            field_types[field_path] = "number"
-                        elif isinstance(v, list):
-                            field_types[field_path] = "array"
-                        else:
-                            field_types[field_path] = "string"
-                        # Save samples
-                        if field_path not in sample_values:
-                            sample_values[field_path] = []
-                        if (
-                            v not in sample_values[field_path]
-                            and len(sample_values[field_path]) < 5
-                        ):
-                            sample_values[field_path].append(v)
+    # Collect field paths + types
+    def collect_paths(doc: dict, prefix=""):
+        paths = []
+        types = {}
+        for k, v in doc.items():
+            path = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                subpaths, subtypes = collect_paths(v, path)
+                paths.extend(subpaths)
+                types.update(subtypes)
+            else:
+                paths.append(path)
+                types[path] = type(v).__name__ if v is not None else "null"
+        return paths, types
 
-        for doc_id, doc_data in list(gt_data.items())[:limit]:
-            extract_paths_and_types(doc_data)
+    field_paths, field_types = [], {}
+    sample_doc = None
+    if gt_data:
+        sample_doc = next(iter(gt_data.values()))
+        field_paths, field_types = collect_paths(sample_doc)
 
-        # Remove 'id' field from the fields list as it's special
-        all_fields.discard("id")
-        all_fields.discard("patient_id")
-
-        return {
-            "document_count": len(gt_data),
-            "fields": sorted(list(all_fields)),
-            "field_types": field_types,
-            "sample_values": sample_values,
-            "preview_data": dict(list(gt_data.items())[:limit]),
-            "format": groundtruth.format,
-            "available_columns": [],  # Not applicable for JSON
-            "current_id_column": groundtruth.id_column_name,  # Not applicable for JSON
-        }
-
-    # For CSV/XLSX, also get available columns for ID selection
+    # For tabular (csv/xlsx), suggest available columns
     available_columns = []
     if groundtruth.format in ["csv", "xlsx"]:
-        # Load raw file to get all columns
-        from ....dependencies import get_file
-
-        content = get_file(groundtruth.file_uuid)
-
-        if groundtruth.format == "csv":
-            df = pd.read_csv(io.BytesIO(content))
-        else:  # xlsx
-            df = pd.read_excel(io.BytesIO(content))
-
-        available_columns = df.columns.tolist()
-
-    all_fields = set()
-    field_types = {}
-    sample_values = {}
-    for doc_id, fields in list(gt_data.items())[:limit]:
-        for field, value in fields.items():
-            all_fields.add(field)
-            # Infer field type
-            if field not in field_types:
-                if isinstance(value, bool):
-                    field_types[field] = "boolean"
-                elif isinstance(value, (int, float)):
-                    field_types[field] = "number"
-                elif isinstance(value, str):
-                    # Check if it's a date
-                    if re.match(r"\d{4}-\d{2}-\d{2}", value):
-                        field_types[field] = "date"
-                    else:
-                        field_types[field] = "string"
+        # Just take columns from first sample (already nested -> flatten)
+        def flatten(d, parent=""):
+            out = []
+            for k, v in d.items():
+                path = f"{parent}.{k}" if parent else k
+                if isinstance(v, dict):
+                    out.extend(flatten(v, path))
                 else:
-                    field_types[field] = "string"
-            # Collect sample values
-            if field not in sample_values:
-                sample_values[field] = []
-            if value not in sample_values[field] and len(sample_values[field]) < 5:
-                sample_values[field].append(value)
+                    out.append(path)
+            return out
+
+        available_columns = flatten(sample_doc) if sample_doc else []
+
     return {
-        "document_count": len(gt_data),
-        "fields": list(all_fields),
+        "fields": field_paths,
         "field_types": field_types,
-        "sample_values": sample_values,
-        "preview_data": dict(list(gt_data.items())[:limit]),
+        "preview_data": {k: v for k, v in list(gt_data.items())[:3]},  # first 3 docs
         "available_columns": available_columns,
         "current_id_column": groundtruth.id_column_name,
     }
