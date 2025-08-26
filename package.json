@@ -11,7 +11,7 @@
     "preview": "node_modules/.bin/vite preview --config frontend/vite.config.js"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.11",
+    "@tailwindcss/vite": "^4.1.12",
     "ag-grid-vue3": "^34.1.1",
     "autoprefixer": "^10.4.21",
     "axios": "^1.11.0",
