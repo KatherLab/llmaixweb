@@ -71,9 +71,9 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     env_file: .env
-    ports:
-      - "9000:9000"     # S3 API
-      - "9001:9001"     # Web console
+    # ports:
+    #   - "9000:9000"     # S3 API
+    #   - "9001:9001"     # Web console
     volumes:
       - minio-data:/data
   # ─────────── one‑shot bucket creator ───────────
