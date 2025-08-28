@@ -71,3 +71,9 @@ minio server miniodata
 ENV_PATH=backend/.env uv run pytest --verbose
 --cov=backend --cov-report=html
 ```
+
+**License**
+
+## License
+
+This project ships under the [AGPL-3.0](LICENSE) license.
