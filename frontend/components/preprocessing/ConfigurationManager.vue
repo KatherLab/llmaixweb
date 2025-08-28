@@ -76,7 +76,7 @@
                   >
                     <option value="ocrmypdf">OCRmyPDF (Tesseract)</option>
                     <option value="paddleocr">PaddleOCR</option>
-                    <option value="surya">Surya OCR</option>
+                    <option value="marker">Marker</option>
                   </select>
                 </div>
                 <div v-if="formConfig.additional_settings.mode === 'advanced' && !formConfig.additional_settings.use_vlm">

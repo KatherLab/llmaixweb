@@ -512,7 +512,7 @@
                             class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
                       <option value="ocrmypdf">OCRmyPDF (Tesseract)</option>
                       <option value="paddleocr">PaddleOCR</option>
-                      <option value="surya">Surya OCR</option>
+                      <option value="marker">Marker</option>
                     </select>
                   </div>
                   <div v-if="customSettings.mode === 'advanced' && !customSettings.use_vlm" class="mb-2">

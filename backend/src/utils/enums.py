@@ -62,7 +62,7 @@ class FileType(str, enum.Enum):
 class PreprocessingMethod(str, enum.Enum):
     TESSERACT = "tesseract"
     VISION_OCR = "vision_ocr"
-    SURYA_OCR = "surya_ocr"
+    MARKER = "marker"
 
 
 class PreprocessingStatus(str, enum.Enum):

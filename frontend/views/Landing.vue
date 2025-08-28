@@ -231,7 +231,7 @@
                         <p class="text-sm text-slate-400">Industry-standard OCR for printed text</p>
                       </div>
                       <div class="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-                        <h5 class="font-semibold text-white mb-1">Surya-OCR</h5>
+                        <h5 class="font-semibold text-white mb-1">Marker</h5>
                         <p class="text-sm text-slate-400">Advanced neural OCR for complex layouts</p>
                       </div>
                       <div class="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
@@ -790,7 +790,7 @@
                 </svg>
               </div>
               <h3 class="mb-2 text-lg font-bold text-white">Advanced OCR Pipeline</h3>
-              <p class="text-sm text-slate-300">Extract text from any document format using Tesseract, Surya-OCR, PaddleOCR, or vision LLMs.</p>
+              <p class="text-sm text-slate-300">Extract text from any document format using Tesseract, Marker, PaddleOCR, or vision LLMs.</p>
             </div>
           </div>
 
