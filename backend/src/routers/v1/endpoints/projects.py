@@ -40,7 +40,8 @@ from ....utils.enums import FileCreator, FileType
 from ....utils.helpers import (
     extract_field_types_from_schema,
     flatten_dict,
-    validate_prompt, detect_structured_mime,
+    validate_prompt,
+    detect_structured_mime,
 )
 from ....utils.info_extraction import (
     get_available_models,
@@ -580,16 +581,18 @@ def preview_structured_file(
     def _coerce_row(row: list) -> list:
         return [("" if v is None else v) for v in row]
 
-    def _normalize_headers(raw_headers: list, width_fallback: int | None = None) -> list[str]:
+    def _normalize_headers(
+        raw_headers: list, width_fallback: int | None = None
+    ) -> list[str]:
         if not raw_headers and width_fallback:
-            headers = [f"Column {i+1}" for i in range(width_fallback)]
+            headers = [f"Column {i + 1}" for i in range(width_fallback)]
         else:
             headers = []
             for idx, h in enumerate(raw_headers):
                 if isinstance(h, str) and h.strip():
                     headers.append(h)
                 else:
-                    headers.append(f"Column {idx+1}")
+                    headers.append(f"Column {idx + 1}")
         return _dedupe_headers(headers)
 
     def _is_zip_xlsx(buf: bytes) -> bool:
@@ -598,7 +601,7 @@ def preview_structured_file(
 
     def _is_ole_xls(buf: bytes) -> bool:
         # Legacy XLS is OLE2/CFB: D0 CF 11 E0 A1 B1 1A 1E
-        sig = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\x1E"
+        sig = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\x1e"
         return len(buf) >= len(sig) and buf[: len(sig)] == sig
 
     def _decide_format() -> str:
@@ -688,10 +691,16 @@ def preview_structured_file(
         preview_rows = []
         for r in data_rows:
             r = _coerce_row(r)
-            preview_rows.append([
-                (c if not isinstance(c, str) or len(c) <= CLIP else (c[:CLIP] + "…"))
-                for c in r
-            ])
+            preview_rows.append(
+                [
+                    (
+                        c
+                        if not isinstance(c, str) or len(c) <= CLIP
+                        else (c[:CLIP] + "…")
+                    )
+                    for c in r
+                ]
+            )
 
         total_rows = len(all_rows) - (1 if has_header else 0)
         truncated = len(all_rows) > (max_rows + (1 if has_header else 0))
@@ -734,7 +743,13 @@ def preview_structured_file(
         truncated = total_rows > max_rows
 
         if not rows:
-            return {"headers": [], "rows": [], "sheets": sheets, "total_rows": 0, "truncated": False}
+            return {
+                "headers": [],
+                "rows": [],
+                "sheets": sheets,
+                "total_rows": 0,
+                "truncated": False,
+            }
 
         if has_header:
             headers = _normalize_headers(rows[0])
@@ -746,10 +761,16 @@ def preview_structured_file(
 
         preview_rows = []
         for r in data_rows[:max_rows]:
-            preview_rows.append([
-                (c if not isinstance(c, str) or len(c) <= CLIP else (c[:CLIP] + "…"))
-                for c in r
-            ])
+            preview_rows.append(
+                [
+                    (
+                        c
+                        if not isinstance(c, str) or len(c) <= CLIP
+                        else (c[:CLIP] + "…")
+                    )
+                    for c in r
+                ]
+            )
 
         return {
             "headers": headers,

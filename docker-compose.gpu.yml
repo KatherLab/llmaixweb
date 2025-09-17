@@ -37,7 +37,7 @@ services:
           devices:
             - driver: nvidia
               capabilities: [gpu]
-    depends_on: [redis]
+    depends_on: [backend]
 
   worker_preprocess:
     image: llmaix-backend:gpu
@@ -54,7 +54,7 @@ services:
           devices:
             - driver: nvidia
               capabilities: [gpu]
-    depends_on: [redis]
+    depends_on: [backend]
 
 # ─────────── Vue / Vite front‑end ───────────
   frontend:

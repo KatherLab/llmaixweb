@@ -23,9 +23,11 @@ CSV_MIME = "text/csv"
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 XLS_MIME = "application/vnd.ms-excel"
 
+
 def _is_zip(buffer: bytes) -> bool:
     # Fast check: PK\x03\x04
     return len(buffer) >= 4 and buffer[:4] == b"PK\x03\x04"
+
 
 def _looks_like_xlsx(buffer: bytes) -> bool:
     """
@@ -42,12 +44,16 @@ def _looks_like_xlsx(buffer: bytes) -> bool:
     except zipfile.BadZipFile:
         return False
 
+
 def _looks_like_ole_xls(buffer: bytes) -> bool:
     # Legacy XLS is OLE2/CFB: D0 CF 11 E0 A1 B1 1A 1E
-    sig = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\x1E"
+    sig = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\x1e"
     return len(buffer) >= len(sig) and buffer[: len(sig)] == sig
 
-def detect_structured_mime(file_name: str, content: bytes, provided_mime: str | None) -> str:
+
+def detect_structured_mime(
+    file_name: str, content: bytes, provided_mime: str | None
+) -> str:
     """
     Decide the *best* MIME for structured files (CSV/XLSX/XLS), ignoring browser quirks.
     Priority:
@@ -91,7 +97,6 @@ def detect_structured_mime(file_name: str, content: bytes, provided_mime: str | 
 
     # Last resort: keep the original or use octet-stream
     return provided or "application/octet-stream"
-
 
 
 def build_evaluation_zipfiles(

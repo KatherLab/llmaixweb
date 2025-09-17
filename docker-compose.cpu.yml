@@ -25,7 +25,7 @@ services:
     volumes:
       - ./backend:/app/backend
       - .env:/app/backend/.env
-    depends_on: [redis]
+    depends_on: [backend]
 
   worker_preprocess:
     image: llmaix-backend:cpu
@@ -36,7 +36,7 @@ services:
     volumes:
       - ./backend:/app/backend
       - .env:/app/backend/.env
-    depends_on: [redis]
+    depends_on: [backend]
 
 # ─────────── Vue / Vite front‑end ───────────
   frontend:
