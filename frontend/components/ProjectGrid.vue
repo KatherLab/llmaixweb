@@ -1,30 +1,37 @@
 <template>
-  <div class="ag-theme-material" style="height: 500px; width: 100%">
+  <div style="height: 500px; width: 100%">
     <AgGridVue
       :rowData="rowData"
       :columnDefs="columnDefs"
       :defaultColDef="defaultColDef"
+      :gridOptions="gridOptions"
       :pagination="true"
       :paginationAutoPageSize="true"
-      style="width: 100%; height: 100%"
       :theme="gridTheme"
+      :components="components"
+
+      style="width: 100%; height: 100%"
+
       @grid-ready="onGridReady"
+      @first-data-rendered="onFirstDataRendered"
+      @grid-size-changed="onGridSizeChanged"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, onActivated, nextTick, defineComponent, h } from 'vue'
 import { AgGridVue } from 'ag-grid-vue3'
-import { api } from '@/services/api'
+import { api as http } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { themeMaterial } from 'ag-grid-community'
 
+// ---- auth / router ----
 const authStore = useAuthStore()
 const router = useRouter()
 
-// Theme customization
+// ---- theme (v34 :theme) ----
 const gridTheme = themeMaterial.withParams({
   spacing: 16,
   borderRadius: 4,
@@ -36,117 +43,124 @@ const gridTheme = themeMaterial.withParams({
   cellHorizontalPadding: 16
 })
 
-// Reactive state
+// ---- state ----
 const rowData = ref([])
 const gridApi = ref(null)
-
-// Role-based visibility
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
-// Column definitions (with conditional admin column)
-const columnDefs = computed(() => {
-  const baseColumns = [
-    {
-      field: 'name',
-      headerName: 'Project',
-      flex: 2,
-      minWidth: 250,
-      cellRenderer: params => {
-        const div = document.createElement('div')
-        div.className = 'flex items-center h-full cursor-pointer text-blue-600 hover:text-blue-800'
-        div.innerHTML = `
-          <div class="flex items-center">
-            <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <span class="font-medium">${params.value}</span>
-          </div>`
-        div.addEventListener('click', () => router.push(`/projects/${params.data.id}`))
-        return div
+// ---- Vue cell components (render functions; no runtime compiler needed) ----
+const ProjectCell = defineComponent({
+  name: 'ProjectCell',
+  props: { params: { type: Object, required: true } },
+  setup(props) {
+    const router = useRouter()
+    const go = () => router.push(`/projects/${props.params.data.id}`)
+    return () =>
+      h('div',
+        { class: 'flex items-center h-full cursor-pointer text-blue-600 hover:text-blue-800', onClick: go },
+        [
+          // keep it simple; omit the SVG to keep h() readable
+          h('span', { class: 'font-medium' }, String(props.params.value ?? ''))
+        ]
+      )
+  }
+})
+
+const StatusCell = defineComponent({
+  name: 'StatusCell',
+  props: { params: { type: Object, required: true } },
+  setup(props) {
+    return () => {
+      const v = String(props.params.value ?? '')
+      const map = {
+        active: 'bg-green-100 text-green-800',
+        inactive: 'bg-red-100 text-red-800',
+        pending: 'bg-yellow-100 text-yellow-800'
       }
-    },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 140,
-      cellRenderer: params => {
-        const statusColors = {
-          active: 'bg-green-100 text-green-800',
-          inactive: 'bg-red-100 text-red-800',
-          pending: 'bg-yellow-100 text-yellow-800'
-        }
-        const div = document.createElement('div')
-        div.className = 'flex items-center h-full'
-        div.innerHTML = `
-          <span class="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[params.value] || 'bg-gray-100 text-gray-800'}">
-            ${params.value.charAt(0).toUpperCase() + params.value.slice(1)}
-          </span>`
-        return div
-      }
-    },
+      const klass = map[v] || 'bg-gray-100 text-gray-800'
+      const label = v ? v.charAt(0).toUpperCase() + v.slice(1) : '—'
+      return h('div', { class: 'flex items-center h-full' }, [
+        h('span', { class: `px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${klass}` }, label)
+      ])
+    }
+  }
+})
+
+const ActionsCell = defineComponent({
+  name: 'ActionsCell',
+  props: { params: { type: Object, required: true } },
+  setup(props) {
+    const router = useRouter()
+    const view = () => router.push(`/projects/${props.params.data.id}`)
+    return () =>
+      h('div', { class: 'flex items-center h-full justify-end' }, [
+        h('button',
+          { class: 'inline-flex items-center px-3 py-1.5 text-xs font-medium rounded text-white bg-blue-500 hover:bg-blue-600', onClick: e => { e.stopPropagation(); view() } },
+          'View'
+        )
+      ])
+  }
+})
+
+const UserCell = defineComponent({
+  name: 'UserCell',
+  props: { params: { type: Object, required: true } },
+  setup(props) {
+    return () => {
+      const user = props.params.value || {}
+      const initials = (user.full_name || '').split(' ').map(n => n[0]).join('') || '?'
+      return h('div', { class: 'flex items-center h-full' }, [
+        h('div', { class: 'flex items-center' }, [
+          h('div', { class: 'flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center' }, [
+            h('span', { class: 'text-blue-800 font-medium' }, initials)
+          ]),
+          h('div', { class: 'ml-3' }, [
+            h('div', { class: 'text-sm font-medium text-gray-900' }, user.full_name || 'N/A'),
+            h('div', { class: 'text-sm text-gray-500' }, user.email || 'N/A')
+          ])
+        ])
+      ])
+    }
+  }
+})
+
+const components = { ProjectCell, StatusCell, ActionsCell, UserCell } // ag-grid-vue3 will use these by name. :contentReference[oaicite:2]{index=2}
+
+// ---- column defs ----
+const baseColumnsComputed = computed(() => {
+  const cols = [
+    { field: 'name', headerName: 'Project', flex: 2, minWidth: 250, cellRenderer: 'ProjectCell' },
+    { field: 'status', headerName: 'Status', width: 140, cellRenderer: 'StatusCell' },
     {
       field: 'created_at',
       headerName: 'Created',
       width: 160,
-      valueFormatter: params => new Date(params.value).toLocaleDateString()
+      valueFormatter: p => p.value ? new Date(p.value).toLocaleDateString() : ''
     },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 120,
-      cellRenderer: params => {
-        const div = document.createElement('div')
-        div.className = 'flex items-center h-full justify-end'
-        const viewBtn = document.createElement('button')
-        viewBtn.className = 'inline-flex items-center px-3 py-1.5 text-xs font-medium rounded text-white bg-blue-500 hover:bg-blue-600'
-        viewBtn.innerHTML = `
-          <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-          View`
-        viewBtn.addEventListener('click', () => router.push(`/projects/${params.data.id}`))
-        div.appendChild(viewBtn)
-        return div
-      }
-    }
+    { field: 'actions', headerName: 'Actions', width: 120, cellRenderer: 'ActionsCell' }
   ]
-
-  // Add user column for admins
   if (isAdmin.value) {
-    baseColumns.splice(1, 0, {
+    cols.splice(1, 0, {
       field: 'user',
       headerName: 'User',
-      width: 200,
-      valueFormatter: params => {
-        const user = params.value
-        return user ? `${user.full_name} <${user.email}>` : ''
-      },
-      cellRenderer: params => {
-        const user = params.value
-        const initials = (user?.full_name?.split(' ').map(n => n[0]).join('') || '?')
-        const div = document.createElement('div')
-        div.className = 'flex items-center h-full'
-        div.innerHTML = `
-          <div class="flex items-center">
-            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <span class="text-blue-800 font-medium">${initials}</span>
-            </div>
-            <div class="ml-3">
-              <div class="text-sm font-medium text-gray-900">${user?.full_name || 'N/A'}</div>
-              <div class="text-sm text-gray-500">${user?.email || 'N/A'}</div>
-            </div>
-          </div>
-        `
-        return div
+      width: 260,
+      cellRenderer: 'UserCell',
+      // IMPORTANT for v34: when the underlying value is an object, provide a valueFormatter
+      // so the grid can coerce to string for filters/sorts/fallbacks (avoids warning #48).
+      valueFormatter: p => {
+        const u = p.value
+        return u ? `${u.full_name ?? 'N/A'} <${u.email ?? 'N/A'}>` : ''
       }
     })
   }
-
-  return baseColumns
+  return cols
 })
 
-// Default column settings
+// materialize to a ref so we can preserve/restore column state on updates
+const columnDefs = ref(baseColumnsComputed.value)
+watch(baseColumnsComputed, (defs) => { columnDefs.value = defs })
+
+// ---- default col def ----
 const defaultColDef = ref({
   sortable: true,
   filter: true,
@@ -154,37 +168,36 @@ const defaultColDef = ref({
   cellClass: 'align-middle'
 })
 
-// Grid lifecycle
-const onGridReady = (params) => {
-  gridApi.value = params.api
+// ---- grid options ----
+const gridOptions = {
+  getRowId: p => String(p.data.id) // stabilize updates
+} // :contentReference[oaicite:3]{index=3}
 
-  // Handle grid destroy
-  params.api.addEventListener('gridPreDestroy', () => {
-    gridApi.value = null
-  })
-
-  // Resize handler
-  const resizeHandler = () => {
-    if (gridApi.value && !gridApi.value.isDestroyed()) {
-      setTimeout(() => gridApi.value.sizeColumnsToFit())
-    }
+// ---- helpers ----
+const sizeToFitIfVisible = () => {
+  const el = gridApi.value?.getGui?.()
+  const visible = el && el.offsetParent !== null && el.clientWidth > 0
+  if (visible && gridApi.value && !gridApi.value.isDestroyed()) {
+    gridApi.value.sizeColumnsToFit()
   }
-
-  window.addEventListener('resize', resizeHandler)
-
-  // Initial column fit
-  setTimeout(() => {
-    if (gridApi.value && !gridApi.value.isDestroyed()) {
-      gridApi.value.sizeColumnsToFit()
-    }
-  })
 }
 
-// Load projects
+// ---- lifecycle ----
+const onGridReady = (params) => {
+  gridApi.value = params.api
+  params.api.addEventListener('gridPreDestroy', () => { gridApi.value = null })
+}
+
+const onFirstDataRendered = () => { sizeToFitIfVisible() }
+const onGridSizeChanged  = () => { sizeToFitIfVisible() }
+
+onActivated(async () => { await nextTick(); sizeToFitIfVisible() })
+onBeforeUnmount(() => { gridApi.value = null })
+
+// ---- data ----
 const loadProjects = async () => {
   try {
-    const endpoint = isAdmin.value ? '/project' : '/project' //`/project/user/${authStore.user.id}`
-    const response = await api.get(endpoint)
+    const response = await http.get('/project')
     rowData.value = response.data.map(project => ({
       ...project,
       user: {
@@ -192,49 +205,33 @@ const loadProjects = async () => {
         email: project.owner?.email || 'N/A'
       }
     }))
-
-    if (gridApi.value && !gridApi.value.isDestroyed()) {
-      setTimeout(() => gridApi.value.sizeColumnsToFit())
-    }
-  } catch (error) {
-    console.error('Error loading projects:', error)
+    sizeToFitIfVisible()
+  } catch (err) {
+    console.error('Error loading projects:', err)
   }
 }
 
-// Watch for role changes
-watch(isAdmin, async (newVal) => {
-  if (gridApi.value && !gridApi.value.isDestroyed()) {
-    gridApi.value.setColumnDefs(columnDefs.value)
-    await loadProjects()
+// toggle admin view -> update defs with v31+ API and preserve user state
+watch(isAdmin, async () => {
+  const api = gridApi.value
+  const savedState = api?.getColumnState?.() ?? null
+  if (api && !api.isDestroyed()) {
+    api.updateGridOptions({ columnDefs: baseColumnsComputed.value }) // v31+ options API
+    if (savedState) api.applyColumnState({ state: savedState, applyOrder: true })
   }
-})
-
-// Initial load
-onMounted(async () => {
   await loadProjects()
 })
+
+// initial load
+onMounted(async () => { await loadProjects() })
 </script>
 
 <style lang="postcss">
-:deep(.ag-center-cols-container) {
-  width: 100%;
-}
-
-:deep(.ag-row) {
-  display: flex;
-  align-items: center;
-}
-
+:deep(.ag-center-cols-container) { width: 100%; }
+:deep(.ag-row) { display: flex; align-items: center; }
 :deep(.ag-cell) {
-  display: flex;
-  align-items: center;
-  height: 100% !important;
-  line-height: normal;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  display: flex; align-items: center; height: 100% !important;
+  line-height: normal; padding-top: 0 !important; padding-bottom: 0 !important;
 }
-
-.ag-theme-material {
-  @apply bg-white;
-}
+/* Theme class is injected by :theme */
 </style>
