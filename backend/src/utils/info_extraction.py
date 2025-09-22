@@ -1,5 +1,7 @@
 import datetime as dt
 import json
+import re
+import unicodedata
 from sqlite3 import IntegrityError
 from typing import Any
 
@@ -247,22 +249,72 @@ def update_trial_progress(db, trial_id: int) -> None:
     db.commit()
 
 
+_CONTROL_CHARS_RE = re.compile(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]')
+
+# Unicode non-characters (optional but harmless)
+_NONCHAR_RE = re.compile(
+    r'[\uFDD0-\uFDEF\uFFFE\uFFFF'
+    r'\U0001FFFE-\U0001FFFF'
+    r'\U0002FFFE-\U0002FFFF'
+    r'\U0003FFFE-\U0003FFFF'
+    r'\U0004FFFE-\U0004FFFF'
+    r'\U0005FFFE-\U0005FFFF'
+    r'\U0006FFFE-\U0006FFFF'
+    r'\U0007FFFE-\U0007FFFF'
+    r'\U0008FFFE-\U0008FFFF'
+    r'\U0009FFFE-\U0009FFFF'
+    r'\U000AFFFE-\U000AFFFF'
+    r'\U000BFFFE-\U000BFFFF'
+    r'\U000CFFFE-\U000CFFFF'
+    r'\U000DFFFE-\U000DFFFF'
+    r'\U000EFFFE-\U000EFFFF'
+    r'\U0010FFFE-\U0010FFFF]'
+)
+
+def sanitize_for_prompt(text: str, *, collapse_space: bool = False) -> str:
+    if text is None:
+        return ""
+
+    # Ensure it's valid Unicode (replace invalid sequences if any)
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", "replace")
+
+    # Normalize (composed form)
+    text = unicodedata.normalize("NFC", text)
+
+    # Remove dangerous control chars
+    text = _CONTROL_CHARS_RE.sub("", text)
+
+    # Strip Unicode non-characters
+    text = _NONCHAR_RE.sub("", text)
+
+    # (Optional) tame pathological whitespace
+    if collapse_space:
+        # Collapse runs of >3 newlines and >2 spaces
+        text = re.sub(r'\n{4,}', '\n\n\n', text)
+        text = re.sub(r'[ \t]{3,}', '  ', text)
+
+    return text
+
+
 def _build_messages(prompt: models.Prompt, document_text: str) -> list[dict]:
     """Inject the document text into user/system prompt templates."""
     placeholder = "{document_content}"
+    clean_doc = sanitize_for_prompt(document_text, collapse_space=False)
+
     msgs: list[dict[str, str]] = []
     if prompt.system_prompt:
         msgs.append(
             {
                 "role": "system",
-                "content": prompt.system_prompt.replace(placeholder, document_text),
+                "content": prompt.system_prompt.replace(placeholder, clean_doc),
             }
         )
     if prompt.user_prompt:
         msgs.append(
             {
                 "role": "user",
-                "content": prompt.user_prompt.replace(placeholder, document_text),
+                "content": prompt.user_prompt.replace(placeholder, clean_doc),
             }
         )
     return msgs

@@ -4,16 +4,16 @@ version = "0.1.2"
 description = "LLM Information Extraction Web Application"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]>=0.116.2",
-    "uvicorn>=0.35.0",
+    "fastapi[standard]>=0.117.1",
+    "uvicorn>=0.36.0",
     "pyjwt~=2.10.1",
     "sqlalchemy~=2.0.43",
     "psycopg[binary,pool]>=3.2.10",
     "pydantic_settings~=2.10.1",
-    "openai~=1.107.3",
+    "openai~=1.108.1",
     "bcrypt~=4.3.0",
-    "boto3~=1.40.32",
-    "boto3-stubs==1.40.32",
+    "boto3~=1.40.35",
+    "boto3-stubs==1.40.35",
     "llmaix[marker,docling,paddleocr]~=0.0.26",
     "redis~=6.4.0",
     "celery~=5.5.3",
@@ -27,7 +27,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.13.0",
+    "ruff>=0.13.1",
     "ty>=0.0.1a21",
     "pytest>=8.4.2",
     "pytest-cov~=7.0.0",
