@@ -288,9 +288,11 @@
       v-if="showImportConfigModal && importConfigFile"
       :file="importConfigFile"
       :project-id="projectId"
-      @close="() => { showImportConfigModal = false; importConfigFile = null; fetchFiles(); }"
-      @saved="fetchFiles"
+      @close="onImportClosed"
+      @saved="onImportSaved"
     />
+
+
 
   </div>
 </template>
@@ -433,9 +435,27 @@ watch(files, (newFiles, oldFiles) => {
 });
 
 
-const handleConfigureImport = (file) => {
-  importConfigFile.value = file;
+const handleConfigureImport = async (file) => {
+  // ⬇️ Always refetch so dialog opens with the latest saved settings
+  importConfigFile.value = await fetchFileById(file.id);
   showImportConfigModal.value = true;
+};
+
+const onImportClosed = () => {
+  showImportConfigModal.value = false;
+  importConfigFile.value = null;
+  fetchFiles(); // keep list in sync
+};
+
+const onImportSaved = async () => {
+  if (importConfigFile.value?.id) {
+    // ⬇️ Refresh just this file so future previews use the saved CSV settings
+    importConfigFile.value = await fetchFileById(importConfigFile.value.id);
+  }
+  showImportConfigModal.value = false;
+  // Refresh list & stats in background
+  fetchFiles();
+  fetchStats();
 };
 
 // Format file size
@@ -738,31 +758,16 @@ const downloadFile = async (file) => {
 
 // Preview file
 const previewFile = async (file) => {
-  previewingFile.value = file;
+  // ⬇️ Always refetch so FilePreviewModal sees latest file_metadata
+  previewingFile.value = await fetchFileById(file.id);
   showPreviewModal.value = true;
+
+  // ⬇️ Let FilePreviewModal handle fetching preview content itself.
+  // (We no longer preload blobs here.)
   previewUrl.value = '';
   previewText.value = '';
-
-  try {
-    const response = await api.get(
-      `/project/${props.projectId}/file/${file.id}/content?preview=true`,
-      { responseType: 'blob' }
-    );
-
-    if (file.file_type === 'text/plain' || file.file_type === 'text/csv') {
-      // For text files, read as text
-      const text = await response.data.text();
-      previewText.value = text;
-      previewUrl.value = 'text';
-    } else {
-      // For other files, create blob URL
-      previewUrl.value = URL.createObjectURL(response.data);
-    }
-  } catch (err) {
-    toast.error('Failed to load preview');
-    console.error('Failed to get file preview:', err);
-  }
 };
+
 
 // Close preview
 const closePreview = () => {
@@ -864,6 +869,11 @@ const cancelDelete = () => {
   showDeleteModal.value = false;
   filesToDelete.value = [];
   deleteMode.value = '';
+};
+
+const fetchFileById = async (id) => {
+  const { data } = await api.get(`/project/${props.projectId}/file/${id}`);
+  return data;
 };
 
 // Fetch files with filters

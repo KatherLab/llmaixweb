@@ -93,7 +93,7 @@
                 <thead class="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th
-                      v-for="(header, idx) in headerLabels"
+                      v-for="(header, idx) in normalizedHeaders"
                       :key="header || idx"
                       class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider border-b border-gray-100 whitespace-nowrap sticky top-0 bg-gray-50"
                       :class="cellClasses(header)"
@@ -108,10 +108,11 @@
                       v-for="(cell, cidx) in row"
                       :key="cidx"
                       class="px-4 py-2 border-b border-gray-50 max-w-[260px] align-top"
-                      :class="cellClasses(headerLabels[cidx])"
+                      :class="cellClasses(normalizedHeaders[cidx])"
                     >
                       <span v-if="cell === '' || cell == null" class="text-gray-300 italic">empty</span>
-                      <template v-else-if="isTextColumn(headerLabels[cidx]) && String(cell).length > 80">
+                      <template v-else-if="isTextColumn(normalizedHeaders[cidx]) && String(cell).length > 80">
+
                         <span
                           class="truncate cursor-pointer text-green-900"
                           :title="String(cell)"
@@ -238,6 +239,17 @@ const totalRows = ref(0);
 const idColumn = ref('');
 const textColumns = ref([]);
 
+// ⬇️ ADD: use settings saved by FileImportConfigModal (from file.file_metadata)
+const delimiter = ref(props.file?.file_metadata?.delimiter || ',');
+const encoding = ref(props.file?.file_metadata?.encoding || 'utf-8');
+const hasHeader = ref(
+  props.file?.file_metadata?.has_header !== undefined
+    ? !!props.file.file_metadata.has_header
+    : true
+);
+const sheetFromMeta = ref(props.file?.file_metadata?.sheet || '');
+
+
 // Robust format checks (extension + MIME)
 const isCSV = computed(() => {
   const t = (props.file.file_type || '').toLowerCase();
@@ -285,6 +297,24 @@ function copyToClipboard() {
   });
 }
 
+const normalizedHeaders = computed(() => {
+  const headers = [...(tabularData.value?.headers || [])];
+  const maxLen = Math.max(
+    headers.length,
+    ...(tabularData.value?.rows || []).map(r => r.length)
+  );
+  while (headers.length < maxLen) {
+    headers.push(`Column ${headers.length + 1}`);
+  }
+  return headers.map((h, idx) => {
+    if (h == null || (typeof h === 'string' && h.trim() === '')) {
+      return `Column ${idx + 1}`;
+    }
+    return String(h);
+  });
+});
+
+
 const loadPreview = async () => {
   isLoading.value = true;
   error.value = '';
@@ -297,18 +327,34 @@ const loadPreview = async () => {
   try {
     if (isCSV.value || isXLSX.value) {
       const params = new URLSearchParams({ max_rows: 50 });
-      // (Optional) You could pass ?sheet= for XLSX if you expose sheet selection here.
+
+      // ⬇️ NEW: pass saved parse hints (identical to the second modal’s behavior)
+      params.append('encoding', encoding.value);
+      params.append('has_header', hasHeader.value);
+      if (isCSV.value && delimiter.value) params.append('delimiter', delimiter.value);
+      if (isXLSX.value && sheetFromMeta.value) params.append('sheet', sheetFromMeta.value);
+
       const { data } = await api.get(
         `/project/${props.projectId}/file/${props.file.id}/preview-rows?${params}`
       );
+
       tabularData.value = {
         headers: data.headers || [],
         rows: data.rows || []
       };
-      truncated.value = !!(data.truncated);
+      truncated.value = !!data.truncated;
       totalRows.value = data.total_rows || data.totalRows || 0;
-      idColumn.value = data.idColumn || data.id_column || props.file.file_metadata?.case_id_column || '';
-      textColumns.value = data.textColumns || data.text_columns || props.file.file_metadata?.text_columns || [];
+
+      idColumn.value =
+        data.idColumn ||
+        data.id_column ||
+        props.file.file_metadata?.case_id_column ||
+        '';
+      textColumns.value =
+        data.textColumns ||
+        data.text_columns ||
+        props.file.file_metadata?.text_columns ||
+        [];
     } else if (props.file.file_type === 'text/plain') {
       const response = await api.get(
         `/project/${props.projectId}/file/${props.file.id}/content?preview=true`,
