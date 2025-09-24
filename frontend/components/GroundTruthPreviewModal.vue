@@ -50,7 +50,7 @@
                 :is-tabular="isTabularFormat"
                 :id-column="idColumn"
                 :json-id-field="jsonIdField"
-                :available-columns="availableColumns"
+                :available-columns="displayedColumns"
                 :id-candidates="idCandidates"
                 :current-id-column="currentIdColumn"
                 @update:id-column="updateIdColumn"
@@ -339,25 +339,40 @@ async function loadGroundTruthPreview() {
   const previewRes = await api.get(
     `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/preview`
   );
+
   groundTruthFieldPaths.value = previewRes.data.fields || [];
   groundTruthFieldTypes.value = previewRes.data.field_types || {};
   groundTruthFieldTree.value = buildTree(groundTruthFieldPaths.value);
-  syncIdSelectionFromGT(previewRes);
+
+  // Columns/options from backend
   availableColumns.value = previewRes.data.available_columns || [];
-  currentIdColumn.value = previewRes.data.current_id_column || "";
-  // Setup idColumn for UI:
+
+  // Resolve saved ID column consistently (supports legacy `id_column_name`)
+  const idCol =
+    previewRes.data.current_id_column ??
+    previewRes.data.id_column_name ??
+    "";
+  currentIdColumn.value = idCol;
+
+  // Setup UI state by format
   if (isTabularFormat.value) {
-    idColumn.value = currentIdColumn.value || "";
+    idColumn.value = idCol || "";
     jsonIdField.value = "";
   } else if (isJsonFormat.value) {
-    if (currentIdColumn.value && currentIdColumn.value !== "") {
+    if (idCol) {
       idColumn.value = "__field__";
-      jsonIdField.value = currentIdColumn.value;
+      jsonIdField.value = idCol;
     } else {
       idColumn.value = ""; // use filename
       jsonIdField.value = "";
     }
   }
+
+  // Ensure saved column is visible as an option
+  if (isTabularFormat.value && idCol && !availableColumns.value.includes(idCol)) {
+    availableColumns.value = [idCol, ...availableColumns.value];
+  }
+
   // Sample doc for field hints
   if (previewRes.data.preview_data) {
     const docs = Object.values(previewRes.data.preview_data);
@@ -572,6 +587,12 @@ const idCandidates = computed(() => {
   const allFields = Object.keys(sampleDoc.value);
   const idLike = allFields.filter(k => /id|name|number/i.test(k));
   return idLike.length ? idLike : allFields;
+});
+const displayedColumns = computed(() => {
+  const cols = availableColumns.value || [];
+  return currentIdColumn.value && !cols.includes(currentIdColumn.value)
+    ? [currentIdColumn.value, ...cols]
+    : cols;
 });
 function updateIdColumn(val) {
   idColumn.value = val;
