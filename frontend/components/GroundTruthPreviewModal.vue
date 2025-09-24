@@ -77,7 +77,10 @@
                   :disabled="!selectedSchemaId"
                   @select="onSchemaFieldSelect"
                   node-color="text-blue-700"
+                  :mapped="mappedSchemaPaths"
+                  :highlight="highlightRequiredUnmapped"
                 />
+
               </div>
             </section>
 
@@ -142,6 +145,7 @@
                   :disabled="!selectedSchemaId"
                   @select="onGroundTruthFieldSelect"
                   node-color="text-purple-700"
+                  :mapped="mappedGtPaths"
                 />
               </div>
               <div class="mt-2">
@@ -483,6 +487,17 @@ function isMapped(schemaPath) {
 const mappingComplete = computed(() => {
   return requiredFields.value.every((f) => isMapped(f));
 });
+const mappedSchemaPaths = computed(() =>
+  mappings.value.map(m => m.schema_field)
+);
+const mappedGtPaths = computed(() =>
+  mappings.value.map(m => m.ground_truth_field)
+);
+
+/** mark required fields that are not yet mapped */
+const highlightRequiredUnmapped = (p) =>
+  requiredFields.value.includes(p) && !mappings.value.some(m => m.schema_field === p);
+
 function autoMap() {
   if (!selectedSchemaId.value) return;
   mappings.value = [];
