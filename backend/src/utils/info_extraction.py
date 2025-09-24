@@ -20,7 +20,10 @@ from sqlalchemy.orm import Session
 from .. import models
 
 
-# Add this missing function back
+# ------------------------------
+# Connection / capability checks
+# ------------------------------
+
 def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str, Any]:
     """Test LLM connection with a specific model by making a test completion"""
     try:
@@ -83,16 +86,15 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
         }
 
 
-# Update your existing functions to return detailed responses
 def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
     try:
         client = OpenAI(api_key=api_key, base_url=base_url)
         response = client.models.list()
-        models = [model.id for model in response.data]
+        models_list = [model.id for model in response.data]
         return {
             "success": True,
-            "models": models,
-            "message": f"Successfully loaded {len(models)} models",
+            "models": models_list,
+            "message": f"Successfully loaded {len(models_list)} models",
         }
     except AuthenticationError:
         return {
@@ -167,11 +169,10 @@ def test_model_with_schema(
     try:
         client = OpenAI(api_key=api_key, base_url=base_url)
 
-        # Try to make a minimal completion with structured output
         client.chat.completions.create(
             model=llm_model,
             messages=[{"role": "user", "content": "Test"}],
-            max_tokens=1,  # Minimal tokens to test
+            max_tokens=1,
             response_format={
                 "type": "json_schema",
                 "json_schema": {
@@ -189,8 +190,6 @@ def test_model_with_schema(
         }
     except Exception as e:
         error_message = str(e)
-
-        # Parse specific error types
         if (
             "json_schema" in error_message.lower()
             or "structured" in error_message.lower()
@@ -209,9 +208,12 @@ def test_model_with_schema(
                 "supports_structured_output": False,
             }
         else:
-            # Fall back to general model test
             return test_llm_connection(api_key, base_url, llm_model)
 
+
+# ------------------------------
+# Time helpers
+# ------------------------------
 
 def _now_utc() -> dt.datetime:
     """Return an offset-aware datetime in UTC."""
@@ -225,7 +227,10 @@ def _to_utc(dt_obj: dt.datetime) -> dt.datetime:
     return dt_obj.astimezone(dt.UTC)
 
 
-# utils/info_extraction.py
+# ------------------------------
+# Trial progress
+# ------------------------------
+
 def update_trial_progress(db, trial_id: int) -> None:
     done = db.scalar(
         select(func.count())
@@ -249,40 +254,50 @@ def update_trial_progress(db, trial_id: int) -> None:
     db.commit()
 
 
-_CONTROL_CHARS_RE = re.compile(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]')
+# ------------------------------
+# Input sanitization
+# ------------------------------
+
+# Keep only LF (\n). Excludes TAB (\t) and CR (\r) so they can be handled explicitly.
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]")
 
 # Unicode non-characters (optional but harmless)
 _NONCHAR_RE = re.compile(
-    r'[\uFDD0-\uFDEF\uFFFE\uFFFF'
-    r'\U0001FFFE-\U0001FFFF'
-    r'\U0002FFFE-\U0002FFFF'
-    r'\U0003FFFE-\U0003FFFF'
-    r'\U0004FFFE-\U0004FFFF'
-    r'\U0005FFFE-\U0005FFFF'
-    r'\U0006FFFE-\U0006FFFF'
-    r'\U0007FFFE-\U0007FFFF'
-    r'\U0008FFFE-\U0008FFFF'
-    r'\U0009FFFE-\U0009FFFF'
-    r'\U000AFFFE-\U000AFFFF'
-    r'\U000BFFFE-\U000BFFFF'
-    r'\U000CFFFE-\U000CFFFF'
-    r'\U000DFFFE-\U000DFFFF'
-    r'\U000EFFFE-\U000EFFFF'
-    r'\U0010FFFE-\U0010FFFF]'
+    r"[\uFDD0-\uFDEF\uFFFE\uFFFF"
+    r"\U0001FFFE-\U0001FFFF"
+    r"\U0002FFFE-\U0002FFFF"
+    r"\U0003FFFE-\U0003FFFF"
+    r"\U0004FFFE-\U0004FFFF"
+    r"\U0005FFFE-\U0005FFFF"
+    r"\U0006FFFE-\U0006FFFF"
+    r"\U0007FFFE-\U0007FFFF"
+    r"\U0008FFFE-\U0008FFFF"
+    r"\U0009FFFE-\U0009FFFF"
+    r"\U000AFFFE-\U000AFFFF"
+    r"\U000BFFFE-\U000BFFFF"
+    r"\U000CFFFE-\U000CFFFF"
+    r"\U000DFFFE-\U000DFFFF"
+    r"\U000EFFFE-\U000EFFFF"
+    r"\U0010FFFE-\U0010FFFF]"
 )
 
+
 def sanitize_for_prompt(text: str, *, collapse_space: bool = False) -> str:
+    """Hardened sanitizer to prevent raw control chars being copied into JSON."""
     if text is None:
         return ""
 
-    # Ensure it's valid Unicode (replace invalid sequences if any)
+    # Ensure it's valid Unicode
     if isinstance(text, bytes):
         text = text.decode("utf-8", "replace")
 
     # Normalize (composed form)
     text = unicodedata.normalize("NFC", text)
 
-    # Remove dangerous control chars
+    # Normalize line endings and tabs *before* control filtering
+    text = text.replace("\r", "\n").replace("\t", "    ")
+
+    # Remove dangerous C0 controls except LF (\n)
     text = _CONTROL_CHARS_RE.sub("", text)
 
     # Strip Unicode non-characters
@@ -290,12 +305,15 @@ def sanitize_for_prompt(text: str, *, collapse_space: bool = False) -> str:
 
     # (Optional) tame pathological whitespace
     if collapse_space:
-        # Collapse runs of >3 newlines and >2 spaces
-        text = re.sub(r'\n{4,}', '\n\n\n', text)
-        text = re.sub(r'[ \t]{3,}', '  ', text)
+        text = re.sub(r"\n{4,}", "\n\n\n", text)
+        text = re.sub(r"[ \t]{3,}", "  ", text)
 
     return text
 
+
+# ------------------------------
+# Message + request building
+# ------------------------------
 
 def _build_messages(prompt: models.Prompt, document_text: str) -> list[dict]:
     """Inject the document text into user/system prompt templates."""
@@ -337,14 +355,14 @@ def _completion_kwargs(
     }
     if adv:
         kwargs.update(
-            {
-                k: v
-                for k, v in adv.items()
-                if k in {"max_completion_tokens", "temperature"}
-            }
+            {k: v for k, v in adv.items() if k in {"max_completion_tokens", "temperature"}}
         )
     return kwargs
 
+
+# ------------------------------
+# Async/sync extraction
+# ------------------------------
 
 async def extract_info_single_doc_async(
     *,
@@ -408,6 +426,104 @@ def extract_info_single_doc(
     _store_result(db_session, trial_id, document_id, response)
 
 
+# ------------------------------
+# Robust JSON parsing helpers
+# ------------------------------
+
+_JSON_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.IGNORECASE)
+
+
+def _extract_json_snippet(s: str) -> str:
+    """Trim to the first complete top-level JSON object/array; remove code fences."""
+    s = _JSON_FENCE_RE.sub("", s.strip())
+    first_brace = s.find("{")
+    first_brack = s.find("[")
+    starts = [x for x in [first_brace, first_brack] if x != -1]
+    if not starts:
+        return s
+    start = min(starts)
+
+    stack: list[str] = []
+    i = start
+    while i < len(s):
+        ch = s[i]
+        if ch in "{[":
+            stack.append("}" if ch == "{" else "]")
+        elif ch in "}]":
+            if not stack or ch != stack[-1]:
+                break
+            stack.pop()
+            if not stack:
+                return s[start : i + 1]
+        i += 1
+    return s[start:]
+
+
+def _escape_ctrls_in_json_strings(s: str) -> str:
+    """Escape raw control characters inside JSON string literals to ....
+
+    Leaves JSON syntax (outside strings) untouched.
+    """
+    out: list[str] = []
+    in_string = False
+    escape = False
+    quote: str | None = None
+
+    for ch in s:
+        if in_string:
+            if escape:
+                out.append(ch)
+                escape = False
+                continue
+            if ch == "\\":
+                out.append(ch)
+                escape = True
+                continue
+            if ch == quote:
+                in_string = False
+                quote = None
+                out.append(ch)
+                continue
+            code = ord(ch)
+            if 0 <= code <= 0x1F or code == 0x7F:
+                out.append(f"\\u{code:04x}")
+            else:
+                out.append(ch)
+        else:
+            if ch in ('"', "'"):
+                in_string = True
+                quote = ch
+                out.append(ch)
+            else:
+                out.append(ch)
+    return "".join(out)
+
+
+def safe_json_loads(text: str) -> Any:
+    """A tolerant JSON loader for LLM outputs.
+
+    - Tries fast path json.loads first.
+    - Removes code fences and trims to a likely JSON snippet.
+    - Replaces smart quotes.
+    - Escapes raw control chars *inside strings only*.
+    """
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    candidate = _extract_json_snippet(text)
+    candidate = (
+        candidate.replace("“", '"').replace("”", '"').replace("’", "'")
+    )
+    candidate = _escape_ctrls_in_json_strings(candidate)
+    return json.loads(candidate)
+
+
+# ------------------------------
+# Store result
+# ------------------------------
+
 def _store_result(db_session, trial_id: int, document_id: int, response) -> None:
     # Skip if a result for this document already exists
     exists = db_session.scalar(
@@ -419,26 +535,61 @@ def _store_result(db_session, trial_id: int, document_id: int, response) -> None
     if exists:
         return
 
-    # Main JSON payload
-    result_json = json.loads(response.choices[0].message.content)
+    raw_content = response.choices[0].message.content
 
-    # Optional extra fields
-    additional: dict = {}
+    # Parse JSON robustly
+    try:
+        result_json = safe_json_loads(raw_content)
+    except Exception as e:
+        # Record the failure but don't crash the whole trial; persist raw for later inspection
+        additional: dict[str, Any] = {"json_error": str(e), "raw_response": raw_content}
+        try:
+            reasoning = getattr(response.choices[0].message, "reasoning_content", None)
+            if reasoning is not None:
+                additional["reasoning_content"] = reasoning
+            finish = getattr(response.choices[0], "finish_reason", None)
+            if finish is not None:
+                additional["finish_reason"] = finish
+            usage = getattr(response, "usage", None)
+            if usage is not None:
+                if hasattr(usage, "model_dump"):
+                    additional["usage"] = usage.model_dump()
+                elif hasattr(usage, "dict"):
+                    additional["usage"] = usage.dict()
+                else:
+                    additional["usage"] = {
+                        k: getattr(usage, k)
+                        for k in dir(usage)
+                        if not k.startswith("_")
+                    }
+        except Exception:
+            pass
 
-    # reasoning_content (if present)
+        try:
+            db_session.add(
+                models.TrialResult(
+                    trial_id=trial_id,
+                    document_id=document_id,
+                    result=None,
+                    additional_content=additional,
+                )
+            )
+            db_session.commit()
+        except IntegrityError:
+            db_session.rollback()
+        # Re-raise so the caller's failure accounting still works
+        raise
+
+    # If we got here, parsing succeeded; collect additional metadata
+    additional: dict[str, Any] = {}
     reasoning = getattr(response.choices[0].message, "reasoning_content", None)
     if reasoning is not None:
         additional["reasoning_content"] = reasoning
-
-    # finish_reason (if present)
     finish = getattr(response.choices[0], "finish_reason", None)
     if finish is not None:
         additional["finish_reason"] = finish
-
-    # usage (if present)
     usage = getattr(response, "usage", None)
     if usage is not None:
-        # Most OpenAI objects support .model_dump() (pydantic v2) or .dict() (v1)
         if hasattr(usage, "model_dump"):
             additional["usage"] = usage.model_dump()
         elif hasattr(usage, "dict"):
@@ -448,7 +599,6 @@ def _store_result(db_session, trial_id: int, document_id: int, response) -> None
                 k: getattr(usage, k) for k in dir(usage) if not k.startswith("_")
             }
 
-    # Persist the result
     try:
         db_session.add(
             models.TrialResult(
