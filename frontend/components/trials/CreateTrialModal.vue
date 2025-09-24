@@ -377,11 +377,13 @@
                             @click="toggleDocumentSelection(doc.id)"
                         >
                           <input
-                              :checked="trialData.document_ids.includes(doc.id)"
-                              class="mr-3"
-                              type="checkbox"
-                              @click.stop
+                            :checked="trialData.document_ids.includes(doc.id)"
+                            class="mr-3"
+                            type="checkbox"
+                            @click.stop
+                            @change="toggleDocumentSelection(doc.id)"
                           />
+
                           <div class="flex-1">
                             <!-- Main Document Name -->
                             <div class="font-medium">
