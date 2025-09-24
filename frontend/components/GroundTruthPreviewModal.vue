@@ -296,6 +296,23 @@ const { floatingStyles } = useFloating(
   }
 );
 
+function normStr(v) {
+  return (v ?? "").toString().trim();
+}
+function mergeColumns(rawCols, sample) {
+  const merged = Array.isArray(rawCols) ? [...rawCols] : [];
+  const seen = new Set(merged.map(c => normStr(c).toLowerCase()).filter(Boolean));
+  if (sample && typeof sample === "object" && !Array.isArray(sample)) {
+    for (const k of Object.keys(sample)) {
+      const nk = normStr(k);
+      if (nk && !seen.has(nk.toLowerCase())) {
+        merged.push(k); // keep original casing from sample
+        seen.add(nk.toLowerCase());
+      }
+    }
+  }
+  return merged;
+}
 
 const saveDisabledReason = computed(() => {
   if (!selectedSchemaId.value) {
@@ -339,6 +356,10 @@ async function loadSchemas() {
   schemas.value = res.data;
 }
 
+function normalizeCol(v) {
+  return (v ?? "").toString().trim();
+}
+
 async function loadGroundTruthPreview() {
   const previewRes = await api.get(
     `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/preview`
@@ -348,17 +369,34 @@ async function loadGroundTruthPreview() {
   groundTruthFieldTypes.value = previewRes.data.field_types || {};
   groundTruthFieldTree.value = buildTree(groundTruthFieldPaths.value);
 
-  // Columns/options from backend
-  availableColumns.value = previewRes.data.available_columns || [];
+  // Sample doc FIRST (we'll use its keys to augment columns for CSV)
+  sampleDoc.value = null;
+  if (previewRes.data.preview_data) {
+    const docs = Object.values(previewRes.data.preview_data);
+    sampleDoc.value = docs.length ? docs[0] : null;
+  }
 
-  // Resolve saved ID column consistently (supports legacy `id_column_name`)
-  const idCol =
+  // Raw columns from backend
+  const rawCols = Array.isArray(previewRes.data.available_columns)
+    ? previewRes.data.available_columns
+    : [];
+
+  // Merge with sample headers to catch newly uploaded CSV columns (incl. ID)
+  availableColumns.value = isTabularFormat.value
+    ? mergeColumns(rawCols, sampleDoc.value)
+    : rawCols;
+
+  // Resolve saved/detected ID under multiple keys
+  const idColRaw =
     previewRes.data.current_id_column ??
     previewRes.data.id_column_name ??
+    previewRes.data.detected_id_column ??
+    previewRes.data.id_column ??
     "";
+  const idCol = normStr(idColRaw);
   currentIdColumn.value = idCol;
 
-  // Setup UI state by format
+  // Setup UI by format
   if (isTabularFormat.value) {
     idColumn.value = idCol || "";
     jsonIdField.value = "";
@@ -367,22 +405,20 @@ async function loadGroundTruthPreview() {
       idColumn.value = "__field__";
       jsonIdField.value = idCol;
     } else {
-      idColumn.value = ""; // use filename
+      idColumn.value = ""; // filename
       jsonIdField.value = "";
     }
   }
 
-  // Ensure saved column is visible as an option
-  if (isTabularFormat.value && idCol && !availableColumns.value.includes(idCol)) {
-    availableColumns.value = [idCol, ...availableColumns.value];
-  }
-
-  // Sample doc for field hints
-  if (previewRes.data.preview_data) {
-    const docs = Object.values(previewRes.data.preview_data);
-    sampleDoc.value = docs.length ? docs[0] : null;
+  // Ensure detected/saved ID appears even if backend omitted it
+  if (isTabularFormat.value && idCol) {
+    const hasId = availableColumns.value.some(c => normStr(c).toLowerCase() === idCol.toLowerCase());
+    if (!hasId) {
+      availableColumns.value = [idColRaw || idCol, ...availableColumns.value];
+    }
   }
 }
+
 
 async function onSchemaChange() {
   if (!selectedSchemaId.value) return;
@@ -605,10 +641,11 @@ const idCandidates = computed(() => {
 });
 const displayedColumns = computed(() => {
   const cols = availableColumns.value || [];
-  return currentIdColumn.value && !cols.includes(currentIdColumn.value)
-    ? [currentIdColumn.value, ...cols]
-    : cols;
+  const idCol = currentIdColumn.value;
+  const hasId = cols.some(c => (c ?? "").toString().trim() === (idCol ?? "").toString().trim());
+  return idCol && !hasId ? [idCol, ...cols] : cols;
 });
+
 function updateIdColumn(val) {
   idColumn.value = val;
 }

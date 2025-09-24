@@ -4227,7 +4227,7 @@ def preview_groundtruth(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load ground truth: {e}")
 
-    # Collect field paths + types
+    # Collect field paths + types from a sample document
     def collect_paths(doc: dict, prefix=""):
         paths = []
         types = {}
@@ -4242,35 +4242,33 @@ def preview_groundtruth(
                 types[path] = type(v).__name__ if v is not None else "null"
         return paths, types
 
-    field_paths, field_types = [], {}
-    sample_doc = None
+    field_paths, field_types, sample_doc = [], {}, None
     if gt_data:
         sample_doc = next(iter(gt_data.values()))
         field_paths, field_types = collect_paths(sample_doc)
 
-    # For tabular (csv/xlsx), suggest available columns
+    # Get available columns directly from the file so the ID header is preserved
     available_columns = []
     if groundtruth.format in ["csv", "xlsx"]:
-        # Just take columns from first sample (already nested -> flatten)
-        def flatten(d, parent=""):
-            out = []
-            for k, v in d.items():
-                path = f"{parent}.{k}" if parent else k
-                if isinstance(v, dict):
-                    out.extend(flatten(v, path))
-                else:
-                    out.append(path)
-            return out
+        try:
+            available_columns = engine.get_available_columns(groundtruth)
+        except ValueError as e:
+            # non-fatal for preview; just return empty list on header read error
+            available_columns = []
 
-        available_columns = flatten(sample_doc) if sample_doc else []
+        # ensure the saved id column appears even if headers are quirky
+        saved = (groundtruth.id_column_name or "").strip()
+        if saved and saved not in available_columns:
+            available_columns = [saved] + available_columns
 
     return {
         "fields": field_paths,
         "field_types": field_types,
-        "preview_data": {k: v for k, v in list(gt_data.items())[:3]},  # first 3 docs
+        "preview_data": {k: v for k, v in list(gt_data.items())[:3]},
         "available_columns": available_columns,
         "current_id_column": groundtruth.id_column_name,
     }
+
 
 
 @router.post(

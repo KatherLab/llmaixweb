@@ -306,6 +306,49 @@ class EvaluationEngine:
         # If still not found, no match
         return None
 
+    def get_available_columns(self, ground_truth: models.GroundTruth) -> List[str]:
+        """
+        Return header names for tabular ground truth exactly as they appear
+        in the file (trimmed), so the chosen ID column is never "lost".
+        For CSV: read only headers. For XLSX: union headers across sheets.
+        """
+        if ground_truth.format not in ["csv", "xlsx"]:
+            return []
+
+        # read raw file bytes
+        from ..dependencies import get_file
+        content = get_file(ground_truth.file_uuid)
+
+        def _norm(x):  # keep original string but trim edges
+            return str(x).strip()
+
+        if ground_truth.format == "csv":
+            try:
+                df = pd.read_csv(io.BytesIO(content), nrows=0)
+            except Exception as e:
+                raise ValueError(f"Failed to read CSV headers: {e}")
+            return [_norm(c) for c in df.columns.tolist()]
+
+        # xlsx
+        try:
+            xls = pd.ExcelFile(io.BytesIO(content))
+        except Exception as e:
+            raise ValueError(f"Invalid Excel file: {e}")
+
+        seen = set()
+        cols: List[str] = []
+        for sheet in xls.sheet_names:
+            try:
+                df = xls.parse(sheet, nrows=0)
+            except Exception:
+                continue
+            for c in df.columns.tolist():
+                s = _norm(c)
+                if s and s.lower() not in seen:
+                    seen.add(s.lower())
+                    cols.append(s)
+        return cols
+
     def _load_ground_truth(self, ground_truth: models.GroundTruth) -> Dict:
         """Load ground truth data with caching."""
         # Check cache
