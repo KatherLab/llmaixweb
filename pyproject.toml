@@ -13,7 +13,7 @@ dependencies = [
     "openai~=1.109.0",
     "bcrypt~=4.3.0",
     "boto3~=1.40.37",
-    "boto3-stubs==1.40.37",
+    "boto3-stubs==1.40.51",
     "llmaix[marker,docling,paddleocr]~=0.0.26",
     "redis~=6.4.0",
     "celery~=5.5.3",
