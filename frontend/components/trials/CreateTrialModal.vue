@@ -952,6 +952,17 @@ const testSelectedModel = async () => {
       params.base_url = trialData.value.base_url.trim();
     }
 
+    // Forward advanced options if set
+    if (maxCompletionTokens.value && parseInt(maxCompletionTokens.value) > 0) {
+      params.max_completion_tokens = parseInt(maxCompletionTokens.value);
+    }
+    if (temperature.value !== '' && !isNaN(Number(temperature.value))) {
+      params.temperature = Number(temperature.value);
+    }
+    if (reasoningEffort.value) {
+      params.reasoning_effort = reasoningEffort.value; // "low" | "medium" | "high"
+    }
+
     console.log('Testing model with schema, params:', params);
     const response = await api.post('/project/llm/test-model-schema', null, {params});
 
@@ -1058,6 +1069,10 @@ watch([() => trialData.value.llm_model, () => trialData.value.schema_id], ([newM
   if (newModel !== oldModel || newSchema !== oldSchema) {
     resetModelTest();
   }
+});
+
+watch([maxCompletionTokens, temperature, reasoningEffort], () => {
+  resetModelTest();
 });
 
 // Filter documents based on search term

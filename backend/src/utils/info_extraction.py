@@ -163,17 +163,22 @@ def test_api_connection(api_key: str, base_url: str) -> dict[str, Any]:
 
 
 def test_model_with_schema(
-    api_key: str, base_url: str, llm_model: str, schema_definition: dict
+    api_key: str,
+    base_url: str,
+    llm_model: str,
+    schema_definition: dict,
+    adv: dict | None = None,
 ) -> dict[str, Any]:
-    """Test if a model supports structured output with a specific schema"""
+    """Test if a model supports structured output with a specific schema + optional advanced params."""
     try:
         client = OpenAI(api_key=api_key, base_url=base_url)
 
-        client.chat.completions.create(
-            model=llm_model,
-            messages=[{"role": "user", "content": "Test"}],
-            max_tokens=1,
-            response_format={
+        kwargs: dict[str, Any] = {
+            "model": llm_model,
+            "messages": [{"role": "user", "content": "Test"}],
+            # keep a tiny cap for the probe unless caller explicitly raises it
+            "max_tokens": 1,
+            "response_format": {
                 "type": "json_schema",
                 "json_schema": {
                     "name": "test_schema",
@@ -181,7 +186,28 @@ def test_model_with_schema(
                     "strict": True,
                 },
             },
-        )
+        }
+
+        # Apply advanced params if present
+        if adv:
+            if "max_completion_tokens" in adv and adv["max_completion_tokens"] is not None:
+                # Your API expects max_completion_tokens for completions; override the tiny probe
+                kwargs["max_completion_tokens"] = adv["max_completion_tokens"]
+                # optional: remove old 'max_tokens' to avoid confusion
+                kwargs.pop("max_tokens", None)
+
+            if "temperature" in adv and adv["temperature"] is not None:
+                kwargs["temperature"] = adv["temperature"]
+
+            if "reasoning_effort" in adv and adv["reasoning_effort"]:
+                kwargs["reasoning_effort"] = adv["reasoning_effort"]
+                extra_body = dict(kwargs.get("extra_body") or {})
+                allowed = set(extra_body.get("allowed_openai_params", []))
+                allowed.add("reasoning_effort")
+                extra_body["allowed_openai_params"] = list(allowed)
+                kwargs["extra_body"] = extra_body
+
+        client.chat.completions.create(**kwargs)
 
         return {
             "success": True,

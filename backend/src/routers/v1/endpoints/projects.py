@@ -3596,16 +3596,15 @@ def test_llm_model_endpoint(
         }
     return test_llm_connection(api_key, base_url, llm_model)
 
-
-# Add this new endpoint to your router:
-
-
 @router.post("/llm/test-model-schema", response_model=dict[str, Any])
 def test_model_with_schema_endpoint(
         api_key: str | None = settings.OPENAI_API_KEY,
         base_url: str | None = settings.OPENAI_API_BASE,
         llm_model: str | None = settings.OPENAI_API_MODEL,
         schema_id: int | None = None,
+        max_completion_tokens: int | None = None,
+        temperature: float | None = None,
+        reasoning_effort: str | None = None,  # "low" | "medium" | "high"
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
@@ -3636,9 +3635,17 @@ def test_model_with_schema_endpoint(
             "error_type": "schema_not_found",
         }
 
+    adv: dict[str, Any] = {}
+    if max_completion_tokens is not None:
+        adv["max_completion_tokens"] = max_completion_tokens
+    if temperature is not None:
+        adv["temperature"] = temperature
+    if reasoning_effort:
+        adv["reasoning_effort"] = reasoning_effort
+
     # Test the model with structured output
     return test_model_with_schema(
-        api_key, base_url, llm_model, schema.schema_definition
+        api_key, base_url, llm_model, schema.schema_definition, adv or None
     )
 
 
