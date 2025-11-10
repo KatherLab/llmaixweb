@@ -2,7 +2,6 @@ import csv
 import datetime
 import io
 import json
-import re
 import zipfile
 from typing import Any, List, cast
 
@@ -36,12 +35,12 @@ from ....dependencies import (
     save_file,
 )
 from ....models.project import document_set_association
-from ....utils.enums import FileCreator, FileType
+from ....utils.enums import FileCreator
 from ....utils.helpers import (
+    detect_structured_mime,
     extract_field_types_from_schema,
     flatten_dict,
     validate_prompt,
-    detect_structured_mime,
 )
 from ....utils.info_extraction import (
     get_available_models,
@@ -562,8 +561,8 @@ def preview_structured_file(
     except AttributeError:
         mime = (str(file.file_type or "")).lower()
 
-    import io as _io
     import csv as _csv
+    import io as _io
 
     # ---- Helpers ----
     def _dedupe_headers(headers: list[str]) -> list[str]:
@@ -4252,7 +4251,7 @@ def preview_groundtruth(
     if groundtruth.format in ["csv", "xlsx"]:
         try:
             available_columns = engine.get_available_columns(groundtruth)
-        except ValueError as e:
+        except ValueError:
             # non-fatal for preview; just return empty list on header read error
             available_columns = []
 
@@ -4268,7 +4267,6 @@ def preview_groundtruth(
         "available_columns": available_columns,
         "current_id_column": groundtruth.id_column_name,
     }
-
 
 
 @router.post(
@@ -4981,8 +4979,6 @@ def download_evaluations_report(
     import csv
     import io
     import zipfile
-
-    import pandas as pd
 
     from ....utils.helpers import (
         build_evaluation_zipfiles,

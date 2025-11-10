@@ -19,10 +19,10 @@ from sqlalchemy.orm import Session
 
 from .. import models
 
-
 # ------------------------------
 # Connection / capability checks
 # ------------------------------
+
 
 def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str, Any]:
     """Test LLM connection with a specific model by making a test completion"""
@@ -215,6 +215,7 @@ def test_model_with_schema(
 # Time helpers
 # ------------------------------
 
+
 def _now_utc() -> dt.datetime:
     """Return an offset-aware datetime in UTC."""
     return dt.datetime.now(dt.UTC)
@@ -230,6 +231,7 @@ def _to_utc(dt_obj: dt.datetime) -> dt.datetime:
 # ------------------------------
 # Trial progress
 # ------------------------------
+
 
 def update_trial_progress(db, trial_id: int) -> None:
     done = db.scalar(
@@ -315,6 +317,7 @@ def sanitize_for_prompt(text: str, *, collapse_space: bool = False) -> str:
 # Message + request building
 # ------------------------------
 
+
 def _build_messages(prompt: models.Prompt, document_text: str) -> list[dict]:
     """Inject the document text into user/system prompt templates."""
     placeholder = "{document_content}"
@@ -355,7 +358,11 @@ def _completion_kwargs(
     }
     if adv:
         kwargs.update(
-            {k: v for k, v in adv.items() if k in {"max_completion_tokens", "temperature"}}
+            {
+                k: v
+                for k, v in adv.items()
+                if k in {"max_completion_tokens", "temperature"}
+            }
         )
     return kwargs
 
@@ -363,6 +370,7 @@ def _completion_kwargs(
 # ------------------------------
 # Async/sync extraction
 # ------------------------------
+
 
 async def extract_info_single_doc_async(
     *,
@@ -513,9 +521,7 @@ def safe_json_loads(text: str) -> Any:
         pass
 
     candidate = _extract_json_snippet(text)
-    candidate = (
-        candidate.replace("“", '"').replace("”", '"').replace("’", "'")
-    )
+    candidate = candidate.replace("“", '"').replace("”", '"').replace("’", "'")
     candidate = _escape_ctrls_in_json_strings(candidate)
     return json.loads(candidate)
 
@@ -523,6 +529,7 @@ def safe_json_loads(text: str) -> Any:
 # ------------------------------
 # Store result
 # ------------------------------
+
 
 def _store_result(db_session, trial_id: int, document_id: int, response) -> None:
     # Skip if a result for this document already exists

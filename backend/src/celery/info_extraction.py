@@ -7,11 +7,9 @@ from openai import AsyncOpenAI
 from sqlalchemy import func, select
 
 from .. import models
+from ..db.session import db_session
 from ..utils.info_extraction import extract_info_single_doc_async, update_trial_progress
 from .celery_config import celery_app
-
-from ..db.session import db_session
-
 
 if celery_app:
 

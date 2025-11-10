@@ -317,6 +317,7 @@ class EvaluationEngine:
 
         # read raw file bytes
         from ..dependencies import get_file
+
         content = get_file(ground_truth.file_uuid)
 
         def _norm(x):  # keep original string but trim edges
@@ -694,23 +695,6 @@ class EvaluationEngine:
         """Calculate overall and field-level metrics."""
         calculator = MetricsCalculator()
         return calculator.calculate(evaluation_results)
-
-
-# Keep existing GroundTruthParser, ValueComparator, and MetricsCalculator classes unchanged
-
-
-# utils/evaluation.py  (excerpt, replace the existing class)
-
-import io
-import json
-import zipfile
-from pathlib import Path
-from typing import Any, Dict, Optional
-
-import pandas as pd
-from pandas.errors import ParserError
-
-from .json_utils import make_jsonable
 
 
 class GroundTruthParser:

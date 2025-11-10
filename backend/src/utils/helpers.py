@@ -1,6 +1,8 @@
 import base64
 import io
 import json
+import mimetypes
+import zipfile
 from datetime import datetime, timezone
 from typing import Any
 
@@ -11,13 +13,7 @@ from sqlalchemy.orm import Session
 
 from backend.src import models, schemas
 
-
-import io
-import mimetypes
-import zipfile
-
 # If your enums/constants are here:
-from .enums import FileType  # adjust import if needed
 
 CSV_MIME = "text/csv"
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
