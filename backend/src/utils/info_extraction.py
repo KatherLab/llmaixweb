@@ -409,11 +409,6 @@ def _completion_kwargs(
         extra_body["allowed_openai_params"] = list(allowed)
         kwargs["extra_body"] = extra_body
 
-        # (Optional) If desired, you could bump max_completion_tokens for "high".
-        # Uncomment to enforce a floor only when not set explicitly.
-        # if adv["reasoning_effort"] == "high" and "max_completion_tokens" not in kwargs:
-        #     kwargs["max_completion_tokens"] = 2048
-
     return kwargs
 
 
@@ -431,24 +426,37 @@ async def extract_info_single_doc_async(
     llm_model: str,
     schema_id: int,
     prompt_id: int,
-    project_id: int,  # kept for signature parity; not used here
+    project_id: int,
     advanced_options: dict | None = None,
 ) -> None:
-    """Async version used inside the Celery worker."""
     schema: models.Schema = db_session.get(models.Schema, schema_id)
     prompt: models.Prompt = db_session.get(models.Prompt, prompt_id)
     document: models.Document = db_session.get(models.Document, document_id)
     if not (schema and prompt and document):
         raise ValueError("schema / prompt / document not found")
 
-    response = await client.chat.completions.create(
-        **_completion_kwargs(
+    kwargs = _completion_kwargs(
+        llm_model,
+        schema.schema_definition,
+        _build_messages(prompt, document.text),
+        advanced_options,
+    )
+    response = await client.chat.completions.create(**kwargs)
+
+    finish_reason = getattr(response.choices[0], "finish_reason", None)
+    raw_content = response.choices[0].message.content
+    has_reasoning = bool(getattr(response.choices[0].message, "reasoning_content", None))
+
+    if (finish_reason == "length") and (raw_content is None or (isinstance(raw_content, str) and raw_content.strip() == "")):
+        bumped_adv = _bump_for_length(advanced_options, getattr(response, "usage", None), has_reasoning)
+        bumped_kwargs = _completion_kwargs(
             llm_model,
             schema.schema_definition,
             _build_messages(prompt, document.text),
-            advanced_options,
+            bumped_adv,
         )
-    )
+        response = await client.chat.completions.create(**bumped_kwargs)
+
     _store_result(db_session, trial_id, document_id, response)
 
 
@@ -462,10 +470,9 @@ def extract_info_single_doc(
     base_url: str,
     schema_id: int,
     prompt_id: int,
-    project_id: int,  # kept for signature parity; not used here
+    project_id: int,
     advanced_options: dict | None = None,
 ) -> None:
-    """Synchronous variant, used when bypass_celery=True."""
     schema: models.Schema = db_session.get(models.Schema, schema_id)
     prompt: models.Prompt = db_session.get(models.Prompt, prompt_id)
     document: models.Document = db_session.get(models.Document, document_id)
@@ -473,14 +480,29 @@ def extract_info_single_doc(
         raise ValueError("schema / prompt / document not found")
 
     client = OpenAI(api_key=api_key, base_url=base_url)
-    response = client.chat.completions.create(
-        **_completion_kwargs(
+
+    kwargs = _completion_kwargs(
+        llm_model,
+        schema.schema_definition,
+        _build_messages(prompt, document.text),
+        advanced_options,
+    )
+    response = client.chat.completions.create(**kwargs)
+
+    finish_reason = getattr(response.choices[0], "finish_reason", None)
+    raw_content = response.choices[0].message.content
+    has_reasoning = bool(getattr(response.choices[0].message, "reasoning_content", None))
+
+    if (finish_reason == "length") and (raw_content is None or (isinstance(raw_content, str) and raw_content.strip() == "")):
+        bumped_adv = _bump_for_length(advanced_options, getattr(response, "usage", None), has_reasoning)
+        bumped_kwargs = _completion_kwargs(
             llm_model,
             schema.schema_definition,
             _build_messages(prompt, document.text),
-            advanced_options,
+            bumped_adv,
         )
-    )
+        response = client.chat.completions.create(**bumped_kwargs)
+
     _store_result(db_session, trial_id, document_id, response)
 
 
@@ -493,6 +515,10 @@ _JSON_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.IGNORECASE)
 
 def _extract_json_snippet(s: str) -> str:
     """Trim to the first complete top-level JSON object/array; remove code fences."""
+    # Be tolerant to None and non-strings
+    if not isinstance(s, str):
+        s = "" if s is None else str(s)
+
     s = _JSON_FENCE_RE.sub("", s.strip())
     first_brace = s.find("{")
     first_brack = s.find("[")
@@ -558,22 +584,371 @@ def _escape_ctrls_in_json_strings(s: str) -> str:
 
 
 def safe_json_loads(text: str) -> Any:
-    """A tolerant JSON loader for LLM outputs.
+    """A tolerant JSON loader for LLM outputs."""
+    # Be tolerant to None and non-strings early
+    if text is None:
+        text = ""
+    elif not isinstance(text, str):
+        text = str(text)
 
-    - Tries fast path json.loads first.
-    - Removes code fences and trims to a likely JSON snippet.
-    - Replaces smart quotes.
-    - Escapes raw control chars *inside strings only*.
-    """
+    # Fast path
     try:
         return json.loads(text)
     except Exception:
         pass
 
+    # Heuristic recovery
     candidate = _extract_json_snippet(text)
     candidate = candidate.replace("“", '"').replace("”", '"').replace("’", "'")
     candidate = _escape_ctrls_in_json_strings(candidate)
     return json.loads(candidate)
+
+
+# ------------------------------
+# Finish-reason handling & user guidance
+# ------------------------------
+
+class IncompleteLLMResponseError(RuntimeError):
+    """Raised when the model did not finish with 'stop' and we don't have a safely parsable result."""
+    def __init__(self, technical_message: str, user_message: str | None = None):
+        super().__init__(technical_message)
+        self.user_message = user_message or technical_message
+
+
+def _analyze_truncation(s: str, tail_len: int = 240) -> dict[str, Any]:
+    """
+    Heuristically detect if `s` looks truncated or empty:
+    - Empty output (no content)
+    - Unbalanced braces/brackets/quotes
+    - Ends mid-token
+    Returns flags + a tail snippet for UI/help.
+    """
+    # Normalize non-string input
+    if not isinstance(s, str):
+        s = "" if s is None else str(s)
+
+    if s.strip() == "":
+        return {
+            "empty_output": True,
+            "likely_truncated": True,  # treat as truncated when finish_reason != stop
+            "unclosed_string": False,
+            "unclosed_braces": 0,
+            "unclosed_brackets": 0,
+            "tail_snippet": "",
+        }
+
+    tail = s[-tail_len:]
+    braces = brackets = 0
+    in_str = False
+    esc = False
+    quote = None
+    for ch in s:
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == quote:
+                in_str = False
+                quote = None
+        else:
+            if ch in ("'", '"'):
+                in_str = True
+                quote = ch
+            elif ch == "{":
+                braces += 1
+            elif ch == "}":
+                braces -= 1
+            elif ch == "[":
+                brackets += 1
+            elif ch == "]":
+                brackets -= 1
+
+    likely_unclosed_string = in_str
+    likely_unclosed_braces = braces > 0
+    likely_unclosed_brackets = brackets > 0
+
+    ends_cleanly = s.rstrip().endswith(("}", "]"))
+    likely_truncated = (not ends_cleanly) or likely_unclosed_string or likely_unclosed_braces or likely_unclosed_brackets
+
+    return {
+        "empty_output": False,
+        "likely_truncated": bool(likely_truncated),
+        "unclosed_string": bool(likely_unclosed_string),
+        "unclosed_braces": braces if braces > 0 else 0,
+        "unclosed_brackets": brackets if brackets > 0 else 0,
+        "tail_snippet": tail,
+    }
+
+
+def _advice_for_finish_reason(
+    *,
+    finish_reason: str | None,
+    usage: Any | None,
+    advanced_options: dict | None,
+    has_reasoning: bool,
+) -> dict[str, Any]:
+    """
+    Build actionable advice for callers/UX.
+    - Suggest raising max_completion_tokens if we hit length or usage shows we're near limits.
+    - Suggest lowering reasoning_effort if using 'high' and content is long.
+    - Provide other finish_reason-specific hints.
+    """
+    advice: dict[str, Any] = {"recommendations": [], "context": {}}
+    adv = advanced_options or {}
+    current_max_tok = adv.get("max_completion_tokens")
+    reasoning_effort = adv.get("reasoning_effort")
+    temperature = adv.get("temperature")
+
+    comp_toks = getattr(usage, "completion_tokens", None) if usage is not None else None
+    prompt_toks = getattr(usage, "prompt_tokens", None) if usage is not None else None
+    total_toks = getattr(usage, "total_tokens", None) if usage is not None else None
+
+    advice["context"]["usage"] = {
+        "prompt_tokens": prompt_toks,
+        "completion_tokens": comp_toks,
+        "total_tokens": total_toks,
+    }
+    advice["context"]["advanced_options"] = {
+        "max_completion_tokens": current_max_tok,
+        "reasoning_effort": reasoning_effort,
+        "temperature": temperature,
+    }
+
+    def bump_target():
+        if isinstance(comp_toks, int) and comp_toks > 0:
+            return min(comp_toks * 2, comp_toks + 4096)
+        return 2048 if not current_max_tok else int(current_max_tok * 2)
+
+    if finish_reason == "length":
+        advice["recommendations"].append(
+            {
+                "action": "increase_max_completion_tokens",
+                "suggested_value": bump_target(),
+                "rationale": "Model stopped due to length; completion likely truncated.",
+            }
+        )
+        if reasoning_effort in {"high", "medium"} and has_reasoning:
+            advice["recommendations"].append(
+                {
+                    "action": "lower_reasoning_effort",
+                    "suggested_value": "low" if reasoning_effort == "high" else "low",
+                    "rationale": "Reasoning traces are long and consume tokens; lowering can prevent cutoffs.",
+                }
+            )
+        advice["recommendations"].append(
+            {
+                "action": "reduce_output_size",
+                "rationale": "Consider a leaner schema or more targeted prompt to reduce required tokens.",
+            }
+        )
+        advice["recommendations"].append(
+            {
+                "action": "lower_temperature",
+                "rationale": "Lowering temperature can reduce verbosity in some models.",
+            }
+        )
+
+    elif finish_reason == "content_filter":
+        advice["recommendations"].append(
+            {
+                "action": "adjust_prompt_or_redact",
+                "rationale": "Content may have triggered safety filters; sanitize inputs or rephrase prompt.",
+            }
+        )
+
+    elif finish_reason and finish_reason != "stop":
+        advice["recommendations"].append(
+            {
+                "action": "retry_or_adjust_parameters",
+                "rationale": f"Non-stop finish reason '{finish_reason}'. Consider retrying with more tokens or fewer constraints.",
+            }
+        )
+
+    if isinstance(total_toks, int) and isinstance(prompt_toks, int) and current_max_tok:
+        if (total_toks - prompt_toks) >= int(0.9 * int(current_max_tok)):
+            advice["recommendations"].append(
+                {
+                    "action": "raise_max_completion_tokens",
+                    "suggested_value": bump_target(),
+                    "rationale": "Observed completion tokens were ~90%+ of the cap.",
+                }
+            )
+
+    return advice
+
+
+def _format_reco(action: str, suggested_value) -> str:
+    if suggested_value is None or suggested_value == "":
+        return f"- {action.replace('_', ' ').capitalize()}."
+    return f"- {action.replace('_', ' ').capitalize()}: {suggested_value}"
+
+
+def _suggestion_phrase(action: str, suggested_value) -> str:
+    """Turn a recommendation into a short, actionable phrase for UI toasts."""
+    a = (action or "").lower()
+
+    if a in {"increase_max_completion_tokens", "raise_max_completion_tokens"}:
+        if suggested_value not in (None, ""):
+            return f"increase max_completion_tokens to {suggested_value}"
+        return "increase max_completion_tokens"
+
+    if a == "lower_reasoning_effort":
+        if suggested_value not in (None, ""):
+            return f"set reasoning_effort={suggested_value}"
+        return "lower reasoning_effort"
+
+    if a == "reduce_output_size":
+        return "reduce output size (leaner schema or shorter fields)"
+
+    if a == "lower_temperature":
+        return "lower temperature"
+
+    if a == "adjust_prompt_or_redact":
+        return "sanitize/redact inputs or rephrase prompt"
+
+    if a == "retry_or_adjust_parameters":
+        return "retry with more tokens or fewer constraints"
+
+    # Fallback
+    if suggested_value not in (None, ""):
+        return f"{a.replace('_', ' ')} to {suggested_value}"
+    return a.replace("_", " ")
+
+
+def _summarize_recommendations_for_message(recos: list[dict], max_items: int = 3) -> str:
+    """Condense a list of recommendations into a short 'Try: ...; ...; ...' string."""
+    phrases: list[str] = []
+    for r in recos or []:
+        phrases.append(_suggestion_phrase(r.get("action"), r.get("suggested_value")))
+    # Deduplicate while preserving order
+    seen = set()
+    uniq = []
+    for p in phrases:
+        if p and p not in seen:
+            uniq.append(p)
+            seen.add(p)
+    return "; ".join(uniq[:max_items])
+
+
+def _build_user_guidance(
+    *,
+    finish_reason: str | None,
+    truncation: dict[str, Any] | None,
+    advice: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """
+    Make a user-friendly guidance payload with:
+      - title
+      - what_happened
+      - how_to_fix (bulleted suggestions)
+      - details (optional tail snippet for support/debug)
+      - user_message (single-line summary with concrete suggestions if available)
+    """
+    fr = (finish_reason or "").lower()
+    title = "The model stopped early"
+
+    empty_output = bool(truncation.get("empty_output")) if truncation else False
+    if fr == "length":
+        title = "Your result was cut off (token limit reached)"
+    elif fr == "content_filter":
+        title = "The output was blocked by a content filter"
+    elif fr and fr != "stop":
+        title = f"Model stopped with '{fr}'"
+
+    # What happened
+    if empty_output:
+        what = (
+            "The model produced no JSON content. It likely used the available tokens for reasoning "
+            "and hit the completion cap before emitting any structured output."
+        )
+    elif fr == "length":
+        what = (
+            "The model hit its completion token limit before finishing the JSON output, "
+            "so the result is incomplete."
+        )
+    elif fr == "content_filter":
+        what = (
+            "The provider’s safety system blocked part of the response. "
+            "This often happens if the prompt or document contains sensitive or disallowed content."
+        )
+    elif fr and fr != "stop":
+        what = "The model ended unexpectedly and may not have produced a complete result."
+    else:
+        what = "The model didn’t finish generating the full structured result."
+
+    # How to fix
+    how_to_fix: list[str] = []
+    recos = []
+    if advice and isinstance(advice.get("recommendations"), list):
+        recos = advice["recommendations"]
+        for reco in recos:
+            how_to_fix.append(
+                _format_reco(reco.get("action", "adjust settings"), reco.get("suggested_value"))
+            )
+
+    if truncation and truncation.get("likely_truncated"):
+        how_to_fix.append("- Reduce output size (leaner schema, shorter descriptions) or split documents.")
+
+    details = {}
+    if truncation:
+        tail = truncation.get("tail_snippet")
+        if tail:
+            details["tail_snippet"] = tail
+
+    # Build short advice summary for toast/snackbar
+    advice_summary = _summarize_recommendations_for_message(recos, max_items=3)
+    if advice_summary:
+        user_message = f"{title} — Try: {advice_summary}"
+    else:
+        user_message = title + " — " + (
+            "Try increasing max completion tokens or lowering reasoning effort." if fr == "length"
+            else "Try adjusting settings or sanitizing the input."
+        )
+
+    return {
+        "title": title,
+        "what_happened": what,
+        "how_to_fix": how_to_fix,
+        "details": details,
+        "user_message": user_message,
+    }
+
+
+def _bump_for_length(adv: dict | None, usage: Any | None, has_reasoning: bool) -> dict:
+    """
+    Return a bumped advanced_options dict for a retry after a 'length' stop with empty content.
+
+    Changes:
+      - Preserves the SAME reasoning_effort if the caller set one (no automatic lowering).
+      - Doubles max_completion_tokens (or sets a floor) with a hard +4096 cap over current.
+      - Leaves temperature as-is; if unset, defaults to 0 to encourage concise output.
+
+    Notes:
+      - We still accept `has_reasoning` for future heuristics, but we do NOT change reasoning_effort here.
+    """
+    new_adv = dict(adv or {})
+
+    # Current cap (default floor if absent)
+    current_cap = int(new_adv.get("max_completion_tokens") or 2048)
+
+    # Heuristic bump target based on observed completion tokens when available
+    comp_toks = getattr(usage, "completion_tokens", None) if usage is not None else None
+    if isinstance(comp_toks, int) and comp_toks > 0:
+        suggested = min(comp_toks * 2, comp_toks + 4096)
+    else:
+        suggested = min(current_cap * 2, current_cap + 4096)
+
+    new_adv["max_completion_tokens"] = max(suggested, current_cap)
+
+    # Preserve existing reasoning_effort EXACTLY as provided by the caller; do not modify.
+    # (If none was set originally, we leave it unset.)
+
+    # Keep existing temperature; if not provided, default to 0 for brevity.
+    if "temperature" not in new_adv or new_adv["temperature"] in (None, ""):
+        new_adv["temperature"] = 0
+
+    return new_adv
 
 
 # ------------------------------
@@ -592,35 +967,64 @@ def _store_result(db_session, trial_id: int, document_id: int, response) -> None
     if exists:
         return
 
+    # Pull raw values first
     raw_content = response.choices[0].message.content
+    reasoning = getattr(response.choices[0].message, "reasoning_content", None)
+    finish_reason = getattr(response.choices[0], "finish_reason", None)
+    usage = getattr(response, "usage", None)
 
-    # Parse JSON robustly
-    try:
-        result_json = safe_json_loads(raw_content)
-    except Exception as e:
-        # Record the failure but don't crash the whole trial; persist raw for later inspection
-        additional: dict[str, Any] = {"json_error": str(e), "raw_response": raw_content}
+    # Common additional payload we’ll enrich across branches
+    additional: dict[str, Any] = {}
+    if reasoning is not None:
+        additional["reasoning_content"] = reasoning
+    if finish_reason is not None:
+        additional["finish_reason"] = finish_reason
+    if usage is not None:
         try:
-            reasoning = getattr(response.choices[0].message, "reasoning_content", None)
-            if reasoning is not None:
-                additional["reasoning_content"] = reasoning
-            finish = getattr(response.choices[0], "finish_reason", None)
-            if finish is not None:
-                additional["finish_reason"] = finish
-            usage = getattr(response, "usage", None)
-            if usage is not None:
-                if hasattr(usage, "model_dump"):
-                    additional["usage"] = usage.model_dump()
-                elif hasattr(usage, "dict"):
-                    additional["usage"] = usage.dict()
-                else:
-                    additional["usage"] = {
-                        k: getattr(usage, k)
-                        for k in dir(usage)
-                        if not k.startswith("_")
-                    }
+            if hasattr(usage, "model_dump"):
+                additional["usage"] = usage.model_dump()
+            elif hasattr(usage, "dict"):
+                additional["usage"] = usage.dict()
+            else:
+                additional["usage"] = {
+                    k: getattr(usage, k)
+                    for k in dir(usage)
+                    if not k.startswith("_")
+                }
         except Exception:
             pass
+
+    # Prepare truncation + advice + user guidance for any non-stop finish
+    user_guidance = None
+    if finish_reason and finish_reason != "stop":
+        trunc = _analyze_truncation(raw_content or "")
+        advice = _advice_for_finish_reason(
+            finish_reason=finish_reason,
+            usage=usage,
+            advanced_options=None,  # not available at this layer
+            has_reasoning=bool(reasoning),
+        )
+        additional["truncation_analysis"] = trunc
+        additional["tuning_advice"] = advice
+        user_guidance = _build_user_guidance(
+            finish_reason=finish_reason,
+            truncation=trunc,
+            advice=advice,
+        )
+        additional["user_guidance"] = user_guidance
+
+    # Handle completely empty content early (common when tokens were consumed by reasoning)
+    if raw_content is None or (isinstance(raw_content, str) and raw_content.strip() == ""):
+        additional["json_error"] = "empty_content"
+        additional["raw_response"] = raw_content
+        if "truncation_analysis" not in additional:
+            additional["truncation_analysis"] = _analyze_truncation(raw_content or "")
+        if user_guidance is None and (finish_reason and finish_reason != "stop"):
+            additional["user_guidance"] = _build_user_guidance(
+                finish_reason=finish_reason,
+                truncation=additional["truncation_analysis"],
+                advice=additional.get("tuning_advice"),
+            )
 
         try:
             db_session.add(
@@ -634,27 +1038,56 @@ def _store_result(db_session, trial_id: int, document_id: int, response) -> None
             db_session.commit()
         except IntegrityError:
             db_session.rollback()
-        # Re-raise so the caller's failure accounting still works
+
+        friendly = (additional.get("user_guidance") or {}).get("user_message") or \
+                   "The model produced no JSON output; try increasing max_completion_tokens and lowering reasoning_effort."
+        technical = (
+            f"Non-stop finish ('{finish_reason}'): empty content. "
+            f"The model likely exhausted tokens during reasoning before emitting JSON."
+        )
+        raise IncompleteLLMResponseError(technical, friendly)
+
+    # Parse JSON robustly
+    try:
+        result_json = safe_json_loads(raw_content)
+    except Exception as e:
+        # Record the failure but don't crash the whole trial; persist raw for later inspection
+        additional["json_error"] = str(e)
+        additional["raw_response"] = raw_content
+        if "truncation_analysis" not in additional:
+            additional["truncation_analysis"] = _analyze_truncation(raw_content or "")
+
+        try:
+            db_session.add(
+                models.TrialResult(
+                    trial_id=trial_id,
+                    document_id=document_id,
+                    result=None,
+                    additional_content=additional,
+                )
+            )
+            db_session.commit()
+        except IntegrityError:
+            db_session.rollback()
+
+        # If model finished due to non-stop reason, raise a clearer, user-friendly error
+        if finish_reason and finish_reason != "stop":
+            tail = additional.get("truncation_analysis", {}).get("tail_snippet", "")
+            technical = (
+                f"Non-stop finish ('{finish_reason}'): response likely incomplete. "
+                f"JSON parse failed: {e}. Tail: {tail!r}"
+            )
+            friendly = (user_guidance or {}).get("user_message") or \
+                "The model stopped early; try increasing max_completion_tokens and lowering reasoning_effort."
+            raise IncompleteLLMResponseError(technical, friendly)
+        # Otherwise surface the parse failure as before
         raise
 
     # If we got here, parsing succeeded; collect additional metadata
-    additional: dict[str, Any] = {}
-    reasoning = getattr(response.choices[0].message, "reasoning_content", None)
-    if reasoning is not None:
-        additional["reasoning_content"] = reasoning
-    finish = getattr(response.choices[0], "finish_reason", None)
-    if finish is not None:
-        additional["finish_reason"] = finish
-    usage = getattr(response, "usage", None)
-    if usage is not None:
-        if hasattr(usage, "model_dump"):
-            additional["usage"] = usage.model_dump()
-        elif hasattr(usage, "dict"):
-            additional["usage"] = usage.dict()
-        else:
-            additional["usage"] = {
-                k: getattr(usage, k) for k in dir(usage) if not k.startswith("_")
-            }
+    if finish_reason and finish_reason != "stop":
+        additional["warning"] = (
+            f"Model finished with '{finish_reason}'. Output parsed but may be incomplete or filtered."
+        )
 
     try:
         db_session.add(

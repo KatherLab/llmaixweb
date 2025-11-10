@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 import multiprocessing as mp
+
+try:
+    mp.set_start_method("spawn")
+except RuntimeError:
+    pass
+
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
@@ -11,6 +18,8 @@ from .celery.celery_config import celery_app
 from .core.config import settings
 from .db.session import init_db
 from .routers.v1.endpoints import admin, auth, projects, users
+
+
 
 
 def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
@@ -26,6 +35,7 @@ def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
         str(concurrency),
         "--max-tasks-per-child",
         "5",
+        "--pool", os.getenv("CELERY_DEV_POOL", "threads"),
         "--loglevel",
         "info",
         "-n",
@@ -35,7 +45,7 @@ def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
     proc = mp.Process(
         target=celery_app.worker_main,
         args=(argv,),
-        daemon=True,  # dies with parent
+        daemon=False,  # dies with parent
         name=f"celery-{queue}-worker",
     )
     proc.start()
