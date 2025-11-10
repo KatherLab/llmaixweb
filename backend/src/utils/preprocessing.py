@@ -66,7 +66,7 @@ def find_matching_configuration(
 class PreprocessingPipeline:
     """Flexible preprocessing pipeline for different file types."""
 
-    MAX_ROWS_PER_FILE = 10000  # Fail-safe limit
+    MAX_ROWS_PER_FILE = 100000  # Fail-safe limit
     BATCH_SIZE = 1000  # Process documents in batches
 
     def __init__(
