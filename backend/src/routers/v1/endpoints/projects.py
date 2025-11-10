@@ -20,7 +20,7 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy import and_, delete, distinct, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session, selectinload, contains_eager, noload
+from sqlalchemy.orm import Session, selectinload, contains_eager, noload, load_only
 from starlette import status
 from thefuzz import fuzz
 
@@ -79,24 +79,27 @@ def check_project_access(
 
 
 @router.get("/", response_model=list[schemas.Project],
-            response_model_exclude={"documents", "owner"})
+            response_model_exclude={"documents"})   # keep documents out
 def get_projects(
-    *,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.Project]:
     stmt = select(models.Project)
+
     if current_user.role != "admin":
         stmt = stmt.where(models.Project.owner_id == current_user.id)
 
-    # Avoid loading relationships entirely for safety
     stmt = stmt.options(
+        # bring owner, but only minimal fields
+        selectinload(models.Project.owner).options(
+            load_only(models.User.id, models.User.full_name, models.User.email)
+        ),
+        # absolutely no documents on the list route
         noload(models.Project.documents),
-        noload(models.Project.owner),
     )
 
-    return list(db.execute(stmt).scalars().all())
-
+    projects = list(db.execute(stmt).scalars().all())
+    return projects
 
 @router.get("/{project_id}", response_model=schemas.Project)
 def get_project(

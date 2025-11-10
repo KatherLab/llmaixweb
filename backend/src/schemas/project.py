@@ -16,7 +16,7 @@ from ..utils.enums import FileCreator, PreprocessingStrategy
 from .other import UTCModel
 
 if TYPE_CHECKING:
-    from .user import User  # noqa: F401
+    from .user import User, UserPublic  # noqa: F401
 
 
 class ProjectBase(UTCModel):
@@ -36,7 +36,7 @@ class ProjectUpdate(ProjectBase):
 
 class Project(ProjectBase):
     id: int
-    owner: SkipValidation[User] | None = None
+    owner: UserPublic | None = None
     documents: list[Document] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
@@ -647,7 +647,7 @@ class EvaluationErrorSummary(BaseModel):
     errors: list[EvaluationError]
 
 
-from .user import User  # noqa: E402, F401
+from .user import User, UserPublic  # noqa: E402, F401
 
 
 # --- Rebuild forward refs for Pydantic v2 / FastAPI ---

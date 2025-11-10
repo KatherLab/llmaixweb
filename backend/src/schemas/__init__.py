@@ -54,6 +54,7 @@ from .user import (
     User,
     UserCreate,
     UserResponse,
+    UserPublic
 )
 
 __all__ = [
@@ -62,6 +63,7 @@ __all__ = [
     "PasswordChange",
     "PasswordSet",
     "User",
+    "UserPublic",
     "UserCreate",
     "UserResponse",
     "InvitationResponse",

@@ -10,6 +10,13 @@ if TYPE_CHECKING:
     from .project import Project, ProjectBase  # noqa: F401
 
 
+class UserPublic(BaseModel):
+    id: int
+    full_name: str
+    email: EmailStr
+
+    model_config = ConfigDict(from_attributes=True)
+
 # User schemas
 class UserBase(BaseModel):
     email: EmailStr | None = None
