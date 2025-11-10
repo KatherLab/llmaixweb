@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, List
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     SkipValidation,
     field_validator,
-    model_validator,
+    model_validator, Field,
 )
 
 from ..core.config import settings
@@ -36,8 +36,8 @@ class ProjectUpdate(ProjectBase):
 
 class Project(ProjectBase):
     id: int
-    owner: Annotated[User, SkipValidation] | None = None
-    documents: list[Document] = []
+    owner: SkipValidation[User] | None = None
+    documents: list[Document] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
@@ -104,8 +104,6 @@ class DocumentBase(UTCModel):
     text: str
     document_name: str | None = None
     meta_data: dict | None = None
-    preprocessing_config: dict
-
 
 class DocumentCreate(DocumentBase):
     original_file_id: int
@@ -125,6 +123,11 @@ class Document(DocumentBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedDocuments(UTCModel):
+    items: List[Document]
+    total: int
 
 
 class DocumentSetBase(UTCModel):
@@ -162,7 +165,7 @@ class DocumentSet(DocumentSetBase):
     id: int
     project_id: int
     name: str
-    description: str | None
+    description: str | None = None
     created_at: datetime
     updated_at: datetime
     documents: list[Document] = []
@@ -183,7 +186,7 @@ class DocumentSetStats(BaseModel):
 
     trials_count: int
     extractions_count: int
-    last_used: datetime | None
+    last_used: datetime | None = None
 
 
 class DocumentFilter(BaseModel):
@@ -213,22 +216,21 @@ class DocumentSetSummary(BaseModel):
 
     id: int
     name: str
-    description: str | None
+    description: str | None = None
     document_count: int
     tags: list[str]
-    preprocessing_config_name: str | None
+    preprocessing_config_name: str | None = None
     is_auto_generated: bool
     created_at: datetime
-    last_used: datetime | None
+    last_used: datetime | None = None
     usage_count: int
 
 
 class DocumentSetDetail(DocumentSet):
     """Detailed document set information including documents"""
-
-    documents: list[Document]
     usage_stats: DocumentSetStats
-    preprocessing_config: PreprocessingConfiguration | None
+    preprocessing_config: PreprocessingConfiguration | None = None
+    documents: list[Document]
 
 
 class SmartDocumentSelection(BaseModel):
@@ -345,7 +347,7 @@ class Trial(TrialBase):
     status: str
     created_at: datetime
     updated_at: datetime
-    results: list[TrialResult] = []
+    results: list[TrialResult] = Field(default_factory=list)
     prompt: Prompt | None = None
     document_set: DocumentSet | None = None  # Add this
     advanced_options: dict | None = None
@@ -567,7 +569,7 @@ class GroundTruth(GroundTruthBase):
     id: int
     project_id: int
     file_uuid: str
-    field_mappings: list[FieldMapping] = []
+    field_mappings: list[FieldMapping] = Field(default_factory=list)
     id_column_name: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -577,11 +579,11 @@ class GroundTruth(GroundTruthBase):
 class EvaluationMetricDetail(BaseModel):
     document_id: int
     field_name: str
-    ground_truth_value: str | None
-    predicted_value: str | None
+    ground_truth_value: str | None = None
+    predicted_value: str | None = None
     is_correct: bool
-    error_type: str | None
-    confidence_score: float | None
+    error_type: str | None = None
+    confidence_score: float | None = None
 
 
 # Enhanced DocumentEvaluationDetail with error handling
@@ -618,7 +620,7 @@ class EvaluationSummary(UTCModel):
     overall_metrics: dict
     field_summaries: list[FieldEvaluationSummary]
     document_summaries: list[DocumentEvaluationDetail]
-    confusion_matrices: dict | None
+    confusion_matrices: dict | None = None
     created_at: datetime
     # Add summary error information
     total_errors: int | None = None
@@ -628,7 +630,7 @@ class EvaluationSummary(UTCModel):
 # Add new schema for error details
 class EvaluationError(BaseModel):
     document_id: int
-    document_name: str | None
+    document_name: str | None = None
     error_message: str
     error_type: str
     field_name: str | None = None
@@ -647,4 +649,24 @@ class EvaluationErrorSummary(BaseModel):
 
 from .user import User  # noqa: E402, F401
 
+
+# --- Rebuild forward refs for Pydantic v2 / FastAPI ---
+for _m in [
+    Document,
+    File,
+    PreprocessingConfiguration,
+    FilePreprocessingTask,
+    PreprocessingTask,
+    DocumentSet,
+    TrialResult,
+    Trial,
+    Evaluation,
+    EvaluationDetail,
+    DocumentSetDetail,
+    PaginatedDocuments,
+    Project,  # you already call this below, but keeping it here is fine
+]:
+    _m.model_rebuild()
+
 Project.model_rebuild()
+

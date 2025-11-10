@@ -12,7 +12,7 @@
       <!-- Quick Stats -->
       <div class="flex items-center space-x-6">
         <div class="text-center">
-          <p class="text-2xl font-semibold text-gray-900">{{ totalDocuments }}</p>
+          <p class="text-2xl font-semibold text-gray-900">{{ totalCount }}</p>
           <p class="text-xs text-gray-500">Total Documents</p>
         </div>
         <div class="text-center">
@@ -34,9 +34,11 @@
           ]"
         >
           All Documents
+          <!-- ✅ Server-side version -->
           <span class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs">
-            {{ totalDocuments }}
+            {{ totalCount }}
           </span>
+
         </button>
         <button
           @click="activeTab = 'groups'"
@@ -200,8 +202,9 @@
 
         <div class="flex items-center space-x-3">
           <span class="text-sm text-gray-500">
-            {{ filteredDocuments.length }} document{{ filteredDocuments.length !== 1 ? 's' : '' }}
+            {{ totalCount }} document{{ totalCount !== 1 ? 's' : '' }}
           </span>
+
 
           <div v-if="selectedDocuments.length > 0" class="flex items-center space-x-2">
             <span class="text-sm text-gray-700">
@@ -240,7 +243,7 @@
         <LoadingSpinner size="large" />
       </div>
 
-      <div v-else-if="filteredDocuments.length === 0" class="bg-gray-50 rounded-lg p-12 text-center">
+      <div v-else-if="serverItems.length === 0" class="bg-gray-50 rounded-lg p-12 text-center">
         <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
@@ -253,7 +256,7 @@
       <!-- Grid View -->
       <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <DocumentCard
-          v-for="doc in paginatedDocuments"
+          v-for="doc in serverItems"
           :key="doc.id"
           :document="doc"
           :selected="selectedDocuments.includes(doc.id)"
@@ -261,6 +264,7 @@
           @view="viewDocument"
           @download="downloadDocument"
         />
+
       </div>
 
       <!-- List View -->
@@ -295,10 +299,11 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr
-              v-for="doc in paginatedDocuments"
+              v-for="doc in serverItems"
               :key="doc.id"
               class="hover:bg-gray-50 transition-colors"
             >
+
               <td class="px-6 py-4 whitespace-nowrap">
                 <input
                   type="checkbox"
@@ -335,10 +340,10 @@
                 <span
                   :class="[
                     'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                    getStatusClass(doc.preprocessing_status)
+                    getStatusClass(doc.file_preprocessing_task?.status)
                   ]"
                 >
-                  {{ doc.preprocessing_status || 'Processed' }}
+                  {{ doc.file_preprocessing_task?.status || 'Processed' }}
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -392,13 +397,14 @@
         </div>
         <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
+            <!-- ✅ Server-side version -->
             <p class="text-sm text-gray-700">
               Showing
               <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span>
               to
-              <span class="font-medium">{{ Math.min(currentPage * itemsPerPage, filteredDocuments.length) }}</span>
+              <span class="font-medium">{{ Math.min(currentPage * itemsPerPage, totalCount) }}</span>
               of
-              <span class="font-medium">{{ filteredDocuments.length }}</span>
+              <span class="font-medium">{{ totalCount }}</span>
               results
             </p>
           </div>
@@ -511,6 +517,8 @@ const currentPage = ref(1);
 const itemsPerPage = ref(20);
 const activeTab = ref('documents');
 const documentSets = ref([]);
+const serverItems = ref([]);   // current page rows from the server
+const totalCount = ref(0);     // total rows on the server (after filters)
 
 // Filters
 const filters = ref({
@@ -545,7 +553,7 @@ const filteredDocuments = computed(() => {
 
   // Task filter
   if (filters.value.taskId) {
-    result = result.filter(doc => doc.preprocessing_task_id === parseInt(filters.value.taskId));
+    result = result.filter(doc => doc.file_preprocessing_task_id === parseInt(filters.value.taskId));
   }
 
   // Config filter
@@ -584,14 +592,17 @@ const filteredDocuments = computed(() => {
 
   // Status filter
   if (filters.value.status) {
-    result = result.filter(doc => doc.preprocessing_status === filters.value.status);
+    result = result.filter(doc => doc.file_preprocessing_task?.status === filters.value.status);
   }
 
   return result;
 });
 
 // Pagination
-const totalPages = computed(() => Math.ceil(filteredDocuments.value.length / itemsPerPage.value));
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(totalCount.value / itemsPerPage.value))
+);
+
 const paginatedDocuments = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value;
   const end = start + itemsPerPage.value;
@@ -635,30 +646,34 @@ const visiblePages = computed(() => {
 });
 
 // Methods
+// ⬇️ REPLACE your fetchDocuments with this (or align your existing one)
 const fetchDocuments = async () => {
   isLoading.value = true;
   try {
-    const response = await api.get(`/project/${props.projectId}/document`);
-    documents.value = response.data;
+    const { date_from, date_to } = computeDateBounds(filters.value.dateRange);
+    const params = {
+      limit: itemsPerPage.value,
+      offset: (currentPage.value - 1) * itemsPerPage.value,
+      file_preprocessing_task_id: filters.value.taskId || undefined,
+      config_id: filters.value.configId || undefined,
+      search: filters.value.search || undefined,
+      date_from: date_from || undefined,
+      date_to: date_to || undefined,
+    };
 
-    // Extract unique preprocessing tasks
-    const taskMap = new Map();
-    documents.value.forEach(doc => {
-      if (doc.preprocessing_task_id && !taskMap.has(doc.preprocessing_task_id)) {
-        taskMap.set(doc.preprocessing_task_id, {
-          id: doc.preprocessing_task_id,
-          documentCount: 0
-        });
-      }
-      if (doc.preprocessing_task_id) {
-        taskMap.get(doc.preprocessing_task_id).documentCount++;
-      }
-    });
-    preprocessingTasks.value = Array.from(taskMap.values());
+    const { data } = await api.get(`/project/${props.projectId}/document`, { params });
+    serverItems.value = data.items;
+    totalCount.value = data.total;
 
-    // Fetch configurations
+    // Optional: keep configurations as you had
     const configResponse = await api.get(`/project/${props.projectId}/preprocessing-config`);
     configurations.value = configResponse.data;
+
+    // Safety: if you navigated beyond last page due to a filter change, pull back
+    if (serverItems.value.length === 0 && totalCount.value > 0 && currentPage.value > totalPages.value) {
+      currentPage.value = totalPages.value;
+      await fetchDocuments();
+    }
   } catch (error) {
     toast.error('Failed to load documents');
     console.error(error);
@@ -666,6 +681,22 @@ const fetchDocuments = async () => {
     isLoading.value = false;
   }
 };
+
+// Helper stays the same; include if you don't have it yet
+function computeDateBounds(range) {
+  if (!range) return {};
+  const now = new Date();
+  const start = new Date(now);
+  if (range === 'today') {
+    start.setHours(0, 0, 0, 0);
+  } else if (range === 'week') {
+    start.setDate(now.getDate() - 7);
+  } else if (range === 'month') {
+    start.setDate(now.getDate() - 30);
+  }
+  return { date_from: start.toISOString(), date_to: now.toISOString() };
+}
+
 
 const fetchDocumentSets = async () => {
   try {
@@ -817,7 +848,9 @@ const formatDate = (dateString) => {
 // Debounced search
 const debouncedSearch = debounce(() => {
   currentPage.value = 1;
+  fetchDocuments();
 }, 300);
+
 
 // Watchers
 watch(() => filters.value.search, debouncedSearch);
@@ -826,11 +859,14 @@ watch([
   () => filters.value.taskId,
   () => filters.value.configId,
   () => filters.value.dateRange,
-  () => filters.value.ocrLanguage,
-  () => filters.value.status
+  //() => filters.value.ocrLanguage,  // only if supported server-side
+  //() => filters.value.status        // only if supported server-side
 ], () => {
   currentPage.value = 1;
+  fetchDocuments();
 });
+
+watch([currentPage, itemsPerPage], fetchDocuments);
 
 // Lifecycle
 onMounted(() => {

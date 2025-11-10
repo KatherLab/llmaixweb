@@ -1,6 +1,7 @@
 from .auth import Token, TokenPayload
 from .project import (
     Document,
+    PaginatedDocuments,
     DocumentBase,
     DocumentCreate,
     DocumentEvaluationDetail,
@@ -109,4 +110,5 @@ __all__ = [
     "EvaluationSummary",
     "EvaluationMetricDetail",
     "DocumentEvaluationDetail",
+    "PaginatedDocuments"
 ]

@@ -3,7 +3,7 @@ import datetime
 import io
 import json
 import zipfile
-from typing import Any, List, cast
+from typing import Any, List, cast, Optional, Annotated
 
 import pandas as pd
 from fastapi import (
@@ -14,13 +14,13 @@ from fastapi import (
     Form,
     HTTPException,
     Query,
-    UploadFile,
+    UploadFile, Path,
 )
 from fastapi.responses import Response, StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy import and_, delete, distinct, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, contains_eager
 from starlette import status
 from thefuzz import fuzz
 
@@ -53,7 +53,7 @@ router = APIRouter()
 
 
 def check_project_access(
-    project_id: int, current_user: models.User, db: Session, permission: str = "read"
+        project_id: int, current_user: models.User, db: Session, permission: str = "read"
 ) -> models.Project:
     """Check if user has access to project."""
     project = db.execute(
@@ -80,9 +80,9 @@ def check_project_access(
 
 @router.get("/", response_model=list[schemas.Project])
 def get_projects(
-    *,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.Project]:
     if current_user.role == "admin":
         projects = list(db.execute(select(models.Project)).scalars().all())
@@ -99,10 +99,10 @@ def get_projects(
 
 @router.get("/{project_id}", response_model=schemas.Project)
 def get_project(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.Project:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -120,10 +120,10 @@ def get_project(
 
 @router.post("/", response_model=schemas.Project)
 def create_project(
-    *,
-    db: Session = Depends(get_db),
-    project: schemas.ProjectCreate,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project: schemas.ProjectCreate,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.Project:
     if not current_user.role == "user":
         if not project.owner_id:
@@ -148,11 +148,11 @@ def create_project(
 
 @router.put("/{project_id}", response_model=schemas.Project)
 def update_project(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    project: schemas.ProjectUpdate,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        project: schemas.ProjectUpdate,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.Project:
     existing_project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -178,10 +178,10 @@ def update_project(
 
 @router.delete("/{project_id}", response_model=schemas.Project)
 def delete_project(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.Project:
     existing_project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -205,21 +205,21 @@ def delete_project(
 
 @router.get("/{project_id}/file", response_model=list[schemas.File])
 def get_project_files(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    # Filter parameters
-    search: str | None = Query(None, description="Search in filename"),
-    file_type: str | None = Query(None, description="Filter by file type"),
-    file_creator: FileCreator | None = Query(None),
-    date_from: datetime.datetime | None = Query(None),
-    date_to: datetime.datetime | None = Query(None),
-    min_size: int | None = Query(None, description="Minimum file size in bytes"),
-    max_size: int | None = Query(None, description="Maximum file size in bytes"),
-    # Pagination
-    skip: int = Query(0, ge=0),
-    limit: int = Query(0, ge=0, le=1000),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        # Filter parameters
+        search: str | None = Query(None, description="Search in filename"),
+        file_type: str | None = Query(None, description="Filter by file type"),
+        file_creator: FileCreator | None = Query(None),
+        date_from: datetime.datetime | None = Query(None),
+        date_to: datetime.datetime | None = Query(None),
+        min_size: int | None = Query(None, description="Minimum file size in bytes"),
+        max_size: int | None = Query(None, description="Maximum file size in bytes"),
+        # Pagination
+        skip: int = Query(0, ge=0),
+        limit: int = Query(0, ge=0, le=1000),
+        current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.File]:
     """Get project files with advanced filtering"""
     check_project_access(project_id, current_user, db)
@@ -254,11 +254,11 @@ def get_project_files(
 
 @router.get("/{project_id}/file/stats", response_model=dict)
 def get_file_stats(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_creator: FileCreator | None = Query(None),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_creator: FileCreator | None = Query(None),
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Get file statistics for the project"""
     check_project_access(project_id, current_user, db)
@@ -318,11 +318,11 @@ def get_file_stats(
 
 @router.get("/{project_id}/file/{file_id}", response_model=schemas.File)
 def get_project_file(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.File:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -350,12 +350,12 @@ def get_project_file(
 
 @router.get("/{project_id}/file/{file_id}/content", response_class=Response)
 def get_project_file_content(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_id: int,
-    preview: bool = Query(False),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_id: int,
+        preview: bool = Query(False),
+        current_user: models.User = Depends(get_current_user),
 ) -> Response:
     """Retrieve the content of a file associated with a project."""
     project: models.Project | None = db.execute(
@@ -391,12 +391,12 @@ def get_project_file_content(
 
 @router.post("/{project_id}/file", response_model=schemas.File)
 def upload_file(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file: UploadFile = File(...),
-    file_info: str = Form(...),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file: UploadFile = File(...),
+        file_info: str = Form(...),
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.File:
     """Upload a file with duplicate detection and *server-side MIME normalization*"""
     try:
@@ -473,12 +473,12 @@ def upload_file(
 
 @router.post("/{project_id}/file/{file_id}/configure", response_model=schemas.File)
 def configure_file_import(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_id: int,
-    config: dict = Body(...),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_id: int,
+        config: dict = Body(...),
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.File:
     """
     Set/update import config and preprocessing strategy for a file.
@@ -500,14 +500,14 @@ def configure_file_import(
     if "file_metadata" in config:
         file.file_metadata = config["file_metadata"]
     elif any(
-        k in config
-        for k in (
-            "delimiter",
-            "has_header",
-            "row_split",
-            "case_id_column",
-            "text_columns",
-        )
+            k in config
+            for k in (
+                    "delimiter",
+                    "has_header",
+                    "row_split",
+                    "case_id_column",
+                    "text_columns",
+            )
     ):
         file.file_metadata = {**(file.file_metadata or {}), **config}
 
@@ -520,16 +520,16 @@ def configure_file_import(
 
 @router.get("/{project_id}/file/{file_id}/preview-rows", response_model=dict)
 def preview_structured_file(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_id: int,
-    delimiter: str = Query(None, description="Delimiter for CSV"),
-    encoding: str = Query("utf-8"),
-    has_header: bool = Query(True),
-    sheet: str = Query(None),
-    max_rows: int = Query(10, ge=1, le=50),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_id: int,
+        delimiter: str = Query(None, description="Delimiter for CSV"),
+        encoding: str = Query("utf-8"),
+        has_header: bool = Query(True),
+        sheet: str = Query(None),
+        max_rows: int = Query(10, ge=1, le=50),
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """
     Return first N rows from CSV/XLSX for configuration/preview.
@@ -581,7 +581,7 @@ def preview_structured_file(
         return [("" if v is None else v) for v in row]
 
     def _normalize_headers(
-        raw_headers: list, width_fallback: int | None = None
+            raw_headers: list, width_fallback: int | None = None
     ) -> list[str]:
         if not raw_headers and width_fallback:
             headers = [f"Column {i + 1}" for i in range(width_fallback)]
@@ -681,7 +681,7 @@ def preview_structured_file(
         if has_header:
             raw_headers = _coerce_row(all_rows[0])
             headers = _normalize_headers(raw_headers)
-            data_rows = all_rows[1 : 1 + max_rows]
+            data_rows = all_rows[1: 1 + max_rows]
         else:
             width = len(all_rows[0])
             headers = _normalize_headers([], width_fallback=width)
@@ -796,11 +796,11 @@ def preview_structured_file(
 
 @router.post("/{project_id}/file/check-duplicates", response_model=list[dict])
 def check_duplicates(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    files: list[dict] = Body(..., description="List of {filename, hash} objects"),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        files: list[dict] = Body(..., description="List of {filename, hash} objects"),
+        current_user: models.User = Depends(get_current_user),
 ) -> list[dict]:
     """Check for duplicate files before uploading"""
     check_project_access(project_id, current_user, db)
@@ -836,12 +836,12 @@ def check_duplicates(
 
 @router.delete("/{project_id}/file/{file_id}", response_model=schemas.File)
 def delete_file(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_id: int,
-    force: bool = Query(False, description="Force delete even if linked"),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_id: int,
+        force: bool = Query(False, description="Force delete even if linked"),
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.File:
     """Delete a file with safety checks"""
     check_project_access(project_id, current_user, db, permission="write")
@@ -862,10 +862,10 @@ def delete_file(
 
     # Check if file is linked to other resources
     is_linked = (
-        len(file.documents_as_original) > 0
-        or len(file.documents_as_preprocessed) > 0
-        or len(file.preprocessing_tasks) > 0
-        or len(file.file_preprocessing_tasks) > 0
+            len(file.documents_as_original) > 0
+            or len(file.documents_as_preprocessed) > 0
+            or len(file.preprocessing_tasks) > 0
+            or len(file.file_preprocessing_tasks) > 0
     )
 
     if is_linked and not force:
@@ -875,9 +875,9 @@ def delete_file(
                 "message": "File is linked to other resources",
                 "links": {
                     "documents": len(file.documents_as_original)
-                    + len(file.documents_as_preprocessed),
+                                 + len(file.documents_as_preprocessed),
                     "preprocessing_tasks": len(file.preprocessing_tasks)
-                    + len(file.file_preprocessing_tasks),
+                                           + len(file.file_preprocessing_tasks),
                 },
             },
         )
@@ -897,12 +897,12 @@ def delete_file(
 
 @router.post("/{project_id}/file/batch-delete", response_model=dict)
 def batch_delete_files(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_ids: list[int] = Body(...),
-    force: bool = Body(False),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_ids: list[int] = Body(...),
+        force: bool = Body(False),
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Delete multiple files at once"""
     check_project_access(project_id, current_user, db, permission="write")
@@ -938,12 +938,12 @@ def batch_delete_files(
 
 @router.post("/{project_id}/file/download-zip")
 async def download_files_as_zip(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_ids: list[int] = Body(...),
-    include_metadata: bool = Body(True),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_ids: list[int] = Body(...),
+        include_metadata: bool = Body(True),
+        current_user: models.User = Depends(get_current_user),
 ) -> Response:
     """Download multiple files as a ZIP archive"""
     check_project_access(project_id, current_user, db)
@@ -1024,12 +1024,12 @@ async def download_files_as_zip(
 
 @router.post("/{project_id}/file/move")
 async def move_files(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_ids: list[int] = Body(...),
-    target_project_id: int = Body(...),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_ids: list[int] = Body(...),
+        target_project_id: int = Body(...),
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Move files to another project"""
     # Check access to both source and target projects
@@ -1088,11 +1088,11 @@ async def move_files(
 
 @router.get("/{project_id}/file/check-links/{file_id}")
 def check_file_links(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Check if a file has any linked resources"""
     check_project_access(project_id, current_user, db)
@@ -1133,11 +1133,11 @@ def check_file_links(
     response_model=List[schemas.PreprocessingConfiguration],
 )
 def get_preprocessing_configurations(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    file_type: str | None = None,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        file_type: str | None = None,
+        current_user: models.User = Depends(get_current_user),
 ) -> List[schemas.PreprocessingConfiguration]:
     """Get all preprocessing configurations for a project."""
     check_project_access(project_id, current_user, db, "read")
@@ -1161,11 +1161,11 @@ def get_preprocessing_configurations(
     response_model=schemas.PreprocessingConfiguration,
 )
 def get_preprocessing_configuration(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    config_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        config_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.PreprocessingConfiguration:
     """Get a specific preprocessing configuration."""
     check_project_access(project_id, current_user, db, "read")
@@ -1188,11 +1188,11 @@ def get_preprocessing_configuration(
     response_model=schemas.PreprocessingConfiguration,
 )
 def create_preprocessing_configuration(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    config: schemas.PreprocessingConfigurationCreate,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        config: schemas.PreprocessingConfigurationCreate,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.PreprocessingConfiguration:
     """Create a reusable preprocessing configuration."""
     check_project_access(project_id, current_user, db, "write")
@@ -1226,12 +1226,12 @@ def create_preprocessing_configuration(
     response_model=schemas.PreprocessingConfiguration,
 )
 def update_preprocessing_configuration(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    config_id: int,
-    config_update: schemas.PreprocessingConfigurationUpdate,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        config_id: int,
+        config_update: schemas.PreprocessingConfigurationUpdate,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.PreprocessingConfiguration:
     """Update a preprocessing configuration."""
     check_project_access(project_id, current_user, db, "write")
@@ -1271,10 +1271,10 @@ def update_preprocessing_configuration(
 
     # Is config referenced by any document?
     in_use = (
-        db.query(models.Document)
-        .filter(models.Document.preprocessing_config_id == config.id)
-        .count()
-        > 0
+            db.query(models.Document)
+            .filter(models.Document.preprocessing_config_id == config.id)
+            .count()
+            > 0
     )
 
     allowed_fields = {"name", "description"}
@@ -1308,11 +1308,11 @@ def update_preprocessing_configuration(
 
 @router.delete("/{project_id}/preprocessing-config/{config_id}")
 def delete_preprocessing_configuration(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    config_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        config_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Delete a preprocessing configuration."""
     check_project_access(project_id, current_user, db, "write")
@@ -1352,11 +1352,11 @@ def delete_preprocessing_configuration(
 
 @router.post("/{project_id}/preprocess", response_model=schemas.PreprocessingTask)
 async def preprocess_project_data(
-    *,
-    project_id: int,
-    preprocessing_task: schemas.PreprocessingTaskCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        *,
+        project_id: int,
+        preprocessing_task: schemas.PreprocessingTaskCreate,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Start preprocessing with advanced duplicate detection and progress tracking."""
     check_project_access(project_id, current_user, db, "write")
@@ -1412,7 +1412,7 @@ async def preprocess_project_data(
 
             # Compare additional_settings (handle None)
             if (potential_config.additional_settings or {}) != (
-                config_dict.get("additional_settings") or {}
+                    config_dict.get("additional_settings") or {}
             ):
                 continue
 
@@ -1613,13 +1613,13 @@ async def preprocess_project_data(
 
 @router.get("/{project_id}/preprocess", response_model=List[schemas.PreprocessingTask])
 def get_preprocessing_tasks(
-    *,
-    project_id: int,
-    status: str | None = Query(None, description="Filter by status"),
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        *,
+        project_id: int,
+        status: str | None = Query(None, description="Filter by status"),
+        limit: int = Query(100, ge=1, le=1000),
+        offset: int = Query(0, ge=0),
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> List[schemas.PreprocessingTask]:
     """Get preprocessing tasks for a project."""
     check_project_access(project_id, current_user, db, "read")
@@ -1653,11 +1653,11 @@ def get_preprocessing_tasks(
     "/{project_id}/preprocess/{task_id}", response_model=schemas.PreprocessingTask
 )
 def get_preprocessing_task(
-    *,
-    project_id: int,
-    task_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        *,
+        project_id: int,
+        task_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Get detailed information about a preprocessing task."""
     check_project_access(project_id, current_user, db, "read")
@@ -1687,12 +1687,12 @@ def get_preprocessing_task(
     response_model=schemas.PreprocessingTask,
 )
 def cancel_preprocessing_task(
-    *,
-    project_id: int,
-    task_id: int,
-    keep_processed: bool = Query(False, description="Keep already processed files"),
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        *,
+        project_id: int,
+        task_id: int,
+        keep_processed: bool = Query(False, description="Keep already processed files"),
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Cancel a preprocessing task with option to keep or rollback processed files."""
 
@@ -1755,11 +1755,11 @@ def cancel_preprocessing_task(
 
 @router.get("/{project_id}/preprocess/{task_id}/progress")
 def get_preprocessing_progress(
-    *,
-    project_id: int,
-    task_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        *,
+        project_id: int,
+        task_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Get detailed progress of a preprocessing task."""
     check_project_access(project_id, current_user, db, "read")
@@ -1776,8 +1776,8 @@ def get_preprocessing_progress(
 
     # Calculate estimated completion time if in progress
     if (
-        task.status == models.PreprocessingStatus.IN_PROGRESS
-        and task.processed_files > 0
+            task.status == models.PreprocessingStatus.IN_PROGRESS
+            and task.processed_files > 0
     ):
         elapsed = datetime.datetime.now(datetime.UTC) - task.started_at
         avg_time_per_file = elapsed.total_seconds() / task.processed_files
@@ -1788,7 +1788,7 @@ def get_preprocessing_progress(
                 seconds=avg_time_per_file * remaining_files
             )
             task.estimated_completion = (
-                datetime.datetime.now(datetime.UTC) + estimated_remaining
+                    datetime.datetime.now(datetime.UTC) + estimated_remaining
             )
 
     return schemas.PreprocessingTask.model_validate(task)
@@ -1796,11 +1796,11 @@ def get_preprocessing_progress(
 
 @router.get("/{project_id}/preprocess/{task_id}/retry-failed")
 def retry_failed_files(
-    *,
-    project_id: int,
-    task_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        *,
+        project_id: int,
+        task_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Create a new task to retry failed files from a previous task."""
     check_project_access(project_id, current_user, db, "write")
@@ -1855,46 +1855,89 @@ def retry_failed_files(
     return schemas.PreprocessingTask.model_validate(new_task)
 
 
-@router.get("/{project_id}/document", response_model=List[schemas.Document])
+@router.get("/{project_id}/document", response_model=None)  # keep None just for the test
 def get_documents(
-    *,
-    project_id: int,
-    file_id: str | None = Query(None, description="Filter by original file"),
-    preprocessing_task_id: int | None = Query(
-        None, description="Filter by preprocessing task"
-    ),
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
+    project_id: Annotated[int, Path()],
+    file_id: Annotated[int | None, Query(description="Filter by original file id")] = None,
+    file_preprocessing_task_id: Annotated[int | None, Query(description="Filter by file_preprocessing_task id")] = None,
+    config_id: Annotated[int | None, Query(description="Filter by preprocessing_config_id")] = None,
+    search: Annotated[str | None, Query(description="Search text and/or filename (case-insensitive)")] = None,
+    date_from: Annotated[datetime.datetime | None, Query(description="ISO datetime lower bound (inclusive)")] = None,
+    date_to: Annotated[datetime.datetime | None, Query(description="ISO datetime upper bound (exclusive)")] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> List[schemas.Document]:
-    """Get documents for a project with optional filtering."""
+) -> schemas.PaginatedDocuments:
     check_project_access(project_id, current_user, db, "read")
 
-    query = select(models.Document).where(models.Document.project_id == project_id)
+    D = models.Document
+    F = models.File
 
-    if file_id:
-        query = query.where(models.Document.original_file_id == file_id)
+    # Build base SELECT with filters (no limit/offset yet)
+    base = (
+        select(D)
+        .where(D.project_id == project_id)
+    )
 
-    if preprocessing_task_id:
-        query = query.join(models.FilePreprocessingTask).where(
-            models.FilePreprocessingTask.preprocessing_task_id == preprocessing_task_id
+    if file_id is not None:
+        base = base.where(D.original_file_id == file_id)
+
+    if file_preprocessing_task_id is not None:
+        base = base.where(D.file_preprocessing_task_id == file_preprocessing_task_id)
+
+    if config_id is not None:
+        base = base.where(D.preprocessing_config_id == config_id)
+
+    if date_from is not None:
+        base = base.where(D.created_at >= date_from)
+    if date_to is not None:
+        base = base.where(D.created_at < date_to)
+
+    joined_for_search = False
+    if search:
+        pattern = f"%{search}%"
+        # Join original_file for filename search; keep it optional if you only want text search
+        base = (
+            base
+            .join(F, F.id == D.original_file_id)
+            .where(or_(
+                D.text.ilike(pattern),
+                F.file_name.ilike(pattern),
+            ))
         )
+        joined_for_search = True
 
-    query = query.order_by(models.Document.created_at.desc())
-    query = query.limit(limit).offset(offset)
+    # total BEFORE slicing
+    total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
 
-    documents = db.execute(query).scalars().all()
-    return [schemas.Document.model_validate(doc) for doc in documents]
+    # Page query
+    page_q = base.order_by(D.created_at.desc()).limit(limit).offset(offset)
+
+    # If you want to eagerly include original_file in the response (handy for the UI)
+    if joined_for_search:
+        # We already joined File for search; use contains_eager to populate relationship
+        page_q = page_q.options(contains_eager(D.original_file))
+    else:
+        # Otherwise, you can lazy-load or eager-load as you prefer:
+        # from sqlalchemy.orm import joinedload
+        # page_q = page_q.options(joinedload(D.original_file))
+        pass
+
+    items = db.execute(page_q).scalars().all()
+    return schemas.PaginatedDocuments(
+        items=[schemas.Document.model_validate(d) for d in items],
+        total=total,
+    )
 
 
 @router.get("/{project_id}/document/{document_id}", response_model=schemas.Document)
 def get_document(
-    *,
-    project_id: int,
-    document_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        *,
+        project_id: int,
+        document_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Document:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -1920,11 +1963,11 @@ def get_document(
 
 @router.delete("/{project_id}/document/{document_id}")
 def delete_document(
-    *,
-    project_id: int,
-    document_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        *,
+        project_id: int,
+        document_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> dict:
     """Delete a specific document, only if not used in any trial, trial result, or evaluation metric."""
     check_project_access(project_id, current_user, db, "write")
@@ -2012,10 +2055,10 @@ def delete_document(
 
 @router.post("/{project_id}/document-set", response_model=schemas.DocumentSet)
 def create_document_set(
-    project_id: int,
-    document_set: schemas.DocumentSetCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        document_set: schemas.DocumentSetCreate,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.DocumentSet:
     """Create a document set from documents or a trial"""
     # Check project access
@@ -2086,16 +2129,16 @@ def create_document_set(
 
 @router.get("/{project_id}/document-set", response_model=List[schemas.DocumentSet])
 def get_document_sets(
-    project_id: int,
-    include_auto_generated: bool = Query(
-        False, description="Include auto-generated sets from trials"
-    ),
-    preprocessing_config_id: int = Query(
-        None, description="Filter by preprocessing configuration"
-    ),
-    tag: str = Query(None, description="Filter by tag"),
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        include_auto_generated: bool = Query(
+            False, description="Include auto-generated sets from trials"
+        ),
+        preprocessing_config_id: int = Query(
+            None, description="Filter by preprocessing configuration"
+        ),
+        tag: str = Query(None, description="Filter by tag"),
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> List[schemas.DocumentSet]:
     check_project_access(project_id, current_user, db, "read")
 
@@ -2123,11 +2166,11 @@ def get_document_sets(
 
 @router.patch("/{project_id}/document-set/{set_id}", response_model=schemas.DocumentSet)
 def update_document_set(
-    project_id: int,
-    set_id: int,
-    update_data: schemas.DocumentSetUpdate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        set_id: int,
+        update_data: schemas.DocumentSetUpdate,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.DocumentSet:
     check_project_access(project_id, current_user, db, "write")
 
@@ -2172,10 +2215,10 @@ def update_document_set(
     summary="Delete a document set (only if not used by any trial)",
 )
 def delete_document_set(
-    project_id: int,
-    set_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        set_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ):
     # 1. Permission check
     check_project_access(project_id, current_user, db, "write")
@@ -2217,11 +2260,11 @@ def delete_document_set(
     response_model=schemas.DocumentSet,
 )
 def create_document_set_from_trial(
-    project_id: int,
-    trial_id: int,
-    set_data: schemas.DocumentSetFromTrial,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        trial_id: int,
+        set_data: schemas.DocumentSetFromTrial,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.DocumentSet:
     """Create a named document set from a trial's documents"""
     check_project_access(project_id, current_user, db, "write")
@@ -2269,10 +2312,10 @@ def create_document_set_from_trial(
     "/{project_id}/document-set/{set_id}/stats", response_model=schemas.DocumentSetStats
 )
 def get_document_set_stats(
-    project_id: int,
-    set_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        set_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.DocumentSetStats:
     """Get usage statistics for a document set"""
     check_project_access(project_id, current_user, db, "read")
@@ -2310,7 +2353,7 @@ def get_document_set_stats(
 
     for trial in trials_with_docs:
         if trial.document_ids and any(
-            doc_id in trial.document_ids for doc_id in doc_ids
+                doc_id in trial.document_ids for doc_id in doc_ids
         ):
             trials_count += 1
             if not last_trial_date or trial.created_at > last_trial_date:
@@ -2318,15 +2361,15 @@ def get_document_set_stats(
 
     # Count total extractions (trial results for these documents)
     extractions_count = (
-        db.execute(
-            select(func.count(models.TrialResult.id))
-            .join(models.Trial)
-            .where(
-                models.Trial.project_id == project_id,
-                models.TrialResult.document_id.in_(doc_ids),
-            )
-        ).scalar()
-        or 0
+            db.execute(
+                select(func.count(models.TrialResult.id))
+                .join(models.Trial)
+                .where(
+                    models.Trial.project_id == project_id,
+                    models.TrialResult.document_id.in_(doc_ids),
+                )
+            ).scalar()
+            or 0
     )
 
     return schemas.DocumentSetStats(
@@ -2338,10 +2381,10 @@ def get_document_set_stats(
 
 @router.post("/{project_id}/document-set/{set_id}/download-all")
 def download_all_documents(
-    project_id: int,
-    set_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        set_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ):
     """Download all documents in a set as a ZIP file"""
     check_project_access(project_id, current_user, db, "read")
@@ -2393,10 +2436,10 @@ def download_all_documents(
 
 @router.post("/{project_id}/schema", response_model=schemas.Schema)
 def create_schema(
-    project_id: int,
-    schema: schemas.SchemaCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        schema: schemas.SchemaCreate,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Schema:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2418,9 +2461,9 @@ def create_schema(
 
 @router.get("/{project_id}/schema", response_model=list[schemas.Schema])
 def get_schemas(
-    project_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> list[schemas.Schema]:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2442,10 +2485,10 @@ def get_schemas(
 
 @router.get("/{project_id}/schema/{schema_id}", response_model=schemas.Schema)
 def get_schema(
-    project_id: int,
-    schema_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        schema_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Schema:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2469,11 +2512,11 @@ def get_schema(
 
 @router.put("/{project_id}/schema/{schema_id}", response_model=schemas.Schema)
 def update_schema(
-    project_id: int,
-    schema_id: int,
-    schema: schemas.SchemaUpdate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        schema_id: int,
+        schema: schemas.SchemaUpdate,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Schema:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2508,10 +2551,10 @@ def update_schema(
 
 @router.delete("/{project_id}/schema/{schema_id}", response_model=schemas.Schema)
 def delete_schema(
-    project_id: int,
-    schema_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        schema_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Schema:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2550,10 +2593,10 @@ def delete_schema(
 
 @router.post("/{project_id}/prompt", response_model=schemas.Prompt)
 def create_prompt(
-    project_id: int,
-    prompt: schemas.PromptCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        prompt: schemas.PromptCreate,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Prompt:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2579,9 +2622,9 @@ def create_prompt(
 
 @router.get("/{project_id}/prompt", response_model=list[schemas.Prompt])
 def get_prompts(
-    project_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> list[schemas.Prompt]:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2603,10 +2646,10 @@ def get_prompts(
 
 @router.get("/{project_id}/prompt/{prompt_id}", response_model=schemas.Prompt)
 def get_prompt(
-    project_id: int,
-    prompt_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        prompt_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Prompt:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2630,11 +2673,11 @@ def get_prompt(
 
 @router.put("/{project_id}/prompt/{prompt_id}", response_model=schemas.Prompt)
 def update_prompt(
-    project_id: int,
-    prompt_id: int,
-    prompt: schemas.PromptUpdate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        prompt_id: int,
+        prompt: schemas.PromptUpdate,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Prompt:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2677,10 +2720,10 @@ def update_prompt(
 
 @router.delete("/{project_id}/prompt/{prompt_id}", response_model=schemas.Prompt)
 def delete_prompt(
-    project_id: int,
-    prompt_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        prompt_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Prompt:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -2716,10 +2759,10 @@ def delete_prompt(
 
 @router.post("/{project_id}/trial", response_model=schemas.Trial)
 def create_trial(
-    project_id: int,
-    trial: schemas.TrialCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        trial: schemas.TrialCreate,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Trial:
     # 1. Project, schema, prompt existence & authorization checks
     project: models.Project | None = db.execute(
@@ -2867,11 +2910,11 @@ def create_trial(
 
 @router.patch("/{project_id}/trial/{trial_id}", response_model=schemas.Trial)
 def update_trial(
-    project_id: int,
-    trial_id: int,
-    trial_update: schemas.TrialUpdate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        trial_id: int,
+        trial_update: schemas.TrialUpdate,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ):
     # 1. Project existence and permission check
     project = db.execute(
@@ -2912,10 +2955,10 @@ def update_trial(
 
 @router.post("/{project_id}/trial/{trial_id}/cancel", response_model=schemas.Trial)
 def cancel_trial(
-    project_id: int,
-    trial_id: int,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+        project_id: int,
+        trial_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user),
 ):
     check_project_access(project_id, current_user, db)
     trial = db.get(models.Trial, trial_id)
@@ -2933,10 +2976,10 @@ def cancel_trial(
 
 @router.delete("/{project_id}/trial/{trial_id}", response_model=schemas.Trial)
 def delete_trial(
-    project_id: int,
-    trial_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        trial_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Trial:
     # Project and permission checks
     project: models.Project | None = db.execute(
@@ -3000,9 +3043,9 @@ def delete_trial(
 
 @router.get("/{project_id}/trial", response_model=list[schemas.Trial])
 def get_trials(
-    project_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> list[schemas.Trial]:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -3024,10 +3067,10 @@ def get_trials(
 
 @router.get("/{project_id}/trial/{trial_id}", response_model=schemas.Trial)
 def get_trial(
-    project_id: int,
-    trial_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+        project_id: int,
+        trial_id: int,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
 ) -> schemas.Trial:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -3066,13 +3109,13 @@ def get_trial(
 
 @router.get("/{project_id}/trial/{trial_id}/download", response_class=Response)
 def download_trial_results(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    trial_id: int,
-    format: str = Query("json", enum=["json", "csv"]),
-    include_content: bool = Query(True),
-    current_user: "models.User" = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        trial_id: int,
+        format: str = Query("json", enum=["json", "csv"]),
+        include_content: bool = Query(True),
+        current_user: "models.User" = Depends(get_current_user),
 ) -> Response:
     """
     Download trial results, with a separate metadata.json for trial/prompt/schema metadata.
@@ -3161,7 +3204,7 @@ def download_trial_results(
             k: v
             for k, v in trial.__dict__.items()
             if not k.startswith("_")
-            and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+               and isinstance(v, (str, int, float, bool, dict, list, type(None)))
         }
     )
     prompt_dict = filter_sensitive_keys(
@@ -3169,7 +3212,7 @@ def download_trial_results(
             k: v
             for k, v in (prompt.__dict__ if prompt else {}).items()
             if not k.startswith("_")
-            and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+               and isinstance(v, (str, int, float, bool, dict, list, type(None)))
         }
     )
     schema_dict = filter_sensitive_keys(
@@ -3177,7 +3220,7 @@ def download_trial_results(
             k: v
             for k, v in (schema.__dict__ if schema else {}).items()
             if not k.startswith("_")
-            and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+               and isinstance(v, (str, int, float, bool, dict, list, type(None)))
         }
     )
 
@@ -3229,9 +3272,9 @@ def download_trial_results(
                                 k: v
                                 for k, v in prep_obj.__dict__.items()
                                 if not k.startswith("_")
-                                and isinstance(
-                                    v, (str, int, float, bool, dict, list, type(None))
-                                )
+                                   and isinstance(
+                                v, (str, int, float, bool, dict, list, type(None))
+                            )
                             }
                         )
 
@@ -3304,19 +3347,19 @@ def download_trial_results(
             output = io.BytesIO()
             with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zipf:
                 header = (
-                    [
-                        "document_id",
-                        "document_name",
-                        "file_name",
-                        "created_at",
-                        "document_content",
-                    ]
-                    + [f"meta.{k}" for k in meta_keys]
-                    + [f"preprocessing.{k}" for k in prep_keys]
-                    + [f"trial.{k}" for k in trial_keys]
-                    + [f"prompt.{k}" for k in prompt_keys]
-                    + [f"schema.{k}" for k in schema_keys]
-                    + [f"result.{k}" for k in result_keys]
+                        [
+                            "document_id",
+                            "document_name",
+                            "file_name",
+                            "created_at",
+                            "document_content",
+                        ]
+                        + [f"meta.{k}" for k in meta_keys]
+                        + [f"preprocessing.{k}" for k in prep_keys]
+                        + [f"trial.{k}" for k in trial_keys]
+                        + [f"prompt.{k}" for k in prompt_keys]
+                        + [f"schema.{k}" for k in schema_keys]
+                        + [f"result.{k}" for k in result_keys]
                 )
                 csv_output = io.StringIO()
                 writer = csv.DictWriter(csv_output, fieldnames=header)
@@ -3353,22 +3396,22 @@ def download_trial_results(
                                         k: v
                                         for k, v in prep_obj.__dict__.items()
                                         if not k.startswith("_")
-                                        and isinstance(
-                                            v,
-                                            (
-                                                str,
-                                                int,
-                                                float,
-                                                bool,
-                                                dict,
-                                                list,
-                                                type(None),
-                                            ),
-                                        )
+                                           and isinstance(
+                                        v,
+                                        (
+                                            str,
+                                            int,
+                                            float,
+                                            bool,
+                                            dict,
+                                            list,
+                                            type(None),
+                                        ),
+                                    )
                                     }
                                 )
                         file_id = (
-                            document.preprocessed_file_id or document.original_file_id
+                                document.preprocessed_file_id or document.original_file_id
                         )
                         if file_id:
                             file_to_add = db.execute(
@@ -3414,13 +3457,13 @@ def download_trial_results(
         else:
             output = io.StringIO()
             header = (
-                ["document_id", "document_name", "file_name", "created_at"]
-                + [f"meta.{k}" for k in meta_keys]
-                + [f"preprocessing.{k}" for k in prep_keys]
-                + [f"trial.{k}" for k in trial_keys]
-                + [f"prompt.{k}" for k in prompt_keys]
-                + [f"schema.{k}" for k in schema_keys]
-                + [f"result.{k}" for k in result_keys]
+                    ["document_id", "document_name", "file_name", "created_at"]
+                    + [f"meta.{k}" for k in meta_keys]
+                    + [f"preprocessing.{k}" for k in prep_keys]
+                    + [f"trial.{k}" for k in trial_keys]
+                    + [f"prompt.{k}" for k in prompt_keys]
+                    + [f"schema.{k}" for k in schema_keys]
+                    + [f"result.{k}" for k in result_keys]
             )
             writer = csv.DictWriter(output, fieldnames=header)
             writer.writeheader()
@@ -3453,10 +3496,10 @@ def download_trial_results(
                                     k: v
                                     for k, v in prep_obj.__dict__.items()
                                     if not k.startswith("_")
-                                    and isinstance(
-                                        v,
-                                        (str, int, float, bool, dict, list, type(None)),
-                                    )
+                                       and isinstance(
+                                    v,
+                                    (str, int, float, bool, dict, list, type(None)),
+                                )
                                 }
                             )
                 row["document_name"] = document_name or ""
@@ -3505,9 +3548,9 @@ def _extract_keys(d, parent_key="", sep="_"):
 
 @router.get("/llm/models", response_model=dict[str, Any])
 def get_available_llm_models(
-    api_key: str | None = settings.OPENAI_API_KEY,
-    base_url: str | None = settings.OPENAI_API_BASE,
-    current_user: models.User = Depends(get_current_user),
+        api_key: str | None = settings.OPENAI_API_KEY,
+        base_url: str | None = settings.OPENAI_API_BASE,
+        current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if api_key is None or base_url is None:
         return {
@@ -3521,9 +3564,9 @@ def get_available_llm_models(
 
 @router.post("/llm/test-connection", response_model=dict[str, Any])
 def test_api_connection_endpoint(
-    api_key: str | None = settings.OPENAI_API_KEY,
-    base_url: str | None = settings.OPENAI_API_BASE,
-    current_user: models.User = Depends(get_current_user),
+        api_key: str | None = settings.OPENAI_API_KEY,
+        base_url: str | None = settings.OPENAI_API_BASE,
+        current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if api_key is None or base_url is None:
         return {
@@ -3536,10 +3579,10 @@ def test_api_connection_endpoint(
 
 @router.post("/llm/test-model", response_model=dict[str, Any])
 def test_llm_model_endpoint(
-    api_key: str | None = settings.OPENAI_API_KEY,
-    base_url: str | None = settings.OPENAI_API_BASE,
-    llm_model: str | None = settings.OPENAI_API_MODEL,
-    current_user: models.User = Depends(get_current_user),
+        api_key: str | None = settings.OPENAI_API_KEY,
+        base_url: str | None = settings.OPENAI_API_BASE,
+        llm_model: str | None = settings.OPENAI_API_MODEL,
+        current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if api_key is None or base_url is None or llm_model is None:
         return {
@@ -3555,12 +3598,12 @@ def test_llm_model_endpoint(
 
 @router.post("/llm/test-model-schema", response_model=dict[str, Any])
 def test_model_with_schema_endpoint(
-    api_key: str | None = settings.OPENAI_API_KEY,
-    base_url: str | None = settings.OPENAI_API_BASE,
-    llm_model: str | None = settings.OPENAI_API_MODEL,
-    schema_id: int | None = None,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+        api_key: str | None = settings.OPENAI_API_KEY,
+        base_url: str | None = settings.OPENAI_API_BASE,
+        llm_model: str | None = settings.OPENAI_API_MODEL,
+        schema_id: int | None = None,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Test if a model supports structured output with a specific schema"""
     if api_key is None or base_url is None or llm_model is None:
@@ -3597,12 +3640,12 @@ def test_model_with_schema_endpoint(
 
 @router.get("/llm/test-vlm-image-support")
 def test_vlm_image_support(
-    *,
-    db: Session = Depends(get_db),
-    model: str,
-    api_key: str | None = None,
-    base_url: str | None = None,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        model: str,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """
     Test if a VLM model supports image input.
@@ -3642,15 +3685,15 @@ def test_vlm_image_support(
 
 @router.post("/{project_id}/groundtruth", response_model=schemas.GroundTruth)
 async def upload_groundtruth(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    files: List[UploadFile] = File(None),  # For multiple files
-    file: UploadFile = File(None),  # For single file (backward compatibility)
-    name: str = Form(None),
-    format: str = Form(...),
-    multiple_json: bool = Form(False),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        files: List[UploadFile] = File(None),  # For multiple files
+        file: UploadFile = File(None),  # For single file (backward compatibility)
+        name: str = Form(None),
+        format: str = Form(...),
+        multiple_json: bool = Form(False),
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.GroundTruth:
     """Upload ground truth file for evaluation."""
     project: models.Project | None = db.execute(
@@ -3715,11 +3758,11 @@ async def upload_groundtruth(
     "/{project_id}/groundtruth/{groundtruth_id}", response_model=schemas.GroundTruth
 )
 def get_groundtruth(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.GroundTruth:
     """Get a specific ground truth file."""
     project: models.Project | None = db.execute(
@@ -3752,11 +3795,11 @@ def get_groundtruth(
     "/{project_id}/groundtruth/{groundtruth_id}", response_model=schemas.GroundTruth
 )
 def delete_groundtruth(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.GroundTruth:
     """Delete a ground truth file."""
     project: models.Project | None = db.execute(
@@ -3811,10 +3854,10 @@ def delete_groundtruth(
 
 @router.get("/{project_id}/groundtruth", response_model=list[schemas.GroundTruth])
 def get_groundtruth_files(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.GroundTruth]:
     """Get all ground truth files for a project."""
     project: models.Project | None = db.execute(
@@ -3843,14 +3886,14 @@ def get_groundtruth_files(
     "/{project_id}/groundtruth/{groundtruth_id}", response_model=schemas.GroundTruth
 )
 def update_groundtruth(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    file: UploadFile = File(None),
-    name: str = Form(None),
-    comparison_options: str = Form(None),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        file: UploadFile = File(None),
+        name: str = Form(None),
+        comparison_options: str = Form(None),
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.GroundTruth:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -3921,12 +3964,12 @@ def update_groundtruth(
     response_model=schemas.GroundTruth,
 )
 def update_ground_truth_id_column(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    id_column: str = Body(..., embed=True),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        id_column: str = Body(..., embed=True),
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.GroundTruth:
     """
     Update the ID column/field for any ground truth file.
@@ -3970,13 +4013,13 @@ def update_ground_truth_id_column(
     response_model=schemas.GroundTruth,
 )
 def configure_field_mapping(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    schema_id: int,
-    mappings: list[schemas.FieldMappingCreate] = Body(...),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        schema_id: int,
+        mappings: list[schemas.FieldMappingCreate] = Body(...),
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.GroundTruth:
     """Configure field mappings for a specific groundtruth-schema combination."""
     # Validate project access
@@ -4042,11 +4085,11 @@ def configure_field_mapping(
 
 @router.get("/{project_id}/schema/{schema_id}/field_types", response_model=dict)
 def get_schema_field_types(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    schema_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        schema_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -4077,11 +4120,11 @@ def get_schema_field_types(
 
 @router.get("/{project_id}/evaluation", response_model=list[schemas.Evaluation])
 def get_evaluations(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int = Query(...),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int = Query(...),
+        current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.Evaluation]:
     """Get evaluation results for all trials using a specific ground truth."""
     project: models.Project | None = db.execute(
@@ -4126,11 +4169,11 @@ def get_evaluations(
     "/{project_id}/evaluation/{evaluation_id}", response_model=schemas.EvaluationDetail
 )
 def get_evaluation_detail(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    evaluation_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        evaluation_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.EvaluationDetail:
     """Get detailed evaluation for a specific trial/ground truth pair."""
     project: models.Project | None = db.execute(
@@ -4187,11 +4230,11 @@ def get_evaluation_detail(
     response_model=dict,
 )
 def preview_groundtruth(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        current_user: models.User = Depends(get_current_user),
 ):
     """
     Preview parsed ground truth: return field paths, field types, available ID columns,
@@ -4274,12 +4317,12 @@ def preview_groundtruth(
     response_model=schemas.GroundTruth,
 )
 def configure_field_mapping_legacy(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    mappings: list[schemas.FieldMappingCreate] = Body(...),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        mappings: list[schemas.FieldMappingCreate] = Body(...),
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.GroundTruth:
     """Configure field mappings for ground truth evaluation."""
     project: models.Project | None = db.execute(
@@ -4327,12 +4370,12 @@ def configure_field_mapping_legacy(
     response_model=list[schemas.FieldMapping],
 )
 def get_field_mappings(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    schema_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        schema_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.FieldMapping]:
     """Get field mappings for a specific groundtruth-schema combination."""
     # Validate project access
@@ -4386,12 +4429,12 @@ def get_field_mappings(
     response_model=dict,
 )
 def delete_field_mappings(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    schema_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        schema_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Delete all field mappings for a specific groundtruth-schema combination."""
     # Validate project access
@@ -4453,12 +4496,12 @@ def delete_field_mappings(
     response_model=list[schemas.FieldMapping],
 )
 def suggest_field_mappings(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    schema_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        schema_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.FieldMapping]:
     """Suggest field mappings based on schema and ground truth."""
     # Validate project access
@@ -4614,12 +4657,12 @@ def _get_comparison_method(field_type: str) -> str:
     response_model=dict,
 )
 def validate_json_ground_truth(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    schema_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        schema_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Validate JSON ground truth against schema definition."""
     # ... access checks ...
@@ -4676,13 +4719,13 @@ def validate_json_ground_truth(
     "/{project_id}/trial/{trial_id}/evaluate", response_model=schemas.EvaluationSummary
 )
 def evaluate_trial(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    trial_id: int,
-    groundtruth_id: int = Query(...),
-    force_recalculate: bool = Query(False),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        trial_id: int,
+        groundtruth_id: int = Query(...),
+        force_recalculate: bool = Query(False),
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.EvaluationSummary:
     """Evaluate a trial against ground truth with comprehensive error handling."""
 
@@ -4882,12 +4925,12 @@ def evaluate_trial(
     response_model=schemas.DocumentEvaluationDetail,
 )
 def get_document_evaluation(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    evaluation_id: int,
-    document_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        evaluation_id: int,
+        document_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> schemas.DocumentEvaluationDetail:
     """Get detailed evaluation for a single document."""
     project: models.Project | None = db.execute(
@@ -4960,17 +5003,17 @@ def get_document_evaluation(
 
 @router.get("/{project_id}/evaluations/download", response_class=Response)
 def download_evaluations_report(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    evaluation_ids: str = Query(...),
-    format: str = Query("csv", enum=["csv", "xlsx", "zip"]),
-    include_details: bool = Query(True),
-    include_field_details: bool = Query(False),
-    include_errors: bool = Query(False),
-    include_document_content: bool = Query(False),
-    include_ground_truth_content: bool = Query(False),
-    current_user: "models.User" = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        evaluation_ids: str = Query(...),
+        format: str = Query("csv", enum=["csv", "xlsx", "zip"]),
+        include_details: bool = Query(True),
+        include_field_details: bool = Query(False),
+        include_errors: bool = Query(False),
+        include_document_content: bool = Query(False),
+        include_ground_truth_content: bool = Query(False),
+        current_user: "models.User" = Depends(get_current_user),
 ) -> Response:
     """
     Download evaluation report in CSV, XLSX, or ZIP format.
@@ -5306,13 +5349,13 @@ def download_evaluations_report(
     "/{project_id}/evaluation/batch", response_model=list[schemas.EvaluationSummary]
 )
 def batch_evaluate_trials(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    trial_ids: list[int] = Body(...),
-    groundtruth_id: int = Body(...),
-    force_recalculate: bool = Body(False),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        trial_ids: list[int] = Body(...),
+        groundtruth_id: int = Body(...),
+        force_recalculate: bool = Body(False),
+        current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.EvaluationSummary]:
     """Evaluate multiple trials against ground truth."""
     project: models.Project | None = db.execute(
@@ -5369,11 +5412,11 @@ def batch_evaluate_trials(
 
 @router.get("/{project_id}/evaluation/compare", response_model=dict)
 def compare_evaluations(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    evaluation_ids: list[int] = Query(...),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        evaluation_ids: list[int] = Query(...),
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Compare multiple evaluations side by side."""
 
@@ -5502,14 +5545,14 @@ def compare_evaluations(
     "/{project_id}/evaluation/{evaluation_id}/errors", response_model=list[dict]
 )
 def get_evaluation_errors(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    evaluation_id: int,
-    field_name: str | None = Query(None),
-    error_type: str | None = Query(None),
-    limit: int = Query(100),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        evaluation_id: int,
+        field_name: str | None = Query(None),
+        error_type: str | None = Query(None),
+        limit: int = Query(100),
+        current_user: models.User = Depends(get_current_user),
 ) -> list[dict]:
     """Get detailed error analysis for an evaluation."""
 
@@ -5595,13 +5638,13 @@ def get_evaluation_errors(
     response_model=dict,
 )
 def auto_map_fields(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    schema_id: int,
-    confidence_threshold: float = Body(0.7),
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        schema_id: int,
+        confidence_threshold: float = Body(0.7),
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Automatically map ground truth fields to schema fields."""
     # Validate project access
@@ -5712,12 +5755,12 @@ def auto_map_fields(
     response_model=dict,
 )
 def check_mapping_status(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    groundtruth_id: int,
-    schema_id: int,
-    current_user: models.User = Depends(get_current_user),
+        *,
+        db: Session = Depends(get_db),
+        project_id: int,
+        groundtruth_id: int,
+        schema_id: int,
+        current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Check if field mappings exist for a groundtruth-schema combination."""
     # Validate project access
