@@ -2,7 +2,7 @@
 name = "llmaixweb"
 version = "0.1.2"
 description = "LLM Information Extraction Web Application"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "fastapi[standard]>=0.121.0",
     "uvicorn>=0.38.0",
