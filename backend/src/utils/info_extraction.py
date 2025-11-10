@@ -344,7 +344,14 @@ def _build_messages(prompt: models.Prompt, document_text: str) -> list[dict]:
 def _completion_kwargs(
     model: str, schema_def: dict, messages: list[dict], adv: dict | None
 ) -> dict:
-    kwargs = {
+    """Build kwargs for chat.completions.create, including optional advanced options.
+
+    Supports:
+      - max_completion_tokens (int)
+      - temperature (float)
+      - reasoning_effort ("low" | "medium" | "high")  -> requires extra_body.allowed_openai_params
+    """
+    kwargs: dict[str, Any] = {
         "model": model,
         "messages": messages,
         "response_format": {
@@ -356,14 +363,31 @@ def _completion_kwargs(
             },
         },
     }
-    if adv:
-        kwargs.update(
-            {
-                k: v
-                for k, v in adv.items()
-                if k in {"max_completion_tokens", "temperature"}
-            }
-        )
+
+    if not adv:
+        return kwargs
+
+    # Pass through basic advanced options
+    for k in ("max_completion_tokens", "temperature"):
+        if k in adv and adv[k] not in (None, ""):
+            kwargs[k] = adv[k]
+
+    # Handle reasoning_effort and required extra_body
+    if "reasoning_effort" in adv and adv["reasoning_effort"] not in (None, ""):
+        kwargs["reasoning_effort"] = adv["reasoning_effort"]
+
+        # Merge/attach extra_body.allowed_openai_params
+        extra_body = dict(kwargs.get("extra_body") or {})
+        allowed = set(extra_body.get("allowed_openai_params", []))
+        allowed.add("reasoning_effort")
+        extra_body["allowed_openai_params"] = list(allowed)
+        kwargs["extra_body"] = extra_body
+
+        # (Optional) If desired, you could bump max_completion_tokens for "high".
+        # Uncomment to enforce a floor only when not set explicitly.
+        # if adv["reasoning_effort"] == "high" and "max_completion_tokens" not in kwargs:
+        #     kwargs["max_completion_tokens"] = 2048
+
     return kwargs
 
 

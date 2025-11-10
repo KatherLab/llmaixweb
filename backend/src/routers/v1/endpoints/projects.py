@@ -3,7 +3,7 @@ import datetime
 import io
 import json
 import zipfile
-from typing import Any, List, cast, Optional, Annotated
+from typing import Any, List, cast, Annotated
 
 import pandas as pd
 from fastapi import (

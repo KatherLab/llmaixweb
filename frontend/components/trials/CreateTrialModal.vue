@@ -186,9 +186,26 @@
                         type="number"
                       />
                       <p class="mt-1 text-xs text-gray-500">
-                        Controls randomness. Lower values make outputs more focused; higher values make them more random. Typical: 0.1–1.0
+                        Controls randomness. Lower values make outputs more focused; higher values make them more random. Typical: 0.0–1.0
                       </p>
                     </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                          Reasoning Effort <span class="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <select
+                          v-model="reasoningEffort"
+                          class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Use model default</option>
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">
+                          Hints the model how much compute to spend on chain-of-thought/reasoning. Not all models/APIs support this.
+                        </p>
+                      </div>
                   </div>
                   <div v-if="advancedOptionsVisible" class="mt-2 bg-gray-50 border rounded-lg p-4 grid gap-6">
                     <div>
@@ -775,6 +792,7 @@ const hasSystemConfig = ref(true);
 // Advanced options
 const maxCompletionTokens = ref('');
 const temperature = ref('');
+const reasoningEffort = ref('');
 
 // Test connection first, then load models
 const testAndLoadModels = async (apiKey = '', baseUrl = '') => {
@@ -996,6 +1014,7 @@ const initializeForm = () => {
   advancedSettingsVisible.value = false;
   maxCompletionTokens.value = '';
   temperature.value = '';
+  reasoningEffort.value = '';
   resetModelTest();
 
   // Always test connection and load models when modal opens
@@ -1221,6 +1240,12 @@ const handleSubmit = () => {
   if (temperature.value !== '' && !isNaN(Number(temperature.value))) {
     advancedOptions.temperature = Number(temperature.value);
   }
+
+  if (reasoningEffort.value) {
+    // pass through as a string: 'low' | 'medium' | 'high'
+    advancedOptions.reasoning_effort = reasoningEffort.value;
+  }
+
 
 
   if (Object.keys(advancedOptions).length > 0) {
