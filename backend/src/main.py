@@ -20,8 +20,6 @@ from .db.session import init_db
 from .routers.v1.endpoints import admin, auth, projects, users
 
 
-
-
 def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
     """
     Start ONE Celery worker process listening on <queue> using Celery’s
@@ -35,7 +33,8 @@ def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
         str(concurrency),
         "--max-tasks-per-child",
         "5",
-        "--pool", os.getenv("CELERY_DEV_POOL", "threads"),
+        "--pool",
+        os.getenv("CELERY_DEV_POOL", "threads"),
         "--loglevel",
         "info",
         "-n",

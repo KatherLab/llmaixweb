@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated, List
+from typing import TYPE_CHECKING, List
 
 from pydantic import (
     BaseModel,
     ConfigDict,
-    SkipValidation,
+    Field,
     field_validator,
-    model_validator, Field,
+    model_validator,
 )
 
 from ..core.config import settings
@@ -104,6 +104,7 @@ class DocumentBase(UTCModel):
     text: str
     document_name: str | None = None
     meta_data: dict | None = None
+
 
 class DocumentCreate(DocumentBase):
     original_file_id: int
@@ -228,6 +229,7 @@ class DocumentSetSummary(BaseModel):
 
 class DocumentSetDetail(DocumentSet):
     """Detailed document set information including documents"""
+
     usage_stats: DocumentSetStats
     preprocessing_config: PreprocessingConfiguration | None = None
     documents: list[Document]
@@ -360,10 +362,13 @@ class Trial(TrialBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 # --- schemas.py (add/extend) ---
+
 
 class TrialSummary(UTCModel):
     """Lightweight Trial model for listings (no 'results')."""
+
     id: int
     project_id: int
     name: str | None = None
@@ -397,7 +402,7 @@ class TrialSummary(UTCModel):
     documents_count: int = 0
     results_count: int = 0
     last_result_at: datetime | None = None
-    error_count: int | None = None         # length of meta.failures if present
+    error_count: int | None = None  # length of meta.failures if present
     has_failures: bool | None = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -696,7 +701,6 @@ class EvaluationErrorSummary(BaseModel):
 
 from .user import User, UserPublic  # noqa: E402, F401
 
-
 # --- Rebuild forward refs for Pydantic v2 / FastAPI ---
 for _m in [
     Document,
@@ -718,4 +722,3 @@ for _m in [
     _m.model_rebuild()
 
 Project.model_rebuild()
-

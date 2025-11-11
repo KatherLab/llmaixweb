@@ -527,8 +527,8 @@ def test_preprocess_project_data_v2(
     response = client.get(f"{api_url}/project/{project_id}/document", headers=headers)
     assert response.status_code == 200
     documents = response.json()
-    assert len(documents) >= 1
-    document = documents[0]
+    assert len(documents["items"]) >= 1
+    document = documents["items"][0]
     assert document["text"] is not None
     assert document["document_name"] == file_name
 
@@ -908,7 +908,9 @@ Document 3,This is the third document,Contains additional data,A"""
     response = client.get(f"{api_url}/project/{project_id}/document", headers=headers)
     assert response.status_code == 200
     documents = response.json()
-    assert len(documents) == 3  # 3 rows in CSV
+    assert documents["total"] == 3  # 3 rows in CSV
+
+    documents = documents["items"]
 
     # Verify document content
     doc_names = [doc["document_name"] for doc in documents]
@@ -997,10 +999,10 @@ def test_image_file_preprocessing(client, api_url, files_base_path):
     response = client.get(f"{api_url}/project/{project_id}/document", headers=headers)
     assert response.status_code == 200
     documents = response.json()
-    assert len(documents) >= 1
+    assert documents["total"] >= 1
 
     # Find the document for our image
-    image_doc = next(d for d in documents if d["original_file_id"] == file_id)
+    image_doc = next(d for d in documents["items"] if d["original_file_id"] == file_id)
     assert image_doc["text"] is not None  # Should contain OCR text
     assert image_doc["meta_data"]["file_type"] == "image/png"
 
@@ -1359,7 +1361,7 @@ def test_excel_file_preprocessing(client, api_url):
     documents = response.json()
 
     # Should have 3 documents (one per row)
-    excel_docs = [d for d in documents if d["original_file_id"] == file_id]
+    excel_docs = [d for d in documents["items"] if d["original_file_id"] == file_id]
     assert len(excel_docs) == 3
 
     # Verify document content
@@ -1511,9 +1513,9 @@ def test_document_set_crud_and_stats(client, api_url):
 
     assert response.status_code == 200
 
-    doc_id = client.get(f"{api_url}/project/{pid}/document", headers=headers).json()[0][
-        "id"
-    ]
+    doc_id = client.get(f"{api_url}/project/{pid}/document", headers=headers).json()[
+        "items"
+    ][0]["id"]
 
     # Create document set from documents
     set_data = {"name": "Group1", "document_ids": [doc_id]}
@@ -1881,7 +1883,7 @@ def test_delete_schema_referenced_by_trial(client, api_url):
     assert response.status_code == 200
     documents = response.json()
     assert len(documents) > 0
-    document_id = documents[0]["id"]
+    document_id = documents["items"][0]["id"]
 
     # 3. Create a prompt with {document_content} in user_prompt
     prompt_data = {
@@ -2067,7 +2069,7 @@ def test_trial_crud_and_extraction(client, api_url):
 
     # Get document ID
     response = client.get(f"{api_url}/project/{project_id}/document", headers=headers)
-    document_id = response.json()[0]["id"]
+    document_id = response.json()["items"][0]["id"]
 
     # Create trial
     trial_data = {
@@ -2081,13 +2083,14 @@ def test_trial_crud_and_extraction(client, api_url):
     )
     assert response.status_code == 200
     trial = response.json()
+    print(trial)
     trial_id = trial["id"]
     assert trial["status"] in ["completed", "pending", "in_progress"]
 
     # Get all trials for project
     response = client.get(f"{api_url}/project/{project_id}/trial", headers=headers)
     assert response.status_code == 200
-    assert any(t["id"] == trial_id for t in response.json())
+    assert any(t["id"] == trial_id for t in response.json()["items"])
 
     # Get single trial
     response = client.get(
@@ -2213,7 +2216,7 @@ def test_trial_result_download_and_status(client, api_url):
     )
     doc_id = client.get(
         f"{api_url}/project/{project_id}/document", headers=headers
-    ).json()[0]["id"]
+    ).json()["items"][0]["id"]
 
     # Create trial
     trial_id = client.post(
@@ -2342,9 +2345,13 @@ Carol,Cold,Hamburg,2024-07-03
     )
     assert docs_response.status_code == 200
     docs = docs_response.json()
-    assert len(docs) == 3
-    doc_ids = [d["id"] for d in docs]
-    assert sorted([d["document_name"] for d in docs]) == ["Alice", "Bob", "Carol"]
+    assert docs["total"] == 3
+    doc_ids = [d["id"] for d in docs["items"]]
+    assert sorted([d["document_name"] for d in docs["items"]]) == [
+        "Alice",
+        "Bob",
+        "Carol",
+    ]
 
     # Schema matching CSV
     schema = {
@@ -2484,8 +2491,8 @@ def test_create_trial_with_mixed_preprocessing(client, api_url, files_base_path)
     )
     assert docs_response.status_code == 200
     docs = docs_response.json()
-    assert len(docs) == 2
-    doc_ids = [d["id"] for d in docs]
+    assert docs["total"] == 2
+    doc_ids = [d["id"] for d in docs["items"]]
 
     # Schema
     schema = {
@@ -2597,7 +2604,7 @@ def test_ocr_preprocessing_for_extraction(client, api_url, files_base_path):
         f"{api_url}/project/{project_id}/document", headers=headers
     )
     assert doc_response.status_code == 200
-    doc = doc_response.json()[0]
+    doc = doc_response.json()["items"][0]
 
     # For PDF
     assert doc["meta_data"].get("file_type", doc.get("file_type")) in [
@@ -2913,7 +2920,7 @@ This is the medical report:
     )
     doc = client.get(
         f"{api_url}/project/{project_id}/document", headers=headers
-    ).json()[0]
+    ).json()["items"][0]
     doc_id = doc["id"]
 
     # Create trial (minimal, does not require valid LLM extract for this test)
@@ -3045,11 +3052,11 @@ def test_evaluation_full_pipeline(client, api_url, files_base_path):
     r = client.get(f"{api_url}/project/{project_id}/document", headers=headers)
     assert r.status_code == 200, r.text
     docs = r.json()
-    assert docs, "No documents created from CSV"
+    assert docs["items"], "No documents created from CSV"
     # Get all doc IDs and check that at least 8 are present (as per your example)
-    assert len(docs) == 8, f"Expected 8 docs, got {len(docs)}"
-    doc_ids = [d["id"] for d in docs]
-    doc_names = [d["document_name"] for d in docs]
+    assert docs["total"] == 8, f"Expected 8 docs, got {docs['total']}"
+    doc_ids = [d["id"] for d in docs["items"]]
+    doc_names = [d["document_name"] for d in docs["items"]]
     assert any(".pdf" in dn for dn in doc_names), (
         doc_names
     )  # Expecting id column to be the document_name

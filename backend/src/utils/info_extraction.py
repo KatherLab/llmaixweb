@@ -190,7 +190,10 @@ def test_model_with_schema(
 
         # Apply advanced params if present
         if adv:
-            if "max_completion_tokens" in adv and adv["max_completion_tokens"] is not None:
+            if (
+                "max_completion_tokens" in adv
+                and adv["max_completion_tokens"] is not None
+            ):
                 # Your API expects max_completion_tokens for completions; override the tiny probe
                 kwargs["max_completion_tokens"] = adv["max_completion_tokens"]
                 # optional: remove old 'max_tokens' to avoid confusion
@@ -445,10 +448,17 @@ async def extract_info_single_doc_async(
 
     finish_reason = getattr(response.choices[0], "finish_reason", None)
     raw_content = response.choices[0].message.content
-    has_reasoning = bool(getattr(response.choices[0].message, "reasoning_content", None))
+    has_reasoning = bool(
+        getattr(response.choices[0].message, "reasoning_content", None)
+    )
 
-    if (finish_reason == "length") and (raw_content is None or (isinstance(raw_content, str) and raw_content.strip() == "")):
-        bumped_adv = _bump_for_length(advanced_options, getattr(response, "usage", None), has_reasoning)
+    if (finish_reason == "length") and (
+        raw_content is None
+        or (isinstance(raw_content, str) and raw_content.strip() == "")
+    ):
+        bumped_adv = _bump_for_length(
+            advanced_options, getattr(response, "usage", None), has_reasoning
+        )
         bumped_kwargs = _completion_kwargs(
             llm_model,
             schema.schema_definition,
@@ -491,10 +501,17 @@ def extract_info_single_doc(
 
     finish_reason = getattr(response.choices[0], "finish_reason", None)
     raw_content = response.choices[0].message.content
-    has_reasoning = bool(getattr(response.choices[0].message, "reasoning_content", None))
+    has_reasoning = bool(
+        getattr(response.choices[0].message, "reasoning_content", None)
+    )
 
-    if (finish_reason == "length") and (raw_content is None or (isinstance(raw_content, str) and raw_content.strip() == "")):
-        bumped_adv = _bump_for_length(advanced_options, getattr(response, "usage", None), has_reasoning)
+    if (finish_reason == "length") and (
+        raw_content is None
+        or (isinstance(raw_content, str) and raw_content.strip() == "")
+    ):
+        bumped_adv = _bump_for_length(
+            advanced_options, getattr(response, "usage", None), has_reasoning
+        )
         bumped_kwargs = _completion_kwargs(
             llm_model,
             schema.schema_definition,
@@ -608,8 +625,10 @@ def safe_json_loads(text: str) -> Any:
 # Finish-reason handling & user guidance
 # ------------------------------
 
+
 class IncompleteLLMResponseError(RuntimeError):
     """Raised when the model did not finish with 'stop' and we don't have a safely parsable result."""
+
     def __init__(self, technical_message: str, user_message: str | None = None):
         super().__init__(technical_message)
         self.user_message = user_message or technical_message
@@ -669,7 +688,12 @@ def _analyze_truncation(s: str, tail_len: int = 240) -> dict[str, Any]:
     likely_unclosed_brackets = brackets > 0
 
     ends_cleanly = s.rstrip().endswith(("}", "]"))
-    likely_truncated = (not ends_cleanly) or likely_unclosed_string or likely_unclosed_braces or likely_unclosed_brackets
+    likely_truncated = (
+        (not ends_cleanly)
+        or likely_unclosed_string
+        or likely_unclosed_braces
+        or likely_unclosed_brackets
+    )
 
     return {
         "empty_output": False,
@@ -816,7 +840,9 @@ def _suggestion_phrase(action: str, suggested_value) -> str:
     return a.replace("_", " ")
 
 
-def _summarize_recommendations_for_message(recos: list[dict], max_items: int = 3) -> str:
+def _summarize_recommendations_for_message(
+    recos: list[dict], max_items: int = 3
+) -> str:
     """Condense a list of recommendations into a short 'Try: ...; ...; ...' string."""
     phrases: list[str] = []
     for r in recos or []:
@@ -873,7 +899,9 @@ def _build_user_guidance(
             "This often happens if the prompt or document contains sensitive or disallowed content."
         )
     elif fr and fr != "stop":
-        what = "The model ended unexpectedly and may not have produced a complete result."
+        what = (
+            "The model ended unexpectedly and may not have produced a complete result."
+        )
     else:
         what = "The model didn’t finish generating the full structured result."
 
@@ -884,11 +912,15 @@ def _build_user_guidance(
         recos = advice["recommendations"]
         for reco in recos:
             how_to_fix.append(
-                _format_reco(reco.get("action", "adjust settings"), reco.get("suggested_value"))
+                _format_reco(
+                    reco.get("action", "adjust settings"), reco.get("suggested_value")
+                )
             )
 
     if truncation and truncation.get("likely_truncated"):
-        how_to_fix.append("- Reduce output size (leaner schema, shorter descriptions) or split documents.")
+        how_to_fix.append(
+            "- Reduce output size (leaner schema, shorter descriptions) or split documents."
+        )
 
     details = {}
     if truncation:
@@ -901,9 +933,14 @@ def _build_user_guidance(
     if advice_summary:
         user_message = f"{title} — Try: {advice_summary}"
     else:
-        user_message = title + " — " + (
-            "Try increasing max completion tokens or lowering reasoning effort." if fr == "length"
-            else "Try adjusting settings or sanitizing the input."
+        user_message = (
+            title
+            + " — "
+            + (
+                "Try increasing max completion tokens or lowering reasoning effort."
+                if fr == "length"
+                else "Try adjusting settings or sanitizing the input."
+            )
         )
 
     return {
@@ -987,9 +1024,7 @@ def _store_result(db_session, trial_id: int, document_id: int, response) -> None
                 additional["usage"] = usage.dict()
             else:
                 additional["usage"] = {
-                    k: getattr(usage, k)
-                    for k in dir(usage)
-                    if not k.startswith("_")
+                    k: getattr(usage, k) for k in dir(usage) if not k.startswith("_")
                 }
         except Exception:
             pass
@@ -1014,7 +1049,9 @@ def _store_result(db_session, trial_id: int, document_id: int, response) -> None
         additional["user_guidance"] = user_guidance
 
     # Handle completely empty content early (common when tokens were consumed by reasoning)
-    if raw_content is None or (isinstance(raw_content, str) and raw_content.strip() == ""):
+    if raw_content is None or (
+        isinstance(raw_content, str) and raw_content.strip() == ""
+    ):
         additional["json_error"] = "empty_content"
         additional["raw_response"] = raw_content
         if "truncation_analysis" not in additional:
@@ -1039,8 +1076,10 @@ def _store_result(db_session, trial_id: int, document_id: int, response) -> None
         except IntegrityError:
             db_session.rollback()
 
-        friendly = (additional.get("user_guidance") or {}).get("user_message") or \
-                   "The model produced no JSON output; try increasing max_completion_tokens and lowering reasoning_effort."
+        friendly = (
+            (additional.get("user_guidance") or {}).get("user_message")
+            or "The model produced no JSON output; try increasing max_completion_tokens and lowering reasoning_effort."
+        )
         technical = (
             f"Non-stop finish ('{finish_reason}'): empty content. "
             f"The model likely exhausted tokens during reasoning before emitting JSON."
@@ -1077,8 +1116,10 @@ def _store_result(db_session, trial_id: int, document_id: int, response) -> None
                 f"Non-stop finish ('{finish_reason}'): response likely incomplete. "
                 f"JSON parse failed: {e}. Tail: {tail!r}"
             )
-            friendly = (user_guidance or {}).get("user_message") or \
-                "The model stopped early; try increasing max_completion_tokens and lowering reasoning_effort."
+            friendly = (
+                (user_guidance or {}).get("user_message")
+                or "The model stopped early; try increasing max_completion_tokens and lowering reasoning_effort."
+            )
             raise IncompleteLLMResponseError(technical, friendly)
         # Otherwise surface the parse failure as before
         raise

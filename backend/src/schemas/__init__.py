@@ -1,7 +1,6 @@
 from .auth import Token, TokenPayload
 from .project import (
     Document,
-    PaginatedDocuments,
     DocumentBase,
     DocumentCreate,
     DocumentEvaluationDetail,
@@ -24,6 +23,8 @@ from .project import (
     FileCreate,
     GroundTruth,
     GroundTruthCreate,
+    PaginatedDocuments,
+    PaginatedTrials,
     PreprocessingConfiguration,
     PreprocessingConfigurationCreate,
     PreprocessingConfigurationUpdate,
@@ -44,9 +45,8 @@ from .project import (
     Trial,
     TrialCreate,
     TrialResult,
-    TrialUpdate,
     TrialSummary,
-    PaginatedTrials
+    TrialUpdate,
 )
 from .user import (
     InvitationInfo,
@@ -55,8 +55,8 @@ from .user import (
     PasswordSet,
     User,
     UserCreate,
+    UserPublic,
     UserResponse,
-    UserPublic
 )
 
 __all__ = [
