@@ -360,6 +360,53 @@ class Trial(TrialBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+# --- schemas.py (add/extend) ---
+
+class TrialSummary(UTCModel):
+    """Lightweight Trial model for listings (no 'results')."""
+    id: int
+    project_id: int
+    name: str | None = None
+    description: str | None = None
+    schema_id: int
+    prompt_id: int
+    document_ids: list[int] | None = None
+    document_set_id: int | None = None
+    llm_model: str | None = settings.OPENAI_API_MODEL
+    api_key: str | None = settings.OPENAI_API_KEY
+    base_url: str | None = settings.OPENAI_API_BASE
+    bypass_celery: bool = False
+    advanced_options: dict | None = None
+
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    # progress-ish, meta, etc.
+    docs_done: int | None = None
+    progress: float | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    meta: dict | None = None
+
+    # Optional small relationships you may show in cards
+    prompt: "Prompt | None" = None
+    document_set: "DocumentSet | None" = None
+
+    # --- NEW summary fields for list view (no heavy loads) ---
+    documents_count: int = 0
+    results_count: int = 0
+    last_result_at: datetime | None = None
+    error_count: int | None = None         # length of meta.failures if present
+    has_failures: bool | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedTrials(UTCModel):
+    items: List[TrialSummary]
+    total: int
+
 
 class TrialResultBase(UTCModel):
     result: dict | None = None
@@ -664,6 +711,8 @@ for _m in [
     EvaluationDetail,
     DocumentSetDetail,
     PaginatedDocuments,
+    TrialSummary,
+    PaginatedTrials,
     Project,  # you already call this below, but keeping it here is fine
 ]:
     _m.model_rebuild()

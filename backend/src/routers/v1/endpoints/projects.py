@@ -3045,29 +3045,171 @@ def delete_trial(
     return trial_data
 
 
-@router.get("/{project_id}/trial", response_model=list[schemas.Trial])
+@router.get("/{project_id}/trial", response_model=schemas.PaginatedTrials)
 def get_trials(
-        project_id: int,
-        current_user: models.User = Depends(get_current_user),
-        db: Session = Depends(get_db),
-) -> list[schemas.Trial]:
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's trials"
+    project_id: Annotated[int, Path()],
+    # --- filters ---
+    search: Annotated[str | None, Query(description="Search name/description or ID")] = None,
+    status: Annotated[str | None, Query(description="pending|processing|completed|failed|cancelled")] = None,
+    schema_id: Annotated[int | None, Query()] = None,
+    prompt_id: Annotated[int | None, Query()] = None,
+    llm_model: Annotated[str | None, Query()] = None,
+    has_failures: Annotated[bool | None, Query(description="true/false; meta.failures length > 0")] = None,
+    date_from: Annotated[datetime.datetime | None, Query(description="ISO datetime lower bound (inclusive)")] = None,
+    date_to: Annotated[datetime.datetime | None, Query(description="ISO datetime upper bound (exclusive)")] = None,
+    # --- pagination ---
+    limit: Annotated[int, Query(ge=1, le=500)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.PaginatedTrials:
+    check_project_access(project_id, current_user, db, "read")
+
+    T = models.Trial
+    TR = models.TrialResult
+
+    base = select(T).where(T.project_id == project_id)
+
+    # --- apply filters ---
+    if status:
+        base = base.where(T.status == status)
+
+    if schema_id is not None:
+        base = base.where(T.schema_id == schema_id)
+
+    if prompt_id is not None:
+        base = base.where(T.prompt_id == prompt_id)
+
+    if llm_model:
+        base = base.where(T.llm_model == llm_model)
+
+    if date_from is not None:
+        base = base.where(T.created_at >= date_from)
+    if date_to is not None:
+        base = base.where(T.created_at < date_to)
+
+    if search:
+        # match name/description; also match id if search is int
+        try:
+            search_id = int(search)
+        except ValueError:
+            search_id = None
+        pattern = f"%{search}%"
+        conds = [
+            T.name.ilike(pattern),
+            T.description.ilike(pattern),
+        ]
+        if search_id is not None:
+            conds.append(T.id == search_id)
+        else:
+            # if non-integer, allow cast(id) LIKE for convenience
+            conds.append(cast(T.id, String).ilike(pattern))
+        base = base.where(or_(*conds))
+
+    # has_failures via meta JSON (store as dict in DB); we do a cheap Python-side
+    # evaluation after fetching page rows. For correctness of TOTAL, we need to filter
+    # in SQL if possible. If meta is a JSON column, add DB-specific JSON-path filter.
+    # Otherwise, we'll compute total post-filtering for has_failures.
+    apply_python_has_failures = has_failures is not None
+
+    # total (before pagination) — if has_failures filter requested, count after post-filtering
+    total_pre = db.scalar(select(func.count()).select_from(base.subquery())) or 0
+
+    page_q = (
+        base.order_by(T.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+        .options(
+            noload(T.results),
+            selectinload(T.prompt),
+            selectinload(T.document_set),
         )
-
-    trials = list(
-        db.execute(select(models.Trial).where(models.Trial.project_id == project_id))
-        .scalars()
-        .all()
     )
-    return [schemas.Trial.model_validate(trial) for trial in trials]
 
+    page_trials: list[models.Trial] = db.execute(page_q).scalars().all()
+    if not page_trials:
+        return schemas.PaginatedTrials(items=[], total=0 if offset == 0 else total_pre)
+
+    # --- post-filter for has_failures if requested ---
+    if apply_python_has_failures:
+        filtered = []
+        for t in page_trials:
+            _has = None
+            if isinstance(t.meta, dict) and isinstance(t.meta.get("failures"), dict):
+                _has = len(t.meta["failures"]) > 0
+            elif t.meta is None:
+                _has = False
+            if has_failures is True and _has:
+                filtered.append(t)
+            elif has_failures is False and not _has:
+                filtered.append(t)
+        page_trials = filtered
+
+        # recompute total properly by scanning ALL (not only page) — do a minimal second pass
+        # This keeps correctness without DB JSON ops.
+        all_ids_rows = db.execute(base.with_only_columns(T.id)).all()
+        all_ids = [r[0] for r in all_ids_rows]
+        if all_ids:
+            all_trials = db.execute(
+                select(T).where(T.id.in_(all_ids)).options(noload(T.results))
+            ).scalars().all()
+            total = 0
+            for t in all_trials:
+                _has = False
+                if isinstance(t.meta, dict) and isinstance(t.meta.get("failures"), dict):
+                    _has = len(t.meta["failures"]) > 0
+                if (has_failures and _has) or (has_failures is False and not _has):
+                    total += 1
+        else:
+            total = 0
+    else:
+        total = total_pre
+
+    # --- aggregates (counts and last_result_at) for *current* page ---
+    trial_ids = [t.id for t in page_trials]
+    counts_map: dict[int, int] = {}
+    last_map: dict[int, datetime.datetime | None] = {}
+
+    if trial_ids:
+        counts_rows = db.execute(
+            select(TR.trial_id, func.count(TR.id).label("cnt"))
+            .where(TR.trial_id.in_(trial_ids))
+            .group_by(TR.trial_id)
+        ).all()
+        counts_map = {tid: cnt for (tid, cnt) in counts_rows}
+
+        last_rows = db.execute(
+            select(TR.trial_id, func.max(TR.created_at).label("last_at"))
+            .where(TR.trial_id.in_(trial_ids))
+            .group_by(TR.trial_id)
+        ).all()
+        last_map = {tid: last_at for (tid, last_at) in last_rows}
+
+    # attach computed attributes for TrialSummary
+    for t in page_trials:
+        try:
+            docs_count = len(t.document_ids) if t.document_ids else 0
+        except Exception:
+            docs_count = 0
+
+        failures = None
+        has_fail = None
+        error_count = None
+        if isinstance(t.meta, dict) and isinstance(t.meta.get("failures"), dict):
+            failures = t.meta["failures"]
+            error_count = len(failures)
+            has_fail = error_count > 0
+
+        setattr(t, "documents_count", docs_count)
+        setattr(t, "results_count", counts_map.get(t.id, 0))
+        setattr(t, "last_result_at", last_map.get(t.id))
+        setattr(t, "error_count", error_count)
+        setattr(t, "has_failures", has_fail)
+
+    return schemas.PaginatedTrials(
+        items=[schemas.TrialSummary.model_validate(t) for t in page_trials],
+        total=total,
+    )
 
 @router.get("/{project_id}/trial/{trial_id}", response_model=schemas.Trial)
 def get_trial(

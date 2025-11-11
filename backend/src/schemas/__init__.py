@@ -45,6 +45,8 @@ from .project import (
     TrialCreate,
     TrialResult,
     TrialUpdate,
+    TrialSummary,
+    PaginatedTrials
 )
 from .user import (
     InvitationInfo,
@@ -112,5 +114,7 @@ __all__ = [
     "EvaluationSummary",
     "EvaluationMetricDetail",
     "DocumentEvaluationDetail",
-    "PaginatedDocuments"
+    "PaginatedDocuments",
+    "TrialSummary",
+    "PaginatedTrials",
 ]

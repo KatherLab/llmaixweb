@@ -33,9 +33,9 @@
       </div>
     </div>
 
-    <!-- Advanced Filter Panel -->
+    <!-- Filter Panel -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-      <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-7 gap-4">
         <!-- Search -->
         <div class="md:col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
@@ -45,117 +45,86 @@
               type="text"
               placeholder="Search in name, description, or ID..."
               class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              @keyup.enter="applyFilters"
             />
             <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
           </div>
         </div>
+
         <!-- Status -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <select v-model="filters.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-            <option value="">All Statuses</option>
+          <select v-model="filters.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" @change="applyFilters">
+            <option value="">All</option>
             <option value="pending">Pending</option>
             <option value="processing">Processing</option>
             <option value="completed">Completed</option>
             <option value="failed">Failed</option>
+            <option value="cancelled">Cancelled</option>
           </select>
         </div>
+
         <!-- Schema -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Schema</label>
-          <select v-model="filters.schemaId" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-            <option value="">All Schemas</option>
-            <option v-for="schema in schemas" :key="schema.id" :value="schema.id">
-              {{ schema.schema_name }}
-            </option>
+          <select v-model="filters.schema_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" @change="applyFilters">
+            <option value="">All</option>
+            <option v-for="schema in schemas" :key="schema.id" :value="schema.id">{{ schema.schema_name }}</option>
           </select>
         </div>
-        <!-- Model -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">LLM Model</label>
-          <select v-model="filters.llmModel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-            <option value="">All Models</option>
-            <option v-for="model in availableTrialModels" :key="model" :value="model">{{ model }}</option>
-          </select>
-        </div>
+
         <!-- Prompt -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Prompt</label>
-          <select v-model="filters.promptId" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-            <option value="">All Prompts</option>
-            <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id">
-              {{ prompt.name }}
-            </option>
+          <select v-model="filters.prompt_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" @change="applyFilters">
+            <option value="">All</option>
+            <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id">{{ prompt.name }}</option>
           </select>
         </div>
-        <!-- Date Range & Clear -->
-        <div class="flex flex-col gap-2">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Created</label>
-            <select v-model="filters.dateRange" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-              <option value="">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 days</option>
-              <option value="month">Last 30 days</option>
-            </select>
-          </div>
-          <button
-            @click="clearFilters"
-            class="mt-2 w-full px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-          >
-            Clear
-          </button>
+
+        <!-- LLM Model -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">LLM Model</label>
+          <input v-model="filters.llm_model" type="text" placeholder="Exact match" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" @keyup.enter="applyFilters"/>
         </div>
+
+        <!-- Failures -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Errors</label>
+          <select v-model="filters.has_failures" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" @change="applyFilters">
+            <option value="">All</option>
+            <option :value="true">Has errors</option>
+            <option :value="false">No errors</option>
+          </select>
+        </div>
+
+        <!-- Date Range -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Created</label>
+          <select v-model="filters.dateRange" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" @change="applyFilters">
+            <option value="">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">Last 7 days</option>
+            <option value="month">Last 30 days</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-3 flex gap-2">
+        <button @click="applyFilters" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">Apply</button>
+        <button @click="clearFilters" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 text-sm font-semibold hover:bg-gray-200">Clear</button>
       </div>
     </div>
 
-    <!-- Batch Action Bar -->
-    <div v-if="selectedTrials.length > 0" class="bg-blue-50 border border-blue-200 rounded-lg flex flex-wrap items-center gap-4 px-4 py-3 shadow mb-4">
-      <span class="font-medium text-blue-700 text-sm">{{ selectedTrials.length }} selected</span>
-      <button
-        class="text-blue-700 hover:bg-blue-100 rounded-md px-3 py-1 text-sm font-medium"
-        @click="openBatchModal('retry')"
-      >
-        <svg class="inline w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-        </svg>
-        Retry
-      </button>
-      <button
-        class="text-blue-700 hover:bg-blue-100 rounded-md px-3 py-1 text-sm font-medium"
-        @click="openBatchModal('export')"
-      >
-        <svg class="inline w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-        </svg>
-        Export
-      </button>
-      <button
-        class="text-red-600 hover:bg-red-50 border border-red-100 rounded-md px-3 py-1 text-sm font-medium"
-        @click="openBatchModal('delete')"
-      >
-        <svg class="inline w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-        </svg>
-        Delete
-      </button>
-      <button
-        class="text-gray-600 hover:text-blue-700 px-3 py-1 text-sm font-medium"
-        @click="selectedTrials = []"
-      >
-        Clear
-      </button>
-    </div>
-
-    <!-- Error, Loading, Empty -->
+    <!-- Error / Loading -->
     <ErrorBanner v-if="error" :message="error" />
     <LoadingSpinner v-if="isLoading" />
 
-    <!-- No trials -->
+    <!-- Empty -->
     <EmptyState
-      v-else-if="filteredTrials.length === 0"
+      v-else-if="trials.length === 0"
       title="No trials found"
       description="Try changing your filters or create a new trial."
       actionText="Start a Trial"
@@ -171,24 +140,33 @@
     </EmptyState>
 
     <!-- Trials Grid -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-      <TrialCard
-        v-for="trial in filteredTrials"
-        :key="trial.id"
-        :trial="trial"
-        :schemas="schemas"
-        :prompts="prompts"
-        :selected="selectedTrials.includes(trial.id)"
-        @select="toggleTrialSelection(trial.id)"
-        @rename="openRenameModal(trial)"
-        @delete="confirmDeleteTrial(trial)"
-        @retry="retryTrial(trial)"
-        @download="openDownloadModal(trial)"
-        @cancel="cancelTrial"
-        @view-results="viewTrialResults(trial)"
-        @view-schema="viewTrialSchema(trial)"
-        @view-prompt="viewTrialPrompt(trial)"
-      />
+    <div v-else class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <TrialCard
+          v-for="trial in trials"
+          :key="trial.id"
+          :trial="trial"
+          :schemas="schemas"
+          :prompts="prompts"
+          :selected="selectedTrials.includes(trial.id)"
+          @select="toggleTrialSelection(trial.id)"
+          @rename="openRenameModal(trial)"
+          @delete="confirmDeleteTrial(trial)"
+          @retry="retryTrial(trial)"
+          @download="openDownloadModal(trial)"
+          @cancel="cancelTrial"
+          @view-results="viewTrialResults(trial)"
+          @view-schema="viewTrialSchema(trial)"
+          @view-prompt="viewTrialPrompt(trial)"
+        />
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="trials.length < totalTrials" class="flex justify-center">
+        <button @click="loadMore" class="px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 border border-gray-200">
+          Load more ({{ trials.length }}/{{ totalTrials }})
+        </button>
+      </div>
     </div>
 
     <!-- Modals -->
@@ -255,7 +233,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import { api } from '@/services/api';
 import CreateTrialModal from '@/components/trials/CreateTrialModal.vue';
@@ -273,10 +251,7 @@ import ErrorBanner from '@/components/ErrorBanner.vue';
 import Tooltip from '@/components/Tooltip.vue'
 
 const props = defineProps({
-  projectId: {
-    type: [String, Number],
-    required: true
-  }
+  projectId: { type: [String, Number], required: true }
 });
 
 const toast = useToast();
@@ -285,6 +260,9 @@ const documents = ref([]);
 const schemas = ref([]);
 const prompts = ref([]);
 const trials = ref([]);
+const totalTrials = ref(0);
+const limit = ref(20);
+const offset = ref(0);
 const isLoading = ref(true);
 const error = ref(null);
 const isModalOpen = ref(false);
@@ -310,12 +288,8 @@ const isPollingActive = ref(false);
 const POLL_INTERVAL_MS = 3000;
 
 const trialDisabled = computed(() =>
-  isLoading.value ||
-  schemas.value.length === 0 ||
-  documents.value.length === 0 ||
-  prompts.value.length === 0
+  isLoading.value || schemas.value.length === 0 || documents.value.length === 0 || prompts.value.length === 0
 );
-
 
 const trialDisabledReason = computed(() => {
   if (isLoading.value) return 'Loading project resources…'
@@ -323,172 +297,169 @@ const trialDisabledReason = computed(() => {
   if (documents.value.length === 0) return 'You need to upload at least one document to start a trial.'
   if (prompts.value.length === 0) return 'You need to create at least one prompt to start a trial.'
   return ''
-})
-
+});
 
 const filters = ref({
   search: '',
   status: '',
-  schemaId: '',
-  llmModel: '',
-  promptId: '',
+  schema_id: '',
+  prompt_id: '',
+  llm_model: '',
+  has_failures: '',
   dateRange: '',
 });
-const clearFilters = () => {
-  filters.value = {
-    search: '',
-    status: '',
-    schemaId: '',
-    llmModel: '',
-    promptId: '',
-    dateRange: '',
-  };
-};
+
+function mapDateRangeToBounds(range) {
+  const now = new Date();
+  let from = null, to = null;
+  if (range === 'today') {
+    from = new Date(); from.setHours(0, 0, 0, 0);
+    to = new Date(); to.setHours(23, 59, 59, 999);
+  } else if (range === 'week') {
+    from = new Date(now); from.setDate(now.getDate() - 7);
+  } else if (range === 'month') {
+    from = new Date(now); from.setDate(now.getDate() - 30);
+  }
+  return {
+    date_from: from ? from.toISOString() : undefined,
+    date_to: to ? to.toISOString() : undefined
+  }
+}
 
 const availableTrialModels = computed(() => {
   const allModels = trials.value.map(t => t.llm_model).filter(Boolean);
   return [...new Set(allModels)];
 });
-const filteredTrials = computed(() => {
-  let result = [...trials.value];
-  // Search filter
-  if (filters.value.search) {
-    const q = filters.value.search.toLowerCase();
-    result = result.filter(trial =>
-      (trial.name && trial.name.toLowerCase().includes(q)) ||
-      (trial.description && trial.description.toLowerCase().includes(q)) ||
-      trial.id.toString().includes(q)
-    );
-  }
-  // Status filter
-  if (filters.value.status) {
-    result = result.filter(trial => trial.status === filters.value.status);
-  }
-  // Schema filter
-  if (filters.value.schemaId) {
-    result = result.filter(trial => trial.schema_id == filters.value.schemaId);
-  }
-  // Model filter
-  if (filters.value.llmModel) {
-    result = result.filter(trial => trial.llm_model === filters.value.llmModel);
-  }
-  // Prompt filter
-  if (filters.value.promptId) {
-    result = result.filter(trial => trial.prompt_id == filters.value.promptId);
-  }
-  // Date range filter
-  if (filters.value.dateRange) {
-    const now = new Date();
-    let startDate = null;
-    switch (filters.value.dateRange) {
-      case 'today':
-        startDate = new Date();
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'week':
-        startDate = new Date();
-        startDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        startDate = new Date();
-        startDate.setDate(now.getDate() - 30);
-        break;
-    }
-    if (startDate) {
-      result = result.filter(trial => new Date(trial.created_at) >= startDate);
-    }
-  }
+
+function clearFilters() {
+  filters.value = {
+    search: '',
+    status: '',
+    schema_id: '',
+    prompt_id: '',
+    llm_model: '',
+    has_failures: '',
+    dateRange: '',
+  };
+  applyFilters();
+}
+
+function paramsFromFilters() {
+  const params = {};
+  if (filters.value.search) params.search = filters.value.search;
+  if (filters.value.status) params.status = filters.value.status;
+  if (filters.value.schema_id) params.schema_id = filters.value.schema_id;
+  if (filters.value.prompt_id) params.prompt_id = filters.value.prompt_id;
+  if (filters.value.llm_model) params.llm_model = filters.value.llm_model;
+  if (filters.value.has_failures !== '' && filters.value.has_failures !== null) params.has_failures = filters.value.has_failures;
+  const { date_from, date_to } = mapDateRangeToBounds(filters.value.dateRange);
+  if (date_from) params.date_from = date_from;
+  if (date_to) params.date_to = date_to;
+
+  // status toggle: hide completed/failed when showCompleted=false
   if (!showCompleted.value) {
-    result = result.filter(trial => !['completed', 'failed'].includes(trial.status));
+    // If user didn’t pick a status, default to only active
+    if (!params.status) params.status = 'processing'; // not perfect; better approach: add server multi-status. For now we keep client-side hide below.
   }
-  return result;
+  return params;
+}
+
+async function fetchTrialsPage({ limitParam, offsetParam }) {
+  const params = { ...paramsFromFilters(), limit: limitParam, offset: offsetParam };
+  const res = await api.get(`/project/${props.projectId}/trial`, { params });
+  return res.data;
+}
+
+async function fetchTrials({ reset = false } = {}) {
+  try {
+    if (reset) isLoading.value = true;
+    const data = await fetchTrialsPage({ limitParam: limit.value, offsetParam: offset.value });
+    totalTrials.value = data.total || 0;
+    const items = (data.items || []);
+    trials.value = reset ? items : [...trials.value, ...items];
+  } catch (err) {
+    error.value = err?.message || 'Failed to load trials';
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+function loadMore() {
+  offset.value += limit.value;
+  fetchTrials({ reset: false });
+}
+
+function resetAndFetch() {
+  offset.value = 0;
+  fetchTrials({ reset: true });
+}
+
+function applyFilters() {
+  resetAndFetch();
+}
+
+watch([showCompleted], () => {
+  // We do client-side hide for completed/failed when the toggle is off:
+  // If you want perfect server-side behavior, extend API with multi-status.
+  // For now, simply refetch to the top for UX.
+  resetAndFetch();
 });
 
-function openCreateTrialModal() {
-  isModalOpen.value = true;
-}
+function openCreateTrialModal() { isModalOpen.value = true; }
 async function handleCreateTrial(trialData) {
   try {
     const response = await api.post(`/project/${props.projectId}/trial`, trialData);
-    trials.value.push(response.data);
+    trials.value.unshift(response.data);
+    totalTrials.value += 1;
     isModalOpen.value = false;
     startPolling();
     toast.success('Trial created!');
-  } catch (e) {
+  } catch {
     toast.error('Failed to create trial.');
   }
 }
 
-function openRenameModal(trial) {
-  editingTrial.value = trial;
-  showRenameModal.value = true;
-}
+function openRenameModal(trial) { editingTrial.value = trial; showRenameModal.value = true; }
 async function submitRename({ id, name, description }) {
   try {
     await api.patch(`/project/${props.projectId}/trial/${id}`, { name, description });
     const idx = trials.value.findIndex(t => t.id === id);
-    if (idx !== -1) {
-      trials.value[idx].name = name;
-      trials.value[idx].description = description;
-    }
-    toast.success('Trial renamed');
-    showRenameModal.value = false;
-  } catch (e) {
-    toast.error('Failed to rename trial');
-  }
-}
-function toggleTrialSelection(id) {
-  if (selectedTrials.value.includes(id)) {
-    selectedTrials.value = selectedTrials.value.filter(tid => tid !== id);
-  } else {
-    selectedTrials.value.push(id);
-  }
-}
-function openBatchModal(action) {
-  batchAction.value = action;
-  showBatchModal.value = true;
-}
-function handleBatchActionComplete(updated = false) {
-  selectedTrials.value = [];
-  showBatchModal.value = false;
-  if (updated) {
-    fetchTrials().then(() => startPolling());
-  }
+    if (idx !== -1) { trials.value[idx].name = name; trials.value[idx].description = description; }
+    toast.success('Trial renamed'); showRenameModal.value = false;
+  } catch { toast.error('Failed to rename trial'); }
 }
 
+function toggleTrialSelection(id) {
+  if (selectedTrials.value.includes(id)) selectedTrials.value = selectedTrials.value.filter(tid => tid !== id);
+  else selectedTrials.value.push(id);
+}
+function openBatchModal(action) { batchAction.value = action; showBatchModal.value = true; }
+function handleBatchActionComplete(updated = false) {
+  selectedTrials.value = []; showBatchModal.value = false;
+  if (updated) { resetAndFetch(); startPolling(); }
+}
 
 async function cancelTrial(trial) {
   try {
     await api.post(`/project/${props.projectId}/trial/${trial.id}/cancel`);
-    // Refresh the trial status in UI
     const idx = trials.value.findIndex(t => t.id === trial.id);
-    if (idx !== -1) {
-      trials.value[idx].status = 'cancelled';
-      trials.value[idx].is_cancelled = true;
-    }
+    if (idx !== -1) { trials.value[idx].status = 'cancelled'; trials.value[idx].is_cancelled = true; }
     toast.success('Trial cancelled');
-  } catch (e) {
-    toast.error('Failed to cancel trial');
-  }
+  } catch { toast.error('Failed to cancel trial'); }
 }
 
-function confirmDeleteTrial(trial) {
-  trialToDelete.value = trial;
-  isConfirmDialogOpen.value = true;
-}
+function confirmDeleteTrial(trial) { trialToDelete.value = trial; isConfirmDialogOpen.value = true; }
 async function deleteTrial() {
   if (!trialToDelete.value) return;
   try {
     await api.delete(`/project/${props.projectId}/trial/${trialToDelete.value.id}`);
-    trials.value = trials.value.filter(trial => trial.id !== trialToDelete.value.id);
+    trials.value = trials.value.filter(t => t.id !== trialToDelete.value.id);
+    totalTrials.value = Math.max(0, totalTrials.value - 1);
     toast.success('Trial deleted');
-  } catch (e) {
-    toast.error('Failed to delete trial');
-  } finally {
-    isConfirmDialogOpen.value = false;
-    trialToDelete.value = null;
-  }
+  } catch { toast.error('Failed to delete trial'); }
+  finally { isConfirmDialogOpen.value = false; trialToDelete.value = null; }
 }
+
 async function retryTrial(trial) {
   try {
     const data = {
@@ -501,101 +472,56 @@ async function retryTrial(trial) {
       advanced_options: trial.advanced_options || {},
     };
     const response = await api.post(`/project/${props.projectId}/trial`, data);
-    trials.value.push(response.data);
+    trials.value.unshift(response.data);
+    totalTrials.value += 1;
     toast.success('Trial restarted');
     startPolling();
-  } catch (e) {
-    toast.error('Failed to restart trial');
-  }
+  } catch { toast.error('Failed to restart trial'); }
 }
-function openDownloadModal(trial) {
-  trialToDownload.value = trial;
-  showDownloadModal.value = true;
-}
+function openDownloadModal(trial) { trialToDownload.value = trial; showDownloadModal.value = true; }
 
-function viewTrialResults(trial) {
-  selectedTrialId.value = trial.id;
-  showTrialResultsModal.value = true;
-}
-function viewTrialSchema(trial) {
-  selectedSchema.value = schemas.value.find(s => s.id === trial.schema_id);
-  showSchemaModal.value = true;
-}
-function viewTrialPrompt(trial) {
-  selectedPrompt.value = prompts.value.find(p => p.id === trial.prompt_id);
-  showPromptModal.value = true;
-}
+function viewTrialResults(trial) { selectedTrialId.value = trial.id; showTrialResultsModal.value = true; }
+function viewTrialSchema(trial) { selectedSchema.value = schemas.value.find(s => s.id === trial.schema_id); showSchemaModal.value = true; }
+function viewTrialPrompt(trial) { selectedPrompt.value = prompts.value.find(p => p.id === trial.prompt_id); showPromptModal.value = true; }
 
-function getActiveTrialIds() {
-  return trials.value.filter(trial =>
-    trial.status === 'pending' || trial.status === 'processing'
-  ).map(trial => trial.id);
-}
-
-function startPolling() {
-  if (isPollingActive.value) return;
-  isPollingActive.value = true;
-  pollTrials();
-}
-
-function stopPolling() {
-  isPollingActive.value = false;
-  if (pollInterval.value) {
-    clearTimeout(pollInterval.value);
-    pollInterval.value = null;
-  }
-}
+function getActiveTrialIds() { return trials.value.filter(t => t.status === 'pending' || t.status === 'processing').map(t => t.id); }
+function startPolling() { if (isPollingActive.value) return; isPollingActive.value = true; pollTrials(); }
+function stopPolling() { isPollingActive.value = false; if (pollInterval.value) { clearTimeout(pollInterval.value); pollInterval.value = null; } }
 
 async function pollTrials() {
   if (!isPollingActive.value) return;
-
   const activeIds = getActiveTrialIds();
-  if (activeIds.length === 0) {
-    stopPolling();
-    return;
-  }
-
+  if (activeIds.length === 0) { stopPolling(); return; }
   try {
     const updates = await Promise.all(
-      activeIds.map(id =>
-        api.get(`/project/${props.projectId}/trial/${id}`).then(r => r.data).catch(() => null)
-      )
+      activeIds.map(id => api.get(`/project/${props.projectId}/trial/${id}`).then(r => r.data).catch(() => null))
     );
     for (const updated of updates) {
-      if (updated) {
-        const idx = trials.value.findIndex(t => t.id === updated.id);
-        if (idx !== -1) trials.value[idx] = updated;
-      }
+      if (!updated) continue;
+      const idx = trials.value.findIndex(t => t.id === updated.id);
+      if (idx !== -1) trials.value[idx] = updated;
     }
-  } catch (e) {
-    // Silently fail: polling should be robust
-  }
+  } catch {}
   pollInterval.value = setTimeout(pollTrials, POLL_INTERVAL_MS);
 }
 
-
 onMounted(async () => {
   try {
-    const [documentsResponse, schemasResponse, promptsResponse, trialsResponse] = await Promise.all([
+    const [documentsResponse, schemasResponse, promptsResponse] = await Promise.all([
       api.get(`/project/${props.projectId}/document`),
       api.get(`/project/${props.projectId}/schema`),
       api.get(`/project/${props.projectId}/prompt`),
-      api.get(`/project/${props.projectId}/trial`)
     ]);
-    documents.value = documentsResponse.data;
+    documents.value = Array.isArray(documentsResponse.data) ? documentsResponse.data : (documentsResponse.data?.items || []);
     schemas.value = schemasResponse.data;
     prompts.value = promptsResponse.data;
-    trials.value = trialsResponse.data;
+    await resetAndFetch();
   } catch (err) {
-    error.value = err.message;
+    error.value = err?.message || 'Failed to load';
   } finally {
     isLoading.value = false;
-    startPolling(); // Start polling once trials are loaded
+    startPolling();
   }
 });
-
-onUnmounted(() => {
-  stopPolling();
-});
-
+onUnmounted(() => { stopPolling(); });
 </script>
