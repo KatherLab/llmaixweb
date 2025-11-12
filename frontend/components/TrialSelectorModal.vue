@@ -79,7 +79,7 @@
           </div>
 
           <!-- No Trials State -->
-          <div v-else-if="trials.length === 0" class="text-center py-8 text-gray-500">
+          <div v-else-if="trials.items.length === 0" class="text-center py-8 text-gray-500">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
@@ -94,7 +94,7 @@
               <p class="text-sm text-gray-600">Choose from completed trials to compare against your ground truth data.</p>
               <div class="mt-3 flex gap-4 text-sm">
                 <span class="text-gray-600">
-                  Total trials: <span class="font-medium">{{ availableTrials.length }}</span>
+                  Total trials: <span class="font-medium">{{ trials.total }}</span>
                 </span>
                 <span class="text-green-600">
                   Ready for evaluation: <span class="font-medium">{{ availableTrials.filter(t => t.hasMappings).length }}</span>
@@ -149,12 +149,27 @@
                         ⚠ No Mappings
                       </span>
                     </div>
-                    <div class="text-sm text-gray-600 space-y-1">
+                    <div class="text-sm text-gray-600 grid grid-cols-2 gap-y-1 gap-x-4">
                       <div><span class="font-medium">Model:</span> {{ trial.llm_model }}</div>
                       <div><span class="font-medium">Schema:</span> {{ getSchemaName(trial.schema_id) }}</div>
-                      <div><span class="font-medium">Documents:</span> {{ trial.document_ids?.length || 0 }}</div>
-                      <div><span class="font-medium">Results:</span> {{ trial.results?.length || 0 }}</div>
+                      <div><span class="font-medium">Documents:</span> {{ trial.documents_count }}</div>
+                      <div><span class="font-medium">Results:</span> {{ trial.results_count }}</div>
                       <div><span class="font-medium">Created:</span> {{ formatDate(trial.created_at) }}</div>
+                      <div><span class="font-medium">Last result:</span> {{ trial.last_result_at ? formatDate(trial.last_result_at) : '—' }}</div>
+                      <div v-if="trial.has_failures !== null && trial.has_failures !== undefined" class="col-span-2">
+                        <span
+                          v-if="trial.has_failures"
+                          class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                        >
+                          Errors: {{ trial.error_count || 0 }}
+                        </span>
+                        <span
+                          v-else
+                          class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                        >
+                          No Errors
+                        </span>
+                      </div>
                     </div>
                     <div v-if="!trial.hasMappings && trial.mappingStatus !== 'loading'" class="mt-2 text-xs text-red-600">
                       Configure field mappings for "{{ getSchemaName(trial.schema_id) }}" schema to enable evaluation
@@ -165,10 +180,21 @@
                       Already evaluated
                     </div>
                     <div class="text-xs text-gray-500">
-                      {{ trial.results?.length || 0 }} results
+                      {{ trial.results_count }} results
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <!-- Load more for pagination -->
+              <div class="pt-2 flex justify-center" v-if="trials.items.length < trials.total">
+                <button
+                  class="px-4 py-2 border rounded-md text-sm"
+                  :disabled="loadingStates.trials"
+                  @click="loadMore"
+                >
+                  {{ loadingStates.trials ? 'Loading...' : 'Load more' }}
+                </button>
               </div>
             </div>
           </div>
@@ -240,8 +266,14 @@ const loadingStates = ref({
   evaluation: false
 });
 
-// Data
-const trials = ref([]);
+// Paginated trials data (summaries)
+const trials = ref({
+  items: [],
+  total: 0,
+  limit: 20,
+  offset: 0
+});
+
 const schemas = ref([]);
 const selectedTrial = ref(null);
 const existingEvaluations = ref([]);
@@ -257,16 +289,17 @@ const isRetrying = ref(false);
 const isEvaluating = computed(() => loadingStates.value.evaluation);
 
 const canEvaluate = computed(() => {
-  return selectedTrial.value &&
-         selectedTrial.value.hasMappings &&
+  return !!selectedTrial.value &&
+         !!selectedTrial.value.hasMappings &&
+         (selectedTrial.value.results_count || 0) > 0 &&
          !isEvaluating.value &&
          !loadingStates.value.trials &&
          !error.value;
 });
 
-// Filter trials to only show completed ones with mapping status
+// Only completed trials are shown in this selector
 const availableTrials = computed(() => {
-  return trials.value
+  return trials.value.items
     .filter(trial => trial.status === 'completed')
     .map(trial => ({
       ...trial,
@@ -331,7 +364,116 @@ const retryLastOperation = async () => {
   }
 };
 
-// Validation functions
+// Data fetching functions
+const fetchTrials = async ({ append = false } = {}) => {
+  lastFailedOperation.value = () => fetchTrials({ append });
+  loadingStates.value.trials = true;
+
+  try {
+    const { limit, offset } = trials.value;
+    // Filter to completed to avoid extra client-side filtering volume
+    const { data } = await api.get(`/project/${props.projectId}/trial`, {
+      params: { limit, offset, status: 'completed' }
+    });
+
+    if (append) {
+      trials.value.items.push(...(data.items || []));
+    } else {
+      trials.value.items = data.items || [];
+    }
+    trials.value.total = data.total || trials.value.items.length;
+
+    // Once a page is loaded, check mapping statuses for those trials
+    await loadMappingStatusesFor(trials.value.items);
+
+    lastFailedOperation.value = null;
+  } catch (err) {
+    handleApiError(err, 'Loading trial data');
+  } finally {
+    loadingStates.value.trials = false;
+  }
+};
+
+const loadMore = async () => {
+  if (trials.value.items.length >= trials.value.total) return;
+  trials.value.offset = trials.value.items.length;
+  await fetchTrials({ append: true });
+};
+
+// Fetch schemas and existing evaluations for this ground truth
+const fetchSchemasAndEvaluations = async () => {
+  const [schemasResponse, evaluationsResponse] = await Promise.all([
+    api.get(`/project/${props.projectId}/schema`),
+    api.get(`/project/${props.projectId}/evaluation?groundtruth_id=${props.groundTruth.id}`)
+  ]);
+  schemas.value = schemasResponse.data;
+  existingEvaluations.value = evaluationsResponse.data;
+};
+
+const fetchData = async () => {
+  lastFailedOperation.value = fetchData;
+  error.value = null;
+
+  try {
+    // Reset paging for fresh open
+    trials.value.limit = 20;
+    trials.value.offset = 0;
+
+    await Promise.all([
+      fetchSchemasAndEvaluations(),
+      fetchTrials()
+    ]);
+
+    lastFailedOperation.value = null;
+  } catch (err) {
+    handleApiError(err, 'Loading trial data');
+  }
+};
+
+// Mapping checks
+const checkMappingStatus = async (trial) => {
+  try {
+    const response = await api.get(
+      `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/schema/${trial.schema_id}/mapping/status`
+    );
+    return response.data.has_mappings || false;
+  } catch (err) {
+    console.error(`Failed to check mapping status for trial ${trial.id}:`, err);
+    return false;
+  }
+};
+
+const loadMappingStatusesFor = async (trialList) => {
+  const completed = trialList.filter(t => t.status === 'completed');
+  if (!completed.length) return;
+
+  loadingStates.value.mappings = true;
+  try {
+    const checks = completed.map(async (trial) => {
+      const hasMapping = await checkMappingStatus(trial);
+      trialMappingStatus.value[trial.id] = hasMapping;
+    });
+    await Promise.all(checks);
+  } catch (err) {
+    console.error('Error loading mapping statuses:', err);
+  } finally {
+    loadingStates.value.mappings = false;
+  }
+};
+
+// Trial selection
+const selectTrial = (trial) => {
+  if (trial.hasMappings) {
+    selectedTrial.value = trial;
+    error.value = null;
+  }
+};
+
+const showMappingRequiredTooltip = (trial) => {
+  toast.warning(`Configure field mappings for "${getSchemaName(trial.schema_id)}" schema first`);
+};
+
+// Validation (uses summary fields)
 const validateEvaluationPrerequisites = () => {
   const errors = [];
 
@@ -347,93 +489,15 @@ const validateEvaluationPrerequisites = () => {
     errors.push('Ground truth file is required');
   }
 
-  if (selectedTrial.value && (!selectedTrial.value.results || selectedTrial.value.results.length === 0)) {
+  if (selectedTrial.value && (selectedTrial.value.results_count || 0) === 0) {
     errors.push('Selected trial has no results to evaluate');
   }
 
   return errors;
 };
 
-// Data fetching functions
-const fetchData = async () => {
-  lastFailedOperation.value = fetchData;
-  loadingStates.value.trials = true;
-  error.value = null;
-
-  try {
-    const [trialsResponse, schemasResponse, evaluationsResponse] = await Promise.all([
-      api.get(`/project/${props.projectId}/trial`),
-      api.get(`/project/${props.projectId}/schema`),
-      api.get(`/project/${props.projectId}/evaluation?groundtruth_id=${props.groundTruth.id}`)
-    ]);
-
-    trials.value = trialsResponse.data;
-    schemas.value = schemasResponse.data;
-    existingEvaluations.value = evaluationsResponse.data;
-
-    // Load mapping statuses for all completed trials
-    await loadMappingStatuses();
-
-    lastFailedOperation.value = null;
-  } catch (err) {
-    handleApiError(err, 'Loading trial data');
-  } finally {
-    loadingStates.value.trials = false;
-  }
-};
-
-// Check if mappings exist for a specific trial's schema
-const checkMappingStatus = async (trial) => {
-  try {
-    const response = await api.get(
-      `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/schema/${trial.schema_id}/mapping/status`
-    );
-    return response.data.has_mappings || false;
-  } catch (err) {
-    console.error(`Failed to check mapping status for trial ${trial.id}:`, err);
-    // Don't show error for individual mapping checks, just return false
-    return false;
-  }
-};
-
-// Load mapping status for all completed trials
-const loadMappingStatuses = async () => {
-  const completedTrials = trials.value.filter(trial => trial.status === 'completed');
-  if (!completedTrials.length) return;
-
-  loadingStates.value.mappings = true;
-
-  try {
-    const statusPromises = completedTrials.map(async (trial) => {
-      const hasMapping = await checkMappingStatus(trial);
-      trialMappingStatus.value[trial.id] = hasMapping;
-      return { trialId: trial.id, hasMapping };
-    });
-
-    await Promise.all(statusPromises);
-  } catch (err) {
-    console.error('Error loading mapping statuses:', err);
-    // Don't show error for mapping status loading
-  } finally {
-    loadingStates.value.mappings = false;
-  }
-};
-
-// Trial selection
-const selectTrial = (trial) => {
-  if (trial.hasMappings) {
-    selectedTrial.value = trial;
-    error.value = null; // Clear any previous errors
-  }
-};
-
-const showMappingRequiredTooltip = (trial) => {
-  toast.warning(`Configure field mappings for "${getSchemaName(trial.schema_id)}" schema first`);
-};
-
-// Enhanced evaluation with comprehensive validation
+// Evaluate
 const evaluateTrialWithValidation = async () => {
-  // Pre-validation
   const validationErrors = validateEvaluationPrerequisites();
   if (validationErrors.length > 0) {
     error.value = `Cannot evaluate trial: ${validationErrors.join(', ')}`;
@@ -446,7 +510,7 @@ const evaluateTrialWithValidation = async () => {
   error.value = null;
 
   try {
-    // Double-check mapping status before evaluation
+    // Re-check mapping before posting
     const mappingStatus = await checkMappingStatus(selectedTrial.value);
     if (!mappingStatus) {
       throw new Error(`Field mappings for schema "${getSchemaName(selectedTrial.value.schema_id)}" are not configured or have been removed`);
@@ -460,7 +524,6 @@ const evaluateTrialWithValidation = async () => {
     toast.success(`Trial #${selectedTrial.value.id} evaluation completed successfully`);
     lastFailedOperation.value = null;
   } catch (err) {
-    // Enhanced error handling for evaluation-specific errors
     if (err.response?.status === 400) {
       const detail = err.response.data?.detail || err.message;
       if (detail.includes('No field mapping found')) {
@@ -484,13 +547,11 @@ const evaluateTrialWithValidation = async () => {
   }
 };
 
-// Handle mapping configuration
+// Mapping configured
 const onMappingConfigured = async () => {
   showMappingModal.value = false;
-
   try {
-    // Refresh mapping statuses after configuration
-    await loadMappingStatuses();
+    await loadMappingStatusesFor(trials.value.items);
     toast.success('Field mappings configured successfully');
   } catch (err) {
     handleApiError(err, 'Refreshing mapping status');
@@ -509,13 +570,11 @@ const unlockBodyScroll = () => {
   }
 };
 
-// Close handler to always remove scroll lock and emit
 const handleClose = () => {
   unlockBodyScroll();
   emit('close');
 };
 
-// Mount/unmount lifecycle for scroll locking
 onMounted(() => {
   lockBodyScroll();
   fetchData();
@@ -526,7 +585,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-/* Add this to your global CSS (or include in a style tag if allowed globally) */
 .no-scroll {
   overflow: hidden !important;
 }

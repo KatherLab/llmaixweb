@@ -220,7 +220,6 @@
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div class="flex gap-2">
-                      <!-- UNIFIED: Single button now opens the comprehensive modal -->
                       <button
                         @click="viewEvaluationAnalysis(evaluation)"
                         class="text-blue-600 hover:text-blue-800 text-sm underline"
@@ -232,6 +231,27 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- (Optional) Trials pagination controls just for caching models -->
+          <div class="flex items-center justify-end gap-2 mt-4" v-if="trials.total > trials.limit">
+            <button
+              class="px-3 py-1 border rounded text-sm"
+              :disabled="trials.offset === 0 || loadingStates.trials"
+              @click="pageBack"
+            >
+              Prev
+            </button>
+            <span class="text-sm text-gray-600">
+              {{ Math.min(trials.offset + 1, trials.total) }}–{{ Math.min(trials.offset + trials.items.length, trials.total) }} of {{ trials.total }}
+            </span>
+            <button
+              class="px-3 py-1 border rounded text-sm"
+              :disabled="trials.offset + trials.limit >= trials.total || loadingStates.trials"
+              @click="pageForward"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
@@ -259,7 +279,6 @@
       @evaluate="onTrialEvaluate"
     />
 
-    <!-- NEW UNIFIED MODAL - replaces EvaluationDetailsModal, DocumentEvaluationModal, etc. -->
     <EvaluationAnalysisModal
       v-if="showEvaluationAnalysis"
       :project-id="projectId"
@@ -294,7 +313,6 @@ import GroundTruthManager from './GroundTruthManager.vue';
 import TrialSelectorModal from './TrialSelectorModal.vue';
 import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue';
 import MetricsExportModal from './MetricsExportModal.vue';
-
 import EvaluationAnalysisModal from './evaluation/EvaluationAnalysisModal.vue';
 
 const props = defineProps({
@@ -322,16 +340,23 @@ const isRetrying = ref(false);
 const groundTruthFiles = ref([]);
 const selectedGroundTruth = ref(null);
 const evaluations = ref([]);
-const trials = ref([]);
 
-// Modal states - UNIFIED
+// Trials pagination + cache for model lookup
+const trials = ref({
+  items: [],
+  total: 0,
+  limit: 20,
+  offset: 0
+});
+const trialCache = ref({}); // { [id]: TrialSummary | Trial (full) }
+const pendingTrialFetches = new Set();
+
+// Modal states
 const showUploadModal = ref(false);
 const showGroundTruthManager = ref(false);
 const showTrialSelector = ref(false);
 const showGroundTruthPreview = ref(false);
 const showExportModal = ref(false);
-
-// NEW UNIFIED MODAL STATE - replaces the old separate modal states
 const showEvaluationAnalysis = ref(false);
 
 // Selected items
@@ -415,7 +440,6 @@ const fetchGroundTruthFiles = async () => {
     const response = await api.get(`/project/${props.projectId}/groundtruth`);
     groundTruthFiles.value = response.data;
 
-    // Auto-select first ground truth if none selected and available
     if (groundTruthFiles.value.length > 0 && !selectedGroundTruth.value) {
       await selectGroundTruth(groundTruthFiles.value[0]);
     }
@@ -433,63 +457,66 @@ const fetchGroundTruthFilesWithRetry = async () => {
   await fetchGroundTruthFiles();
 };
 
-const fetchTrials = async () => {
-  lastFailedOperation.value = fetchTrials;
+// Paginated trial summaries
+const fetchTrials = async (opts = {}) => {
+  lastFailedOperation.value = () => fetchTrials(opts);
   loadingStates.value.trials = true;
 
   try {
-    const response = await api.get(`/project/${props.projectId}/trial`);
-    trials.value = response.data;
+    const { limit = trials.value.limit, offset = trials.value.offset, ...filters } = opts;
+    const { data } = await api.get(`/project/${props.projectId}/trial`, {
+      params: { limit, offset, ...filters }
+    });
+
+    trials.value.items = data.items || [];
+    trials.value.total = data.total || 0;
+    trials.value.limit = limit;
+    trials.value.offset = offset;
+
+    for (const t of trials.value.items) trialCache.value[t.id] = t;
+
     lastFailedOperation.value = null;
   } catch (err) {
     console.error('Failed to load trials:', err);
-    // Don't show error for trials loading as it's not critical
   } finally {
     loadingStates.value.trials = false;
   }
 };
 
-const selectGroundTruth = async (groundTruth) => {
-  try {
-    error.value = null;
-    selectedGroundTruth.value = groundTruth;
-    await fetchEvaluations();
-  } catch (err) {
-    handleApiError(err, 'Selecting ground truth');
+const pageBack = () => {
+  const newOffset = Math.max(0, trials.value.offset - trials.value.limit);
+  fetchTrials({ offset: newOffset, limit: trials.value.limit });
+};
+const pageForward = () => {
+  const newOffset = Math.min(
+    trials.value.total,
+    trials.value.offset + trials.value.limit
+  );
+  if (newOffset !== trials.value.offset) {
+    fetchTrials({ offset: newOffset, limit: trials.value.limit });
   }
 };
 
-const selectGroundTruthWithValidation = async (groundTruth) => {
-  if (!groundTruth) {
-    error.value = 'Invalid ground truth file selected';
-    return;
-  }
-
-  await selectGroundTruth(groundTruth);
-};
-
-const fetchEvaluations = async () => {
-  if (!selectedGroundTruth.value) return;
-
-  lastFailedOperation.value = fetchEvaluations;
-  loadingStates.value.evaluations = true;
-  error.value = null;
-
+// Lazy fetch full trial (only if a view ever needs more than the summary)
+const fetchTrialIfMissing = async (id) => {
+  if (trialCache.value[id]?.results || pendingTrialFetches.has(id)) return;
+  pendingTrialFetches.add(id);
   try {
-    const response = await api.get(`/project/${props.projectId}/evaluation?groundtruth_id=${selectedGroundTruth.value.id}`);
-    evaluations.value = response.data;
-    lastFailedOperation.value = null;
-  } catch (err) {
-    handleApiError(err, 'Loading evaluations');
+    const { data } = await api.get(`/project/${props.projectId}/trial/${id}`);
+    trialCache.value[id] = data;
+  } catch {
+    /* no-op */
   } finally {
-    loadingStates.value.evaluations = false;
+    pendingTrialFetches.delete(id);
   }
 };
 
 // Utility functions for evaluation display
 const getTrialModel = (trialId) => {
-  const trial = trials.value.find(t => t.id === trialId);
-  return trial?.llm_model || 'Unknown';
+  const t = trialCache.value[trialId];
+  if (t?.llm_model) return t.llm_model;
+  fetchTrialIfMissing(trialId);
+  return 'Unknown';
 };
 
 const getAccuracyPercentage = (evaluation) => {
@@ -502,7 +529,6 @@ const getDocumentCount = (evaluation) => {
 };
 
 const hasEvaluationErrors = (evaluation) => {
-  // Check if any document has errors
   const documents = evaluation.document_summaries || evaluation.document_metrics || [];
   return documents.some(doc => doc.error || doc.has_error);
 };
@@ -524,10 +550,6 @@ const validateEvaluationPrerequisites = () => {
     errors.push('Ground truth file has no field mappings configured');
   }
 
-  if (trials.value.length === 0) {
-    errors.push('No trials available for evaluation');
-  }
-
   return errors;
 };
 
@@ -544,6 +566,42 @@ const showTrialSelectorWithValidation = () => {
 };
 
 // Event handlers
+const selectGroundTruth = async (groundTruth) => {
+  try {
+    error.value = null;
+    selectedGroundTruth.value = groundTruth;
+    await fetchEvaluations();
+  } catch (err) {
+    handleApiError(err, 'Selecting ground truth');
+  }
+};
+
+const selectGroundTruthWithValidation = async (groundTruth) => {
+  if (!groundTruth) {
+    error.value = 'Invalid ground truth file selected';
+    return;
+  }
+  await selectGroundTruth(groundTruth);
+};
+
+const fetchEvaluations = async () => {
+  if (!selectedGroundTruth.value) return;
+
+  lastFailedOperation.value = fetchEvaluations;
+  loadingStates.value.evaluations = true;
+  error.value = null;
+
+  try {
+    const response = await api.get(`/project/${props.projectId}/evaluation?groundtruth_id=${selectedGroundTruth.value.id}`);
+    evaluations.value = response.data;
+    lastFailedOperation.value = null;
+  } catch (err) {
+    handleApiError(err, 'Loading evaluations');
+  } finally {
+    loadingStates.value.evaluations = false;
+  }
+};
+
 const onGroundTruthUploaded = async (groundTruth) => {
   try {
     groundTruthFiles.value.push(groundTruth);
@@ -557,7 +615,7 @@ const onGroundTruthUploaded = async (groundTruth) => {
 
 const onTrialEvaluate = async (evaluationSummary) => {
   try {
-    // Convert EvaluationSummary to Evaluation format for consistency
+    // Normalize to evaluation-like object for table
     const evaluation = {
       id: evaluationSummary.id,
       trial_id: evaluationSummary.trial_id,
@@ -581,11 +639,8 @@ const onTrialEvaluate = async (evaluationSummary) => {
 const onMappingConfigured = async () => {
   try {
     showGroundTruthPreview.value = false;
-
-    // Refresh the ground truth files
     await fetchGroundTruthFiles();
 
-    // IMPORTANT: Re-select the current ground truth to update its state
     if (selectedGroundTruth.value) {
       const updatedGroundTruth = groundTruthFiles.value.find(
         gt => gt.id === selectedGroundTruth.value.id
@@ -601,8 +656,7 @@ const onMappingConfigured = async () => {
   }
 };
 
-
-// Modal actions - UNIFIED
+// Modal actions
 const previewGroundTruth = () => {
   if (!selectedGroundTruth.value) {
     error.value = 'No ground truth file selected';
@@ -611,7 +665,6 @@ const previewGroundTruth = () => {
   showGroundTruthPreview.value = true;
 };
 
-// NEW UNIFIED MODAL ACTION - replaces the old separate modal actions
 const viewEvaluationAnalysis = (evaluation) => {
   selectedEvaluation.value = evaluation;
   showEvaluationAnalysis.value = true;
@@ -623,7 +676,7 @@ onMounted(async () => {
   try {
     await Promise.all([
       fetchGroundTruthFiles(),
-      fetchTrials()
+      fetchTrials() // just to warm the cache for model lookups
     ]);
   } catch (err) {
     handleApiError(err, 'Initializing evaluation view');
