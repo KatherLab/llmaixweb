@@ -193,9 +193,14 @@
               <tbody class="bg-white divide-y divide-gray-200">
                 <tr v-for="evaluation in evaluations" :key="evaluation.id" class="hover:bg-gray-50">
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
-                    <div class="font-medium">Trial #{{ evaluation.trial_id }}</div>
-                    <div class="text-xs text-gray-500">{{ formatDate(evaluation.created_at) }}</div>
+                    <div class="font-medium truncate" :title="getTrialName(evaluation.trial_id)">
+                      {{ getTrialName(evaluation.trial_id) }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      ID: {{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}
+                    </div>
                   </td>
+
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     {{ getTrialModel(evaluation.trial_id) }}
                   </td>
@@ -519,6 +524,19 @@ const getTrialModel = (trialId) => {
   return 'Unknown';
 };
 
+const getTrialName = (trialId) => {
+  const t = trialCache.value[trialId];
+  if (t && typeof t.name === 'string' && t.name.trim().length > 0) {
+    return t.name;
+  }
+
+  // If not in the current page cache, try to warm it with the full Trial.
+  // (This may update reactively; until then, show a deterministic fallback.)
+  if (!t) fetchTrialIfMissing(trialId);
+
+  return `Trial #${trialId}`;
+};
+
 const getAccuracyPercentage = (evaluation) => {
   const accuracy = evaluation.overall_metrics?.accuracy || evaluation.metrics?.accuracy || 0;
   return (accuracy * 100).toFixed(1);
@@ -592,8 +610,20 @@ const fetchEvaluations = async () => {
   error.value = null;
 
   try {
-    const response = await api.get(`/project/${props.projectId}/evaluation?groundtruth_id=${selectedGroundTruth.value.id}`);
-    evaluations.value = response.data;
+    const { data } = await api.get(
+      `/project/${props.projectId}/evaluation?groundtruth_id=${selectedGroundTruth.value.id}`
+    );
+
+    // 1) store the evaluations
+    evaluations.value = Array.isArray(data) ? data : (data?.items ?? []);
+
+    // 2) warm trial names/models for rows we’ll render
+    for (const ev of evaluations.value) {
+      if (!trialCache.value[ev.trial_id]) {
+        fetchTrialIfMissing(ev.trial_id);
+      }
+    }
+
     lastFailedOperation.value = null;
   } catch (err) {
     handleApiError(err, 'Loading evaluations');
@@ -601,6 +631,7 @@ const fetchEvaluations = async () => {
     loadingStates.value.evaluations = false;
   }
 };
+
 
 const onGroundTruthUploaded = async (groundTruth) => {
   try {

@@ -363,9 +363,6 @@ class Trial(TrialBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-# --- schemas.py (add/extend) ---
-
-
 class TrialSummary(UTCModel):
     """Lightweight Trial model for listings (no 'results')."""
 

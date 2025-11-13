@@ -126,7 +126,10 @@
                 <div class="flex justify-between items-start">
                   <div class="flex-1">
                     <div class="flex items-center gap-3 mb-2">
-                      <h5 class="font-medium text-gray-900">Trial #{{ trial.id }}</h5>
+                      <h5 class="font-medium text-gray-900 truncate" :title="trialDisplayName(trial)">
+                        {{ trialDisplayName(trial) }}
+                      </h5>
+                      <div class="text-xs text-gray-500">ID: {{ trial.id }}</div>
                       <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         {{ trial.status }}
                       </span>
@@ -220,7 +223,9 @@
               </svg>
               Evaluating...
             </span>
-            <span v-else>{{ selectedTrial ? `Evaluate Trial #${selectedTrial.id}` : 'Select Trial First' }}</span>
+            <span v-else>
+              {{ selectedTrial ? `Evaluate ${trialDisplayName(selectedTrial)}` : 'Select Trial First' }}
+            </span>
           </button>
         </div>
 
@@ -323,6 +328,9 @@ const clearError = () => {
   error.value = null;
   lastFailedOperation.value = null;
 };
+
+const trialDisplayName = (trial) =>
+  trial?.name && trial.name.trim().length > 0 ? trial.name : `Trial #${trial.id}`;
 
 const handleApiError = (err, operation) => {
   console.error(`${operation} failed:`, err);
@@ -521,7 +529,7 @@ const evaluateTrialWithValidation = async () => {
     );
 
     emit('evaluate', response.data);
-    toast.success(`Trial #${selectedTrial.value.id} evaluation completed successfully`);
+    toast.success(`${trialDisplayName(selectedTrial.value)} evaluation completed successfully`);
     lastFailedOperation.value = null;
   } catch (err) {
     if (err.response?.status === 400) {
