@@ -281,6 +281,13 @@ const parseAdditional = (ac) => { if (!ac) return null; if (typeof ac === 'strin
 const getAdditionalContent = (i) => { const r = trial.value?.results?.[i]; return r ? parseAdditional(r.additional_content) : null; };
 const getReasoningContent = (i) => getAdditionalContent(i)?.reasoning_content || null;
 
+const docIdForIndex = (i) => {
+  const r = trial.value?.results?.[i];
+  // Prefer the document_id embedded in the result; fall back to legacy array if present
+  return r?.document_id ?? trial.value?.document_ids?.[i] ?? null;
+};
+
+
 const totalUsage = computed(() => {
   const totals = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
   if (!trial.value?.results?.length) return totals;
@@ -300,7 +307,7 @@ const fetchData = async () => {
   try {
     const res = await api.get(`/project/${props.projectId}/trial/${trialId.value}`);
     trial.value = res.data;
-    if (trial.value?.document_ids) loadDocumentNames();
+    if (trial.value?.results?.length) loadDocumentNames();
   } catch (err) {
     console.error('Error loading trial:', err);
     error.value = err?.message || 'Failed to load trial data';
@@ -309,10 +316,11 @@ const fetchData = async () => {
 
 // Load per-document display labels
 const loadDocumentNames = async () => {
-  if (!trial.value?.document_ids) return;
-  for (let i = 0; i < trial.value.document_ids.length; i++) {
+  if (!trial.value?.results?.length) return;
+  for (let i = 0; i < trial.value.results.length; i++) {
     try {
-      const docId = trial.value.document_ids[i];
+      const docId = docIdForIndex(i);
+      if (!docId) continue;
       const r = await api.get(`/project/${props.projectId}/document/${docId}`);
       const d = r.data;
       documentLabels.value[i] = {
@@ -321,11 +329,12 @@ const loadDocumentNames = async () => {
       };
     } catch (err) {
       console.error(`Label load failed index ${i}:`, err);
-      const docId = trial.value.document_ids[i];
-      documentLabels.value[i] = { name: `Document (ID: ${docId})`, original: '' };
+      const fallbackId = docIdForIndex(i);
+      documentLabels.value[i] = { name: `Document (ID: ${fallbackId ?? 'unknown'})`, original: '' };
     }
   }
 };
+
 
 // Toggles
 const toggleResultExpansion = async (i) => {
@@ -333,7 +342,8 @@ const toggleResultExpansion = async (i) => {
   if (viewMode.value[i] === undefined) viewMode.value[i] = 'horizontal';
   if (expandedResults.value[i] && !documentContents.value[i]) {
     try {
-      const docId = trial.value.document_ids[i];
+      const docId = docIdForIndex(i);
+      if (!docId) throw new Error('Missing document_id for this result');
       const r = await api.get(`/project/${props.projectId}/document/${docId}`);
       documentContents.value[i] = r.data.text || 'No text content available';
     } catch (err) {
@@ -342,13 +352,16 @@ const toggleResultExpansion = async (i) => {
     }
   }
 };
+
 const toggleViewMode = (i) => { viewMode.value[i] = viewMode.value[i] === 'vertical' ? 'horizontal' : 'vertical'; };
+// >>> REPLACE: resolve doc id from the result row
 const toggleDocumentPanel = async (i) => {
   showDocumentPanel.value[i] = !showDocumentPanel.value[i];
   if (showDocumentPanel.value[i] && !documentPdfUrls.value[i] && !documentPdfLoading.value[i]) {
     documentPdfLoading.value[i] = true;
     try {
-      const docId = trial.value.document_ids[i];
+      const docId = docIdForIndex(i);
+      if (!docId) throw new Error('Missing document_id for this result');
       const r = await api.get(`/project/${props.projectId}/document/${docId}`);
       const d = r.data;
       let fileId;
@@ -364,9 +377,18 @@ const toggleDocumentPanel = async (i) => {
   }
 };
 
+
 watch(() => props.isModal, v => { document.body.style.overflow = v ? 'hidden' : ''; });
 onMounted(() => { fetchData(); if (props.isModal) document.body.style.overflow = 'hidden'; });
-onUnmounted(() => { document.body.style.overflow = ''; });
+onUnmounted(() => {
+  try {
+    Object.values(documentPdfUrls.value || {}).forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+  } catch {}
+  document.body.style.overflow = '';
+});
+
 </script>
 
 <style>
