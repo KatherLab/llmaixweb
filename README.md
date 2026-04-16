@@ -42,8 +42,6 @@ A modern web interface for the **LLMAIx** framework that turns unstructured medi
 
 ```bash
 cp .env.example .env
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env  # if present
 ```
 
 2. Start the stack (choose GPU or CPU):
