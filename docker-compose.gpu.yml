@@ -12,8 +12,8 @@ services:
       - REQUIRE_INVITATION=false
     ports: ["8000:8000"]
     volumes:
-      - ./backend:/app/backend
-      - .env:/app/backend/.env
+      - ./backend:/app/backend:Z
+      - .env:/app/backend/.env:Z
     deploy:
       resources:
         reservations:
@@ -26,11 +26,11 @@ services:
     image: llmaix-backend:gpu
     env_file: .env
     command: >
-      celery -A backend.src.celery.celery_config
+      /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
       worker -Q default -c 4 --loglevel=info
     volumes:
-      - ./backend:/app/backend
-      - .env:/app/backend/.env
+      - ./backend:/app/backend:Z
+      - .env:/app/backend/.env:Z
     deploy:
       resources:
         reservations:
@@ -43,11 +43,11 @@ services:
     image: llmaix-backend:gpu
     env_file: .env
     command: >
-      celery -A backend.src.celery.celery_config
+      /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
       worker -Q preprocess -c 1 --loglevel=info
     volumes:
-      - ./backend:/app/backend
-      - .env:/app/backend/.env
+      - ./backend:/app/backend:Z
+      - .env:/app/backend/.env:Z
     deploy:
       resources:
         reservations:
@@ -64,6 +64,8 @@ services:
         - VITE_API_BACKEND_URL=${VITE_API_BACKEND_URL}
     image: llmaix-frontend:latest
     env_file: .env
+    volumes:
+      - .env:/app/frontend/.env:Z
     ports: ["5173:8080"]
     depends_on: [backend]
 
@@ -95,8 +97,8 @@ services:
           sleep 3;
         done;
         mc mb -p local/${S3_BUCKET_NAME} || true;
-        mc policy set download local/${S3_BUCKET_NAME};
-        echo '✅  Bucket '${S3_BUCKET_NAME}' ready';
+        mc anonymous set download local/${S3_BUCKET_NAME} || true;
+        echo 'Bucket '${S3_BUCKET_NAME}' ready';
       "
     restart: "no"
 

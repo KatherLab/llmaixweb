@@ -18,21 +18,33 @@ ENV UV_INSTALL_DIR=/opt/uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/opt/uv:${PATH}"
 
-# dependency install
-COPY pyproject.toml uv.lock* ./
-RUN uv sync
-
-# copy application code last for better caching
-COPY backend ./backend
-
-# create non-root user and hand over app dir
+# create non-root user first
 RUN groupadd --system --gid 10001 app && \
-    useradd --system --uid 10001 --gid app --create-home --home-dir /home/app app && \
-    chown -R app:app /app
+    useradd --system --uid 10001 --gid app --create-home --home-dir /home/app app
 
-# activate the virtual env for runtime
-ENV PATH="/app/.venv/bin:/opt/uv:${PATH}"
+# copy dependency metadata first for better caching
+COPY pyproject.toml uv.lock* ./
+
+# prepare ownership before switching user
+RUN chown -R app:app /app
 
 USER 10001:10001
 
-CMD ["uvicorn", "backend.src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# create a standard venv with system python to avoid uv-managed interpreter issues
+RUN python3 -m venv /app/.venv
+
+# activate the virtual env for build + runtime
+ENV PATH="/app/.venv/bin:/opt/uv:${PATH}"
+ENV VIRTUAL_ENV="/app/.venv"
+
+# install dependencies into the existing venv
+RUN uv sync --locked
+
+USER root
+
+# copy application code last for better caching
+COPY --chown=app:app backend ./backend
+
+USER 10001:10001
+
+CMD ["/app/.venv/bin/python", "-m", "uvicorn", "backend.src.main:app", "--host", "0.0.0.0", "--port", "8000"]
