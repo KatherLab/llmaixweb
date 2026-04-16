@@ -68,14 +68,13 @@ services:
     depends_on: [backend]
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql/data
 
   redis:
-    image: redis:7-alpine
-    ports: ["6379:6379"]
+    image: redis:8-alpine
     volumes:
       - redis-data:/data
 

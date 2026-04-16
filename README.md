@@ -44,6 +44,21 @@ A modern web interface for the **LLMAIx** framework that turns unstructured medi
 cp .env.example .env
 ```
 
+### ⚙️ Environment Configuration
+Edit the `.env` file to match your deployment:
+
+* **LLM Providers (OpenAI compatible)**:
+    * `OPENAI_API_KEY`: Your API key.
+    * `OPENAI_API_BASE`: The base URL (e.g., `https://api.openai.com/v1` for official OpenAI, or your local vLLM/Ollama endpoint).
+    * `OPENAI_API_MODEL`: Default model name to use.
+    * `OPENAI_NO_API_CHECK`: Set to `true` to skip initial connectivity checks.
+* **Network & CORS**:
+    * `BACKEND_CORS_ORIGINS`: Comma-separated list of allowed origins (e.g., `http://localhost:5173,https://app.example.com`).
+    * `VITE_API_BACKEND_URL`: The public URL of the backend API as seen by the browser (e.g., `http://localhost:8000/api/v1`).
+* **Access Control**:
+    * `REQUIRE_INVITATION`: Set to `true` to disable open registration; new users will then require an invitation from an admin.
+
+
 2. Start the stack (choose GPU or CPU):
 
 ```bash
