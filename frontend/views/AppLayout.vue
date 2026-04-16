@@ -2,6 +2,10 @@
   <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-900">
     <!-- Navigation -->
     <nav class="w-full bg-white dark:bg-slate-900 shadow-sm border-b border-gray-100 dark:border-slate-800">
+      <div v-if="isBackendDown"
+           class="bg-red-600 text-white text-center py-1.5 text-xs font-medium animate-pulse">
+        Backend connection failed. Please check if the backend server is running.
+      </div>
       <div class="w-full px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16 items-center">
           <div class="flex items-center">
@@ -287,6 +291,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const showUserMenu = ref(false)
 const backendVersion = ref('')
+const isBackendDown = ref(false)
 const currentYear = new Date().getFullYear()
 const authReady = ref(false)
 const toast = useToast()
@@ -313,8 +318,10 @@ onMounted(async () => {
   try {
     const response = await api.get('/version')
     backendVersion.value = response.data.version
+    isBackendDown.value = false
   } catch (error) {
     console.error('Error fetching backend version:', error)
+    isBackendDown.value = true
   }
   // Wait for authStore initialization
   await authStore.initialize()
