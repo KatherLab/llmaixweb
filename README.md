@@ -44,7 +44,7 @@ A modern web interface for the **LLMAIx** framework that turns unstructured medi
 git clone https://github.com/KatherLab/llmaixweb
 ```
 
-2Copy and edit environment files:
+2. Copy and edit environment files:
 
 ```bash
 cp .env.example .env
