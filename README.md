@@ -38,7 +38,13 @@ A modern web interface for the **LLMAIx** framework that turns unstructured medi
 
 ## 🐳 Docker Installation
 
-1. Copy and edit environment files:
+1. Clone the repository:
+
+```bash
+git clone https://github.com/KatherLab/llmaixweb
+```
+
+2Copy and edit environment files:
 
 ```bash
 cp .env.example .env
@@ -59,7 +65,7 @@ Edit the `.env` file to match your deployment:
     * `REQUIRE_INVITATION`: Set to `true` to disable open registration; new users will then require an invitation from an admin.
 
 
-2. Start the stack (choose GPU or CPU):
+3. Start the stack (choose GPU or CPU):
 
 ```bash
 # GPU (requires NVIDIA driver + container toolkit)
@@ -75,7 +81,7 @@ docker compose -f docker-compose.cpu.yml up -d --build
 * Services included: `backend`, `worker_default`, `worker_preprocess`, `frontend`, `postgres`, `redis`, `minio`, and one‑shot `minio-init` (creates `S3_BUCKET_NAME`).
 * The backend reads settings from `backend/.env` (see `ENV_PATH` in `backend/src/config.py`). The project `.env` is mounted into `/app/backend/.env` in the container.
 
-3. Visit the web UI at **[http://localhost:5173](http://localhost:5173)**.
+4. Visit the web UI at **[http://localhost:5173](http://localhost:5173)**.
 
 ---
 
