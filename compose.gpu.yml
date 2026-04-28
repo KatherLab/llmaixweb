@@ -17,7 +17,15 @@ services:
           devices:
             - driver: nvidia
               capabilities: [gpu]
-    depends_on: [postgres, redis, minio]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+      rustfs-init:
+        condition: service_completed_successfully
 
   worker_default:
     image: ghcr.io/katherlab/llmaixweb-backend:gpu
@@ -64,26 +72,46 @@ services:
     env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:8-alpine
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
-  minio:
-    image: minio/minio:latest
+  rustfs:
+    image: rustfs/rustfs:1.0.0-alpha.99
     command: server /data --console-address ":9001"
     env_file: .env
     volumes:
       - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:9000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
-  minio-init:
-    image: minio/mc
-    depends_on: [minio]
+  rustfs-init:
+    image: rustfs/rc:latest
+    depends_on:
+      rustfs:
+        condition: service_healthy
     env_file: .env
     entrypoint: >
       /bin/sh -c "
-        until mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; do
+        until mc alias set local http://rustfs:9000 ${RUSTFS_ACCESS_KEY} ${RUSTFS_SECRET_KEY}; do
           sleep 3;
         done;
         mc mb -p local/${S3_BUCKET_NAME} || true;
