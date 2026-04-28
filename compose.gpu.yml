@@ -8,8 +8,8 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DISABLE_CELERY=false
-      - INITIALIZE_CELERY=false
-      - REQUIRE_INVITATION=false
+      - INITIALIZE_CELERY=${INITIALIZE_CELERY:-false}
+      - REQUIRE_INVITATION=${REQUIRE_INVITATION:-false}
     ports: ["8000:8000"]
     deploy:
       resources:

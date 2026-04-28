@@ -31,8 +31,8 @@ A modern web interface for the **LLMAIx** framework that turns unstructured medi
 * Python 3.11+ (for the backend)
 * Docker & Docker Compose (recommended for deployment)
 * Optional GPU stack: NVIDIA driver + NVIDIA Container Toolkit
-* **OpenAI-compatible API** (e.g., official OpenAI, self-hosted llama.cpp, vLLM, …)
-* (Optional) **MinIO** for object storage or any other S3 storage
+* **OpenAI-compatible API** (e.g., official OpenAI, self-hosted vLLM, llama.cpp, ollama, …)
+* (Optional) **RustFS** for object storage or any other S3 storage
 
 ---
 
@@ -76,11 +76,11 @@ docker compose -f compose.dev.yml up -d
 
 ### Docker Compose Files
 
-| File | Purpose |
-|------|---------|
-| `compose.yml` | **Default config** - CPU-only backend, works with Docker & Podman |
-| `compose.gpu.yml` | **GPU config** - GPU-enabled backend (NVIDIA driver + container toolkit required) |
-| `compose.dev.yml` | **Optional overlay** - Mounts local code for hot-reload (development only) |
+| File              | Purpose                                                                             |
+|-------------------|-------------------------------------------------------------------------------------|
+| `compose.yml`     | **Default config** - CPU-only backend, works with Docker & Podman                   |
+| `compose.gpu.yml` | **GPU config** - GPU-enabled backend (NVIDIA driver required, for some OCR methods) |
+| `compose.dev.yml` | **Optional overlay** - Mounts local code for hot-reload (development only)          |
 
 **Usage pattern:**
 ```bash
@@ -96,32 +96,95 @@ docker compose -f compose.gpu.yml up -d
 
 ### Environment Configuration
 
-Edit the `.env` file to match your deployment:
+Edit the `.env` file to match your deployment. **For basic setups, only the LLM provider settings are required** - all other defaults work with docker-compose out of the box.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OPENAI_API_KEY` | API key for LLM provider | (empty) |
-| `OPENAI_API_BASE` | Base URL for OpenAI-compatible API | (empty) |
-| `OPENAI_API_MODEL` | Default model to use | (empty) |
-| `OPENAI_NO_API_CHECK` | Skip API connectivity check | `true` |
-| `BACKEND_CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:5173` |
-| `VITE_API_BACKEND_URL` | **Runtime** backend URL for frontend | `http://localhost:8000/api/v1` |
-| `REQUIRE_INVITATION` | Require invitation for signup | `false` |
-| `ALLOW_FIRST_ADMIN_SETUP` | Allow first user to become admin | `true` |
+#### Essential Settings
 
-**Storage options:**
-- **MinIO (local)**: Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_ENDPOINT_URL`, `S3_BUCKET_NAME`
-- **AWS S3**: Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, optionally `S3_ENDPOINT_URL`
-- **Local filesystem**: Set `LOCAL_DIRECTORY=/path/to/storage`
+| Variable           | Description                        | Default          |
+|--------------------|------------------------------------|------------------|
+| `OPENAI_API_KEY`   | API key for LLM provider           | (required)       |
+| `OPENAI_API_BASE`  | Base URL for OpenAI-compatible API | (empty)          |
+| `OPENAI_API_MODEL` | Default model to use               | (empty)          |
+| `SECRET_KEY`       | Secret key for sessions            | (auto-generated) |
+
+#### Storage
+
+**RustFS** (can be any S3 compatible storage):
+
+| Variable                | Default              |
+|-------------------------|----------------------|
+| `AWS_ACCESS_KEY_ID`     | `rustfsadmin`        |
+| `AWS_SECRET_ACCESS_KEY` | `rustfsadmin`        |
+| `S3_ENDPOINT_URL`       | `http://rustfs:9000` |
+| `S3_BUCKET_NAME`        | `llmaixweb`          |
+
+**Local filesystem** (alternative):
+
+| Variable          | Description                     |
+|-------------------|---------------------------------|
+| `LOCAL_DIRECTORY` | Path to local storage directory |
+
+#### Other Settings
+
+| Variable                  | Description                           | Default                        |
+|---------------------------|---------------------------------------|--------------------------------|
+| `BACKEND_CORS_ORIGINS`    | Comma-separated allowed origins       | `http://localhost:5173`        |
+| `VITE_API_BACKEND_URL`    | Runtime backend URL for frontend      | `http://localhost:8000/api/v1` |
+| `REQUIRE_INVITATION`      | Require invitation for signup         | `false`                        |
+| `ALLOW_FIRST_ADMIN_SETUP` | Allow first user to become admin      | `true`                         |
+| `CELERY_PREPROCESS_POOL`  | Pool type (`auto`, `solo`, `prefork`) | `auto` (use `solo` on macOS)   |
+
+<details>
+<summary>Database & Advanced Settings (click to expand)</summary>
+
+These defaults work with docker-compose - only change if using external services.
+
+| Variable                      | Description                  | Default                |
+|-------------------------------|------------------------------|------------------------|
+| `POSTGRES_SERVER`             | Database host                | `postgres`             |
+| `POSTGRES_USER`               | Database user                | `postgres`             |
+| `POSTGRES_PASSWORD`           | Database password            | `postgres`             |
+| `POSTGRES_DB`                 | Database name                | `llmaixweb`            |
+| `CELERY_BROKER_URL`           | Redis broker URL             | `redis://redis:6379/0` |
+| `CELERY_RESULT_BACKEND`       | Redis result backend         | `redis://redis:6379/0` |
+| `DISABLE_CELERY`              | Disable Celery workers       | `false`                |
+| `INITIALIZE_CELERY`           | Initialize Celery on startup | `false`                |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Token expiry in minutes      | `60*24*8`              |
+| `RUSTFS_ACCESS_KEY`           | RustFS access key            | `rustfsadmin`          |
+| `RUSTFS_SECRET_KEY`           | RustFS secret key            | `rustfsadmin`          |
+
+</details>
+
+#### Local Network & Reverse Proxy
+
+> **Testing in local network?** Access from other devices requires:
+> 1. Set `BACKEND_CORS_ORIGINS` to include your server IP (e.g., `http://192.168.1.100:5173`)
+> 2. Set `VITE_API_BACKEND_URL` to point to your server (e.g., `http://192.168.1.100:8000/api/v1`)
+> 3. Restart the stack
+>
+> **Using a reverse proxy (nginx, Traefik, etc.)?** Adjust:
+> - `BACKEND_CORS_ORIGINS` to your public domain (e.g., `https://app.example.com`)
+> - `VITE_API_BACKEND_URL` to your public API endpoint (e.g., `https://api.example.com/api/v1`)
 
 ---
 
 ## 🚀 Get started
 
-1. Open **[http://localhost:5173](http://localhost:5173)**.
-2. Create an **Admin** account.
-3. Log in with your new account and configure an LLM provider under *Settings*.
-4. Upload a few documents, define a schema, and run your first trial.
+1. **Configure**: Edit `.env` and set at minimum:
+   - `OPENAI_API_KEY`, `OPENAI_API_BASE`, `OPENAI_API_MODEL` (your LLM provider)
+   - `SECRET_KEY` (random string for production)
+
+2. **Start**: `docker compose up -d`
+
+3. **Access**: Open **[http://localhost:5173](http://localhost:5173)**
+
+4. **Setup**: Create an admin account on first visit
+
+5. **Configure**: In the admin panel, set up your LLM provider and extraction schemas
+
+6. **Upload**: Add documents and run your first extraction trial
+
+> **Troubleshooting**: Check container logs with `docker compose logs -f backend` if the app fails to start. Most issues are missing/invalid environment variables.
 
 ---
 
