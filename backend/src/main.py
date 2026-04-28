@@ -117,7 +117,7 @@ async def version_api():
         git_commit = subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"],
             stderr=subprocess.DEVNULL,
-            text=True
+            text=True,
         ).strip()
     except Exception:
         git_commit = "unknown"

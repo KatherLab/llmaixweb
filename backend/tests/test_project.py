@@ -2673,7 +2673,7 @@ def test_field_mapping_and_evaluation(client, api_url, files_base_path):
             "system_prompt": "",
             "user_prompt": """From the following medical report, extract the following information and return it in JSON format:
 
-    shortness of breath: true / false 
+    shortness of breath: true / false
     chest pain: true / false
     leg pain or swelling: true / false
     heart palpitations: true / false
@@ -2840,7 +2840,7 @@ def test_trial_download_and_error_endpoints(client, api_url, files_base_path):
             "system_prompt": "",
             "user_prompt": """From the following medical report, extract the following information and return it in JSON format:
 
-    shortness of breath: true / false 
+    shortness of breath: true / false
     chest pain: true / false
     leg pain or swelling: true / false
     heart palpitations: true / false
@@ -3070,7 +3070,7 @@ def test_evaluation_full_pipeline(client, api_url, files_base_path):
             "system_prompt": "",
             "user_prompt": """From the following medical report, extract the following information and return it in JSON format:
 
-shortness of breath: true / false 
+shortness of breath: true / false
 chest pain: true / false
 leg pain or swelling: true / false
 heart palpitations: true / false

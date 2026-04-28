@@ -72,12 +72,16 @@ class Settings(BaseSettings):
             if os.getenv("DOCKER_ENV", "false").lower() == "true":
                 pass  # Silent - expected in Docker
             else:
-                print(f"Note: .env file not found at {_env_path.absolute()}, using environment variables only.")
+                print(
+                    f"Note: .env file not found at {_env_path.absolute()}, using environment variables only."
+                )
     except (PermissionError, OSError):
         # File might exist but not be readable, or parent directory not accessible
         # Fall back to environment variables only
         if os.getenv("DOCKER_ENV", "false").lower() != "true":
-            print(f"Note: Cannot access .env file at {_env_path.absolute()}, using environment variables only.")
+            print(
+                f"Note: Cannot access .env file at {_env_path.absolute()}, using environment variables only."
+            )
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

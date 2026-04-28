@@ -1,5 +1,4 @@
 from logging.config import fileConfig
-from typing import TYPE_CHECKING
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
