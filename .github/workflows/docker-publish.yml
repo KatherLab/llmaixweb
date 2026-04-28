@@ -60,5 +60,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GIT_COMMIT_HASH=${{ github.sha }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/katherlab/${{ matrix.image }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/katherlab/${{ matrix.image }}:buildcache,mode=max

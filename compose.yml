@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        - GIT_COMMIT_HASH=${GIT_COMMIT_HASH:-$(git rev-parse --short HEAD)}
+        - GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
     image: ghcr.io/katherlab/llmaixweb-frontend:latest
     environment:
       - VITE_API_BACKEND_URL=${VITE_API_BACKEND_URL:-http://localhost:8000/api/v1}

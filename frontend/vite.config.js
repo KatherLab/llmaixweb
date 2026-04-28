@@ -5,7 +5,7 @@ import path from 'path';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(({ mode }) => {
-  const frontendDir = path.resolve(__dirname); // absolute path to frontend/
+  const frontendDir = path.resolve(__dirname);
   const env = loadEnv(mode, frontendDir, '');
 
   return {
@@ -22,10 +22,8 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
     },
-    // Define placeholder for runtime substitution
-    // VITE_API_BACKEND_URL is now injected at runtime via config.js
     define: {
-      'import.meta.env.VITE_API_BACKEND_URL': env.VITE_API_BACKEND_URL || '__VITE_API_BACKEND_URL__',
+      'import.meta.env.VITE_API_BACKEND_URL': JSON.stringify(env.VITE_API_BACKEND_URL || '__VITE_API_BACKEND_URL__'),
     },
   };
 });
