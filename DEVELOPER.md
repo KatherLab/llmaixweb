@@ -124,3 +124,49 @@ The initial migration (`alembic/versions/2d2bfbbdcc04_initial.py`) creates all e
 - document_sets, field_mappings
 - preprocessing_tasks, file_preprocessing_tasks
 - trials, documents, evaluations, trial_results
+
+---
+
+## 🧪 Running Tests
+
+### Backend Tests
+
+```bash
+# 1. Copy the example test environment file
+cp backend/.env.localtest.example backend/.env.localtest
+
+# 2. Edit backend/.env.localtest with your test settings (e.g., OpenAI API key for integration tests)
+
+# 3. Run tests
+ENV_PATH=backend/.env.localtest uv run pytest --verbose --cov=backend --cov-report=html
+```
+
+---
+
+## 📦 RustFS Storage (Optional)
+
+Start the RustFS server for local development:
+
+```bash
+rustfs server llmaixwebdata
+```
+
+---
+
+## 👥 Initialize Users
+
+```bash
+python -m backend.scripts.populate_users
+```
+
+**When using Docker:**
+
+```bash
+# Running stack
+docker compose -f compose.gpu.yml exec -it backend \
+  python -m backend.scripts.populate_users
+
+# Stopped stack
+docker compose -f compose.gpu.yml run --rm -it backend \
+  python -m backend.scripts.populate_users
+```

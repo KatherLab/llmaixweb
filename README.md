@@ -190,39 +190,7 @@ These defaults work with docker-compose - only change if using external services
 
 ## 🔧 Development
 
-See [DEVELOPER.md](DEVELOPER.md) for version management and release instructions.
-
-### Initialize users
-
-```bash
-python -m backend.scripts.populate_users
-```
-
-**When using Docker**
-
-```bash
-# Running stack
-docker compose -f compose.gpu.yml exec -it backend \
-  python -m backend.scripts.populate_users
-
-# Stopped stack
-docker compose -f compose.gpu.yml run --rm -it backend \
-  python -m backend.scripts.populate_users
-```
-
-### MinIO (optional for dev)
-
-Start on macOS:
-
-```bash
-minio server miniodata
-```
-
-### Run backend tests
-
-```bash
-ENV_PATH=backend/.env uv run pytest --verbose --cov=backend --cov-report=html
-```
+See [DEVELOPER.md](DEVELOPER.md) for development instructions, including running tests and initializing users.
 
 ---
 
