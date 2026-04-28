@@ -47,4 +47,7 @@ COPY --chown=app:app backend ./backend
 
 USER 10001:10001
 
+# Signal that we're running in Docker (env vars preferred over .env file)
+ENV DOCKER_ENV=true
+
 CMD ["/app/.venv/bin/python", "-m", "uvicorn", "backend.src.main:app", "--host", "0.0.0.0", "--port", "8000"]

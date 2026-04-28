@@ -6,16 +6,30 @@ COPY package.json pnpm-lock.yaml* yarn.lock* ./
 RUN npm install
 COPY frontend ./frontend
 
-ARG VITE_API_BACKEND_URL=http://localhost:8000/api/v1
-ENV VITE_API_BACKEND_URL=${VITE_API_BACKEND_URL}
+# Build with a placeholder - actual URL injected at runtime
+ENV VITE_API_BACKEND_URL=__VITE_API_BACKEND_URL__
 
 RUN npm run build
 
 ### ── Runtime stage (non-root) ──────────────────────────────────────
 FROM nginxinc/nginx-unprivileged:stable-alpine
 
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Install gettext for envsubst
+USER root
+RUN apk add --no-cache gettext
+
+COPY frontend/nginx.conf.template /etc/nginx/conf.d/default.conf.template
+COPY frontend/config.js.template /usr/share/nginx/html/config.js.template
+COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+
+# Set proper ownership for nginx user (UID 101 for nginx-unprivileged)
+RUN chown -R 101:101 /usr/share/nginx/html /etc/nginx/conf.d /docker-entrypoint.sh \
+    && chmod +x /docker-entrypoint.sh
+
+USER 101
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
 EXPOSE 8080
 

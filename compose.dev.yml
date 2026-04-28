@@ -1,0 +1,20 @@
+# Development overrides - mount local code for hot-reloading
+# Usage: docker compose -f compose.yml -f compose.dev.yml up -d
+#
+# This file is OPTIONAL - only use for local development, NOT for production
+
+services:
+  backend:
+    volumes:
+      - ./backend:/app/backend:Z
+    environment:
+      # Watch for code changes and auto-reload (uvicorn reload)
+      - UVICORN_RELOAD=true
+
+  worker_default:
+    volumes:
+      - ./backend:/app/backend:Z
+
+  worker_preprocess:
+    volumes:
+      - ./backend:/app/backend:Z

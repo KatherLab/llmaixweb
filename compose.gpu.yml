@@ -11,9 +11,6 @@ services:
       - INITIALIZE_CELERY=false
       - REQUIRE_INVITATION=false
     ports: ["8000:8000"]
-    volumes:
-      - ./backend:/app/backend:Z
-      - .env:/app/backend/.env:Z
     deploy:
       resources:
         reservations:
@@ -28,9 +25,6 @@ services:
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
       worker -Q default -c 4 --loglevel=info
-    volumes:
-      - ./backend:/app/backend:Z
-      - .env:/app/backend/.env:Z
     deploy:
       resources:
         reservations:
@@ -45,9 +39,6 @@ services:
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
       worker -Q preprocess -c 1 --loglevel=info
-    volumes:
-      - ./backend:/app/backend:Z
-      - .env:/app/backend/.env:Z
     deploy:
       resources:
         reservations:
@@ -60,12 +51,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      args:
-        - VITE_API_BACKEND_URL=${VITE_API_BACKEND_URL}
-    image: llmaix-frontend:latest
-    env_file: .env
-    volumes:
-      - .env:/app/frontend/.env:Z
+    environment:
+      - VITE_API_BACKEND_URL=${VITE_API_BACKEND_URL:-http://localhost:8000/api/v1}
     ports: ["5173:8080"]
     depends_on: [backend]
 

@@ -1,16 +1,39 @@
-backend/.env
-__pycache__/
-database.db
-.idea
-.coverage
-.venv
+# Environment files (never commit secrets)
 .env
+.env.*
+.env.local
+backend/.env
+frontend/.env
 
-# frontend
-.DS_Store
-node_modules
+# Database
+database.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
 */dist
 
-.env.local
-
+# IDE
+.idea
 .vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local development
+miniodata/
+test_local_storage/

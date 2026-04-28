@@ -55,19 +55,30 @@ class Settings(BaseSettings):
             return []
         return [origin.strip() for origin in self.BACKEND_CORS_ORIGINS.split(",")]
 
-    if not Path(os.getenv("ENV_PATH", "backend/.env")).exists():
-        raise EnvironmentError(
-            f".env file not found in {Path(os.getenv('ENV_PATH', 'backend/.env')).absolute()}. Please create it or set the ENV_PATH environment variable to the correct path."
-        )
+    # Determine .env file path - used only if file exists and is readable
+    _env_path = Path(os.getenv("ENV_PATH", "backend/.env"))
+    _env_file_to_load = None
 
-    print(
-        "Loading configuration from .env file at: ",
-        Path(os.getenv("ENV_PATH", "backend/.env")).absolute(),
-    )
+    # Check if .env file exists and is readable (handle permission errors gracefully)
+    try:
+        if _env_path.exists() and _env_path.is_file():
+            _env_file_to_load = str(_env_path)
+            print("Loading configuration from .env file at: ", _env_path.absolute())
+        else:
+            # Running in Docker with environment variables only
+            if os.getenv("DOCKER_ENV", "false").lower() == "true":
+                pass  # Silent - expected in Docker
+            else:
+                print(f"Note: .env file not found at {_env_path.absolute()}, using environment variables only.")
+    except (PermissionError, OSError):
+        # File might exist but not be readable, or parent directory not accessible
+        # Fall back to environment variables only
+        if os.getenv("DOCKER_ENV", "false").lower() != "true":
+            print(f"Note: Cannot access .env file at {_env_path.absolute()}, using environment variables only.")
 
     model_config = SettingsConfigDict(
         case_sensitive=True,
-        env_file=os.getenv("ENV_PATH", "backend/.env"),
+        env_file=_env_file_to_load,
         env_file_encoding="utf-8",
         extra="ignore",  # Ignore extra fields not defined in the model
     )

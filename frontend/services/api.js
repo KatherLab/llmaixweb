@@ -3,8 +3,23 @@ import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 
+// Get base URL from runtime config (injected at container startup) or fallback to build-time env
+const getBaseURL = () => {
+  // Priority 1: Runtime config from config.js (production Docker)
+  if (window.__APP_CONFIG__?.API_BACKEND_URL && window.__APP_CONFIG__.API_BACKEND_URL !== '__VITE_API_BACKEND_URL__') {
+    return window.__APP_CONFIG__.API_BACKEND_URL
+  }
+  // Priority 2: Build-time env var (development)
+  const envUrl = import.meta.env.VITE_API_BACKEND_URL
+  if (envUrl && envUrl !== '__VITE_API_BACKEND_URL__') {
+    return envUrl
+  }
+  // Default fallback
+  return 'http://localhost:8000/api/v1'
+}
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BACKEND_URL,
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   }

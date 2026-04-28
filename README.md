@@ -38,50 +38,79 @@ A modern web interface for the **LLMAIx** framework that turns unstructured medi
 
 ## 🐳 Docker Installation
 
+### Quick Start (Development)
+
 1. Clone the repository:
 
 ```bash
 git clone https://github.com/KatherLab/llmaixweb
+cd llmaixweb
 ```
 
 2. Copy and edit environment files:
 
 ```bash
 cp .env.example .env
+# Edit .env with your settings
 ```
 
-### ⚙️ Environment Configuration
-Edit the `.env` file to match your deployment:
+> **Note:** The `.env` file is required. The stack will fail to start without it (missing database credentials, secrets, etc.).
 
-* **LLM Providers (OpenAI compatible)**:
-    * `OPENAI_API_KEY`: Your API key.
-    * `OPENAI_API_BASE`: The base URL (e.g., `https://api.openai.com/v1` for official OpenAI, or your local vLLM/Ollama endpoint).
-    * `OPENAI_API_MODEL`: Default model name to use.
-    * `OPENAI_NO_API_CHECK`: Set to `true` to skip initial connectivity checks.
-* **Network & CORS**:
-    * `BACKEND_CORS_ORIGINS`: Comma-separated list of allowed origins (e.g., `http://localhost:5173,https://app.example.com`).
-    * `VITE_API_BACKEND_URL`: The public URL of the backend API as seen by the browser (e.g., `http://localhost:8000/api/v1`).
-* **Access Control**:
-    * `REQUIRE_INVITATION`: Set to `true` to disable open registration; new users will then require an invitation from an admin.
-
-
-3. Start the stack (choose GPU or CPU):
+3. Start the stack:
 
 ```bash
-# GPU (requires NVIDIA driver + container toolkit)
-docker compose -f docker-compose.gpu.yml up -d --build
+# CPU only (default - works with Docker or Podman)
+docker compose up -d --build
+# or: podman compose up -d --build
 
-# CPU
-docker compose -f docker-compose.cpu.yml up -d --build
+# GPU (requires NVIDIA driver + container toolkit)
+docker compose -f compose.gpu.yml up -d --build
+
+# Development with hot-reload (optional overlay)
+docker compose -f compose.dev.yml up -d --build
 ```
 
-**Notes:**
-
-* The GPU stack reserves an NVIDIA device via Compose `deploy.resources.reservations.devices`.
-* Services included: `backend`, `worker_default`, `worker_preprocess`, `frontend`, `postgres`, `redis`, `minio`, and one‑shot `minio-init` (creates `S3_BUCKET_NAME`).
-* The backend reads settings from `backend/.env` (see `ENV_PATH` in `backend/src/config.py`). The project `.env` is mounted into `/app/backend/.env` in the container.
-
 4. Visit the web UI at **[http://localhost:5173](http://localhost:5173)**.
+
+### Docker Compose Files
+
+| File | Purpose |
+|------|---------|
+| `compose.yml` | **Default config** - CPU-only backend, works with Docker & Podman |
+| `compose.gpu.yml` | **GPU config** - GPU-enabled backend (NVIDIA driver + container toolkit required) |
+| `compose.dev.yml` | **Optional overlay** - Mounts local code for hot-reload (development only) |
+
+**Usage pattern:**
+```bash
+# Default CPU setup (recommended)
+docker compose up -d
+
+# Development with code hot-reload
+docker compose -f compose.dev.yml up -d
+
+# GPU deployment
+docker compose -f compose.gpu.yml up -d
+```
+
+### Environment Configuration
+
+Edit the `.env` file to match your deployment:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | API key for LLM provider | (empty) |
+| `OPENAI_API_BASE` | Base URL for OpenAI-compatible API | (empty) |
+| `OPENAI_API_MODEL` | Default model to use | (empty) |
+| `OPENAI_NO_API_CHECK` | Skip API connectivity check | `true` |
+| `BACKEND_CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:5173` |
+| `VITE_API_BACKEND_URL` | **Runtime** backend URL for frontend | `http://localhost:8000/api/v1` |
+| `REQUIRE_INVITATION` | Require invitation for signup | `false` |
+| `ALLOW_FIRST_ADMIN_SETUP` | Allow first user to become admin | `true` |
+
+**Storage options:**
+- **MinIO (local)**: Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_ENDPOINT_URL`, `S3_BUCKET_NAME`
+- **AWS S3**: Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, optionally `S3_ENDPOINT_URL`
+- **Local filesystem**: Set `LOCAL_DIRECTORY=/path/to/storage`
 
 ---
 
@@ -105,13 +134,12 @@ python -m backend.scripts.populate_users
 **When using Docker**
 
 ```bash
-## Replace gpu compose file name with cpu if needed
 # Running stack
-docker compose -f docker-compose.gpu.yml exec -it backend \
+docker compose -f compose.gpu.yml exec -it backend \
   python -m backend.scripts.populate_users
 
 # Stopped stack
-docker compose -f docker-compose.gpu.yml run --rm -it backend \
+docker compose -f compose.gpu.yml run --rm -it backend \
   python -m backend.scripts.populate_users
 ```
 
