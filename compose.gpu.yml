@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    image: llmaix-backend:gpu
+    image: ghcr.io/katherlab/llmaixweb-backend:gpu
     env_file: .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
@@ -20,7 +20,7 @@ services:
     depends_on: [postgres, redis, minio]
 
   worker_default:
-    image: llmaix-backend:gpu
+    image: ghcr.io/katherlab/llmaixweb-backend:gpu
     env_file: .env
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
@@ -34,7 +34,7 @@ services:
     depends_on: [backend]
 
   worker_preprocess:
-    image: llmaix-backend:gpu
+    image: ghcr.io/katherlab/llmaixweb-backend:gpu
     env_file: .env
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
@@ -51,6 +51,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        - GIT_COMMIT_HASH=${GIT_COMMIT_HASH:-$(git rev-parse --short HEAD)}
+    image: ghcr.io/katherlab/llmaixweb-frontend:latest
     environment:
       - VITE_API_BACKEND_URL=${VITE_API_BACKEND_URL:-http://localhost:8000/api/v1}
     ports: ["5173:8080"]

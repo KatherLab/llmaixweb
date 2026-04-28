@@ -18,13 +18,13 @@ jobs:
       matrix:
         include:
           - dockerfile: Dockerfile.backend
-            image: llmaix-backend-gpu
+            image: llmaixweb-backend-gpu
             platforms: linux/amd64
           - dockerfile: Dockerfile.backend.cpu
-            image: llmaix-backend-cpu
+            image: llmaixweb-backend-cpu
             platforms: linux/amd64
           - dockerfile: Dockerfile.frontend
-            image: llmaix-frontend
+            image: llmaixweb-frontend
             platforms: linux/amd64
 
     steps:

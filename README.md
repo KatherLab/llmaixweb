@@ -60,15 +60,17 @@ cp .env.example .env
 
 ```bash
 # CPU only (default - works with Docker or Podman)
-docker compose up -d --build
-# or: podman compose up -d --build
+docker compose up -d
+# or: podman compose up -d
 
 # GPU (requires NVIDIA driver + container toolkit)
-docker compose -f compose.gpu.yml up -d --build
+docker compose -f compose.gpu.yml up -d
 
 # Development with hot-reload (optional overlay)
-docker compose -f compose.dev.yml up -d --build
+docker compose -f compose.dev.yml up -d
 ```
+
+> **Tip:** Pre-built images are available at `ghcr.io/katherlab/llmaixweb-backend:cpu`, `ghcr.io/katherlab/llmaixweb-backend:gpu`, and `ghcr.io/katherlab/llmaixweb-frontend:latest`. Compose will automatically pull them if not present locally. Use `--build` to build from source instead.
 
 4. Visit the web UI at **[http://localhost:5173](http://localhost:5173)**.
 
@@ -124,6 +126,8 @@ Edit the `.env` file to match your deployment:
 ---
 
 ## 🔧 Development
+
+See [DEVELOPER.md](DEVELOPER.md) for version management and release instructions.
 
 ### Initialize users
 

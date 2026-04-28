@@ -189,8 +189,13 @@
           AGPL-3.0
         </a>
       </div>
-      <div>
-        Frontend Version: {{ frontendVersion }} | Backend Version: {{ backendVersion }}
+      <div class="space-x-4">
+        <span :title="`Commit: ${frontendGitCommit}`" class="cursor-help">
+          Frontend Version: {{ frontendVersion }}
+        </span>
+        <span :title="`Commit: ${backendGitCommit}`" class="cursor-help">
+          Backend Version: {{ backendVersion }}
+        </span>
       </div>
     </footer>
     <!-- Change Password Modal -->
@@ -281,7 +286,7 @@
 
 <script setup>
 import {computed, onMounted, ref, watch} from 'vue'
-import {frontendVersion} from '@/version.js'
+import {frontendVersion, frontendGitCommit} from '@/version.js'
 import {useRouter} from 'vue-router'
 import {useAuthStore} from '@/stores/auth'
 import {api} from "@/services/api.js"
@@ -291,6 +296,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const showUserMenu = ref(false)
 const backendVersion = ref('')
+const backendGitCommit = ref('')
 const isBackendDown = ref(false)
 const currentYear = new Date().getFullYear()
 const authReady = ref(false)
@@ -314,10 +320,11 @@ function toggleDarkMode() {
 }
 
 onMounted(async () => {
-  // Fetch backend version
+  // Fetch backend version and git commit
   try {
     const response = await api.get('/version')
-    backendVersion.value = response.data.version
+    backendVersion.value = response.data.backend_version || response.data.version
+    backendGitCommit.value = response.data.backend_git_commit || 'unknown'
     isBackendDown.value = false
   } catch (error) {
     console.error('Error fetching backend version:', error)
