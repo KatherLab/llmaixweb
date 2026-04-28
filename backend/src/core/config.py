@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     REQUIRE_INVITATION: bool = True
     ALLOW_FIRST_ADMIN_SETUP: bool = True
 
+    # Skip runtime validation checks (useful for Alembic migrations)
+    SKIP_RUNTIME_CHECKS: bool = False
+
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
@@ -93,6 +96,10 @@ class Settings(BaseSettings):
                 f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
                 f"@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
             )
+
+        # Skip runtime checks for operations like Alembic migrations
+        if self.SKIP_RUNTIME_CHECKS:
+            return
 
         if not self.OPENAI_NO_API_CHECK:
             if not self.OPENAI_API_KEY:
@@ -181,16 +188,30 @@ class Settings(BaseSettings):
             sys.exit(1)
 
 
-try:
-    Settings()
-except ValidationError as e:
-    print("Configuration Error:")
-    print(e)
-    print("Please check your .env file or environment variables.")
-    sys.exit(1)
+# Lazy initialization - settings are validated only when first accessed
+# This avoids requiring .env file for operations like Alembic migrations
+_settings_instance: Settings | None = None
 
-# Appease ty - otherwise it will complain about a possible unbound variable
-settings: Settings = Settings()
+
+def _get_settings() -> Settings:
+    """Get settings instance, initializing on first access."""
+    global _settings_instance
+    if _settings_instance is None:
+        try:
+            _settings_instance = Settings()
+        except ValidationError as e:
+            print("Configuration Error:")
+            print(e)
+            print("Please check your .env file or environment variables.")
+            sys.exit(1)
+    return _settings_instance
+
+
+def __getattr__(name: str) -> Settings:
+    """Lazy load settings on first attribute access."""
+    if name == "settings":
+        return _get_settings()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 SETTINGS_META = {

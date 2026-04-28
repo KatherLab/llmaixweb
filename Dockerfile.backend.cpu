@@ -45,9 +45,19 @@ USER root
 # copy app code last
 COPY --chown=app:app backend ./backend
 
+# copy alembic migration files
+COPY --chown=app:app alembic ./alembic
+COPY --chown=app:app alembic.ini ./alembic.ini
+
+# copy migration script
+COPY --chown=app:app backend/scripts/run_migrations.sh /app/run_migrations.sh
+
 USER 10001:10001
+
+# make migration script executable
+RUN chmod +x /app/run_migrations.sh
 
 # Signal that we're running in Docker (env vars preferred over .env file)
 ENV DOCKER_ENV=true
 
-CMD ["/app/.venv/bin/python", "-m", "uvicorn", "backend.src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/run_migrations.sh"]

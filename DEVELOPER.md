@@ -67,3 +67,60 @@ Frontend Version: 0.0.2 (hover: Commit: abc1234) | Backend Version: 0.1.3 (hover
 ```
 
 This helps users and support quickly identify version mismatches or outdated components.
+
+## Database Migrations (Alembic)
+
+This project uses Alembic for database schema version control and migrations.
+
+### Configuration
+
+- **Config file**: `alembic.ini`
+- **Migration scripts**: `alembic/versions/`
+- **Environment**: `alembic/env.py` (configured to load DB URL from settings)
+
+### Running Migrations
+
+**Docker Compose**: Migrations run automatically when the backend container starts. No manual intervention needed.
+
+**Local Development**: All migration commands require `SKIP_RUNTIME_CHECKS=true` to bypass OpenAI/S3 validation:
+
+```bash
+# Check current database revision
+SKIP_RUNTIME_CHECKS=true uv run alembic current
+
+# Show migration history
+SKIP_RUNTIME_CHECKS=true uv run alembic history
+
+# Apply all pending migrations
+SKIP_RUNTIME_CHECKS=true uv run alembic upgrade head
+
+# Downgrade one version
+SKIP_RUNTIME_CHECKS=true uv run alembic downgrade -1
+
+# Downgrade to specific revision
+SKIP_RUNTIME_CHECKS=true uv run alembic downgrade <revision_id>
+```
+
+### Creating New Migrations
+
+After modifying models in `backend/src/models/`:
+
+```bash
+# Auto-generate migration from model changes
+SKIP_RUNTIME_CHECKS=true uv run alembic revision --autogenerate --message "description"
+
+# Create empty migration manually
+SKIP_RUNTIME_CHECKS=true uv run alembic revision --empty --message "description"
+```
+
+Review and edit the generated file in `alembic/versions/` before applying.
+
+### Initial Migration
+
+The initial migration (`alembic/versions/2d2bfbbdcc04_initial.py`) creates all existing tables:
+- users, invitations, app_settings
+- projects, files, ground_truth
+- preprocessing_configurations, prompts, schemas
+- document_sets, field_mappings
+- preprocessing_tasks, file_preprocessing_tasks
+- trials, documents, evaluations, trial_results
