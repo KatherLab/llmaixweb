@@ -3,7 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend.cpu
-    image: ghcr.io/katherlab/llmaixweb-backend:cpu
+      args:
+        - GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
+    image: ghcr.io/katherlab/llmaixweb-backend-cpu:latest
     env_file: .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
@@ -22,7 +24,7 @@ services:
         condition: service_completed_successfully
 
   worker_default:
-    image: ghcr.io/katherlab/llmaixweb-backend:cpu
+    image: ghcr.io/katherlab/llmaixweb-backend-cpu:latest
     env_file: .env
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
@@ -32,7 +34,7 @@ services:
         condition: service_started
 
   worker_preprocess:
-    image: ghcr.io/katherlab/llmaixweb-backend:cpu
+    image: ghcr.io/katherlab/llmaixweb-backend-cpu:latest
     env_file: .env
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config

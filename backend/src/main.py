@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from llmaix.__version__ import __version__
+from ._version import get_version, get_git_commit
 
 from .celery.celery_config import celery_app
 from .core.config import settings
@@ -102,28 +102,18 @@ async def root():
 @app.get("/version")
 async def version_api():
     """
-    Returns backend and frontend version information.
+    Returns backend version information.
 
-    Backend version is read from pyproject.toml via llmaix package.
-    Frontend version is set during build/deployment.
+    Backend version is read from pyproject.toml.
+    Git commit hash is set at build time via GIT_COMMIT_HASH env var (GitHub Actions).
+    For local builds, git commit shows "unknown" (may have uncommitted changes).
 
     Note for developers: When releasing, update both:
-    - backend: version in pyproject.toml (llmaix package)
+    - backend: version in pyproject.toml
     - frontend: version in frontend/version.js
     """
-    import subprocess
-
-    try:
-        git_commit = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            stderr=subprocess.DEVNULL,
-            text=True,
-        ).strip()
-    except Exception:
-        git_commit = "unknown"
-
     return {
-        "backend_version": __version__,
-        "backend_git_commit": git_commit,
+        "backend_version": get_version(),
+        "backend_git_commit": get_git_commit(),
         "backend_description": "LLMAIx (v2) backend API",
     }

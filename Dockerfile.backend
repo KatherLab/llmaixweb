@@ -1,6 +1,9 @@
 ###################  LLMAIx – backend (GPU, non-root) ###################
 FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04
 
+# Git commit hash - passed from GitHub Actions
+ARG GIT_COMMIT_HASH=unknown
+
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -44,6 +47,9 @@ USER root
 
 # copy application code last for better caching
 COPY --chown=app:app backend ./backend
+
+# Write git commit hash to file for runtime version info
+RUN echo "${GIT_COMMIT_HASH}" > /app/backend/src/_git_commit.txt
 
 # copy alembic migration files
 COPY --chown=app:app alembic ./alembic

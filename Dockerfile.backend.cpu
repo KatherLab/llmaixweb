@@ -1,8 +1,8 @@
 ###################  LLMAIx – backend (CPU, non-root) ###################
 FROM ubuntu:24.04
 
-ENV PYTHONUNBUFFERED=1
-ENV DEBIAN_FRONTEND=noninteractive
+# Git commit hash - passed from GitHub Actions
+ARG GIT_COMMIT_HASH=unknown
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -44,6 +44,9 @@ USER root
 
 # copy app code last
 COPY --chown=app:app backend ./backend
+
+# Write git commit hash to file for runtime version info
+RUN echo "${GIT_COMMIT_HASH}" > /app/backend/src/_git_commit.txt
 
 # copy alembic migration files
 COPY --chown=app:app alembic ./alembic
