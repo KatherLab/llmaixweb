@@ -463,6 +463,7 @@ class FilePreprocessingTaskBase(UTCModel):
     document_count: int = 0
     file_name: str | None = None
     processing_time: float | None = None
+    warnings: dict | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None
 

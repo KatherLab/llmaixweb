@@ -64,7 +64,7 @@
           <!-- Modal body: scrollable -->
           <div class="flex-1 min-h-0 overflow-y-auto px-6 py-6 space-y-8">
             <!-- Summary Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div class="bg-white rounded-lg p-4 flex flex-col items-center">
                 <div class="text-2xl font-bold text-gray-900">{{ total }}</div>
                 <div class="text-sm text-gray-500">Total Files</div>
@@ -80,6 +80,10 @@
               <div class="bg-white rounded-lg p-4 flex flex-col items-center">
                 <div class="text-2xl font-bold text-yellow-600">{{ cancelled }}</div>
                 <div class="text-sm text-gray-500">Cancelled</div>
+              </div>
+              <div class="bg-white rounded-lg p-4 flex flex-col items-center">
+                <div class="text-2xl font-bold text-amber-600">{{ warningCount }}</div>
+                <div class="text-sm text-gray-500">With Warnings</div>
               </div>
             </div>
 
@@ -164,17 +168,80 @@
                       </p>
                     </div>
                   </div>
-                  <div v-if="fileTask.error_message" class="ml-4 max-w-xs group relative">
-                    <p
-                      :title="fileTask.error_message"
-                      class="text-xs text-red-600 truncate cursor-pointer group-hover:underline"
-                    >
-                      {{
-                        fileTask.error_message.length > 64
-                          ? fileTask.error_message.slice(0, 64) + '…'
-                          : fileTask.error_message
-                      }}
-                    </p>
+                  <div class="ml-4 flex items-center gap-3">
+                    <!-- Warning indicator for skipped rows -->
+                    <div v-if="fileTask.warnings && (fileTask.warnings.messages || fileTask.warnings.skipped_rows)" class="text-xs text-amber-600">
+                      <span class="flex items-center gap-1">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-5.355-7.695a9 9 0 1110.71 0 9 9 0 01-10.71 0z" />
+                        </svg>
+                        {{ fileTask.warnings.skipped_rows?.count || 0 }} skipped rows
+                      </span>
+                    </div>
+                    <!-- Error message -->
+                    <div v-if="fileTask.error_message" class="group relative">
+                      <p
+                        :title="fileTask.error_message"
+                        class="text-xs text-red-600 truncate cursor-pointer group-hover:underline"
+                      >
+                        {{
+                          fileTask.error_message.length > 64
+                            ? fileTask.error_message.slice(0, 64) + '…'
+                            : fileTask.error_message
+                        }}
+                      </p>
+                    </div>
+                  </div>
+                  <!-- Expanded warnings details (moved inside v-for loop) -->
+                  <div v-if="fileTask.warnings && (fileTask.warnings.messages || fileTask.warnings.skipped_rows)" class="ml-11 mb-3 mt-1">
+                    <div class="bg-amber-50 border border-amber-200 rounded-md p-3">
+                      <div class="flex items-start gap-2">
+                        <svg class="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-5.355-7.695a9 9 0 1110.71 0 9 9 0 01-10.71 0z" />
+                        </svg>
+                        <div class="flex-1">
+                          <h5 class="text-sm font-medium text-amber-800 mb-2">
+                            Warnings ({{ fileTask.warnings.skipped_rows?.count || 0 }} skipped rows)
+                          </h5>
+                          <!-- Warning messages -->
+                          <ul class="space-y-1 mb-2">
+                            <li v-for="(msg, idx) in fileTask.warnings.messages" :key="idx" class="text-sm text-amber-700">
+                              {{ msg }}
+                            </li>
+                          </ul>
+                          <!-- Skipped rows details -->
+                          <div v-if="fileTask.warnings.skipped_rows?.details" class="mt-2">
+                            <details class="group">
+                              <summary class="text-sm text-amber-700 cursor-pointer hover:text-amber-900 flex items-center gap-1">
+                                <svg class="h-4 w-4 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                                View skipped rows details
+                                <span v-if="fileTask.warnings.skipped_rows.truncated" class="text-xs text-amber-600">(showing first 100)</span>
+                              </summary>
+                              <div class="mt-2 max-h-64 overflow-y-auto bg-white rounded border border-amber-200">
+                                <table class="min-w-full text-xs">
+                                  <thead class="bg-amber-100 sticky top-0">
+                                    <tr>
+                                      <th class="px-3 py-2 text-left font-medium text-amber-800">Row Index</th>
+                                      <th class="px-3 py-2 text-left font-medium text-amber-800">Case ID</th>
+                                      <th class="px-3 py-2 text-left font-medium text-amber-800">Reason</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr v-for="(row, idx) in fileTask.warnings.skipped_rows.details" :key="idx" class="border-t border-amber-100 hover:bg-amber-50">
+                                      <td class="px-3 py-2 text-amber-900">{{ row.row_index }}</td>
+                                      <td class="px-3 py-2 text-amber-900">{{ row.case_id || 'N/A' }}</td>
+                                      <td class="px-3 py-2 text-amber-700">{{ row.reason }}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </details>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -252,6 +319,12 @@ const progress = computed(() => {
 const isActive = computed(() =>
   ['pending', 'processing', 'in_progress'].includes(props.task.status)
 );
+
+// Warnings computation - count files with warnings
+const warningCount = computed(() => {
+  const fileTasks = props.task.file_tasks || [];
+  return fileTasks.filter(ft => ft.warnings && (ft.warnings.messages || ft.warnings.skipped_rows)).length;
+});
 
 function prettyEta(sec) {
   if (!sec || isNaN(sec)) return "00:00:00";

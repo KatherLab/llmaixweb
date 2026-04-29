@@ -599,27 +599,48 @@ def _escape_ctrls_in_json_strings(s: str) -> str:
                 out.append(ch)
     return "".join(out)
 
+def _print_json_error(label: str, raw: str, err: json.JSONDecodeError) -> None:
+    start = max(0, err.pos - 120)
+    end = min(len(raw), err.pos + 120)
+    snippet = raw[start:end]
+
+    print(f"[{label}] JSONDecodeError: {err.msg}")
+    print(f"[{label}] line={err.lineno} col={err.colno} pos={err.pos}")
+    print(f"[{label}] context={snippet!r}")
+
+    if 0 <= err.pos < len(raw):
+        ch = raw[err.pos]
+        print(f"[{label}] offending_char={ch!r} ord={ord(ch)} hex=0x{ord(ch):02x}")
+
 
 def safe_json_loads(text: str) -> Any:
     """A tolerant JSON loader for LLM outputs."""
-    # Be tolerant to None and non-strings early
     if text is None:
         text = ""
     elif not isinstance(text, str):
         text = str(text)
 
-    # Fast path
     try:
         return json.loads(text)
-    except Exception:
-        pass
+    except json.JSONDecodeError as e:
+        print("[safe_json_loads] initial parse failed")
+        _print_json_error("initial", text, e)
+    except Exception as e:
+        print(f"[safe_json_loads] initial parse failed: {type(e).__name__}: {e}")
 
-    # Heuristic recovery
     candidate = _extract_json_snippet(text)
     candidate = candidate.replace("“", '"').replace("”", '"').replace("’", "'")
     candidate = _escape_ctrls_in_json_strings(candidate)
-    return json.loads(candidate)
 
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError as e:
+        print("[safe_json_loads] repaired parse failed")
+        _print_json_error("repaired", candidate, e)
+        raise
+    except Exception as e:
+        print(f"[safe_json_loads] repaired parse failed: {type(e).__name__}: {e}")
+        raise
 
 # ------------------------------
 # Finish-reason handling & user guidance

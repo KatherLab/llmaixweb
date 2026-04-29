@@ -158,15 +158,19 @@
             <div class="flex items-center gap-3 min-w-0">
               <span
                   :class="{
-                  'bg-green-50': task.status === 'completed',
+                  'bg-green-50': task.status === 'completed' && !task.file_tasks?.some(ft => ft.warnings?.messages || ft.warnings?.skipped_rows),
+                  'bg-amber-50': task.status === 'completed' && task.file_tasks?.some(ft => ft.warnings?.messages || ft.warnings?.skipped_rows),
                   'bg-red-50': task.status === 'failed',
                   'bg-yellow-50': task.status === 'cancelled' || task.status === 'errored'
                 }"
                   class="w-6 h-6 flex items-center justify-center rounded-full"
               >
-                <svg v-if="task.status === 'completed'" class="w-4 h-4 text-emerald-500" fill="none"
+                <svg v-if="task.status === 'completed' && !task.file_tasks?.some(ft => ft.warnings?.messages || ft.warnings?.skipped_rows)" class="w-4 h-4 text-emerald-500" fill="none"
                      stroke="currentColor" viewBox="0 0 24 24">
                   <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                </svg>
+                <svg v-else-if="task.status === 'completed' && task.file_tasks?.some(ft => ft.warnings?.messages || ft.warnings?.skipped_rows)" class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-5.355-7.695a9 9 0 1110.71 0 9 9 0 01-10.71 0z" />
                 </svg>
                 <svg v-else-if="task.status === 'failed'" class="w-4 h-4 text-red-500" fill="none" stroke="currentColor"
                      viewBox="0 0 24 24">
@@ -210,6 +214,12 @@
                   </span>
                   <span v-if="task.skipped_files > 0" class="text-yellow-600">
                     ⚠ {{ task.skipped_files }} skipped
+                  </span>
+                  <!-- Warnings indicator -->
+                  <span v-if="task.file_tasks?.some(ft => ft.warnings?.messages || ft.warnings?.skipped_rows)"
+                        class="text-amber-600"
+                        :title="`${task.file_tasks.filter(ft => ft.warnings?.messages || ft.warnings?.skipped_rows).length} file(s) have warnings`">
+                    ⚠ {{ task.file_tasks.filter(ft => ft.warnings?.messages || ft.warnings?.skipped_rows).length }} with warnings
                   </span>
                   <span v-if="task.status === 'failed' && task.message" class="text-red-400 truncate max-w-[200px]">
                     {{ task.message }}

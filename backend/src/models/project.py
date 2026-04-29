@@ -425,7 +425,7 @@ class FilePreprocessingTask(Base):
         Enum(PreprocessingStatus, native_enum=False, length=20),
         default=PreprocessingStatus.PENDING,
     )
-    error_message: Mapped[str] = mapped_column(String(1000), nullable=True)
+    error_message: Mapped[str] = mapped_column(String(4000), nullable=True)
     progress: Mapped[float] = mapped_column(Float, default=0.0)
 
     # Track produced documents
@@ -434,6 +434,11 @@ class FilePreprocessingTask(Base):
     # Add these new fields
     file_name: Mapped[str] = mapped_column(String(255), nullable=True)
     processing_time: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Track warnings (e.g., skipped rows during CSV processing)
+    warnings: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=True, default=dict
+    )
 
     started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[DateTime] = mapped_column(
