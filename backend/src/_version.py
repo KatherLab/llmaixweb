@@ -21,7 +21,11 @@ def get_version() -> str:
             content = f.read()
 
         # Match version = "x.y.z" in [project] section
-        match = re.search(r'^\[project\].*?^version\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE | re.DOTALL)
+        match = re.search(
+            r'^\[project\].*?^version\s*=\s*["\']([^"\']+)["\']',
+            content,
+            re.MULTILINE | re.DOTALL,
+        )
         if match:
             return match.group(1)
     except (FileNotFoundError, IOError):

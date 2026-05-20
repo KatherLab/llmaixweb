@@ -599,6 +599,7 @@ def _escape_ctrls_in_json_strings(s: str) -> str:
                 out.append(ch)
     return "".join(out)
 
+
 def _print_json_error(label: str, raw: str, err: json.JSONDecodeError) -> None:
     start = max(0, err.pos - 120)
     end = min(len(raw), err.pos + 120)
@@ -641,6 +642,7 @@ def safe_json_loads(text: str) -> Any:
     except Exception as e:
         print(f"[safe_json_loads] repaired parse failed: {type(e).__name__}: {e}")
         raise
+
 
 # ------------------------------
 # Finish-reason handling & user guidance

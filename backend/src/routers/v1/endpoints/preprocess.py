@@ -3,7 +3,7 @@
 import datetime
 from typing import List
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -343,9 +343,7 @@ def get_preprocessing_tasks(
     return [schemas.PreprocessingTask.model_validate(task) for task in tasks]
 
 
-@router.get(
-    "/preprocess/{task_id}", response_model=schemas.PreprocessingTask
-)
+@router.get("/preprocess/{task_id}", response_model=schemas.PreprocessingTask)
 def get_preprocessing_task(
     *,
     project_id: int,

@@ -46,4 +46,7 @@ ignore = ["E501"]  # Line length - too strict for strings/comments
 "alembic/env.py" = ["F405"]  # Alembic context is injected at runtime
 "backend/src/core/config.py" = ["N802"]  # Pydantic property naming
 "backend/src/schemas/**/*.py" = ["N805"]  # Pydantic validators use cls
+"backend/src/routers/v1/endpoints/documents.py" = ["N806"]  # Type aliases (D, F)
+"backend/src/routers/v1/endpoints/files.py" = ["N806"]  # Type aliases (CLIP)
 "backend/src/routers/v1/endpoints/projects.py" = ["N806"]  # Type aliases (D, F, T, TR, CLIP)
+"backend/src/routers/v1/endpoints/trials.py" = ["N806"]  # Type aliases (T, TR)

@@ -12,8 +12,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from ._version import get_version, get_git_commit
 
+from ._version import get_git_commit, get_version
 from .celery.celery_config import celery_app
 from .core.config import settings
 from .db.session import init_db

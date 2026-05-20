@@ -1451,7 +1451,7 @@ def test_document_set_crud_and_stats(client, api_url):
     from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     # Login
     user_data = {"username": "admin@example.com", "password": "adminpassword"}
@@ -1816,7 +1816,7 @@ def test_delete_schema_referenced_by_trial(client, api_url):
     from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     user_data = {
         "username": "admin@example.com",
@@ -1941,7 +1941,7 @@ def test_delete_schema_referenced_by_trial(client, api_url):
 def test_get_available_llm_models(client, api_url):
     from backend.src.core.config import settings
 
-    if settings.OPENAI_NO_API_CHECK:  # type: ignore
+    if settings.OPENAI_NO_API_CHECK:
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     login = client.post(
@@ -1964,7 +1964,7 @@ def test_get_available_llm_models(client, api_url):
 def test_test_llm_connection(client, api_url):
     from backend.src.core.config import settings
 
-    if settings.OPENAI_NO_API_CHECK:  # type: ignore
+    if settings.OPENAI_NO_API_CHECK:
         pytest.skip("Skipping LLM connection test due to OPENAI_NO_API_CHECK setting")
 
     user_data = {"username": "test@example.com", "password": "testpassword"}
@@ -1984,7 +1984,7 @@ def test_trial_crud_and_extraction(client, api_url):
     from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     # Login as user
     user_data = {"username": "admin@example.com", "password": "adminpassword"}
@@ -2148,7 +2148,7 @@ def test_trial_result_download_and_status(client, api_url):
     from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     # Login as admin
     user_data = {"username": "admin@example.com", "password": "adminpassword"}
@@ -2261,7 +2261,7 @@ def test_create_trial_with_table_preprocessing(client, api_url):
     from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     user_data = {"username": "admin@example.com", "password": "adminpassword"}
     response = client.post(f"{api_url}/auth/login", data=user_data)
@@ -2396,11 +2396,12 @@ Carol,Cold,Hamburg,2024-07-03
         assert "location" in extracted
         assert "date" in extracted
 
+
 def test_create_trial_with_mixed_preprocessing(client, api_url, files_base_path):
     from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     user_data = {"username": "admin@example.com", "password": "adminpassword"}
     access_token = client.post(f"{api_url}/auth/login", data=user_data).json()[
@@ -2536,7 +2537,7 @@ def test_ocr_preprocessing_for_extraction(client, api_url, files_base_path):
     from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     user_data = {"username": "admin@example.com", "password": "adminpassword"}
     access_token = client.post(f"{api_url}/auth/login", data=user_data).json()[
@@ -2652,7 +2653,7 @@ def test_field_mapping_and_evaluation(client, api_url, files_base_path):
     from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     user_data = {"username": "admin@example.com", "password": "adminpassword"}
     resp = client.post(f"{api_url}/auth/login", data=user_data)
@@ -2818,7 +2819,7 @@ def test_trial_download_and_error_endpoints(client, api_url, files_base_path):
     from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     # Prepare minimal project with prompt, schema, file, document, trial, result
     user_data = {"username": "admin@example.com", "password": "adminpassword"}
@@ -2982,7 +2983,7 @@ def test_evaluation_full_pipeline(client, api_url, files_base_path):
     from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
-        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")  # type: ignore
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     import json
 
@@ -3226,8 +3227,9 @@ def test_llm_json_schema_enforcement():
     This tests whether the JSON schema enforcement (via response_format)
     is working correctly, independent of prompt engineering.
     """
-    from backend.src.core.config import settings
     from openai import OpenAI
+
+    from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
@@ -3256,7 +3258,10 @@ def test_llm_json_schema_enforcement():
     His performance score is 4.5 out of 5. His skills include Python, Machine Learning, and Data Analysis."""
 
     messages = [
-        {"role": "system", "content": "Extract person information from the text and return as JSON."},
+        {
+            "role": "system",
+            "content": "Extract person information from the text and return as JSON.",
+        },
         {"role": "user", "content": f"Text: {document_text}"},
     ]
 
@@ -3279,6 +3284,7 @@ def test_llm_json_schema_enforcement():
 
     # Parse and validate response
     import json
+
     result = json.loads(response.choices[0].message.content)
 
     # Verify structure - all required fields must be present
@@ -3289,14 +3295,26 @@ def test_llm_json_schema_enforcement():
     assert "tags" in result, "Missing required field: tags"
 
     # Verify types
-    assert isinstance(result["name"], str), f"'name' should be string, got {type(result['name'])}"
-    assert isinstance(result["age"], int), f"'age' should be integer, got {type(result['age'])}"
-    assert isinstance(result["active"], bool), f"'active' should be boolean, got {type(result['active'])}"
-    assert isinstance(result["score"], (int, float)), f"'score' should be number, got {type(result['score'])}"
-    assert isinstance(result["tags"], list), f"'tags' should be array, got {type(result['tags'])}"
+    assert isinstance(result["name"], str), (
+        f"'name' should be string, got {type(result['name'])}"
+    )
+    assert isinstance(result["age"], int), (
+        f"'age' should be integer, got {type(result['age'])}"
+    )
+    assert isinstance(result["active"], bool), (
+        f"'active' should be boolean, got {type(result['active'])}"
+    )
+    assert isinstance(result["score"], (int, float)), (
+        f"'score' should be number, got {type(result['score'])}"
+    )
+    assert isinstance(result["tags"], list), (
+        f"'tags' should be array, got {type(result['tags'])}"
+    )
 
     # Verify values are reasonable
-    assert result["age"] > 0 and result["age"] < 150, f"Age seems invalid: {result['age']}"
+    assert result["age"] > 0 and result["age"] < 150, (
+        f"Age seems invalid: {result['age']}"
+    )
     assert result["active"] is True, f"Expected active=True, got {result['active']}"
     assert len(result["tags"]) > 0, "Tags array should not be empty"
 
@@ -3309,8 +3327,9 @@ def test_llm_json_schema_with_minimal_data():
     This test verifies how the LLM handles extraction when the source text
     doesn't contain all the information needed for the schema fields.
     """
-    from backend.src.core.config import settings
     from openai import OpenAI
+
+    from backend.src.core.config import settings
 
     if settings.OPENAI_NO_API_CHECK:
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
@@ -3336,7 +3355,10 @@ def test_llm_json_schema_with_minimal_data():
     document_text = "Flu Leipzig"
 
     messages = [
-        {"role": "system", "content": "Extract the requested information from the text."},
+        {
+            "role": "system",
+            "content": "Extract the requested information from the text.",
+        },
         {"role": "user", "content": f"Text: {document_text}"},
     ]
 
@@ -3356,6 +3378,7 @@ def test_llm_json_schema_with_minimal_data():
     assert finish_reason == "stop", f"Model did not finish cleanly: {finish_reason}"
 
     import json
+
     result = json.loads(response.choices[0].message.content)
 
     # Verify structure

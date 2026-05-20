@@ -5,11 +5,10 @@ import io
 import zipfile
 from typing import Annotated, List
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, contains_eager, selectinload
-from starlette import status
 
 from .... import models, schemas
 from ....core.security import get_current_user
@@ -44,9 +43,7 @@ def check_project_access(
     )
 
 
-@router.get(
-    "/document", response_model=None
-)  # keep None just for the test
+@router.get("/document", response_model=None)  # keep None just for the test
 def get_documents(
     project_id: Annotated[int, Path()],
     file_id: Annotated[

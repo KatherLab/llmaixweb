@@ -1,13 +1,10 @@
 """File management endpoints for projects."""
 
-import csv
 import datetime
 import io
 import json
 import zipfile
-from typing import List
 
-import pandas as pd
 from fastapi import (
     APIRouter,
     Body,
@@ -20,8 +17,8 @@ from fastapi import (
 )
 from fastapi.responses import Response
 from pydantic import ValidationError
-from sqlalchemy import and_, delete, distinct, func, or_, select
-from sqlalchemy.orm import Session, load_only, noload, selectinload
+from sqlalchemy import and_, distinct, func, or_, select
+from sqlalchemy.orm import Session, selectinload
 
 from .... import models, schemas
 from ....core.security import get_current_user

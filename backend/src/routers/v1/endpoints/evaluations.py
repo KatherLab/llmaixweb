@@ -7,7 +7,7 @@ import zipfile
 import pandas as pd
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import Response
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .... import models, schemas
@@ -69,9 +69,7 @@ def get_evaluations(
     return [schemas.Evaluation.model_validate(eval) for eval in evaluations]
 
 
-@router.get(
-    "/evaluation/{evaluation_id}", response_model=schemas.EvaluationDetail
-)
+@router.get("/evaluation/{evaluation_id}", response_model=schemas.EvaluationDetail)
 def get_evaluation_detail(
     *,
     db: Session = Depends(get_db),
@@ -228,10 +226,6 @@ def download_evaluations_report(
     Download evaluation report in CSV, XLSX, or ZIP format.
     ZIP: includes summary, per-field, per-doc content as separate files.
     """
-    from ....utils.helpers import (
-        build_evaluation_zipfiles,
-        collect_evaluation_field_level_details,
-    )
 
     # Parse IDs
     try:
@@ -549,9 +543,7 @@ def download_evaluations_report(
     )
 
 
-@router.post(
-    "/evaluation/batch", response_model=list[schemas.EvaluationSummary]
-)
+@router.post("/evaluation/batch", response_model=list[schemas.EvaluationSummary])
 def batch_evaluate_trials(
     *,
     db: Session = Depends(get_db),
@@ -743,9 +735,7 @@ def compare_evaluations(
     return comparison
 
 
-@router.get(
-    "/evaluation/{evaluation_id}/errors", response_model=list[dict]
-)
+@router.get("/evaluation/{evaluation_id}/errors", response_model=list[dict])
 def get_evaluation_errors(
     *,
     db: Session = Depends(get_db),
