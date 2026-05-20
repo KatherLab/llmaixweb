@@ -1,10 +1,13 @@
 import asyncio
 import datetime as dt
+import logging
 
 from .. import models
 from ..dependencies import get_db
 from ..utils.preprocessing import PreprocessingPipeline
 from .celery_config import celery_app
+
+log = logging.getLogger(__name__)
 
 if celery_app:
 
@@ -12,7 +15,7 @@ if celery_app:
         bind=True,
         autoretry_for=(Exception,),
         retry_backoff=True,
-        max_retries=3,
+        max_retries=2,
         queue="preprocess",
     )
     def process_files_async(
@@ -24,19 +27,60 @@ if celery_app:
         async def _run():
             failures = {}
 
-            # --- Setup: fetch the task ---
+            # --- Setup: fetch the task + mark IN_PROGRESS ---
             with next(get_db()) as db:
                 task: models.PreprocessingTask = db.get(
                     models.PreprocessingTask, task_id
                 )
-                if task and (api_key or base_url):
+                if not task:
+                    raise ValueError(f"PreprocessingTask with id {task_id} not found")
+                if api_key or base_url:
                     if not task.task_metadata:
                         task.task_metadata = {}
                     if api_key:
                         task.task_metadata["api_key"] = api_key
                     if base_url:
                         task.task_metadata["api_base_url"] = base_url
+
+                # ── Re-delivery after worker lost? ──────────────────────
+                # When a worker is killed by SIGKILL (OOM etc.) Celery
+                # rejects the message and the broker re-queues it.  On the
+                # next delivery `started_at` will already be set (from the
+                # first run's commit on line 90 below) and `status` will be
+                # IN_PROGRESS because the worker died before reaching the
+                # finalization block.  We detect this and fail immediately
+                # instead of looping forever.
+                now = dt.datetime.now(dt.UTC)
+                if task.started_at is not None and task.status in (
+                    models.PreprocessingStatus.PENDING,
+                    models.PreprocessingStatus.IN_PROGRESS,
+                ):
+                    task.status = models.PreprocessingStatus.FAILED
+                    task.completed_at = now
+                    task.message = (
+                        "Preprocessing failed: the Celery worker was lost "
+                        "(out-of-memory or process crash). "
+                        "This file may be too large. Check worker logs for details."
+                    )
+                    for ft in task.file_tasks:
+                        ft.status = models.PreprocessingStatus.FAILED
+                        ft.error_message = "Worker lost during processing"
+                        ft.completed_at = now
                     db.commit()
+                    log.warning(
+                        "PreprocessingTask %s: worker was lost on a previous "
+                        "attempt (started_at=%s). Marking as FAILED.",
+                        task_id,
+                        task.started_at,
+                    )
+                    return
+
+                # Mark the task as in_progress immediately so the frontend
+                # never sees a stale PENDING status after Celery accepted it.
+                task.status = models.PreprocessingStatus.IN_PROGRESS
+                task.started_at = now
+                db.commit()
+
                 file_tasks = [
                     ft
                     for ft in task.file_tasks
@@ -248,3 +292,57 @@ if celery_app:
                 db.commit()
 
         asyncio.run(_run())
+
+    # ────────────────────────────────────────────────────────────
+    # Signal handler: safety net when a task permanently fails
+    # after all autoretry_for attempts are exhausted.
+    # Updates the DB row so the frontend sees FAILED instead of
+    # an eternally-in_progress task.
+    # ────────────────────────────────────────────────────────────
+    from celery.signals import task_failure
+
+    @task_failure.connect(sender=process_files_async)
+    def handle_process_files_failure(sender=None, body=None, **kwargs):
+        """Mark the PreprocessingTask as FAILED in the DB after all retries
+        are exhausted and the task permanently fails."""
+        if body is None:
+            return
+        task_id = body[0] if body else None
+        if task_id is None:
+            return
+        try:
+            with next(get_db()) as db:
+                task = db.get(models.PreprocessingTask, task_id)
+                if task is None:
+                    return
+                # Only update if the task hasn't already reached a terminal state
+                if task.status in (
+                    models.PreprocessingStatus.PENDING,
+                    models.PreprocessingStatus.IN_PROGRESS,
+                ):
+                    task.status = models.PreprocessingStatus.FAILED
+                    task.completed_at = dt.datetime.now(dt.UTC)
+                    exc = kwargs.get("exception", None)
+                    reason = str(exc) if exc else "unknown error"
+                    task.message = f"Processing failed after all retries: {reason}"
+                    # Mark any pending/in-progress file tasks as failed too
+                    now = dt.datetime.now(dt.UTC)
+                    for ft in task.file_tasks:
+                        if ft.status in (
+                            models.PreprocessingStatus.PENDING,
+                            models.PreprocessingStatus.IN_PROGRESS,
+                        ):
+                            ft.status = models.PreprocessingStatus.FAILED
+                            ft.error_message = reason
+                            ft.completed_at = now
+                    db.commit()
+                    log.warning(
+                        "Marked PreprocessingTask %s as FAILED after all retries",
+                        task_id,
+                    )
+        except Exception as exc:
+            log.error(
+                "Failed to update PreprocessingTask %s after task_failure: %s",
+                task_id,
+                exc,
+            )
