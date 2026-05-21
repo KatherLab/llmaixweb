@@ -10,9 +10,7 @@ from thefuzz import fuzz
 from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db, remove_file, save_file
-from ....utils.helpers import (
-    extract_field_types_from_schema,
-)
+from ....utils.helpers import extract_field_types_from_schema
 
 router = APIRouter()
 

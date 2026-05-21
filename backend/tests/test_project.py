@@ -311,8 +311,6 @@ def test_get_project_file_content(client, api_url):
     assert response.content == b"Hello KatherLab!"
 
 
-
-
 # Test Preprocess Project Data with Configuration
 @pytest.mark.parametrize(
     "file_name, expected_text",
@@ -1053,7 +1051,10 @@ def test_document_set_crud_and_stats(client, api_url):
         headers=headers,
         json={
             "file_ids": [file_id],
-            "inline_config": {"name": "SetCfg", "description": "Config for doc set test"},
+            "inline_config": {
+                "name": "SetCfg",
+                "description": "Config for doc set test",
+            },
             "bypass_celery": True,
         },
     )

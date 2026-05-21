@@ -9,6 +9,7 @@ Create Date: 2026-05-20 10:02:29.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -39,11 +40,15 @@ def downgrade() -> None:
     )
     op.add_column(
         "preprocessing_configurations",
-        sa.Column("use_ocr", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column(
+            "use_ocr", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
     )
     op.add_column(
         "preprocessing_configurations",
-        sa.Column("force_ocr", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "force_ocr", sa.Boolean(), nullable=False, server_default=sa.text("false")
+        ),
     )
     op.add_column(
         "preprocessing_configurations",

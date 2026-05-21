@@ -22,7 +22,10 @@ def any_admin_exists(db: Session) -> bool:
 
 
 def create_access_token(
-    subject: str | Any, expires_delta: datetime.timedelta | None = None, *, token_version: int = 1
+    subject: str | Any,
+    expires_delta: datetime.timedelta | None = None,
+    *,
+    token_version: int = 1,
 ) -> str:
     if expires_delta:
         expire = datetime.datetime.now(datetime.UTC) + expires_delta
@@ -79,7 +82,9 @@ async def get_current_user(
     except PyJWTError:
         raise credentials_exception
 
-    user = db.execute(select(User).where(User.id == int(user_id))).scalars().one_or_none()
+    user = (
+        db.execute(select(User).where(User.id == int(user_id))).scalars().one_or_none()
+    )
     if user is None:
         raise credentials_exception
     if not user.is_active:

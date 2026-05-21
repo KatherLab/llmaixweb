@@ -22,7 +22,9 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.add_column(
         "users",
-        sa.Column("token_version", sa.Integer(), nullable=False, server_default=sa.text("1")),
+        sa.Column(
+            "token_version", sa.Integer(), nullable=False, server_default=sa.text("1")
+        ),
     )
 
 

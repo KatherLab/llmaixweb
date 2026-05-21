@@ -62,9 +62,7 @@ async def preprocess_project_data(
         )
 
     # Create configuration from inline config
-    config_dict = preprocessing_task.inline_config.model_dump(
-        exclude={"bypass_celery"}
-    )
+    config_dict = preprocessing_task.inline_config.model_dump(exclude={"bypass_celery"})
     config = models.PreprocessingConfiguration(
         project_id=project_id,
         name=config_dict.get("name", f"Task {datetime.datetime.now(datetime.UTC)}"),
