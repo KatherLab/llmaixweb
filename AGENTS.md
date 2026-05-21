@@ -258,9 +258,20 @@ Frontend tests are currently not set up.
 - Database migrations run automatically on backend container startup
 
 ### Versioning
-- Separate versions for frontend (`frontend/version.js`) and backend (`pyproject.toml`)
+- Separate versions for frontend (`frontend/version.js`) and backend (`pyproject.toml` - `llmaix` package version)
 - Both displayed in UI footer with git commit hashes on hover
-- See `DEVELOPER.md` for release checklist
+- Backend commit hash read at runtime via `git rev-parse --short HEAD`; frontend commit hash injected at build time via `GIT_COMMIT_HASH` build arg
+
+#### Release Checklist
+1. **Bump frontend version** in `frontend/version.js` (e.g. `export const frontendVersion = '0.0.3'`)
+2. **Bump backend version** in `pyproject.toml` (e.g. `version = "0.1.4"`)
+3. **Build and push images** — handled by GitHub Actions on release tag
+4. **Tag the release:**
+   ```bash
+   git tag v0.0.3
+   git push origin v0.0.3
+   ```
+- Frontend and backend are separate Docker images, so they can be updated independently
 
 ### Common Pitfalls & Patterns
 - **Settings initialization** uses lazy loading to avoid requiring `.env` for Alembic — use `SKIP_RUNTIME_CHECKS=true` for migration commands
