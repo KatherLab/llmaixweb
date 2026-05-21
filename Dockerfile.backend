@@ -1,11 +1,8 @@
-###################  LLMAIx – backend (GPU, non-root) ###################
-FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04
+###################  LLMAIx – backend (non-root) ###################
+FROM ubuntu:24.04
 
 # Git commit hash - passed from GitHub Actions
 ARG GIT_COMMIT_HASH=unknown
-
-ENV PYTHONUNBUFFERED=1
-ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -45,7 +42,7 @@ RUN uv sync --locked
 
 USER root
 
-# copy application code last for better caching
+# copy app code last
 COPY --chown=app:app backend ./backend
 
 # Write git commit hash to file for runtime version info
