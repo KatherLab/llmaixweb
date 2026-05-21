@@ -86,6 +86,7 @@ def change_password(
             detail="New password must be different from the old password.",
         )
     current_user.hashed_password = get_password_hash(password_data.new_password)
+    current_user.token_version += 1  # Revoke existing tokens
     db.commit()
     db.refresh(current_user)
     return schemas.UserResponse.model_validate(current_user)
@@ -111,6 +112,7 @@ def admin_set_user_password(
             detail="Cannot change password of other admin users",
         )
     user.hashed_password = get_password_hash(password_data.new_password)
+    user.token_version += 1  # Revoke existing tokens
     db.commit()
     db.refresh(user)
     return schemas.UserResponse.model_validate(user)
@@ -267,6 +269,7 @@ def toggle_user_status(
         )
 
     user.is_active = not user.is_active
+    user.token_version += 1  # Revoke all existing tokens on status change
     db.commit()
     db.refresh(user)
     return schemas.UserResponse.model_validate(user)

@@ -354,6 +354,10 @@ class Trial(TrialBase):
     finished_at: datetime | None = None  # set when everything is done
     meta: dict | None = None  # currently holds {"eta_seconds": …}
 
+    # Never expose API keys or base URLs in API responses
+    api_key: str | None = Field(default=None, exclude=True)
+    base_url: str | None = Field(default=None, exclude=True)
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -369,8 +373,8 @@ class TrialSummary(UTCModel):
     document_ids: list[int] | None = None
     document_set_id: int | None = None
     llm_model: str | None = settings.OPENAI_API_MODEL
-    api_key: str | None = settings.OPENAI_API_KEY
-    base_url: str | None = settings.OPENAI_API_BASE
+    api_key: str | None = Field(default=None, exclude=True)
+    base_url: str | None = Field(default=None, exclude=True)
     bypass_celery: bool = False
     advanced_options: dict | None = None
 

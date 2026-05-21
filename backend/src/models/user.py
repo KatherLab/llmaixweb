@@ -21,6 +21,7 @@ class User(Base):
         Enum(UserRole, native_enum=False, length=10), default=UserRole.user
     )
     is_active: Mapped[bool] = mapped_column(default=True)
+    token_version: Mapped[int] = mapped_column(default=1)
     projects: Mapped[list["Project"]] = relationship(back_populates="owner")  # noqa: F821
 
 

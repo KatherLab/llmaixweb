@@ -22,7 +22,7 @@ def any_admin_exists(db: Session) -> bool:
 
 
 def create_access_token(
-    subject: str | Any, expires_delta: datetime.timedelta | None = None
+    subject: str | Any, expires_delta: datetime.timedelta | None = None, *, token_version: int = 1
 ) -> str:
     if expires_delta:
         expire = datetime.datetime.now(datetime.UTC) + expires_delta
@@ -30,7 +30,7 @@ def create_access_token(
         expire = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
-    to_encode = {"exp": expire, "sub": str(subject)}
+    to_encode = {"exp": expire, "sub": str(subject), "tkn_v": token_version}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
     return encoded_jwt
 
@@ -79,9 +79,22 @@ async def get_current_user(
     except PyJWTError:
         raise credentials_exception
 
-    user = db.execute(select(User).where(User.id == int(user_id))).scalars().one()
+    user = db.execute(select(User).where(User.id == int(user_id))).scalars().one_or_none()
     if user is None:
         raise credentials_exception
+    if not user.is_active:
+        # Deactivated users cannot use any tokens
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is deactivated",
+        )
+    # Validate token version — a newer version means old tokens are revoked
+    token_version = payload.get("tkn_v", 0)
+    if token_version < user.token_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked. Please log in again.",
+        )
     return user
 
 

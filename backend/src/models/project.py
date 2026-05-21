@@ -16,10 +16,11 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.ext.mutable import MutableDict
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from sqlalchemy.sql import func
 
 from ..db.base import Base
+from ..utils.crypto import encrypt
 from ..utils.enums import (
     ComparisonMethod,
     FieldType,
@@ -546,6 +547,14 @@ class Trial(Base):
     evaluations: Mapped[list["Evaluation"]] = relationship(
         back_populates="trial", cascade="all, delete-orphan"
     )
+
+    @validates("api_key")
+    def _validate_api_key(self, key: str, value: str) -> str:
+        """Automatically encrypt API keys before storing in the database."""
+        # Only encrypt non-empty, non-encrypted-looking values
+        if value and not value.startswith("gAAAAA"):
+            return encrypt(value)
+        return value
 
     def cancel(self):
         self.is_cancelled = True

@@ -1,5 +1,4 @@
 import os
-import secrets
 import sys
 from pathlib import Path
 
@@ -13,7 +12,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     PROJECT_NAME: str = "LLMAIx (v2) backend"
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    SECRET_KEY: str = ""  # Must be set in .env — validated at startup
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     REQUIRE_INVITATION: bool = True
     ALLOW_FIRST_ADMIN_SETUP: bool = True
@@ -122,6 +121,14 @@ class Settings(BaseSettings):
         # Skip runtime checks for operations like Alembic migrations
         if self.SKIP_RUNTIME_CHECKS:
             return
+
+        # SECRET_KEY is required — refuse to start with a default/empty value
+        if not self.SECRET_KEY or len(self.SECRET_KEY) < 16:
+            print(
+                "ERROR: SECRET_KEY must be explicitly set in your .env file "
+                "(at least 16 characters). Do not rely on a default."
+            )
+            sys.exit(1)
 
         if not self.OPENAI_NO_API_CHECK:
             if not self.OPENAI_API_KEY:
