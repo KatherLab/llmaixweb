@@ -37,7 +37,9 @@ llmaixweb/
 ├── pyproject.toml            # Python deps, Ruff config, project metadata
 ├── compose.yml               # Docker Compose (CPU)
 ├── compose.gpu.yml           # Docker Compose (GPU)
-└── compose.dev.yml           # Docker Compose (dev hot-reload)
+├── compose.dev.yml           # Docker Compose (dev hot-reload)
+├── compose.deepseek.yml      # Optional: self-hosted Mistral OCR (DeepSeek-OCR-2 + KatDocExtract, GPU)
+└── compose.vllm.yml          # Optional: self-hosted vLLM endpoint (e.g. Gemma 4 for Vision OCR, GPU)
 ```
 
 ---
@@ -74,6 +76,9 @@ Files are processed asynchronously via **Celery** to extract text content. The `
 2. **ocrmypdf (Tesseract)** — local OCR using Tesseract
 3. **Mistral OCR** — API-based OCR via Mistral
 4. **Vision LLM OCR** — API-based OCR via any OpenAI-compatible vision model
+
+Both Mistral OCR and Vision LLM OCR can use self-hosted backends:
+`compose.deepseek.yml` provides a local Mistral OCR API; `compose.vllm.yml` provides a local OpenAI-compatible endpoint for Vision OCR. Point `MISTRAL_API_BASE` / `VISION_OCR_API_BASE` at the respective service.
 
 **For CSV/XLSX files:**
 - `full_document` strategy: entire table converted to text
@@ -243,7 +248,12 @@ ENV_PATH=backend/.env.localtest uv run pytest --verbose --cov=backend --cov-repo
 Frontend tests are currently not set up.
 
 ### Docker
-- Three compose files compose together via `-f` flag pattern
+- Five compose files compose together via `-f` flag pattern:
+  - `compose.yml` — base (CPU), always required
+  - `compose.gpu.yml` — GPU-enabled backend
+  - `compose.dev.yml` — local code hot-reload
+  - `compose.deepseek.yml` — self-hosted Mistral OCR (vLLM + KatDocExtract, GPU)
+  - `compose.vllm.yml` — self-hosted OpenAI-compatible endpoint (GPU)
 - Images: `ghcr.io/katherlab/llmaixweb-backend:cpu|gpu`, `ghcr.io/katherlab/llmaixweb-frontend:latest`
 - Database migrations run automatically on backend container startup
 

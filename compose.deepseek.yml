@@ -1,0 +1,76 @@
+# Self-hosted Mistral OCR API via DeepSeek-OCR-2 + KatDocExtract
+# Usage: docker compose -f compose.yml -f compose.deepseek.yml up -d
+#
+# This file is OPTIONAL — only use if you want to run OCR locally via
+# a Mistral OCR-compatible API backed by DeepSeek-OCR-2 on a GPU.
+#
+# Prerequisites:
+#   - NVIDIA GPU with sufficient VRAM (24+ GB recommended for DeepSeek-OCR-2)
+#   - NVIDIA Container Toolkit (nvidia-docker2 / nvidia-container-toolkit)
+#
+# Required .env overrides (uncomment in your .env):
+#   MISTRAL_API_BASE=http://ocr-api:8001
+#   MISTRAL_API_KEY=sk-noop       # KatDocExtract doesn't validate API keys
+#   MISTRAL_OCR_ENABLED=true
+#
+# Optional .env overrides:
+#   VLLM_MODEL=deepseek-ai/DeepSeek-OCR-2   (default)
+#   VLLM_GPU_MEMORY_UTILIZATION=0.8
+#   VLLM_PORT=8000
+#   KATDOCEXTRACT_PORT=3001
+
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    env_file:
+      - .env
+    environment:
+      TRITON_PTXAS_PATH: /usr/local/cuda/bin/ptxas
+    ipc: host
+    shm_size: "8gb"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    command: >
+      --model ${VLLM_MODEL:-deepseek-ai/DeepSeek-OCR-2}
+      --logits_processors vllm.model_executor.models.deepseek_ocr:NGramPerReqLogitsProcessor
+      --no-enable-prefix-caching
+      --mm-processor-cache-gb 0
+      --host 0.0.0.0
+      --port ${VLLM_PORT:-8000}
+      --gpu-memory-utilization=${VLLM_GPU_MEMORY_UTILIZATION:-0.8}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${VLLM_PORT:-8000}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  ocr-api:
+    image: ghcr.io/katherlab/katdocextract:latest
+    env_file:
+      - .env
+    ports:
+      - "${KATDOCEXTRACT_PORT:-3001}:8001"
+    depends_on:
+      vllm:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      # Shared file store for OCR page images
+      - ocr-files:/data/files_store
+    environment:
+      # Point KatDocExtract at the vLLM service inside the compose network
+      VLLM_BASE_URL: http://vllm:${VLLM_PORT:-8000}/v1
+      # Ensure file storage path matches bind mount above
+      FILES_DIR: /data/files_store
+
+volumes:
+  ocr-files:

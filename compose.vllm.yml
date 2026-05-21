@@ -1,0 +1,60 @@
+# Self-hosted vLLM OpenAI-compatible API for local LLM inference
+# Usage: docker compose -f compose.yml -f compose.vllm.yml up -d
+#
+# This file is OPTIONAL — use when you want a local OpenAI-compatible
+# LLM endpoint via vLLM (e.g. for Vision LLM OCR, or as the main LLM
+# provider for info extraction).
+#
+# Prerequisites:
+#   - NVIDIA GPU (VRAM depends on model — Gemma 4 4B needs ~8 GB)
+#   - NVIDIA Container Toolkit (nvidia-docker2 / nvidia-container-toolkit)
+#
+# Example .env overrides for Vision LLM OCR:
+#   VISION_OCR_ENABLED=true
+#   VISION_OCR_API_BASE=http://vllm:8000/v1
+#   VISION_OCR_API_KEY=sk-noop
+#   VISION_OCR_MODEL=google/gemma-4-E4B-it
+#
+# Or as the main LLM provider for info extraction:
+#   OPENAI_API_BASE=http://vllm:8000/v1
+#   OPENAI_API_KEY=sk-noop
+#   OPENAI_API_MODEL=google/gemma-4-E4B-it
+#   OPENAI_NO_API_CHECK=true
+#
+# Optional .env overrides:
+#   VLLM_MODEL=google/gemma-4-E4B-it                    (default)
+#   VLLM_GPU_MEMORY_UTILIZATION=0.90
+#   VLLM_MAX_MODEL_LEN=32768
+#   VLLM_TENSOR_PARALLEL_SIZE=1
+#   VLLM_PORT=8000
+
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    env_file:
+      - .env
+    ipc: host
+    shm_size: "8gb"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    command: >
+      --model ${VLLM_MODEL:-google/gemma-4-E4B-it}
+      --tensor-parallel-size ${VLLM_TENSOR_PARALLEL_SIZE:-1}
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-32768}
+      --gpu-memory-utilization=${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
+      --host 0.0.0.0
+      --port ${VLLM_PORT:-8000}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${VLLM_PORT:-8000}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

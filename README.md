@@ -76,11 +76,13 @@ docker compose -f compose.dev.yml up -d
 
 ### Docker Compose Files
 
-| File              | Purpose                                                                             |
-|-------------------|-------------------------------------------------------------------------------------|
-| `compose.yml`     | **Default config** - CPU-only backend, works with Docker & Podman                   |
-| `compose.gpu.yml` | **GPU config** - GPU-enabled backend (NVIDIA driver required, for LLM inference) |
-| `compose.dev.yml` | **Optional overlay** - Mounts local code for hot-reload (development only)          |
+| File                   | Purpose                                                                                         |
+|------------------------|-------------------------------------------------------------------------------------------------|
+| `compose.yml`          | **Default config** - CPU-only backend, works with Docker & Podman                               |
+| `compose.gpu.yml`      | **GPU config** - GPU-enabled backend (NVIDIA driver required, for LLM inference)                |
+| `compose.dev.yml`      | **Optional overlay** - Mounts local code for hot-reload (development only)                      |
+| `compose.deepseek.yml` | **Optional GPU overlay** - Self-hosted Mistral OCR API via DeepSeek-OCR-2 + KatDocExtract       |
+| `compose.vllm.yml`     | **Optional GPU overlay** - Bring your own vLLM OpenAI-compatible endpoint (e.g. for Vision OCR) |
 
 **Usage pattern:**
 ```bash
@@ -90,9 +92,17 @@ docker compose up -d
 # Development with code hot-reload
 docker compose -f compose.dev.yml up -d
 
-# GPU deployment
+# GPU deployment (for GPU-accelerated LLM inference in the backend)
 docker compose -f compose.gpu.yml up -d
+
+# Self-hosted Mistral OCR via DeepSeek-OCR-2 (GPU required)
+docker compose -f compose.yml -f compose.deepseek.yml up -d
+
+# Self-hosted vLLM endpoint for Vision LLM OCR or as main LLM provider (GPU required)
+docker compose -f compose.yml -f compose.vllm.yml up -d
 ```
+
+> **Combine overlays:** Overlay files stack, e.g. `docker compose -f compose.yml -f compose.gpu.yml -f compose.deepseek.yml up -d` for GPU backend + self-hosted OCR.
 
 ### Environment Configuration
 
@@ -140,6 +150,8 @@ Edit the `.env` file to match your deployment. **For basic setups, only the LLM 
 | `VISION_OCR_API_KEY`      | Vision OCR API key (server default)   | (empty)                        |
 | `VISION_OCR_API_BASE`     | Vision OCR API base URL               | (empty)                        |
 | `VISION_OCR_MODEL`        | Vision OCR default model              | `gpt-4o`                       |
+
+> **Self-hosted OCR:** Use `docker compose -f compose.yml -f compose.deepseek.yml up -d` for a local Mistral OCR-compatible API (DeepSeek-OCR-2 via KatDocExtract). Use `docker compose -f compose.yml -f compose.vllm.yml up -d` for a local vision LLM endpoint (e.g. Gemma 4). See `.env.example` for the required env var overrides.
 
 <details>
 <summary>Database & Advanced Settings (click to expand)</summary>

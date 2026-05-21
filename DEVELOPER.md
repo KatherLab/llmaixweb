@@ -143,6 +143,78 @@ ENV_PATH=backend/.env.localtest uv run pytest --verbose --cov=backend --cov-repo
 
 ---
 
+## 🐳 Optional Compose Overlays
+
+The repo ships two optional GPU compose overlays for self-hosted OCR and LLM inference:
+
+### compose.deepseek.yml — Self-hosted Mistral OCR
+
+Spins up **vLLM** (DeepSeek-OCR-2) + **KatDocExtract** (Mistral OCR-compatible API wrapper).
+
+```bash
+docker compose -f compose.yml -f compose.deepseek.yml up -d
+```
+
+Then in `.env`, set:
+```env
+MISTRAL_API_BASE=http://ocr-api:8001
+MISTRAL_API_KEY=sk-noop
+MISTRAL_OCR_ENABLED=true
+```
+
+Override the vLLM model or KatDocExtract port:
+```env
+VLLM_MODEL=deepseek-ai/DeepSeek-OCR-2
+KATDOCEXTRACT_PORT=3001
+```
+
+The `ocr-api` service binds to port 3001 by default.
+
+### compose.vllm.yml — Self-hosted vLLM endpoint
+
+Spins up **vLLM** with a model of your choice. Default: `google/gemma-4-E4B-it`.
+
+```bash
+docker compose -f compose.yml -f compose.vllm.yml up -d
+```
+
+**Use as Vision LLM OCR provider** (in `.env`):
+```env
+VISION_OCR_ENABLED=true
+VISION_OCR_API_BASE=http://vllm:8000/v1
+VISION_OCR_API_KEY=sk-noop
+VISION_OCR_MODEL=google/gemma-4-E4B-it
+```
+
+**Use as main LLM provider** (in `.env`):
+```env
+OPENAI_API_BASE=http://vllm:8000/v1
+OPENAI_API_KEY=sk-noop
+OPENAI_API_MODEL=google/gemma-4-E4B-it
+OPENAI_NO_API_CHECK=true
+```
+
+Override model, tensor parallel size, or max context length:
+```env
+VLLM_MODEL=google/gemma-4-E4B-it
+VLLM_TENSOR_PARALLEL_SIZE=1
+VLLM_MAX_MODEL_LEN=32768
+VLLM_GPU_MEMORY_UTILIZATION=0.90
+```
+
+### Using External APIs Instead
+
+Both OCR paths also work with external (cloud) APIs — no compose overlay needed:
+
+| OCR Engine       | Env Vars to Set                                                  |
+|------------------|------------------------------------------------------------------|
+| Mistral OCR API  | `MISTRAL_API_BASE=https://api.mistral.ai`, `MISTRAL_API_KEY=...` |
+| Vision LLM OCR   | `VISION_OCR_API_BASE=<your-api>`, `VISION_OCR_MODEL=...`         |
+
+The main LLM extraction path also accepts any OpenAI-compatible external API via `OPENAI_API_BASE`, `OPENAI_API_KEY`, and `OPENAI_API_MODEL`.
+
+---
+
 ## 📦 RustFS Storage (Optional)
 
 Start the RustFS server for local development:
