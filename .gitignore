@@ -37,3 +37,6 @@ Thumbs.db
 # Local development
 miniodata/
 test_local_storage/
+
+# Agents
+.claude
