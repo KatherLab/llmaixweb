@@ -111,19 +111,10 @@
                   placeholder="Search documents..."
                   class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
-                <select
-                  v-model="filterConfig"
-                  class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">All Configurations</option>
-                  <option
-                    v-for="config in preprocessingConfigs"
-                    :key="config.id"
-                    :value="config.id"
-                  >
-                    {{ config.name }}
-                  </option>
-                </select>
+                <input
+                  type="hidden"
+                  value=""
+                />
               </div>
 
               <!-- Document List -->
@@ -225,8 +216,6 @@ const formData = ref({
 const initialFormState = ref('');
 const newTag = ref('');
 const searchTerm = ref('');
-const filterConfig = ref('');
-const preprocessingConfigs = ref([]);
 
 // Serialize form for dirty check
 function serializeForm(data) {
@@ -249,13 +238,6 @@ onMounted(async () => {
     };
   }
   initialFormState.value = serializeForm(formData.value);
-
-  try {
-    const response = await api.get(`/project/${props.projectId}/preprocessing-config`);
-    preprocessingConfigs.value = response.data;
-  } catch (error) {
-    console.error('Failed to load preprocessing configs:', error);
-  }
 
   // Disable body scroll when modal is open
   document.body.style.overflow = 'hidden';
@@ -287,11 +269,6 @@ const filteredDocuments = computed(() => {
     docs = docs.filter(doc =>
       doc.original_file?.file_name?.toLowerCase().includes(search) ||
       doc.text?.toLowerCase().includes(search)
-    );
-  }
-  if (filterConfig.value) {
-    docs = docs.filter(doc =>
-      doc.preprocessing_config?.id === parseInt(filterConfig.value)
     );
   }
   return docs;

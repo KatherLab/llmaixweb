@@ -14,7 +14,7 @@ A modern web interface for the **LLMAIx** framework that turns unstructured medi
 ## ✨ Features
 
 * **Upload & organize**: multi‑format file support (PDF, DOC/DOCX, PNG/JPEG images, CSV/XLSX) with column selection, grouping and previews.
-* **Preprocessing & OCR**: pluggable methods including **Tesseract**, **Marker**, **PaddleOCR**, and vision LLMs; document parsers like **Docling**, **PyMuPDF4LLM**, and **MarkItDown**.
+* **Preprocessing & OCR**: local OCR via **OCRmyPDF** (Tesseract), text extraction via **Docling**, and API-based OCR via **Mistral OCR** or any **Vision LLM** (OpenAI-compatible). Document parsers include **PyMuPDF4LLM** and **Docling**.
 * **Visual schema editor**: tree‑based editor supporting nested objects/arrays, all JSON types, import/export, validation, and templates.
 * **LLM trials**: run multiple extraction trials across prompts/models with temperature control, per‑trial iterations, token tracking, and OpenAI‑compatible endpoints (official OpenAI, vLLM, llama.cpp/Ollama, custom gateways).
 * **Evaluation**: upload ground truth, compare field‑by‑field, compute overall/per‑field accuracy metrics.
@@ -30,7 +30,7 @@ A modern web interface for the **LLMAIx** framework that turns unstructured medi
 * Node.js 18+ (for the frontend) and PNPM/NPM/Yarn
 * Python 3.11+ (for the backend)
 * Docker & Docker Compose (recommended for deployment)
-* Optional GPU stack: NVIDIA driver + NVIDIA Container Toolkit
+* Optional GPU stack: NVIDIA driver + NVIDIA Container Toolkit (for LLM inference only, not needed for OCR)
 * **OpenAI-compatible API** (e.g., official OpenAI, self-hosted vLLM, llama.cpp, ollama, …)
 * (Optional) **RustFS** for object storage or any other S3 storage
 
@@ -79,7 +79,7 @@ docker compose -f compose.dev.yml up -d
 | File              | Purpose                                                                             |
 |-------------------|-------------------------------------------------------------------------------------|
 | `compose.yml`     | **Default config** - CPU-only backend, works with Docker & Podman                   |
-| `compose.gpu.yml` | **GPU config** - GPU-enabled backend (NVIDIA driver required, for some OCR methods) |
+| `compose.gpu.yml` | **GPU config** - GPU-enabled backend (NVIDIA driver required, for LLM inference) |
 | `compose.dev.yml` | **Optional overlay** - Mounts local code for hot-reload (development only)          |
 
 **Usage pattern:**
@@ -133,6 +133,13 @@ Edit the `.env` file to match your deployment. **For basic setups, only the LLM 
 | `REQUIRE_INVITATION`      | Require invitation for signup         | `false`                        |
 | `ALLOW_FIRST_ADMIN_SETUP` | Allow first user to become admin      | `true`                         |
 | `CELERY_PREPROCESS_POOL`  | Pool type (`auto`, `solo`, `prefork`) | `auto` (use `solo` on macOS)   |
+| `MISTRAL_API_BASE`        | Mistral OCR API base URL              | `https://api.mistral.ai`       |
+| `MISTRAL_API_KEY`         | Mistral OCR API key (server default)  | (empty)                        |
+| `MISTRAL_OCR_ENABLED`     | Enable Mistral OCR engine             | `true`                         |
+| `VISION_OCR_ENABLED`      | Enable Vision LLM OCR engine          | `true`                         |
+| `VISION_OCR_API_KEY`      | Vision OCR API key (server default)   | (empty)                        |
+| `VISION_OCR_API_BASE`     | Vision OCR API base URL               | (empty)                        |
+| `VISION_OCR_MODEL`        | Vision OCR default model              | `gpt-4o`                       |
 
 <details>
 <summary>Database & Advanced Settings (click to expand)</summary>

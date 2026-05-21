@@ -41,6 +41,24 @@ class Settings(BaseSettings):
     OPENAI_API_MODEL: str = ""
     OPENAI_NO_API_CHECK: bool = False
 
+    MISTRAL_API_BASE: str = "https://api.mistral.ai"
+    MISTRAL_API_KEY: str = ""
+    MISTRAL_OCR_ENABLED: bool = True
+    MISTRAL_OCR_DISPLAY_NAME: str = "Mistral OCR API"
+    MISTRAL_OCR_DISPLAY_SUBTITLE: str = "Best for complex layouts"
+
+    # Separate API endpoint/config for Vision LLM OCR (independent of main LLM client)
+    VISION_OCR_ENABLED: bool = True
+    VISION_OCR_API_KEY: str = ""
+    VISION_OCR_API_BASE: str = ""
+    VISION_OCR_MODEL: str = "gpt-4o"
+    VISION_OCR_PROMPT: str = (
+        "Extract all text from this image and return it as clean markdown. "
+        "Preserve the original structure, headings, lists, and formatting as much as possible."
+    )
+    VISION_OCR_DISPLAY_NAME: str = "Vision LLM API"
+    VISION_OCR_DISPLAY_SUBTITLE: str = "Best for complex documents"
+
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     DISABLE_CELERY: bool = False
     INITIALIZE_CELERY: bool = True  # Whether to initialize Celery workers on startup
@@ -365,5 +383,47 @@ SETTINGS_META = {
         "readonly": True,
         "category": "General",
         "label": "CORS Origins",
+    },
+    "MISTRAL_OCR_ENABLED": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Mistral OCR Enabled",
+    },
+    "MISTRAL_OCR_DISPLAY_NAME": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Mistral OCR Display Name",
+    },
+    "MISTRAL_OCR_DISPLAY_SUBTITLE": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Mistral OCR Display Subtitle",
+    },
+    "VISION_OCR_DISPLAY_NAME": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Vision OCR Display Name",
+    },
+    "VISION_OCR_DISPLAY_SUBTITLE": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Vision OCR Display Subtitle",
+    },
+    "VISION_OCR_PROMPT": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Vision OCR Prompt",
     },
 }

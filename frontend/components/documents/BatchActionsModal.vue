@@ -38,38 +38,6 @@
         <div class="flex-1 overflow-y-auto p-6">
           <!-- Reprocess Action -->
           <div v-if="action === 'reprocess'" class="space-y-4">
-            <p class="text-sm text-gray-600">
-              Choose a preprocessing configuration for the selected documents:
-            </p>
-            <div class="space-y-3">
-              <label
-                v-for="config in configurations"
-                :key="config.id"
-                class="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50"
-              >
-                <input
-                  v-model="selectedConfigId"
-                  :value="config.id"
-                  type="radio"
-                  class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 mt-0.5"
-                />
-                <div class="ml-3">
-                  <p class="font-medium text-gray-900">{{ config.name }}</p>
-                  <p class="text-sm text-gray-500">{{ config.description }}</p>
-                  <div class="mt-1 flex flex-wrap gap-2">
-                    <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
-                      {{ config.file_type }}
-                    </span>
-                    <span
-                      v-if="config.use_ocr"
-                      class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded"
-                    >
-                      OCR: {{ config.ocr_languages?.join(', ') }}
-                    </span>
-                  </div>
-                </div>
-              </label>
-            </div>
             <div class="flex items-center">
               <input
                 v-model="forceReprocess"
@@ -212,8 +180,6 @@ const toast = useToast();
 const modalRef = ref(null);
 
 // Form state
-const configurations = ref([]);
-const selectedConfigId = ref(null);
 const forceReprocess = ref(false);
 const exportFormat = ref('json');
 const includeMetadata = ref(true);
@@ -243,7 +209,7 @@ const actionButtonText = computed(() => {
 const canPerformAction = computed(() => {
   if (isProcessing.value) return false;
   switch (props.action) {
-    case 'reprocess': return selectedConfigId.value !== null;
+    case 'reprocess': return true;
     case 'export': return true;
     case 'delete': return confirmDelete.value;
     default: return false;
@@ -251,15 +217,6 @@ const canPerformAction = computed(() => {
 });
 
 // Methods
-const fetchConfigurations = async () => {
-  try {
-    const response = await api.get(`/project/${props.projectId}/preprocessing-config`);
-    configurations.value = response.data;
-  } catch (error) {
-    console.error('Failed to fetch configurations:', error);
-  }
-};
-
 const performAction = async () => {
   if (!canPerformAction.value) return;
   isProcessing.value = true;
@@ -281,7 +238,10 @@ const performAction = async () => {
 const reprocessDocuments = async () => {
   const fileIds = props.documents;
   const taskData = {
-    configuration_id: selectedConfigId.value,
+    inline_config: {
+      name: `Reprocess ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
+      additional_settings: {},
+    },
     file_ids: fileIds,
     force_reprocess: forceReprocess.value,
   };
@@ -306,9 +266,6 @@ onMounted(() => {
   nextTick(() => {
     modalRef.value?.focus();
   });
-  if (props.action === 'reprocess') {
-    fetchConfigurations();
-  }
 });
 
 onUnmounted(() => {

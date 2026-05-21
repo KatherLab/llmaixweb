@@ -2,6 +2,7 @@
 
 import datetime
 import io
+import logging
 from typing import List
 
 import pandas as pd
@@ -13,54 +14,7 @@ from ..core.config import settings
 from ..dependencies import get_file
 from .helpers import _make_aware
 
-
-def find_matching_configuration(
-    db: Session, project_id: int, config_dict: dict, exclude_id: int | None = None
-) -> models.PreprocessingConfiguration | None:
-    """Find a configuration with matching settings."""
-    query = db.query(models.PreprocessingConfiguration).filter(
-        models.PreprocessingConfiguration.project_id == project_id
-    )
-
-    if exclude_id:
-        query = query.filter(models.PreprocessingConfiguration.id != exclude_id)
-
-    # Key fields to compare (excluding name and description)
-    compare_fields = [
-        "pdf_backend",
-        "ocr_backend",
-        "use_ocr",
-        "force_ocr",
-        "ocr_model",
-    ]
-
-    for field in compare_fields:
-        if field in config_dict:
-            query = query.filter(
-                getattr(models.PreprocessingConfiguration, field) == config_dict[field]
-            )
-
-    # Handle OCR languages comparison separately (array field)
-    if "ocr_languages" in config_dict:
-        # Convert to sorted list for comparison
-        target_langs = sorted(config_dict["ocr_languages"] or [])
-        configs = query.all()
-
-        for config in configs:
-            config_langs = sorted(config.ocr_languages or [])
-            if config_langs == target_langs:
-                # Also check table_settings and additional_settings
-                if (config.table_settings or {}) == (
-                    config_dict.get("table_settings") or {}
-                ):
-                    if (config.additional_settings or {}) == (
-                        config_dict.get("additional_settings") or {}
-                    ):
-                        return config
-    else:
-        return query.first()
-
-    return None
+logger = logging.getLogger(__name__)
 
 
 class PreprocessingPipeline:
@@ -229,118 +183,6 @@ class PreprocessingPipeline:
                 f"File: {file.file_name}"
             )
 
-    def _process_with_llmaix(
-        self, file: models.File, file_task: models.FilePreprocessingTask
-    ) -> List[models.Document]:
-        """Process files using the new llmaix DocumentPreprocessor."""
-        from llmaix import DocumentPreprocessor
-
-        file_content = get_file(file.file_uuid)
-        additional_settings = self.config.additional_settings or {}
-
-        # Extract all settings
-        mode = additional_settings.get("mode", "fast")
-        ocr_engine = additional_settings.get("ocr_engine", "ocrmypdf")
-        docling_ocr_engine = additional_settings.get("docling_ocr_engine", "rapidocr")
-        enable_picture_description = additional_settings.get(
-            "enable_picture_description", False
-        )
-        enable_formula = additional_settings.get("enable_formula", False)
-        enable_code = additional_settings.get("enable_code", False)
-        max_image_dim = additional_settings.get("max_image_dim", 800)
-        use_vlm = additional_settings.get("use_vlm", False)
-        use_local_vlm = additional_settings.get("use_local_vlm", False)
-        local_vlm_repo_id = additional_settings.get("local_vlm_repo_id")
-        vlm_model = additional_settings.get("vlm_model")
-        vlm_prompt = additional_settings.get("vlm_prompt")
-        vlm_base_url = additional_settings.get("vlm_base_url")
-
-        # Build DocumentPreprocessor parameters
-        preprocessor_params = {
-            "mode": mode,
-            "ocr_engine": ocr_engine,
-            "enable_picture_description": enable_picture_description,
-            "enable_formula": enable_formula,
-            "enable_code": enable_code,
-            "force_ocr": self.config.force_ocr,
-            "languages": self.config.ocr_languages,
-            "max_image_dim": max_image_dim,
-        }
-
-        # Add docling_ocr_engine when available in llmaix
-        if docling_ocr_engine and mode == "advanced":
-            # Map to the parameter name used in extract_docling
-            preprocessor_params["ocr_engine"] = docling_ocr_engine
-
-        # Handle VLM settings
-        if use_vlm:
-            if use_local_vlm and local_vlm_repo_id:
-                preprocessor_params["use_local_vlm"] = True
-                preprocessor_params["local_vlm_repo_id"] = local_vlm_repo_id
-            else:
-                # Create client for remote VLM
-                api_key = None
-                base_url = vlm_base_url
-
-                # Get API key from task metadata or client
-                if hasattr(self, "task") and self.task.task_metadata:
-                    api_key = self.task.task_metadata.get("api_key")
-                    if not base_url:
-                        base_url = self.task.task_metadata.get("api_base_url")
-
-                if not api_key and hasattr(self, "client") and self.client:
-                    api_key = self.client.api_key
-                    if not base_url:
-                        base_url = self.client.base_url
-
-                if api_key and base_url:
-
-                    class VLMClient:
-                        def __init__(self, base_url, api_key):
-                            self.base_url = base_url
-                            self.api_key = api_key
-
-                    vlm_client = VLMClient(base_url, api_key)
-                    preprocessor_params["llm_client"] = vlm_client
-                    preprocessor_params["llm_model"] = (
-                        vlm_model or self.config.llm_model
-                    )
-
-        if vlm_prompt:
-            preprocessor_params["vlm_prompt"] = vlm_prompt
-
-        # Create preprocessor
-        preprocessor = DocumentPreprocessor(**preprocessor_params)
-
-        # Process file
-        result = preprocessor.process(file_content)
-
-        # Create document
-        doc = models.Document(
-            project_id=self.task.project_id,
-            original_file_id=file.id,
-            file_preprocessing_task_id=file_task.id,
-            text=result,
-            document_name=file.file_name,
-            preprocessing_config_id=self.config.id,
-            meta_data={
-                "file_type": file.file_type,
-                "preprocessing_mode": mode,
-                "ocr_engine": ocr_engine if mode == "fast" else docling_ocr_engine,
-                "vlm_used": use_vlm,
-                "advanced_features": {
-                    "picture_description": enable_picture_description,
-                    "formula_extraction": enable_formula,
-                    "code_extraction": enable_code,
-                }
-                if mode == "advanced"
-                else None,
-            },
-        )
-
-        self.db.add(doc)
-        return [doc]
-
     def _process_file_task(self, file_task: models.FilePreprocessingTask):
         """Process a single file task."""
         file_task.status = models.PreprocessingStatus.IN_PROGRESS
@@ -357,21 +199,12 @@ class PreprocessingPipeline:
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ]:
-                # For CSV/Excel, check if it needs preprocessing
-                if (
-                    file.preprocessing_strategy
-                    == models.PreprocessingStrategy.ROW_BY_ROW
-                ):
-                    documents = self._process_table_file(file, file_task)
-                else:
-                    # Full document CSV - use simple extraction
-                    documents = self._process_table_file(file, file_task)
+                documents = self._process_table_file(file, file_task)
             elif file.file_type in [models.FileType.TEXT_PLAIN]:
-                # Plain text files - no need for llmaix
                 documents = self._process_text_file(file, file_task)
             else:
-                # All other file types go through llmaix
-                documents = self._process_with_llmaix(file, file_task)
+                # PDF/Image files — route by OCR engine
+                documents = self._route_pdf_image(file, file_task)
 
             file_task.document_count = len(documents)
             file_task.status = models.PreprocessingStatus.COMPLETED
@@ -396,6 +229,305 @@ class PreprocessingPipeline:
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
 
         self.db.commit()
+
+    def _route_pdf_image(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document]:
+        """Route PDF/image file to the appropriate OCR/text extraction engine.
+
+        For PDFs: internally tries Docling first to extract embedded text.
+        If sufficient text is found and force_ocr is not set, the Docling
+        result is used directly (skipping OCR). Otherwise routes to the
+        user-selected OCR engine.
+
+        For images: routes directly to the user-selected OCR engine.
+        """
+        additional = self.config.additional_settings or {}
+        ocr_engine = additional.get("ocr_engine", "ocrmypdf")
+        force_ocr = additional.get("force_ocr", False)
+
+        # For PDFs, try Docling first for embedded text extraction
+        if file.file_type == models.FileType.APPLICATION_PDF and not force_ocr:
+            docling_result = self._try_docling_extraction(file, file_task)
+            if docling_result is not None:
+                return docling_result
+
+        # Route to user-selected OCR engine
+        if ocr_engine == "ocrmypdf":
+            return self._process_with_ocrmypdf(file, file_task)
+        elif ocr_engine == "mistral_ocr":
+            if not settings.MISTRAL_OCR_ENABLED:
+                raise ValueError(
+                    "Mistral OCR is disabled by server configuration (MISTRAL_OCR_ENABLED=false)."
+                )
+            return self._process_with_mistral_ocr(file, file_task)
+        elif ocr_engine == "llm_vision":
+            if not settings.VISION_OCR_ENABLED:
+                raise ValueError(
+                    "Vision LLM OCR is disabled by server configuration (VISION_OCR_ENABLED=false)."
+                )
+            return self._process_with_llm_vision_ocr(file, file_task)
+        else:
+            raise ValueError(f"Unknown OCR engine: {ocr_engine}")
+
+    def _try_docling_extraction(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document] | None:
+        """Try to extract text from a PDF using Docling.
+
+        Returns documents if sufficient text was extracted, None otherwise.
+        """
+        from ..services.docling_service import DoclingService
+
+        file_content = get_file(file.file_uuid)
+        service = DoclingService()
+        try:
+            md_text = service.process(file_content)
+            # Consider text "sufficient" if it has at least 50 non-whitespace characters
+            if md_text and len(md_text.strip()) > 50:
+                doc = models.Document(
+                    project_id=self.task.project_id,
+                    original_file_id=file.id,
+                    file_preprocessing_task_id=file_task.id,
+                    text=md_text,
+                    document_name=file.file_name,
+                    preprocessing_config_id=self.config.id,
+                    meta_data={
+                        "file_type": file.file_type,
+                        "ocr_engine": "docling",
+                        "extraction_method": "embedded_text",
+                    },
+                )
+                self.db.add(doc)
+                return [doc]
+        except Exception:
+            logger.warning(
+                "Docling extraction failed for %s, falling back to OCR",
+                file.file_name,
+                exc_info=True,
+            )
+        return None
+
+    def _process_with_ocrmypdf(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document]:
+        """Process file using ocrmypdf (Tesseract)."""
+        file_content = get_file(file.file_uuid)
+        additional = self.config.additional_settings or {}
+
+        import tempfile
+
+        import ocrmypdf
+
+        # Write input to temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_in:
+            tmp_in.write(file_content)
+            tmp_in_path = tmp_in.name
+
+        tmp_out_path = tmp_in_path.replace(".pdf", "_ocr.pdf")
+
+        try:
+            # Remove alpha channel from images if present (ocrmypdf doesn't support RGBA)
+            if file.file_type in (
+                models.FileType.IMAGE_PNG,
+                models.FileType.IMAGE_JPEG,
+                "image/png",
+                "image/jpeg",
+            ):
+                from PIL import Image
+
+                img = Image.open(tmp_in_path)
+                if img.mode == "RGBA":
+                    img = img.convert("RGB")
+                    img.save(tmp_in_path)
+
+            # Run ocrmypdf
+            force_ocr = additional.get("force_ocr", False)
+            ocrmypdf.ocr(
+                tmp_in_path,
+                tmp_out_path,
+                force_ocr=force_ocr,
+                language="eng",
+                skip_text=not force_ocr,
+                deskew=True,
+                clean=False,
+                image_dpi=additional.get("image_dpi", 300),
+            )
+
+            # Extract text from OCR'd PDF using pypdf
+            from pypdf import PdfReader
+
+            reader = PdfReader(tmp_out_path)
+            text_parts = []
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text_parts.append(page_text)
+            md_text = "\n\n".join(text_parts)
+
+            doc = models.Document(
+                project_id=self.task.project_id,
+                original_file_id=file.id,
+                file_preprocessing_task_id=file_task.id,
+                text=md_text,
+                document_name=file.file_name,
+                preprocessing_config_id=self.config.id,
+                meta_data={
+                    "file_type": file.file_type,
+                    "ocr_engine": "ocrmypdf",
+                    "force_ocr": additional.get("force_ocr", False),
+                },
+            )
+            self.db.add(doc)
+            return [doc]
+
+        finally:
+            # Clean up temp files
+            import os
+
+            for p in (tmp_in_path, tmp_out_path):
+                try:
+                    os.unlink(p)
+                except OSError:
+                    pass
+
+    def _process_with_docling(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document]:
+        """Process file using Docling (text extraction, no OCR)."""
+        from ..services.docling_service import DoclingService
+
+        file_content = get_file(file.file_uuid)
+        service = DoclingService()
+        md_text = service.process(file_content)
+
+        doc = models.Document(
+            project_id=self.task.project_id,
+            original_file_id=file.id,
+            file_preprocessing_task_id=file_task.id,
+            text=md_text,
+            document_name=file.file_name,
+            preprocessing_config_id=self.config.id,
+            meta_data={
+                "file_type": file.file_type,
+                "ocr_engine": "docling",
+            },
+        )
+        self.db.add(doc)
+        return [doc]
+
+    def _process_with_mistral_ocr(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document]:
+        """Process file using Mistral OCR API."""
+        from ..services.mistral_ocr_service import MistralOCRService
+
+        additional = self.config.additional_settings or {}
+
+        # Get API key: from task metadata (user-set) or fallback to app config
+        api_key = None
+        if self.task.task_metadata:
+            api_key = self.task.task_metadata.get("mistral_api_key")
+        if not api_key:
+            api_key = additional.get("mistral_api_key")
+        if not api_key:
+            api_key = settings.MISTRAL_API_KEY
+        if not api_key:
+            raise ValueError(
+                "Mistral API key is not configured. "
+                "Set it in Additional Settings (mistral_api_key) or in the server config (MISTRAL_API_KEY)."
+            )
+
+        model = additional.get("mistral_model", "mistral-ocr-latest")
+        base_url = settings.MISTRAL_API_BASE
+
+        service = MistralOCRService(api_key=api_key, base_url=base_url, model=model)
+        file_content = get_file(file.file_uuid)
+        result = service.process(file_content)
+
+        doc = models.Document(
+            project_id=self.task.project_id,
+            original_file_id=file.id,
+            file_preprocessing_task_id=file_task.id,
+            text=result.text,
+            document_name=file.file_name,
+            preprocessing_config_id=self.config.id,
+            meta_data={
+                "file_type": file.file_type,
+                "ocr_engine": "mistral_ocr",
+                "model": model,
+            },
+        )
+        self.db.add(doc)
+        return [doc]
+
+    def _process_with_llm_vision_ocr(
+        self, file: models.File, file_task: models.FilePreprocessingTask
+    ) -> List[models.Document]:
+        """Process file using a Vision LLM API."""
+        from ..services.llm_vision_ocr_service import LLMVisionOCRService
+
+        additional = self.config.additional_settings or {}
+
+        # Get API credentials — user per-task settings take priority,
+        # then fall back to server-level VISION_OCR_* config
+        api_key = additional.get("vision_api_key") or settings.VISION_OCR_API_KEY or ""
+        base_url = (
+            additional.get("vision_base_url") or settings.VISION_OCR_API_BASE or ""
+        )
+
+        # Fallback to self.client (the pipeline-level main OpenAI client)
+        if not api_key and self.client:
+            api_key = self.client.api_key or ""
+        if not base_url and self.client:
+            base_url = str(self.client.base_url)
+
+        if not api_key or not base_url:
+            raise ValueError(
+                "Vision LLM API key and base URL are required for llm_vision engine. "
+                "Set them in Additional Settings (vision_api_key, vision_base_url) "
+                "or configure VISION_OCR_API_KEY / VISION_OCR_API_BASE in server settings."
+            )
+
+        model = additional.get("vision_model") or settings.VISION_OCR_MODEL or "gpt-4o"
+        prompt = additional.get("vision_prompt") or settings.VISION_OCR_PROMPT
+        max_image_dim = additional.get("vision_max_image_dim", 2048)
+
+        service = LLMVisionOCRService(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
+            prompt=prompt,
+            max_image_dim=max_image_dim,
+        )
+
+        file_content = get_file(file.file_uuid)
+        is_pdf = file.file_type == models.FileType.APPLICATION_PDF
+        result = service.process(file_content, is_pdf=is_pdf)
+
+        # Surface partial failures as warnings on the file task
+        if result.failed_pages > 0:
+            file_task.warnings = {
+                "messages": result.errors,
+                "failed_pages": result.failed_pages,
+                "total_pages": result.total_pages,
+            }
+
+        doc = models.Document(
+            project_id=self.task.project_id,
+            original_file_id=file.id,
+            file_preprocessing_task_id=file_task.id,
+            text=result.text,
+            document_name=file.file_name,
+            preprocessing_config_id=self.config.id,
+            meta_data={
+                "file_type": file.file_type,
+                "ocr_engine": "llm_vision",
+                "model": model,
+            },
+        )
+        self.db.add(doc)
+        return [doc]
 
     def _process_table_file(
         self, file: models.File, file_task: models.FilePreprocessingTask
@@ -582,21 +714,6 @@ class PreprocessingPipeline:
 
         self.db.add(doc)
         return [doc]
-
-    def _get_config_snapshot(self) -> dict:
-        """Get configuration snapshot for duplicate detection."""
-        return {
-            "file_type": self.config.file_type,
-            "preprocessing_strategy": self.config.preprocessing_strategy,
-            "pdf_backend": self.config.pdf_backend,
-            "ocr_backend": self.config.ocr_backend,
-            "use_ocr": self.config.use_ocr,
-            "force_ocr": self.config.force_ocr,
-            "ocr_languages": self.config.ocr_languages,
-            "ocr_model": self.config.ocr_model,
-            "table_settings": self.config.table_settings,
-            "llm_model": self.config.llm_model,
-        }
 
 
 def process_files_with_config(task_id: int, db: Session):

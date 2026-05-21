@@ -96,24 +96,6 @@
             </select>
           </div>
 
-          <!-- Configuration Filter -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Configuration</label>
-            <select
-              v-model="filters.configId"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Configurations</option>
-              <option
-                v-for="config in configurations"
-                :key="config.id"
-                :value="config.id"
-              >
-                {{ config.name }}
-              </option>
-            </select>
-          </div>
-
           <!-- Date Range -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
@@ -125,21 +107,6 @@
               <option value="today">Today</option>
               <option value="week">Last 7 days</option>
               <option value="month">Last 30 days</option>
-            </select>
-          </div>
-
-          <!-- OCR Language Filter -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">OCR Language</label>
-            <select
-              v-model="filters.ocrLanguage"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Languages</option>
-              <option value="eng">English</option>
-              <option value="spa">Spanish</option>
-              <option value="fra">French</option>
-              <option value="deu">German</option>
             </select>
           </div>
 
@@ -330,10 +297,7 @@
                   {{ doc.preprocessing_config?.name || 'Custom Config' }}
                 </div>
                 <div class="text-xs text-gray-500">
-                  OCR: {{ doc.preprocessing_config?.use_ocr ? 'Yes' : 'No' }}
-                  <span v-if="doc.preprocessing_config?.ocr_languages">
-                    ({{ doc.preprocessing_config.ocr_languages.join(', ') }})
-                  </span>
+                  {{ getEngineLabelWithKey(doc.preprocessing_config?.additional_settings?.ocr_engine) }}
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -487,6 +451,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/services/api.js';
 import { useToast } from 'vue-toastification';
 import { debounce } from 'perfect-debounce';
+import { getEngineLabelWithKey, setEngineLabels } from '@/utils/ocrLabels';
 import FileIcon from '../common/FileIcon.vue';
 import LoadingSpinner from '../common/LoadingSpinner.vue';
 import DocumentViewer from './DocumentViewer.vue';
@@ -506,7 +471,6 @@ const toast = useToast();
 // State
 const documents = ref([]);
 const preprocessingTasks = ref([]);
-const configurations = ref([]);
 const isLoading = ref(true);
 const selectedDocuments = ref([]);
 const viewingDocument = ref(null);
@@ -524,7 +488,6 @@ const totalCount = ref(0);     // total rows on the server (after filters)
 const filters = ref({
   search: '',
   taskId: '',
-  configId: '',
   dateRange: '',
   ocrLanguage: '',
   status: ''
@@ -556,11 +519,6 @@ const filteredDocuments = computed(() => {
     result = result.filter(doc => doc.file_preprocessing_task_id === parseInt(filters.value.taskId));
   }
 
-  // Config filter
-  if (filters.value.configId) {
-    result = result.filter(doc => doc.preprocessing_config?.id === parseInt(filters.value.configId));
-  }
-
   // Date range filter
   if (filters.value.dateRange) {
     const now = new Date();
@@ -581,13 +539,6 @@ const filteredDocuments = computed(() => {
     if (startDate) {
       result = result.filter(doc => new Date(doc.created_at) >= startDate);
     }
-  }
-
-  // OCR language filter
-  if (filters.value.ocrLanguage) {
-    result = result.filter(doc =>
-      doc.preprocessing_config?.ocr_languages?.includes(filters.value.ocrLanguage)
-    );
   }
 
   // Status filter
@@ -655,7 +606,6 @@ const fetchDocuments = async () => {
       limit: itemsPerPage.value,
       offset: (currentPage.value - 1) * itemsPerPage.value,
       file_preprocessing_task_id: filters.value.taskId || undefined,
-      config_id: filters.value.configId || undefined,
       search: filters.value.search || undefined,
       date_from: date_from || undefined,
       date_to: date_to || undefined,
@@ -664,10 +614,6 @@ const fetchDocuments = async () => {
     const { data } = await api.get(`/project/${props.projectId}/document`, { params });
     serverItems.value = data.items;
     totalCount.value = data.total;
-
-    // Optional: keep configurations as you had
-    const configResponse = await api.get(`/project/${props.projectId}/preprocessing-config`);
-    configurations.value = configResponse.data;
 
     // Safety: if you navigated beyond last page due to a filter change, pull back
     if (serverItems.value.length === 0 && totalCount.value > 0 && currentPage.value > totalPages.value) {
@@ -778,20 +724,17 @@ const handleBatchComplete = () => {
 const reprocessDocument = async (doc) => {
   try {
     const fileId = doc.original_file?.id;
-    const configId = doc.preprocessing_config?.id;
     if (!fileId) {
       console.error('Original file id not found for this document!');
       toast.error('Original file id not found for this document!');
       return;
     }
-    if (!configId) {
-      console.error('Preprocessing configuration not found for this document!');
-      toast.error('Preprocessing configuration not found for this document!');
-      return;
-    }
     const payload = {
       file_ids: [fileId],
-      configuration_id: configId,
+      inline_config: {
+        name: `Reprocess ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
+        additional_settings: {},
+      },
       force_reprocess: true
     };
     await api.post(`/project/${props.projectId}/preprocess`, payload);
@@ -812,7 +755,6 @@ const clearFilters = () => {
   filters.value = {
     search: '',
     taskId: '',
-    configId: '',
     dateRange: '',
     ocrLanguage: '',
     status: ''
@@ -857,7 +799,6 @@ watch(() => filters.value.search, debouncedSearch);
 
 watch([
   () => filters.value.taskId,
-  () => filters.value.configId,
   () => filters.value.dateRange,
   //() => filters.value.ocrLanguage,  // only if supported server-side
   //() => filters.value.status        // only if supported server-side
@@ -872,6 +813,8 @@ watch([currentPage, itemsPerPage], fetchDocuments);
 onMounted(() => {
   fetchDocuments();
   fetchDocumentSets();
+  // Load OCR display names from server
+  api.get('/auth/settings').then(r => setEngineLabels(r.data)).catch(() => {});
 });
 </script>
 

@@ -99,21 +99,15 @@
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-gray-500">PDF Backend</dt>
+                    <dt class="text-gray-500">OCR Engine</dt>
                     <dd class="font-medium text-gray-900">
-                      {{ task.configuration?.pdf_backend || 'Default' }}
+                      {{ getEngineLabelWithKey(task.configuration?.additional_settings?.ocr_engine) }}
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-gray-500">OCR Enabled</dt>
+                    <dt class="text-gray-500">Force OCR</dt>
                     <dd class="font-medium text-gray-900">
-                      {{ task.configuration?.use_ocr ? 'Yes' : 'No' }}
-                    </dd>
-                  </div>
-                  <div v-if="task.configuration?.use_ocr">
-                    <dt class="text-gray-500">OCR Languages</dt>
-                    <dd class="font-medium text-gray-900">
-                      {{ task.configuration?.ocr_languages?.join(', ') || 'Default' }}
+                      {{ task.configuration?.additional_settings?.force_ocr ? 'Yes' : 'No' }}
                     </dd>
                   </div>
                 </dl>
@@ -275,6 +269,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { getEngineLabelWithKey } from '@/utils/ocrLabels';
 
 const props = defineProps({
   task: {

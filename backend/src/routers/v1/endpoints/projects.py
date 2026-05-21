@@ -11,16 +11,12 @@ from .files import router as files_router
 from .groundtruth import router as groundtruth_router
 from .llm import router as llm_router
 from .preprocess import router as preprocess_router
-from .preprocessing_config import router as preprocessing_config_router
 from .prompts import router as prompts_router
 from .schemas import router as schemas_router
 from .trials import router as trials_router
 
 router = APIRouter()
 router.include_router(files_router, prefix="/{project_id}/file", tags=["files"])
-router.include_router(
-    preprocessing_config_router, prefix="/{project_id}", tags=["preprocessing-config"]
-)
 router.include_router(preprocess_router, prefix="/{project_id}", tags=["preprocess"])
 router.include_router(documents_router, prefix="/{project_id}", tags=["documents"])
 router.include_router(prompts_router, prefix="/{project_id}/prompt", tags=["prompts"])

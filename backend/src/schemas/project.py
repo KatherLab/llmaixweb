@@ -426,13 +426,6 @@ class TrialResult(TrialResultBase):
 class PreprocessingConfigurationBase(UTCModel):
     name: str
     description: str | None = None
-    pdf_backend: str | None = None
-    ocr_backend: str | None = None
-    use_ocr: bool = True
-    force_ocr: bool = False
-    ocr_languages: list[str] | None = None
-    ocr_model: str | None = None
-    llm_model: str | None = None
     additional_settings: dict | None = None
 
 

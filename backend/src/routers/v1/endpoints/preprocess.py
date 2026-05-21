@@ -55,105 +55,25 @@ async def preprocess_project_data(
     """Start preprocessing with advanced duplicate detection and progress tracking."""
     check_project_access(project_id, current_user, db, "write")
 
-    # Determine configuration to use
-    if preprocessing_task.configuration_id:
-        # Using existing configuration
-        config = db.get(
-            models.PreprocessingConfiguration, preprocessing_task.configuration_id
-        )
-        if not config or config.project_id != project_id:
-            raise HTTPException(status_code=404, detail="Configuration not found")
-    elif preprocessing_task.inline_config:
-        # Check if a matching configuration already exists
-        config_dict = preprocessing_task.inline_config.model_dump(
-            exclude={"bypass_celery"}
-        )
-
-        # Build query to find matching configuration
-        query = db.query(models.PreprocessingConfiguration).filter(
-            models.PreprocessingConfiguration.project_id == project_id,
-            models.PreprocessingConfiguration.pdf_backend
-            == config_dict.get("pdf_backend"),
-            models.PreprocessingConfiguration.ocr_backend
-            == config_dict.get("ocr_backend"),
-            models.PreprocessingConfiguration.use_ocr
-            == config_dict.get("use_ocr", True),
-            models.PreprocessingConfiguration.force_ocr
-            == config_dict.get("force_ocr", False),
-        )
-
-        # Handle None values for ocr_model
-        if config_dict.get("ocr_model") is None:
-            query = query.filter(models.PreprocessingConfiguration.ocr_model.is_(None))
-        else:
-            query = query.filter(
-                models.PreprocessingConfiguration.ocr_model
-                == config_dict.get("ocr_model")
-            )
-
-        # Get all potential matches to check complex fields
-        potential_matches = query.all()
-
-        # Check OCR languages and other complex fields
-        existing_config = None
-        for potential_config in potential_matches:
-            # Compare OCR languages (handle None and empty lists)
-            config_langs = sorted(potential_config.ocr_languages or [])
-            new_langs = sorted(config_dict.get("ocr_languages") or [])
-
-            if config_langs != new_langs:
-                continue
-
-            # Compare additional_settings (handle None)
-            if (potential_config.additional_settings or {}) != (
-                config_dict.get("additional_settings") or {}
-            ):
-                continue
-
-            # For "Quick Process" or similar standard configs, also check the name
-            if config_dict.get("name") in [
-                "Quick Process",
-                "Custom Process",
-                "Standard Process",
-            ]:
-                if potential_config.name == config_dict.get("name"):
-                    existing_config = potential_config
-                    break
-            else:
-                # For other configs, any match is good
-                existing_config = potential_config
-                break
-
-        if existing_config:
-            # Use existing configuration
-            config = existing_config
-        else:
-            # Create new configuration only if none exists
-            config = models.PreprocessingConfiguration(
-                project_id=project_id,
-                name=config_dict.get(
-                    "name", f"Auto-created config {datetime.datetime.now(datetime.UTC)}"
-                ),
-                description=config_dict.get(
-                    "description", "Automatically created configuration"
-                ),
-                pdf_backend=config_dict.get("pdf_backend"),
-                ocr_backend=config_dict.get("ocr_backend"),
-                use_ocr=config_dict.get("use_ocr", True),
-                force_ocr=config_dict.get("force_ocr", False),
-                ocr_languages=config_dict.get("ocr_languages"),
-                ocr_model=config_dict.get("ocr_model"),
-                llm_model=config_dict.get("llm_model"),
-                additional_settings=config_dict.get("additional_settings"),
-            )
-            db.add(config)
-            db.commit()
-            db.refresh(config)
-    else:
+    if not preprocessing_task.inline_config:
         raise HTTPException(
             status_code=400,
-            detail="Either configuration_id or inline_config must be provided",
+            detail="inline_config is required",
         )
+
+    # Create configuration from inline config
+    config_dict = preprocessing_task.inline_config.model_dump(
+        exclude={"bypass_celery"}
+    )
+    config = models.PreprocessingConfiguration(
+        project_id=project_id,
+        name=config_dict.get("name", f"Task {datetime.datetime.now(datetime.UTC)}"),
+        description=config_dict.get("description"),
+        additional_settings=config_dict.get("additional_settings"),
+    )
+    db.add(config)
+    db.commit()
+    db.refresh(config)
 
     # Validate files exist and belong to project
     files = (

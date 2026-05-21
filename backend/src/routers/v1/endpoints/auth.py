@@ -15,7 +15,19 @@ router = APIRouter()
 
 @router.get("/settings")
 def get_settings():
-    return {"require_invitation": settings.REQUIRE_INVITATION}
+    return {
+        "require_invitation": settings.REQUIRE_INVITATION,
+        "mistral_ocr_enabled": settings.MISTRAL_OCR_ENABLED,
+        "mistral_api_base": settings.MISTRAL_API_BASE,
+        "vision_ocr_enabled": settings.VISION_OCR_ENABLED,
+        "vision_ocr_api_base": settings.VISION_OCR_API_BASE,
+        "vision_ocr_model": settings.VISION_OCR_MODEL,
+        "vision_ocr_prompt": settings.VISION_OCR_PROMPT,
+        "mistral_ocr_display_name": settings.MISTRAL_OCR_DISPLAY_NAME,
+        "mistral_ocr_display_subtitle": settings.MISTRAL_OCR_DISPLAY_SUBTITLE,
+        "vision_ocr_display_name": settings.VISION_OCR_DISPLAY_NAME,
+        "vision_ocr_display_subtitle": settings.VISION_OCR_DISPLAY_SUBTITLE,
+    }
 
 
 @router.post("/login", response_model=schemas.Token)

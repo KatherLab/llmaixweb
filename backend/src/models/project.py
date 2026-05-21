@@ -308,17 +308,7 @@ class PreprocessingConfiguration(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(String(500), nullable=True)
 
-    # PDF/Image settings
-    pdf_backend: Mapped[str] = mapped_column(String(50), nullable=True)
-    ocr_backend: Mapped[str] = mapped_column(String(50), nullable=True)
-    use_ocr: Mapped[bool] = mapped_column(Boolean, default=True)
-    force_ocr: Mapped[bool] = mapped_column(Boolean, default=False)
-    ocr_languages: Mapped[list[str]] = mapped_column(JSON, nullable=True)
-    ocr_model: Mapped[str] = mapped_column(String(100), nullable=True)
-
-    # LLM settings (optional)
-    llm_model: Mapped[str] = mapped_column(String(100), nullable=True)
-
+    # Engine settings are stored in additional_settings
     # Additional settings
     additional_settings: Mapped[dict] = mapped_column(JSON, nullable=True)
 

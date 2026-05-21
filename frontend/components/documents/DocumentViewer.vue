@@ -127,18 +127,8 @@
                     <dd class="text-gray-900">{{ document.preprocessing_config?.name || 'Custom' }}</dd>
                   </div>
                   <div>
-                    <dt class="text-gray-500">OCR Enabled</dt>
-                    <dd class="text-gray-900">{{ document.preprocessing_config?.use_ocr ? 'Yes' : 'No' }}</dd>
-                  </div>
-                  <div v-if="document.preprocessing_config?.use_ocr">
-                    <dt class="text-gray-500">OCR Languages</dt>
-                    <dd class="text-gray-900">
-                      {{ document.preprocessing_config?.ocr_languages?.join(', ') || 'Default' }}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt class="text-gray-500">PDF Backend</dt>
-                    <dd class="text-gray-900">{{ document.preprocessing_config?.pdf_backend || 'Default' }}</dd>
+                    <dt class="text-gray-500">OCR Engine</dt>
+                    <dd class="text-gray-900">{{ getEngineLabelWithKey(document.preprocessing_config?.additional_settings?.ocr_engine) }}</dd>
                   </div>
                 </dl>
               </div>
@@ -176,6 +166,7 @@ import { api } from '@/services/api.js'
 import { useToast } from 'vue-toastification'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { getEngineLabelWithKey } from '@/utils/ocrLabels'
 
 const props = defineProps({
   document: { type: Object, required: true },
