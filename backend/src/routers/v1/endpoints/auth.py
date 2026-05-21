@@ -37,7 +37,7 @@ def get_settings():
 
 @router.post("/login", response_model=schemas.Token)
 @router.post("/api/v1/login", response_model=schemas.Token)
-@limiter.limit("10/minute")
+@limiter.limit(None if settings.DISABLE_RATE_LIMIT else "10/minute")
 def login(
     request: Request,
     db: Session = Depends(get_db),

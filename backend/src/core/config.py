@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     DISABLE_CELERY: bool = False
     INITIALIZE_CELERY: bool = True  # Whether to initialize Celery workers on startup
+    DISABLE_RATE_LIMIT: bool = False  # Disable rate limiting (for tests)
 
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
 
