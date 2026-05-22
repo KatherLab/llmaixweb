@@ -9,7 +9,7 @@
 
 A web application that turns unstructured medical/lab documents into structured JSON using LLMs. Upload PDFs, images, or spreadsheets — extract data with configurable schemas and prompts, then evaluate results against ground truth.
 
-**Works with any OpenAI-compatible API:** use official services (OpenAI, Mistral OCR) for convenience, or run everything fully local with self-hosted models (DeepSeek-OCR-2 via KatDocExtract, vision LLMs like Gemma 4 via vLLM) for sensitive environments.
+**Works with any OpenAI-compatible API:** use official services (OpenAI, Mistral OCR) for convenience, or run everything fully local with self-hosted models (DeepSeek-OCR-2 via [KatDocExtract](https://github.com/KatherLab/KatDocExtract), vision LLMs like Gemma 4 via vLLM) for sensitive environments.
 
 ---
 
@@ -65,7 +65,7 @@ docker compose up -d
 |------------------------|-------------------------------------------------------------------------------------------------------|-----------------------------|
 | `compose.yml`          | **Main config** — CPU-only, works with Docker & Podman                                                | No                          |
 | `compose.dev.yml`      | **Optional overlay** — hot-reload for local development                                               | No                          |
-| `compose.deepseek.yml` | **Optional overlay** — self-hosted Mistral OCR API via DeepSeek-OCR-2 + KatDocExtract                 | Yes (24+ GB VRAM)           |
+| `compose.deepseek.yml` | **Optional overlay** — self-hosted Mistral OCR API via DeepSeek-OCR-2 + [KatDocExtract](https://github.com/KatherLab/KatDocExtract) | Yes (24+ GB VRAM)           |
 | `compose.vllm.yml`     | **Optional overlay** — self-hosted OpenAI-compatible endpoint via vLLM (e.g., Gemma 4 for Vision OCR) | Yes (VRAM depends on model) |
 
 **Usage examples:**
@@ -135,7 +135,7 @@ Edit `.env` for your deployment. **At minimum**, configure your LLM provider and
 | `VISION_OCR_API_BASE`     | Vision OCR API base URL               | (empty)                        |
 | `VISION_OCR_MODEL`        | Vision OCR default model              | `gpt-4o`                       |
 
-> **Self-hosted OCR:** Use `docker compose -f compose.yml -f compose.deepseek.yml up -d` for a local Mistral OCR-compatible API (DeepSeek-OCR-2 via KatDocExtract). Use `docker compose -f compose.yml -f compose.vllm.yml up -d` for a local vision LLM endpoint (e.g. Gemma 4). Then set the corresponding `MISTRAL_API_BASE`/`VISION_OCR_API_BASE` env vars. See `.env.example` for details.
+> **Self-hosted OCR:** Use `docker compose -f compose.yml -f compose.deepseek.yml up -d` for a local Mistral OCR-compatible API (DeepSeek-OCR-2 via [KatDocExtract](https://github.com/KatherLab/KatDocExtract)). Use `docker compose -f compose.yml -f compose.vllm.yml up -d` for a local vision LLM endpoint (e.g. Gemma 4). Then set the corresponding `MISTRAL_API_BASE`/`VISION_OCR_API_BASE` env vars. See `.env.example` for details.
 
 <details>
 <summary>Database & Advanced Settings (click to expand)</summary>
