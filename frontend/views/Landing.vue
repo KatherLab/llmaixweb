@@ -231,16 +231,12 @@
                         <p class="text-sm text-slate-400">Industry-standard OCR for printed text</p>
                       </div>
                       <div class="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-                        <h5 class="font-semibold text-white mb-1">Marker</h5>
-                        <p class="text-sm text-slate-400">Advanced neural OCR for complex layouts</p>
+                        <h5 class="font-semibold text-white mb-1">Mistral OCR API</h5>
+                        <p class="text-sm text-slate-400">Best for complex layouts and handwritten text</p>
                       </div>
                       <div class="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-                        <h5 class="font-semibold text-white mb-1">PaddleOCR</h5>
-                        <p class="text-sm text-slate-400">Multi-language support with high accuracy</p>
-                      </div>
-                      <div class="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-                        <h5 class="font-semibold text-white mb-1">Vision LLMs</h5>
-                        <p class="text-sm text-slate-400">AI-powered text extraction from images</p>
+                        <h5 class="font-semibold text-white mb-1">Vision LLM-based OCR</h5>
+                        <p class="text-sm text-slate-400">AI-powered extraction via vision language models</p>
                       </div>
                     </div>
                   </div>
@@ -250,14 +246,6 @@
                       <div class="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
                         <h5 class="font-semibold text-white mb-1">Docling</h5>
                         <p class="text-sm text-slate-400">IBM's document understanding library</p>
-                      </div>
-                      <div class="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-                        <h5 class="font-semibold text-white mb-1">PyMuPDF4LLM</h5>
-                        <p class="text-sm text-slate-400">Optimized PDF parsing for LLMs</p>
-                      </div>
-                      <div class="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-                        <h5 class="font-semibold text-white mb-1">MarkItDown</h5>
-                        <p class="text-sm text-slate-400">Convert documents to clean markdown</p>
                       </div>
                     </div>
                   </div>
@@ -790,7 +778,7 @@
                 </svg>
               </div>
               <h3 class="mb-2 text-lg font-bold text-white">Advanced OCR Pipeline</h3>
-              <p class="text-sm text-slate-300">Extract text from any document format using Tesseract, Marker, PaddleOCR, or vision LLMs.</p>
+              <p class="text-sm text-slate-300">Extract text from any document format using Tesseract, Mistral OCR API, or vision LLM-based OCR.</p>
             </div>
           </div>
 
