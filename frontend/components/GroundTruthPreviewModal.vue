@@ -2,11 +2,11 @@
   <Teleport to="body">
     <transition name="fade">
       <div
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2.5px] p-2"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-2"
         @click="close"
       >
         <div
-          class="bg-white/90 rounded-2xl border border-blue-100 shadow-2xl w-full max-w-8xl min-h-[420px] max-h-[90vh] flex flex-col overflow-hidden"
+          class="bg-white/90 rounded-2xl border border-gray-200 shadow-2xl w-full max-w-8xl min-h-[420px] max-h-[90vh] flex flex-col overflow-hidden"
           @click.stop
         >
           <!-- HEADER -->
@@ -244,12 +244,15 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useToast } from "vue-toastification";
 import { useFloating, offset, flip, shift, autoUpdate } from "@floating-ui/vue";
+import { useScrollLock } from '@/composables/useScrollLock';
 import FieldTree from "@/components/groundtruth/FieldTree.vue";
 import MappingList from "@/components/groundtruth/MappingList.vue";
 import ValidationBanner from "@/components/groundtruth/ValidationBanner.vue";
 import GroundTruthSample from "@/components/groundtruth/GroundTruthSample.vue";
 import IdFieldSelector from "@/components/groundtruth/IdFieldSelector.vue";
 import { api } from "@/services/api";
+
+useScrollLock({ autoLock: true });
 
 const props = defineProps({
   projectId: [String, Number],

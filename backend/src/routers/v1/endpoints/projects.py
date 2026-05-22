@@ -59,10 +59,14 @@ def check_project_access(
 def get_projects(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
+    all: bool = False,
 ) -> list[schemas.Project]:
     stmt = select(models.Project)
 
-    if current_user.role != "admin":
+    if current_user.role == "admin":
+        if not all:
+            stmt = stmt.where(models.Project.owner_id == current_user.id)
+    else:
         stmt = stmt.where(models.Project.owner_id == current_user.id)
 
     stmt = stmt.options(

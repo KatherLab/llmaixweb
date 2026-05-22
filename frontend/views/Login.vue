@@ -33,6 +33,11 @@
           placeholder="Password"
           autocomplete="current-password"
         />
+        <div class="mt-1 text-right">
+          <router-link to="/forgot-password" class="text-xs text-blue-600 hover:underline">
+            Forgot your password?
+          </router-link>
+        </div>
       </div>
       <button
         type="submit"

@@ -1,11 +1,11 @@
 <template>
   <Teleport to="body">
     <!-- Overlay with blur and dark transparent background -->
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      @click.self="$emit('close')"
-      style="backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(30,30,40,0.27);"
-    >
+    <transition name="fade">
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+        @click.self="$emit('close')"
+      >
       <!-- Modal Container -->
       <div
         class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] border border-gray-200"
@@ -161,6 +161,7 @@
         </div>
       </div>
     </div>
+    </transition>
   </Teleport>
 </template>
 
@@ -168,6 +169,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { api } from '@/services/api.js';
 import { useToast } from 'vue-toastification';
+import { useScrollLock } from '@/composables/useScrollLock';
 
 const props = defineProps({
   action: { type: String, required: true },
@@ -261,14 +263,22 @@ const deleteDocuments = async () => {
 };
 
 // Lifecycle
+useScrollLock({ autoLock: true });
+
 onMounted(() => {
-  document.body.style.overflow = 'hidden';
   nextTick(() => {
     modalRef.value?.focus();
   });
 });
-
-onUnmounted(() => {
-  document.body.style.overflow = '';
-});
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

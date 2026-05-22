@@ -1,23 +1,23 @@
 <template>
   <teleport to="body">
-    <div
-      class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      @click.self="$emit('close')"
-    >
-      <div class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-all"></div>
+    <transition name="fade">
       <div
-        class="relative bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden"
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
+        @click.self="$emit('close')"
+      >
+      <div
+        class="relative bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden"
         @click.stop
       >
         <!-- Header -->
-        <div class="px-8 py-6 border-b flex justify-between items-center rounded-t-3xl bg-white/90">
+        <div class="px-8 py-6 border-b flex justify-between items-center rounded-t-2xl bg-gray-50">
           <div>
             <h3 class="text-2xl font-bold text-gray-900">Evaluation Analysis</h3>
             <p v-if="evaluation" class="text-sm text-gray-500">
               Trial #{{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}
             </p>
           </div>
-          <button @click="$emit('close')" class="text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Close">
+          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Close">
             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -137,7 +137,7 @@
         </div>
 
         <!-- Footer -->
-        <div class="px-8 py-6 border-t flex justify-between items-center bg-white/90 rounded-b-3xl">
+        <div class="px-8 py-6 border-t flex justify-between items-center bg-gray-50 rounded-b-2xl">
           <div class="text-sm text-gray-500">
             {{ evaluationDetail?.document_count || 0 }} documents •
             {{ evaluationDetail ? (evaluationDetail.metrics.accuracy * 100).toFixed(1) : '0.0' }}% accuracy
@@ -151,14 +151,18 @@
         </div>
       </div>
     </div>
+    </transition>
   </teleport>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { api } from '@/services/api.js';
 import { formatDate } from '@/utils/formatters.js';
 import { useToast } from 'vue-toastification';
+import { useScrollLock } from '@/composables/useScrollLock';
+
+useScrollLock({ autoLock: true });
 
 // Import sub-components
 import EvaluationOverview from '@/components/EvaluationOverview.vue';
@@ -426,9 +430,6 @@ const viewIndividualDocument = async (documentId) => {
     }
   }
 };
-
-watch(() => true, () => { document.body.style.overflow = 'hidden'; }, { immediate: true });
-onUnmounted(() => { document.body.style.overflow = ''; });
 
 onMounted(() => {
   fetchAllData();

@@ -3,17 +3,16 @@
     <transition name="fade">
       <div
         v-if="open"
-        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
         @click="handleBackdropClick"
       >
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
         <div
-          class="relative bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col overflow-hidden ring-1 ring-blue-100"
+          class="relative bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col overflow-hidden border border-gray-200"
           @click.stop
         >
-          <div class="px-8 py-6 border-b flex justify-between items-center rounded-t-3xl bg-white">
-            <h3 class="text-2xl font-bold tracking-tight">Start New Trial</h3>
-            <button aria-label="Close modal" class="text-gray-500 hover:text-gray-700" @click="tryClose">
+          <div class="px-8 py-6 border-b bg-gray-50 rounded-t-2xl flex justify-between items-center">
+            <h3 class="text-2xl font-bold tracking-tight text-gray-900">Start New Trial</h3>
+            <button aria-label="Close modal" class="text-gray-400 hover:text-gray-600 transition-colors" @click="tryClose">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
               </svg>
@@ -635,7 +634,7 @@
             </div>
           </div>
 
-          <div class="px-8 py-6 border-t flex justify-end gap-2 bg-white rounded-b-3xl">
+          <div class="px-8 py-6 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-2">
             <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md" @click="tryClose">
               Cancel
             </button>
@@ -655,10 +654,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { formatDate } from '@/utils/formatters.js';
 import { api } from '@/services/api.js';
 import { useToast } from 'vue-toastification';
+import { useScrollLock } from '@/composables/useScrollLock';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 
 const toast = useToast();
@@ -698,11 +698,6 @@ const dateRange = ref({ start: '', end: '' });
 const showSelectedDocs = ref(false);
 const isSelectingAll = ref(false);
 
-/* -------------------------------------------------------
- * Scroll lock
- * -----------------------------------------------------*/
-const lockScroll = () => { document.body.style.overflow = 'hidden'; };
-const unlockScroll = () => { document.body.style.overflow = ''; };
 
 /* -------------------------------------------------------
  * Backend-driven: Document groups / previous trials / configs
@@ -1257,6 +1252,8 @@ const handleBackdropClick = (e) => {
 /* -------------------------------------------------------
  * Watchers
  * -----------------------------------------------------*/
+useScrollLock({ watch: () => props.open });
+
 watch(() => props.open, (newValue) => {
   if (newValue) {
     initializeForm();
@@ -1310,14 +1307,9 @@ watch(() => page.value, () => {
   if (documentSelectionMode.value === 'individual') fetchDocuments();
 });
 
-// keep original scroll lock
-watch(() => props.open, v => v ? lockScroll() : unlockScroll());
-
 onMounted(() => {
-  if (props.open) lockScroll();
   if (documentSelectionMode.value === 'individual') fetchDocuments({ reset: true });
 });
-onUnmounted(unlockScroll);
 </script>
 
 <style scoped>

@@ -1,16 +1,17 @@
 <template>
   <Teleport to="body">
-    <div
-      class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
-      @click="$emit('close')"
-    >
+    <transition name="fade">
       <div
-        class="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] flex flex-col"
-        @click.stop
+        class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
+        @click="$emit('close')"
       >
-        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 class="text-lg font-medium text-gray-900">Field Errors: {{ fieldName }}</h3>
-          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-500">
+        <div
+          class="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[90vh] flex flex-col"
+          @click.stop
+        >
+          <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+            <h3 class="text-lg font-semibold text-gray-900">Field Errors: {{ fieldName }}</h3>
+            <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -101,7 +102,7 @@
           </div>
         </div>
 
-        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3 bg-gray-50 rounded-b-2xl">
           <button
             @click="$emit('close')"
             class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
@@ -111,6 +112,7 @@
         </div>
       </div>
     </div>
+    </transition>
   </Teleport>
 </template>
 
@@ -118,6 +120,9 @@
 import { ref, onMounted } from 'vue';
 import { api } from '@/services/api.js';
 import { useToast } from 'vue-toastification';
+import { useScrollLock } from '@/composables/useScrollLock';
+
+useScrollLock({ autoLock: true });
 
 const props = defineProps({
   projectId: {
@@ -194,3 +199,14 @@ onMounted(() => {
   fetchFieldErrors();
 });
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

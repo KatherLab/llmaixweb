@@ -1,16 +1,17 @@
 <template>
   <Teleport to="body">
-    <div
-      class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
-      @click="handleClose"
-    >
+    <transition name="fade">
       <div
-        class="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col"
-        @click.stop
+        class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
+        @click="handleClose"
       >
-        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 class="text-lg font-medium text-gray-900">Evaluate Trial</h3>
-          <button @click="handleClose" class="text-gray-400 hover:text-gray-500">
+        <div
+          class="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-2xl max-h-[90vh] flex flex-col"
+          @click.stop
+        >
+          <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+            <h3 class="text-lg font-semibold text-gray-900">Evaluate Trial</h3>
+            <button @click="handleClose" class="text-gray-400 hover:text-gray-600 transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -203,7 +204,7 @@
           </div>
         </div>
 
-        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3 bg-gray-50 rounded-b-2xl">
           <button
             type="button"
             @click="handleClose"
@@ -239,15 +240,19 @@
         />
       </div>
     </div>
+    </transition>
   </Teleport>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import { api } from '@/services/api';
 import { formatDate } from '@/utils/formatters';
 import { useToast } from 'vue-toastification';
 import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue';
+import { useScrollLock } from '@/composables/useScrollLock';
+
+useScrollLock({ autoLock: true });
 
 const props = defineProps({
   projectId: {
@@ -566,34 +571,22 @@ const onMappingConfigured = async () => {
   }
 };
 
-/** BODY SCROLL LOCK LOGIC **/
-const lockBodyScroll = () => {
-  if (typeof window !== 'undefined') {
-    document.body.classList.add('no-scroll');
-  }
-};
-const unlockBodyScroll = () => {
-  if (typeof window !== 'undefined') {
-    document.body.classList.remove('no-scroll');
-  }
-};
-
 const handleClose = () => {
-  unlockBodyScroll();
   emit('close');
 };
 
 onMounted(() => {
-  lockBodyScroll();
   fetchData();
-});
-onBeforeUnmount(() => {
-  unlockBodyScroll();
 });
 </script>
 
-<style>
-.no-scroll {
-  overflow: hidden !important;
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

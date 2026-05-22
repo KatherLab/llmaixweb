@@ -1,6 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.src.utils.enums import UserRole
+
 
 @pytest.fixture
 def api_url():
@@ -345,24 +347,71 @@ def test_toggle_user_status(client, api_url):
     restore_user(toggle_test_email, test_password, UserRole.user, True)
 
 
-# Test Reset Password
+# Test Reset Password flow
 def test_reset_password(client, api_url):
-    user_data = {
-        "username": "test@example.com",
-        "password": "testpassword",
-    }
-    response = client.post(f"{api_url}/auth/login", data=user_data)
-    assert response.status_code == 200
-    access_token = response.json()["access_token"]
-    headers = {"Authorization": f"Bearer {access_token}"}
-    new_password = "testpassword"
+    from backend.src.db.session import SessionLocal
+    from backend.src.models import PasswordResetToken
+
+    # Step 1: Request password reset (always returns success to prevent enumeration)
     response = client.post(
-        f"{api_url}/user/reset-password?new_password={new_password}", headers=headers
+        f"{api_url}/user/forgot-password",
+        json={"email": "test@example.com"},
     )
-    # Not implemented in yet, so we expect a 501 Not Implemented status
-    print(response.json())
-    assert response.status_code == 501
-    # assert response.json()["email"] == user_data["username"]
+    assert response.status_code == 200
+    assert "message" in response.json()
+
+    # Step 2: Check that a reset token was created
+    db = SessionLocal()
+    reset_token = (
+        db.query(PasswordResetToken)
+        .join(PasswordResetToken.user)
+        .filter(PasswordResetToken.user.has(email="test@example.com"))
+        .first()
+    )
+    assert reset_token is not None
+    token = reset_token.token
+    db.close()
+
+    # Step 3: Validate the reset token
+    response = client.get(f"{api_url}/user/validate-reset-token/{token}")
+    assert response.status_code == 200
+    assert response.json()["valid"] is True
+
+    # Step 4: Reset the password using the token
+    new_password = "newtestpassword123"
+    response = client.post(
+        f"{api_url}/user/reset-password/{token}",
+        json={"token": token, "new_password": new_password},
+    )
+    assert response.status_code == 200
+    assert response.json()["message"] == "Password has been reset successfully."
+
+    # Step 5: Verify old password no longer works
+    response = client.post(
+        f"{api_url}/auth/login",
+        data={"username": "test@example.com", "password": "testpassword"},
+    )
+    assert response.status_code == 401
+
+    # Step 6: Verify new password works
+    response = client.post(
+        f"{api_url}/auth/login",
+        data={"username": "test@example.com", "password": new_password},
+    )
+    assert response.status_code == 200
+
+    # Step 7: Test with invalid token
+    response = client.get(f"{api_url}/user/validate-reset-token/invalid_token_123")
+    assert response.status_code == 404
+
+    # Step 8: Test that used token is now invalid
+    response = client.get(f"{api_url}/user/validate-reset-token/{token}")
+    assert response.status_code == 404
+
+    # Restore original password
+    from .helpers import restore_user
+
+    restore_user("test@example.com", "testpassword", UserRole.user, True)
 
 
 # Test Delete User (admin only)

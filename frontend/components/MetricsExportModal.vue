@@ -1,16 +1,17 @@
 <template>
   <Teleport to="body">
-    <div
-      class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
-      @click="$emit('close')"
-    >
+    <transition name="fade">
       <div
-        class="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col"
-        @click.stop
+        class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
+        @click="$emit('close')"
       >
-        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 class="text-lg font-medium text-gray-900">Export Evaluation Report</h3>
-          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-500">
+        <div
+          class="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-2xl max-h-[90vh] flex flex-col"
+          @click.stop
+        >
+          <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+            <h3 class="text-lg font-semibold text-gray-900">Export Evaluation Report</h3>
+            <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -209,7 +210,7 @@
           </div>
         </div>
 
-        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3 bg-gray-50 rounded-b-2xl">
           <button
             type="button"
             @click="$emit('close')"
@@ -239,14 +240,18 @@
         </div>
       </div>
     </div>
+    </transition>
   </Teleport>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import { api } from '@/services/api';
 import { formatDate } from '@/utils/formatters';
 import { useToast } from 'vue-toastification';
+import { useScrollLock } from '@/composables/useScrollLock';
+
+useScrollLock({ autoLock: true });
 
 const props = defineProps({
   projectId: {
@@ -304,26 +309,6 @@ const toggleSelectAll = () => {
   }
 };
 
-// Lock background scroll when modal is open
-const lockScroll = () => {
-  document.body.style.overflow = 'hidden';
-};
-const unlockScroll = () => {
-  document.body.style.overflow = '';
-};
-
-onMounted(() => {
-  lockScroll();
-});
-onBeforeUnmount(() => {
-  unlockScroll();
-});
-
-// Also unlock scroll when modal closes via emit
-watch(() => emit, (val, oldVal) => {
-  if (!val) unlockScroll();
-});
-
 const exportReport = async () => {
   if (selectedEvaluations.value.length === 0) {
     toast.warning('Please select at least one evaluation to export');
@@ -372,3 +357,14 @@ const exportReport = async () => {
   }
 };
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

@@ -1,16 +1,17 @@
 <template>
   <Teleport to="body">
-    <div
-      class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
-      @click="$emit('close')"
-    >
+    <transition name="fade">
       <div
-        class="bg-white rounded-lg shadow-lg w-full max-w-lg overflow-auto max-h-[90vh]"
-        @click.stop
+        class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
+        @click="$emit('close')"
       >
-        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 class="text-lg font-medium text-gray-900">Upload Ground Truth</h3>
-          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-500">
+        <div
+          class="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-auto max-h-[90vh]"
+          @click.stop
+        >
+          <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+            <h3 class="text-lg font-semibold text-gray-900">Upload Ground Truth</h3>
+            <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -131,13 +132,17 @@
         </div>
       </div>
     </div>
+    </transition>
   </Teleport>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
+import { useScrollLock } from '@/composables/useScrollLock';
+
+useScrollLock({ autoLock: true });
 
 const props = defineProps({
   projectId: {
@@ -250,13 +255,15 @@ const uploadGroundTruth = async () => {
     isUploading.value = false;
   }
 };
-
-// Disable background scroll when modal is mounted, re-enable on unmount
-onMounted(() => {
-  document.body.style.overflow = 'hidden';
-});
-
-onBeforeUnmount(() => {
-  document.body.style.overflow = '';
-});
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

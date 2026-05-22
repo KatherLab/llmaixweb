@@ -1,5 +1,5 @@
 ### ── Build stage ───────────────────────────────────────────────────
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 
 ARG GIT_COMMIT_HASH=unknown
 ENV VITE_GIT_COMMIT_HASH=${GIT_COMMIT_HASH}

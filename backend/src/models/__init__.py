@@ -25,7 +25,7 @@ from .project import (
     TrialResult,
     TrialStatus,
 )
-from .user import Invitation, User, UserRole
+from .user import Invitation, PasswordResetToken, User, UserRole
 
 __all__ = [
     "AppSetting",
@@ -56,4 +56,5 @@ __all__ = [
     "FieldType",
     "FieldMapping",
     "EvaluationMetric",
+    "PasswordResetToken",
 ]

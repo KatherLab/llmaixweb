@@ -150,7 +150,7 @@ const saving = ref(false)
 const error = ref('')
 const success = ref(false)
 
-const categories = ["All", "General", "OpenAI", "OCR", "Storage", "Database", "Security", "Celery"]
+const categories = ["All", "General", "OpenAI", "OCR", "Storage", "Database", "Security", "Celery", "Email"]
 const activeTab = ref("All")
 
 const filteredSettings = computed(() => {

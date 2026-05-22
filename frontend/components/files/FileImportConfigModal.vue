@@ -1,10 +1,10 @@
 <template>
   <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      @click.self="tryClose"
-      style="backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background: rgba(25,30,40,0.30);"
-    >
+    <transition name="fade">
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+        @click.self="tryClose"
+      >
       <div
         class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl sm:max-w-3xl md:max-w-4xl lg:max-w-[90vw] flex flex-col max-h-[95vh] border border-gray-200"
         tabindex="0"
@@ -172,6 +172,7 @@
         </div>
       </div>
     </div>
+    </transition>
   </Teleport>
 </template>
 
@@ -179,6 +180,7 @@
 import { ref, watch, onMounted, nextTick, computed, onUnmounted } from 'vue'
 import { api } from '@/services/api'
 import { useToast } from 'vue-toastification'
+import { useScrollLock } from '@/composables/useScrollLock';
 
 const props = defineProps({
   file: { type: Object, required: true },
@@ -219,6 +221,8 @@ const saving = ref(false);
 const modalRef = ref(null);
 const showConfirm = ref(false);
 const initialConfig = ref({});
+
+useScrollLock({ autoLock: true });
 
 // Derived header labels (no null/empty headers)
 const headerLabels = computed(() =>
@@ -320,6 +324,8 @@ const loadPreview = async () => {
   }
 };
 
+useScrollLock({ autoLock: true });
+
 onMounted(async () => {
   // Pre-fill from metadata if available
   const meta = props.file.file_metadata || {};
@@ -336,7 +342,6 @@ onMounted(async () => {
 
   nextTick(() => {
     if (modalRef.value) modalRef.value.focus();
-    document.body.style.overflow = 'hidden';
   });
   resetInitialConfig();
 });
@@ -344,10 +349,6 @@ onMounted(async () => {
 // Re-load preview when these change
 watch([delimiter, encoding, sheet, hasHeader], async () => {
   await loadPreview();
-});
-
-onUnmounted(() => {
-  document.body.style.overflow = '';
 });
 
 const saveConfig = async () => {
@@ -395,7 +396,17 @@ function confirmClose() {
   doClose();
 }
 function doClose() {
-  document.body.style.overflow = '';
   emit('close');
 }
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

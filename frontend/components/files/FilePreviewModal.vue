@@ -1,13 +1,14 @@
 <template>
   <Teleport to="body">
-    <div
-      class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
-      @click="$emit('close')"
-    >
+    <transition name="fade">
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col border border-gray-200"
-        @click.stop
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+        @click="$emit('close')"
       >
+        <div
+          class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col border border-gray-200"
+          @click.stop
+        >
         <!-- Header -->
         <div class="flex justify-between items-center p-6 border-b bg-gray-50 rounded-t-2xl">
           <div class="flex items-center gap-4">
@@ -31,7 +32,7 @@
             </button>
             <button
               @click="$emit('close')"
-              class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition"
+              class="p-2 text-gray-400 hover:text-gray-600 transition-colors"
             >
               <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -209,7 +210,8 @@
             <span v-if="copied" class="ml-2 text-green-700 text-xs">Copied!</span>
         </div>
       </div>
-    </div>
+        </div>
+    </transition>
   </Teleport>
 </template>
 
@@ -217,8 +219,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
+import { useScrollLock } from '@/composables/useScrollLock';
 import FileIcon from '@/components/common/FileIcon.vue';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
+
+useScrollLock({ autoLock: true });
 
 const props = defineProps({
   file: { type: Object, required: true },
@@ -418,13 +423,11 @@ const formatDate = (dateString) => {
 
 onMounted(() => {
   loadPreview();
-  document.body.style.overflow = 'hidden';
 });
 onUnmounted(() => {
   if (previewUrl.value) {
     URL.revokeObjectURL(previewUrl.value);
   }
-  document.body.style.overflow = '';
 });
 
 function cellClasses(headerLabel) {
@@ -446,3 +449,14 @@ function isTextColumn(headerLabel) {
   return textColumns.value && textColumns.value.includes(headerLabel);
 }
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

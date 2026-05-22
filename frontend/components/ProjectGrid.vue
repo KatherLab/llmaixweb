@@ -1,6 +1,17 @@
 <template>
-  <div style="height: 500px; width: 100%">
-    <AgGridVue
+  <div>
+    <div v-if="isAdmin" class="flex items-center mb-3">
+      <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          v-model="showAllProjects"
+          class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+        />
+        <span class="text-sm text-gray-700">Show all users' projects</span>
+      </label>
+    </div>
+    <div style="height: 500px; width: 100%">
+      <AgGridVue
       :rowData="rowData"
       :columnDefs="columnDefs"
       :defaultColDef="defaultColDef"
@@ -16,6 +27,7 @@
       @first-data-rendered="onFirstDataRendered"
       @grid-size-changed="onGridSizeChanged"
     />
+    </div>
   </div>
 </template>
 
@@ -47,6 +59,7 @@ const gridTheme = themeMaterial.withParams({
 const rowData = ref([])
 const gridApi = ref(null)
 const isAdmin = computed(() => authStore.user?.role === 'admin')
+const showAllProjects = ref(false)
 
 // ---- Vue cell components (render functions; no runtime compiler needed) ----
 const ProjectCell = defineComponent({
@@ -197,7 +210,8 @@ onBeforeUnmount(() => { gridApi.value = null })
 // ---- data ----
 const loadProjects = async () => {
   try {
-    const response = await http.get('/project')
+    const params = isAdmin.value && showAllProjects.value ? { all: true } : {}
+    const response = await http.get('/project', { params })
     rowData.value = response.data.map(project => ({
       ...project,
       user: {
@@ -219,6 +233,12 @@ watch(isAdmin, async () => {
     api.updateGridOptions({ columnDefs: baseColumnsComputed.value }) // v31+ options API
     if (savedState) api.applyColumnState({ state: savedState, applyOrder: true })
   }
+  showAllProjects.value = false
+  await loadProjects()
+})
+
+// reload when show all projects toggle changes
+watch(showAllProjects, async () => {
   await loadProjects()
 })
 

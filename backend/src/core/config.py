@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "llmaixweb"
-    SQLALCHEMY_DATABASE_URI: str | None = "sqlite:///database.db"
+    SQLALCHEMY_DATABASE_URI: str | None = None
 
     # storing files in S3
     AWS_ACCESS_KEY_ID: str = ""
@@ -64,6 +64,16 @@ class Settings(BaseSettings):
     DISABLE_RATE_LIMIT: bool = False  # Disable rate limiting (for tests)
 
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
+
+    # Email / SMTP settings
+    EMAIL_ENABLED: bool = False
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_ADDRESS: str = ""
+    SMTP_FROM_NAME: str = "LLMAIx Web"
+    SMTP_USE_TLS: bool = True
 
     CELERY_PREPROCESS_POOL: str = Field(
         default="auto",  # auto | solo | prefork
@@ -117,6 +127,10 @@ class Settings(BaseSettings):
             self.SQLALCHEMY_DATABASE_URI = (
                 f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
                 f"@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
+            )
+            print(
+                f"INFO: SQLALCHEMY_DATABASE_URI not explicitly set — "
+                f"derived from POSTGRES_* defaults: postgresql://{self.POSTGRES_USER}:****@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
             )
 
         # Skip runtime checks for operations like Alembic migrations
@@ -384,6 +398,62 @@ SETTINGS_META = {
         "readonly": False,
         "category": "Celery",
         "label": "Disable Celery",
+    },
+    "EMAIL_ENABLED": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Email",
+        "label": "Email Enabled",
+    },
+    "SMTP_HOST": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "Email",
+        "label": "SMTP Host",
+    },
+    "SMTP_PORT": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Email",
+        "label": "SMTP Port",
+    },
+    "SMTP_USERNAME": {
+        "type": "str",
+        "secret": True,
+        "readonly": False,
+        "category": "Email",
+        "label": "SMTP Username",
+    },
+    "SMTP_PASSWORD": {
+        "type": "str",
+        "secret": True,
+        "readonly": False,
+        "category": "Email",
+        "label": "SMTP Password",
+    },
+    "SMTP_FROM_ADDRESS": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "Email",
+        "label": "From Address",
+    },
+    "SMTP_FROM_NAME": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "Email",
+        "label": "From Name",
+    },
+    "SMTP_USE_TLS": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Email",
+        "label": "Use TLS",
     },
     "BACKEND_CORS_ORIGINS": {
         "type": "str",

@@ -1,7 +1,8 @@
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
+import { useScrollLock } from '@/composables/useScrollLock';
 
 const props = defineProps({
   open: Boolean,
@@ -21,20 +22,14 @@ const isCsvZip = computed(() => format.value === 'csv' && includeContent.value);
 const isCsvOnly = computed(() => format.value === 'csv' && !includeContent.value);
 const fileExt = computed(() => isCsvOnly.value ? 'csv' : 'zip');
 
-function lockBodyScroll() { document.body.style.overflow = 'hidden'; }
-function unlockBodyScroll() { document.body.style.overflow = ''; }
+useScrollLock({ watch: () => props.open });
 
 watch(() => props.open, (open) => {
   if (open) {
     format.value = 'json';
     includeContent.value = true;
-    lockBodyScroll();
-  } else {
-    unlockBodyScroll();
   }
 });
-onMounted(() => { if (props.open) lockBodyScroll(); });
-onBeforeUnmount(unlockBodyScroll);
 
 async function download() {
   if (isDownloading.value) return;
@@ -64,13 +59,13 @@ async function download() {
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="open"
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      style="backdrop-filter: blur(8px); background: rgba(30,30,40,0.27);"
-      @click.self="$emit('close')"
-    >
-      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 flex flex-col max-h-[80vh] overflow-auto">
+    <transition name="fade">
+      <div
+        v-if="open"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+        @click.self="$emit('close')"
+      >
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 flex flex-col max-h-[80vh] overflow-auto border border-gray-200">
         <h3 class="text-lg font-semibold text-gray-900 mb-2">Download Trial Results</h3>
 
         <div class="mb-4 flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded px-3 py-2 border border-gray-100">
@@ -148,5 +143,17 @@ async function download() {
         </div>
       </div>
     </div>
+    </transition>
   </Teleport>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

@@ -34,9 +34,7 @@
           :rowData="users"
           :search="userSearch"
           :theme="materialTheme"
-          @toggle-requested="confirmToggleUserStatus"
-          @delete-requested="confirmDeleteUser"
-          @set-password-requested="openSetPasswordModal" />
+          @edit-requested="openEditModal" />
       </section>
 
       <section class="card">
@@ -64,6 +62,7 @@
                         :onGridReady="onInvitationGridReady" />
       </section>
 
+      <!-- === INVITE MODAL === -->
       <transition name="fade">
         <div v-if="showInviteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-4" @click="closeInviteModal">
           <div class="bg-white/90 rounded-2xl shadow-2xl w-full max-w-md" @click.stop style="backdrop-filter: blur(12px);">
@@ -88,12 +87,26 @@
                     placeholder="Enter email address"
                   />
                 </div>
+                <div class="mb-5">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" v-model="sendInviteEmail" class="rounded border-gray-300 text-blue-600" />
+                    <span class="text-sm text-gray-700">Send invitation via email</span>
+                  </label>
+                </div>
                 <div v-if="inviteError" class="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-md">
                   {{ inviteError }}
                 </div>
                 <div v-if="inviteSuccess" class="mb-4">
-                  <div class="p-3 bg-green-50 text-green-700 text-xs rounded-md mb-2">
-                    Invitation sent! Email will be auto-filled in registration.
+                  <div
+                    class="p-3 text-xs rounded-md mb-2"
+                    :class="inviteEmailSent ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'"
+                  >
+                    <template v-if="inviteEmailSent">
+                      Invitation sent to email successfully!
+                    </template>
+                    <template v-else>
+                      Invitation created but email delivery is not configured. Copy the link manually.
+                    </template>
                   </div>
                   <div class="flex items-center mt-2 gap-2">
                     <input
@@ -134,97 +147,151 @@
           </div>
         </div>
       </transition>
+
+      <!-- === UNIFIED EDIT USER MODAL === -->
       <transition name="fade">
-        <div v-if="setPasswordUser" class="fixed inset-0 bg-black/30 backdrop-blur flex items-center justify-center z-50" @click="setPasswordUser = null">
-          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
-            <form @submit.prevent="setPassword">
-              <div class="px-8 py-6">
-                <div class="flex justify-between items-center mb-6">
-                  <h3 class="text-lg font-bold text-gray-900">Set User Password</h3>
-                  <button type="button" @click="setPasswordUser = null" class="text-gray-400 hover:text-gray-500">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                  </button>
+        <div v-if="editUser" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-4" @click="closeEditModal">
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" @click.stop>
+            <!-- Header -->
+            <div class="flex items-center justify-between px-8 pt-7 pb-4 border-b border-gray-100">
+              <div>
+                <h3 class="text-lg font-bold text-gray-900">Edit User</h3>
+                <p class="text-sm text-gray-500 mt-0.5">#{{ editUser.id }} &middot; {{ editUser.email }}</p>
+              </div>
+              <button @click="closeEditModal" class="text-gray-400 hover:text-gray-500 transition-colors">
+                <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="px-8 py-6 space-y-6">
+              <!-- Error / Success -->
+              <div v-if="editError" class="p-3 bg-red-50 text-red-700 text-xs rounded-md">{{ editError }}</div>
+              <div v-if="editSuccess" class="p-3 bg-green-50 text-green-700 text-xs rounded-md">User updated successfully!</div>
+              <div v-if="setPasswordSuccessMsg" class="p-3 bg-green-50 text-green-700 text-xs rounded-md">Password updated successfully!</div>
+
+              <!-- === General Settings === -->
+              <div>
+                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">General</h4>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">Full Name</label>
+                    <input
+                      v-model="editForm.full_name"
+                      type="text"
+                      class="block w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">Email</label>
+                    <input
+                      v-model="editForm.email"
+                      type="email"
+                      class="block w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
+                  <div class="flex gap-4">
+                    <div class="flex-1">
+                      <label class="block text-xs font-bold text-gray-600 mb-1">Role</label>
+                      <select
+                        v-model="editForm.role"
+                        class="block w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400"
+                        :disabled="editUser.id === currentUserId"
+                      >
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <p v-if="editUser.id === currentUserId" class="text-xs text-amber-600 mt-1">You cannot change your own role.</p>
+                    </div>
+                    <div class="flex-1">
+                      <label class="block text-xs font-bold text-gray-600 mb-1">Status</label>
+                      <div class="flex items-center gap-3 mt-2">
+                        <button
+                          type="button"
+                          @click="toggleEditUserActive"
+                          class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                          :class="[editForm.is_active ? 'bg-green-500' : 'bg-gray-300', editUser.id === currentUserId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer']"
+                        >
+                          <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                :class="editForm.is_active ? 'translate-x-6' : 'translate-x-1'" />
+                        </button>
+                        <span class="text-sm" :class="editForm.is_active ? 'text-green-700' : 'text-red-600'">
+                          {{ editForm.is_active ? 'Active' : 'Inactive' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="mb-4 text-gray-700 text-sm">
-                  For <span class="font-semibold">{{ setPasswordUser.full_name }}</span> ({{ setPasswordUser.email }})
-                </div>
-                <div class="mb-4">
-                  <label class="block text-xs font-bold mb-1">New Password</label>
-                  <input
-                    v-model="newPassword"
-                    type="password"
-                    required
-                    minlength="8"
-                    class="block w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400"
-                    placeholder="Enter new password"
-                  />
-                </div>
-                <div v-if="setPasswordError" class="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-md">
-                  {{ setPasswordError }}
-                </div>
-                <div v-if="setPasswordSuccess" class="mb-4 p-3 bg-green-50 text-green-700 text-xs rounded-md">
-                  Password updated!
-                </div>
-                <div class="mt-6 flex justify-end gap-2">
+              </div>
+
+              <!-- Divider -->
+              <hr class="border-gray-100" />
+
+              <!-- === Set Password === -->
+              <div>
+                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Set Password</h4>
+                <div class="flex gap-2 items-start">
+                  <div class="flex-1">
+                    <input
+                      v-model="editPassword"
+                      type="password"
+                      class="block w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400"
+                      placeholder="Enter new password (optional)"
+                    />
+                  </div>
                   <button
                     type="button"
-                    @click="setPasswordUser = null"
-                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                  >Cancel</button>
-                  <button
-                    type="submit"
-                    :disabled="isSettingPassword"
-                    class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                  >{{ isSettingPassword ? 'Updating...' : 'Set Password' }}</button>
+                    @click="setPasswordForEditUser"
+                    :disabled="!editPassword || isSettingPassword"
+                    class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg shadow-sm hover:bg-indigo-700 transition disabled:opacity-50"
+                  >{{ isSettingPassword ? '...' : 'Set' }}</button>
                 </div>
               </div>
-            </form>
-          </div>
-        </div>
-      </transition>
-      <transition name="fade">
-        <div v-if="userToToggle" class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50" @click="userToToggle = null">
-          <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full" @click.stop>
-            <div class="px-6 py-5">
-              <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">
-                  {{ userToToggle.is_active ? 'Disable' : 'Enable' }} User
-                </h3>
-                <button @click="userToToggle = null" class="text-gray-400 hover:text-gray-500 transition-colors">
-                  <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+
+              <!-- Divider -->
+              <hr class="border-gray-100" />
+
+              <!-- === Danger Zone === -->
+              <div class="p-4 border border-red-200 rounded-xl bg-red-50/50">
+                <div class="flex items-start gap-3">
+                  <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
-                </button>
+                  <div class="flex-1">
+                    <h4 class="text-sm font-bold text-red-800">Danger Zone</h4>
+                    <p class="text-xs text-red-600 mt-1">Delete this user and all associated data. This cannot be undone.</p>
+                    <button
+                      type="button"
+                      @click="confirmDeleteFromModal"
+                      class="mt-3 px-4 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
+                    >Delete User</button>
+                  </div>
+                </div>
               </div>
-              <div class="mb-6">
-                <p class="text-sm text-gray-500">
-                  Are you sure you want to {{ userToToggle.is_active ? 'disable' : 'enable' }} this user?
-                </p>
-                <p class="mt-2 text-sm font-medium text-gray-900">
-                  {{ userToToggle.full_name }} ({{ userToToggle.email }})
-                </p>
-              </div>
-              <div class="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  @click="userToToggle = null"
-                  class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition"
-                >Cancel</button>
-                <button
-                  type="button"
-                  @click="toggleUserStatus"
-                  class="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-lg shadow-sm hover:bg-amber-700 transition"
-                  :disabled="isProcessingUser === userToToggle.id"
-                >{{ isProcessingUser === userToToggle.id ? 'Processing...' : (userToToggle.is_active ? 'Disable' : 'Enable') }}</button>
-              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex justify-end gap-2 px-8 pb-7 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                @click="closeEditModal"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition"
+              >Cancel</button>
+              <button
+                type="button"
+                @click="saveEditUser"
+                :disabled="isSavingEdit"
+                class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 transition disabled:opacity-50"
+              >{{ isSavingEdit ? 'Saving...' : 'Save Changes' }}</button>
             </div>
           </div>
         </div>
       </transition>
+
+      <!-- === DELETE CONFIRMATION MODAL (from edit modal or grid) === -->
       <transition name="fade">
-        <div v-if="deleteUserModal" class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50" @click="cancelDelete">
+        <div v-if="deleteUserModal" class="fixed inset-0 z-[60] bg-black/30 backdrop-blur-md flex items-center justify-center p-4" @click="cancelDelete">
           <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full" @click.stop>
             <div class="px-6 py-5">
               <div class="flex justify-between items-center mb-4">
@@ -236,11 +303,24 @@
                 </button>
               </div>
               <div class="mb-6">
+                <div class="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
+                  <svg class="w-6 h-6 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <div>
+                    <p class="text-sm font-semibold text-red-800">This will permanently delete:</p>
+                    <ul class="mt-2 text-sm text-red-700 list-disc list-inside space-y-1">
+                      <li>The user account and all associated data</li>
+                      <li><strong>All projects</strong> owned by this user, including files, documents, schemas, prompts, trials, and evaluations</li>
+                      <li><strong>Uploaded files</strong> will be removed from storage</li>
+                    </ul>
+                  </div>
+                </div>
                 <p class="text-sm text-gray-500">
-                  Are you sure you want to delete this user? This action cannot be undone.
+                  Are you sure you want to delete this user?
                 </p>
-                <p v-if="userToDelete" class="mt-2 text-sm font-medium text-gray-900">
-                  {{ userToDelete.full_name }} ({{ userToDelete.email }})
+                <p class="mt-2 text-sm font-medium text-gray-900">
+                  {{ userToDelete?.full_name }} ({{ userToDelete?.email }})
                 </p>
               </div>
               <div class="flex justify-end space-x-3">
@@ -254,12 +334,14 @@
                   @click="deleteUser"
                   class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg shadow-sm hover:bg-red-700 transition"
                   :disabled="isProcessingDelete"
-                >{{ isProcessingDelete ? 'Deleting...' : 'Delete' }}</button>
+                >{{ isProcessingDelete ? 'Deleting...' : 'Permanently Delete' }}</button>
               </div>
             </div>
           </div>
         </div>
       </transition>
+
+      <!-- === DELETE INVITATION MODAL === -->
       <transition name="fade">
         <div v-if="deleteInvitationModal" class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50" @click="cancelDeleteInvitation">
           <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full" @click.stop>
@@ -302,15 +384,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import UserGrid from '@/components/UserGrid.vue'
 import InvitationGrid from '@/components/InvitationGrid.vue'
 import { api } from '@/services/api'
+import { useToast } from 'vue-toastification'
 import { themeMaterial, iconSetMaterial } from 'ag-grid-community'
 
 const materialTheme = themeMaterial.withPart(iconSetMaterial)
+const toast = useToast()
 
-const userGrid = ref(null)
+const currentUserId = ref(null)
+
 const users = ref([])
 const loading = ref(true)
 const userSearch = ref('')
@@ -320,22 +405,36 @@ const loadingInvitations = ref(true)
 const invitationSearch = ref('')
 const showUsedInvitations = ref(false)
 
+// --- Invite modal ---
 const showInviteModal = ref(false)
 const inviteEmail = ref('')
 const isInviting = ref(false)
 const inviteError = ref('')
 const inviteSuccess = ref(false)
+const inviteEmailSent = ref(false)
+const sendInviteEmail = ref(false)
 const invitationLink = ref('')
 const copySuccess = ref(false)
 
-const setPasswordUser = ref(null)
-const newPassword = ref('')
-const setPasswordError = ref('')
-const setPasswordSuccess = ref(false)
+// --- Edit modal ---
+const editUser = ref(null)
+const editForm = ref({ full_name: '', email: '', role: 'user', is_active: true })
+const editPassword = ref('')
+const editError = ref('')
+const editSuccess = ref(false)
+const isSavingEdit = ref(false)
 const isSettingPassword = ref(false)
+const setPasswordSuccessMsg = ref(false)
 
-const userToToggle = ref(null)
-const isProcessingUser = ref(null)
+// Disable background scrolling when edit modal is open
+watch(editUser, (val) => {
+  document.body.classList.toggle('overflow-hidden', !!val)
+})
+onUnmounted(() => {
+  document.body.classList.remove('overflow-hidden')
+})
+
+// --- Delete user ---
 const deleteUserModal = ref(false)
 const userToDelete = ref(null)
 const isProcessingDelete = ref(false)
@@ -377,6 +476,11 @@ const invitationColumnDefs = [
 const invitationDefaultColDef = { resizable: true, sortable: true, filter: true }
 
 onMounted(async () => {
+  // Get current user info
+  try {
+    const me = await api.get('/user/me')
+    currentUserId.value = me.data.id
+  } catch (_) {}
   await Promise.all([
     loadUsers(),
     loadInvitations()
@@ -403,19 +507,23 @@ async function loadInvitations() {
   }
 }
 
+// --- Invite ---
 async function sendInvitation() {
   if (!inviteEmail.value) return
   isInviting.value = true
   inviteError.value = ''
   inviteSuccess.value = false
+  inviteEmailSent.value = false
   try {
     const formData = new URLSearchParams()
     formData.append('email', inviteEmail.value)
+    formData.append('send_email', sendInviteEmail.value ? 'true' : 'false')
     const response = await api.post('/user/invite', formData.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     })
     const baseUrl = window.location.origin
     invitationLink.value = `${baseUrl}/register?token=${response.data.token}`
+    inviteEmailSent.value = response.data.email_sent || false
     inviteSuccess.value = true
     await loadInvitations()
   } catch (error) {
@@ -478,59 +586,101 @@ function copyGeneratedLink() {
   }
 }
 
-function openSetPasswordModal(user) {
-  setPasswordUser.value = user
-  newPassword.value = ''
-  setPasswordError.value = ''
-  setPasswordSuccess.value = false
+// --- Edit User ---
+function openEditModal(user) {
+  editForm.value = {
+    full_name: user.full_name,
+    email: user.email,
+    role: user.role,
+    is_active: user.is_active,
+  }
+  editPassword.value = ''
+  editError.value = ''
+  editSuccess.value = false
+  setPasswordSuccessMsg.value = false
+  editUser.value = user
 }
 
-async function setPassword() {
-  if (!setPasswordUser.value || !newPassword.value) return
-  isSettingPassword.value = true
-  setPasswordError.value = ''
-  setPasswordSuccess.value = false
+function closeEditModal() {
+  editUser.value = null
+}
+
+function toggleEditUserActive() {
+  if (editUser.value && editUser.value.id !== currentUserId.value) {
+    editForm.value.is_active = !editForm.value.is_active
+  }
+}
+
+async function saveEditUser() {
+  if (!editUser.value) return
+  isSavingEdit.value = true
+  editError.value = ''
+  editSuccess.value = false
   try {
-    await api.post(`/user/${setPasswordUser.value.id}/set-password`, { new_password: newPassword.value })
-    setPasswordSuccess.value = true
-    setTimeout(() => {
-      setPasswordUser.value = null
-    }, 1200)
-    await loadUsers()
+    const payload = {}
+    if (editForm.value.full_name !== editUser.value.full_name) payload.full_name = editForm.value.full_name
+    if (editForm.value.email !== editUser.value.email) payload.email = editForm.value.email
+    if (editForm.value.role !== editUser.value.role) payload.role = editForm.value.role
+    if (editForm.value.is_active !== editUser.value.is_active) payload.is_active = editForm.value.is_active
+
+    if (Object.keys(payload).length === 0) {
+      editSuccess.value = true
+      return
+    }
+
+    const response = await api.patch(`/user/${editUser.value.id}`, payload)
+    const updatedUser = response.data
+    const idx = users.value.findIndex(u => u.id === updatedUser.id)
+    if (idx !== -1) {
+      users.value[idx] = updatedUser
+      users.value = [...users.value]
+    }
+    editUser.value = updatedUser
+    editSuccess.value = true
+    toast.success(`User "${updatedUser.full_name}" updated.`)
   } catch (error) {
-    setPasswordError.value = error.response?.data?.detail || 'Failed to set password'
+    editError.value = error.response?.data?.detail || 'Failed to update user.'
+  } finally {
+    isSavingEdit.value = false
+  }
+}
+
+async function setPasswordForEditUser() {
+  if (!editUser.value || !editPassword.value) return
+  isSettingPassword.value = true
+  setPasswordSuccessMsg.value = false
+  try {
+    await api.post(`/user/${editUser.value.id}/set-password`, { new_password: editPassword.value })
+    setPasswordSuccessMsg.value = true
+    editPassword.value = ''
+    toast.success('Password updated.')
+  } catch (error) {
+    editError.value = error.response?.data?.detail || 'Failed to set password'
   } finally {
     isSettingPassword.value = false
   }
 }
 
-function confirmToggleUserStatus(user) {
-  userToToggle.value = user
-}
-async function toggleUserStatus() {
-  if (!userToToggle.value || isProcessingUser.value) return
-  isProcessingUser.value = userToToggle.value.id
-  try {
-    await api.patch(`/user/${userToToggle.value.id}/toggle-status`)
-    await loadUsers()
-    userToToggle.value = null
-  } finally {
-    isProcessingUser.value = null
-  }
-}
-
-function confirmDeleteUser(user) {
-  userToDelete.value = user
+// --- Delete user ---
+function confirmDeleteFromModal() {
+  if (!editUser.value) return
+  userToDelete.value = editUser.value
   deleteUserModal.value = true
 }
+
 async function deleteUser() {
   if (!userToDelete.value || isProcessingDelete.value) return
   isProcessingDelete.value = true
+  const userName = userToDelete.value.full_name
   try {
     await api.delete(`/user/${userToDelete.value.id}`)
-    await loadUsers()
+    users.value = users.value.filter(u => u.id !== userToDelete.value.id)
+    toast.success(`User "${userName}" deleted successfully.`)
     deleteUserModal.value = false
     userToDelete.value = null
+    editUser.value = null // close edit modal too
+  } catch (error) {
+    toast.error(error.response?.data?.detail || 'Failed to delete user.')
   } finally {
     isProcessingDelete.value = false
   }
@@ -540,6 +690,7 @@ function cancelDelete() {
   userToDelete.value = null
 }
 
+// --- Delete invitation ---
 function onInvitationGridReady(params) {
   params.api.addEventListener('cellClicked', (event) => {
     if (event.colDef.field !== 'actions') return
@@ -559,9 +710,12 @@ async function deleteInvitation() {
   isProcessingDelete.value = true
   try {
     await api.delete(`/user/invitations/${invitationToDelete.value.id}`)
-    await loadInvitations()
+    invitations.value = invitations.value.filter(inv => inv.id !== invitationToDelete.value.id)
+    toast.success(`Invitation for "${invitationToDelete.value.email}" deleted.`)
     deleteInvitationModal.value = false
     invitationToDelete.value = null
+  } catch (error) {
+    toast.error(error.response?.data?.detail || 'Failed to delete invitation.')
   } finally {
     isProcessingDelete.value = false
   }

@@ -47,6 +47,14 @@ class PasswordSet(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=128)
 
 
+class UserUpdateAdmin(BaseModel):
+    """Admin update for any user field. Only provided fields are updated."""
+    full_name: str | None = None
+    email: EmailStr | None = None
+    role: UserRole | None = None
+    is_active: bool | None = None
+
+
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
@@ -91,6 +99,7 @@ class InvitationCreate(InvitationBase):
 
 class InvitationResponse(InvitationBase):
     id: int
+    email_sent: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -98,6 +107,19 @@ class InvitationResponse(InvitationBase):
 class InvitationInfo(BaseModel):
     valid: bool
     email: str | None = None
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+class PasswordResetValidate(BaseModel):
+    valid: bool
 
 
 from .project import Project  # noqa: E402, F401

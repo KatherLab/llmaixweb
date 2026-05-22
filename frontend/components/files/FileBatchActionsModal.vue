@@ -1,11 +1,11 @@
 <!-- Update FileBatchActionsModal.vue template - remove move action and fix delete -->
 <template>
   <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      @click.self="$emit('close')"
-      style="backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(30,30,40,0.27);"
-    >
+    <transition name="fade">
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+        @click.self="$emit('close')"
+      >
       <div
         class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] border border-gray-200"
         tabindex="0"
@@ -13,7 +13,7 @@
         @keydown.esc="$emit('close')"
       >
         <!-- Header -->
-        <div class="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b rounded-t-2xl">
+        <div class="px-6 py-4 bg-gray-50 border-b rounded-t-2xl flex items-center justify-between">
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-lg font-semibold text-gray-900 flex items-center">
@@ -35,7 +35,8 @@
             </div>
             <button
               @click="$emit('close')"
-              class="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-100 rounded-lg"
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Close"
             >
               <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -130,12 +131,14 @@
         </div>
       </div>
     </div>
+    </transition>
   </Teleport>
 </template>
 
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { useScrollLock } from '@/composables/useScrollLock';
 import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
 import FileIcon from '../common/FileIcon.vue';
@@ -366,8 +369,9 @@ const checkLinkedResources = async () => {
 };
 
 // Lifecycle
+useScrollLock({ autoLock: true });
+
 onMounted(() => {
-  document.body.style.overflow = 'hidden';
   nextTick(() => {
     modalRef.value?.focus();
   });
@@ -378,8 +382,15 @@ onMounted(() => {
     checkLinkedResources();
   }
 });
-
-onUnmounted(() => {
-  document.body.style.overflow = '';
-});
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

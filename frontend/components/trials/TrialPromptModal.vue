@@ -1,12 +1,12 @@
 <template>
   <Teleport to="body">
-    <div
-      v-if="open"
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      style="backdrop-filter: blur(8px); background: rgba(30,30,40,0.27);"
-      @click.self="$emit('close')"
-    >
-      <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 flex flex-col max-h-[80vh] overflow-auto">
+    <transition name="fade">
+      <div
+        v-if="open"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+        @click.self="$emit('close')"
+      >
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 flex flex-col max-h-[80vh] overflow-auto border border-gray-200">
         <div class="flex justify-between items-center mb-3">
           <h3 class="text-lg font-semibold text-gray-900">Trial Prompt</h3>
           <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600">
@@ -38,11 +38,13 @@
         </div>
       </div>
     </div>
+    </transition>
   </Teleport>
 </template>
 <script setup>
-import { watch, onMounted, onBeforeUnmount } from 'vue';
+import { watch } from 'vue';
 import { useToast } from 'vue-toastification';
+import { useScrollLock } from '@/composables/useScrollLock';
 
 const props = defineProps({
   open: Boolean,
@@ -50,26 +52,23 @@ const props = defineProps({
 });
 const toast = useToast();
 
+useScrollLock({ watch: () => props.open });
+
 function copyPrompt() {
   if (!props.prompt) return;
   const text = `System Prompt:\n${props.prompt.system_prompt || '-'}\n\nUser Prompt:\n${props.prompt.user_prompt || '-'}`;
   navigator.clipboard.writeText(text);
   toast.success('Prompt copied!');
 }
-
-// --- BODY SCROLL LOCK ---
-function lockBodyScroll() {
-  document.body.style.overflow = 'hidden';
-}
-function unlockBodyScroll() {
-  document.body.style.overflow = '';
-}
-watch(() => props.open, (open) => {
-  if (open) lockBodyScroll();
-  else unlockBodyScroll();
-});
-onMounted(() => {
-  if (props.open) lockBodyScroll();
-});
-onBeforeUnmount(unlockBodyScroll);
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

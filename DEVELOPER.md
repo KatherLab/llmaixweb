@@ -8,13 +8,13 @@ This project uses separate versioning for frontend and backend components.
 
 | Component | Version File | Exposed Via |
 |-----------|-------------|-------------|
-| Frontend | `frontend/version.js` | Displayed in footer |
+| Frontend | `package.json` (root) → `frontend/update-version.js` syncs to `frontend/version.js` at build time | Displayed in footer |
 | Backend | `pyproject.toml` (llmaix package) | `/api/v1/version` endpoint |
 
 ### Current Versions
 
-- **Frontend**: `frontend/version.js` → `export const frontendVersion = '0.0.2'`
-- **Backend**: `pyproject.toml` → `version = "0.1.3"` (llmaix package version)
+- **Frontend**: `package.json` → `"version": "0.2.3"` (synced to `frontend/version.js` via `prebuild` script)
+- **Backend**: `pyproject.toml` → `version = "0.1.4"` (llmaix package version)
 
 ### Git Commit Hash
 
@@ -29,18 +29,24 @@ Both frontend and backend display their git commit hashes:
 
 When making a release:
 
-1. **Update frontend version** in `frontend/version.js`:
-   ```javascript
-   export const frontendVersion = '0.0.3';  // bump version
+1. **Update frontend version** in `package.json` (root):
+   ```json
+   "version": "0.2.4"  // bump version
    ```
+   The `prebuild` script (`frontend/update-version.js`) automatically syncs this to `frontend/version.js` at build time.
 
 2. **Update backend version** in `pyproject.toml`:
    ```toml
    [project]
-   version = "0.1.4"  // bump version
+   version = "0.1.5"  // bump version
    ```
 
-3. **Build and push images** (handled by GitHub Actions on release tag)
+3. **Lock dependencies** — run `uv lock` to update `uv.lock` (it tracks the `llmaixweb` version from `pyproject.toml` and will update automatically):
+   ```bash
+   uv lock
+   ```
+
+4. **Build and push images** (handled by GitHub Actions on release tag)
 
 4. **Tag the release** on GitHub:
    ```bash
@@ -71,6 +77,8 @@ This helps users and support quickly identify version mismatches or outdated com
 ## Database Migrations (Alembic)
 
 This project uses Alembic for database schema version control and migrations.
+
+> **PostgreSQL is required for any deployment where you plan to run Alembic migrations** (version upgrades, schema changes). Several migrations use operations like `alter_column` and `drop_column` that SQLite does not support. For active development / debugging without migration steps, SQLite can still be used.
 
 ### Configuration
 
@@ -222,6 +230,42 @@ Start the RustFS server for local development:
 ```bash
 rustfs server llmaixwebdata
 ```
+
+---
+
+---
+
+## ✉️ Email Setup (Optional)
+
+LLMAIx Web can send emails for user invitations and password resets via SMTP.
+
+### Configuration
+
+Set the following environment variables (or configure via Admin Settings UI → Email tab):
+
+| Variable | Description |
+|----------|-------------|
+| `EMAIL_ENABLED` | Set to `true` to enable email sending |
+| `SMTP_HOST` | SMTP server hostname (e.g., `smtp.gmail.com`) |
+| `SMTP_PORT` | SMTP port (587 for STARTTLS, 465 for SSL) |
+| `SMTP_USERNAME` | SMTP username (may be secret) |
+| `SMTP_PASSWORD` | SMTP password / app password (may be secret) |
+| `SMTP_FROM_ADDRESS` | Sender email address |
+| `SMTP_FROM_NAME` | Sender display name (default: "LLMAIx Web") |
+| `SMTP_USE_TLS` | Use STARTTLS (default: `true`) |
+
+### Behavior When Email is Disabled
+
+- **Invitations**: Created as DB records with tokens — admins copy-paste the invitation link manually (existing behavior)
+- **Password Reset**: The request still succeeds (returns generic "check your email" message) but shows a warning that email delivery is not configured
+
+### Email Templates
+
+HTML templates live in `backend/src/templates/emails/`:
+- `invitation.html` — invitation link email
+- `password_reset.html` — password reset link email
+
+Templates use Jinja2 with inline CSS. Edit them to customize branding or content.
 
 ---
 

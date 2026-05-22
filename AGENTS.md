@@ -258,15 +258,16 @@ Frontend tests are currently not set up.
 - Database migrations run automatically on backend container startup
 
 ### Versioning
-- Separate versions for frontend (`frontend/version.js`) and backend (`pyproject.toml` - `llmaix` package version)
+- Separate versions for frontend (`package.json` root → auto-synced to `frontend/version.js`) and backend (`pyproject.toml` - `llmaixweb` package version)
 - Both displayed in UI footer with git commit hashes on hover
 - Backend commit hash read at runtime via `git rev-parse --short HEAD`; frontend commit hash injected at build time via `GIT_COMMIT_HASH` build arg
 
 #### Release Checklist
-1. **Bump frontend version** in `frontend/version.js` (e.g. `export const frontendVersion = '0.0.3'`)
+1. **Bump frontend version** in `package.json` (root) — the `prebuild` script auto-syncs to `frontend/version.js` at build time
 2. **Bump backend version** in `pyproject.toml` (e.g. `version = "0.1.4"`)
-3. **Build and push images** — handled by GitHub Actions on release tag
-4. **Tag the release:**
+3. **Lock dependencies** — run `uv lock` if any dependencies changed; the `uv.lock` file also tracks the `llmaixweb` version and will update automatically
+4. **Build and push images** — handled by GitHub Actions on release tag
+5. **Tag the release:**
    ```bash
    git tag v0.0.3
    git push origin v0.0.3

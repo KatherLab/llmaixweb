@@ -1,5 +1,5 @@
 ###################  LLMAIx – backend (non-root) ###################
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 # Git commit hash - passed from GitHub Actions
 ARG GIT_COMMIT_HASH=unknown

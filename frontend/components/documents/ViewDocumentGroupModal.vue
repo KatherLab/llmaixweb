@@ -1,9 +1,11 @@
 <!-- ViewDocumentGroupModal.vue -->
 <template>
-  <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50" @click="$emit('close')">
-    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col" @click.stop>
-      <div class="px-6 py-4 border-b flex justify-between items-center">
-        <h3 class="text-xl font-semibold">{{ group.name }}</h3>
+  <Teleport to="body">
+  <transition name="fade">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md" @click="$emit('close')">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-gray-200" @click.stop>
+        <div class="px-6 py-4 border-b bg-gray-50 rounded-t-2xl flex justify-between items-center">
+          <h3 class="text-xl font-semibold text-gray-900">{{ group.name }}</h3>
         <div class="flex items-center gap-2">
           <button
             @click="$emit('edit', group)"
@@ -11,7 +13,7 @@
           >
             Edit Group
           </button>
-          <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700">
+          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -160,6 +162,8 @@
       </div>
     </div>
   </div>
+  </transition>
+  </Teleport>
 </template>
 
 <script setup>
@@ -168,6 +172,9 @@ import { api } from '@/services/api';
 import { useToast } from 'vue-toastification';
 import { formatDate, formatFileSize } from '@/utils/formatters';
 import FileIcon from '../common/FileIcon.vue';
+import { useScrollLock } from '@/composables/useScrollLock';
+
+useScrollLock({ autoLock: true });
 
 const props = defineProps({
   group: {
@@ -258,3 +265,14 @@ const downloadAllDocuments = async () => {
   }
 };
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

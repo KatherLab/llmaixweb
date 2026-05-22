@@ -3,25 +3,20 @@
     <transition name="fade">
       <div
         v-if="visible"
-        class="fixed inset-0 z-50 flex items-center justify-center"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
         @click="handleBackgroundClick"
       >
-        <!-- Modal Background -->
-        <div
-          class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
-        ></div>
-
         <!-- Modal Content -->
         <div
-          class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+          class="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-200"
           @click.stop
         >
           <!-- Header -->
-          <div class="px-6 py-4 border-b flex justify-between items-center">
-            <h3 class="text-xl font-semibold">
+          <div class="px-6 py-4 border-b bg-gray-50 rounded-t-2xl flex justify-between items-center">
+            <h3 class="text-xl font-semibold text-gray-900">
               {{ group ? 'Edit Document Group' : 'Create Document Group' }}
             </h3>
-            <button @click="tryClose" class="text-gray-500 hover:text-gray-700">
+            <button @click="tryClose" class="text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -171,7 +166,7 @@
           </div>
 
           <!-- Footer -->
-          <div class="px-6 py-4 border-t flex justify-end gap-2">
+          <div class="px-6 py-4 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-2">
             <button
               @click="tryClose"
               class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md"
@@ -196,6 +191,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { api } from '@/services/api';
 import { formatDate } from '@/utils/formatters';
+import { useScrollLock } from '@/composables/useScrollLock';
 
 const props = defineProps({
   group: { type: Object, default: null },
@@ -205,6 +201,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'save']);
+
+useScrollLock({ autoLock: true });
 
 const formData = ref({
   name: '',
@@ -238,27 +236,6 @@ onMounted(async () => {
     };
   }
   initialFormState.value = serializeForm(formData.value);
-
-  // Disable body scroll when modal is open
-  document.body.style.overflow = 'hidden';
-});
-
-// Re-enable scroll when modal closes (watch visible)
-watch(
-  () => props.visible,
-  (val) => {
-    if (val) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-  }
-);
-
-// On unmount, always cleanup
-import { onUnmounted } from 'vue';
-onUnmounted(() => {
-  document.body.style.overflow = '';
 });
 
 // Computed

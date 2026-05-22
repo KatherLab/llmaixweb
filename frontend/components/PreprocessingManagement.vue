@@ -334,6 +334,7 @@
               :show-preview="true"
               @select-all="selectAllFiles"
               @clear-selection="selectedFiles = []"
+              @preview="previewFile"
           />
         </div>
 
@@ -366,6 +367,14 @@
         @retry-failed="retryFailedFiles"
     />
 
+    <!-- File Preview Modal -->
+    <FilePreviewModal
+        v-if="previewFileData"
+        :file="previewFileData"
+        :project-id="props.projectId"
+        @close="previewFileData = null"
+    />
+
     <ConfirmationDialog
       v-if="showCancelDialog"
       :open="showCancelDialog"
@@ -393,6 +402,7 @@ import TaskCard from './preprocessing/TaskCard.vue';
 import FileSelector from './preprocessing/FileSelector.vue';
 import TaskDetailsModal from './preprocessing/TaskDetailsModal.vue';
 import ConfirmationDialog from "@/components/ConfirmationDialog.vue";
+import FilePreviewModal from "@/components/files/FilePreviewModal.vue";
 
 const props = defineProps({
   projectId: { type: [String, Number], required: true },
@@ -417,6 +427,7 @@ const cancelDeleteMode = ref(false);
 const isSubmitting = ref(false);
 const showAllCompleted = ref(false);
 const isAdmin = computed(() => authStore.isAdmin);
+const previewFileData = ref(null);
 let pollInterval = null;
 
 // Server-provided OCR defaults (populated from /auth/settings)
@@ -622,6 +633,10 @@ const resetForm = () => {
   visionPrompt.value = serverDefaults.value.vision_ocr_prompt;
   visionMaxImageDim.value = 2048;
   showVisionAdvanced.value = false;
+};
+
+const previewFile = (file) => {
+  previewFileData.value = file;
 };
 
 // Lifecycle

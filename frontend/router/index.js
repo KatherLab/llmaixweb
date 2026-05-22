@@ -6,6 +6,8 @@ import AuthLayout from '@/views/AuthLayout.vue'
 
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
+import ForgotPassword from '@/views/ForgotPassword.vue'
+import ResetPassword from '@/views/ResetPassword.vue'
 import InvitationLanding from '@/views/InvitationLandingPage.vue'
 import NotFound from '@/views/NotFound.vue'
 
@@ -52,6 +54,8 @@ const routes = [
     children: [
       { path: 'login', component: Login },
       { path: 'register', component: Register },
+      { path: 'forgot-password', component: ForgotPassword },
+      { path: 'reset-password/:token', component: ResetPassword },
       { path: 'invitation/:token', component: InvitationLanding },
       { path: 'first-admin', component: FirstAdminSetup }
     ]
@@ -98,7 +102,7 @@ router.beforeEach(async (to, from, next) => {
   // Prevent logged-in users from seeing login/register pages
   if (
     authStore.isAuthenticated &&
-    (to.path === '/login' || to.path === '/register' || to.path.startsWith('/invitation'))
+    (to.path === '/login' || to.path === '/register' || to.path.startsWith('/invitation') || to.path === '/forgot-password' || to.path.startsWith('/reset-password/'))
   ) {
     return next('/')
   }

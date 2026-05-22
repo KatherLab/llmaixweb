@@ -4,15 +4,21 @@
     <transition name="fade">
       <div
         v-if="open"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[1px] p-4"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-4"
         @click="emitClose"
       >
         <div
-          class="bg-white/80 rounded-2xl shadow-2xl w-full max-w-lg p-8 relative overflow-y-auto max-h-[90vh]"
-          style="backdrop-filter: blur(16px);"
+          class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 relative overflow-y-auto max-h-[90vh] border border-gray-200"
           @click.stop
         >
-          <h2 class="text-xl font-bold mb-4 text-gray-900">Edit Project</h2>
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">Edit Project</h2>
+            <button @click="emitClose" class="text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
           <input
             v-model="name"
             class="w-full px-4 py-2 text-lg font-semibold rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-400 mb-3"
@@ -68,7 +74,8 @@
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted, onMounted } from 'vue';
+import { ref, watch, onMounted } from 'vue';
+import { useScrollLock } from '@/composables/useScrollLock';
 
 const props = defineProps({
   open: Boolean,
@@ -81,6 +88,8 @@ const emit = defineEmits(['save', 'close']);
 const name = ref(props.initialName || '');
 const description = ref(props.initialDescription || '');
 
+useScrollLock({ watch: () => props.open });
+
 // Sync props changes
 watch(
   () => [props.initialName, props.initialDescription],
@@ -89,18 +98,6 @@ watch(
     description.value = newDesc || '';
   }
 );
-
-// Disable background scroll while modal is open
-watch(
-  () => props.open,
-  (open) => {
-    document.body.classList.toggle('overflow-hidden', open);
-  }
-);
-
-onUnmounted(() => {
-  document.body.classList.remove('overflow-hidden');
-});
 
 // Emit save event with form data
 function onSave() {

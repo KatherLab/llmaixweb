@@ -1,24 +1,17 @@
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-50">
-      <!-- Modal backdrop: disables background scrolling and closes on click -->
+    <transition name="fade">
       <div
-        class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md px-4 py-6"
         @click="onClose"
-      ></div>
-
-      <!-- Modal content: scrollable, but fits on screen -->
-      <div
-        class="absolute inset-0 flex items-center justify-center px-2 py-6 pointer-events-none"
-        style="z-index: 60;"
       >
         <div
-          class="relative bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[96vh] flex flex-col pointer-events-auto"
+          class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[96vh] flex flex-col border border-gray-200"
           @click.stop
           ref="modalRef"
         >
           <!-- Header -->
-          <div class="flex items-center justify-between p-6 border-b rounded-t-xl">
+          <div class="px-6 py-4 border-b bg-gray-50 rounded-t-2xl flex justify-between items-center">
             <div>
               <h3 class="text-lg font-semibold text-gray-900">
                 Preprocessing Task #{{ task.id }}
@@ -29,7 +22,7 @@
             </div>
             <button
               aria-label="Close"
-              class="text-gray-400 hover:text-gray-500"
+              class="text-gray-400 hover:text-gray-600 transition-colors"
               @click="onClose"
             >
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,7 +239,7 @@
           </div>
 
           <!-- Footer Actions -->
-          <div class="p-6 border-t bg-gray-50 rounded-b-xl flex justify-end gap-2">
+          <div class="px-6 py-4 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-2">
             <button
               v-if="failed > 0"
               class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
@@ -263,13 +256,16 @@
           </div>
         </div>
       </div>
-    </div>
+    </transition>
   </Teleport>
 </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { getEngineLabelWithKey } from '@/utils/ocrLabels';
+import { useScrollLock } from '@/composables/useScrollLock';
+
+useScrollLock({ autoLock: true });
 
 const props = defineProps({
   task: {
@@ -280,14 +276,6 @@ const props = defineProps({
 const emit = defineEmits(['close', 'retry-failed']);
 
 const modalRef = ref(null);
-
-// Lock background scroll when modal is open
-onMounted(() => {
-  document.body.classList.add('overflow-hidden');
-});
-onUnmounted(() => {
-  document.body.classList.remove('overflow-hidden');
-});
 
 // Helper: close
 function onClose() {
@@ -342,5 +330,14 @@ html, body {
 .flex-1 {
   min-height: 0;
   /* Needed for flexbox scrolling */
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
