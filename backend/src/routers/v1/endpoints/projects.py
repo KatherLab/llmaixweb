@@ -54,7 +54,7 @@ def check_project_access(
 
 
 @router.get(
-    "/", response_model=list[schemas.Project], response_model_exclude={"documents"}
+    "", response_model=list[schemas.Project], response_model_exclude={"documents"}
 )  # keep documents out
 def get_projects(
     db: Session = Depends(get_db),
@@ -103,7 +103,7 @@ def get_project(
     return project
 
 
-@router.post("/", response_model=schemas.Project)
+@router.post("", response_model=schemas.Project)
 def create_project(
     *,
     db: Session = Depends(get_db),

@@ -87,7 +87,7 @@ async def lifespan(app):
                 p.join(5)
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 
 # ── Rate limiting ──────────────────────────────────────────────
 limiter = Limiter(
