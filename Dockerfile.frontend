@@ -9,20 +9,14 @@ COPY package.json pnpm-lock.yaml* yarn.lock* ./
 RUN npm install
 COPY frontend ./frontend
 
-# Build with a placeholder - actual URL injected at runtime
-ENV VITE_API_BACKEND_URL=__VITE_API_BACKEND_URL__
-
 RUN npm run build
 
 ### ── Runtime stage (non-root) ──────────────────────────────────────
 FROM nginxinc/nginx-unprivileged:stable-alpine
 
-# Install gettext for envsubst
 USER root
-RUN apk add --no-cache gettext
 
-COPY frontend/nginx.conf.template /etc/nginx/conf.d/default.conf.template
-COPY frontend/config.js.template /usr/share/nginx/html/config.js.template
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 

@@ -8,11 +8,13 @@ services:
     image: ghcr.io/katherlab/llmaixweb-backend:latest
     env_file: .env
     environment:
+      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg://postgres:postgres@postgres/llmaixweb
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DISABLE_CELERY=false
       - INITIALIZE_CELERY=${INITIALIZE_CELERY:-false}
       - REQUIRE_INVITATION=${REQUIRE_INVITATION:-false}
-    ports: ["8000:8000"]
+      - APP_URL=${APP_URL:-http://localhost:5173}
+    # ports: ["8000:8000"] # uncomment for local debugging / testing the backend
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,8 +52,6 @@ services:
       args:
         - GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
     image: ghcr.io/katherlab/llmaixweb-frontend:latest
-    environment:
-      - VITE_API_BACKEND_URL=${VITE_API_BACKEND_URL:-http://localhost:8000/api/v1}
     ports: ["5173:8080"]
     depends_on:
       backend:

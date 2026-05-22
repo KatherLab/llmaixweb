@@ -1,4 +1,0 @@
-// Runtime configuration - injected at container startup
-window.__APP_CONFIG__ = {
-    API_BACKEND_URL: '${VITE_API_BACKEND_URL}'
-};

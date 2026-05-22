@@ -373,7 +373,7 @@ def invite(
     if existing_invitation:
         resp = schemas.InvitationResponse.model_validate(existing_invitation)
         if send_email:
-            base_url = str(settings.BACKEND_CORS_ORIGINS).split(",")[0].strip()
+            base_url = settings.APP_URL
             invite_url = f"{base_url}/register?token={existing_invitation.token}"
             email_sent = send_invitation_email(email, existing_invitation.token, invite_url)
             resp.email_sent = email_sent
@@ -398,7 +398,7 @@ def invite(
 
     # Send email if requested and SMTP is configured
     if send_email:
-        base_url = str(settings.BACKEND_CORS_ORIGINS).split(",")[0].strip()
+        base_url = settings.APP_URL
         invite_url = f"{base_url}/register?token={token}"
         email_sent = send_invitation_email(email, token, invite_url)
         resp.email_sent = email_sent
@@ -494,7 +494,7 @@ def forgot_password(
         db.commit()
 
         # Send email if configured
-        base_url = str(settings.BACKEND_CORS_ORIGINS).split(",")[0].strip()
+        base_url = settings.APP_URL
         reset_url = f"{base_url}/reset-password/{token}"
         email_sent = send_password_reset_email(body.email, token, reset_url)
 

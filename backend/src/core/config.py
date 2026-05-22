@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     DISABLE_RATE_LIMIT: bool = False  # Disable rate limiting (for tests)
 
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
+    APP_URL: str = "http://localhost:5173"
 
     # Email / SMTP settings
     EMAIL_ENABLED: bool = False
@@ -141,7 +142,8 @@ class Settings(BaseSettings):
         if not self.SECRET_KEY or len(self.SECRET_KEY) < 16:
             print(
                 "ERROR: SECRET_KEY must be explicitly set in your .env file "
-                "(at least 16 characters). Do not rely on a default."
+                "(at least 16 characters). Do not rely on a default.\n"
+                "Generate one with:  python3 -c \"import secrets; print(secrets.token_urlsafe(32))\""
             )
             sys.exit(1)
 
@@ -461,6 +463,13 @@ SETTINGS_META = {
         "readonly": True,
         "category": "General",
         "label": "CORS Origins",
+    },
+    "APP_URL": {
+        "type": "str",
+        "secret": False,
+        "readonly": True,
+        "category": "General",
+        "label": "App URL",
     },
     "MISTRAL_OCR_ENABLED": {
         "type": "bool",

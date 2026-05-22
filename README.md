@@ -94,12 +94,12 @@ Edit `.env` for your deployment. **At minimum**, configure your LLM provider and
 
 #### Essential Settings
 
-| Variable           | Description                        | Default          |
-|--------------------|------------------------------------|------------------|
-| `OPENAI_API_KEY`   | API key for LLM provider           | (required)       |
-| `OPENAI_API_BASE`  | Base URL for OpenAI-compatible API | (empty)          |
-| `OPENAI_API_MODEL` | Default model to use               | (empty)          |
-| `SECRET_KEY`       | Secret key for sessions            | (auto-generated) |
+| Variable           | Description                                                                                             | Default    |
+|--------------------|---------------------------------------------------------------------------------------------------------|------------|
+| `OPENAI_API_KEY`   | API key for LLM provider                                                                                | (required) |
+| `OPENAI_API_BASE`  | Base URL for OpenAI-compatible API                                                                      | (empty)    |
+| `OPENAI_API_MODEL` | Default model to use                                                                                    | (empty)    |
+| `SECRET_KEY`       | Secret key for sessions (generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`) | (required) |
 
 #### Storage
 
@@ -122,8 +122,8 @@ Edit `.env` for your deployment. **At minimum**, configure your LLM provider and
 
 | Variable                  | Description                           | Default                        |
 |---------------------------|---------------------------------------|--------------------------------|
+| `APP_URL`                 | Public app URL (for links in emails)  | `http://localhost:5173`        |
 | `BACKEND_CORS_ORIGINS`    | Comma-separated allowed origins       | `http://localhost:5173`        |
-| `VITE_API_BACKEND_URL`    | Runtime backend URL for frontend      | `http://localhost:8000/api/v1` |
 | `REQUIRE_INVITATION`      | Require invitation for signup         | `false`                        |
 | `ALLOW_FIRST_ADMIN_SETUP` | Allow first user to become admin      | `true`                         |
 | `CELERY_PREPROCESS_POOL`  | Pool type (`auto`, `solo`, `prefork`) | `auto` (use `solo` on macOS)   |
@@ -158,14 +158,17 @@ Edit `.env` for your deployment. **At minimum**, configure your LLM provider and
 
 #### Local Network & Reverse Proxy
 
+The frontend nginx proxies `/api/` requests to the backend, so only one URL is needed.
+The `APP_URL` env var controls invitation/password-reset link construction.
+
 > **Testing in local network?** Access from other devices requires:
-> 1. Set `BACKEND_CORS_ORIGINS` to include your server IP (e.g., `http://192.168.1.100:5173`)
-> 2. Set `VITE_API_BACKEND_URL` to point to your server (e.g., `http://192.168.1.100:8000/api/v1`)
+> 1. Set `APP_URL` to your server IP (e.g., `http://192.168.1.100:5173`)
+> 2. Set `BACKEND_CORS_ORIGINS` to include your server IP (e.g., `http://192.168.1.100:5173`)
 > 3. Restart the stack
 >
 > **Using a reverse proxy (nginx, Traefik, etc.)?** Adjust:
+> - `APP_URL` to your public domain (e.g., `https://app.example.com`)
 > - `BACKEND_CORS_ORIGINS` to your public domain (e.g., `https://app.example.com`)
-> - `VITE_API_BACKEND_URL` to your public API endpoint (e.g., `https://api.example.com/api/v1`)
 
 ---
 
