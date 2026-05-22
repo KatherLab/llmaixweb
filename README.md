@@ -1,112 +1,96 @@
 ![Tests](https://github.com/KatherLab/llmaixweb/actions/workflows/tests.yml/badge.svg?branch=main)
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 > This application is an early preview. It may not run stably and extracted results can be inaccurate. Always check outputs for validity before using them in practice.
 
 # LLMAIx (v2) Web
 
 ![cover.png](static/cover.png)
 
-A modern web interface for the **LLMAIx** framework that turns unstructured medical documents into structured JSON with privacy‑first controls. The application includes an admin dashboard for configuring providers, prompts, schemas, and overrides, plus basic **user management** (e.g. invitations when enabled).
+A web application that turns unstructured medical/lab documents into structured JSON using LLMs. Upload PDFs, images, or spreadsheets — extract data with configurable schemas and prompts, then evaluate results against ground truth.
+
+**Works with any OpenAI-compatible API:** use official services (OpenAI, Mistral OCR) for convenience, or run everything fully local with self-hosted models (DeepSeek-OCR-2 via KatDocExtract, vision LLMs like Gemma 4 via vLLM) for sensitive environments.
 
 ---
 
-## ✨ Features
+## Features
 
-* **Upload & organize**: multi‑format file support (PDF, DOC/DOCX, PNG/JPEG images, CSV/XLSX) with column selection, grouping and previews.
-* **Preprocessing & OCR**: local OCR via **OCRmyPDF** (Tesseract), text extraction via **Docling**, and API-based OCR via **Mistral OCR** or any **Vision LLM** (OpenAI-compatible). Document parsers include **PyMuPDF4LLM** and **Docling**.
-* **Visual schema editor**: tree‑based editor supporting nested objects/arrays, all JSON types, import/export, validation, and templates.
-* **LLM trials**: run multiple extraction trials across prompts/models with temperature control, per‑trial iterations, token tracking, and OpenAI‑compatible endpoints (official OpenAI, vLLM, llama.cpp/Ollama, custom gateways).
-* **Evaluation**: upload ground truth, compare field‑by‑field, compute overall/per‑field accuracy metrics.
-* **Privacy‑first**: run fully locally or with self‑hosted providers; no forced external calls.
-* **Admin dashboard**: provider configuration, **user management** (setup first admin, invitations/roles).
+* **Upload & organize** — PDF, DOC/DOCX, images, CSV/XLSX, TXT files with column selection and previews.
+* **Preprocessing & OCR** — local OCR via **OCRmyPDF** (Tesseract), embedded text extraction via **Docling**, plus API-based OCR through **Mistral OCR** or any **vision LLM** (OpenAI-compatible). Use Mistral's cloud API, self-host DeepSeek-OCR-2 via KatDocExtract, or use a vision model like Gemma 4 via vLLM — all configurable.
+* **Visual schema editor** — tree-based JSON schema editor with support for nested objects, arrays, all JSON types, import/export, and validation.
+* **LLM trials** — run extraction trials across different prompts, schemas, and models. Temperature control, token tracking, batch execution. Works with any OpenAI-compatible endpoint.
+* **Evaluation** — upload ground truth CSVs, compare field-by-field, compute per-field and overall accuracy metrics.
+* **Privacy-first** — run fully local or with self-hosted providers. No forced external calls.
+* **Admin dashboard** — user management (invitations, roles), provider configuration, Celery monitoring.
 
 > Tech stack: **Vue 3 + Vite + TailwindCSS** (frontend), **FastAPI** (backend), **SQLAlchemy**, **Celery**, **Pydantic** for configuration.
 
 ---
 
-## 📦 Requirements
+## Requirements
 
-* Node.js 18+ (for the frontend) and PNPM/NPM/Yarn
-* Python 3.11+ (for the backend)
 * Docker & Docker Compose (recommended for deployment)
-* Optional GPU stack: NVIDIA driver + NVIDIA Container Toolkit (for LLM inference only, not needed for OCR)
-* **OpenAI-compatible API** (e.g., official OpenAI, self-hosted vLLM, llama.cpp, ollama, …)
-* (Optional) **RustFS** for object storage or any other S3 storage
+* **An OpenAI-compatible API** — official OpenAI, self-hosted vLLM, Ollama, llama.cpp, or any compatible gateway
+* Optional: NVIDIA GPU + Container Toolkit (only needed for self-hosted OCR/LLM via the optional compose overlays)
+* For local development: Node.js 18+ + Python 3.11+
 
 ---
 
-## 🐳 Docker Installation
+## Docker Installation
 
-### Quick Start (Development)
+### Quick Start
 
-1. Clone the repository:
-
+1. Clone the repository and set up environment:
 ```bash
 git clone https://github.com/KatherLab/llmaixweb
 cd llmaixweb
-```
-
-2. Copy and edit environment files:
-
-```bash
 cp .env.example .env
-# Edit .env with your settings
+# Edit .env with at minimum: SECRET_KEY, OPENAI_API_KEY, OPENAI_API_BASE, OPENAI_API_MODEL
 ```
 
-> **Note:** The `.env` file is required. The stack will fail to start without it (missing database credentials, secrets, etc.).
-
-3. Start the stack:
-
+2. Start the stack:
 ```bash
-# CPU only (default - works with Docker or Podman)
 docker compose up -d
-# or: podman compose up -d
-
-# GPU (requires NVIDIA driver + container toolkit)
-docker compose -f compose.gpu.yml up -d
-
-# Development with hot-reload (optional overlay)
-docker compose -f compose.dev.yml up -d
 ```
 
-> **Tip:** Pre-built images are available at `ghcr.io/katherlab/llmaixweb-backend:cpu`, `ghcr.io/katherlab/llmaixweb-backend:gpu`, and `ghcr.io/katherlab/llmaixweb-frontend:latest`. Compose will automatically pull them if not present locally. Use `--build` to build from source instead.
+3. Open **[http://localhost:5173](http://localhost:5173)** and create an admin account on first visit.
 
-4. Visit the web UI at **[http://localhost:5173](http://localhost:5173)**.
+4. In the admin panel, configure your LLM provider, then upload documents and run extraction trials.
 
-### Docker Compose Files
+> Pre-built images at `ghcr.io/katherlab/llmaixweb-backend:latest` and `ghcr.io/katherlab/llmaixweb-frontend:latest`. Add `--build` to build from source.
 
-| File                   | Purpose                                                                                         |
-|------------------------|-------------------------------------------------------------------------------------------------|
-| `compose.yml`          | **Default config** - CPU-only backend, works with Docker & Podman                               |
-| `compose.gpu.yml`      | **GPU config** - GPU-enabled backend (NVIDIA driver required, for LLM inference)                |
-| `compose.dev.yml`      | **Optional overlay** - Mounts local code for hot-reload (development only)                      |
-| `compose.deepseek.yml` | **Optional GPU overlay** - Self-hosted Mistral OCR API via DeepSeek-OCR-2 + KatDocExtract       |
-| `compose.vllm.yml`     | **Optional GPU overlay** - Bring your own vLLM OpenAI-compatible endpoint (e.g. for Vision OCR) |
+### Compose Files
 
-**Usage pattern:**
+| File                   | Purpose                                                                                               | GPU required?               |
+|------------------------|-------------------------------------------------------------------------------------------------------|-----------------------------|
+| `compose.yml`          | **Main config** — CPU-only, works with Docker & Podman                                                | No                          |
+| `compose.dev.yml`      | **Optional overlay** — hot-reload for local development                                               | No                          |
+| `compose.deepseek.yml` | **Optional overlay** — self-hosted Mistral OCR API via DeepSeek-OCR-2 + KatDocExtract                 | Yes (24+ GB VRAM)           |
+| `compose.vllm.yml`     | **Optional overlay** — self-hosted OpenAI-compatible endpoint via vLLM (e.g., Gemma 4 for Vision OCR) | Yes (VRAM depends on model) |
+
+**Usage examples:**
 ```bash
-# Default CPU setup (recommended)
+# Minimal setup (CPU, uses your configured API provider)
 docker compose up -d
 
-# Development with code hot-reload
+# Development with hot-reload
 docker compose -f compose.dev.yml up -d
-
-# GPU deployment (for GPU-accelerated LLM inference in the backend)
-docker compose -f compose.gpu.yml up -d
 
 # Self-hosted Mistral OCR via DeepSeek-OCR-2 (GPU required)
 docker compose -f compose.yml -f compose.deepseek.yml up -d
 
-# Self-hosted vLLM endpoint for Vision LLM OCR or as main LLM provider (GPU required)
+# Self-hosted vision LLM via vLLM (GPU required)
 docker compose -f compose.yml -f compose.vllm.yml up -d
+
+# Combine overlays: e.g., all services
+docker compose -f compose.yml -f compose.deepseek.yml -f compose.vllm.yml up -d
 ```
 
-> **Combine overlays:** Overlay files stack, e.g. `docker compose -f compose.yml -f compose.gpu.yml -f compose.deepseek.yml up -d` for GPU backend + self-hosted OCR.
+> The overlays (`compose.deepseek.yml`, `compose.vllm.yml`) are **optional** GPU-requiring services for running OCR/LLM locally. Without them, the app simply connects to your configured remote API.
 
 ### Environment Configuration
 
-Edit the `.env` file to match your deployment. **For basic setups, only the LLM provider settings are required** - all other defaults work with docker-compose out of the box.
+Edit `.env` for your deployment. **At minimum**, configure your LLM provider and a secret key.
 
 #### Essential Settings
 
@@ -119,7 +103,7 @@ Edit the `.env` file to match your deployment. **For basic setups, only the LLM 
 
 #### Storage
 
-**RustFS** (can be any S3 compatible storage):
+**RustFS** (default with docker-compose):
 
 | Variable                | Default              |
 |-------------------------|----------------------|
@@ -145,18 +129,16 @@ Edit the `.env` file to match your deployment. **For basic setups, only the LLM 
 | `CELERY_PREPROCESS_POOL`  | Pool type (`auto`, `solo`, `prefork`) | `auto` (use `solo` on macOS)   |
 | `MISTRAL_API_BASE`        | Mistral OCR API base URL              | `https://api.mistral.ai`       |
 | `MISTRAL_API_KEY`         | Mistral OCR API key (server default)  | (empty)                        |
-| `MISTRAL_OCR_ENABLED`     | Enable Mistral OCR engine             | `true`                         |
-| `VISION_OCR_ENABLED`      | Enable Vision LLM OCR engine          | `true`                         |
+| `MISTRAL_OCR_ENABLED`     | Enable Mistral OCR engine             | `false`                        |
+| `VISION_OCR_ENABLED`      | Enable Vision LLM OCR engine          | `false`                        |
 | `VISION_OCR_API_KEY`      | Vision OCR API key (server default)   | (empty)                        |
 | `VISION_OCR_API_BASE`     | Vision OCR API base URL               | (empty)                        |
 | `VISION_OCR_MODEL`        | Vision OCR default model              | `gpt-4o`                       |
 
-> **Self-hosted OCR:** Use `docker compose -f compose.yml -f compose.deepseek.yml up -d` for a local Mistral OCR-compatible API (DeepSeek-OCR-2 via KatDocExtract). Use `docker compose -f compose.yml -f compose.vllm.yml up -d` for a local vision LLM endpoint (e.g. Gemma 4). See `.env.example` for the required env var overrides.
+> **Self-hosted OCR:** Use `docker compose -f compose.yml -f compose.deepseek.yml up -d` for a local Mistral OCR-compatible API (DeepSeek-OCR-2 via KatDocExtract). Use `docker compose -f compose.yml -f compose.vllm.yml up -d` for a local vision LLM endpoint (e.g. Gemma 4). Then set the corresponding `MISTRAL_API_BASE`/`VISION_OCR_API_BASE` env vars. See `.env.example` for details.
 
 <details>
 <summary>Database & Advanced Settings (click to expand)</summary>
-
-These defaults work with docker-compose - only change if using external services.
 
 | Variable                      | Description                  | Default                |
 |-------------------------------|------------------------------|------------------------|
@@ -187,33 +169,13 @@ These defaults work with docker-compose - only change if using external services
 
 ---
 
-## 🚀 Get started
+## Development
 
-1. **Configure**: Edit `.env` and set at minimum:
-   - `OPENAI_API_KEY`, `OPENAI_API_BASE`, `OPENAI_API_MODEL` (your LLM provider)
-   - `SECRET_KEY` (random string for production)
-
-2. **Start**: `docker compose up -d`
-
-3. **Access**: Open **[http://localhost:5173](http://localhost:5173)**
-
-4. **Setup**: Create an admin account on first visit
-
-5. **Configure**: In the admin panel, set up your LLM provider and extraction schemas
-
-6. **Upload**: Add documents and run your first extraction trial
-
-> **Troubleshooting**: Check container logs with `docker compose logs -f backend` if the app fails to start. Most issues are missing/invalid environment variables.
+See [DEVELOPER.md](DEVELOPER.md) for local development and testing instructions.
 
 ---
 
-## 🔧 Development
-
-See [DEVELOPER.md](DEVELOPER.md) for development instructions, including running tests and initializing users.
-
----
-
-## 🔐 Security & Privacy
+## Security & Privacy
 
 * Keep PHI strictly local unless you explicitly configure a remote provider.
 * Prefer self-hosted, OpenAI-compatible endpoints for clinical data.
@@ -221,6 +183,6 @@ See [DEVELOPER.md](DEVELOPER.md) for development instructions, including running
 
 ---
 
-## 📜 License
+## License
 
-This project is licensed under the **AGPL-3.0**. See [LICENSE](LICENSE).
+**AGPL-3.0** — see [LICENSE](LICENSE).

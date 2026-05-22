@@ -6,15 +6,15 @@ This project uses separate versioning for frontend and backend components.
 
 ### Version Locations
 
-| Component | Version File | Exposed Via |
-|-----------|-------------|-------------|
-| Frontend | `package.json` (root) → `frontend/update-version.js` syncs to `frontend/version.js` at build time | Displayed in footer |
-| Backend | `pyproject.toml` (llmaix package) | `/api/v1/version` endpoint |
+| Component | Version File                                                                                      | Exposed Via                |
+|-----------|---------------------------------------------------------------------------------------------------|----------------------------|
+| Frontend  | `package.json` (root) → `frontend/update-version.js` syncs to `frontend/version.js` at build time | Displayed in footer        |
+| Backend   | `pyproject.toml` (llmaixweb package)                                                              | `/api/v1/version` endpoint |
 
 ### Current Versions
 
-- **Frontend**: `package.json` → `"version": "0.2.3"` (synced to `frontend/version.js` via `prebuild` script)
-- **Backend**: `pyproject.toml` → `version = "0.1.4"` (llmaix package version)
+- **Frontend**: `package.json` → `"version": "0.2.4"` (synced to `frontend/version.js` via `prebuild` script)
+- **Backend**: `pyproject.toml` → `version = "0.1.4"` (llmaixweb package version)
 
 ### Git Commit Hash
 
@@ -153,7 +153,7 @@ ENV_PATH=backend/.env.localtest uv run pytest --verbose --cov=backend --cov-repo
 
 ## 🐳 Optional Compose Overlays
 
-The repo ships two optional GPU compose overlays for self-hosted OCR and LLM inference:
+The repo ships two optional GPU-requiring compose overlays for self-hosted OCR and LLM inference:
 
 ### compose.deepseek.yml — Self-hosted Mistral OCR
 
@@ -243,16 +243,16 @@ LLMAIx Web can send emails for user invitations and password resets via SMTP.
 
 Set the following environment variables (or configure via Admin Settings UI → Email tab):
 
-| Variable | Description |
-|----------|-------------|
-| `EMAIL_ENABLED` | Set to `true` to enable email sending |
-| `SMTP_HOST` | SMTP server hostname (e.g., `smtp.gmail.com`) |
-| `SMTP_PORT` | SMTP port (587 for STARTTLS, 465 for SSL) |
-| `SMTP_USERNAME` | SMTP username (may be secret) |
-| `SMTP_PASSWORD` | SMTP password / app password (may be secret) |
-| `SMTP_FROM_ADDRESS` | Sender email address |
-| `SMTP_FROM_NAME` | Sender display name (default: "LLMAIx Web") |
-| `SMTP_USE_TLS` | Use STARTTLS (default: `true`) |
+| Variable            | Description                                   |
+|---------------------|-----------------------------------------------|
+| `EMAIL_ENABLED`     | Set to `true` to enable email sending         |
+| `SMTP_HOST`         | SMTP server hostname (e.g., `smtp.gmail.com`) |
+| `SMTP_PORT`         | SMTP port (587 for STARTTLS, 465 for SSL)     |
+| `SMTP_USERNAME`     | SMTP username (may be secret)                 |
+| `SMTP_PASSWORD`     | SMTP password / app password (may be secret)  |
+| `SMTP_FROM_ADDRESS` | Sender email address                          |
+| `SMTP_FROM_NAME`    | Sender display name (default: "LLMAIx Web")   |
+| `SMTP_USE_TLS`      | Use STARTTLS (default: `true`)                |
 
 ### Behavior When Email is Disabled
 
@@ -279,10 +279,10 @@ python -m backend.scripts.populate_users
 
 ```bash
 # Running stack
-docker compose -f compose.gpu.yml exec -it backend \
+docker compose exec -it backend \
   python -m backend.scripts.populate_users
 
 # Stopped stack
-docker compose -f compose.gpu.yml run --rm -it backend \
+docker compose run --rm -it backend \
   python -m backend.scripts.populate_users
 ```
