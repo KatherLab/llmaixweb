@@ -39,11 +39,6 @@ def check_project_access(
     )
 
 
-async def get_admin_user(current_user: models.User) -> bool:
-    """Check if user is admin."""
-    return current_user.role == "admin"
-
-
 @router.post("/preprocess", response_model=schemas.PreprocessingTask)
 async def preprocess_project_data(
     *,
@@ -179,13 +174,9 @@ async def preprocess_project_data(
         elif isinstance(inline_cfg, dict):
             bypass_celery = inline_cfg.get("bypass_celery", False)
 
-    # 2. Only check admin if someone tried to set bypass_celery
-    if bypass_celery:
-        if not await get_admin_user(current_user):
-            # Not an admin, so do not allow bypass
-            bypass_celery = False
-            # Optionally, raise error instead:
-            raise HTTPException(403, "Only admins may set bypass_celery")
+    # 2. Only allow bypass_celery for admins
+    if bypass_celery and current_user.role != "admin":
+        raise HTTPException(403, "Only admins may set bypass_celery")
 
     # Start processing
     if bypass_celery:
