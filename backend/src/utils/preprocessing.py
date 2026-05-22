@@ -124,7 +124,7 @@ class PreprocessingPipeline:
             elif failed == total:
                 self.task.status = models.PreprocessingStatus.FAILED
                 self.task.message = "All files failed to preprocess."
-                print("set to all failed")
+                logger.warning("All files failed to preprocess for task %s", self.task.id)
             else:
                 self.task.status = models.PreprocessingStatus.FAILED
                 self.task.message = (
@@ -220,10 +220,11 @@ class PreprocessingPipeline:
 
         except Exception as e:
             file_task.status = models.PreprocessingStatus.FAILED
-            import traceback
-
-            print(
-                f"Error processing file {file_task.file.file_name}: {traceback.format_exc()}"
+            logger.error(
+                "Error processing file %s: %s",
+                file_task.file.file_name,
+                e,
+                exc_info=True,
             )
             file_task.error_message = str(e)
             file_task.completed_at = datetime.datetime.now(datetime.UTC)

@@ -1,6 +1,7 @@
 """Preprocessing task endpoints for projects."""
 
 import datetime
+import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,6 +12,7 @@ from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -180,7 +182,7 @@ async def preprocess_project_data(
 
     # Start processing
     if bypass_celery:
-        print("Bypassing Celery for preprocessing task")
+        logger.info("Bypassing Celery for preprocessing task %s", task.id)
         from ....utils.preprocessing import PreprocessingPipeline
 
         try:

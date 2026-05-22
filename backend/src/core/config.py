@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     VISION_OCR_DISPLAY_SUBTITLE: str = "Best for complex documents"
 
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    LOG_LEVEL: str = "INFO"
+
     DISABLE_CELERY: bool = False
     INITIALIZE_CELERY: bool = True  # Whether to initialize Celery workers on startup
     DISABLE_RATE_LIMIT: bool = False  # Disable rate limiting (for tests)
@@ -393,6 +395,13 @@ SETTINGS_META = {
         "readonly": False,
         "category": "OpenAI",
         "label": "Skip OpenAI Check",
+    },
+    "LOG_LEVEL": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "General",
+        "label": "Log Level",
     },
     "DISABLE_CELERY": {
         "type": "bool",

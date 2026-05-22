@@ -1,6 +1,7 @@
 # backend/src/celery/info_extraction.py
 import asyncio
 import datetime as dt
+import logging
 from typing import Any, Dict, List
 
 from openai import AsyncOpenAI
@@ -10,6 +11,8 @@ from .. import models
 from ..db.session import db_session
 from ..utils.info_extraction import extract_info_single_doc_async, update_trial_progress
 from .celery_config import celery_app
+
+log = logging.getLogger(__name__)
 
 if celery_app:
 
@@ -79,14 +82,12 @@ if celery_app:
                                 )
 
                         except asyncio.CancelledError:
-                            print(
-                                f"[Trial {trial_id}] Doc {doc_id} was force-cancelled!"
-                            )
+                            log.warning("Trial %s: Doc %s was force-cancelled", trial_id, doc_id)
                             failures[str(doc_id)] = "Cancelled"
                             raise
                         except Exception as exc:
                             failures[str(doc_id)] = str(exc)
-                            print(f"[Trial {trial_id}] Doc {doc_id} failed: {exc}")
+                            log.error("Trial %s: Doc %s failed: %s", trial_id, doc_id, exc)
 
                 # Launch tasks (they'll be throttled by the semaphore)
                 for doc_id in document_ids:
@@ -103,7 +104,7 @@ if celery_app:
                                 break
                     except Exception as exc:
                         # non-fatal; just log
-                        print(f"[Trial {trial_id}] Heartbeat error: {exc}")
+                        log.warning("Trial %s: Heartbeat error: %s", trial_id, exc)
 
                 # Cancellation watcher: cancels in-flight tasks
                 async def _cancellation_watcher():
@@ -113,9 +114,7 @@ if celery_app:
                             with db_session() as db:
                                 trial = db.get(models.Trial, trial_id)
                                 if trial and trial.is_cancelled:
-                                    print(
-                                        f"[Trial {trial_id}] Cancellation detected, aborting in-flight tasks..."
-                                    )
+                                    log.warning("Trial %s: Cancellation detected, aborting in-flight tasks", trial_id)
                                     for t in doc_tasks.values():
                                         if not t.done():
                                             t.cancel()
@@ -123,7 +122,7 @@ if celery_app:
                             if all(t.done() for t in doc_tasks.values()):
                                 break
                     except Exception as exc:
-                        print(f"[Trial {trial_id}] Cancellation watcher error: {exc}")
+                        log.warning("Trial %s: Cancellation watcher error: %s", trial_id, exc)
 
                 # Run all together
                 await asyncio.gather(

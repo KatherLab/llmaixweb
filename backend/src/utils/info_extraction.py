@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import logging
 import re
 import unicodedata
 from sqlite3 import IntegrityError
@@ -18,6 +19,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .. import models
+
+logger = logging.getLogger(__name__)
 
 # ------------------------------
 # Connection / capability checks
@@ -605,13 +608,21 @@ def _print_json_error(label: str, raw: str, err: json.JSONDecodeError) -> None:
     end = min(len(raw), err.pos + 120)
     snippet = raw[start:end]
 
-    print(f"[{label}] JSONDecodeError: {err.msg}")
-    print(f"[{label}] line={err.lineno} col={err.colno} pos={err.pos}")
-    print(f"[{label}] context={snippet!r}")
+    logger.warning(
+        "[%s] JSONDecodeError: %s  line=%s col=%s pos=%s  context=%r",
+        label,
+        err.msg,
+        err.lineno,
+        err.colno,
+        err.pos,
+        snippet,
+    )
 
     if 0 <= err.pos < len(raw):
         ch = raw[err.pos]
-        print(f"[{label}] offending_char={ch!r} ord={ord(ch)} hex=0x{ord(ch):02x}")
+        logger.debug(
+            "[%s] offending_char=%r ord=%d hex=0x%02x", label, ch, ord(ch), ord(ch)
+        )
 
 
 def safe_json_loads(text: str) -> Any:
@@ -624,10 +635,10 @@ def safe_json_loads(text: str) -> Any:
     try:
         return json.loads(text)
     except json.JSONDecodeError as e:
-        print("[safe_json_loads] initial parse failed")
+        logger.debug("[safe_json_loads] initial parse failed")
         _print_json_error("initial", text, e)
     except Exception as e:
-        print(f"[safe_json_loads] initial parse failed: {type(e).__name__}: {e}")
+        logger.warning("[safe_json_loads] initial parse failed: %s: %s", type(e).__name__, e)
 
     candidate = _extract_json_snippet(text)
     candidate = candidate.replace("“", '"').replace("”", '"').replace("’", "'")
@@ -636,11 +647,11 @@ def safe_json_loads(text: str) -> Any:
     try:
         return json.loads(candidate)
     except json.JSONDecodeError as e:
-        print("[safe_json_loads] repaired parse failed")
+        logger.warning("[safe_json_loads] repaired parse failed")
         _print_json_error("repaired", candidate, e)
         raise
     except Exception as e:
-        print(f"[safe_json_loads] repaired parse failed: {type(e).__name__}: {e}")
+        logger.warning("[safe_json_loads] repaired parse failed: %s: %s", type(e).__name__, e)
         raise
 
 

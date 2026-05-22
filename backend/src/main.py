@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import multiprocessing as mp
 
 try:
@@ -21,6 +22,9 @@ from .celery.celery_config import celery_app
 from .core.config import settings
 from .db.session import init_db
 from .routers.v1.endpoints import admin, auth, projects, users
+from .utils.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
@@ -57,6 +61,13 @@ def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
 # ───────────────────────── FastAPI lifespan ──────────────────────
 @asynccontextmanager
 async def lifespan(app):
+    setup_logging(level=settings.LOG_LEVEL)
+    logger.info(
+        "Starting %s v%s (%s)",
+        settings.PROJECT_NAME,
+        get_version(),
+        get_git_commit(),
+    )
     init_db()
 
     workers: list[mp.Process] = []
@@ -94,7 +105,7 @@ api_router.include_router(projects.router, prefix="/project", tags=["projects"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(api_router)
 
-print("Using custom CORS origins from settings:", settings.BACKEND_CORS_ORIGINS_LIST)
+logger.info("CORS origins: %s", settings.BACKEND_CORS_ORIGINS_LIST)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS_LIST,
