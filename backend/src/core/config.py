@@ -42,12 +42,12 @@ class Settings(BaseSettings):
 
     MISTRAL_API_BASE: str = "https://api.mistral.ai"
     MISTRAL_API_KEY: str = ""
-    MISTRAL_OCR_ENABLED: bool = True
+    MISTRAL_OCR_ENABLED: bool = False
     MISTRAL_OCR_DISPLAY_NAME: str = "Mistral OCR API"
     MISTRAL_OCR_DISPLAY_SUBTITLE: str = "Best for complex layouts"
 
     # Separate API endpoint/config for Vision LLM OCR (independent of main LLM client)
-    VISION_OCR_ENABLED: bool = True
+    VISION_OCR_ENABLED: bool = False
     VISION_OCR_API_KEY: str = ""
     VISION_OCR_API_BASE: str = ""
     VISION_OCR_MODEL: str = "gpt-4o"
