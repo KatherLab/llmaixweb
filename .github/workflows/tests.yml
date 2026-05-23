@@ -20,7 +20,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ocrmypdf tesseract-ocr-deu tesseract-ocr-eng
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng
 
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b

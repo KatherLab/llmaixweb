@@ -15,8 +15,11 @@ services:
       - INITIALIZE_CELERY=${INITIALIZE_CELERY:-false}
       - REQUIRE_INVITATION=${REQUIRE_INVITATION:-false}
       - APP_URL=${APP_URL:-http://localhost:5173}
+      - DOCLING_ARTIFACTS_PATH=/app/docling-models
     # ports: ["8000:8000"] # uncomment for local debugging / testing the backend
     depends_on:
+      docling-models-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -41,12 +44,40 @@ services:
     image: ghcr.io/katherlab/llmaixweb-backend:latest
     restart: unless-stopped
     env_file: .env
+    environment:
+      - DOCLING_ARTIFACTS_PATH=/app/docling-models
+    volumes:
+      - docling-models:/app/docling-models
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
       worker -Q preprocess -c 1 --loglevel=info
     depends_on:
       backend:
         condition: service_started
+
+  docling-models-init:
+    image: ghcr.io/katherlab/llmaixweb-backend:latest
+    restart: "no"
+    env_file: .env
+    environment:
+      - DOCLING_ARTIFACTS_PATH=/app/docling-models
+    volumes:
+      - docling-models:/app/docling-models
+    command: >
+      /bin/sh -c "
+        if [ -f /app/docling-models/.ready ]; then
+          echo 'Docling models already present';
+          exit 0;
+        fi;
+
+        echo 'Downloading Docling models...';
+        mkdir -p /app/docling-models;
+
+        /app/.venv/bin/docling-tools models download --output-dir /app/docling-models 2>&1;
+
+        touch /app/docling-models/.ready;
+        echo 'Docling models ready';
+      "
 
   frontend:
     build:
@@ -121,3 +152,4 @@ volumes:
   pgdata:
   redis-data:
   minio-data:
+  docling-models:

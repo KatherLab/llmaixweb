@@ -1,7 +1,8 @@
 // Reactive store for OCR engine display names
 // Populated from GET /auth/settings
 const ocrEngineLabels = {
-  ocrmypdf: { name: 'Quick (Local OCR)', subtitle: 'OCRmyPDF / Tesseract' },
+  ocrmypdf: { name: 'Quick (Local OCR)', subtitle: 'Legacy: OCRmyPDF' },
+  docling_tesseract: { name: 'Quick (Local OCR)', subtitle: 'Docling / Tesseract' },
   mistral_ocr: { name: 'Mistral OCR API', subtitle: 'Best for complex layouts' },
   llm_vision: { name: 'Vision LLM API', subtitle: 'Best for complex documents' },
 }

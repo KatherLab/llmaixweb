@@ -16,13 +16,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # uv binary
 COPY --from=uv /uv /usr/local/bin/uv
 
-# Native runtime tools for OCRmyPDF + Tesseract.
-# OCRmyPDF itself comes from pyproject.toml / uv.lock.
+# Runtime tools for Tesseract OCR (used by Docling).
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
-        ghostscript \
-        qpdf \
         tesseract-ocr \
         tesseract-ocr-eng \
         tesseract-ocr-deu \
@@ -34,8 +31,8 @@ RUN apt-get update && \
         tesseract-ocr-pol \
         tesseract-ocr-rus \
         tesseract-ocr-chi-sim \
-        unpaper \
-        pngquant \
+        tesseract-ocr-lat \
+        tesseract-ocr-osd \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

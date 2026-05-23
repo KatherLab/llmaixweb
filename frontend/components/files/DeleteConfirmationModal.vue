@@ -45,6 +45,37 @@
               Cancel
             </button>
             <button
+              v-if="showForceDelete"
+              class="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:bg-orange-300"
+              :disabled="isProcessing"
+              @click="$emit('force-delete')"
+            >
+              <span v-if="isProcessing" class="flex items-center">
+                <svg
+                  class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Deleting...
+              </span>
+              <span v-else>{{ forceDeleteLabel }}</span>
+            </button>
+            <button
+              v-else
               class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:bg-red-300"
               :disabled="isProcessing"
               @click="$emit('confirm')"
@@ -96,9 +127,17 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  showForceDelete: {
+    type: Boolean,
+    default: false,
+  },
+  forceDeleteLabel: {
+    type: String,
+    default: 'Delete Anyway (Force)',
+  },
 })
 
-defineEmits(['confirm', 'cancel'])
+defineEmits(['confirm', 'cancel', 'force-delete'])
 
 useScrollLock({ autoLock: true })
 </script>

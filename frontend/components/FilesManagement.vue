@@ -311,7 +311,10 @@
       :title="deleteModalTitle"
       :message="deleteModalMessage"
       :is-processing="isDeleting"
+      :show-force-delete="showForceDelete"
+      force-delete-label="Delete Anyway (Force)"
       @confirm="executeDelete"
+      @force-delete="executeForceDelete"
       @cancel="cancelDelete"
     />
 
@@ -404,6 +407,9 @@ const deleteModalMessage = ref('')
 const isDeleting = ref(false)
 const filesToDelete = ref([])
 const deleteMode = ref('') // 'single' or 'batch'
+const deleteForce = ref(false) // 'normal' or 'force'
+const showForceDelete = ref(false)
+const linkedResourceDetail = ref('')
 
 // Duplicate detection
 const showDuplicatesModal = ref(false)
@@ -836,6 +842,8 @@ const confirmBatchDelete = () => {
 const confirmDeleteFile = (file) => {
   filesToDelete.value = [file]
   deleteMode.value = 'single'
+  showForceDelete.value = false
+  linkedResourceDetail.value = ''
   deleteModalTitle.value = 'Delete File'
   deleteModalMessage.value = `Are you sure you want to delete "${file.file_name}"? This action cannot be undone.`
   showDeleteModal.value = true
@@ -845,6 +853,8 @@ const confirmDeleteFile = (file) => {
 const showBatchDelete = () => {
   filesToDelete.value = selectedFiles.value.map((id) => files.value.find((f) => f.id === id))
   deleteMode.value = 'batch'
+  showForceDelete.value = false
+  linkedResourceDetail.value = ''
   deleteModalTitle.value = 'Delete Multiple Files'
   deleteModalMessage.value = `Are you sure you want to delete ${selectedFiles.value.length} files? This action cannot be undone.`
   showDeleteModal.value = true
@@ -880,25 +890,65 @@ const executeDelete = async () => {
     await fetchFiles()
     await fetchStats()
     emit('files-changed')
+    cancelDelete()
   } catch (err) {
     if (err.response?.status === 409) {
       const detail = err.response?.data?.detail
+      let linkMsg = ''
       if (detail && detail.links) {
-        toast.error(
-          `Cannot delete: File has ${detail.links.documents} linked documents and ${detail.links.preprocessing_tasks} preprocessing tasks`,
-        )
+        linkMsg = `File has ${detail.links.documents} linked document(s) and ${detail.links.preprocessing_tasks} preprocessing task(s).`
       } else {
-        toast.error('Cannot delete file: it is linked to other resources')
+        linkMsg = 'File is linked to other resources.'
       }
+      linkedResourceDetail.value = linkMsg
+      showForceDelete.value = true
+      deleteModalMessage.value =
+        `${linkMsg}\n\n` +
+        'Use "Delete Anyway (Force)" to delete the file and orphan the linked records.'
     } else {
       toast.error('Failed to delete file(s)')
+      cancelDelete()
     }
     console.error(err)
   } finally {
     isDeleting.value = false
-    showDeleteModal.value = false
-    filesToDelete.value = []
-    deleteMode.value = ''
+  }
+}
+
+const executeForceDelete = async () => {
+  isDeleting.value = true
+
+  try {
+    if (deleteMode.value === 'single') {
+      await api.delete(`/project/${props.projectId}/file/${filesToDelete.value[0].id}?force=true`)
+      toast.success('File deleted with force')
+    } else {
+      const response = await api.post(`/project/${props.projectId}/file/batch-delete`, {
+        file_ids: filesToDelete.value.map((f) => f.id),
+        force: true,
+      })
+
+      if (response.data.total_deleted > 0) {
+        toast.success(`Deleted ${response.data.total_deleted} files`)
+      }
+      if (response.data.errors && response.data.errors.length > 0) {
+        response.data.errors.forEach((error) => {
+          toast.error(`Failed to delete file: ${error.error}`)
+        })
+      }
+      selectedFiles.value = []
+    }
+
+    await fetchFiles()
+    await fetchStats()
+    emit('files-changed')
+    cancelDelete()
+  } catch (err) {
+    toast.error('Failed to force delete file(s)')
+    console.error(err)
+    cancelDelete()
+  } finally {
+    isDeleting.value = false
   }
 }
 
@@ -907,6 +957,8 @@ const cancelDelete = () => {
   showDeleteModal.value = false
   filesToDelete.value = []
   deleteMode.value = ''
+  showForceDelete.value = false
+  linkedResourceDetail.value = ''
 }
 
 const fetchFileById = async (id) => {

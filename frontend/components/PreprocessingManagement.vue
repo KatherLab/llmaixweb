@@ -360,14 +360,14 @@
             <button
               :class="[
                 'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all min-h-[100px]',
-                selectedEngine === 'ocrmypdf'
+                selectedEngine === 'docling_tesseract'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300',
               ]"
-              @click="selectedEngine = 'ocrmypdf'"
+              @click="selectedEngine = 'docling_tesseract'"
             >
               <svg
-                :class="selectedEngine === 'ocrmypdf' ? 'text-blue-600' : 'text-gray-400'"
+                :class="selectedEngine === 'docling_tesseract' ? 'text-blue-600' : 'text-gray-400'"
                 class="h-8 w-8 mb-2"
                 fill="none"
                 stroke="currentColor"
@@ -380,9 +380,9 @@
                   stroke-width="2"
                 />
               </svg>
-              <span class="font-medium text-sm">{{ getEngineLabel('ocrmypdf') }}</span>
+              <span class="font-medium text-sm">{{ getEngineLabel('docling_tesseract') }}</span>
               <span class="text-xs text-gray-500 mt-1 text-center"
-                >{{ getEngineSubtitle('ocrmypdf') }}<br />No configuration needed</span
+                >{{ getEngineSubtitle('docling_tesseract') }}<br />No configuration needed</span
               >
             </button>
 
@@ -459,6 +459,62 @@
             <input v-model="forceOcr" class="accent-blue-600" type="checkbox" />
             Force OCR for PDFs (ignore embedded text, run OCR on all pages)
           </label>
+
+          <!-- Local OCR (Docling / Tesseract) advanced settings -->
+          <div
+            v-if="selectedEngine === 'docling_tesseract'"
+            class="space-y-3 border-t border-blue-100 pt-4"
+          >
+            <button
+              class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+              type="button"
+              @click="showLocalOcrAdvanced = !showLocalOcrAdvanced"
+            >
+              <svg
+                :class="showLocalOcrAdvanced ? 'rotate-90' : ''"
+                class="h-3 w-3 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M9 5l7 7-7 7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+              Advanced
+            </button>
+            <div v-if="showLocalOcrAdvanced" class="space-y-3 pl-3 border-l-2 border-blue-100">
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1"
+                  >Tesseract Language</label
+                >
+                <select
+                  v-model="tesseractLang"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="auto">Auto-detect (default)</option>
+                  <option value="eng">English</option>
+                  <option value="deu">German</option>
+                  <option value="fra">French</option>
+                  <option value="spa">Spanish</option>
+                  <option value="ita">Italian</option>
+                  <option value="por">Portuguese</option>
+                  <option value="nld">Dutch</option>
+                  <option value="pol">Polish</option>
+                  <option value="rus">Russian</option>
+                  <option value="chi-sim">Chinese (Simplified)</option>
+                  <option value="lat">Latin</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500">
+                  Select a specific language or leave as auto-detect. Only used for local Tesseract
+                  OCR.
+                </p>
+              </div>
+            </div>
+          </div>
 
           <!-- Mistral settings -->
           <div
@@ -748,7 +804,7 @@ const serverDefaults = ref({
 })
 
 // Form state
-const selectedEngine = ref('ocrmypdf')
+const selectedEngine = ref('docling_tesseract')
 const forceOcr = ref(false)
 const mistralApiKey = ref('')
 const mistralModel = ref('mistral-ocr-latest')
@@ -760,6 +816,8 @@ const visionPrompt = ref(
   'Extract all text from this image and return it as clean markdown. Preserve the original structure, headings, lists, and formatting as much as possible.',
 )
 const visionMaxImageDim = ref(2048)
+const showLocalOcrAdvanced = ref(false)
+const tesseractLang = ref('auto')
 const showVisionAdvanced = ref(false)
 
 const engineLabel = (task) => {
@@ -876,6 +934,9 @@ const formatRelativeTime = (ds) => {
 
 const buildAdditionalSettings = () => {
   const settings = { ocr_engine: selectedEngine.value, force_ocr: forceOcr.value }
+  if (selectedEngine.value === 'docling_tesseract' && tesseractLang.value !== 'auto') {
+    settings.docling_ocr_languages = [tesseractLang.value]
+  }
   if (selectedEngine.value === 'mistral_ocr') {
     if (mistralApiKey.value) settings.mistral_api_key = mistralApiKey.value
     settings.mistral_model = mistralModel.value
@@ -896,7 +957,9 @@ const startPreprocessing = async () => {
   try {
     const inlineConfig = {
       name:
-        selectedEngine.value === 'ocrmypdf' ? 'Quick Process' : `Custom ${selectedEngine.value}`,
+        selectedEngine.value === 'docling_tesseract'
+          ? 'Quick (Local OCR)'
+          : `Custom ${selectedEngine.value}`,
       additional_settings: buildAdditionalSettings(),
     }
     const taskData = { inline_config: inlineConfig, file_ids: selectedFiles.value }
@@ -989,8 +1052,10 @@ const selectAllFiles = () => {
 }
 const resetForm = () => {
   selectedFiles.value = []
-  selectedEngine.value = 'ocrmypdf'
+  selectedEngine.value = 'docling_tesseract'
   forceOcr.value = false
+  tesseractLang.value = 'auto'
+  showLocalOcrAdvanced.value = false
   mistralApiKey.value = ''
   mistralModel.value = 'mistral-ocr-latest'
   showMistralAdvanced.value = false

@@ -73,7 +73,7 @@ Files are processed asynchronously via **Celery** to extract text content. The `
 
 **OCR engines (for PDFs/images):**
 1. **Docling** — embedded text extraction (tried first for PDFs, no OCR, falls back if insufficient text)
-2. **ocrmypdf (Tesseract)** — local OCR using Tesseract
+2. **Local OCR (Docling + Tesseract)** — local OCR using Tesseract via the Docling pipeline
 3. **Mistral OCR** — API-based OCR via Mistral
 4. **Vision LLM OCR** — API-based OCR via any OpenAI-compatible vision model
 

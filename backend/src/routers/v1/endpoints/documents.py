@@ -178,16 +178,20 @@ def delete_document(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # --- NEW: Check for usage in any trial (document_ids is a JSON list) ---
+    # --- Check for usage in any trial (document_ids is a JSON list) ---
+    # Use in-Python filtering to avoid JSON operator incompatibility between SQLite and PostgreSQL
     trials_with_doc = (
-        db.execute(
-            select(models.Trial).where(
-                models.Trial.project_id == project_id,
-                models.Trial.document_ids.contains([document_id]),
-            )
-        )
+        db.execute(select(models.Trial).where(models.Trial.project_id == project_id))
         .scalars()
-        .first()
+        .all()
+    )
+    trials_with_doc = next(
+        (
+            t
+            for t in trials_with_doc
+            if t.document_ids and document_id in t.document_ids
+        ),
+        None,
     )
     if trials_with_doc:
         raise HTTPException(
@@ -350,11 +354,15 @@ def get_document_sets(
         )
 
     if tag:
-        query = query.where(models.DocumentSet.tags.contains([tag]))
+        # In-Python filtering to avoid JSON `LIKE` incompatibility with PostgreSQL
+        pass  # Filtered below after fetch
 
     sets = (
         db.execute(query.order_by(models.DocumentSet.created_at.desc())).scalars().all()
     )
+
+    if tag:
+        sets = [s for s in sets if s.tags and tag in s.tags]
 
     return [schemas.DocumentSet.model_validate(s) for s in sets]
 

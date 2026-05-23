@@ -20,12 +20,24 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.alter_column("trials", "llm_model", type_=sa.String(255), existing_type=sa.String(100))
-    op.alter_column("trials", "api_key", type_=sa.String(512), existing_type=sa.String(100))
-    op.alter_column("trials", "base_url", type_=sa.String(512), existing_type=sa.String(100))
+    op.alter_column(
+        "trials", "llm_model", type_=sa.String(255), existing_type=sa.String(100)
+    )
+    op.alter_column(
+        "trials", "api_key", type_=sa.String(512), existing_type=sa.String(100)
+    )
+    op.alter_column(
+        "trials", "base_url", type_=sa.String(512), existing_type=sa.String(100)
+    )
 
 
 def downgrade() -> None:
-    op.alter_column("trials", "llm_model", type_=sa.String(100), existing_type=sa.String(255))
-    op.alter_column("trials", "api_key", type_=sa.String(100), existing_type=sa.String(512))
-    op.alter_column("trials", "base_url", type_=sa.String(100), existing_type=sa.String(512))
+    op.alter_column(
+        "trials", "llm_model", type_=sa.String(100), existing_type=sa.String(255)
+    )
+    op.alter_column(
+        "trials", "api_key", type_=sa.String(100), existing_type=sa.String(512)
+    )
+    op.alter_column(
+        "trials", "base_url", type_=sa.String(100), existing_type=sa.String(512)
+    )

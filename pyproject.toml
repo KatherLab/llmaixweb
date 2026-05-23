@@ -23,7 +23,6 @@ dependencies = [
     "pandas==3.0.3",
     "xlsxwriter==3.2.9",
     "alembic==1.18.4",
-    "ocrmypdf==17.4.2",
     "slowapi==0.1.9",
     "cryptography==48.0.0",
     "rtree==1.4.1",
@@ -37,11 +36,11 @@ dependencies = [
 [dependency-groups]
 dev = [
     "ruff==0.15.14",
-    "ty==0.0.38",
+    "ty==0.0.39",
     "pytest==9.0.3",
     "pytest-cov==7.1.0",
     "isort==8.0.1",
-    "boto3-stubs==1.43.13",
+    "boto3-stubs==1.43.14",
     "pandas-stubs==3.0.0.260204",
     "celery-types==0.26.0",
 ]

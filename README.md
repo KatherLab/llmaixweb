@@ -16,7 +16,7 @@ A web application that turns unstructured medical/lab documents into structured 
 ## Features
 
 * **Upload & organize** — PDF, DOC/DOCX, images, CSV/XLSX, TXT files with column selection and previews.
-* **Preprocessing & OCR** — local OCR via **OCRmyPDF** (Tesseract), embedded text extraction via **Docling**, plus API-based OCR through **Mistral OCR** or any **vision LLM** (OpenAI-compatible). Use Mistral's cloud API, self-host DeepSeek-OCR-2 via KatDocExtract, or use a vision model like Gemma 4 via vLLM — all configurable.
+* **Preprocessing & OCR** — three extraction engines to choose from (see [Preprocessing Guide](#preprocessing-guide))
 * **Visual schema editor** — tree-based JSON schema editor with support for nested objects, arrays, all JSON types, import/export, and validation.
 * **LLM trials** — run extraction trials across different prompts, schemas, and models. Temperature control, token tracking, batch execution. Works with any OpenAI-compatible endpoint.
 * **Evaluation** — upload ground truth CSVs, compare field-by-field, compute per-field and overall accuracy metrics.
@@ -24,6 +24,42 @@ A web application that turns unstructured medical/lab documents into structured 
 * **Admin dashboard** — user management (invitations, roles), provider configuration, Celery monitoring.
 
 > Tech stack: **Vue 3 + Vite + TailwindCSS** (frontend), **FastAPI** (backend), **SQLAlchemy**, **Celery**, **Pydantic** for configuration.
+
+---
+
+## Preprocessing Guide
+
+Before extracting data with an LLM, you need to turn your files into plain text. This step is called **preprocessing** (or OCR/text extraction). The app offers three engines — pick whichever works best for your document type.
+
+### 1. Quick (Local OCR) — no API needed
+
+Uses **Docling + Tesseract** to extract text directly on the server. The engine detects whether a PDF already has embedded text (like a digitally created PDF) and uses it directly. For scanned pages, it runs Tesseract OCR locally.
+
+- **Best for:** Any document; works offline, no extra cost
+- **Limitations:** Slower for large batches; Tesseract accuracy varies with image quality
+- **Force OCR:** Enable this to treat all PDF pages as images (bypasses native text)
+
+### 2. Mistral OCR API
+
+Sends pages to a Mistral OCR-compatible API. This can be the official Mistral cloud service or a self-hosted DeepSeek-OCR-2 instance ([KatDocExtract](https://github.com/KatherLab/KatDocExtract)).
+
+- **Best for:** Complex layouts, tables, forms — higher accuracy than local OCR
+- **Limitations:** Requires an API key and network access (or GPU + compose overlay)
+- **Tip:** The engine automatically checks for embedded PDF text first. If enough text is found, it uses Docling without OCR locally, saving the API call. Disable this with "Force OCR".
+
+### 3. Vision LLM API
+
+Sends pages as images to any OpenAI-compatible vision model (GPT-4o, Gemma 4 via vLLM, etc.).
+
+- **Best for:** Documents requiring understanding of layout and visual context
+- **Limitations:** Slower and more expensive than dedicated OCR; requires a vision-capable model
+- **Tip:** Same embedded-text shortcut as Mistral OCR — only sends pages to the vision model when really needed.
+
+### Force OCR
+
+When enabled, the embedded-text pre-check is **skipped**, and every page goes through the selected engine. Useful for PDFs with garbled or incomplete embedded text.
+
+> **Self-hosted:** Use `docker compose -f compose.yml -f compose.deepseek.yml up -d` for local Mistral OCR, or `docker compose -f compose.yml -f compose.vllm.yml up -d` for a local vision LLM endpoint. See [Compose Files](#compose-files).
 
 ---
 
