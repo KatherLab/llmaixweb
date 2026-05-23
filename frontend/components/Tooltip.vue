@@ -4,7 +4,7 @@ import { ref, watchEffect } from 'vue'
 import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/vue'
 
 const props = defineProps({
-  text: { type: String, required: true }
+  text: { type: String, required: true },
 })
 
 // refs for the trigger and tooltip
@@ -26,14 +26,15 @@ watchEffect(() => {
 </script>
 
 <template>
-  <span class="relative inline-block"
+  <span
     ref="reference"
+    class="relative inline-block"
+    tabindex="0"
+    style="outline: none"
     @mouseenter="show = !!text"
     @mouseleave="show = false"
     @focus="show = !!text"
     @blur="show = false"
-    tabindex="0"
-    style="outline: none"
   >
     <slot />
     <div

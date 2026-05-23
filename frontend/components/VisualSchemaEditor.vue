@@ -7,19 +7,29 @@
         <nav class="flex items-center space-x-2 text-sm">
           <button
             type="button"
-            @click="navigateToRoot"
             class="text-gray-600 hover:text-gray-900 font-medium"
+            @click="navigateToRoot"
           >
             Root
           </button>
           <template v-for="(segment, index) in navigationPath" :key="index">
-            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            <svg
+              class="h-4 w-4 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
             <button
               type="button"
-              @click="navigateToPath(index)"
               class="text-gray-600 hover:text-gray-900 font-medium"
+              @click="navigateToPath(index)"
             >
               {{ segment }}
             </button>
@@ -31,12 +41,17 @@
       <div class="flex items-center space-x-2">
         <button
           type="button"
-          @click="showHelp = true"
           class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
           title="Help"
+          @click="showHelp = true"
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         </button>
       </div>
@@ -45,17 +60,10 @@
     <!-- Main Editor Area -->
     <div class="flex-1 overflow-hidden flex">
       <!-- Tree Navigation (Collapsible) -->
-      <div
-        v-if="showTreeNav"
-        class="w-64 bg-white border-r overflow-y-auto"
-      >
+      <div v-if="showTreeNav" class="w-64 bg-white border-r overflow-y-auto">
         <div class="p-4">
           <h3 class="text-sm font-medium text-gray-900 mb-3">Schema Structure</h3>
-          <SchemaTree
-            :schema="schema"
-            :current-path="currentPath"
-            @navigate="navigateToPath"
-          />
+          <SchemaTree :schema="schema" :current-path="currentPath" @navigate="navigateToPath" />
         </div>
       </div>
 
@@ -75,20 +83,32 @@
             @edit-root="editRootSchema"
           />
 
-
           <!-- Empty State -->
           <div
-            v-if="currentSchema.type === 'object' && (!currentSchema.properties || Object.keys(currentSchema.properties).length === 0)"
+            v-if="
+              currentSchema.type === 'object' &&
+              (!currentSchema.properties || Object.keys(currentSchema.properties).length === 0)
+            "
             class="mt-6 text-center py-12 border-2 border-dashed border-gray-300 rounded-lg"
           >
-            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            <svg
+              class="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
             </svg>
             <p class="mt-2 text-sm text-gray-600">No properties defined</p>
             <button
               type="button"
-              @click="showAddPropertyModal = true"
               class="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              @click="showAddPropertyModal = true"
             >
               Add First Property
             </button>
@@ -116,8 +136,8 @@
                   {{ advancedMode ? 'Property Name' : 'Field Name' }}
                 </label>
                 <input
-                  v-model="newProperty.name"
                   ref="propertyNameInput"
+                  v-model="newProperty.name"
                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="e.g., patient_name"
                   required
@@ -133,13 +153,13 @@
                     v-for="type in availableTypes"
                     :key="type.value"
                     type="button"
-                    @click="newProperty.type = type.value"
                     :class="[
                       'relative rounded-lg border p-4 flex flex-col items-center cursor-pointer focus:outline-none transition-all',
                       newProperty.type === type.value
                         ? 'border-blue-500 ring-2 ring-blue-500 bg-blue-50'
-                        : 'border-gray-300 hover:border-gray-400'
+                        : 'border-gray-300 hover:border-gray-400',
                     ]"
+                    @click="newProperty.type = type.value"
                   >
                     <div :class="['rounded-lg p-2 mb-2', type.color]">
                       <component :is="type.icon" class="h-6 w-6 text-white" />
@@ -150,9 +170,7 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700">
-                  Display Name
-                </label>
+                <label class="block text-sm font-medium text-gray-700"> Display Name </label>
                 <input
                   v-model="newProperty.title"
                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -161,9 +179,7 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700">
-                  Description
-                </label>
+                <label class="block text-sm font-medium text-gray-700"> Description </label>
                 <textarea
                   v-model="newProperty.description"
                   rows="2"
@@ -176,8 +192,8 @@
             <div class="mt-6 flex justify-end space-x-3">
               <button
                 type="button"
-                @click="showAddPropertyModal = false"
                 class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                @click="showAddPropertyModal = false"
               >
                 Cancel
               </button>
@@ -200,12 +216,21 @@
         class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50"
         @click="handleEditModalClose"
       >
-        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" @click.stop>
+        <div
+          class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+          @click.stop
+        >
           <div class="p-6 border-b">
             <h3 class="text-lg font-medium text-gray-900">
-              Edit {{ editingProperty?.key === '__root__' ? 'Root Schema' : (advancedMode ? 'Property' : 'Field') }}: {{ editingProperty?.key === '__root__' ? '' : editingProperty?.key }}
+              Edit
+              {{
+                editingProperty?.key === '__root__'
+                  ? 'Root Schema'
+                  : advancedMode
+                    ? 'Property'
+                    : 'Field'
+              }}: {{ editingProperty?.key === '__root__' ? '' : editingProperty?.key }}
             </h3>
-
           </div>
 
           <div class="flex-1 overflow-y-auto p-6">
@@ -217,21 +242,20 @@
               @update="updateEditingProperty"
               @update-key="updateEditingPropertyKey"
             />
-
           </div>
 
           <div class="p-6 border-t bg-gray-50 flex justify-end space-x-3">
             <button
               type="button"
-              @click="showEditPropertyModal = false"
               class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              @click="showEditPropertyModal = false"
             >
               Cancel
             </button>
             <button
               type="button"
-              @click="savePropertyEdits"
               class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              @click="savePropertyEdits"
             >
               Save Changes
             </button>
@@ -248,22 +272,24 @@
         @click="showDeleteModal = false"
       >
         <div class="bg-white rounded-lg max-w-md w-full p-6" @click.stop>
-          <h3 class="text-lg font-medium text-gray-900">Delete {{ advancedMode ? 'Property' : 'Field' }}</h3>
+          <h3 class="text-lg font-medium text-gray-900">
+            Delete {{ advancedMode ? 'Property' : 'Field' }}
+          </h3>
           <p class="mt-2 text-sm text-gray-500">
             Are you sure you want to delete "{{ propertyToDelete }}"? This action cannot be undone.
           </p>
           <div class="mt-6 flex justify-end space-x-3">
             <button
               type="button"
-              @click="showDeleteModal = false"
               class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              @click="showDeleteModal = false"
             >
               Cancel
             </button>
             <button
               type="button"
-              @click="deleteProperty"
               class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+              @click="deleteProperty"
             >
               Delete
             </button>
@@ -297,19 +323,24 @@
               />
               <button
                 type="button"
-                @click="removeEnumValue(index)"
                 class="text-red-600 hover:text-red-800"
+                @click="removeEnumValue(index)"
               >
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </div>
 
             <button
               type="button"
-              @click="addEnumValue"
               class="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
+              @click="addEnumValue"
             >
               + Add Option
             </button>
@@ -318,15 +349,15 @@
           <div class="mt-6 flex justify-end space-x-3">
             <button
               type="button"
-              @click="showEnumModal = false"
               class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              @click="showEnumModal = false"
             >
               Cancel
             </button>
             <button
               type="button"
-              @click="saveEnumValues"
               class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              @click="saveEnumValues"
             >
               Save Options
             </button>
@@ -351,7 +382,11 @@
               <div>
                 <h4 class="font-medium text-gray-900 mb-2">Field Types</h4>
                 <div class="grid grid-cols-2 gap-3">
-                  <div v-for="type in availableTypes" :key="type.value" class="flex items-start space-x-3">
+                  <div
+                    v-for="type in availableTypes"
+                    :key="type.value"
+                    class="flex items-start space-x-3"
+                  >
                     <div :class="['rounded-lg p-2', type.color]">
                       <component :is="type.icon" class="h-5 w-5 text-white" />
                     </div>
@@ -377,8 +412,8 @@
           <div class="p-6 border-t bg-gray-50">
             <button
               type="button"
-              @click="showHelp = false"
               class="w-full px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              @click="showHelp = false"
             >
               Close
             </button>
@@ -390,69 +425,69 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, h, onUnmounted, onMounted } from 'vue';
-import SchemaBlock from './SchemaBlock.vue';
-import SchemaTree from './SchemaTree.vue';
-import PropertyDetailsEditor from './PropertyDetailsEditor.vue';
+import { ref, computed, watch, nextTick, h, onUnmounted, onMounted } from 'vue'
+import SchemaBlock from './SchemaBlock.vue'
+import SchemaTree from './SchemaTree.vue'
+import PropertyDetailsEditor from './PropertyDetailsEditor.vue'
 
 const props = defineProps({
   schema: {
     type: Object,
-    required: true
+    required: true,
   },
   advancedMode: {
     type: Boolean,
-    default: false
-  }
-});
+    default: false,
+  },
+})
 
-const emit = defineEmits(['update:schema']);
+const emit = defineEmits(['update:schema'])
 
 // UI State
-const showTreeNav = ref(true);
-const showAddPropertyModal = ref(false);
-const showEditPropertyModal = ref(false);
-const showDeleteModal = ref(false);
-const showEnumModal = ref(false);
-const showHelp = ref(false);
+const showTreeNav = ref(true)
+const showAddPropertyModal = ref(false)
+const showEditPropertyModal = ref(false)
+const showDeleteModal = ref(false)
+const showEnumModal = ref(false)
+const showHelp = ref(false)
 
 // Navigation
-const currentPath = ref([]);
+const currentPath = ref([])
 const navigationPath = computed(() => {
-  return currentPath.value.map(segment => {
+  return currentPath.value.map((segment) => {
     // Make path segments more readable
-    return segment.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  });
-});
+    return segment.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+  })
+})
 
 // Schema Data
-const localSchema = ref(JSON.parse(JSON.stringify(props.schema)));
+const localSchema = ref(JSON.parse(JSON.stringify(props.schema)))
 const currentSchema = computed(() => {
-  let schema = localSchema.value;
+  let schema = localSchema.value
   for (const segment of currentPath.value) {
     if (schema.properties && schema.properties[segment]) {
-      schema = schema.properties[segment];
+      schema = schema.properties[segment]
     } else if (schema.items) {
-      schema = schema.items;
+      schema = schema.items
     }
   }
-  return schema;
-});
+  return schema
+})
 
 // Property Management
 const newProperty = ref({
   name: '',
   type: 'string',
   title: '',
-  description: ''
-});
+  description: '',
+})
 
-const editingProperty = ref(null);
-const propertyToDelete = ref('');
-const enumProperty = ref(null);
-const enumValues = ref([]);
-const originalEditingProperty = ref(null);
-const originalEditingPropertyKey = ref(null);
+const editingProperty = ref(null)
+const propertyToDelete = ref('')
+const enumProperty = ref(null)
+const enumValues = ref([])
+const originalEditingProperty = ref(null)
+const originalEditingPropertyKey = ref(null)
 
 // Property type definitions with icons
 const StringIcon = {
@@ -462,11 +497,11 @@ const StringIcon = {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': '2',
-        d: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
-      })
-    ]);
-  }
-};
+        d: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
+      }),
+    ])
+  },
+}
 
 const NumberIcon = {
   render() {
@@ -475,11 +510,11 @@ const NumberIcon = {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': '2',
-        d: 'M7 20l4-16m2 16l4-16M6 9h14M4 15h14'
-      })
-    ]);
-  }
-};
+        d: 'M7 20l4-16m2 16l4-16M6 9h14M4 15h14',
+      }),
+    ])
+  },
+}
 
 const BooleanIcon = {
   render() {
@@ -488,11 +523,11 @@ const BooleanIcon = {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': '2',
-        d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
-      })
-    ]);
-  }
-};
+        d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+      }),
+    ])
+  },
+}
 
 const ObjectIcon = {
   render() {
@@ -501,11 +536,11 @@ const ObjectIcon = {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': '2',
-        d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'
-      })
-    ]);
-  }
-};
+        d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
+      }),
+    ])
+  },
+}
 
 const ArrayIcon = {
   render() {
@@ -514,11 +549,11 @@ const ArrayIcon = {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': '2',
-        d: 'M4 6h16M4 10h16M4 14h16M4 18h16'
-      })
-    ]);
-  }
-};
+        d: 'M4 6h16M4 10h16M4 14h16M4 18h16',
+      }),
+    ])
+  },
+}
 
 const availableTypes = computed(() => [
   {
@@ -526,368 +561,365 @@ const availableTypes = computed(() => [
     label: props.advancedMode ? 'String' : 'Text',
     color: 'bg-green-500',
     icon: StringIcon,
-    description: 'Single line or multi-line text'
+    description: 'Single line or multi-line text',
   },
   {
     value: 'number',
     label: props.advancedMode ? 'Number' : 'Number',
     color: 'bg-blue-500',
     icon: NumberIcon,
-    description: 'Numeric values, decimals allowed'
+    description: 'Numeric values, decimals allowed',
   },
   {
     value: 'boolean',
     label: props.advancedMode ? 'Boolean' : 'Yes/No',
     color: 'bg-purple-500',
     icon: BooleanIcon,
-    description: 'True or false values'
+    description: 'True or false values',
   },
   {
     value: 'object',
     label: props.advancedMode ? 'Object' : 'Group',
     color: 'bg-orange-500',
     icon: ObjectIcon,
-    description: 'Group of related fields'
+    description: 'Group of related fields',
   },
   {
     value: 'array',
     label: props.advancedMode ? 'Array' : 'List',
     color: 'bg-pink-500',
     icon: ArrayIcon,
-    description: 'List of items'
-  }
-]);
+    description: 'List of items',
+  },
+])
 
 // Watch for external schema changes
-watch(() => props.schema, (newSchema) => {
-  // Only update if the schema actually changed
-  if (JSON.stringify(newSchema) !== JSON.stringify(localSchema.value)) {
-    localSchema.value = JSON.parse(JSON.stringify(newSchema));
-  }
-}, { deep: true });
-
+watch(
+  () => props.schema,
+  (newSchema) => {
+    // Only update if the schema actually changed
+    if (JSON.stringify(newSchema) !== JSON.stringify(localSchema.value)) {
+      localSchema.value = JSON.parse(JSON.stringify(newSchema))
+    }
+  },
+  { deep: true },
+)
 
 // Emit changes
-watch(localSchema, (newSchema) => {
-  emit('update:schema', newSchema);
-}, { deep: true });
+watch(
+  localSchema,
+  (newSchema) => {
+    emit('update:schema', newSchema)
+  },
+  { deep: true },
+)
 
 // Navigation methods
 const navigateToRoot = () => {
-  currentPath.value = [];
-};
+  currentPath.value = []
+}
 
 const navigateToPath = (pathIndex) => {
   if (typeof pathIndex === 'number') {
-    currentPath.value = currentPath.value.slice(0, pathIndex + 1);
+    currentPath.value = currentPath.value.slice(0, pathIndex + 1)
   } else if (Array.isArray(pathIndex)) {
-    currentPath.value = pathIndex;
+    currentPath.value = pathIndex
   }
-};
+}
 
 const navigateToProperty = (propertyKey) => {
-  currentPath.value = [...currentPath.value, propertyKey];
-};
+  currentPath.value = [...currentPath.value, propertyKey]
+}
 
 // Schema update methods
 const updateCurrentSchema = (updates) => {
-  let schema = localSchema.value;
-  const path = [...currentPath.value];
-  const lastSegment = path.pop();
+  let schema = localSchema.value
+  const path = [...currentPath.value]
+  const lastSegment = path.pop()
 
   // Navigate to parent
   for (const segment of path) {
     if (schema.properties && schema.properties[segment]) {
-      schema = schema.properties[segment];
+      schema = schema.properties[segment]
     } else if (schema.items) {
-      schema = schema.items;
+      schema = schema.items
     }
   }
 
   // Update the schema
   if (lastSegment) {
     if (schema.properties && schema.properties[lastSegment]) {
-      schema.properties[lastSegment] = JSON.parse(JSON.stringify(updates));
+      schema.properties[lastSegment] = JSON.parse(JSON.stringify(updates))
     } else if (lastSegment === 'items' && schema.items) {
-      schema.items = JSON.parse(JSON.stringify(updates));
+      schema.items = JSON.parse(JSON.stringify(updates))
     }
   } else {
     // root
-    localSchema.value = JSON.parse(JSON.stringify(updates));
+    localSchema.value = JSON.parse(JSON.stringify(updates))
   }
-
-};
+}
 
 // Property management methods
 const addProperty = () => {
-  const key = newProperty.value.name.trim();
+  const key = newProperty.value.name.trim()
   if (currentSchema.value.properties?.[key]) {
-    alert(`Property "${key}" already exists!`);
-    return;
+    alert(`Property "${key}" already exists!`)
+    return
   }
 
-  if (!newProperty.value.name.trim()) return;
+  if (!newProperty.value.name.trim()) return
 
-  const propertyKey = newProperty.value.name.trim();
+  const propertyKey = newProperty.value.name.trim()
   const propertySchema = {
     type: newProperty.value.type,
     title: newProperty.value.title || propertyKey,
-    description: newProperty.value.description
-  };
+    description: newProperty.value.description,
+  }
 
   // Add type-specific defaults
   if (propertySchema.type === 'object') {
-    propertySchema.properties = {};
+    propertySchema.properties = {}
   } else if (propertySchema.type === 'array') {
-    propertySchema.items = { type: 'string' };
+    propertySchema.items = { type: 'string' }
   }
 
   // Add to current schema
   if (!currentSchema.value.properties) {
-    currentSchema.value.properties = {};
+    currentSchema.value.properties = {}
   }
-  currentSchema.value.properties[propertyKey] = propertySchema;
+  currentSchema.value.properties[propertyKey] = propertySchema
 
   // Reset form
   newProperty.value = {
     name: '',
     type: 'string',
     title: '',
-    description: ''
-  };
-  showAddPropertyModal.value = false;
-};
+    description: '',
+  }
+  showAddPropertyModal.value = false
+}
 
 const editProperty = ({ key, schema }) => {
   if (key === '__root__') {
     // Handle root schema editing
     editingProperty.value = {
       key: '__root__',
-      schema: JSON.parse(JSON.stringify(localSchema.value))
-    };
-    originalEditingProperty.value = JSON.parse(JSON.stringify(localSchema.value));
-    originalEditingPropertyKey.value = '__root__';
+      schema: JSON.parse(JSON.stringify(localSchema.value)),
+    }
+    originalEditingProperty.value = JSON.parse(JSON.stringify(localSchema.value))
+    originalEditingPropertyKey.value = '__root__'
   } else {
-    editingProperty.value = { key, schema: JSON.parse(JSON.stringify(schema)) };
-    originalEditingProperty.value = JSON.parse(JSON.stringify(schema));
-    originalEditingPropertyKey.value = key;
+    editingProperty.value = { key, schema: JSON.parse(JSON.stringify(schema)) }
+    originalEditingProperty.value = JSON.parse(JSON.stringify(schema))
+    originalEditingPropertyKey.value = key
   }
-  showEditPropertyModal.value = true;
-};
-
-
-
+  showEditPropertyModal.value = true
+}
 
 const updateEditingProperty = (newSchema) => {
   if (editingProperty.value) {
     // Deep-clone to break reactivity links
-    editingProperty.value.schema = JSON.parse(JSON.stringify(newSchema));
+    editingProperty.value.schema = JSON.parse(JSON.stringify(newSchema))
   }
-};
-
+}
 
 // Add this method after the other property management methods
 const editRootSchema = () => {
   editingProperty.value = {
     key: '__root__',
-    schema: JSON.parse(JSON.stringify(localSchema.value))
-  };
-  showEditPropertyModal.value = true;
-};
+    schema: JSON.parse(JSON.stringify(localSchema.value)),
+  }
+  showEditPropertyModal.value = true
+}
 
 // VisualSchemaEditor.vue
 const savePropertyEdits = () => {
-  if (!editingProperty.value) return;
+  if (!editingProperty.value) return
 
   /* ---------- 1. ROOT SCHEMA ---------- */
   if (editingProperty.value.key === '__root__') {
     // Replace (don’t merge) the entire root schema
-    localSchema.value = JSON.parse(JSON.stringify(editingProperty.value.schema));
-    showEditPropertyModal.value = false;
-    editingProperty.value = null;
-    return;
+    localSchema.value = JSON.parse(JSON.stringify(editingProperty.value.schema))
+    showEditPropertyModal.value = false
+    editingProperty.value = null
+    return
   }
 
   /* ---------- 2. NORMAL PROPERTY ---------- */
-  const oldKey = editingProperty.value.key;
-  const newKey = editingProperty.value.newKey || oldKey;
+  const oldKey = editingProperty.value.key
+  const newKey = editingProperty.value.newKey || oldKey
 
   // Find the parent container of the property being edited
-  let parent = localSchema.value;
-  const path = [...currentPath.value];
+  let parent = localSchema.value
+  const path = [...currentPath.value]
   for (const segment of path) {
     if (parent.properties && parent.properties[segment]) {
-      parent = parent.properties[segment];
+      parent = parent.properties[segment]
     } else if (parent.items) {
-      parent = parent.items;
+      parent = parent.items
     }
   }
 
   // Guard-clause for duplicates when renaming
   if (oldKey !== newKey && parent.properties && parent.properties[newKey]) {
-    alert(`Property "${newKey}" already exists!`);
-    return;
+    alert(`Property "${newKey}" already exists!`)
+    return
   }
 
   // Deep-clone the edited schema so we don’t keep reactive links
-  const freshSchema = JSON.parse(JSON.stringify(editingProperty.value.schema));
+  const freshSchema = JSON.parse(JSON.stringify(editingProperty.value.schema))
 
   // If the container is an OBJECT
   if (parent.properties) {
     if (oldKey !== newKey) {
-      delete parent.properties[oldKey];
+      delete parent.properties[oldKey]
     }
-    parent.properties[newKey] = freshSchema;
+    parent.properties[newKey] = freshSchema
 
     // Update “required” array if present
     if (parent.required && Array.isArray(parent.required)) {
-      const idx = parent.required.indexOf(oldKey);
+      const idx = parent.required.indexOf(oldKey)
       if (idx !== -1) {
-        parent.required[idx] = newKey;
+        parent.required[idx] = newKey
       }
     }
   }
 
   // If the container is an ARRAY items schema (editing “items”)
   if (oldKey === 'items' && parent.type === 'array') {
-    parent.items = freshSchema;
+    parent.items = freshSchema
   }
 
   /* ---------- 3. FINALISE ---------- */
-  showEditPropertyModal.value = false;
-  editingProperty.value = null;
-};
-
+  showEditPropertyModal.value = false
+  editingProperty.value = null
+}
 
 const handleEditModalClose = () => {
   if (editingProperty.value && hasUnsavedPropertyChanges()) {
     if (confirm('You have unsaved changes. Are you sure you want to close?')) {
-      showEditPropertyModal.value = false;
-      editingProperty.value = null;
-      originalEditingProperty.value = null;
-      originalEditingPropertyKey.value = null;
+      showEditPropertyModal.value = false
+      editingProperty.value = null
+      originalEditingProperty.value = null
+      originalEditingPropertyKey.value = null
     }
   } else {
-    showEditPropertyModal.value = false;
-    editingProperty.value = null;
-    originalEditingProperty.value = null;
-    originalEditingPropertyKey.value = null;
+    showEditPropertyModal.value = false
+    editingProperty.value = null
+    originalEditingProperty.value = null
+    originalEditingPropertyKey.value = null
   }
-};
-
-
-
+}
 
 // Add this helper to check for unsaved changes
 const hasUnsavedPropertyChanges = () => {
-  if (!editingProperty.value || !originalEditingProperty.value) return false;
+  if (!editingProperty.value || !originalEditingProperty.value) return false
 
   // Check if the key has changed
-  const currentKey = editingProperty.value.newKey || editingProperty.value.key;
-  if (currentKey !== originalEditingPropertyKey.value && originalEditingPropertyKey.value !== '__root__') {
-    return true;
+  const currentKey = editingProperty.value.newKey || editingProperty.value.key
+  if (
+    currentKey !== originalEditingPropertyKey.value &&
+    originalEditingPropertyKey.value !== '__root__'
+  ) {
+    return true
   }
 
   // Compare original with edited version
-  const currentJSON = JSON.stringify(originalEditingProperty.value);
-  const editedJSON = JSON.stringify(editingProperty.value.schema);
+  const currentJSON = JSON.stringify(originalEditingProperty.value)
+  const editedJSON = JSON.stringify(editingProperty.value.schema)
 
-  return currentJSON !== editedJSON;
-};
-
-
+  return currentJSON !== editedJSON
+}
 
 // Add this method to handle key updates
 const updateEditingPropertyKey = (newKey) => {
   if (editingProperty.value) {
-    editingProperty.value.newKey = newKey;
+    editingProperty.value.newKey = newKey
   }
-};
+}
 
 const confirmDeleteProperty = (propertyKey) => {
-  propertyToDelete.value = propertyKey;
-  showDeleteModal.value = true;
-};
+  propertyToDelete.value = propertyKey
+  showDeleteModal.value = true
+}
 
 const deleteProperty = () => {
   if (propertyToDelete.value && currentSchema.value.properties) {
     // Delete the property
-    delete currentSchema.value.properties[propertyToDelete.value];
+    delete currentSchema.value.properties[propertyToDelete.value]
 
     // Also remove from required array if present
     if (currentSchema.value.required && Array.isArray(currentSchema.value.required)) {
-      const requiredIndex = currentSchema.value.required.indexOf(propertyToDelete.value);
+      const requiredIndex = currentSchema.value.required.indexOf(propertyToDelete.value)
       if (requiredIndex !== -1) {
-        currentSchema.value.required.splice(requiredIndex, 1);
+        currentSchema.value.required.splice(requiredIndex, 1)
 
         // Remove empty required array
         if (currentSchema.value.required.length === 0) {
-          delete currentSchema.value.required;
+          delete currentSchema.value.required
         }
       }
     }
   }
-  showDeleteModal.value = false;
-  propertyToDelete.value = '';
-};
-
+  showDeleteModal.value = false
+  propertyToDelete.value = ''
+}
 
 // Enum management
 const editEnum = (propertyKey, currentEnum) => {
-  enumProperty.value = { key: propertyKey };
-  enumValues.value = currentEnum ? [...currentEnum] : [''];
-  showEnumModal.value = true;
-};
+  enumProperty.value = { key: propertyKey }
+  enumValues.value = currentEnum ? [...currentEnum] : ['']
+  showEnumModal.value = true
+}
 
 const addEnumValue = () => {
-  enumValues.value.push('');
-};
+  enumValues.value.push('')
+}
 
 const removeEnumValue = (index) => {
-  enumValues.value.splice(index, 1);
-};
+  enumValues.value.splice(index, 1)
+}
 
 const saveEnumValues = () => {
   if (enumProperty.value && currentSchema.value.properties) {
-    const property = currentSchema.value.properties[enumProperty.value.key];
-    property.enum = enumValues.value.filter(v => v.trim());
+    const property = currentSchema.value.properties[enumProperty.value.key]
+    property.enum = enumValues.value.filter((v) => v.trim())
   }
-  showEnumModal.value = false;
-  enumProperty.value = null;
-  enumValues.value = [];
-};
+  showEnumModal.value = false
+  enumProperty.value = null
+  enumValues.value = []
+}
 
 // Focus on input when modal opens
 watch(showAddPropertyModal, async (newVal) => {
   if (newVal) {
-    await nextTick();
-    const input = document.querySelector('input[ref="propertyNameInput"]');
-    if (input) input.focus();
+    await nextTick()
+    const input = document.querySelector('input[ref="propertyNameInput"]')
+    if (input) input.focus()
   }
-});
+})
 
 onMounted(() => {
   const handleKeyboard = (e) => {
     // Ctrl/Cmd + N for new property
     if ((e.ctrlKey || e.metaKey) && e.key === 'n' && currentSchema.value.type === 'object') {
-      e.preventDefault();
-      showAddPropertyModal.value = true;
+      e.preventDefault()
+      showAddPropertyModal.value = true
     }
     // Escape to close modals
     if (e.key === 'Escape') {
-      showAddPropertyModal.value = false;
-      showEditPropertyModal.value = false;
-      showDeleteModal.value = false;
-      showEnumModal.value = false;
-      showHelp.value = false;
+      showAddPropertyModal.value = false
+      showEditPropertyModal.value = false
+      showDeleteModal.value = false
+      showEnumModal.value = false
+      showHelp.value = false
     }
-  };
+  }
 
-  window.addEventListener('keydown', handleKeyboard);
+  window.addEventListener('keydown', handleKeyboard)
 
   onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeyboard);
-  });
-});
-
+    window.removeEventListener('keydown', handleKeyboard)
+  })
+})
 </script>

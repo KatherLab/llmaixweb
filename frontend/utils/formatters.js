@@ -5,26 +5,26 @@
  * @returns {string} Formatted date string
  */
 export function formatDate(dateString, includeTime = false) {
-  if (!dateString) return '';
+  if (!dateString) return ''
 
-  const date = new Date(dateString);
+  const date = new Date(dateString)
 
   if (isNaN(date)) {
-    return 'Invalid date';
+    return 'Invalid date'
   }
 
   const options = {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
-  };
-
-  if (includeTime) {
-    options.hour = '2-digit';
-    options.minute = '2-digit';
+    day: 'numeric',
   }
 
-  return date.toLocaleDateString('en-US', options);
+  if (includeTime) {
+    options.hour = '2-digit'
+    options.minute = '2-digit'
+  }
+
+  return date.toLocaleDateString('en-US', options)
 }
 
 /**
@@ -33,17 +33,17 @@ export function formatDate(dateString, includeTime = false) {
  * @returns {string} Formatted size
  */
 export function formatFileSize(bytes) {
-  if (!bytes || isNaN(bytes)) return '0 B';
+  if (!bytes || isNaN(bytes)) return '0 B'
 
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let i = 0;
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let i = 0
 
   while (bytes >= 1024 && i < units.length - 1) {
-    bytes /= 1024;
-    i++;
+    bytes /= 1024
+    i++
   }
-  
-  return `${bytes.toFixed(1)} ${units[i]}`;
+
+  return `${bytes.toFixed(1)} ${units[i]}`
 }
 
 /**
@@ -53,11 +53,11 @@ export function formatFileSize(bytes) {
  * @returns {string} Truncated text
  */
 export function truncateText(text, maxLength = 100) {
-  if (!text) return '';
+  if (!text) return ''
 
   if (text.length <= maxLength) {
-    return text;
+    return text
   }
 
-  return text.slice(0, maxLength) + '...';
+  return text.slice(0, maxLength) + '...'
 }

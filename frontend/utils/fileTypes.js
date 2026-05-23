@@ -4,19 +4,19 @@ export const FILE_TYPES = {
     label: 'PDF',
     icon: 'document',
     color: 'red',
-    preview: true
+    preview: true,
   },
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
     label: 'Word',
     icon: 'document',
     color: 'blue',
-    preview: false
+    preview: false,
   },
   'application/msword': {
     label: 'Word',
     icon: 'document',
     color: 'blue',
-    preview: false
+    preview: false,
   },
 
   // Spreadsheets
@@ -24,19 +24,19 @@ export const FILE_TYPES = {
     label: 'Excel',
     icon: 'spreadsheet',
     color: 'green',
-    preview: false
+    preview: false,
   },
   'application/vnd.ms-excel': {
     label: 'Excel',
     icon: 'spreadsheet',
     color: 'green',
-    preview: false
+    preview: false,
   },
   'text/csv': {
     label: 'CSV',
     icon: 'spreadsheet',
     color: 'green',
-    preview: true
+    preview: true,
   },
 
   // Images
@@ -44,25 +44,25 @@ export const FILE_TYPES = {
     label: 'JPEG',
     icon: 'image',
     color: 'purple',
-    preview: true
+    preview: true,
   },
   'image/png': {
     label: 'PNG',
     icon: 'image',
     color: 'purple',
-    preview: true
+    preview: true,
   },
   'image/gif': {
     label: 'GIF',
     icon: 'image',
     color: 'purple',
-    preview: true
+    preview: true,
   },
   'image/webp': {
     label: 'WebP',
     icon: 'image',
     color: 'purple',
-    preview: true
+    preview: true,
   },
 
   // Text
@@ -70,13 +70,13 @@ export const FILE_TYPES = {
     label: 'Text',
     icon: 'document',
     color: 'gray',
-    preview: true
+    preview: true,
   },
   'text/markdown': {
     label: 'Markdown',
     icon: 'document',
     color: 'gray',
-    preview: true
+    preview: true,
   },
 
   // Default
@@ -84,40 +84,40 @@ export const FILE_TYPES = {
     label: 'File',
     icon: 'file',
     color: 'gray',
-    preview: false
-  }
-};
+    preview: false,
+  },
+}
 
 export function getFileTypeInfo(mimeType) {
-  return FILE_TYPES[mimeType] || FILE_TYPES['application/octet-stream'];
+  return FILE_TYPES[mimeType] || FILE_TYPES['application/octet-stream']
 }
 
 export function getAcceptedFileTypes() {
   return Object.keys(FILE_TYPES)
-    .filter(type => type !== 'application/octet-stream')
-    .join(',');
+    .filter((type) => type !== 'application/octet-stream')
+    .join(',')
 }
 
 export function getFileExtension(filename) {
-  return filename.split('.').pop()?.toLowerCase() || '';
+  return filename.split('.').pop()?.toLowerCase() || ''
 }
 
 export function getMimeTypeFromExtension(extension) {
   const extMap = {
-    'pdf': 'application/pdf',
-    'doc': 'application/msword',
-    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'xls': 'application/vnd.ms-excel',
-    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'csv': 'text/csv',
-    'txt': 'text/plain',
-    'md': 'text/markdown',
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'png': 'image/png',
-    'gif': 'image/gif',
-    'webp': 'image/webp'
-  };
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    csv: 'text/csv',
+    txt: 'text/plain',
+    md: 'text/markdown',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+  }
 
-  return extMap[extension] || 'application/octet-stream';
+  return extMap[extension] || 'application/octet-stream'
 }

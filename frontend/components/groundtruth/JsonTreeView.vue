@@ -2,7 +2,10 @@
   <div class="json-tree">
     <div v-for="(value, key) in data" :key="key" class="ml-4">
       <div v-if="isObject(value) && currentDepth < maxDepth" class="my-1">
-        <button @click="toggleExpanded(key)" class="text-gray-700 hover:text-blue-600 flex items-center">
+        <button
+          class="text-gray-700 hover:text-blue-600 flex items-center"
+          @click="toggleExpanded(key)"
+        >
           <span class="mr-1">{{ expanded[key] ? '▼' : '▶' }}</span>
           <span class="font-medium">{{ key }}:</span>
           <span class="text-gray-500 ml-1 text-xs">{Object}</span>
@@ -20,42 +23,42 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   data: {
     type: Object,
-    required: true
+    required: true,
   },
   maxDepth: {
     type: Number,
-    default: 3
+    default: 3,
   },
   currentDepth: {
     type: Number,
-    default: 0
-  }
-});
+    default: 0,
+  },
+})
 
-const expanded = ref({});
+const expanded = ref({})
 
-const isObject = (val) => val && typeof val === 'object' && !Array.isArray(val);
+const isObject = (val) => val && typeof val === 'object' && !Array.isArray(val)
 
 const formatValue = (val) => {
-  if (val === null) return 'null';
-  if (val === undefined) return 'undefined';
-  if (Array.isArray(val)) return `[Array: ${val.length} items]`;
-  if (isObject(val)) return '{...}';
+  if (val === null) return 'null'
+  if (val === undefined) return 'undefined'
+  if (Array.isArray(val)) return `[Array: ${val.length} items]`
+  if (isObject(val)) return '{...}'
   if (typeof val === 'string' && val.length > 50) {
-    return `"${val.substring(0, 50)}..."`;
+    return `"${val.substring(0, 50)}..."`
   }
-  if (typeof val === 'string') return `"${val}"`;
-  return String(val);
-};
+  if (typeof val === 'string') return `"${val}"`
+  return String(val)
+}
 
 const toggleExpanded = (key) => {
-  expanded.value[key] = !expanded.value[key];
-};
+  expanded.value[key] = !expanded.value[key]
+}
 </script>
 
 <style scoped>

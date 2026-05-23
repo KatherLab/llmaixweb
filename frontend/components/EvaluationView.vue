@@ -27,9 +27,9 @@
           <div class="mt-3 flex gap-2">
             <button
               v-if="lastFailedOperation"
-              @click="retryLastOperation"
               class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
               :disabled="isRetrying"
+              @click="retryLastOperation"
             >
               <span v-if="isRetrying" class="flex items-center">
                 <span class="animate-spin -ml-1 mr-1 h-3 w-3">⟳</span>
@@ -37,10 +37,7 @@
               </span>
               <span v-else>Retry</span>
             </button>
-            <button
-              @click="clearError"
-              class="text-sm text-red-600 hover:text-red-800"
-            >
+            <button class="text-sm text-red-600 hover:text-red-800" @click="clearError">
               Dismiss
             </button>
           </div>
@@ -55,17 +52,17 @@
       </div>
       <div class="flex gap-2">
         <button
-          @click="showUploadModal = true"
           class="px-4 py-2 rounded-md font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
           :disabled="loadingStates.groundTruthFiles"
+          @click="showUploadModal = true"
         >
           Upload Ground Truth
         </button>
         <button
           v-if="evaluations.length > 0"
-          @click="showExportModal = true"
           class="px-4 py-2 rounded-md font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed"
           :disabled="loadingStates.evaluations"
+          @click="showExportModal = true"
         >
           <span class="flex items-center">
             <span class="mr-1">⬇</span>
@@ -77,7 +74,9 @@
 
     <!-- Loading States -->
     <div v-if="loadingStates.groundTruthFiles" class="text-center py-8">
-      <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      <div
+        class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"
+      ></div>
       <p class="mt-2 text-gray-500">Loading ground truth files...</p>
     </div>
 
@@ -86,7 +85,7 @@
       v-else-if="groundTruthFiles.length === 0"
       title="No ground truth files yet"
       description="Upload ground truth data to evaluate your trial results"
-      actionText="Upload Ground Truth"
+      action-text="Upload Ground Truth"
       @action="showUploadModal = true"
     >
       <template #icon>
@@ -101,8 +100,8 @@
         <div class="flex justify-between items-center mb-3">
           <h2 class="font-medium">Ground Truth Files</h2>
           <button
-            @click="showGroundTruthManager = true"
             class="text-blue-600 hover:text-blue-800 text-sm"
+            @click="showGroundTruthManager = true"
           >
             Manage
           </button>
@@ -116,13 +115,13 @@
             @click="selectGroundTruthWithValidation(gt)"
           >
             <div class="font-medium text-sm">{{ gt.name || `Ground Truth #${index + 1}` }}</div>
-            <div class="text-xs text-gray-500">{{ gt.format?.toUpperCase() }} • {{ formatDate(gt.created_at) }}</div>
+            <div class="text-xs text-gray-500">
+              {{ gt.format?.toUpperCase() }} • {{ formatDate(gt.created_at) }}
+            </div>
             <div v-if="gt.field_mappings?.length" class="text-xs text-green-600 mt-1">
               {{ gt.field_mappings.length }} field mappings configured
             </div>
-            <div v-else class="text-xs text-yellow-600 mt-1">
-              No field mappings configured
-            </div>
+            <div v-else class="text-xs text-yellow-600 mt-1">No field mappings configured</div>
           </div>
         </div>
       </div>
@@ -138,16 +137,16 @@
             <h2 class="font-medium">Evaluation Dashboard</h2>
             <div class="flex gap-2">
               <button
-                @click="showTrialSelectorWithValidation"
                 class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm hover:bg-blue-100 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                 :disabled="!canStartEvaluation"
+                @click="showTrialSelectorWithValidation"
               >
                 Evaluate Trial
               </button>
               <button
                 v-if="selectedGroundTruth && !selectedGroundTruth.field_mappings?.length"
-                @click="previewGroundTruth"
                 class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-md text-sm hover:bg-yellow-100 transition-colors"
+                @click="previewGroundTruth"
               >
                 Preview & Configure
               </button>
@@ -155,7 +154,10 @@
           </div>
 
           <!-- Prerequisites Warning -->
-          <div v-if="!canStartEvaluation" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <div
+            v-if="!canStartEvaluation"
+            class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md"
+          >
             <div class="flex">
               <span class="h-5 w-5 text-yellow-400">⚠️</span>
               <div class="ml-3">
@@ -169,7 +171,9 @@
 
           <!-- Loading evaluations -->
           <div v-if="loadingStates.evaluations" class="text-center py-8">
-            <div class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+            <div
+              class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"
+            ></div>
             <p class="mt-2 text-gray-500">Loading evaluations...</p>
           </div>
 
@@ -182,12 +186,36 @@
             <table class="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
-                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trial</th>
-                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
-                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overall Accuracy</th>
-                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documents</th>
-                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th
+                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Trial
+                  </th>
+                  <th
+                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Model
+                  </th>
+                  <th
+                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Overall Accuracy
+                  </th>
+                  <th
+                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Documents
+                  </th>
+                  <th
+                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Status
+                  </th>
+                  <th
+                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
@@ -208,7 +236,10 @@
                     <div class="flex items-center">
                       <div class="mr-2">{{ getAccuracyPercentage(evaluation) }}%</div>
                       <div class="w-16 bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-600 h-2 rounded-full" :style="{width: `${getAccuracyPercentage(evaluation)}%`}"></div>
+                        <div
+                          class="bg-blue-600 h-2 rounded-full"
+                          :style="{ width: `${getAccuracyPercentage(evaluation)}%` }"
+                        ></div>
                       </div>
                     </div>
                   </td>
@@ -216,18 +247,24 @@
                     {{ getDocumentCount(evaluation) }}
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
-                    <span v-if="hasEvaluationErrors(evaluation)" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+                    <span
+                      v-if="hasEvaluationErrors(evaluation)"
+                      class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full"
+                    >
                       Has Errors ({{ getErrorCount(evaluation) }})
                     </span>
-                    <span v-else class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                    <span
+                      v-else
+                      class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full"
+                    >
                       Complete
                     </span>
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div class="flex gap-2">
                       <button
-                        @click="viewEvaluationAnalysis(evaluation)"
                         class="text-blue-600 hover:text-blue-800 text-sm underline"
+                        @click="viewEvaluationAnalysis(evaluation)"
                       >
                         Analysis
                       </button>
@@ -239,7 +276,7 @@
           </div>
 
           <!-- (Optional) Trials pagination controls just for caching models -->
-          <div class="flex items-center justify-end gap-2 mt-4" v-if="trials.total > trials.limit">
+          <div v-if="trials.total > trials.limit" class="flex items-center justify-end gap-2 mt-4">
             <button
               class="px-3 py-1 border rounded text-sm"
               :disabled="trials.offset === 0 || loadingStates.trials"
@@ -248,7 +285,10 @@
               Prev
             </button>
             <span class="text-sm text-gray-600">
-              {{ Math.min(trials.offset + 1, trials.total) }}–{{ Math.min(trials.offset + trials.items.length, trials.total) }} of {{ trials.total }}
+              {{ Math.min(trials.offset + 1, trials.total) }}–{{
+                Math.min(trials.offset + trials.items.length, trials.total)
+              }}
+              of {{ trials.total }}
             </span>
             <button
               class="px-3 py-1 border rounded text-sm"
@@ -308,341 +348,339 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { api } from '@/services/api';
-import { formatDate } from '@/utils/formatters';
-import { useToast } from 'vue-toastification';
-import EmptyState from '@/components/EmptyState.vue';
-import GroundTruthUploadModal from './GroundTruthUploadModal.vue';
-import GroundTruthManager from './GroundTruthManager.vue';
-import TrialSelectorModal from './TrialSelectorModal.vue';
-import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue';
-import MetricsExportModal from './MetricsExportModal.vue';
-import EvaluationAnalysisModal from './evaluation/EvaluationAnalysisModal.vue';
+import { ref, onMounted, computed } from 'vue'
+import { api } from '@/services/api'
+import { formatDate } from '@/utils/formatters'
+import { useToast } from 'vue-toastification'
+import EmptyState from '@/components/EmptyState.vue'
+import GroundTruthUploadModal from './GroundTruthUploadModal.vue'
+import GroundTruthManager from './GroundTruthManager.vue'
+import TrialSelectorModal from './TrialSelectorModal.vue'
+import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue'
+import MetricsExportModal from './MetricsExportModal.vue'
+import EvaluationAnalysisModal from './evaluation/EvaluationAnalysisModal.vue'
 
 const props = defineProps({
   projectId: {
     type: [String, Number],
-    required: true
-  }
-});
+    required: true,
+  },
+})
 
-const toast = useToast();
+const toast = useToast()
 
 // Loading states
 const loadingStates = ref({
   groundTruthFiles: false,
   evaluations: false,
-  trials: false
-});
+  trials: false,
+})
 
 // Error handling
-const error = ref(null);
-const lastFailedOperation = ref(null);
-const isRetrying = ref(false);
+const error = ref(null)
+const lastFailedOperation = ref(null)
+const isRetrying = ref(false)
 
 // Data
-const groundTruthFiles = ref([]);
-const selectedGroundTruth = ref(null);
-const evaluations = ref([]);
+const groundTruthFiles = ref([])
+const selectedGroundTruth = ref(null)
+const evaluations = ref([])
 
 // Trials pagination + cache for model lookup
 const trials = ref({
   items: [],
   total: 0,
   limit: 20,
-  offset: 0
-});
-const trialCache = ref({}); // { [id]: TrialSummary | Trial (full) }
-const pendingTrialFetches = new Set();
+  offset: 0,
+})
+const trialCache = ref({}) // { [id]: TrialSummary | Trial (full) }
+const pendingTrialFetches = new Set()
 
 // Modal states
-const showUploadModal = ref(false);
-const showGroundTruthManager = ref(false);
-const showTrialSelector = ref(false);
-const showGroundTruthPreview = ref(false);
-const showExportModal = ref(false);
-const showEvaluationAnalysis = ref(false);
+const showUploadModal = ref(false)
+const showGroundTruthManager = ref(false)
+const showTrialSelector = ref(false)
+const showGroundTruthPreview = ref(false)
+const showExportModal = ref(false)
+const showEvaluationAnalysis = ref(false)
 
 // Selected items
-const selectedEvaluation = ref(null);
+const selectedEvaluation = ref(null)
 
 // Computed properties
 const canStartEvaluation = computed(() => {
-  return selectedGroundTruth.value &&
-         selectedGroundTruth.value.field_mappings?.length > 0 &&
-         !loadingStates.value.groundTruthFiles &&
-         !loadingStates.value.evaluations &&
-         !error.value;
-});
+  return (
+    selectedGroundTruth.value &&
+    selectedGroundTruth.value.field_mappings?.length > 0 &&
+    !loadingStates.value.groundTruthFiles &&
+    !loadingStates.value.evaluations &&
+    !error.value
+  )
+})
 
 const evaluationPrerequisiteMessage = computed(() => {
   if (!selectedGroundTruth.value) {
-    return 'Please select a ground truth file first.';
+    return 'Please select a ground truth file first.'
   }
   if (!selectedGroundTruth.value.field_mappings?.length) {
-    return 'Configure field mappings for the selected ground truth file to enable evaluation.';
+    return 'Configure field mappings for the selected ground truth file to enable evaluation.'
   }
   if (error.value) {
-    return 'Resolve the current error before starting evaluation.';
+    return 'Resolve the current error before starting evaluation.'
   }
-  return '';
-});
+  return ''
+})
 
 // Utility functions
 const clearError = () => {
-  error.value = null;
-  lastFailedOperation.value = null;
-};
+  error.value = null
+  lastFailedOperation.value = null
+}
 
 const handleApiError = (err, operation) => {
-  console.error(`${operation} failed:`, err);
+  console.error(`${operation} failed:`, err)
 
-  let errorMessage;
+  let errorMessage
 
   if (!err.response) {
-    errorMessage = `Network error during ${operation}. Please check your connection and try again.`;
+    errorMessage = `Network error during ${operation}. Please check your connection and try again.`
   } else if (err.response.status === 400) {
-    errorMessage = `${operation} failed: ${err.response.data?.detail || err.message}`;
+    errorMessage = `${operation} failed: ${err.response.data?.detail || err.message}`
   } else if (err.response.status === 403) {
-    errorMessage = `Permission denied: You don't have access to ${operation.toLowerCase()}.`;
+    errorMessage = `Permission denied: You don't have access to ${operation.toLowerCase()}.`
   } else if (err.response.status === 404) {
-    errorMessage = `Resource not found during ${operation}. Please refresh and try again.`;
+    errorMessage = `Resource not found during ${operation}. Please refresh and try again.`
   } else if (err.response.status === 500) {
-    errorMessage = `Server error during ${operation}. Please try again later or contact support.`;
+    errorMessage = `Server error during ${operation}. Please try again later or contact support.`
   } else {
-    errorMessage = `${operation} failed: ${err.response?.data?.detail || err.message}`;
+    errorMessage = `${operation} failed: ${err.response?.data?.detail || err.message}`
   }
 
-  error.value = errorMessage;
-  toast.error(errorMessage);
-};
+  error.value = errorMessage
+  toast.error(errorMessage)
+}
 
 const retryLastOperation = async () => {
-  if (!lastFailedOperation.value) return;
+  if (!lastFailedOperation.value) return
 
-  isRetrying.value = true;
-  error.value = null;
+  isRetrying.value = true
+  error.value = null
 
   try {
-    await lastFailedOperation.value();
-    toast.success('Operation completed successfully');
-    lastFailedOperation.value = null;
+    await lastFailedOperation.value()
+    toast.success('Operation completed successfully')
+    lastFailedOperation.value = null
   } catch (err) {
-    handleApiError(err, 'Retry');
+    handleApiError(err, 'Retry')
   } finally {
-    isRetrying.value = false;
+    isRetrying.value = false
   }
-};
+}
 
 // Data fetching functions
 const fetchGroundTruthFiles = async () => {
-  lastFailedOperation.value = fetchGroundTruthFiles;
-  loadingStates.value.groundTruthFiles = true;
-  error.value = null;
+  lastFailedOperation.value = fetchGroundTruthFiles
+  loadingStates.value.groundTruthFiles = true
+  error.value = null
 
   try {
-    const response = await api.get(`/project/${props.projectId}/groundtruth`);
-    groundTruthFiles.value = response.data;
+    const response = await api.get(`/project/${props.projectId}/groundtruth`)
+    groundTruthFiles.value = response.data
 
     if (groundTruthFiles.value.length > 0 && !selectedGroundTruth.value) {
-      await selectGroundTruth(groundTruthFiles.value[0]);
+      await selectGroundTruth(groundTruthFiles.value[0])
     }
 
-    lastFailedOperation.value = null;
+    lastFailedOperation.value = null
   } catch (err) {
-    handleApiError(err, 'Loading ground truth files');
+    handleApiError(err, 'Loading ground truth files')
   } finally {
-    loadingStates.value.groundTruthFiles = false;
+    loadingStates.value.groundTruthFiles = false
   }
-};
+}
 
 const fetchGroundTruthFilesWithRetry = async () => {
-  lastFailedOperation.value = fetchGroundTruthFiles;
-  await fetchGroundTruthFiles();
-};
+  lastFailedOperation.value = fetchGroundTruthFiles
+  await fetchGroundTruthFiles()
+}
 
 // Paginated trial summaries
 const fetchTrials = async (opts = {}) => {
-  lastFailedOperation.value = () => fetchTrials(opts);
-  loadingStates.value.trials = true;
+  lastFailedOperation.value = () => fetchTrials(opts)
+  loadingStates.value.trials = true
 
   try {
-    const { limit = trials.value.limit, offset = trials.value.offset, ...filters } = opts;
+    const { limit = trials.value.limit, offset = trials.value.offset, ...filters } = opts
     const { data } = await api.get(`/project/${props.projectId}/trial`, {
-      params: { limit, offset, ...filters }
-    });
+      params: { limit, offset, ...filters },
+    })
 
-    trials.value.items = data.items || [];
-    trials.value.total = data.total || 0;
-    trials.value.limit = limit;
-    trials.value.offset = offset;
+    trials.value.items = data.items || []
+    trials.value.total = data.total || 0
+    trials.value.limit = limit
+    trials.value.offset = offset
 
-    for (const t of trials.value.items) trialCache.value[t.id] = t;
+    for (const t of trials.value.items) trialCache.value[t.id] = t
 
-    lastFailedOperation.value = null;
+    lastFailedOperation.value = null
   } catch (err) {
-    console.error('Failed to load trials:', err);
+    console.error('Failed to load trials:', err)
   } finally {
-    loadingStates.value.trials = false;
+    loadingStates.value.trials = false
   }
-};
+}
 
 const pageBack = () => {
-  const newOffset = Math.max(0, trials.value.offset - trials.value.limit);
-  fetchTrials({ offset: newOffset, limit: trials.value.limit });
-};
+  const newOffset = Math.max(0, trials.value.offset - trials.value.limit)
+  fetchTrials({ offset: newOffset, limit: trials.value.limit })
+}
 const pageForward = () => {
-  const newOffset = Math.min(
-    trials.value.total,
-    trials.value.offset + trials.value.limit
-  );
+  const newOffset = Math.min(trials.value.total, trials.value.offset + trials.value.limit)
   if (newOffset !== trials.value.offset) {
-    fetchTrials({ offset: newOffset, limit: trials.value.limit });
+    fetchTrials({ offset: newOffset, limit: trials.value.limit })
   }
-};
+}
 
 // Lazy fetch full trial (only if a view ever needs more than the summary)
 const fetchTrialIfMissing = async (id) => {
-  if (trialCache.value[id]?.results || pendingTrialFetches.has(id)) return;
-  pendingTrialFetches.add(id);
+  if (trialCache.value[id]?.results || pendingTrialFetches.has(id)) return
+  pendingTrialFetches.add(id)
   try {
-    const { data } = await api.get(`/project/${props.projectId}/trial/${id}`);
-    trialCache.value[id] = data;
+    const { data } = await api.get(`/project/${props.projectId}/trial/${id}`)
+    trialCache.value[id] = data
   } catch {
     /* no-op */
   } finally {
-    pendingTrialFetches.delete(id);
+    pendingTrialFetches.delete(id)
   }
-};
+}
 
 // Utility functions for evaluation display
 const getTrialModel = (trialId) => {
-  const t = trialCache.value[trialId];
-  if (t?.llm_model) return t.llm_model;
-  fetchTrialIfMissing(trialId);
-  return 'Unknown';
-};
+  const t = trialCache.value[trialId]
+  if (t?.llm_model) return t.llm_model
+  fetchTrialIfMissing(trialId)
+  return 'Unknown'
+}
 
 const getTrialName = (trialId) => {
-  const t = trialCache.value[trialId];
+  const t = trialCache.value[trialId]
   if (t && typeof t.name === 'string' && t.name.trim().length > 0) {
-    return t.name;
+    return t.name
   }
 
   // If not in the current page cache, try to warm it with the full Trial.
   // (This may update reactively; until then, show a deterministic fallback.)
-  if (!t) fetchTrialIfMissing(trialId);
+  if (!t) fetchTrialIfMissing(trialId)
 
-  return `Trial #${trialId}`;
-};
+  return `Trial #${trialId}`
+}
 
 const getAccuracyPercentage = (evaluation) => {
-  const accuracy = evaluation.overall_metrics?.accuracy || evaluation.metrics?.accuracy || 0;
-  return (accuracy * 100).toFixed(1);
-};
+  const accuracy = evaluation.overall_metrics?.accuracy || evaluation.metrics?.accuracy || 0
+  return (accuracy * 100).toFixed(1)
+}
 
 const getDocumentCount = (evaluation) => {
-  return evaluation.document_summaries?.length || evaluation.document_metrics?.length || 0;
-};
+  return evaluation.document_summaries?.length || evaluation.document_metrics?.length || 0
+}
 
 const hasEvaluationErrors = (evaluation) => {
-  const documents = evaluation.document_summaries || evaluation.document_metrics || [];
-  return documents.some(doc => doc.error || doc.has_error);
-};
+  const documents = evaluation.document_summaries || evaluation.document_metrics || []
+  return documents.some((doc) => doc.error || doc.has_error)
+}
 
 const getErrorCount = (evaluation) => {
-  const documents = evaluation.document_summaries || evaluation.document_metrics || [];
-  return documents.filter(doc => doc.error || doc.has_error).length;
-};
+  const documents = evaluation.document_summaries || evaluation.document_metrics || []
+  return documents.filter((doc) => doc.error || doc.has_error).length
+}
 
 // Validation functions
 const validateEvaluationPrerequisites = () => {
-  const errors = [];
+  const errors = []
 
   if (!selectedGroundTruth.value) {
-    errors.push('Please select a ground truth file');
+    errors.push('Please select a ground truth file')
   }
 
   if (selectedGroundTruth.value && !selectedGroundTruth.value.field_mappings?.length) {
-    errors.push('Ground truth file has no field mappings configured');
+    errors.push('Ground truth file has no field mappings configured')
   }
 
-  return errors;
-};
+  return errors
+}
 
 const showTrialSelectorWithValidation = () => {
-  const validationErrors = validateEvaluationPrerequisites();
+  const validationErrors = validateEvaluationPrerequisites()
 
   if (validationErrors.length > 0) {
-    error.value = `Cannot start evaluation: ${validationErrors.join(', ')}`;
-    toast.error(error.value);
-    return;
+    error.value = `Cannot start evaluation: ${validationErrors.join(', ')}`
+    toast.error(error.value)
+    return
   }
 
-  showTrialSelector.value = true;
-};
+  showTrialSelector.value = true
+}
 
 // Event handlers
 const selectGroundTruth = async (groundTruth) => {
   try {
-    error.value = null;
-    selectedGroundTruth.value = groundTruth;
-    await fetchEvaluations();
+    error.value = null
+    selectedGroundTruth.value = groundTruth
+    await fetchEvaluations()
   } catch (err) {
-    handleApiError(err, 'Selecting ground truth');
+    handleApiError(err, 'Selecting ground truth')
   }
-};
+}
 
 const selectGroundTruthWithValidation = async (groundTruth) => {
   if (!groundTruth) {
-    error.value = 'Invalid ground truth file selected';
-    return;
+    error.value = 'Invalid ground truth file selected'
+    return
   }
-  await selectGroundTruth(groundTruth);
-};
+  await selectGroundTruth(groundTruth)
+}
 
 const fetchEvaluations = async () => {
-  if (!selectedGroundTruth.value) return;
+  if (!selectedGroundTruth.value) return
 
-  lastFailedOperation.value = fetchEvaluations;
-  loadingStates.value.evaluations = true;
-  error.value = null;
+  lastFailedOperation.value = fetchEvaluations
+  loadingStates.value.evaluations = true
+  error.value = null
 
   try {
     const { data } = await api.get(
-      `/project/${props.projectId}/evaluation?groundtruth_id=${selectedGroundTruth.value.id}`
-    );
+      `/project/${props.projectId}/evaluation?groundtruth_id=${selectedGroundTruth.value.id}`,
+    )
 
     // 1) store the evaluations
-    evaluations.value = Array.isArray(data) ? data : (data?.items ?? []);
+    evaluations.value = Array.isArray(data) ? data : (data?.items ?? [])
 
     // 2) warm trial names/models for rows we’ll render
     for (const ev of evaluations.value) {
       if (!trialCache.value[ev.trial_id]) {
-        fetchTrialIfMissing(ev.trial_id);
+        fetchTrialIfMissing(ev.trial_id)
       }
     }
 
-    lastFailedOperation.value = null;
+    lastFailedOperation.value = null
   } catch (err) {
-    handleApiError(err, 'Loading evaluations');
+    handleApiError(err, 'Loading evaluations')
   } finally {
-    loadingStates.value.evaluations = false;
+    loadingStates.value.evaluations = false
   }
-};
-
+}
 
 const onGroundTruthUploaded = async (groundTruth) => {
   try {
-    groundTruthFiles.value.push(groundTruth);
-    await selectGroundTruth(groundTruth);
-    showUploadModal.value = false;
-    toast.success('Ground truth uploaded successfully');
+    groundTruthFiles.value.push(groundTruth)
+    await selectGroundTruth(groundTruth)
+    showUploadModal.value = false
+    toast.success('Ground truth uploaded successfully')
   } catch (err) {
-    handleApiError(err, 'Processing uploaded ground truth');
+    handleApiError(err, 'Processing uploaded ground truth')
   }
-};
+}
 
 const onTrialEvaluate = async (evaluationSummary) => {
   try {
@@ -656,63 +694,63 @@ const onTrialEvaluate = async (evaluationSummary) => {
       field_metrics: {},
       document_metrics: evaluationSummary.document_summaries || [],
       document_summaries: evaluationSummary.document_summaries,
-      created_at: evaluationSummary.created_at
-    };
+      created_at: evaluationSummary.created_at,
+    }
 
-    evaluations.value.push(evaluation);
-    showTrialSelector.value = false;
-    toast.success(`Trial #${evaluationSummary.trial_id} evaluation completed successfully`);
+    evaluations.value.push(evaluation)
+    showTrialSelector.value = false
+    toast.success(`Trial #${evaluationSummary.trial_id} evaluation completed successfully`)
   } catch (err) {
-    handleApiError(err, 'Processing evaluation result');
+    handleApiError(err, 'Processing evaluation result')
   }
-};
+}
 
 const onMappingConfigured = async () => {
   try {
-    showGroundTruthPreview.value = false;
-    await fetchGroundTruthFiles();
+    showGroundTruthPreview.value = false
+    await fetchGroundTruthFiles()
 
     if (selectedGroundTruth.value) {
       const updatedGroundTruth = groundTruthFiles.value.find(
-        gt => gt.id === selectedGroundTruth.value.id
-      );
+        (gt) => gt.id === selectedGroundTruth.value.id,
+      )
       if (updatedGroundTruth) {
-        selectedGroundTruth.value = updatedGroundTruth;
+        selectedGroundTruth.value = updatedGroundTruth
       }
     }
 
-    toast.success('Field mappings configured successfully');
+    toast.success('Field mappings configured successfully')
   } catch (err) {
-    handleApiError(err, 'Refreshing after mapping configuration');
+    handleApiError(err, 'Refreshing after mapping configuration')
   }
-};
+}
 
 // Modal actions
 const previewGroundTruth = () => {
   if (!selectedGroundTruth.value) {
-    error.value = 'No ground truth file selected';
-    return;
+    error.value = 'No ground truth file selected'
+    return
   }
-  showGroundTruthPreview.value = true;
-};
+  showGroundTruthPreview.value = true
+}
 
 const viewEvaluationAnalysis = (evaluation) => {
-  selectedEvaluation.value = evaluation;
-  showEvaluationAnalysis.value = true;
-};
+  selectedEvaluation.value = evaluation
+  showEvaluationAnalysis.value = true
+}
 
 // Initialize component
 onMounted(async () => {
-  loadingStates.value.groundTruthFiles = true;
+  loadingStates.value.groundTruthFiles = true
   try {
     await Promise.all([
       fetchGroundTruthFiles(),
-      fetchTrials() // just to warm the cache for model lookups
-    ]);
+      fetchTrials(), // just to warm the cache for model lookups
+    ])
   } catch (err) {
-    handleApiError(err, 'Initializing evaluation view');
+    handleApiError(err, 'Initializing evaluation view')
   } finally {
-    loadingStates.value.groundTruthFiles = false;
+    loadingStates.value.groundTruthFiles = false
   }
-});
+})
 </script>

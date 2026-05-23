@@ -509,9 +509,9 @@ class Trial(Base):
     status: Mapped[TrialStatus] = mapped_column(
         Enum(TrialStatus, native_enum=False, length=20), default=TrialStatus.PENDING
     )
-    llm_model: Mapped[str] = mapped_column(String(100))
-    api_key: Mapped[str] = mapped_column(String(100))
-    base_url: Mapped[str] = mapped_column(String(100))
+    llm_model: Mapped[str] = mapped_column(String(255))
+    api_key: Mapped[str] = mapped_column(String(512))
+    base_url: Mapped[str] = mapped_column(String(512))
     bypass_celery: Mapped[bool] = mapped_column(Boolean, default=False)
     advanced_options: Mapped[dict] = mapped_column(JSON, default=dict)
 

@@ -31,9 +31,18 @@ const routes = [
     children: [
       { path: '', component: Landing },
       { path: 'projects', component: ProjectOverview, meta: { requiresAuth: true } },
-      { path: 'projects/:projectId', component: ProjectDetail, props: true, meta: { requiresAuth: true } },
+      {
+        path: 'projects/:projectId',
+        component: ProjectDetail,
+        props: true,
+        meta: { requiresAuth: true },
+      },
       // Admin routes
-      { path: 'admin/user-management', component: AdminUserManagement, meta: { requiresAuth: true, adminOnly: true } },
+      {
+        path: 'admin/user-management',
+        component: AdminUserManagement,
+        meta: { requiresAuth: true, adminOnly: true },
+      },
       {
         path: 'admin',
         component: AdminDashboard,
@@ -41,10 +50,10 @@ const routes = [
         children: [
           { path: 'settings', component: AdminSettings },
           { path: 'celery', component: AdminCelery },
-          { path: '', redirect: '/admin/settings' }
-        ]
-      }
-    ]
+          { path: '', redirect: '/admin/settings' },
+        ],
+      },
+    ],
   },
 
   // Public routes (no navbar)
@@ -57,18 +66,18 @@ const routes = [
       { path: 'forgot-password', component: ForgotPassword },
       { path: 'reset-password/:token', component: ResetPassword },
       { path: 'invitation/:token', component: InvitationLanding },
-      { path: 'first-admin', component: FirstAdminSetup }
-    ]
+      { path: 'first-admin', component: FirstAdminSetup },
+    ],
   },
 
   // 404 fallback
-  { path: '/:pathMatch(.*)*', component: NotFound }
+  { path: '/:pathMatch(.*)*', component: NotFound },
 ]
 
 // Router creation
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
 })
 
 // Auth/admin/first-admin guard
@@ -91,18 +100,22 @@ router.beforeEach(async (to, from, next) => {
   }
 
   // Standard auth guard
-  if (to.matched.some(record => record.meta.requiresAuth)) {
+  if (to.matched.some((record) => record.meta.requiresAuth)) {
     if (!authStore.isAuthenticated) {
       return next({ path: '/login', query: { redirect: to.fullPath } })
     }
-    if (to.matched.some(record => record.meta.adminOnly) && !authStore.isAdmin) {
+    if (to.matched.some((record) => record.meta.adminOnly) && !authStore.isAdmin) {
       return next('/')
     }
   }
   // Prevent logged-in users from seeing login/register pages
   if (
     authStore.isAuthenticated &&
-    (to.path === '/login' || to.path === '/register' || to.path.startsWith('/invitation') || to.path === '/forgot-password' || to.path.startsWith('/reset-password/'))
+    (to.path === '/login' ||
+      to.path === '/register' ||
+      to.path.startsWith('/invitation') ||
+      to.path === '/forgot-password' ||
+      to.path.startsWith('/reset-password/'))
   ) {
     return next('/')
   }

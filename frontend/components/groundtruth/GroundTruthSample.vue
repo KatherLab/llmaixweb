@@ -18,12 +18,12 @@
 const props = defineProps({
   doc: Object,
   format: String,
-});
+})
 function prettyJson(o) {
   try {
-    return JSON.stringify(o, null, 2);
+    return JSON.stringify(o, null, 2)
   } catch {
-    return "";
+    return ''
   }
 }
 </script>

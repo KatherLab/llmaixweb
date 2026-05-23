@@ -4,7 +4,9 @@
     <div class="bg-gradient-to-r from-blue-50 to-white rounded-lg p-6 border">
       <div class="flex justify-between items-start mb-4">
         <div>
-          <h2 class="text-xl font-semibold text-gray-800">Trial #{{ evaluationDetail.trial_id }}</h2>
+          <h2 class="text-xl font-semibold text-gray-800">
+            Trial #{{ evaluationDetail.trial_id }}
+          </h2>
           <p class="text-gray-600">Model: {{ evaluationDetail.model || 'Unknown' }}</p>
           <p class="text-sm text-gray-500">{{ formatDate(evaluationDetail.created_at) }}</p>
         </div>
@@ -19,7 +21,9 @@
       <!-- Key metrics grid -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white rounded-lg p-4 text-center border shadow-sm">
-          <div class="text-lg font-semibold text-gray-800">{{ evaluationDetail.document_count || 0 }}</div>
+          <div class="text-lg font-semibold text-gray-800">
+            {{ evaluationDetail.document_count || 0 }}
+          </div>
           <div class="text-sm text-gray-500">Documents</div>
         </div>
         <div class="bg-white rounded-lg p-4 text-center border shadow-sm">
@@ -44,22 +48,53 @@
     </div>
 
     <!-- Field-level metrics -->
-    <div v-if="evaluationDetail.fields && Object.keys(evaluationDetail.fields).length > 0" class="bg-white rounded-lg border p-6 shadow-sm">
+    <div
+      v-if="evaluationDetail.fields && Object.keys(evaluationDetail.fields).length > 0"
+      class="bg-white rounded-lg border p-6 shadow-sm"
+    >
       <h3 class="text-lg font-semibold text-gray-800 mb-4">Field-Level Performance</h3>
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Field</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precision</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recall</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">F1 Score</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Errors</th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Field
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Accuracy
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Precision
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Recall
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                F1 Score
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Errors
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="(fieldData, fieldName) in evaluationDetail.fields" :key="fieldName" class="hover:bg-gray-50">
+            <tr
+              v-for="(fieldData, fieldName) in evaluationDetail.fields"
+              :key="fieldName"
+              class="hover:bg-gray-50"
+            >
               <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                 {{ fieldName }}
               </td>
@@ -67,7 +102,10 @@
                 <div class="flex items-center">
                   <div class="mr-2">{{ ((fieldData.accuracy || 0) * 100).toFixed(1) }}%</div>
                   <div class="w-16 bg-gray-200 rounded-full h-2">
-                    <div class="bg-blue-600 h-2 rounded-full" :style="{width: `${(fieldData.accuracy || 0) * 100}%`}"></div>
+                    <div
+                      class="bg-blue-600 h-2 rounded-full"
+                      :style="{ width: `${(fieldData.accuracy || 0) * 100}%` }"
+                    ></div>
                   </div>
                 </div>
               </td>
@@ -82,9 +120,9 @@
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-sm">
                 <button
-                  @click="$emit('view-field-errors', fieldName)"
                   class="text-red-600 hover:text-red-800 text-sm underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed"
                   :disabled="!fieldData.error_count || fieldData.error_count === 0"
+                  @click="$emit('view-field-errors', fieldName)"
                 >
                   {{ fieldData.error_count || 0 }} errors
                 </button>
@@ -100,8 +138,8 @@
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-semibold text-gray-800">Document Performance Summary</h3>
         <button
-          @click="$emit('view-document-details')"
           class="text-blue-600 hover:text-blue-800 text-sm underline"
+          @click="$emit('view-document-details')"
         >
           View All Documents →
         </button>
@@ -111,19 +149,28 @@
       <div class="mb-4">
         <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
           <span>Accuracy Distribution</span>
-          <span>{{ documentStats.perfect }} perfect, {{ documentStats.good }} good, {{ documentStats.poor }} needs improvement</span>
+          <span
+            >{{ documentStats.perfect }} perfect, {{ documentStats.good }} good,
+            {{ documentStats.poor }} needs improvement</span
+          >
         </div>
         <div class="w-full bg-gray-200 rounded-full h-3">
           <div class="h-3 rounded-full flex">
-            <div class="bg-green-500 rounded-l-full" :style="{width: `${documentStats.perfectPercent}%`}"></div>
-            <div class="bg-yellow-500" :style="{width: `${documentStats.goodPercent}%`}"></div>
-            <div class="bg-red-500 rounded-r-full" :style="{width: `${documentStats.poorPercent}%`}"></div>
+            <div
+              class="bg-green-500 rounded-l-full"
+              :style="{ width: `${documentStats.perfectPercent}%` }"
+            ></div>
+            <div class="bg-yellow-500" :style="{ width: `${documentStats.goodPercent}%` }"></div>
+            <div
+              class="bg-red-500 rounded-r-full"
+              :style="{ width: `${documentStats.poorPercent}%` }"
+            ></div>
           </div>
         </div>
         <div class="flex justify-between text-xs text-gray-500 mt-1">
           <span>Perfect (≥90%)</span>
           <span>Good (70-89%)</span>
-          <span>Needs Review (<70%)</span>
+          <span>Needs Review (&lt;70%)</span>
         </div>
       </div>
 
@@ -147,18 +194,18 @@
 </template>
 
 <script setup>
-import { formatDate } from '@/utils/formatters';
+import { formatDate } from '@/utils/formatters'
 
 defineProps({
   evaluationDetail: {
     type: Object,
-    required: true
+    required: true,
   },
   documentStats: {
     type: Object,
-    required: true
-  }
-});
+    required: true,
+  },
+})
 
-defineEmits(['view-field-errors', 'view-document-details']);
+defineEmits(['view-field-errors', 'view-document-details'])
 </script>

@@ -15,39 +15,39 @@
  *   onMounted(lockScroll);
  *   onUnmounted(unlockScroll);
  */
-import { watch, onMounted, onUnmounted } from 'vue';
+import { watch, onMounted, onUnmounted } from 'vue'
 
 export function useScrollLock(options = {}) {
-  const { autoLock = false, watch: watchRef = null } = options;
+  const { autoLock = false, watch: watchRef = null } = options
 
   function lockScroll() {
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden'
   }
 
   function unlockScroll() {
-    document.body.style.overflow = '';
+    document.body.style.overflow = ''
   }
 
   // Auto-lock based on a reactive ref
   if (watchRef !== null) {
     watch(watchRef, (val) => {
       if (val) {
-        lockScroll();
+        lockScroll()
       } else {
-        unlockScroll();
+        unlockScroll()
       }
-    });
+    })
     // Also check initial value
     if (typeof watchRef === 'function' ? watchRef() : watchRef.value) {
-      onMounted(lockScroll);
+      onMounted(lockScroll)
     }
   }
 
   // Auto-lock as soon as the component mounts
   if (autoLock) {
-    onMounted(lockScroll);
-    onUnmounted(unlockScroll);
+    onMounted(lockScroll)
+    onUnmounted(unlockScroll)
   }
 
-  return { lockScroll, unlockScroll };
+  return { lockScroll, unlockScroll }
 }

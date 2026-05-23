@@ -1,13 +1,13 @@
 <template>
   <AgGridVue
-    :rowData="rowData"
-    :columnDefs="columnDefs"
-    :defaultColDef="defaultColDef"
+    :row-data="rowData"
+    :column-defs="columnDefs"
+    :default-col-def="defaultColDef"
     pagination
-    paginationAutoPageSize
-    style="width:100%;height:320px"
+    pagination-auto-page-size
+    style="width: 100%; height: 320px"
     class="mx-auto"
-    :quickFilterText="search"
+    :quick-filter-text="search"
     :theme="theme"
     @grid-ready="gridReady"
   />
@@ -21,7 +21,7 @@ const props = defineProps({
   defaultColDef: Object,
   search: String,
   theme: Object,
-  onGridReady: Function
+  onGridReady: Function,
 })
 function gridReady(params) {
   props.onGridReady?.(params)

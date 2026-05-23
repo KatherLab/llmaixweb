@@ -232,6 +232,34 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - Frontend: `PascalCase.vue` for components, `camelCase` for JS variables
 - API routes use plural nouns (`/files`, `/projects`, `/trials/`)
 
+### Linting & Formatting
+
+Always run these checks before committing changes:
+
+**Frontend:**
+```bash
+npm run check          # prettier --check + eslint
+npm run format         # prettier --write (auto-fix)
+npm run lint:fix       # eslint --fix
+```
+
+Pre-commit hook auto-runs `lint-staged` (eslint + prettier on staged `.js`/`.vue` files via `simple-git-hooks`).
+
+**Backend:**
+```bash
+uv run ruff check backend/src/
+uv run ruff format backend/src/
+```
+
+### Build Check
+
+Always verify the frontend builds cleanly:
+```bash
+npm run build
+```
+
+---
+
 ### Environment Variables
 - `.env.example` documents all available settings
 - `ENV_PATH` env var controls `.env` file location (defaults to `backend/.env`)

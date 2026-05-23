@@ -11,16 +11,30 @@
           @click.stop
         >
           <!-- Header with close button -->
-          <div v-if="title" class="flex items-center justify-between px-6 py-4 border-b bg-gray-50 rounded-t-2xl">
+          <div
+            v-if="title"
+            class="flex items-center justify-between px-6 py-4 border-b bg-gray-50 rounded-t-2xl"
+          >
             <h3 class="text-lg font-semibold text-gray-900">{{ title }}</h3>
             <button
               type="button"
               class="text-gray-400 hover:text-gray-600 transition-colors"
-              @click="close"
               aria-label="Close"
+              @click="close"
             >
-              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                class="h-6 w-6"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -31,11 +45,22 @@
               v-if="!title"
               type="button"
               class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
-              @click="close"
               aria-label="Close"
+              @click="close"
             >
-              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                class="h-6 w-6"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
             <slot></slot>
@@ -52,44 +77,44 @@
 </template>
 
 <script setup>
-import { watch } from 'vue';
-import { useScrollLock } from '@/composables/useScrollLock';
+import { watch } from 'vue'
+import { useScrollLock } from '@/composables/useScrollLock'
 
 const props = defineProps({
   modelValue: {
     type: Boolean,
-    default: false
+    default: false,
   },
   open: {
     type: Boolean,
-    default: false
+    default: false,
   },
   title: {
     type: String,
-    default: ''
+    default: '',
   },
   closeOnBackdrop: {
     type: Boolean,
-    default: true
-  }
-});
+    default: true,
+  },
+})
 
-const emit = defineEmits(['update:modelValue', 'close']);
+const emit = defineEmits(['update:modelValue', 'close'])
 
-const isOpen = () => props.modelValue || props.open;
+const isOpen = () => props.modelValue || props.open
 
-useScrollLock({ watch: () => isOpen() });
+useScrollLock({ watch: () => isOpen() })
 
 const close = () => {
-  emit('update:modelValue', false);
-  emit('close');
-};
+  emit('update:modelValue', false)
+  emit('close')
+}
 
 const handleBackdropClick = () => {
   if (props.closeOnBackdrop) {
-    close();
+    close()
   }
-};
+}
 </script>
 
 <style scoped>

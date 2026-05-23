@@ -1,16 +1,15 @@
 <template>
   <div style="width: 100%; height: 500px">
     <AgGridVue
-      :rowData="rowData"
-      :columnDefs="columnDefs"
-      :defaultColDef="defaultColDef"
+      :row-data="internalRowData"
+      :column-defs="columnDefs"
+      :default-col-def="defaultColDef"
       :pagination="true"
-      :paginationAutoPageSize="true"
+      :pagination-auto-page-size="true"
       :theme="gridTheme"
-      :gridOptions="gridOptions"
+      :grid-options="gridOptions"
       :components="components"
       style="width: 100%; height: 100%"
-
       @grid-ready="onGridReady"
       @first-data-rendered="onFirstDataRendered"
       @grid-size-changed="onGridSizeChanged"
@@ -37,7 +36,7 @@ const gridTheme = themeMaterial.withParams({
   rowHoverColor: '#f3f4f6',
   headerBackgroundColor: '#f9fafb',
   headerTextColor: '#111827',
-  headerCellHoverBackgroundColor: '#e0e7ff'
+  headerCellHoverBackgroundColor: '#e0e7ff',
 })
 
 // ----------------------------
@@ -50,19 +49,30 @@ const UserCell = defineComponent({
     const onEdit = () => props.params.context?.emitEdit?.(props.params.data)
     return () => {
       const name = String(props.params.value ?? '')
-      const initials = name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '?'
+      const initials = name
+        ? name
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+        : '?'
       const email = props.params.data?.email ?? ''
       return h('div', { class: 'flex items-center h-full cursor-pointer', onClick: onEdit }, [
-        h('div', { class: 'flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center' }, [
-          h('span', { class: 'text-blue-800 font-medium' }, initials)
-        ]),
+        h(
+          'div',
+          {
+            class:
+              'flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center',
+          },
+          [h('span', { class: 'text-blue-800 font-medium' }, initials)],
+        ),
         h('div', { class: 'ml-3' }, [
           h('div', { class: 'text-sm font-medium text-gray-900' }, name || 'N/A'),
-          h('div', { class: 'text-sm text-gray-500' }, email)
-        ])
+          h('div', { class: 'text-sm text-gray-500' }, email),
+        ]),
       ])
     }
-  }
+  },
 })
 
 const StatusCell = defineComponent({
@@ -75,10 +85,14 @@ const StatusCell = defineComponent({
       const cls = active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
       const text = active ? 'Active' : 'Inactive'
       return h('div', { class: 'flex items-center h-full cursor-pointer', onClick: onEdit }, [
-        h('span', { class: `px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${cls}` }, text)
+        h(
+          'span',
+          { class: `px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${cls}` },
+          text,
+        ),
       ])
     }
-  }
+  },
 })
 
 const RoleCell = defineComponent({
@@ -86,10 +100,11 @@ const RoleCell = defineComponent({
   props: { params: { type: Object, required: true } },
   setup(props) {
     const onEdit = () => props.params.context?.emitEdit?.(props.params.data)
-    return () => h('div', { class: 'flex items-center h-full cursor-pointer capitalize', onClick: onEdit }, [
-      h('span', String(props.params.value ?? ''))
-    ])
-  }
+    return () =>
+      h('div', { class: 'flex items-center h-full cursor-pointer capitalize', onClick: onEdit }, [
+        h('span', String(props.params.value ?? '')),
+      ])
+  },
 })
 
 const ActionsCell = defineComponent({
@@ -99,16 +114,21 @@ const ActionsCell = defineComponent({
     const onEdit = () => props.params.context?.emitEdit?.(props.params.data)
     return () => {
       return h('div', { class: 'flex items-center h-full justify-center' }, [
-        h('button',
+        h(
+          'button',
           {
-            class: 'px-3 py-1.5 text-xs font-medium rounded text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition',
-            onClick: (e) => { e.stopPropagation(); onEdit() }
+            class:
+              'px-3 py-1.5 text-xs font-medium rounded text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition',
+            onClick: (e) => {
+              e.stopPropagation()
+              onEdit()
+            },
           },
-          'Edit'
-        )
+          'Edit',
+        ),
       ])
     }
-  }
+  },
 })
 
 const components = { UserCell, StatusCell, RoleCell, ActionsCell } // used by colDefs via string names. :contentReference[oaicite:5]{index=5}
@@ -120,7 +140,7 @@ const columnDefs = ref([
   { field: 'full_name', headerName: 'User', flex: 2, minWidth: 220, cellRenderer: 'UserCell' },
   { field: 'is_active', headerName: 'Status', width: 120, cellRenderer: 'StatusCell' },
   { field: 'role', headerName: 'Role', width: 120, cellRenderer: 'RoleCell' },
-  { field: 'actions', headerName: 'Actions', width: 120, cellRenderer: 'ActionsCell' }
+  { field: 'actions', headerName: 'Actions', width: 120, cellRenderer: 'ActionsCell' },
 ])
 
 // ----------------------------
@@ -130,18 +150,18 @@ const defaultColDef = {
   sortable: true,
   filter: true,
   resizable: true,
-  cellClass: 'align-middle'
+  cellClass: 'align-middle',
 }
 
-const rowData = ref([])
+const internalRowData = ref([])
 const gridApi = ref(null)
 
 const gridOptions = {
   // so button clicks can emit to the parent Component
   context: {
-    emitEdit: (row) => emit('edit-requested', row)
+    emitEdit: (row) => emit('edit-requested', row),
   },
-  getRowId: p => String(p.data.id) // stabilize row updates across refreshes. :contentReference[oaicite:6]{index=6}
+  getRowId: (p) => String(p.data.id), // stabilize row updates across refreshes
 }
 
 // Sizing helpers & lifecycle (called when data is rendered/resized)
@@ -155,11 +175,17 @@ const sizeToFitIfVisible = () => {
 
 function onGridReady(params) {
   gridApi.value = params.api
-  params.api.addEventListener('gridPreDestroy', () => { gridApi.value = null }) // teardown hook. :contentReference[oaicite:7]{index=7}
+  params.api.addEventListener('gridPreDestroy', () => {
+    gridApi.value = null
+  }) // teardown hook. :contentReference[oaicite:7]{index=7}
 }
 
-function onFirstDataRendered() { sizeToFitIfVisible() }
-function onGridSizeChanged()  { sizeToFitIfVisible() }
+function onFirstDataRendered() {
+  sizeToFitIfVisible()
+}
+function onGridSizeChanged() {
+  sizeToFitIfVisible()
+}
 
 // ----------------------------
 // Data — use parent rowData prop reactively
@@ -167,16 +193,20 @@ function onGridSizeChanged()  { sizeToFitIfVisible() }
 const props = defineProps({
   rowData: { type: Array, default: () => [] },
   search: { type: String, default: '' },
-  theme: { type: Object, default: null }
+  theme: { type: Object, default: null },
 })
 
-watch(() => props.rowData, (newData) => {
-  rowData.value = newData
-  // Force refresh all cells so Vue cell renderers re-render with updated data
-  if (gridApi.value && !gridApi.value.isDestroyed()) {
-    gridApi.value.refreshCells({ force: true })
-  }
-}, { immediate: true })
+watch(
+  () => props.rowData,
+  (newData) => {
+    internalRowData.value = newData
+    // Force refresh all cells so Vue cell renderers re-render with updated data
+    if (gridApi.value && !gridApi.value.isDestroyed()) {
+      gridApi.value.refreshCells({ force: true })
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <style>

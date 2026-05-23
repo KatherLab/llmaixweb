@@ -7,8 +7,8 @@
           <h2 class="text-xl font-semibold text-gray-800">Document #{{ document.document_id }}</h2>
           <p class="text-gray-600">Individual field-by-field analysis</p>
           <button
-            @click="$emit('back-to-documents')"
             class="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center"
+            @click="$emit('back-to-documents')"
           >
             <span class="mr-1">←</span>
             Back to Documents
@@ -23,19 +23,24 @@
       </div>
 
       <!-- Show error prominently if exists -->
-      <div v-if="document.error" class="my-4 p-3 bg-pink-50 border border-pink-300 rounded flex items-center gap-2 text-pink-800 font-semibold">
+      <div
+        v-if="document.error"
+        class="my-4 p-3 bg-pink-50 border border-pink-300 rounded flex items-center gap-2 text-pink-800 font-semibold"
+      >
         <span class="text-xl">⚠️</span>
         <span>{{ document.error }}</span>
       </div>
 
       <!-- Summary stats -->
-      <div class="grid grid-cols-3 gap-4" v-if="!document.error">
+      <div v-if="!document.error" class="grid grid-cols-3 gap-4">
         <div class="bg-white rounded-lg p-4 text-center border shadow-sm">
           <div class="text-lg font-semibold text-green-600">{{ document.correct_fields }}</div>
           <div class="text-sm text-gray-500">Correct Fields</div>
         </div>
         <div class="bg-white rounded-lg p-4 text-center border shadow-sm">
-          <div class="text-lg font-semibold text-red-600">{{ document.total_fields - document.correct_fields }}</div>
+          <div class="text-lg font-semibold text-red-600">
+            {{ document.total_fields - document.correct_fields }}
+          </div>
           <div class="text-sm text-gray-500">Incorrect Fields</div>
         </div>
         <div class="bg-white rounded-lg p-4 text-center border shadow-sm">
@@ -46,7 +51,7 @@
     </div>
 
     <!-- Field-by-field analysis -->
-    <div class="bg-white rounded-lg border p-6 shadow-sm" v-if="!document.error">
+    <div v-if="!document.error" class="bg-white rounded-lg border p-6 shadow-sm">
       <h3 class="text-lg font-semibold text-gray-800 mb-4">Field-by-Field Analysis</h3>
       <div class="space-y-4">
         <div
@@ -55,7 +60,7 @@
           class="border rounded-lg p-4"
           :class="{
             'border-green-200 bg-green-50': fieldDetail.is_correct,
-            'border-red-200 bg-red-50': !fieldDetail.is_correct
+            'border-red-200 bg-red-50': !fieldDetail.is_correct,
           }"
         >
           <div class="flex justify-between items-start mb-3">
@@ -64,7 +69,7 @@
               class="px-2 py-1 rounded-full text-xs font-medium"
               :class="{
                 'bg-green-100 text-green-800': fieldDetail.is_correct,
-                'bg-red-100 text-red-800': !fieldDetail.is_correct
+                'bg-red-100 text-red-800': !fieldDetail.is_correct,
               }"
             >
               {{ fieldDetail.is_correct ? 'Correct' : fieldDetail.error_type || 'Incorrect' }}
@@ -74,11 +79,15 @@
           <div class="grid grid-cols-2 gap-4">
             <div class="bg-white border rounded p-3">
               <h5 class="text-xs font-medium text-gray-700 mb-1">Ground Truth</h5>
-              <p class="text-sm text-gray-800">{{ formatFieldValue(fieldDetail.ground_truth_value) }}</p>
+              <p class="text-sm text-gray-800">
+                {{ formatFieldValue(fieldDetail.ground_truth_value) }}
+              </p>
             </div>
             <div class="bg-white border rounded p-3">
               <h5 class="text-xs font-medium text-gray-700 mb-1">Predicted</h5>
-              <p class="text-sm text-gray-800">{{ formatFieldValue(fieldDetail.predicted_value) }}</p>
+              <p class="text-sm text-gray-800">
+                {{ formatFieldValue(fieldDetail.predicted_value) }}
+              </p>
             </div>
           </div>
 
@@ -92,10 +101,11 @@
                 class="h-2 rounded-full"
                 :class="{
                   'bg-green-500': fieldDetail.confidence_score >= 0.8,
-                  'bg-yellow-500': fieldDetail.confidence_score >= 0.5 && fieldDetail.confidence_score < 0.8,
-                  'bg-red-500': fieldDetail.confidence_score < 0.5
+                  'bg-yellow-500':
+                    fieldDetail.confidence_score >= 0.5 && fieldDetail.confidence_score < 0.8,
+                  'bg-red-500': fieldDetail.confidence_score < 0.5,
                 }"
-                :style="{width: `${fieldDetail.confidence_score * 100}%`}"
+                :style="{ width: `${fieldDetail.confidence_score * 100}%` }"
               ></div>
             </div>
           </div>
@@ -109,18 +119,23 @@
         <h3 class="text-lg font-semibold text-gray-800">Document Content</h3>
         <button
           v-if="!documentContent && !loadingContent"
-          @click="$emit('load-content', document.document_id)"
           class="text-blue-600 hover:text-blue-800 text-sm underline"
+          @click="$emit('load-content', document.document_id)"
         >
           Load Content
         </button>
       </div>
 
-      <div v-if="documentContent" class="bg-gray-50 p-4 rounded-md overflow-auto max-h-96 border border-gray-200">
+      <div
+        v-if="documentContent"
+        class="bg-gray-50 p-4 rounded-md overflow-auto max-h-96 border border-gray-200"
+      >
         <div class="text-sm text-gray-800 whitespace-pre-wrap">{{ documentContent }}</div>
       </div>
       <div v-else-if="loadingContent" class="text-center py-8">
-        <div class="inline-block animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+        <div
+          class="inline-block animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"
+        ></div>
         <p class="mt-2 text-gray-500 text-sm">Loading document content...</p>
       </div>
       <div v-else class="text-center py-8">
@@ -135,31 +150,31 @@
 const props = defineProps({
   projectId: {
     type: [String, Number],
-    required: true
+    required: true,
   },
   evaluation: {
     type: Object,
-    required: true
+    required: true,
   },
   document: {
     type: Object,
-    required: true
+    required: true,
   },
   documentContent: {
     type: String,
-    default: null
+    default: null,
   },
   loadingContent: {
     type: Boolean,
-    default: false
-  }
-});
+    default: false,
+  },
+})
 
-const emit = defineEmits(['load-content', 'back-to-documents']);
+const emit = defineEmits(['load-content', 'back-to-documents'])
 
 const formatFieldValue = (value) => {
-  if (value === null || value === undefined) return 'null';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
-};
+  if (value === null || value === undefined) return 'null'
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
 </script>

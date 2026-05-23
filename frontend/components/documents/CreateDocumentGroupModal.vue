@@ -12,13 +12,24 @@
           @click.stop
         >
           <!-- Header -->
-          <div class="px-6 py-4 border-b bg-gray-50 rounded-t-2xl flex justify-between items-center">
+          <div
+            class="px-6 py-4 border-b bg-gray-50 rounded-t-2xl flex justify-between items-center"
+          >
             <h3 class="text-xl font-semibold text-gray-900">
               {{ group ? 'Edit Document Group' : 'Create Document Group' }}
             </h3>
-            <button @click="tryClose" class="text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
+            <button
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Close"
+              @click="tryClose"
+            >
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -59,12 +70,14 @@
                   class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
                 >
                   {{ tag }}
-                  <button
-                    @click="removeTag(index)"
-                    class="ml-2 text-blue-600 hover:text-blue-800"
-                  >
+                  <button class="ml-2 text-blue-600 hover:text-blue-800" @click="removeTag(index)">
                     <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </span>
@@ -73,14 +86,14 @@
                 <input
                   v-model="newTag"
                   type="text"
-                  @keyup.enter="addTag"
                   class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Add a tag..."
+                  @keyup.enter="addTag"
                 />
                 <button
-                  @click="addTag"
                   :disabled="!newTag.trim()"
                   class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300"
+                  @click="addTag"
                 >
                   Add
                 </button>
@@ -106,10 +119,7 @@
                   placeholder="Search documents..."
                   class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
-                <input
-                  type="hidden"
-                  value=""
-                />
+                <input type="hidden" value="" />
               </div>
 
               <!-- Document List -->
@@ -123,7 +133,7 @@
                     :key="doc.id"
                     :class="[
                       'p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 flex items-center',
-                      { 'bg-blue-50': formData.document_ids.includes(doc.id) }
+                      { 'bg-blue-50': formData.document_ids.includes(doc.id) },
                     ]"
                     @click="toggleDocument(doc.id)"
                   >
@@ -131,16 +141,16 @@
                       type="checkbox"
                       :checked="formData.document_ids.includes(doc.id)"
                       class="mr-3"
-                      @click.stop
                       readonly
+                      @click.stop
                     />
                     <div class="flex-1">
                       <div class="font-medium text-sm">
                         {{ doc.original_file?.file_name || `Document #${doc.id}` }}
                       </div>
                       <div class="text-xs text-gray-500">
-                        Config: {{ doc.preprocessing_config?.name || 'N/A' }} •
-                        Created: {{ formatDate(doc.created_at) }}
+                        Config: {{ doc.preprocessing_config?.name || 'N/A' }} • Created:
+                        {{ formatDate(doc.created_at) }}
                       </div>
                     </div>
                   </div>
@@ -148,17 +158,11 @@
               </div>
 
               <div class="flex gap-2 mt-2">
-                <button
-                  @click="selectAll"
-                  class="text-sm text-blue-600 hover:text-blue-800"
-                >
+                <button class="text-sm text-blue-600 hover:text-blue-800" @click="selectAll">
                   Select All Visible
                 </button>
                 <span class="text-gray-300">|</span>
-                <button
-                  @click="clearSelection"
-                  class="text-sm text-blue-600 hover:text-blue-800"
-                >
+                <button class="text-sm text-blue-600 hover:text-blue-800" @click="clearSelection">
                   Clear Selection
                 </button>
               </div>
@@ -167,16 +171,13 @@
 
           <!-- Footer -->
           <div class="px-6 py-4 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-2">
-            <button
-              @click="tryClose"
-              class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md"
-            >
+            <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md" @click="tryClose">
               Cancel
             </button>
             <button
-              @click="handleSave"
               :disabled="!isFormValid"
               class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md disabled:bg-blue-300 disabled:cursor-not-allowed"
+              @click="handleSave"
             >
               {{ group ? 'Update' : 'Create' }} Group
             </button>
@@ -188,32 +189,32 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
-import { api } from '@/services/api';
-import { formatDate } from '@/utils/formatters';
-import { useScrollLock } from '@/composables/useScrollLock';
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { api } from '@/services/api'
+import { formatDate } from '@/utils/formatters'
+import { useScrollLock } from '@/composables/useScrollLock'
 
 const props = defineProps({
   group: { type: Object, default: null },
   documents: { type: Array, required: true },
   projectId: { type: [String, Number], required: true },
   visible: { type: Boolean, default: true }, // allow parent to show/hide
-});
+})
 
-const emit = defineEmits(['close', 'save']);
+const emit = defineEmits(['close', 'save'])
 
-useScrollLock({ autoLock: true });
+useScrollLock({ autoLock: true })
 
 const formData = ref({
   name: '',
   description: '',
   tags: [],
   document_ids: [],
-});
+})
 
-const initialFormState = ref('');
-const newTag = ref('');
-const searchTerm = ref('');
+const initialFormState = ref('')
+const newTag = ref('')
+const searchTerm = ref('')
 
 // Serialize form for dirty check
 function serializeForm(data) {
@@ -222,7 +223,7 @@ function serializeForm(data) {
     description: data.description,
     tags: [...data.tags].sort(),
     document_ids: [...data.document_ids].sort(),
-  });
+  })
 }
 
 // Setup initial data and save initial state for dirty check
@@ -232,90 +233,91 @@ onMounted(async () => {
       name: props.group.name,
       description: props.group.description || '',
       tags: [...(props.group.tags || [])],
-      document_ids: props.group.documents.map(d => d.id),
-    };
+      document_ids: props.group.documents.map((d) => d.id),
+    }
   }
-  initialFormState.value = serializeForm(formData.value);
-});
+  initialFormState.value = serializeForm(formData.value)
+})
 
 // Computed
 const filteredDocuments = computed(() => {
-  let docs = [...props.documents];
+  let docs = [...props.documents]
   if (searchTerm.value) {
-    const search = searchTerm.value.toLowerCase();
-    docs = docs.filter(doc =>
-      doc.original_file?.file_name?.toLowerCase().includes(search) ||
-      doc.text?.toLowerCase().includes(search)
-    );
+    const search = searchTerm.value.toLowerCase()
+    docs = docs.filter(
+      (doc) =>
+        doc.original_file?.file_name?.toLowerCase().includes(search) ||
+        doc.text?.toLowerCase().includes(search),
+    )
   }
-  return docs;
-});
+  return docs
+})
 
 const isFormValid = computed(() => {
-  return formData.value.name.trim() && formData.value.document_ids.length > 0;
-});
+  return formData.value.name.trim() && formData.value.document_ids.length > 0
+})
 
 const isDirty = computed(() => {
-  return serializeForm(formData.value) !== initialFormState.value;
-});
+  return serializeForm(formData.value) !== initialFormState.value
+})
 
 // Methods
 const addTag = () => {
-  const tag = newTag.value.trim();
+  const tag = newTag.value.trim()
   if (tag && !formData.value.tags.includes(tag)) {
-    formData.value.tags.push(tag);
-    newTag.value = '';
+    formData.value.tags.push(tag)
+    newTag.value = ''
   }
-};
+}
 const removeTag = (index) => {
-  formData.value.tags.splice(index, 1);
-};
+  formData.value.tags.splice(index, 1)
+}
 const toggleDocument = (docId) => {
-  const index = formData.value.document_ids.indexOf(docId);
+  const index = formData.value.document_ids.indexOf(docId)
   if (index === -1) {
-    formData.value.document_ids.push(docId);
+    formData.value.document_ids.push(docId)
   } else {
-    formData.value.document_ids.splice(index, 1);
+    formData.value.document_ids.splice(index, 1)
   }
-};
+}
 const selectAll = () => {
-  const visibleIds = filteredDocuments.value.map(d => d.id);
-  const newIds = visibleIds.filter(id => !formData.value.document_ids.includes(id));
-  formData.value.document_ids.push(...newIds);
-};
+  const visibleIds = filteredDocuments.value.map((d) => d.id)
+  const newIds = visibleIds.filter((id) => !formData.value.document_ids.includes(id))
+  formData.value.document_ids.push(...newIds)
+}
 const clearSelection = () => {
-  formData.value.document_ids = [];
-};
+  formData.value.document_ids = []
+}
 
 // Close handlers with confirmation if dirty
 const tryClose = () => {
   if (isDirty.value) {
     if (window.confirm('You have unsaved changes. Are you sure you want to close?')) {
-      emit('close');
+      emit('close')
     }
   } else {
-    emit('close');
+    emit('close')
   }
-};
+}
 const handleBackgroundClick = (e) => {
   if (e.target === e.currentTarget) {
-    tryClose();
+    tryClose()
   }
-};
+}
 const handleSave = () => {
   emit('save', {
     name: formData.value.name.trim(),
     description: formData.value.description.trim(),
     tags: formData.value.tags,
     document_ids: formData.value.document_ids,
-  });
-};
+  })
+}
 </script>
 
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity .2s;
+  transition: opacity 0.2s;
 }
 .fade-enter-from,
 .fade-leave-to {

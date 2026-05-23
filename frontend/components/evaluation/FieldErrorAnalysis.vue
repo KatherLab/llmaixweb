@@ -24,11 +24,15 @@
           <div class="text-sm text-gray-500">Value Mismatches</div>
         </div>
         <div class="bg-white rounded-lg p-4 text-center border">
-          <div class="text-lg font-semibold text-yellow-600">{{ errorsByType.type_error || 0 }}</div>
+          <div class="text-lg font-semibold text-yellow-600">
+            {{ errorsByType.type_error || 0 }}
+          </div>
           <div class="text-sm text-gray-500">Type Errors</div>
         </div>
         <div class="bg-white rounded-lg p-4 text-center border">
-          <div class="text-lg font-semibold text-purple-600">{{ Object.keys(fieldErrors).length }}</div>
+          <div class="text-lg font-semibold text-purple-600">
+            {{ Object.keys(fieldErrors).length }}
+          </div>
           <div class="text-sm text-gray-500">Fields Affected</div>
         </div>
       </div>
@@ -41,8 +45,8 @@
           <label class="text-sm font-medium text-gray-700">Field:</label>
           <select
             :value="selectedField"
-            @change="$emit('select-field', $event.target.value)"
             class="rounded-md border border-gray-300 text-sm py-1 px-2 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+            @change="$emit('select-field', $event.target.value)"
           >
             <option value="">All Fields</option>
             <option v-for="fieldName in fieldNames" :key="fieldName" :value="fieldName">
@@ -61,9 +65,7 @@
     <!-- Error details -->
     <div v-if="selectedField && fieldErrors[selectedField]" class="space-y-4">
       <div class="bg-white rounded-lg border p-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">
-          Errors for "{{ selectedField }}"
-        </h3>
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Errors for "{{ selectedField }}"</h3>
 
         <div class="space-y-4">
           <div
@@ -73,9 +75,7 @@
           >
             <div class="flex justify-between items-start mb-3">
               <div>
-                <h4 class="text-sm font-medium text-red-800">
-                  Document #{{ error.document_id }}
-                </h4>
+                <h4 class="text-sm font-medium text-red-800">Document #{{ error.document_id }}</h4>
                 <p class="text-xs text-red-600 mt-1">
                   {{ error.document_name || 'Unknown file' }}
                 </p>
@@ -107,15 +107,11 @@
             <div class="mt-3 bg-white border border-gray-200 rounded p-3">
               <h5 class="text-xs font-medium text-gray-700 mb-2">Error Analysis:</h5>
               <div class="text-xs text-gray-600 space-y-1">
-                <div>
-                  <strong>Type:</strong> {{ getErrorTypeDescription(error.error_type) }}
-                </div>
+                <div><strong>Type:</strong> {{ getErrorTypeDescription(error.error_type) }}</div>
                 <div v-if="error.confidence_score !== null">
                   <strong>Confidence:</strong> {{ (error.confidence_score * 100).toFixed(1) }}%
                 </div>
-                <div>
-                  <strong>Suggestion:</strong> {{ getErrorSuggestion(error.error_type) }}
-                </div>
+                <div><strong>Suggestion:</strong> {{ getErrorSuggestion(error.error_type) }}</div>
               </div>
 
               <!-- Context if available -->
@@ -145,7 +141,8 @@
             <div>
               <div class="font-medium text-gray-800">{{ fieldName }}</div>
               <div class="text-sm text-gray-500">
-                {{ fieldErrors[fieldName]?.length || 0 }} errors across {{ getDocumentCount(fieldName) }} documents
+                {{ fieldErrors[fieldName]?.length || 0 }} errors across
+                {{ getDocumentCount(fieldName) }} documents
               </div>
             </div>
           </div>
@@ -162,88 +159,88 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed } from 'vue'
 
 const props = defineProps({
   projectId: {
     type: [String, Number],
-    required: true
+    required: true,
   },
   evaluation: {
     type: Object,
-    required: true
+    required: true,
   },
   fieldErrors: {
     type: Object,
-    required: true
+    required: true,
   },
   selectedField: {
     type: String,
-    default: null
-  }
-});
+    default: null,
+  },
+})
 
-const emit = defineEmits(['select-field']);
+const emit = defineEmits(['select-field'])
 
 // Computed properties
 const fieldNames = computed(() => {
-  return Object.keys(props.fieldErrors).sort();
-});
+  return Object.keys(props.fieldErrors).sort()
+})
 
 const totalErrors = computed(() => {
-  return Object.values(props.fieldErrors).reduce((total, errors) => total + errors.length, 0);
-});
+  return Object.values(props.fieldErrors).reduce((total, errors) => total + errors.length, 0)
+})
 
 const errorsByType = computed(() => {
-  const types = {};
-  Object.values(props.fieldErrors).forEach(errors => {
-    errors.forEach(error => {
-      types[error.error_type] = (types[error.error_type] || 0) + 1;
-    });
-  });
-  return types;
-});
+  const types = {}
+  Object.values(props.fieldErrors).forEach((errors) => {
+    errors.forEach((error) => {
+      types[error.error_type] = (types[error.error_type] || 0) + 1
+    })
+  })
+  return types
+})
 
 // Helper functions
 const formatFieldValue = (value) => {
-  if (value === null || value === undefined) return 'null';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
-};
+  if (value === null || value === undefined) return 'null'
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
 
 const getDocumentCount = (fieldName) => {
-  const errors = props.fieldErrors[fieldName] || [];
-  const uniqueDocuments = new Set(errors.map(error => error.document_id));
-  return uniqueDocuments.size;
-};
+  const errors = props.fieldErrors[fieldName] || []
+  const uniqueDocuments = new Set(errors.map((error) => error.document_id))
+  return uniqueDocuments.size
+}
 
 const getErrorTypeDescription = (errorType) => {
   const descriptions = {
-    'missing': 'Field was not extracted from the document',
-    'mismatch': 'Extracted value does not match ground truth',
-    'fuzzy_mismatch': 'Extracted value is similar but not close enough to ground truth',
-    'numeric_mismatch': 'Numeric value is outside acceptable tolerance',
-    'boolean_mismatch': 'Boolean value is incorrect',
-    'category_mismatch': 'Category value does not match expected options',
-    'date_mismatch': 'Date value is incorrect or in wrong format',
-    'type_error': 'Value type is incorrect (e.g., text instead of number)',
-    'extra': 'Field was extracted but not expected in ground truth'
-  };
-  return descriptions[errorType] || 'Unknown error type';
-};
+    missing: 'Field was not extracted from the document',
+    mismatch: 'Extracted value does not match ground truth',
+    fuzzy_mismatch: 'Extracted value is similar but not close enough to ground truth',
+    numeric_mismatch: 'Numeric value is outside acceptable tolerance',
+    boolean_mismatch: 'Boolean value is incorrect',
+    category_mismatch: 'Category value does not match expected options',
+    date_mismatch: 'Date value is incorrect or in wrong format',
+    type_error: 'Value type is incorrect (e.g., text instead of number)',
+    extra: 'Field was extracted but not expected in ground truth',
+  }
+  return descriptions[errorType] || 'Unknown error type'
+}
 
 const getErrorSuggestion = (errorType) => {
   const suggestions = {
-    'missing': 'Check if the field exists in the document or improve extraction prompts',
-    'mismatch': 'Review extraction accuracy or ground truth data',
-    'fuzzy_mismatch': 'Consider adjusting fuzzy matching threshold or improving extraction',
-    'numeric_mismatch': 'Check numeric parsing or adjust tolerance settings',
-    'boolean_mismatch': 'Review boolean value mapping or extraction logic',
-    'category_mismatch': 'Verify category mappings or improve classification',
-    'date_mismatch': 'Check date format parsing or improve date extraction',
-    'type_error': 'Review data type conversion or schema definition',
-    'extra': 'Check if this field should be included in ground truth'
-  };
-  return suggestions[errorType] || 'Review extraction logic and ground truth data';
-};
+    missing: 'Check if the field exists in the document or improve extraction prompts',
+    mismatch: 'Review extraction accuracy or ground truth data',
+    fuzzy_mismatch: 'Consider adjusting fuzzy matching threshold or improving extraction',
+    numeric_mismatch: 'Check numeric parsing or adjust tolerance settings',
+    boolean_mismatch: 'Review boolean value mapping or extraction logic',
+    category_mismatch: 'Verify category mappings or improve classification',
+    date_mismatch: 'Check date format parsing or improve date extraction',
+    type_error: 'Review data type conversion or schema definition',
+    extra: 'Check if this field should be included in ground truth',
+  }
+  return suggestions[errorType] || 'Review extraction logic and ground truth data'
+}
 </script>

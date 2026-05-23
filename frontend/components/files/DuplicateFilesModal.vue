@@ -12,8 +12,19 @@
           <!-- Header -->
           <div class="px-6 py-4 bg-amber-50 border-b border-amber-200 rounded-t-2xl">
             <div class="flex items-center">
-              <svg class="h-6 w-6 text-amber-600 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <svg
+                class="h-6 w-6 text-amber-600 mr-3"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
               </svg>
               <h3 class="text-lg font-medium text-gray-900">Duplicate Files Detected</h3>
             </div>
@@ -33,7 +44,7 @@
               >
                 <div class="flex items-center justify-between">
                   <div class="flex items-center space-x-3">
-                    <FileIcon :fileType="getFileType(duplicate.filename)" :size="32" />
+                    <FileIcon :file-type="getFileType(duplicate.filename)" :size="32" />
                     <div>
                       <p class="text-sm font-medium text-gray-900">{{ duplicate.filename }}</p>
                       <p class="text-xs text-gray-500">
@@ -50,7 +61,8 @@
 
             <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p class="text-sm text-blue-800">
-                <strong>Tip:</strong> Files are compared using their content hash, so even renamed files will be detected as duplicates if their content is identical.
+                <strong>Tip:</strong> Files are compared using their content hash, so even renamed
+                files will be detected as duplicates if their content is identical.
               </p>
             </div>
           </div>
@@ -58,21 +70,21 @@
           <!-- Footer -->
           <div class="px-6 py-4 bg-gray-50 border-t rounded-b-2xl flex justify-between">
             <button
-              @click="$emit('cancel')"
               class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              @click="$emit('cancel')"
             >
               Cancel Upload
             </button>
             <div class="space-x-3">
               <button
-                @click="$emit('proceed', true)"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                @click="$emit('proceed', true)"
               >
                 Skip Duplicates
               </button>
               <button
-                @click="$emit('proceed', false)"
                 class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700"
+                @click="$emit('proceed', false)"
               >
                 Upload All Anyway
               </button>
@@ -85,37 +97,37 @@
 </template>
 
 <script setup>
-import { useScrollLock } from '@/composables/useScrollLock';
-import FileIcon from '../common/FileIcon.vue';
+import { useScrollLock } from '@/composables/useScrollLock'
+import FileIcon from '../common/FileIcon.vue'
 
-useScrollLock({ autoLock: true });
+useScrollLock({ autoLock: true })
 
 defineProps({
   duplicates: {
     type: Array,
-    required: true
-  }
-});
+    required: true,
+  },
+})
 
-defineEmits(['proceed', 'cancel']);
+defineEmits(['proceed', 'cancel'])
 
 const getFileType = (filename) => {
-  const ext = filename.split('.').pop().toLowerCase();
+  const ext = filename.split('.').pop().toLowerCase()
   const typeMap = {
-    'pdf': 'application/pdf',
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'png': 'image/png',
-    'txt': 'text/plain',
-    'csv': 'text/csv',
-    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  };
-  return typeMap[ext] || 'application/octet-stream';
-};
+    pdf: 'application/pdf',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    txt: 'text/plain',
+    csv: 'text/csv',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  }
+  return typeMap[ext] || 'application/octet-stream'
+}
 
 const formatDate = (dateString) => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleString();
-};
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleString()
+}
 </script>

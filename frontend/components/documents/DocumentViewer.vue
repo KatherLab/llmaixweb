@@ -6,48 +6,86 @@
         @click="$emit('close')"
       ></div>
 
-      <div class="absolute inset-4 md:inset-8 bg-white rounded-lg shadow-2xl flex flex-col overflow-hidden">
+      <div
+        class="absolute inset-4 md:inset-8 bg-white rounded-lg shadow-2xl flex flex-col overflow-hidden"
+      >
         <!-- Header -->
         <div class="flex items-center justify-between p-4 border-b bg-gray-50 rounded-t-lg">
           <div class="flex items-center space-x-4">
             <h3 class="text-lg font-semibold text-gray-900">
-              {{ document.document_name || document.original_file?.file_name || `Document #${document.id}` }}
+              {{
+                document.document_name ||
+                document.original_file?.file_name ||
+                `Document #${document.id}`
+              }}
             </h3>
 
-            <p v-if="document.document_name && document.original_file?.file_name && document.document_name !== document.original_file.file_name"
-               class="text-sm text-gray-500 mt-1">
+            <p
+              v-if="
+                document.document_name &&
+                document.original_file?.file_name &&
+                document.document_name !== document.original_file.file_name
+              "
+              class="text-sm text-gray-500 mt-1"
+            >
               Original File: {{ document.original_file.file_name }}
             </p>
-
           </div>
           <div class="flex items-center space-x-2">
             <button
-              @click="toggleView"
               class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              @click="toggleView"
             >
-              <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              <svg
+                class="h-4 w-4 mr-1.5"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                />
               </svg>
               {{ viewModeLabel }}
             </button>
             <button
-              @click="downloadDocument"
               class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              @click="downloadDocument"
             >
-              <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              <svg
+                class="h-4 w-4 mr-1.5"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                />
               </svg>
               Download
             </button>
-            <button
-              @click="$emit('close')"
-              class="text-gray-400 hover:text-gray-500"
-            >
-              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12" />
+            <button class="text-gray-400 hover:text-gray-500" @click="$emit('close')">
+              <svg
+                class="h-6 w-6"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -58,10 +96,7 @@
           <div class="flex-1 overflow-auto">
             <!-- Text View -->
             <div v-if="viewMode === 'text'" class="p-6">
-              <div
-                class="prose max-w-none bg-gray-50 p-4 rounded-lg"
-                v-html="safeMarkdown"
-              />
+              <div class="prose max-w-none bg-gray-50 p-4 rounded-lg" v-html="safeMarkdown" />
             </div>
             <!-- PDF View -->
             <div v-else-if="viewMode === 'pdf' && pdfUrl" class="h-full">
@@ -110,7 +145,9 @@
                   </div>
                   <div>
                     <dt class="text-gray-500">File Size</dt>
-                    <dd class="text-gray-900">{{ formatFileSize(document.original_file?.file_size) }}</dd>
+                    <dd class="text-gray-900">
+                      {{ formatFileSize(document.original_file?.file_size) }}
+                    </dd>
                   </div>
                   <div>
                     <dt class="text-gray-500">Text Length</dt>
@@ -124,11 +161,19 @@
                 <dl class="space-y-2 text-sm">
                   <div>
                     <dt class="text-gray-500">Configuration</dt>
-                    <dd class="text-gray-900">{{ document.preprocessing_config?.name || 'Custom' }}</dd>
+                    <dd class="text-gray-900">
+                      {{ document.preprocessing_config?.name || 'Custom' }}
+                    </dd>
                   </div>
                   <div>
                     <dt class="text-gray-500">OCR Engine</dt>
-                    <dd class="text-gray-900">{{ getEngineLabelWithKey(document.preprocessing_config?.additional_settings?.ocr_engine) }}</dd>
+                    <dd class="text-gray-900">
+                      {{
+                        getEngineLabelWithKey(
+                          document.preprocessing_config?.additional_settings?.ocr_engine,
+                        )
+                      }}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -136,18 +181,30 @@
               <div v-if="document.meta_data && Object.keys(document.meta_data).length > 0">
                 <h4 class="font-medium text-gray-900 mb-2">Metadata</h4>
                 <div class="bg-white rounded-lg p-3 text-xs">
-                  <pre class="overflow-x-auto">{{ JSON.stringify(document.meta_data, null, 2) }}</pre>
+                  <pre class="overflow-x-auto">{{
+                    JSON.stringify(document.meta_data, null, 2)
+                  }}</pre>
                 </div>
               </div>
               <!-- Actions -->
               <div class="pt-4 border-t">
                 <button
-                  @click="() => emit('reprocess', document)"
                   class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  @click="() => emit('reprocess', document)"
                 >
-                  <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  <svg
+                    class="h-4 w-4 mr-2"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
                   </svg>
                   Reprocess Document
                 </button>
@@ -170,7 +227,7 @@ import { getEngineLabelWithKey } from '@/utils/ocrLabels'
 
 const props = defineProps({
   document: { type: Object, required: true },
-  projectId: { type: [String, Number], required: true }
+  projectId: { type: [String, Number], required: true },
 })
 
 const emit = defineEmits(['close', 'reprocess'])
@@ -196,7 +253,11 @@ const safeMarkdown = computed(() => {
 const toggleView = () => {
   if (viewMode.value === 'text') {
     viewMode.value = hasPreprocessedFile.value ? 'pdf' : 'text'
-  } else if (viewMode.value === 'pdf' && hasPreprocessedFile.value && props.document.original_file?.id) {
+  } else if (
+    viewMode.value === 'pdf' &&
+    hasPreprocessedFile.value &&
+    props.document.original_file?.id
+  ) {
     viewMode.value = 'compare'
   } else {
     viewMode.value = 'text'
@@ -211,12 +272,15 @@ const downloadDocument = async () => {
       return
     }
     const response = await api.get(`/project/${props.projectId}/file/${fileId}/content`, {
-      responseType: 'blob'
+      responseType: 'blob',
     })
     const url = window.URL.createObjectURL(response.data)
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', props.document.original_file?.file_name || `document_${props.document.id}.pdf`)
+    link.setAttribute(
+      'download',
+      props.document.original_file?.file_name || `document_${props.document.id}.pdf`,
+    )
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -245,14 +309,14 @@ onMounted(async () => {
     if (props.document.preprocessed_file?.id) {
       const response = await api.get(
         `/project/${props.projectId}/file/${props.document.preprocessed_file.id}/content?preview=true`,
-        { responseType: 'blob' }
+        { responseType: 'blob' },
       )
       pdfUrl.value = URL.createObjectURL(response.data)
     }
     if (props.document.original_file?.id) {
       const response = await api.get(
         `/project/${props.projectId}/file/${props.document.original_file.id}/content?preview=true`,
-        { responseType: 'blob' }
+        { responseType: 'blob' },
       )
       originalPdfUrl.value = URL.createObjectURL(response.data)
     }

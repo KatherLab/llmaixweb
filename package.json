@@ -8,7 +8,12 @@
     "preserve": "node frontend/update-version.js",
     "dev": "node_modules/.bin/vite --config frontend/vite.config.js",
     "build": "node_modules/.bin/vite build --config frontend/vite.config.js",
-    "preview": "node_modules/.bin/vite preview --config frontend/vite.config.js"
+    "preview": "node_modules/.bin/vite preview --config frontend/vite.config.js",
+    "format": "prettier --write \"frontend/**/*.{js,vue,css}\"",
+    "format:check": "prettier --check \"frontend/**/*.{js,vue,css}\"",
+    "lint": "eslint frontend/",
+    "lint:fix": "eslint frontend/ --fix",
+    "check": "npm run format:check && npm run lint"
   },
   "dependencies": {
     "@tailwindcss/vite": "4.3.0",
@@ -32,8 +37,28 @@
     "jszip": "3.10.1"
   },
   "devDependencies": {
+    "@eslint/js": "9.27.0",
     "@vitejs/plugin-vue": "6.0.7",
+    "eslint": "9.27.0",
+    "eslint-config-prettier": "10.1.2",
+    "eslint-plugin-vue": "10.1.0",
+    "globals": "16.0.0",
+    "lint-staged": "15.5.2",
+    "prettier": "3.5.3",
+    "simple-git-hooks": "2.12.1",
     "vite": "8.0.14",
     "vite-plugin-vue-devtools": "8.1.2"
+  },
+  "lint-staged": {
+    "frontend/**/*.{js,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "frontend/**/*.css": [
+      "prettier --write"
+    ]
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
   }
 }

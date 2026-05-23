@@ -13,9 +13,18 @@
         >
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold text-gray-900">Edit Project</h2>
-            <button @click="emitClose" class="text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
+            <button
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Close"
+              @click="emitClose"
+            >
               <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -33,15 +42,15 @@
           ></textarea>
           <div class="flex justify-end mt-6 space-x-2">
             <button
-              @click="emitClose"
               class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700"
+              @click="emitClose"
             >
               Cancel
             </button>
             <button
-              @click="onSave"
               :disabled="isSaving"
               class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold flex items-center"
+              @click="onSave"
             >
               <svg
                 v-if="isSaving"
@@ -74,48 +83,48 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
-import { useScrollLock } from '@/composables/useScrollLock';
+import { ref, watch, onMounted } from 'vue'
+import { useScrollLock } from '@/composables/useScrollLock'
 
 const props = defineProps({
   open: Boolean,
   initialName: String,
   initialDescription: String,
-  isSaving: Boolean
-});
-const emit = defineEmits(['save', 'close']);
+  isSaving: Boolean,
+})
+const emit = defineEmits(['save', 'close'])
 
-const name = ref(props.initialName || '');
-const description = ref(props.initialDescription || '');
+const name = ref(props.initialName || '')
+const description = ref(props.initialDescription || '')
 
-useScrollLock({ watch: () => props.open });
+useScrollLock({ watch: () => props.open })
 
 // Sync props changes
 watch(
   () => [props.initialName, props.initialDescription],
   ([newName, newDesc]) => {
-    name.value = newName || '';
-    description.value = newDesc || '';
-  }
-);
+    name.value = newName || ''
+    description.value = newDesc || ''
+  },
+)
 
 // Emit save event with form data
 function onSave() {
-  emit('save', { name: name.value, description: description.value });
+  emit('save', { name: name.value, description: description.value })
 }
 
 // Emit close event
 function emitClose() {
   if (!props.isSaving) {
-    emit('close');
+    emit('close')
   }
 }
 
 onMounted(() => {
   if (props.open) {
-    setTimeout(() => document.querySelector('input[autofocus]')?.focus(), 10);
+    setTimeout(() => document.querySelector('input[autofocus]')?.focus(), 10)
   }
-});
+})
 </script>
 
 <style scoped>

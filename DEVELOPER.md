@@ -135,6 +135,64 @@ The initial migration (`alembic/versions/2d2bfbbdcc04_initial.py`) creates all e
 
 ---
 
+## 🎨 Code Style & Linting
+
+This project uses automated formatting and linting for both frontend and backend code.
+
+### Frontend (JavaScript / Vue)
+
+**Prettier** handles code formatting, **ESLint** handles code quality.
+
+| Tool       | What it does                       | Config file            |
+|------------|------------------------------------|------------------------|
+| Prettier   | Auto-formats JS, Vue, CSS          | `.prettierrc`          |
+| ESLint     | Catches errors, enforces Vue rules | `eslint.config.js`     |
+
+**npm scripts** (run from project root):
+
+```bash
+npm run format          # Auto-format all frontend files with Prettier
+npm run format:check    # Check formatting without changing files
+npm run lint            # Lint frontend with ESLint
+npm run lint:fix        # Lint + auto-fix where possible
+npm run check           # Full check: format:check + lint
+```
+
+**Pre-commit hook:** `simple-git-hooks` + `lint-staged` automatically runs `eslint --fix` and `prettier --write` on staged `.js`/`.vue` files before every commit.
+
+**Preferred Prettier settings** (`.prettierrc`):
+- No semicolons
+- Single quotes
+- 2-space indentation
+- Trailing commas everywhere
+- 100 character print width
+
+### Backend (Python)
+
+**Ruff** handles both formatting and linting for Python code.
+
+```bash
+uv run ruff check backend/src/    # Lint
+uv run ruff format backend/src/   # Auto-format
+```
+
+Ruff configuration lives in `pyproject.toml` under `[tool.ruff]`.
+
+### Pre-Commit Checklist (Before Pushing)
+
+```bash
+# Frontend
+npm run check
+npm run build
+
+# Backend
+uv run ruff check backend/src/
+uv run ruff format backend/src/ --check
+ENV_PATH=backend/.env.localtest uv run pytest --verbose
+```
+
+---
+
 ## 🧪 Running Tests
 
 ### Backend Tests

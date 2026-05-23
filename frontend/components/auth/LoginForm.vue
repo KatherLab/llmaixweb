@@ -23,6 +23,7 @@
                 class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
+          </div>
 
           <div class="flex items-center justify-between">
             <div class="flex items-center">
@@ -64,9 +65,7 @@
               <div class="w-full border-t border-gray-300"></div>
             </div>
             <div class="relative flex justify-center text-sm">
-              <span class="px-2 bg-white text-gray-500">
-                New to the platform?
-              </span>
+              <span class="px-2 bg-white text-gray-500"> New to the platform? </span>
             </div>
           </div>
 

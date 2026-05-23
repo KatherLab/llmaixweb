@@ -6,16 +6,16 @@
         @click="onClose"
       >
         <div
+          ref="modalRef"
           class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[96vh] flex flex-col border border-gray-200"
           @click.stop
-          ref="modalRef"
         >
           <!-- Header -->
-          <div class="px-6 py-4 border-b bg-gray-50 rounded-t-2xl flex justify-between items-center">
+          <div
+            class="px-6 py-4 border-b bg-gray-50 rounded-t-2xl flex justify-between items-center"
+          >
             <div>
-              <h3 class="text-lg font-semibold text-gray-900">
-                Preprocessing Task #{{ task.id }}
-              </h3>
+              <h3 class="text-lg font-semibold text-gray-900">Preprocessing Task #{{ task.id }}</h3>
               <p class="mt-1 text-sm text-gray-500">
                 Created {{ formatDateTime(task.created_at) }}
               </p>
@@ -26,19 +26,23 @@
               @click="onClose"
             >
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                <path
+                  d="M6 18L18 6M6 6l12 12"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
               </svg>
             </button>
           </div>
 
           <!-- Progress (Live) -->
-          <div
-            v-if="isActive"
-            class="px-6 pt-4 pb-2 bg-blue-50 border-b flex flex-col gap-1"
-          >
+          <div v-if="isActive" class="px-6 pt-4 pb-2 bg-blue-50 border-b flex flex-col gap-1">
             <div class="flex items-center justify-between text-xs text-blue-900 mb-1">
               <span>Progress</span>
-              <span v-if="task.meta?.eta_seconds > 0">≈ {{ prettyEta(task.meta.eta_seconds) }} left</span>
+              <span v-if="task.meta?.eta_seconds > 0"
+                >≈ {{ prettyEta(task.meta.eta_seconds) }} left</span
+              >
               <span v-else>Finishing…</span>
             </div>
             <div class="w-full bg-blue-200/40 rounded-full h-2 overflow-hidden">
@@ -94,7 +98,9 @@
                   <div>
                     <dt class="text-gray-500">OCR Engine</dt>
                     <dd class="font-medium text-gray-900">
-                      {{ getEngineLabelWithKey(task.configuration?.additional_settings?.ocr_engine) }}
+                      {{
+                        getEngineLabelWithKey(task.configuration?.additional_settings?.ocr_engine)
+                      }}
                     </dd>
                   </div>
                   <div>
@@ -126,30 +132,82 @@
                     <div
                       :class="[
                         'h-8 w-8 rounded-full flex items-center justify-center',
-                        fileTask.status === 'completed' ? 'bg-green-100' :
-                        fileTask.status === 'failed' ? 'bg-red-100' :
-                        fileTask.status === 'cancelled' ? 'bg-yellow-100' : 'bg-gray-100'
+                        fileTask.status === 'completed'
+                          ? 'bg-green-100'
+                          : fileTask.status === 'failed'
+                            ? 'bg-red-100'
+                            : fileTask.status === 'cancelled'
+                              ? 'bg-yellow-100'
+                              : 'bg-gray-100',
                       ]"
                     >
-                      <svg v-if="fileTask.status === 'completed'" class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                      <svg
+                        v-if="fileTask.status === 'completed'"
+                        class="h-5 w-5 text-green-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          d="M5 13l4 4L19 7"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                        />
                       </svg>
-                      <svg v-else-if="fileTask.status === 'failed'" class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                      <svg
+                        v-else-if="fileTask.status === 'failed'"
+                        class="h-5 w-5 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          d="M6 18L18 6M6 6l12 12"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                        />
                       </svg>
-                      <svg v-else-if="fileTask.status === 'cancelled'" class="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <path d="M12 9v2m0 4h.01" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                      <svg
+                        v-else-if="fileTask.status === 'cancelled'"
+                        class="h-5 w-5 text-yellow-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                        <path
+                          d="M12 9v2m0 4h.01"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                        />
                       </svg>
-                      <svg v-else class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                      <svg
+                        v-else
+                        class="h-5 w-5 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                        />
                       </svg>
                     </div>
                     <div>
                       <p class="text-sm font-medium text-gray-900">{{ fileTask.file_name }}</p>
                       <p class="text-xs text-gray-500">
-                        <span v-if="fileTask.status === 'completed' && fileTask.processing_time">Processed in {{ fileTask.processing_time }}s</span>
-                        <span v-else-if="fileTask.status === 'failed' && fileTask.processing_time">Failed after {{ fileTask.processing_time }}s</span>
+                        <span v-if="fileTask.status === 'completed' && fileTask.processing_time"
+                          >Processed in {{ fileTask.processing_time }}s</span
+                        >
+                        <span v-else-if="fileTask.status === 'failed' && fileTask.processing_time"
+                          >Failed after {{ fileTask.processing_time }}s</span
+                        >
                         <span v-else-if="fileTask.status === 'cancelled'">Cancelled</span>
                         <span v-else>Pending</span>
                       </p>
@@ -157,10 +215,21 @@
                   </div>
                   <div class="ml-4 flex items-center gap-3">
                     <!-- Warning indicator for skipped rows -->
-                    <div v-if="fileTask.warnings && (fileTask.warnings.messages || fileTask.warnings.skipped_rows)" class="text-xs text-amber-600">
+                    <div
+                      v-if="
+                        fileTask.warnings &&
+                        (fileTask.warnings.messages || fileTask.warnings.skipped_rows)
+                      "
+                      class="text-xs text-amber-600"
+                    >
                       <span class="flex items-center gap-1">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-5.355-7.695a9 9 0 1110.71 0 9 9 0 01-10.71 0z" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v2m0 4h.01m-5.355-7.695a9 9 0 1110.71 0 9 9 0 01-10.71 0z"
+                          />
                         </svg>
                         {{ fileTask.warnings.skipped_rows?.count || 0 }} skipped rows
                       </span>
@@ -180,11 +249,27 @@
                     </div>
                   </div>
                   <!-- Expanded warnings details (moved inside v-for loop) -->
-                  <div v-if="fileTask.warnings && (fileTask.warnings.messages || fileTask.warnings.skipped_rows)" class="ml-11 mb-3 mt-1">
+                  <div
+                    v-if="
+                      fileTask.warnings &&
+                      (fileTask.warnings.messages || fileTask.warnings.skipped_rows)
+                    "
+                    class="ml-11 mb-3 mt-1"
+                  >
                     <div class="bg-amber-50 border border-amber-200 rounded-md p-3">
                       <div class="flex items-start gap-2">
-                        <svg class="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-5.355-7.695a9 9 0 1110.71 0 9 9 0 01-10.71 0z" />
+                        <svg
+                          class="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v2m0 4h.01m-5.355-7.695a9 9 0 1110.71 0 9 9 0 01-10.71 0z"
+                          />
                         </svg>
                         <div class="flex-1">
                           <h5 class="text-sm font-medium text-amber-800 mb-2">
@@ -192,33 +277,67 @@
                           </h5>
                           <!-- Warning messages -->
                           <ul class="space-y-1 mb-2">
-                            <li v-for="(msg, idx) in fileTask.warnings.messages" :key="idx" class="text-sm text-amber-700">
+                            <li
+                              v-for="(msg, idx) in fileTask.warnings.messages"
+                              :key="idx"
+                              class="text-sm text-amber-700"
+                            >
                               {{ msg }}
                             </li>
                           </ul>
                           <!-- Skipped rows details -->
                           <div v-if="fileTask.warnings.skipped_rows?.details" class="mt-2">
                             <details class="group">
-                              <summary class="text-sm text-amber-700 cursor-pointer hover:text-amber-900 flex items-center gap-1">
-                                <svg class="h-4 w-4 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                              <summary
+                                class="text-sm text-amber-700 cursor-pointer hover:text-amber-900 flex items-center gap-1"
+                              >
+                                <svg
+                                  class="h-4 w-4 transition-transform group-open:rotate-90"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M9 5l7 7-7 7"
+                                  />
                                 </svg>
                                 View skipped rows details
-                                <span v-if="fileTask.warnings.skipped_rows.truncated" class="text-xs text-amber-600">(showing first 100)</span>
+                                <span
+                                  v-if="fileTask.warnings.skipped_rows.truncated"
+                                  class="text-xs text-amber-600"
+                                  >(showing first 100)</span
+                                >
                               </summary>
-                              <div class="mt-2 max-h-64 overflow-y-auto bg-white rounded border border-amber-200">
+                              <div
+                                class="mt-2 max-h-64 overflow-y-auto bg-white rounded border border-amber-200"
+                              >
                                 <table class="min-w-full text-xs">
                                   <thead class="bg-amber-100 sticky top-0">
                                     <tr>
-                                      <th class="px-3 py-2 text-left font-medium text-amber-800">Row Index</th>
-                                      <th class="px-3 py-2 text-left font-medium text-amber-800">Case ID</th>
-                                      <th class="px-3 py-2 text-left font-medium text-amber-800">Reason</th>
+                                      <th class="px-3 py-2 text-left font-medium text-amber-800">
+                                        Row Index
+                                      </th>
+                                      <th class="px-3 py-2 text-left font-medium text-amber-800">
+                                        Case ID
+                                      </th>
+                                      <th class="px-3 py-2 text-left font-medium text-amber-800">
+                                        Reason
+                                      </th>
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    <tr v-for="(row, idx) in fileTask.warnings.skipped_rows.details" :key="idx" class="border-t border-amber-100 hover:bg-amber-50">
+                                    <tr
+                                      v-for="(row, idx) in fileTask.warnings.skipped_rows.details"
+                                      :key="idx"
+                                      class="border-t border-amber-100 hover:bg-amber-50"
+                                    >
                                       <td class="px-3 py-2 text-amber-900">{{ row.row_index }}</td>
-                                      <td class="px-3 py-2 text-amber-900">{{ row.case_id || 'N/A' }}</td>
+                                      <td class="px-3 py-2 text-amber-900">
+                                        {{ row.case_id || 'N/A' }}
+                                      </td>
                                       <td class="px-3 py-2 text-amber-700">{{ row.reason }}</td>
                                     </tr>
                                   </tbody>
@@ -232,9 +351,7 @@
                   </div>
                 </div>
               </div>
-              <div v-else class="text-center text-gray-400 py-6">
-                No file-tasks recorded.
-              </div>
+              <div v-else class="text-center text-gray-400 py-6">No file-tasks recorded.</div>
             </div>
           </div>
 
@@ -261,68 +378,72 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { getEngineLabelWithKey } from '@/utils/ocrLabels';
-import { useScrollLock } from '@/composables/useScrollLock';
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { getEngineLabelWithKey } from '@/utils/ocrLabels'
+import { useScrollLock } from '@/composables/useScrollLock'
 
-useScrollLock({ autoLock: true });
+useScrollLock({ autoLock: true })
 
 const props = defineProps({
   task: {
     type: Object,
-    required: true
-  }
-});
-const emit = defineEmits(['close', 'retry-failed']);
+    required: true,
+  },
+})
+const emit = defineEmits(['close', 'retry-failed'])
 
-const modalRef = ref(null);
+const modalRef = ref(null)
 
 // Helper: close
 function onClose() {
-  emit('close');
+  emit('close')
 }
 
 // Status/completion breakdown
-const total = computed(() => props.task.meta?.total_files || props.task.total_files || 0);
-const completed = computed(() => props.task.meta?.completed_files || props.task.processed_files || 0);
-const failed = computed(() => props.task.meta?.failed_files || props.task.failed_files || 0);
-const cancelled = computed(() => props.task.meta?.cancelled_files || props.task.skipped_files || 0);
+const total = computed(() => props.task.meta?.total_files || props.task.total_files || 0)
+const completed = computed(
+  () => props.task.meta?.completed_files || props.task.processed_files || 0,
+)
+const failed = computed(() => props.task.meta?.failed_files || props.task.failed_files || 0)
+const cancelled = computed(() => props.task.meta?.cancelled_files || props.task.skipped_files || 0)
 
 const fileTasks = computed(() =>
-  Array.isArray(props.task.file_tasks) ? props.task.file_tasks : []
-);
-const actualProcessed = computed(() => completed.value + failed.value + cancelled.value);
+  Array.isArray(props.task.file_tasks) ? props.task.file_tasks : [],
+)
+const actualProcessed = computed(() => completed.value + failed.value + cancelled.value)
 
 const progress = computed(() => {
-  if (!total.value) return 0;
-  return Math.min(actualProcessed.value / total.value, 1.0);
-});
+  if (!total.value) return 0
+  return Math.min(actualProcessed.value / total.value, 1.0)
+})
 
 // Is the task running?
 const isActive = computed(() =>
-  ['pending', 'processing', 'in_progress'].includes(props.task.status)
-);
+  ['pending', 'processing', 'in_progress'].includes(props.task.status),
+)
 
 // Warnings computation - count files with warnings
 const warningCount = computed(() => {
-  const fileTasks = props.task.file_tasks || [];
-  return fileTasks.filter(ft => ft.warnings && (ft.warnings.messages || ft.warnings.skipped_rows)).length;
-});
+  const fileTasks = props.task.file_tasks || []
+  return fileTasks.filter((ft) => ft.warnings && (ft.warnings.messages || ft.warnings.skipped_rows))
+    .length
+})
 
 function prettyEta(sec) {
-  if (!sec || isNaN(sec)) return "00:00:00";
-  return new Date(sec * 1000).toISOString().substring(11, 19);
+  if (!sec || isNaN(sec)) return '00:00:00'
+  return new Date(sec * 1000).toISOString().substring(11, 19)
 }
 
 function formatDateTime(dateString) {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleString();
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleString()
 }
 </script>
 
 <style scoped>
 /* Prevent background scroll when modal is open */
-html, body {
+html,
+body {
   overscroll-behavior: none;
 }
 

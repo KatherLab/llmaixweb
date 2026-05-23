@@ -5,7 +5,7 @@
       :class="[
         'rounded-lg shadow-sm border-2 overflow-hidden transition-all',
         blockColorClass,
-        'hover:shadow-md'
+        'hover:shadow-md',
       ]"
     >
       <!-- Block Header -->
@@ -36,12 +36,17 @@
             <!-- Edit Button (always show for current block) -->
             <button
               type="button"
-              @click="$emit('edit-property', { key: getCurrentKey(), schema: schema })"
               class="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
               title="Edit Settings"
+              @click="$emit('edit-property', { key: getCurrentKey(), schema: schema })"
             >
               <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
               </svg>
             </button>
 
@@ -49,32 +54,39 @@
             <button
               v-if="schema.type === 'object'"
               type="button"
-              @click="$emit('add-property')"
               class="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
               title="Add Property"
+              @click="$emit('add-property')"
             >
               <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
             </button>
 
             <!-- Toggle Details Button -->
             <button
               type="button"
-              @click="showDetails = !showDetails"
               class="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
               :title="showDetails ? 'Hide Details' : 'Show Details'"
+              @click="showDetails = !showDetails"
             >
               <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  :d="showDetails ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  :d="showDetails ? 'M19 9l-7 7-7-7' : 'M9 5l7 7-7 7'"
+                />
               </svg>
             </button>
           </div>
-
         </div>
       </div>
-
 
       <!-- Block Details -->
       <transition
@@ -122,7 +134,12 @@
             <div v-if="schema.enum && schema.enum.length > 0" class="bg-blue-50 rounded-lg p-3">
               <label class="block text-xs font-medium text-blue-900 mb-2 flex items-center">
                 <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                  />
                 </svg>
                 Allowed Values
               </label>
@@ -170,16 +187,14 @@
 
         <!-- Properties -->
         <div class="space-y-3 pl-6">
-          <div
-            v-for="(propSchema, propKey) in schema.properties"
-            :key="propKey"
-            class="relative"
-          >
+          <div v-for="(propSchema, propKey) in schema.properties" :key="propKey" class="relative">
             <!-- Horizontal Connection -->
             <div class="absolute -left-6 top-6 w-6 h-0.5 bg-gray-300"></div>
 
             <!-- Property Block -->
-            <div class="bg-white rounded-lg shadow-sm border p-3 hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer group">
+            <div
+              class="bg-white rounded-lg shadow-sm border p-3 hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer group"
+            >
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center space-x-2">
                   <code class="text-sm font-medium text-gray-700">{{ propKey }}</code>
@@ -193,33 +208,48 @@
                 <div class="flex items-center space-x-1">
                   <button
                     type="button"
-                    @click="$emit('edit-property', { key: propKey, schema: propSchema })"
                     class="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
                     title="Edit Property"
+                    @click="$emit('edit-property', { key: propKey, schema: propSchema })"
                   >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
                     </svg>
                   </button>
                   <button
                     v-if="propSchema.type === 'object' || propSchema.type === 'array'"
                     type="button"
-                    @click="$emit('navigate', propKey)"
                     class="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded"
                     title="Navigate Into"
+                    @click="$emit('navigate', propKey)"
                   >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 7l5 5m0 0l-5 5m5-5H6"
+                      />
                     </svg>
                   </button>
                   <button
                     type="button"
-                    @click="$emit('delete-property', propKey)"
                     class="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
                     title="Delete Property"
+                    @click="$emit('delete-property', propKey)"
                   >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -227,7 +257,12 @@
 
               <!-- Mini Type Badge -->
               <div class="flex items-center space-x-2">
-                <span :class="['px-2 py-0.5 rounded text-xs font-medium', getTypeBadgeClass(propSchema.type)]">
+                <span
+                  :class="[
+                    'px-2 py-0.5 rounded text-xs font-medium',
+                    getTypeBadgeClass(propSchema.type),
+                  ]"
+                >
                   {{ getTypeLabel(propSchema.type) }}
                 </span>
                 <span v-if="propSchema.title" class="text-xs text-gray-600">
@@ -265,29 +300,44 @@
               <div class="flex items-center space-x-1">
                 <button
                   type="button"
-                  @click="$emit('edit-property', { key: 'items', schema: schema.items })"
                   class="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
                   title="Edit Array Items"
+                  @click="$emit('edit-property', { key: 'items', schema: schema.items })"
                 >
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
                   </svg>
                 </button>
                 <button
                   v-if="schema.items.type === 'object'"
                   type="button"
-                  @click="$emit('navigate', 'items')"
                   class="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded"
                   title="Navigate Into Items"
+                  @click="$emit('navigate', 'items')"
                 >
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    />
                   </svg>
                 </button>
               </div>
             </div>
 
-            <span :class="['px-2 py-0.5 rounded text-xs font-medium', getTypeBadgeClass(schema.items.type)]">
+            <span
+              :class="[
+                'px-2 py-0.5 rounded text-xs font-medium',
+                getTypeBadgeClass(schema.items.type),
+              ]"
+            >
               {{ getTypeLabel(schema.items.type) }}
             </span>
           </div>
@@ -298,26 +348,33 @@
 </template>
 
 <script setup>
-import { ref, computed, h, onMounted } from 'vue';
+import { ref, computed, h, onMounted } from 'vue'
 
 const props = defineProps({
   schema: {
     type: Object,
-    required: true
+    required: true,
   },
   path: {
     type: Array,
-    default: () => []
+    default: () => [],
   },
   advancedMode: {
     type: Boolean,
-    default: false
-  }
-});
+    default: false,
+  },
+})
 
-const emit = defineEmits(['update', 'add-property', 'edit-property', 'delete-property', 'navigate', 'edit-root']);
+const emit = defineEmits([
+  'update',
+  'add-property',
+  'edit-property',
+  'delete-property',
+  'navigate',
+  'edit-root',
+])
 
-const showDetails = ref(false);
+const showDetails = ref(false)
 
 // Type Icons
 const StringIcon = {
@@ -327,11 +384,11 @@ const StringIcon = {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': '2',
-        d: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
-      })
-    ]);
-  }
-};
+        d: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
+      }),
+    ])
+  },
+}
 
 const NumberIcon = {
   render() {
@@ -340,11 +397,11 @@ const NumberIcon = {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': '2',
-        d: 'M7 20l4-16m2 16l4-16M6 9h14M4 15h14'
-      })
-    ]);
-  }
-};
+        d: 'M7 20l4-16m2 16l4-16M6 9h14M4 15h14',
+      }),
+    ])
+  },
+}
 
 const BooleanIcon = {
   render() {
@@ -353,11 +410,11 @@ const BooleanIcon = {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': '2',
-        d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
-      })
-    ]);
-  }
-};
+        d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+      }),
+    ])
+  },
+}
 
 const ObjectIcon = {
   render() {
@@ -366,11 +423,11 @@ const ObjectIcon = {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': '2',
-        d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'
-      })
-    ]);
-  }
-};
+        d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
+      }),
+    ])
+  },
+}
 
 const ArrayIcon = {
   render() {
@@ -379,11 +436,11 @@ const ArrayIcon = {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': '2',
-        d: 'M4 6h16M4 10h16M4 14h16M4 18h16'
-      })
-    ]);
-  }
-};
+        d: 'M4 6h16M4 10h16M4 14h16M4 18h16',
+      }),
+    ])
+  },
+}
 
 // Computed properties
 const typeIcon = computed(() => {
@@ -392,14 +449,14 @@ const typeIcon = computed(() => {
     number: NumberIcon,
     boolean: BooleanIcon,
     object: ObjectIcon,
-    array: ArrayIcon
-  };
-  return icons[props.schema.type] || StringIcon;
-});
+    array: ArrayIcon,
+  }
+  return icons[props.schema.type] || StringIcon
+})
 
 const typeLabel = computed(() => {
-  return getTypeLabel(props.schema.type);
-});
+  return getTypeLabel(props.schema.type)
+})
 
 const blockColorClass = computed(() => {
   const colors = {
@@ -407,10 +464,10 @@ const blockColorClass = computed(() => {
     number: 'border-blue-200',
     boolean: 'border-purple-200',
     object: 'border-orange-200',
-    array: 'border-pink-200'
-  };
-  return colors[props.schema.type] || 'border-gray-200';
-});
+    array: 'border-pink-200',
+  }
+  return colors[props.schema.type] || 'border-gray-200'
+})
 
 const headerColorClass = computed(() => {
   const colors = {
@@ -418,15 +475,15 @@ const headerColorClass = computed(() => {
     number: 'bg-blue-500',
     boolean: 'bg-purple-500',
     object: 'bg-orange-500',
-    array: 'bg-pink-500'
-  };
-  return colors[props.schema.type] || 'bg-gray-500';
-});
+    array: 'bg-pink-500',
+  }
+  return colors[props.schema.type] || 'bg-gray-500'
+})
 
 // Methods
 const getTypeLabel = (type) => {
   if (props.advancedMode) {
-    return type.charAt(0).toUpperCase() + type.slice(1);
+    return type.charAt(0).toUpperCase() + type.slice(1)
   }
 
   const labels = {
@@ -434,10 +491,10 @@ const getTypeLabel = (type) => {
     number: 'Number',
     boolean: 'Yes/No',
     object: 'Group',
-    array: 'List'
-  };
-  return labels[type] || type;
-};
+    array: 'List',
+  }
+  return labels[type] || type
+}
 
 const getTypeBadgeClass = (type) => {
   const classes = {
@@ -445,35 +502,31 @@ const getTypeBadgeClass = (type) => {
     number: 'bg-blue-100 text-blue-700',
     boolean: 'bg-purple-100 text-purple-700',
     object: 'bg-orange-100 text-orange-700',
-    array: 'bg-pink-100 text-pink-700'
-  };
-  return classes[type] || 'bg-gray-100 text-gray-700';
-};
+    array: 'bg-pink-100 text-pink-700',
+  }
+  return classes[type] || 'bg-gray-100 text-gray-700'
+}
 
 const formatTitle = (key) => {
-  if (!key) return '';
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, l => l.toUpperCase());
-};
+  if (!key) return ''
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+}
 
 const getCurrentKey = () => {
   // For root level, return a special identifier
   if (props.path.length === 0) {
-    return '__root__';
+    return '__root__'
   }
   // Return the last segment of the path
-  return props.path[props.path.length - 1];
-};
-
+  return props.path[props.path.length - 1]
+}
 
 onMounted(() => {
   // Auto-expand details for leaf elements (string, number, boolean)
   if (['string', 'number', 'boolean'].includes(props.schema.type)) {
-    showDetails.value = true;
+    showDetails.value = true
   }
-});
-
+})
 </script>
 
 <style scoped>
