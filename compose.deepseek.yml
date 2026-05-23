@@ -27,6 +27,7 @@ services:
     environment:
       TRITON_PTXAS_PATH: /usr/local/cuda/bin/ptxas
     ipc: host
+    # Shared memory needed for GPU IPC communication between PyTorch processes
     shm_size: "8gb"
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface

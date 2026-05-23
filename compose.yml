@@ -6,6 +6,7 @@ services:
       args:
         - GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
     image: ghcr.io/katherlab/llmaixweb-backend:latest
+    restart: unless-stopped
     env_file: .env
     environment:
       - SQLALCHEMY_DATABASE_URI=postgresql+psycopg://postgres:postgres@postgres/llmaixweb
@@ -27,6 +28,7 @@ services:
 
   worker_default:
     image: ghcr.io/katherlab/llmaixweb-backend:latest
+    restart: unless-stopped
     env_file: .env
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
@@ -37,6 +39,7 @@ services:
 
   worker_preprocess:
     image: ghcr.io/katherlab/llmaixweb-backend:latest
+    restart: unless-stopped
     env_file: .env
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
@@ -52,6 +55,7 @@ services:
       args:
         - GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
     image: ghcr.io/katherlab/llmaixweb-frontend:latest
+    restart: unless-stopped
     ports: ["5173:8080"]
     depends_on:
       backend:
@@ -59,6 +63,7 @@ services:
 
   postgres:
     image: postgres:18-alpine
+    restart: unless-stopped
     env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql
@@ -71,6 +76,7 @@ services:
 
   redis:
     image: redis:8-alpine
+    restart: unless-stopped
     volumes:
       - redis-data:/data
     healthcheck:
@@ -82,6 +88,7 @@ services:
 
   rustfs:
     image: rustfs/rustfs:1.0.0-alpha.99
+    restart: unless-stopped
     command: server /data --console-address ":9001"
     env_file: .env
     volumes:
