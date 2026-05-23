@@ -1,66 +1,66 @@
-###################  LLMAIx – backend (non-root) ###################
-FROM ubuntu:26.04
+################### LLMAIx – backend ###################
+FROM ghcr.io/astral-sh/uv:latest AS uv
 
-# Git commit hash - passed from GitHub Actions
+FROM python:3.13-slim-trixie
+
 ARG GIT_COMMIT_HASH=unknown
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:/usr/local/bin:${PATH}" \
+    DOCKER_ENV=true
+
+# uv binary
+COPY --from=uv /uv /usr/local/bin/uv
+
+# Native runtime tools for OCRmyPDF + Tesseract.
+# OCRmyPDF itself comes from pyproject.toml / uv.lock.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        python3 python3-pip python3-venv git curl build-essential \
-        tesseract-ocr-* \
-        ocrmypdf && \
-    rm -rf /var/lib/apt/lists/*
+        ca-certificates \
+        ghostscript \
+        qpdf \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+        tesseract-ocr-deu \
+        tesseract-ocr-fra \
+        tesseract-ocr-spa \
+        tesseract-ocr-ita \
+        tesseract-ocr-por \
+        tesseract-ocr-nld \
+        tesseract-ocr-pol \
+        tesseract-ocr-rus \
+        tesseract-ocr-chi-sim \
+        unpaper \
+        pngquant \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# install uv into a global path accessible for all users
-ENV UV_INSTALL_DIR=/opt/uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/opt/uv:${PATH}"
-
-# create non-root user first
+# Create non-root user
 RUN groupadd --system --gid 10001 app && \
     useradd --system --uid 10001 --gid app --create-home --home-dir /home/app app
 
-# copy dependency metadata first for better caching
+# Dependency metadata first for Docker cache
 COPY pyproject.toml uv.lock* ./
 
-# prepare ownership before switching user
-RUN chown -R app:app /app
+# Install only production dependencies.
+# --no-dev skips [dependency-groups].dev
+RUN uv sync --locked --no-dev && uv cache clean
 
-USER 10001:10001
-
-# create a standard venv with system python to avoid uv-managed interpreter issues
-RUN python3 -m venv /app/.venv
-
-# activate the virtual env for build + runtime
-ENV PATH="/app/.venv/bin:/opt/uv:${PATH}"
-ENV VIRTUAL_ENV="/app/.venv"
-
-# install dependencies into the existing venv
-RUN uv sync --locked
-
-USER root
-
-# copy app code last
+# Copy app code last
 COPY --chown=app:app backend ./backend
-
-# Write git commit hash to file for runtime version info
-RUN echo "${GIT_COMMIT_HASH}" > /app/backend/src/_git_commit.txt
-
-# copy alembic migration files
 COPY --chown=app:app alembic ./alembic
 COPY --chown=app:app alembic.ini ./alembic.ini
-
-# copy migration script
 COPY --chown=app:app backend/scripts/run_migrations.sh /app/run_migrations.sh
 
+RUN echo "${GIT_COMMIT_HASH}" > /app/backend/src/_git_commit.txt && \
+    chmod +x /app/run_migrations.sh && \
+    chown -R app:app /app
+
 USER 10001:10001
-
-# make migration script executable
-RUN chmod +x /app/run_migrations.sh
-
-# Signal that we're running in Docker (env vars preferred over .env file)
-ENV DOCKER_ENV=true
 
 CMD ["/app/run_migrations.sh"]

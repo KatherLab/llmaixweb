@@ -2,6 +2,7 @@
 
 Uses Jinja2 for HTML template rendering with inline CSS.
 """
+
 import logging
 import smtplib
 import ssl
@@ -36,7 +37,9 @@ def _render_template(template_name: str, **kwargs) -> str:
         template = _get_env().get_template(template_name)
         return template.render(**kwargs)
     except TemplateNotFound:
-        logger.error("Email template '%s' not found in %s", template_name, _TEMPLATES_DIR)
+        logger.error(
+            "Email template '%s' not found in %s", template_name, _TEMPLATES_DIR
+        )
         # Fallback to plain text rendering
         lines = [f"{k}: {v}" for k, v in kwargs.items()]
         return "\n".join(lines)
@@ -89,7 +92,11 @@ def send_email(
     except smtplib.SMTPAuthenticationError:
         logger.error("SMTP authentication failed for %s", settings.SMTP_USERNAME)
     except smtplib.SMTPConnectError:
-        logger.error("Could not connect to SMTP server %s:%s", settings.SMTP_HOST, settings.SMTP_PORT)
+        logger.error(
+            "Could not connect to SMTP server %s:%s",
+            settings.SMTP_HOST,
+            settings.SMTP_PORT,
+        )
     except smtplib.SMTPException as e:
         logger.error("SMTP error sending email to %s: %s", to, e)
     except OSError as e:

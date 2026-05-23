@@ -351,7 +351,7 @@ const deleteFiles = async () => {
 
 const fetchProjects = async () => {
   try {
-    const response = await api.get('/project/');
+    const response = await api.get('/project');
     projects.value = response.data.map(p => ({
       ...p,
       file_count: p.files?.length || 0

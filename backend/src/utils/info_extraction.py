@@ -638,7 +638,9 @@ def safe_json_loads(text: str) -> Any:
         logger.debug("[safe_json_loads] initial parse failed")
         _print_json_error("initial", text, e)
     except Exception as e:
-        logger.warning("[safe_json_loads] initial parse failed: %s: %s", type(e).__name__, e)
+        logger.warning(
+            "[safe_json_loads] initial parse failed: %s: %s", type(e).__name__, e
+        )
 
     candidate = _extract_json_snippet(text)
     candidate = candidate.replace("“", '"').replace("”", '"').replace("’", "'")
@@ -651,7 +653,9 @@ def safe_json_loads(text: str) -> Any:
         _print_json_error("repaired", candidate, e)
         raise
     except Exception as e:
-        logger.warning("[safe_json_loads] repaired parse failed: %s: %s", type(e).__name__, e)
+        logger.warning(
+            "[safe_json_loads] repaired parse failed: %s: %s", type(e).__name__, e
+        )
         raise
 
 

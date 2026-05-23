@@ -654,7 +654,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import {computed, onMounted, ref, watch} from 'vue';
 import { formatDate } from '@/utils/formatters.js';
 import { api } from '@/services/api.js';
 import { useToast } from 'vue-toastification';

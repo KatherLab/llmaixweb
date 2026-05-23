@@ -294,10 +294,14 @@ def admin_update_user(
     if update_data.full_name is not None:
         user.full_name = update_data.full_name
     if update_data.email is not None:
-        existing = db.query(models.User).filter(
-            models.User.email == update_data.email,
-            models.User.id != user_id,
-        ).first()
+        existing = (
+            db.query(models.User)
+            .filter(
+                models.User.email == update_data.email,
+                models.User.id != user_id,
+            )
+            .first()
+        )
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -375,7 +379,9 @@ def invite(
         if send_email:
             base_url = settings.APP_URL
             invite_url = f"{base_url}/register?token={existing_invitation.token}"
-            email_sent = send_invitation_email(email, existing_invitation.token, invite_url)
+            email_sent = send_invitation_email(
+                email, existing_invitation.token, invite_url
+            )
             resp.email_sent = email_sent
         return resp
 
@@ -484,7 +490,9 @@ def forgot_password(
 
         # Create new reset token (24h expiry)
         token = secrets.token_urlsafe(32)
-        expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
+            hours=24
+        )
         reset_token = models.PasswordResetToken(
             user_id=user.id,
             token=token,
@@ -501,7 +509,7 @@ def forgot_password(
         if not email_sent:
             return {
                 "message": "If an account with this email exists, a password reset link has been generated. "
-                           "Please contact your administrator to obtain the reset link.",
+                "Please contact your administrator to obtain the reset link.",
                 "warning": "Email delivery is not configured. The reset link was not sent.",
             }
 
@@ -510,7 +518,9 @@ def forgot_password(
     }
 
 
-@router.get("/validate-reset-token/{token}", response_model=schemas.PasswordResetValidate)
+@router.get(
+    "/validate-reset-token/{token}", response_model=schemas.PasswordResetValidate
+)
 def validate_reset_token(
     token: str,
     db: Session = Depends(get_db),
@@ -521,7 +531,9 @@ def validate_reset_token(
         .filter(models.PasswordResetToken.token == token)
         .first()
     )
-    if not reset_token or reset_token.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+    if not reset_token or reset_token.expires_at < datetime.now(timezone.utc).replace(
+        tzinfo=None
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Invalid or expired reset token",
@@ -548,7 +560,9 @@ def reset_password(
         .filter(models.PasswordResetToken.token == token)
         .first()
     )
-    if not reset_token or reset_token.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+    if not reset_token or reset_token.expires_at < datetime.now(timezone.utc).replace(
+        tzinfo=None
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Invalid or expired reset token",

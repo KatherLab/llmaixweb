@@ -14,7 +14,7 @@ This project uses separate versioning for frontend and backend components.
 ### Current Versions
 
 - **Frontend**: `package.json` → `"version": "0.2.4"` (synced to `frontend/version.js` via `prebuild` script)
-- **Backend**: `pyproject.toml` → `version = "0.1.4"` (llmaixweb package version)
+- **Backend**: `pyproject.toml` → `version = "0.2.4"` (llmaixweb package version)
 
 ### Git Commit Hash
 

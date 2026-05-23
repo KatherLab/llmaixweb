@@ -5,7 +5,7 @@ echo "Running database migrations..."
 
 # Run Alembic migrations with SKIP_RUNTIME_CHECKS to bypass OpenAI/S3 validation
 export SKIP_RUNTIME_CHECKS=true
-uv run alembic upgrade head
+uv run --no-dev alembic upgrade head
 
 echo "Migrations completed. Starting server..."
 

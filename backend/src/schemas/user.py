@@ -49,6 +49,7 @@ class PasswordSet(BaseModel):
 
 class UserUpdateAdmin(BaseModel):
     """Admin update for any user field. Only provided fields are updated."""
+
     full_name: str | None = None
     email: EmailStr | None = None
     role: UserRole | None = None

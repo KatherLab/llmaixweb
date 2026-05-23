@@ -35,6 +35,7 @@ class PreprocessingPipeline:
         self.config = self.task.configuration
         self.cancelled = False
         self.client = None
+        self._docling_service = None
 
         # Store API credentials in task metadata if custom ones provided
         if api_key and base_url:
@@ -124,7 +125,9 @@ class PreprocessingPipeline:
             elif failed == total:
                 self.task.status = models.PreprocessingStatus.FAILED
                 self.task.message = "All files failed to preprocess."
-                logger.warning("All files failed to preprocess for task %s", self.task.id)
+                logger.warning(
+                    "All files failed to preprocess for task %s", self.task.id
+                )
             else:
                 self.task.status = models.PreprocessingStatus.FAILED
                 self.task.message = (
@@ -159,6 +162,31 @@ class PreprocessingPipeline:
                 raise ValueError(
                     f"No text_columns specified in file_metadata for {file.file_name}"
                 )
+
+    def _get_docling_service(self):
+        """Lazily initialise and return the shared DoclingService instance."""
+        if self._docling_service is None:
+            from ..services.docling_service import DoclingService
+
+            self._docling_service = DoclingService()
+        return self._docling_service
+
+    def _has_useful_extracted_text(self, text: str, min_chars: int = 100) -> bool:
+        """Return True if extracted Markdown contains enough real text.
+
+        Strips common Markdown/table syntax to avoid accepting page
+        artifacts or formatting noise as useful content.
+        """
+        import re
+
+        if not text:
+            return False
+
+        # Remove common Markdown/table syntax and collapse whitespace.
+        cleaned = re.sub(r"[#*_`>\-|:\[\](){}]+", " ", text)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+        return len(cleaned) >= min_chars
 
     def _check_duplicate_case_ids(self, file: models.File, df: pd.DataFrame) -> None:
         """Check for duplicate case IDs before processing."""
@@ -274,18 +302,27 @@ class PreprocessingPipeline:
     def _try_docling_extraction(
         self, file: models.File, file_task: models.FilePreprocessingTask
     ) -> List[models.Document] | None:
-        """Try to extract text from a PDF using Docling.
+        """Try to convert a text-layer PDF using Docling.
 
-        Returns documents if sufficient text was extracted, None otherwise.
+        First checks for embedded text using pypdf (lightweight). Only if
+        sufficient embedded text exists is Docling called to produce
+        structured Markdown. Returns documents on success, None otherwise
+        so the caller falls back to OCR.
         """
-        from ..services.docling_service import DoclingService
-
         file_content = get_file(file.file_uuid)
-        service = DoclingService()
+        service = self._get_docling_service()
+
+        if not service.has_embedded_text(file_content, min_chars=100):
+            logger.info(
+                "PDF %s has insufficient embedded text; falling back to OCR",
+                file.file_name,
+            )
+            return None
+
         try:
             md_text = service.process(file_content)
-            # Consider text "sufficient" if it has at least 50 non-whitespace characters
-            if md_text and len(md_text.strip()) > 50:
+
+            if self._has_useful_extracted_text(md_text, min_chars=100):
                 doc = models.Document(
                     project_id=self.task.project_id,
                     original_file_id=file.id,
@@ -296,17 +333,25 @@ class PreprocessingPipeline:
                     meta_data={
                         "file_type": file.file_type,
                         "ocr_engine": "docling",
-                        "extraction_method": "embedded_text",
+                        "extraction_method": "docling_no_ocr",
+                        "ocr_applied": False,
                     },
                 )
                 self.db.add(doc)
                 return [doc]
+
+            logger.info(
+                "Docling produced insufficient text for %s; falling back to OCR",
+                file.file_name,
+            )
+
         except Exception:
             logger.warning(
                 "Docling extraction failed for %s, falling back to OCR",
                 file.file_name,
                 exc_info=True,
             )
+
         return None
 
     def _process_with_ocrmypdf(

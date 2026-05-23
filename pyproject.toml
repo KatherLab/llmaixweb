@@ -13,24 +13,25 @@ dependencies = [
     "openai==2.38.0",
     "bcrypt==5.0.0",
     "boto3==1.43.13",
-    "boto3-stubs==1.43.13",
     "mistralai==2.4.5",
-    "docling==2.95.0",
-    "pypdf==6.12.0",
+    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli]==2.95.0",
+    "pypdf==6.12.1",
     "redis==7.4.0",
     "celery==5.6.3",
     "jsonschema==4.26.0",
     "thefuzz==0.22.1",
     "pandas==3.0.3",
-    "pandas-stubs==3.0.0.260204",
     "xlsxwriter==3.2.9",
-    "celery-types==0.26.0",
     "alembic==1.18.4",
-    "ty==0.0.38",
-    "ruff==0.15.14",
     "ocrmypdf==17.4.2",
     "slowapi==0.1.9",
     "cryptography==48.0.0",
+    "rtree==1.4.1",
+    "torch==2.12.0",
+    "torchvision==0.27.0",
+    "scipy==1.17.1",
+    "opencv-python-headless==4.13.0.92",
+    "pymupdf==1.27.2.3"
 ]
 
 [dependency-groups]
@@ -40,7 +41,23 @@ dev = [
     "pytest==9.0.3",
     "pytest-cov==7.1.0",
     "isort==8.0.1",
+    "boto3-stubs==1.43.13",
+    "pandas-stubs==3.0.0.260204",
+    "celery-types==0.26.0",
 ]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu" },
+]
+torchvision = [
+  { index = "pytorch-cpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.ruff]
 target-version = "py313"

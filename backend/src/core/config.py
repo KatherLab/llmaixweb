@@ -145,7 +145,7 @@ class Settings(BaseSettings):
             print(
                 "ERROR: SECRET_KEY must be explicitly set in your .env file "
                 "(at least 16 characters). Do not rely on a default.\n"
-                "Generate one with:  python3 -c \"import secrets; print(secrets.token_urlsafe(32))\""
+                'Generate one with:  python3 -c "import secrets; print(secrets.token_urlsafe(32))"'
             )
             sys.exit(1)
 

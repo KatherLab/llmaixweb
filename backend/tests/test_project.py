@@ -29,7 +29,7 @@ def test_create_project(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     assert response.json()["name"] == project_data["name"]
 
@@ -44,7 +44,7 @@ def test_get_projects(client, api_url):
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.get(f"{api_url}/project/", headers=headers)
+    response = client.get(f"{api_url}/project", headers=headers)
     assert response.status_code == 200
     assert len(response.json()) > 0
 
@@ -63,14 +63,14 @@ def test_get_project(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
     response = client.get(f"{api_url}/project/{project_id}", headers=headers)
     assert response.status_code == 200
     assert response.json()["name"] == project_data["name"]
 
-    response = client.get(f"{api_url}/project/372849078/", headers=headers)
+    response = client.get(f"{api_url}/project/372849078", headers=headers)
     assert response.status_code == 404
     assert response.json()["detail"] == "Project not found"
 
@@ -89,7 +89,7 @@ def test_update_project(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
     updated_project_data = {
@@ -117,7 +117,7 @@ def test_delete_project(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
     response = client.delete(f"{api_url}/project/{project_id}", headers=headers)
@@ -139,7 +139,7 @@ def test_get_project_files(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
     response = client.get(f"{api_url}/project/{project_id}/file", headers=headers)
@@ -162,7 +162,7 @@ def test_upload_file(client, api_url, files_base_path):
         "description": "This is a test project",
     }
     response = client.post(
-        f"{api_url}/project/",
+        f"{api_url}/project",
         headers={"Authorization": f"Bearer {access_token}"},
         json=project_data,
     )
@@ -203,7 +203,7 @@ def test_get_project_file(client, api_url):
         "description": "This is a test project",
     }
     response = client.post(
-        f"{api_url}/project/",
+        f"{api_url}/project",
         headers={"Authorization": f"Bearer {access_token}"},
         json=project_data,
     )
@@ -244,7 +244,7 @@ def test_delete_file(client, api_url):
         "description": "This is a test project",
     }
     response = client.post(
-        f"{api_url}/project/",
+        f"{api_url}/project",
         headers={"Authorization": f"Bearer {access_token}"},
         json=project_data,
     )
@@ -285,7 +285,7 @@ def test_get_project_file_content(client, api_url):
         "description": "This is a test project",
     }
     response = client.post(
-        f"{api_url}/project/",
+        f"{api_url}/project",
         headers={"Authorization": f"Bearer {access_token}"},
         json=project_data,
     )
@@ -340,7 +340,7 @@ def test_preprocess_project_data_v2(
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
 
@@ -429,7 +429,7 @@ def test_preprocess_with_inline_config(client, api_url):
 
     # Create a project
     response = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "Test Project"}
+        f"{api_url}/project", headers=headers, json={"name": "Test Project"}
     )
     assert response.status_code == 200
     project_id = response.json()["id"]
@@ -481,7 +481,7 @@ def test_duplicate_detection(client, api_url):
 
     # Create a project
     response = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "Test Project"}
+        f"{api_url}/project", headers=headers, json={"name": "Test Project"}
     )
     assert response.status_code == 200
     project_id = response.json()["id"]
@@ -569,7 +569,7 @@ def test_table_file_preprocessing(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
 
@@ -679,7 +679,7 @@ def test_image_file_preprocessing(client, api_url, files_base_path):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
 
@@ -745,7 +745,7 @@ def test_preprocessing_progress_tracking(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
 
@@ -819,7 +819,7 @@ def test_excel_file_preprocessing(client, api_url):
 
     # Create a project
     response = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "Test Project"}
+        f"{api_url}/project", headers=headers, json={"name": "Test Project"}
     )
     assert response.status_code == 200
     project_id = response.json()["id"]
@@ -934,7 +934,7 @@ def test_project_access_control(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
 
@@ -1010,7 +1010,7 @@ def test_document_set_crud_and_stats(client, api_url):
 
     # Project, prompt, schema, document
     pid = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "DocSetProj"}
+        f"{api_url}/project", headers=headers, json={"name": "DocSetProj"}
     ).json()["id"]
 
     prompt_id = client.post(
@@ -1153,7 +1153,7 @@ def test_prompt_crud(client, api_url):
 
     # Create a project
     response = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "Prompt Test"}
+        f"{api_url}/project", headers=headers, json={"name": "Prompt Test"}
     )
     assert response.status_code == 200
     project_id = response.json()["id"]
@@ -1238,7 +1238,7 @@ def test_create_schema(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
 
@@ -1278,7 +1278,7 @@ def test_get_schema(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
 
@@ -1325,7 +1325,7 @@ def test_delete_schema(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
 
@@ -1380,7 +1380,7 @@ def test_delete_schema_referenced_by_trial(client, api_url):
         "name": "Test Project",
         "description": "This is a test project",
     }
-    response = client.post(f"{api_url}/project/", headers=headers, json=project_data)
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
     assert response.status_code == 200
     project_id = response.json()["id"]
 
@@ -1534,7 +1534,7 @@ def test_trial_crud_and_extraction(client, api_url):
 
     # Create project
     response = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "Trial Project"}
+        f"{api_url}/project", headers=headers, json={"name": "Trial Project"}
     )
     project_id = response.json()["id"]
 
@@ -1688,7 +1688,7 @@ def test_trial_result_download_and_status(client, api_url):
 
     # Create project, prompt, schema, document
     response = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "TrialDL"}
+        f"{api_url}/project", headers=headers, json={"name": "TrialDL"}
     )
     project_id = response.json()["id"]
 
@@ -1791,7 +1791,7 @@ def test_create_trial_with_table_preprocessing(client, api_url):
 
     # Project
     project_id = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "TableTrial"}
+        f"{api_url}/project", headers=headers, json={"name": "TableTrial"}
     ).json()["id"]
 
     # Prompt
@@ -1923,7 +1923,7 @@ def test_create_trial_with_mixed_preprocessing(client, api_url, files_base_path)
     ]
     headers = {"Authorization": f"Bearer {access_token}"}
     project_id = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "MixedTrial"}
+        f"{api_url}/project", headers=headers, json={"name": "MixedTrial"}
     ).json()["id"]
 
     # Prompt
@@ -2047,7 +2047,7 @@ def test_ocr_preprocessing_for_extraction(client, api_url, files_base_path):
     ]
     headers = {"Authorization": f"Bearer {access_token}"}
     project_id = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "OCRTrial"}
+        f"{api_url}/project", headers=headers, json={"name": "OCRTrial"}
     ).json()["id"]
 
     # Prompt with {document_content}
@@ -2152,9 +2152,7 @@ def test_field_mapping_and_evaluation(client, api_url, files_base_path):
     headers = {"Authorization": f"Bearer {access_token}"}
 
     # Project
-    resp = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "EvalTest"}
-    )
+    resp = client.post(f"{api_url}/project", headers=headers, json={"name": "EvalTest"})
     project_id = resp.json()["id"]
 
     # Prompt
@@ -2320,7 +2318,7 @@ def test_trial_download_and_error_endpoints(client, api_url, files_base_path):
 
     # Project
     resp = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "DownloadTest"}
+        f"{api_url}/project", headers=headers, json={"name": "DownloadTest"}
     )
     project_id = resp.json()["id"]
 
@@ -2480,7 +2478,7 @@ def test_evaluation_full_pipeline(client, api_url, files_base_path):
 
     # --- Create Project ---
     r = client.post(
-        f"{api_url}/project/", headers=headers, json={"name": "EvalPipelineCSV"}
+        f"{api_url}/project", headers=headers, json={"name": "EvalPipelineCSV"}
     )
     assert r.status_code == 200, r.text
     project_id = r.json()["id"]
