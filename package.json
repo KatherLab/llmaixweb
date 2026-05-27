@@ -31,7 +31,7 @@
     "jsonschema": "1.5.0",
     "@vueform/multiselect": "2.6.11",
     "marked": "18.0.4",
-    "dompurify": "3.4.5",
+    "dompurify": "3.4.6",
     "crypto-js": "4.2.0",
     "@floating-ui/vue": "1.1.11",
     "jszip": "3.10.1"
