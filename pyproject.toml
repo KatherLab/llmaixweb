@@ -15,7 +15,7 @@ dependencies = [
     "boto3==1.43.14",
     "mistralai==2.4.5",
     "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli]==2.95.0",
-    "pypdf==6.12.1",
+    "pypdf==6.12.2",
     "redis==7.4.0",
     "celery==5.6.3",
     "jsonschema==4.26.0",
