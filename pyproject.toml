@@ -40,7 +40,7 @@ dev = [
     "pytest==9.0.3",
     "pytest-cov==7.1.0",
     "isort==8.0.1",
-    "boto3-stubs==1.43.14",
+    "boto3-stubs==1.43.15",
     "pandas-stubs==3.0.0.260204",
     "celery-types==0.26.0",
 ]
