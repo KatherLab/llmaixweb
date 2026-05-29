@@ -1,21 +1,21 @@
 [project]
 name = "llmaixweb"
-version = "0.3.1"
+version = "0.3.2"
 description = "LLM Information Extraction Web Application"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "fastapi[standard]==0.136.1",
-    "uvicorn==0.47.0",
+    "fastapi[standard]==0.136.3",
+    "uvicorn==0.48.0",
     "pyjwt==2.13.0",
-    "sqlalchemy==2.0.49",
+    "sqlalchemy==2.0.50",
     "psycopg[binary,pool]==3.3.4",
     "pydantic_settings==2.14.1",
     "openai==2.38.0",
     "bcrypt==5.0.0",
-    "boto3==1.43.14",
-    "mistralai==2.4.5",
-    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli]==2.95.0",
-    "pypdf==6.12.1",
+    "boto3==1.43.17",
+    "mistralai==2.4.8",
+    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli]==2.96.0",
+    "pypdf==6.12.2",
     "redis==7.4.0",
     "celery==5.6.3",
     "jsonschema==4.26.0",
@@ -35,12 +35,12 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff==0.15.14",
-    "ty==0.0.39",
+    "ruff==0.15.15",
+    "ty==0.0.40",
     "pytest==9.0.3",
     "pytest-cov==7.1.0",
     "isort==8.0.1",
-    "boto3-stubs==1.43.14",
+    "boto3-stubs==1.43.17",
     "pandas-stubs==3.0.0.260204",
     "celery-types==0.26.0",
 ]
