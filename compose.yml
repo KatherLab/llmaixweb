@@ -118,7 +118,7 @@ services:
       start_period: 5s
 
   rustfs:
-    image: rustfs/rustfs:1.0.0-alpha.99
+    image: rustfs/rustfs:latest
     restart: unless-stopped
     command: server /data --console-address ":9001"
     env_file: .env
