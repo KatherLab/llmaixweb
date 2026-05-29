@@ -56,7 +56,8 @@ COPY --chown=app:app backend/scripts/run_migrations.sh /app/run_migrations.sh
 
 RUN echo "${GIT_COMMIT_HASH}" > /app/backend/src/_git_commit.txt && \
     chmod +x /app/run_migrations.sh && \
-    chown -R app:app /app
+    chown -R app:app /app && \
+    mkdir -p /app/docling-models && chmod 777 /app/docling-models
 
 USER 10001:10001
 

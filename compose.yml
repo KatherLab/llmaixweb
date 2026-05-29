@@ -57,6 +57,7 @@ services:
 
   docling-models-init:
     image: ghcr.io/katherlab/llmaixweb-backend:latest
+    user: "10001:10001"
     restart: "no"
     env_file: .env
     environment:
@@ -71,12 +72,11 @@ services:
         fi;
 
         echo 'Downloading Docling models...';
-        mkdir -p /app/docling-models;
-
-        /app/.venv/bin/docling-tools models download --output-dir /app/docling-models 2>&1;
-
-        touch /app/docling-models/.ready;
-        echo 'Docling models ready';
+        mkdir -p /app/docling-models &&
+        /app/.venv/bin/docling-tools models download --output-dir /app/docling-models &&
+        touch /app/docling-models/.ready &&
+        echo 'Docling models ready' ||
+        { echo 'Failed to download Docling models'; exit 1; }
       "
 
   frontend:
