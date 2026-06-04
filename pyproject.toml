@@ -16,7 +16,7 @@ dependencies = [
     "mistralai==2.4.8",
     "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli]==2.96.0",
     "pypdf==6.12.2",
-    "redis==7.4.0",
+    "redis==8.0.0",
     "celery==5.6.3",
     "jsonschema==4.26.0",
     "thefuzz==0.22.1",
