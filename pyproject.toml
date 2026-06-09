@@ -1,22 +1,22 @@
 [project]
 name = "llmaixweb"
-version = "0.3.2"
+version = "0.3.3"
 description = "LLM Information Extraction Web Application"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "fastapi[standard]==0.136.3",
-    "uvicorn==0.48.0",
+    "uvicorn==0.49.0",
     "pyjwt==2.13.0",
     "sqlalchemy==2.0.50",
     "psycopg[binary,pool]==3.3.4",
     "pydantic_settings==2.14.1",
-    "openai==2.38.0",
+    "openai==2.41.0",
     "bcrypt==5.0.0",
-    "boto3==1.43.17",
-    "mistralai==2.4.8",
-    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli]==2.96.0",
-    "pypdf==6.12.2",
-    "redis==7.4.0",
+    "boto3==1.43.25",
+    "mistralai==2.4.9",
+    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.99.0",
+    "pypdf==6.13.1",
+    "redis==8.0.0",
     "celery==5.6.3",
     "jsonschema==4.26.0",
     "thefuzz==0.22.1",
@@ -30,18 +30,18 @@ dependencies = [
     "torchvision==0.27.0",
     "scipy==1.17.1",
     "opencv-python-headless==4.13.0.92",
-    "pymupdf==1.27.2.3"
+    "pymupdf==1.27.2.3",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff==0.15.15",
-    "ty==0.0.40",
+    "ruff==0.15.16",
+    "ty==0.0.46",
     "pytest==9.0.3",
     "pytest-cov==7.1.0",
     "isort==8.0.1",
-    "boto3-stubs==1.43.17",
-    "pandas-stubs==3.0.0.260204",
+    "boto3-stubs==1.43.25",
+    "pandas-stubs==3.0.3.260530",
     "celery-types==0.26.0",
 ]
 
