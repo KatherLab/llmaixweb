@@ -199,6 +199,7 @@ const props = defineProps({
   documents: { type: Array, required: true },
   projectId: { type: [String, Number], required: true },
   visible: { type: Boolean, default: true }, // allow parent to show/hide
+  selectedDocumentIds: { type: Array, default: null }, // optional pre-selected documents
 })
 
 const emit = defineEmits(['close', 'save'])
@@ -235,6 +236,9 @@ onMounted(async () => {
       tags: [...(props.group.tags || [])],
       document_ids: props.group.documents.map((d) => d.id),
     }
+  } else if (props.selectedDocumentIds && props.selectedDocumentIds.length > 0) {
+    // Pre-select documents if provided
+    formData.value.document_ids = [...props.selectedDocumentIds]
   }
   initialFormState.value = serializeForm(formData.value)
 })

@@ -201,6 +201,13 @@
           <div v-if="selectedDocuments.length > 0" class="flex items-center space-x-2">
             <span class="text-sm text-gray-700"> {{ selectedDocuments.length }} selected </span>
             <button
+              class="text-sm text-green-600 hover:text-green-800 font-medium"
+              @click="createGroupFromSelection"
+            >
+              Create Group
+            </button>
+            <span class="text-gray-300">|</span>
+            <button
               class="text-sm text-blue-600 hover:text-blue-800 font-medium"
               @click="performBatchAction('reprocess')"
             >
@@ -532,12 +539,21 @@
         @close="showBatchActions = false"
         @complete="handleBatchComplete"
       />
+
+      <!-- Create Document Group Modal (from documents tab) -->
+      <CreateDocumentGroupModal
+        v-if="showCreateGroupModal"
+        :documents="documents"
+        :project-id="projectId"
+        :selected-document-ids="createGroupWithDocs"
+        @close="handleCreateGroupModalClose"
+        @save="handleCreateGroupModalSave"
+      />
     </div>
 
     <div v-else-if="activeTab === 'groups'">
       <DocumentGroups
         :project-id="projectId"
-        :documents="documents"
         :document-sets="documentSets"
         @refresh="fetchDocumentSets"
       />
@@ -557,6 +573,7 @@ import DocumentViewer from './DocumentViewer.vue'
 import DocumentCard from './DocumentCard.vue'
 import BatchActionsModal from './BatchActionsModal.vue'
 import DocumentGroups from './DocumentsGroups.vue'
+import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
 
 const props = defineProps({
   projectId: {
@@ -568,7 +585,8 @@ const props = defineProps({
 const toast = useToast()
 
 // State
-const documents = ref([])
+const documents = ref([]) // All documents for groups modal
+const allDocumentsLoaded = ref(false) // Track if we've fetched all documents
 const preprocessingTasks = ref([])
 const isLoading = ref(true)
 const selectedDocuments = ref([])
@@ -579,6 +597,8 @@ const viewMode = ref('grid')
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
 const activeTab = ref('documents')
+const showCreateGroupModal = ref(false)
+const createGroupWithDocs = ref([]) // Documents to pre-select when creating group
 const documentSets = ref([])
 const serverItems = ref([]) // current page rows from the server
 const totalCount = ref(0) // total rows on the server (after filters)
@@ -732,6 +752,34 @@ const fetchDocuments = async () => {
   }
 }
 
+// Fetch all documents for the groups modal (with pagination)
+const fetchAllDocuments = async () => {
+  if (allDocumentsLoaded.value) {
+    return // Already fetched
+  }
+  try {
+    const PAGE_SIZE = 500
+    let offset = 0
+    let allDocs = []
+    let hasMore = true
+
+    while (hasMore) {
+      const { data } = await api.get(`/project/${props.projectId}/document`, {
+        params: { limit: PAGE_SIZE, offset },
+      })
+      allDocs = allDocs.concat(data.items || [])
+      hasMore = data.items && data.items.length === PAGE_SIZE
+      offset += PAGE_SIZE
+    }
+
+    documents.value = allDocs
+    allDocumentsLoaded.value = true
+  } catch (error) {
+    console.error('Failed to fetch all documents:', error)
+    documents.value = []
+  }
+}
+
 // Helper stays the same; include if you don't have it yet
 function computeDateBounds(range) {
   if (!range) return {}
@@ -818,6 +866,34 @@ const performBatchAction = (action) => {
 
   batchAction.value = action
   showBatchActions.value = true
+}
+
+const createGroupFromSelection = () => {
+  if (selectedDocuments.value.length === 0) {
+    toast.warning('Please select documents first')
+    return
+  }
+  createGroupWithDocs.value = [...selectedDocuments.value]
+  showCreateGroupModal.value = true
+}
+
+const handleCreateGroupModalClose = () => {
+  showCreateGroupModal.value = false
+  createGroupWithDocs.value = []
+}
+
+const handleCreateGroupModalSave = async (groupData) => {
+  try {
+    await api.post(`/project/${props.projectId}/document-set`, groupData)
+    toast.success('Document group created successfully')
+    showCreateGroupModal.value = false
+    createGroupWithDocs.value = []
+    selectedDocuments.value = []
+    fetchDocumentSets()
+  } catch (error) {
+    toast.error('Failed to create document group')
+    console.error(error)
+  }
 }
 
 const handleBatchComplete = () => {
@@ -915,6 +991,7 @@ watch([currentPage, itemsPerPage], fetchDocuments)
 onMounted(() => {
   fetchDocuments()
   fetchDocumentSets()
+  fetchAllDocuments() // Load all documents for groups modal
   // Load OCR display names from server
   api
     .get('/auth/settings')

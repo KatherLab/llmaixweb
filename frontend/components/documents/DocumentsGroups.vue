@@ -242,7 +242,7 @@
     <CreateDocumentGroupModal
       v-if="showCreateModal || editingGroup"
       :group="editingGroup"
-      :documents="documents"
+      :documents="availableDocuments"
       :project-id="projectId"
       @close="closeModal"
       @save="handleSaveGroup"
@@ -260,7 +260,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '@/services/api'
 import { useToast } from 'vue-toastification'
 import { formatDate } from '@/utils/formatters'
@@ -275,7 +275,7 @@ const props = defineProps({
   },
   documents: {
     type: Array,
-    required: true,
+    default: () => [],
   },
   documentSets: {
     type: Array,
@@ -293,6 +293,40 @@ const viewMode = ref('grid')
 const showCreateModal = ref(false)
 const editingGroup = ref(null)
 const viewingGroup = ref(null)
+const availableDocuments = ref([])
+const allDocumentsLoaded = ref(false)
+
+// Fetch all documents for the modal (with pagination)
+const fetchAllDocuments = async () => {
+  if (allDocumentsLoaded.value) {
+    return
+  }
+  try {
+    const PAGE_SIZE = 500
+    let offset = 0
+    let allDocs = []
+    let hasMore = true
+
+    while (hasMore) {
+      const { data } = await api.get(`/project/${props.projectId}/document`, {
+        params: { limit: PAGE_SIZE, offset },
+      })
+      allDocs = allDocs.concat(data.items || [])
+      hasMore = data.items && data.items.length === PAGE_SIZE
+      offset += PAGE_SIZE
+    }
+
+    availableDocuments.value = allDocs
+    allDocumentsLoaded.value = true
+  } catch (error) {
+    console.error('Failed to fetch all documents:', error)
+    availableDocuments.value = []
+  }
+}
+
+onMounted(() => {
+  fetchAllDocuments()
+})
 
 // Computed
 const filteredGroups = computed(() => {
