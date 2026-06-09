@@ -212,7 +212,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['close', 'edit'])
+const emit = defineEmits(['close', 'edit', 'view-document'])
 
 const toast = useToast()
 const usageStats = ref({
@@ -234,8 +234,7 @@ onMounted(async () => {
 })
 
 const viewDocument = (doc) => {
-  // Implement document viewer
-  window.open(`/project/${props.projectId}/document/${doc.id}`, '_blank')
+  emit('view-document', doc)
 }
 
 const exportDocumentList = () => {

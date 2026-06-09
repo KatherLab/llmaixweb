@@ -255,6 +255,7 @@
       :project-id="projectId"
       @close="viewingGroup = null"
       @edit="editGroup"
+      @view-document="viewDocumentFromGroup"
     />
   </div>
 </template>
@@ -283,7 +284,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['refresh'])
+const emit = defineEmits(['refresh', 'view-document'])
 
 const toast = useToast()
 
@@ -351,6 +352,10 @@ const editGroup = (group) => {
 
 const viewGroup = (group) => {
   viewingGroup.value = group
+}
+
+const viewDocumentFromGroup = (doc) => {
+  emit('view-document', doc)
 }
 
 const deleteGroup = async (group) => {

@@ -521,15 +521,6 @@
         </div>
       </div>
 
-      <!-- Document Viewer Modal -->
-      <DocumentViewer
-        v-if="viewingDocument"
-        :document="viewingDocument"
-        :project-id="projectId"
-        @close="viewingDocument = null"
-        @reprocess="reprocessDocument"
-      />
-
       <!-- Batch Actions Modal -->
       <BatchActionsModal
         v-if="showBatchActions"
@@ -556,8 +547,18 @@
         :project-id="projectId"
         :document-sets="documentSets"
         @refresh="fetchDocumentSets"
+        @view-document="viewDocument"
       />
     </div>
+
+    <!-- Document Viewer Modal (moved outside tabs to be always available) -->
+    <DocumentViewer
+      v-if="viewingDocument"
+      :document="viewingDocument"
+      :project-id="projectId"
+      @close="viewingDocument = null"
+      @reprocess="reprocessDocument"
+    />
   </div>
 </template>
 
