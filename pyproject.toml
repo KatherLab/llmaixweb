@@ -14,7 +14,7 @@ dependencies = [
     "bcrypt==5.0.0",
     "boto3==1.43.25",
     "mistralai==2.4.9",
-    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.99.0",
+    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.100.0",
     "pypdf==6.13.1",
     "redis==8.0.0",
     "celery==5.6.3",
