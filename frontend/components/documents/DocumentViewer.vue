@@ -99,29 +99,56 @@
               <div class="prose max-w-none bg-gray-50 p-4 rounded-lg" v-html="safeMarkdown" />
             </div>
             <!-- PDF View -->
-            <div v-else-if="viewMode === 'pdf' && pdfUrl" class="h-full">
+            <div v-else-if="viewMode === 'pdf' && originalPdfUrl" class="h-full">
               <iframe
-                :src="pdfUrl"
+                :src="originalPdfUrl"
                 class="w-full h-full"
                 frameborder="0"
-                title="Processed PDF"
+                title="Original PDF"
               ></iframe>
+            </div>
+            <!-- Image View (for original image files) -->
+            <div
+              v-else-if="viewMode === 'image' && originalImageUrl"
+              class="h-full p-4 bg-gray-100"
+            >
+              <div class="flex items-center justify-center h-full">
+                <img
+                  :src="originalImageUrl"
+                  alt="Original document"
+                  class="max-w-full max-h-full object-contain shadow-lg rounded-lg"
+                />
+              </div>
             </div>
             <!-- Side-by-side Compare View -->
             <div v-else-if="viewMode === 'compare'" class="flex h-full">
-              <!-- Left: PDF -->
+              <!-- Left: Original File (PDF or Image) -->
               <div class="w-1/2 border-r overflow-auto p-4 flex flex-col">
-                <h4 class="font-medium text-gray-700 mb-2">Original PDF</h4>
+                <h4 class="font-medium text-gray-700 mb-2">Original File</h4>
+                <!-- PDF Viewer -->
                 <iframe
-                  v-if="originalPdfUrl"
+                  v-if="originalPdfUrl && originalFileType === 'pdf'"
                   :src="originalPdfUrl"
                   class="w-full flex-1"
                   frameborder="0"
                   title="Original PDF"
                 ></iframe>
-                <div v-else class="text-gray-400">No original file</div>
+                <!-- Image Viewer -->
+                <div
+                  v-else-if="originalImageUrl && ['image'].includes(originalFileType)"
+                  class="flex-1 flex items-center justify-center bg-gray-100 rounded-lg p-4"
+                >
+                  <img
+                    :src="originalImageUrl"
+                    alt="Original document"
+                    class="max-w-full max-h-full object-contain"
+                  />
+                </div>
+                <div v-else class="text-gray-400 flex items-center justify-center flex-1">
+                  No original file available
+                </div>
               </div>
-              <!-- Right: Markdown Text -->
+              <!-- Right: Extracted Text -->
               <div class="w-1/2 overflow-auto p-4 flex flex-col">
                 <h4 class="font-medium text-gray-700 mb-2">Extracted Text</h4>
                 <div
@@ -233,16 +260,38 @@ const props = defineProps({
 const emit = defineEmits(['close', 'reprocess'])
 const toast = useToast()
 const viewMode = ref('text')
-const pdfUrl = ref('')
 const originalPdfUrl = ref('')
+const originalImageUrl = ref('')
 
-const hasPreprocessedFile = computed(() => !!props.document.preprocessed_file?.id)
+const hasOriginalFile = computed(() => !!props.document.original_file?.id)
+const hasText = computed(() => !!props.document.text)
+
+const originalFileType = computed(() => {
+  const fileType = props.document.original_file?.file_type
+  if (!fileType) return null
+  if (fileType.includes('pdf')) return 'pdf'
+  if (fileType.includes('image')) return 'image'
+  return 'other'
+})
 
 const viewModeLabel = computed(() => {
-  if (viewMode.value === 'text') return hasPreprocessedFile.value ? 'Show Original' : 'Show Text'
-  if (viewMode.value === 'pdf' && hasPreprocessedFile.value) return 'Compare'
-  return 'Show Text'
+  // Label describes what clicking will show, not current view
+  if (viewMode.value === 'compare') return 'Show File' // clicking shows single file
+  if (viewMode.value === 'pdf' || viewMode.value === 'image') return 'Show Text' // clicking shows text
+  if (viewMode.value === 'text') return 'Show Both' // clicking shows compare (side-by-side)
+  return 'Show Both'
 })
+
+// Set default view mode: compare (file + text side-by-side) if both available
+const setDefaultViewMode = () => {
+  if (hasOriginalFile.value && hasText.value) {
+    viewMode.value = 'compare'
+  } else if (hasOriginalFile.value) {
+    viewMode.value = originalFileType.value === 'image' ? 'image' : 'pdf'
+  } else {
+    viewMode.value = 'text'
+  }
+}
 
 // Markdown rendering with XSS sanitizing
 const safeMarkdown = computed(() => {
@@ -251,16 +300,22 @@ const safeMarkdown = computed(() => {
 })
 
 const toggleView = () => {
-  if (viewMode.value === 'text') {
-    viewMode.value = hasPreprocessedFile.value ? 'pdf' : 'text'
-  } else if (
-    viewMode.value === 'pdf' &&
-    hasPreprocessedFile.value &&
-    props.document.original_file?.id
-  ) {
-    viewMode.value = 'compare'
-  } else {
+  const isImage = originalFileType.value === 'image'
+
+  // Cycle: Compare → Single File (PDF/Image) → Text → Compare
+  if (viewMode.value === 'compare') {
+    // From compare: go to single file view
+    viewMode.value = hasOriginalFile.value ? (isImage ? 'image' : 'pdf') : 'text'
+  } else if (viewMode.value === 'pdf' || viewMode.value === 'image') {
+    // From single file: go to text
     viewMode.value = 'text'
+  } else if (viewMode.value === 'text') {
+    // From text: go to compare if we have file + text
+    if (hasOriginalFile.value && hasText.value) {
+      viewMode.value = 'compare'
+    } else if (hasOriginalFile.value) {
+      viewMode.value = isImage ? 'image' : 'pdf'
+    }
   }
 }
 
@@ -306,20 +361,20 @@ const formatFileSize = (bytes) => {
 onMounted(async () => {
   document.body.style.overflow = 'hidden'
   try {
-    if (props.document.preprocessed_file?.id) {
-      const response = await api.get(
-        `/project/${props.projectId}/file/${props.document.preprocessed_file.id}/content?preview=true`,
-        { responseType: 'blob' },
-      )
-      pdfUrl.value = URL.createObjectURL(response.data)
-    }
     if (props.document.original_file?.id) {
       const response = await api.get(
         `/project/${props.projectId}/file/${props.document.original_file.id}/content?preview=true`,
         { responseType: 'blob' },
       )
-      originalPdfUrl.value = URL.createObjectURL(response.data)
+      // Load image URL for image files, otherwise PDF URL
+      if (originalFileType.value === 'image') {
+        originalImageUrl.value = URL.createObjectURL(response.data)
+      } else if (originalFileType.value === 'pdf') {
+        originalPdfUrl.value = URL.createObjectURL(response.data)
+      }
     }
+    // Set default view mode
+    setDefaultViewMode()
   } catch (error) {
     toast.error('Failed to load document preview.')
     console.error(error)
@@ -328,7 +383,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.body.style.overflow = ''
-  if (pdfUrl.value) window.URL.revokeObjectURL(pdfUrl.value)
   if (originalPdfUrl.value) window.URL.revokeObjectURL(originalPdfUrl.value)
+  if (originalImageUrl.value) window.URL.revokeObjectURL(originalImageUrl.value)
 })
 </script>
