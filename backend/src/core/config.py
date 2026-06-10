@@ -1,3 +1,4 @@
+# backend/src/core/config.py
 import os
 import sys
 from pathlib import Path

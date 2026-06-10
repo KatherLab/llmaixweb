@@ -1,3 +1,4 @@
+# backend/src/dependencies.py
 import hashlib
 import os
 import uuid

@@ -1,3 +1,4 @@
+# backend/src/_version.py
 """Backend version information."""
 
 import os

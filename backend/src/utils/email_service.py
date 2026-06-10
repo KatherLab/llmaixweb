@@ -1,3 +1,4 @@
+# backend/src/utils/email_service.py
 """Email sending service using smtplib.
 
 Uses Jinja2 for HTML template rendering with inline CSS.

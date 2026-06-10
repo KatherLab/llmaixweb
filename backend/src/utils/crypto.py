@@ -1,3 +1,4 @@
+# backend/src/utils/crypto.py
 """Fernet encryption/decryption for sensitive fields stored in the database.
 
 Uses the app's SECRET_KEY (hashed to a valid Fernet key) so that we don't

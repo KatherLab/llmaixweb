@@ -1,3 +1,4 @@
+# backend/tests/test_general_api.py
 def test_api_root(client):
     """Test the root endpoint of the API. Ensure the API is running."""
     response = client.get("/")

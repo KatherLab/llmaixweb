@@ -1,3 +1,4 @@
+# backend/src/services/llm_vision_ocr_service.py
 """Vision LLM OCR service for document text extraction using chat completions."""
 
 import base64

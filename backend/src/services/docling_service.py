@@ -1,3 +1,4 @@
+# backend/src/services/docling_service.py
 """Docling service for PDF-to-Markdown extraction with optional Tesseract OCR."""
 
 from __future__ import annotations

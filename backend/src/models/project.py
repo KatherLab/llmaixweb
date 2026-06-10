@@ -1,3 +1,4 @@
+# backend/src/models/project.py
 import enum
 from typing import TYPE_CHECKING
 

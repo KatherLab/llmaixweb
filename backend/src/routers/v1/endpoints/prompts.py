@@ -1,3 +1,4 @@
+# backend/src/routers/v1/endpoints/prompts.py
 """Prompt endpoints for projects."""
 
 from fastapi import APIRouter, Depends, HTTPException

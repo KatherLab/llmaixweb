@@ -1,3 +1,4 @@
+# backend/scripts/populate_users.py
 #!/usr/bin/env python3
 """
 Script to initialize admin users and add multiple other users.

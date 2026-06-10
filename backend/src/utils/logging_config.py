@@ -1,3 +1,4 @@
+# backend/src/utils/logging_config.py
 """
 Centralized logging configuration for LLMAIx Web backend.
 

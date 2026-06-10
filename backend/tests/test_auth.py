@@ -1,3 +1,4 @@
+# backend/tests/test_auth.py
 import pytest
 from fastapi.testclient import TestClient
 

@@ -1,3 +1,4 @@
+# backend/src/models/admin.py
 from sqlalchemy import Column, DateTime, String, Text
 from sqlalchemy.sql import func
 

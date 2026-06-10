@@ -1,3 +1,4 @@
+# backend/src/models/user.py
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
