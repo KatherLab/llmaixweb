@@ -263,12 +263,17 @@ const performAction = async () => {
         break
       case 'delete':
         await deleteDocuments()
-        break
+        // Only emit complete if delete succeeded (errors handled inside deleteDocuments)
+        emit('complete')
+        return
     }
     emit('complete')
   } catch (error) {
-    toast.error(`Failed to ${props.action} documents`)
-    console.error(error)
+    // Don't show generic error for delete - specific errors already shown
+    if (props.action !== 'delete') {
+      toast.error(`Failed to ${props.action} documents`)
+      console.error(error)
+    }
   } finally {
     isProcessing.value = false
   }
@@ -293,10 +298,40 @@ const exportDocuments = async () => {
 }
 
 const deleteDocuments = async () => {
+  const failedDocs = []
+
   for (const docId of props.documents) {
-    await api.delete(`/project/${props.projectId}/document/${docId}`)
+    try {
+      await api.delete(`/project/${props.projectId}/document/${docId}`)
+    } catch (error) {
+      const errorMsg = error?.response?.data?.detail || 'Failed to delete document'
+      failedDocs.push({ docId, error: errorMsg })
+
+      // Show specific error for each failed document
+      if (errorMsg.includes('document sets')) {
+        toast.error(`Document #${docId}: ${errorMsg} Go to Document Groups tab to manage.`)
+      } else if (errorMsg.includes('trial')) {
+        toast.error(`Document #${docId}: ${errorMsg}`)
+      } else if (errorMsg.includes('trial result')) {
+        toast.error(`Document #${docId}: ${errorMsg}`)
+      } else if (errorMsg.includes('evaluation')) {
+        toast.error(`Document #${docId}: ${errorMsg}`)
+      } else {
+        toast.error(`Document #${docId}: ${errorMsg}`)
+      }
+    }
   }
-  toast.success(`${props.documents.length} documents deleted`)
+
+  const successCount = props.documents.length - failedDocs.length
+  if (successCount > 0) {
+    toast.success(`${successCount} document${successCount !== 1 ? 's' : ''} deleted successfully`)
+  }
+
+  if (failedDocs.length > 0) {
+    console.error('Failed to delete documents:', failedDocs)
+    // Throw to keep modal open if there were failures
+    throw new Error(`${failedDocs.length} document(s) could not be deleted`)
+  }
 }
 
 // Lifecycle

@@ -613,73 +613,13 @@ const filters = ref({
   status: '',
 })
 
-// Stats
-const totalDocuments = computed(() => documents.value.length)
-const recentDocuments = computed(() => {
-  const weekAgo = new Date()
-  weekAgo.setDate(weekAgo.getDate() - 7)
-  return documents.value.filter((doc) => new Date(doc.created_at) > weekAgo).length
-})
+// Stats - using server-side totalCount
+// Note: recentDocuments would need a separate API call for server-side count
+const totalDocuments = computed(() => totalCount.value)
+const recentDocuments = ref(0) // Updated by fetchDocuments based on server response
 
-// Filtered documents
-const filteredDocuments = computed(() => {
-  let result = [...documents.value]
-
-  // Search filter
-  if (filters.value.search) {
-    const search = filters.value.search.toLowerCase()
-    result = result.filter(
-      (doc) =>
-        doc.original_file?.file_name?.toLowerCase().includes(search) ||
-        doc.text?.toLowerCase().includes(search),
-    )
-  }
-
-  // Task filter
-  if (filters.value.taskId) {
-    result = result.filter(
-      (doc) => doc.file_preprocessing_task_id === parseInt(filters.value.taskId),
-    )
-  }
-
-  // Date range filter
-  if (filters.value.dateRange) {
-    const now = new Date()
-    let startDate
-
-    switch (filters.value.dateRange) {
-      case 'today':
-        startDate = new Date(now.setHours(0, 0, 0, 0))
-        break
-      case 'week':
-        startDate = new Date(now.setDate(now.getDate() - 7))
-        break
-      case 'month':
-        startDate = new Date(now.setDate(now.getDate() - 30))
-        break
-    }
-
-    if (startDate) {
-      result = result.filter((doc) => new Date(doc.created_at) >= startDate)
-    }
-  }
-
-  // Status filter
-  if (filters.value.status) {
-    result = result.filter((doc) => doc.file_preprocessing_task?.status === filters.value.status)
-  }
-
-  return result
-})
-
-// Pagination
+// Server-side pagination - totalPages is already computed from totalCount
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / itemsPerPage.value)))
-
-const paginatedDocuments = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value
-  const end = start + itemsPerPage.value
-  return filteredDocuments.value.slice(start, end)
-})
 
 const visiblePages = computed(() => {
   const pages = []
@@ -718,7 +658,6 @@ const visiblePages = computed(() => {
 })
 
 // Methods
-// ⬇️ REPLACE your fetchDocuments with this (or align your existing one)
 const fetchDocuments = async () => {
   isLoading.value = true
   try {
@@ -735,6 +674,11 @@ const fetchDocuments = async () => {
     const { data } = await api.get(`/project/${props.projectId}/document`, { params })
     serverItems.value = data.items
     totalCount.value = data.total
+
+    // Compute recent documents (last 7 days) from loaded items
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    recentDocuments.value = data.items.filter((doc) => new Date(doc.created_at) > weekAgo).length
 
     // Safety: if you navigated beyond last page due to a filter change, pull back
     if (
@@ -816,16 +760,21 @@ const toggleDocumentSelection = (docId) => {
 
 const toggleSelectAll = () => {
   if (areAllDocumentsSelected.value) {
-    selectedDocuments.value = []
+    // Deselect all - remove current page items from selection
+    const currentPageIds = serverItems.value.map((doc) => doc.id)
+    selectedDocuments.value = selectedDocuments.value.filter((id) => !currentPageIds.includes(id))
   } else {
-    selectedDocuments.value = paginatedDocuments.value.map((doc) => doc.id)
+    // Select all items on current page
+    const currentPageIds = serverItems.value.map((doc) => doc.id)
+    const newIds = currentPageIds.filter((id) => !selectedDocuments.value.includes(id))
+    selectedDocuments.value = [...selectedDocuments.value, ...newIds]
   }
 }
 
 const areAllDocumentsSelected = computed(() => {
   return (
-    paginatedDocuments.value.length > 0 &&
-    paginatedDocuments.value.every((doc) => selectedDocuments.value.includes(doc.id))
+    serverItems.value.length > 0 &&
+    serverItems.value.every((doc) => selectedDocuments.value.includes(doc.id))
   )
 })
 
