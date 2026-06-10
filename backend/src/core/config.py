@@ -59,6 +59,27 @@ class Settings(BaseSettings):
     VISION_OCR_DISPLAY_NAME: str = "Vision LLM API"
     VISION_OCR_DISPLAY_SUBTITLE: str = "Best for complex documents"
 
+    # Docling-serve remote OCR service configuration
+    DOCLING_SERVE_ENABLED: bool = True
+    DOCLING_SERVE_URL: str = "http://docling-serve:5001"
+    DOCLING_SERVE_TIMEOUT_SECONDS: int = 600
+    DOCLING_SERVE_MAX_RETRIES: int = 1
+
+    # Default OCR settings for docling-serve
+    DOCLING_DEFAULT_OCR_LANGS: list[str] = Field(default_factory=lambda: ["deu", "eng"])
+    DOCLING_DEFAULT_TABLE_MODE: str = "fast"
+    DOCLING_IMAGE_EXPORT_MODE: str = "placeholder"
+
+    # Text extraction thresholds for quality checks
+    DOCLING_MIN_EXTRACTED_CHARS_PDF: int = 100
+    DOCLING_MIN_EXTRACTED_CHARS_IMAGE: int = 20
+
+    # Remote OCR fallback (Mistral/Vision) - disabled by default for privacy
+    REMOTE_OCR_FALLBACK_ENABLED: bool = False
+
+    # Local Docling fallback for testing (when docling-serve is unavailable)
+    DOCLING_LOCAL_FALLBACK: bool = False
+
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     LOG_LEVEL: str = "INFO"
 
@@ -522,5 +543,82 @@ SETTINGS_META = {
         "readonly": False,
         "category": "OCR",
         "label": "Vision OCR Prompt",
+    },
+    "DOCLING_SERVE_ENABLED": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "docling-serve",
+        "label": "docling-serve Enabled",
+    },
+    "DOCLING_SERVE_URL": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "docling-serve",
+        "label": "docling-serve URL",
+    },
+    "DOCLING_SERVE_TIMEOUT_SECONDS": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "docling-serve",
+        "label": "docling-serve Timeout (seconds)",
+    },
+    "DOCLING_SERVE_MAX_RETRIES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "docling-serve",
+        "label": "docling-serve Max Retries",
+    },
+    "DOCLING_DEFAULT_OCR_LANGS": {
+        "type": "list",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Default OCR Languages",
+    },
+    "DOCLING_DEFAULT_TABLE_MODE": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "docling-serve",
+        "label": "Table Mode",
+    },
+    "DOCLING_IMAGE_EXPORT_MODE": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "docling-serve",
+        "label": "Image Export Mode",
+    },
+    "DOCLING_MIN_EXTRACTED_CHARS_PDF": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Min Extracted Chars (PDF)",
+    },
+    "DOCLING_MIN_EXTRACTED_CHARS_IMAGE": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Min Extracted Chars (Image)",
+    },
+    "REMOTE_OCR_FALLBACK_ENABLED": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Remote OCR Fallback Enabled",
+    },
+    "DOCLING_LOCAL_FALLBACK": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "docling-serve",
+        "label": "Local Docling Fallback Enabled",
     },
 }

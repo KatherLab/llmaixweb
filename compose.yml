@@ -1,4 +1,27 @@
 services:
+  # docling-serve: Separate service for PDF/image OCR and conversion
+  # This keeps Docling out of the main backend/Celery processes, reducing
+  # memory usage and avoiding duplicate model loading in workers.
+  docling-serve:
+    image: quay.io/docling-project/docling-serve-cpu:latest
+    restart: unless-stopped
+    environment:
+      - DOCLING_SERVE_ENABLE_UI=0
+      - UVICORN_WORKERS=2
+      - OMP_NUM_THREADS=2
+      # TESSDATA_PREFIX: verify path in container first; remove if not needed
+    # ports:
+    #   - "5001:5001"
+    # Memory limit: 6GB is usually sufficient for CPU-based Tesseract OCR
+    # Adjust based on your deployment needs
+    mem_limit: 8g
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/openapi.json', timeout=5)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
   backend:
     build:
       context: .
@@ -15,11 +38,12 @@ services:
       - INITIALIZE_CELERY=${INITIALIZE_CELERY:-false}
       - REQUIRE_INVITATION=${REQUIRE_INVITATION:-false}
       - APP_URL=${APP_URL:-http://localhost:5173}
-      - DOCLING_ARTIFACTS_PATH=/app/docling-models
+      - DOCLING_SERVE_URL=http://docling-serve:5001
+      - DOCLING_SERVE_ENABLED=true
     # ports: ["8000:8000"] # uncomment for local debugging / testing the backend
     depends_on:
-      docling-models-init:
-        condition: service_completed_successfully
+      docling-serve:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
@@ -45,39 +69,15 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      - DOCLING_ARTIFACTS_PATH=/app/docling-models
-    volumes:
-      - docling-models:/app/docling-models
+      - DOCLING_SERVE_URL=http://docling-serve:5001
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
       worker -Q preprocess -c 1 --loglevel=info
     depends_on:
       backend:
         condition: service_started
-
-  docling-models-init:
-    image: ghcr.io/katherlab/llmaixweb-backend:latest
-    user: "10001:10001"
-    restart: "no"
-    env_file: .env
-    environment:
-      - DOCLING_ARTIFACTS_PATH=/app/docling-models
-    volumes:
-      - docling-models:/app/docling-models
-    command: >
-      /bin/sh -c "
-        if [ -f /app/docling-models/.ready ]; then
-          echo 'Docling models already present';
-          exit 0;
-        fi;
-
-        echo 'Downloading Docling models...';
-        mkdir -p /app/docling-models &&
-        /app/.venv/bin/docling-tools models download --output-dir /app/docling-models &&
-        touch /app/docling-models/.ready &&
-        echo 'Docling models ready' ||
-        { echo 'Failed to download Docling models'; exit 1; }
-      "
+      docling-serve:
+        condition: service_healthy
 
   frontend:
     build:
@@ -152,4 +152,3 @@ volumes:
   pgdata:
   redis-data:
   minio-data:
-  docling-models:

@@ -3,7 +3,6 @@
 import datetime
 import io
 import logging
-from pathlib import Path
 from typing import List
 
 import pandas as pd
@@ -36,7 +35,7 @@ class PreprocessingPipeline:
         self.config = self.task.configuration
         self.cancelled = False
         self.client = None
-        self._docling_service = None
+        self._docling_serve_client = None
 
         # Store API credentials in task metadata if custom ones provided
         if api_key and base_url:
@@ -164,34 +163,35 @@ class PreprocessingPipeline:
                     f"No text_columns specified in file_metadata for {file.file_name}"
                 )
 
-    def _get_docling_service(self):
-        """Lazily initialise and return the shared DoclingService instance."""
-        if self._docling_service is None:
-            from ..services.docling_service import DoclingService
+    def _get_docling_serve_client(self):
+        """Lazily initialise and return the docling-serve HTTP client."""
+        if self._docling_serve_client is None:
+            from ..services.docling_serve_client import DoclingServeClient
 
             additional = self.config.additional_settings or {}
 
-            # Default to English + German for the Dresden hospital context.
-            # Can be overridden from additional_settings:
-            # {"docling_ocr_languages": ["eng", "deu"]}
-            ocr_languages = additional.get("docling_ocr_languages", ["auto"])
+            base_url = settings.DOCLING_SERVE_URL
+            timeout = settings.DOCLING_SERVE_TIMEOUT_SECONDS
+            max_retries = settings.DOCLING_SERVE_MAX_RETRIES
 
-            if isinstance(ocr_languages, str):
-                if ocr_languages.lower() == "auto":
-                    ocr_languages = ["auto"]
+            # OCR languages from settings or additional_settings
+            ocr_langs = additional.get("docling_ocr_languages")
+            if ocr_langs is None:
+                ocr_langs = list(settings.DOCLING_DEFAULT_OCR_LANGS)
+            elif isinstance(ocr_langs, str):
+                if ocr_langs.lower() == "auto":
+                    ocr_langs = ["deu", "eng"]  # fallback from "auto"
                 else:
-                    ocr_languages = [ocr_languages]
+                    ocr_langs = [ocr_langs]
 
-            # Default to CPU because Apple MPS can fail in Docling layout stages
-            # with float64 operations. Set "cuda" for NVIDIA GPU machines.
-            accelerator_device = additional.get("docling_accelerator_device", "cpu")
-
-            self._docling_service = DoclingService(
-                ocr_languages=ocr_languages,
-                accelerator_device=accelerator_device,
+            self._docling_serve_client = DoclingServeClient(
+                base_url=base_url,
+                timeout_seconds=timeout,
+                max_retries=max_retries,
+                default_ocr_langs=ocr_langs,
             )
 
-        return self._docling_service
+        return self._docling_serve_client
 
     def _has_useful_extracted_text(self, text: str, min_chars: int = 100) -> bool:
         """Return True if extracted Markdown contains enough real text.
@@ -284,315 +284,415 @@ class PreprocessingPipeline:
     def _route_pdf_image(
         self, file: models.File, file_task: models.FilePreprocessingTask
     ) -> List[models.Document]:
-        """Route PDF/image file to the appropriate OCR/text extraction engine.
+        """Route PDF/image file through docling-serve with extraction mode routing.
 
-        PDF behavior:
-        - local/simple OCR:
-            Use Docling + Tesseract directly.
-            Without force_ocr, this allows mixed native-text/OCR handling.
-            With force_ocr, this uses full-page OCR.
-        - mistral_ocr / llm_vision:
-            If force_ocr is false, first do a lightweight pypdf embedded-text check.
-            If text exists, use Docling without OCR.
-            Otherwise use the selected remote OCR engine.
-            If force_ocr is true, skip the text check and directly use the selected
-            remote OCR engine.
+        Extraction modes:
+        - auto:
+            PDF with embedded text: docling-serve, do_ocr=false
+            PDF without embedded text: docling-serve, do_ocr=true (Tesseract)
+            Image: docling-serve, do_ocr=true (Tesseract)
+        - fast_local_ocr:
+            All files: docling-serve with Tesseract OCR
+        - high_accuracy_remote:
+            PDF with embedded text: docling-serve, do_ocr=false
+            PDF/image needing OCR: Mistral OCR or Vision LLM (if enabled)
+        - force_ocr:
+            All files: docling-serve with Tesseract force OCR
 
-        Image behavior:
-        - Images are routed directly to the selected OCR engine.
+        Backwards compatibility:
+        - ocr_engine="ocrmypdf" or "tesseract" -> treated as extraction_mode="auto"
         """
         additional = self.config.additional_settings or {}
-        ocr_engine = additional.get("ocr_engine", "ocrmypdf")
+
+        # Support both new extraction_mode and legacy ocr_engine settings
+        extraction_mode = additional.get("extraction_mode", "auto")
         force_ocr = additional.get("force_ocr", False)
+        remote_fallback = additional.get("remote_ocr_fallback", False)
+
+        # Backwards compatibility: map legacy ocr_engine values to extraction_mode
+        ocr_engine = additional.get("ocr_engine", None)
+        if ocr_engine and extraction_mode == "auto":
+            if ocr_engine in {"ocrmypdf", "docling_tesseract", "tesseract"}:
+                extraction_mode = "auto"  # Use local Tesseract via docling-serve
+            elif ocr_engine == "mistral_ocr":
+                extraction_mode = "high_accuracy_remote"
+                remote_fallback = True
+            elif ocr_engine == "llm_vision":
+                extraction_mode = "high_accuracy_remote"
+                remote_fallback = True
 
         is_pdf = file.file_type == models.FileType.APPLICATION_PDF
+        is_image = file.file_type in [
+            models.FileType.IMAGE_PNG,
+            models.FileType.IMAGE_JPEG,
+            "image/png",
+            "image/jpeg",
+            "image/jpg",
+        ]
 
-        # ------------------------------------------------------------------
-        # PDF routing
-        # ------------------------------------------------------------------
         if is_pdf:
-            # Backwards compatibility:
-            # Existing UI/config may still call the local engine "ocrmypdf".
-            # Internally we now route that option to Docling + Tesseract.
-            if ocr_engine in {"ocrmypdf", "docling_tesseract", "tesseract"}:
-                return self._process_with_docling_tesseract(
-                    file,
-                    file_task,
-                    force_full_page_ocr=force_ocr,
-                )
+            return self._process_pdf(
+                file,
+                file_task,
+                extraction_mode,
+                force_ocr,
+                remote_fallback,
+                ocr_engine,
+            )
 
-            if ocr_engine == "mistral_ocr":
-                if not settings.MISTRAL_OCR_ENABLED:
-                    raise ValueError(
-                        "Mistral OCR is disabled by server configuration "
-                        "(MISTRAL_OCR_ENABLED=false)."
-                    )
+        if is_image:
+            return self._process_image(
+                file,
+                file_task,
+                extraction_mode,
+                force_ocr,
+                remote_fallback,
+                ocr_engine,
+            )
 
-                if not force_ocr:
-                    docling_result = self._try_docling_no_ocr_if_embedded_text(
-                        file,
-                        file_task,
-                    )
-                    if docling_result is not None:
-                        return docling_result
+        raise ValueError(f"Unsupported file type for OCR/extraction: {file.file_type}")
 
-                return self._process_with_mistral_ocr(file, file_task)
+    def _process_pdf(
+        self,
+        file: models.File,
+        file_task: models.FilePreprocessingTask,
+        extraction_mode: str,
+        force_ocr: bool,
+        remote_fallback: bool,
+        ocr_engine: str | None = None,
+    ) -> List[models.Document]:
+        """Process a PDF file through docling-serve with extraction mode routing.
 
-            if ocr_engine == "llm_vision":
-                if not settings.VISION_OCR_ENABLED:
-                    raise ValueError(
-                        "Vision LLM OCR is disabled by server configuration "
-                        "(VISION_OCR_ENABLED=false)."
-                    )
+        Args:
+            file: The file model.
+            file_task: The file preprocessing task.
+            extraction_mode: One of "auto", "fast_local_ocr", "high_accuracy_remote", "force_ocr".
+            force_ocr: If True, skip embedded text check and force OCR.
+            remote_fallback: If True, use Mistral/Vision for high_accuracy_remote mode.
+            ocr_engine: Original OCR engine setting (mistral_ocr, llm_vision, etc.).
 
-                if not force_ocr:
-                    docling_result = self._try_docling_no_ocr_if_embedded_text(
-                        file,
-                        file_task,
-                    )
-                    if docling_result is not None:
-                        return docling_result
+        Returns:
+            List of created Document objects.
+        """
+        # Get quality thresholds from settings
+        min_chars_pdf = settings.DOCLING_MIN_EXTRACTED_CHARS_PDF
 
-                return self._process_with_llm_vision_ocr(file, file_task)
-
-            raise ValueError(f"Unknown OCR engine: {ocr_engine}")
-
-        # ------------------------------------------------------------------
-        # Image routing
-        # ------------------------------------------------------------------
-        if ocr_engine in {"ocrmypdf", "docling_tesseract", "tesseract"}:
-            # Backwards compatibility:
-            # Existing configs may still say "ocrmypdf", but local image OCR now uses
-            # Docling + Tesseract.
-            return self._process_image_with_docling_tesseract(
+        # Force OCR mode - always use Tesseract with force_ocr=True
+        if extraction_mode == "force_ocr" or force_ocr:
+            return self._process_with_docling_serve_tesseract(
                 file,
                 file_task,
                 force_full_page_ocr=True,
             )
 
-        if ocr_engine == "mistral_ocr":
-            if not settings.MISTRAL_OCR_ENABLED:
-                raise ValueError(
-                    "Mistral OCR is disabled by server configuration "
-                    "(MISTRAL_OCR_ENABLED=false)."
-                )
-            return self._process_with_mistral_ocr(file, file_task)
-
-        if ocr_engine == "llm_vision":
-            if not settings.VISION_OCR_ENABLED:
-                raise ValueError(
-                    "Vision LLM OCR is disabled by server configuration "
-                    "(VISION_OCR_ENABLED=false)."
-                )
-            return self._process_with_llm_vision_ocr(file, file_task)
-
-        raise ValueError(f"Unknown OCR engine: {ocr_engine}")
-
-    def _try_docling_no_ocr_if_embedded_text(
-        self, file: models.File, file_task: models.FilePreprocessingTask
-    ) -> List[models.Document] | None:
-        """Use Docling without OCR if a PDF has useful embedded text.
-
-        This is intended for Mistral/Vision paths where we want to avoid sending
-        a digitally born PDF to a remote OCR service unnecessarily.
-        """
-        from ..services.docling_service import DoclingMode
-
-        file_content = get_file(file.file_uuid)
-        service = self._get_docling_service()
-
-        additional = self.config.additional_settings or {}
-        min_chars = additional.get("embedded_text_min_chars", 100)
-        max_pages_to_check = additional.get("embedded_text_max_pages_to_check", 8)
-
-        if not service.has_embedded_text(
-            file_content,
-            min_chars=min_chars,
-            max_pages_to_check=max_pages_to_check,
-        ):
-            logger.info(
-                "PDF %s has insufficient embedded text; using selected OCR engine",
-                file.file_name,
+        # Fast local OCR - always use Tesseract
+        if extraction_mode == "fast_local_ocr":
+            return self._process_with_docling_serve_tesseract(
+                file,
+                file_task,
+                force_full_page_ocr=False,
             )
-            return None
 
-        try:
-            md_text = service.process(
+        # Auto mode - check for embedded text first
+        if extraction_mode == "auto":
+            file_content = get_file(file.file_uuid)
+
+            # Use local pypdf probe (no Docling import needed)
+            from ..services.pdf_text_probe import has_embedded_text
+
+            has_text = has_embedded_text(
                 file_content,
-                mode=DoclingMode.NO_OCR,
+                min_chars=min_chars_pdf,
+                max_pages_to_check=8,
             )
 
-            if self._has_useful_extracted_text(md_text, min_chars=min_chars):
-                doc = self._build_pdf_document(
-                    file=file,
-                    file_task=file_task,
-                    text=md_text,
-                    ocr_engine="docling",
-                    extraction_method="docling_no_ocr",
-                    ocr_applied=False,
-                    extra_metadata={
-                        "embedded_text_detected": True,
-                        "force_ocr": False,
-                    },
+            if has_text and not force_ocr:
+                # Use docling-serve without OCR
+                return self._process_with_docling_serve_no_ocr(file, file_task)
+            else:
+                # Use docling-serve with Tesseract OCR
+                return self._process_with_docling_serve_tesseract(
+                    file,
+                    file_task,
+                    force_full_page_ocr=False,
                 )
-                self.db.add(doc)
-                return [doc]
 
-            logger.info(
-                "Docling without OCR produced insufficient text for %s; "
-                "using selected OCR engine",
-                file.file_name,
-            )
+        # High accuracy remote mode - use remote OCR only if enabled and needed
+        if extraction_mode == "high_accuracy_remote":
+            if not remote_fallback:
+                # Remote fallback disabled - use local Tesseract
+                return self._process_with_docling_serve_tesseract(
+                    file,
+                    file_task,
+                    force_full_page_ocr=False,
+                )
 
-        except Exception:
-            logger.warning(
-                "Docling no-OCR extraction failed for %s; using selected OCR engine",
-                file.file_name,
-                exc_info=True,
-            )
+            # Check if we can avoid remote OCR (embedded text exists)
+            if not force_ocr:
+                file_content = get_file(file.file_uuid)
+                from ..services.pdf_text_probe import has_embedded_text
 
-        return None
+                has_text = has_embedded_text(
+                    file_content,
+                    min_chars=min_chars_pdf,
+                    max_pages_to_check=8,
+                )
 
-    def _get_docling_suffix(self, file: models.File) -> str:
-        """Return a file suffix so Docling can infer the input format."""
-        if file.file_type == models.FileType.APPLICATION_PDF:
-            return ".pdf"
+                if has_text:
+                    # Use local docling-serve without OCR
+                    return self._process_with_docling_serve_no_ocr(file, file_task)
 
-        if file.file_type in (models.FileType.IMAGE_PNG, "image/png"):
-            return ".png"
+            # Use remote OCR - respect the original ocr_engine setting
+            if ocr_engine == "mistral_ocr" and settings.MISTRAL_OCR_ENABLED:
+                return self._process_with_mistral_ocr(file, file_task)
+            elif ocr_engine == "llm_vision" and settings.VISION_OCR_ENABLED:
+                return self._process_with_llm_vision_ocr(file, file_task)
+            elif settings.MISTRAL_OCR_ENABLED:
+                # Fallback to Mistral if no specific engine requested
+                return self._process_with_mistral_ocr(file, file_task)
+            elif settings.VISION_OCR_ENABLED:
+                # Fallback to Vision if no specific engine requested
+                return self._process_with_llm_vision_ocr(file, file_task)
+            else:
+                # Remote fallback requested but not configured - fail clearly
+                raise ValueError(
+                    "High accuracy remote OCR requested but neither Mistral OCR nor Vision LLM is enabled. "
+                    "Set MISTRAL_OCR_ENABLED=true or VISION_OCR_ENABLED=true, or use a different extraction mode."
+                )
 
-        if file.file_type in (models.FileType.IMAGE_JPEG, "image/jpeg", "image/jpg"):
-            return ".jpg"
+        # Unknown extraction mode - fail clearly
+        raise ValueError(f"Unknown extraction_mode: {extraction_mode}")
 
-        # Conservative fallback for image-like inputs.
-        return Path(file.file_name).suffix or ".bin"
-
-    def _process_image_with_docling_tesseract(
+    def _process_image(
         self,
         file: models.File,
         file_task: models.FilePreprocessingTask,
-        *,
-        force_full_page_ocr: bool = True,
+        extraction_mode: str,
+        force_ocr: bool,
+        remote_fallback: bool,
+        ocr_engine: str | None = None,
     ) -> List[models.Document]:
-        """Process an image using Docling with Tesseract OCR."""
-        from ..services.docling_service import DoclingMode
+        """Process an image file through docling-serve with extraction mode routing.
+
+        Images always need OCR, so the main difference is whether to use
+        local Tesseract or remote Mistral/Vision.
+
+        Args:
+            file: The file model.
+            file_task: The file preprocessing task.
+            extraction_mode: One of "auto", "fast_local_ocr", "high_accuracy_remote", "force_ocr".
+            force_ocr: If True, force full-page OCR (always True for images).
+            remote_fallback: If True, use Mistral/Vision for high_accuracy_remote mode.
+            ocr_engine: Original OCR engine setting (mistral_ocr, llm_vision, etc.).
+
+        Returns:
+            List of created Document objects.
+        """
+        # High accuracy remote mode - use remote OCR if enabled
+        if extraction_mode == "high_accuracy_remote" and remote_fallback:
+            # Respect the original ocr_engine setting
+            if ocr_engine == "mistral_ocr" and settings.MISTRAL_OCR_ENABLED:
+                return self._process_with_mistral_ocr(file, file_task)
+            elif ocr_engine == "llm_vision" and settings.VISION_OCR_ENABLED:
+                return self._process_with_llm_vision_ocr(file, file_task)
+            elif settings.MISTRAL_OCR_ENABLED:
+                # Fallback to Mistral if no specific engine requested
+                return self._process_with_mistral_ocr(file, file_task)
+            elif settings.VISION_OCR_ENABLED:
+                # Fallback to Vision if no specific engine requested
+                return self._process_with_llm_vision_ocr(file, file_task)
+            else:
+                # Remote fallback requested but not configured - use local
+                pass
+
+        # All other modes (auto, fast_local_ocr, force_ocr) or fallback:
+        # Use docling-serve with Tesseract OCR
+        return self._process_image_with_docling_serve_tesseract(file, file_task)
+
+    def _process_image_with_docling_serve_tesseract(
+        self,
+        file: models.File,
+        file_task: models.FilePreprocessingTask,
+    ) -> List[models.Document]:
+        """Process an image using docling-serve with Tesseract OCR.
+
+        Images are always processed with force OCR since they don't have
+        embedded text.
+
+        Args:
+            file: The file model.
+            file_task: The file preprocessing task.
+
+        Returns:
+            List of created Document objects.
+
+        Raises:
+            ValueError: If extraction fails or produces insufficient text.
+        """
+        from ..services.docling_serve_client import DoclingServeError
 
         file_content = get_file(file.file_uuid)
-        service = self._get_docling_service()
 
-        mode = (
-            DoclingMode.TESSERACT_FORCE_OCR
-            if force_full_page_ocr
-            else DoclingMode.TESSERACT_OCR
-        )
+        # Determine MIME type from file type
+        mime_type_map = {
+            models.FileType.IMAGE_PNG: "image/png",
+            models.FileType.IMAGE_JPEG: "image/jpeg",
+            "image/png": "image/png",
+            "image/jpeg": "image/jpeg",
+            "image/jpg": "image/jpeg",
+        }
+        mime_type = mime_type_map.get(file.file_type, "image/png")
 
-        suffix = self._get_docling_suffix(file)
+        client = self._get_docling_serve_client()
 
-        md_text = service.process(
-            file_content,
-            mode=mode,
-            suffix=suffix,
-        )
+        try:
+            result = client.convert_image_tesseract(
+                file_content=file_content,
+                filename=file.file_name,
+                mime_type=mime_type,
+            )
+        except DoclingServeError as e:
+            raise ValueError(f"docling-serve image OCR failed: {e}")
 
-        if not self._has_useful_extracted_text(md_text, min_chars=20):
+        min_chars = settings.DOCLING_MIN_EXTRACTED_CHARS_IMAGE
+
+        if not self._has_useful_extracted_text(result.text, min_chars=min_chars):
             raise ValueError(
-                f"Docling Tesseract OCR produced insufficient text for image {file.file_name}"
+                f"docling-serve Tesseract produced insufficient text for image {file.file_name} "
+                f"({len(result.text)} chars)"
             )
 
-        doc = models.Document(
-            project_id=self.task.project_id,
-            original_file_id=file.id,
-            file_preprocessing_task_id=file_task.id,
-            text=md_text,
-            document_name=file.file_name,
-            preprocessing_config_id=self.config.id,
-            meta_data={
-                "file_type": file.file_type,
-                "ocr_engine": "docling_tesseract",
-                "extraction_method": "docling_tesseract_image_ocr",
-                "ocr_applied": True,
+        doc = self._build_pdf_document(
+            file=file,
+            file_task=file_task,
+            text=result.text,
+            ocr_engine="tesseract",
+            extraction_method="docling_serve_tesseract_image_ocr",
+            ocr_applied=True,
+            extra_metadata={
                 "force_ocr": True,
-                "force_full_page_ocr": force_full_page_ocr,
+                "engine_used": "docling_serve",
+                "file_type": file.file_type,
             },
         )
 
         self.db.add(doc)
         return [doc]
 
-    def _process_with_docling_tesseract(
+    def _process_with_docling_serve_tesseract(
         self,
         file: models.File,
         file_task: models.FilePreprocessingTask,
         *,
-        force_full_page_ocr: bool,
+        force_full_page_ocr: bool = False,
     ) -> List[models.Document]:
-        """Process a PDF using Docling with Tesseract OCR enabled.
+        """Process a PDF using docling-serve with Tesseract OCR.
 
-        If force_full_page_ocr is False, Docling may use native text where possible
+        If force_full_page_ocr is False, docling-serve may use native text where possible
         and OCR where needed.
 
-        If force_full_page_ocr is True, Docling forces OCR for the full page.
+        If force_full_page_ocr is True, docling-serve forces full-page OCR.
+
+        Args:
+            file: The file model.
+            file_task: The file preprocessing task.
+            force_full_page_ocr: If True, force full-page OCR.
+
+        Returns:
+            List of created Document objects.
+
+        Raises:
+            ValueError: If extraction fails or produces insufficient text.
         """
-        from ..services.docling_service import DoclingMode
+        from ..services.docling_serve_client import DoclingServeError
 
         file_content = get_file(file.file_uuid)
-        service = self._get_docling_service()
+        client = self._get_docling_serve_client()
 
-        mode = (
-            DoclingMode.TESSERACT_FORCE_OCR
-            if force_full_page_ocr
-            else DoclingMode.TESSERACT_OCR
-        )
+        try:
+            result = client.convert_pdf_tesseract(
+                file_content=file_content,
+                filename=file.file_name,
+                force_ocr=force_full_page_ocr,
+            )
+        except DoclingServeError as e:
+            raise ValueError(f"docling-serve Tesseract extraction failed: {e}")
 
-        md_text = service.process(
-            file_content,
-            mode=mode,
-        )
+        min_chars = settings.DOCLING_MIN_EXTRACTED_CHARS_PDF
 
-        if not self._has_useful_extracted_text(md_text, min_chars=100):
+        if not self._has_useful_extracted_text(result.text, min_chars=min_chars):
             raise ValueError(
-                f"Docling Tesseract OCR produced insufficient text for {file.file_name}"
+                f"docling-serve Tesseract produced insufficient text for {file.file_name} "
+                f"({len(result.text)} chars)"
             )
 
         doc = self._build_pdf_document(
             file=file,
             file_task=file_task,
-            text=md_text,
-            ocr_engine="docling_tesseract",
+            text=result.text,
+            ocr_engine="tesseract",
             extraction_method=(
-                "docling_tesseract_force_ocr"
+                "docling_serve_tesseract_force_ocr"
                 if force_full_page_ocr
-                else "docling_tesseract_ocr"
+                else "docling_serve_tesseract_ocr"
             ),
             ocr_applied=True,
             extra_metadata={
                 "force_ocr": force_full_page_ocr,
-                "force_full_page_ocr": force_full_page_ocr,
+                "engine_used": "docling_serve",
             },
         )
 
         self.db.add(doc)
         return [doc]
 
-    def _process_with_docling(
+    def _process_with_docling_serve_no_ocr(
         self, file: models.File, file_task: models.FilePreprocessingTask
     ) -> List[models.Document]:
-        """Process PDF using Docling without OCR."""
-        from ..services.docling_service import DoclingMode
+        """Process PDF using docling-serve without OCR (embedded text only).
+
+        Args:
+            file: The file model.
+            file_task: The file preprocessing task.
+
+        Returns:
+            List of created Document objects.
+
+        Raises:
+            ValueError: If extraction fails or produces insufficient text.
+        """
+        from ..services.docling_serve_client import DoclingServeError
 
         file_content = get_file(file.file_uuid)
-        service = self._get_docling_service()
-        md_text = service.process(file_content, mode=DoclingMode.NO_OCR)
+        client = self._get_docling_serve_client()
+
+        try:
+            result = client.convert_pdf_no_ocr(
+                file_content=file_content,
+                filename=file.file_name,
+            )
+        except DoclingServeError as e:
+            raise ValueError(f"docling-serve extraction failed: {e}")
+
+        min_chars = settings.DOCLING_MIN_EXTRACTED_CHARS_PDF
+
+        if not self._has_useful_extracted_text(result.text, min_chars=min_chars):
+            raise ValueError(
+                f"docling-serve produced insufficient text for {file.file_name} "
+                f"({len(result.text)} chars)"
+            )
 
         doc = self._build_pdf_document(
             file=file,
             file_task=file_task,
-            text=md_text,
-            ocr_engine="docling",
-            extraction_method="docling_no_ocr",
+            text=result.text,
+            ocr_engine="docling_serve",
+            extraction_method="docling_serve_no_ocr",
             ocr_applied=False,
             extra_metadata={
                 "embedded_text_detected": True,
+                "force_ocr": False,
+                "engine_used": "docling_serve",
             },
         )
 

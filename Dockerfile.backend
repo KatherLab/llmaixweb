@@ -16,25 +16,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # uv binary
 COPY --from=uv /uv /usr/local/bin/uv
 
-# Runtime tools for Tesseract OCR (used by Docling).
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        tesseract-ocr \
-        tesseract-ocr-eng \
-        tesseract-ocr-deu \
-        tesseract-ocr-fra \
-        tesseract-ocr-spa \
-        tesseract-ocr-ita \
-        tesseract-ocr-por \
-        tesseract-ocr-nld \
-        tesseract-ocr-pol \
-        tesseract-ocr-rus \
-        tesseract-ocr-chi-sim \
-        tesseract-ocr-lat \
-        tesseract-ocr-osd \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 # Create non-root user
@@ -56,8 +37,7 @@ COPY --chown=app:app backend/scripts/run_migrations.sh /app/run_migrations.sh
 
 RUN echo "${GIT_COMMIT_HASH}" > /app/backend/src/_git_commit.txt && \
     chmod +x /app/run_migrations.sh && \
-    chown -R app:app /app && \
-    mkdir -p /app/docling-models && chmod 777 /app/docling-models
+    chown -R app:app /app
 
 USER 10001:10001
 

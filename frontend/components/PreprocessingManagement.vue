@@ -351,12 +351,13 @@
       <div class="p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-6">Create New Preprocessing Task</h3>
 
-        <!-- Engine Selection -->
+        <!-- OCR Engine Selection -->
         <div class="mb-6">
           <label class="block text-sm font-medium text-gray-700 mb-3"
-            >OCR / Text Extraction Engine</label
+            >PDF / Image Extraction Engine</label
           >
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- Local Docling (Tesseract) -->
             <button
               :class="[
                 'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all min-h-[100px]',
@@ -386,6 +387,7 @@
               >
             </button>
 
+            <!-- Mistral OCR API -->
             <button
               :class="[
                 'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all min-h-[100px]',
@@ -417,6 +419,7 @@
               }}</span>
             </button>
 
+            <!-- Vision LLM API -->
             <button
               :class="[
                 'relative rounded-lg border-2 p-4 flex flex-col items-center justify-center transition-all min-h-[100px]',
@@ -448,23 +451,34 @@
               }}</span>
             </button>
           </div>
+          <p class="text-xs text-gray-500 mt-2">
+            Note: For PDFs with embedded text, the engine will use embedded text by default. Enable
+            "Force OCR" below to run OCR on all PDF pages.
+          </p>
         </div>
 
-        <!-- Engine-specific settings -->
+        <!-- Force OCR Toggle (prominent) -->
+        <div class="mb-6">
+          <label
+            class="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl cursor-pointer hover:bg-amber-100 transition"
+          >
+            <input v-model="forceOcr" class="accent-amber-600 mt-0.5" type="checkbox" />
+            <div class="flex-1">
+              <p class="text-sm font-medium text-amber-900">Force OCR for PDF documents</p>
+              <p class="text-xs text-amber-700 mt-1">
+                When enabled, all PDFs will be OCR'd even if they contain embedded text. This is
+                slower but useful for poor quality scans or verifying OCR accuracy.
+              </p>
+            </div>
+          </label>
+        </div>
+
+        <!-- Engine-specific Advanced Settings -->
         <div
           class="bg-gradient-to-br from-blue-50/60 to-white border border-blue-200 rounded-2xl px-8 py-6 space-y-4 mt-4 mb-4"
         >
-          <!-- Force OCR (global) -->
-          <label class="flex items-center gap-2">
-            <input v-model="forceOcr" class="accent-blue-600" type="checkbox" />
-            Force OCR for PDFs (ignore embedded text, run OCR on all pages)
-          </label>
-
-          <!-- Local OCR (Docling / Tesseract) advanced settings -->
-          <div
-            v-if="selectedEngine === 'docling_tesseract'"
-            class="space-y-3 border-t border-blue-100 pt-4"
-          >
+          <!-- Local OCR (Docling / Tesseract) settings -->
+          <div v-if="selectedEngine === 'docling_tesseract'" class="space-y-3">
             <button
               class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
               type="button"
@@ -484,7 +498,7 @@
                   stroke-width="2"
                 />
               </svg>
-              Advanced
+              Advanced Tesseract Settings
             </button>
             <div v-if="showLocalOcrAdvanced" class="space-y-3 pl-3 border-l-2 border-blue-100">
               <div>
@@ -509,19 +523,14 @@
                   <option value="lat">Latin</option>
                 </select>
                 <p class="mt-1 text-xs text-gray-500">
-                  Select a specific language or leave as auto-detect. Only used for local Tesseract
-                  OCR.
+                  Select a specific language or leave as auto-detect.
                 </p>
               </div>
             </div>
           </div>
 
-          <!-- Mistral settings -->
-          <div
-            v-if="selectedEngine === 'mistral_ocr'"
-            class="space-y-3 border-t border-blue-100 pt-4"
-          >
-            <!-- Always visible: prompt area (empty for Mistral) -->
+          <!-- Mistral OCR settings -->
+          <div v-if="selectedEngine === 'mistral_ocr'" class="space-y-3">
             <p class="text-sm text-gray-600">
               Base URL:
               <code class="text-xs bg-blue-50 px-1.5 py-0.5 rounded">{{
@@ -529,30 +538,27 @@
               }}</code>
             </p>
 
-            <!-- Advanced settings -->
-            <div>
-              <button
-                class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
-                type="button"
-                @click="showMistralAdvanced = !showMistralAdvanced"
+            <button
+              class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+              type="button"
+              @click="showMistralAdvanced = !showMistralAdvanced"
+            >
+              <svg
+                :class="showMistralAdvanced ? 'rotate-90' : ''"
+                class="h-3 w-3 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  :class="showMistralAdvanced ? 'rotate-90' : ''"
-                  class="h-3 w-3 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M9 5l7 7-7 7"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                  />
-                </svg>
-                Advanced
-              </button>
-            </div>
+                <path
+                  d="M9 5l7 7-7 7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+              Advanced
+            </button>
             <div v-if="showMistralAdvanced" class="space-y-3 pl-3 border-l-2 border-blue-100">
               <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">API Key</label>
@@ -577,45 +583,42 @@
           </div>
 
           <!-- Vision LLM settings -->
-          <div
-            v-if="selectedEngine === 'llm_vision'"
-            class="space-y-3 border-t border-blue-100 pt-4"
-          >
-            <!-- Always visible -->
+          <div v-if="selectedEngine === 'llm_vision'" class="space-y-3">
+            <!-- Always visible: prompt -->
             <div>
-              <label class="block text-xs font-medium text-gray-700 mb-1">Prompt (optional)</label>
+              <label class="block text-xs font-medium text-gray-700 mb-1">OCR Prompt</label>
               <textarea
                 v-model="visionPrompt"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                 :placeholder="serverDefaults.vision_ocr_prompt"
                 rows="2"
               />
+              <p class="mt-1 text-xs text-gray-500">
+                This prompt is sent to the vision model along with the document image.
+              </p>
             </div>
 
-            <!-- Advanced settings -->
-            <div>
-              <button
-                class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
-                type="button"
-                @click="showVisionAdvanced = !showVisionAdvanced"
+            <button
+              class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+              type="button"
+              @click="showVisionAdvanced = !showVisionAdvanced"
+            >
+              <svg
+                :class="showVisionAdvanced ? 'rotate-90' : ''"
+                class="h-3 w-3 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  :class="showVisionAdvanced ? 'rotate-90' : ''"
-                  class="h-3 w-3 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M9 5l7 7-7 7"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                  />
-                </svg>
-                Advanced
-              </button>
-            </div>
+                <path
+                  d="M9 5l7 7-7 7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+              Advanced
+            </button>
             <div v-if="showVisionAdvanced" class="space-y-3 pl-3 border-l-2 border-blue-100">
               <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">API Key</label>
@@ -790,7 +793,7 @@ const cancelTaskPending = ref(null)
 const cancelDeleteMode = ref(false)
 const isSubmitting = ref(false)
 const showAllCompleted = ref(false)
-const isAdmin = computed(() => authStore.isAdmin)
+// isAdmin is available for future admin-specific features
 const previewFileData = ref(null)
 let pollInterval = null
 
@@ -803,7 +806,7 @@ const serverDefaults = ref({
   mistral_api_base: 'https://api.mistral.ai',
 })
 
-// Form state
+// Form state - Engine Selection
 const selectedEngine = ref('docling_tesseract')
 const forceOcr = ref(false)
 const mistralApiKey = ref('')
@@ -817,12 +820,25 @@ const visionPrompt = ref(
 )
 const visionMaxImageDim = ref(2048)
 const showLocalOcrAdvanced = ref(false)
-const tesseractLang = ref('auto')
 const showVisionAdvanced = ref(false)
+const tesseractLang = ref('auto')
 
 const engineLabel = (task) => {
-  const engine = task.configuration?.additional_settings?.ocr_engine
-  return getEngineLabel(engine)
+  const settings = task.configuration?.additional_settings || {}
+  const engine = settings.ocr_engine
+  const forceOcr = settings.force_ocr
+
+  // Get engine label
+  let label
+  if (engine === 'mistral_ocr') label = 'Mistral OCR'
+  else if (engine === 'llm_vision') label = 'Vision LLM'
+  else if (engine === 'docling_tesseract' || engine === 'tesseract') label = 'Local OCR'
+  else label = 'Local OCR' // default
+
+  // Add force OCR indicator
+  if (forceOcr) label += ' + Force'
+
+  return label
 }
 
 // Computed
@@ -886,7 +902,7 @@ const fetchOcrSettings = async () => {
     if (r.data.mistral_api_base) serverDefaults.value.mistral_api_base = r.data.mistral_api_base
     // Populate dynamic OCR display names
     setEngineLabels(r.data)
-  } catch (e) {
+  } catch {
     /* defaults enabled */
   }
 }
@@ -933,14 +949,23 @@ const formatRelativeTime = (ds) => {
 }
 
 const buildAdditionalSettings = () => {
-  const settings = { ocr_engine: selectedEngine.value, force_ocr: forceOcr.value }
+  const settings = {
+    ocr_engine: selectedEngine.value,
+    force_ocr: forceOcr.value,
+  }
+
+  // Local OCR (Docling/Tesseract) settings
   if (selectedEngine.value === 'docling_tesseract' && tesseractLang.value !== 'auto') {
     settings.docling_ocr_languages = [tesseractLang.value]
   }
+
+  // Mistral OCR settings
   if (selectedEngine.value === 'mistral_ocr') {
     if (mistralApiKey.value) settings.mistral_api_key = mistralApiKey.value
     settings.mistral_model = mistralModel.value
   }
+
+  // Vision LLM settings
   if (selectedEngine.value === 'llm_vision') {
     if (visionApiKey.value) settings.vision_api_key = visionApiKey.value
     if (visionBaseUrl.value) settings.vision_base_url = visionBaseUrl.value
@@ -948,6 +973,7 @@ const buildAdditionalSettings = () => {
     settings.vision_prompt = visionPrompt.value
     settings.vision_max_image_dim = visionMaxImageDim.value
   }
+
   return settings
 }
 
@@ -955,11 +981,14 @@ const startPreprocessing = async () => {
   if (!canStartProcessing.value) return
   isSubmitting.value = true
   try {
+    const engineNames = {
+      docling_tesseract: 'Local OCR (Docling)',
+      mistral_ocr: 'Mistral OCR',
+      llm_vision: 'Vision LLM',
+    }
+    const forceOcrText = forceOcr.value ? ' + Force OCR' : ''
     const inlineConfig = {
-      name:
-        selectedEngine.value === 'docling_tesseract'
-          ? 'Quick (Local OCR)'
-          : `Custom ${selectedEngine.value}`,
+      name: `${engineNames[selectedEngine.value] || 'Custom'}${forceOcrText}`,
       additional_settings: buildAdditionalSettings(),
     }
     const taskData = { inline_config: inlineConfig, file_ids: selectedFiles.value }
