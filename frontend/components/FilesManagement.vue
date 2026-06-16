@@ -894,16 +894,14 @@ const executeDelete = async () => {
   } catch (err) {
     if (err.response?.status === 409) {
       const detail = err.response?.data?.detail
-      let linkMsg = ''
       if (detail && detail.links) {
-        linkMsg = `File has ${detail.links.documents} linked document(s) and ${detail.links.preprocessing_tasks} preprocessing task(s).`
+        linkedResourceDetail.value = `File has ${detail.links.documents} linked document(s) and ${detail.links.preprocessing_tasks} preprocessing task(s).`
       } else {
-        linkMsg = 'File is linked to other resources.'
+        linkedResourceDetail.value = 'File is linked to other resources.'
       }
-      linkedResourceDetail.value = linkMsg
       showForceDelete.value = true
       deleteModalMessage.value =
-        `${linkMsg}\n\n` +
+        `${linkedResourceDetail.value}\n\n` +
         'Use "Delete Anyway (Force)" to delete the file and orphan the linked records.'
     } else {
       toast.error('Failed to delete file(s)')
