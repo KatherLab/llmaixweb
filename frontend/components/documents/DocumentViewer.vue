@@ -396,6 +396,12 @@
                       }}
                     </dd>
                   </div>
+                  <div v-if="getModelName(selectedVersion || document)">
+                    <dt class="text-gray-500">Model</dt>
+                    <dd class="text-gray-900">
+                      {{ getModelName(selectedVersion || document) }}
+                    </dd>
+                  </div>
                 </dl>
               </div>
               <!-- Metadata -->
@@ -737,6 +743,18 @@ const getShortExtractionMethod = (method) => {
   if (method.includes('llm_vision')) return 'Vision LLM'
   if (method.includes('force_ocr')) return 'Force OCR'
   return method.replace(/_/g, ' ').replace('docling serve', 'Docling')
+}
+
+const getModelName = (doc) => {
+  if (!doc) return ''
+  const metaData = doc.meta_data || {}
+  // Check for specific model fields first
+  if (metaData.mistral_model) return metaData.mistral_model
+  if (metaData.vision_model) return metaData.vision_model
+  // Fallback to generic model field
+  if (metaData.model) return metaData.model
+  // No model for local OCR
+  return ''
 }
 
 // Fetch all versions of this document

@@ -1206,6 +1206,7 @@ class PreprocessingPipeline:
                 "file_type": file.file_type,
                 "ocr_engine": "mistral_ocr",
                 "model": model,
+                "mistral_model": model,
             },
         )
         return [doc]
@@ -1271,6 +1272,7 @@ class PreprocessingPipeline:
                 "file_type": file.file_type,
                 "ocr_engine": "llm_vision",
                 "model": model,
+                "vision_model": model,
             },
         )
         return [doc]

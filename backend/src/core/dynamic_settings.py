@@ -1,5 +1,6 @@
 # backend/src/core/dynamic_settings.py
 from functools import lru_cache
+import sys
 
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -7,8 +8,10 @@ from sqlalchemy.orm import Session
 # Use absolute imports for reliability across different run contexts
 try:
     from .config import SETTINGS_META, Settings
+    _config_module_name = __name__.replace("dynamic_settings", "config")
 except ImportError:
     from backend.src.core.config import SETTINGS_META, Settings
+    _config_module_name = "backend.src.core.config"
 
 try:
     from .session import SessionLocal
@@ -44,17 +47,11 @@ def get_settings() -> Settings:
 
 def reload_settings_cache():
     """Clear the dynamic settings cache and the config module's cached instance."""
+    # Clear the lru_cache for get_settings()
     get_settings.cache_clear()
 
-    # Also clear the cached instance in config.py
-    try:
-        import backend.src.core.config as config_module
-
-        config_module._settings_instance = None
-    except (ImportError, AttributeError):
-        try:
-            from . import config as config_module
-
-            config_module._settings_instance = None
-        except (ImportError, AttributeError):
-            pass  # Ignore if we can't import (e.g., during startup)
+    # Clear the cached instance in the config module
+    # Use the module name we determined at import time
+    if _config_module_name in sys.modules:
+        config_module = sys.modules[_config_module_name]
+        setattr(config_module, "_settings_instance", None)

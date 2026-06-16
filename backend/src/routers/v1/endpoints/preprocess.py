@@ -134,6 +134,9 @@ async def preview_preprocessing_duplicates(
     additional_settings = config_dict.get("additional_settings", {})
     new_ocr_engine = additional_settings.get("ocr_engine", "docling_tesseract")
     new_force_ocr = additional_settings.get("force_ocr", False)
+    # Model names for duplicate detection (user may change model while keeping same engine)
+    new_mistral_model = additional_settings.get("mistral_model")
+    new_vision_model = additional_settings.get("vision_model")
 
     # Normalize OCR engine names for comparison
     # Frontend sends "docling_tesseract" but backend stores "tesseract"
@@ -180,13 +183,16 @@ async def preview_preprocessing_duplicates(
             )
             total_existing_docs += len(existing_docs)
 
-            # Check for same config duplicates (OCR engine + force_ocr setting match)
+            # Check for same config duplicates (OCR engine + force_ocr setting + model match)
             same_config_docs = []
             for doc in existing_docs:
                 doc_meta = doc.meta_data or {}
                 doc_ocr_engine = doc_meta.get("ocr_engine")
                 doc_force_ocr = doc_meta.get("force_ocr", False)
                 doc_extraction_method = doc_meta.get("extraction_method", "")
+                # Model names stored in metadata (for mistral_ocr and llm_vision engines)
+                doc_mistral_model = doc_meta.get("mistral_model")
+                doc_vision_model = doc_meta.get("vision_model")
 
                 # Check if this document was created with the same config
                 # For PDFs with embedded text, docling_serve_no_ocr produces the same result
@@ -199,14 +205,39 @@ async def preview_preprocessing_duplicates(
                 )
 
                 # Same config = same OCR engine AND same force_ocr setting
+                # For mistral_ocr: also require same mistral_model
+                # For llm_vision: also require same vision_model
                 # OR both would use docling embedded text extraction (force_ocr=False for PDF)
                 is_same_config = (
                     (
                         doc_ocr_engine_normalized == new_ocr_engine_normalized
                         and doc_force_ocr == new_force_ocr
+                        # Model comparison: only check if engine matches
+                        and (
+                            # mistral_ocr engine: compare mistral_model
+                            (
+                                doc_ocr_engine == "mistral_ocr"
+                                and new_ocr_engine == "mistral_ocr"
+                                and doc_mistral_model == new_mistral_model
+                            )
+                            or
+                            # llm_vision engine: compare vision_model
+                            (
+                                doc_ocr_engine == "llm_vision"
+                                and new_ocr_engine == "llm_vision"
+                                and doc_vision_model == new_vision_model
+                            )
+                            or
+                            # Other engines (tesseract, pypdf, etc.): no model comparison needed
+                            (
+                                doc_ocr_engine not in ("mistral_ocr", "llm_vision")
+                                and new_ocr_engine not in ("mistral_ocr", "llm_vision")
+                            )
+                        )
                     )
                     or
                     # Special case: PDF with embedded text, force_ocr=False for both
+                    # (uses docling_serve_no_ocr regardless of OCR engine selection)
                     (
                         file.file_type == models.FileType.APPLICATION_PDF
                         and has_embedded_text

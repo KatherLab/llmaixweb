@@ -193,59 +193,8 @@
         </div>
       </div>
 
-      <!-- View Toggle and Actions -->
+      <!-- Batch Actions -->
       <div class="flex justify-between items-center mb-4">
-        <div class="flex items-center space-x-2">
-          <button
-            :class="[
-              'p-2 rounded-lg transition-colors',
-              viewMode === 'grid'
-                ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
-                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
-            ]"
-            @click="viewMode = 'grid'"
-          >
-            <svg
-              class="h-5 w-5"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-              />
-            </svg>
-          </button>
-          <button
-            :class="[
-              'p-2 rounded-lg transition-colors',
-              viewMode === 'list'
-                ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
-                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
-            ]"
-            @click="viewMode = 'list'"
-          >
-            <svg
-              class="h-5 w-5"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </button>
-        </div>
-
         <div class="flex items-center space-x-3">
           <span class="text-sm text-gray-500 dark:text-gray-400">
             {{ totalCount }} document{{ totalCount !== 1 ? 's' : '' }}
@@ -323,23 +272,7 @@
         </p>
       </div>
 
-      <!-- Grid View -->
-      <div
-        v-else-if="viewMode === 'grid'"
-        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-      >
-        <DocumentCard
-          v-for="doc in serverItems"
-          :key="doc.id"
-          :document="doc"
-          :selected="selectedDocuments.includes(doc.id)"
-          @toggle-selection="toggleDocumentSelection"
-          @view="viewDocument"
-          @download="downloadDocument"
-        />
-      </div>
-
-      <!-- List View -->
+      <!-- Documents Table -->
       <div
         v-else
         class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
@@ -364,6 +297,11 @@
                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Configuration
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Model
               </th>
               <th
                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
@@ -415,6 +353,11 @@
                   {{
                     getEngineLabelWithKey(doc.preprocessing_config?.additional_settings?.ocr_engine)
                   }}
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900 dark:text-white">
+                  {{ getModelName(doc) }}
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -637,7 +580,6 @@ import { getEngineLabelWithKey, setEngineLabels } from '@/utils/ocrLabels'
 import FileIcon from '../common/FileIcon.vue'
 import LoadingSpinner from '../common/LoadingSpinner.vue'
 import DocumentViewer from './DocumentViewer.vue'
-import DocumentCard from './DocumentCard.vue'
 import BatchActionsModal from './BatchActionsModal.vue'
 import DocumentGroups from './DocumentsGroups.vue'
 import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
@@ -662,7 +604,6 @@ const selectedDocuments = ref([])
 const viewingDocument = ref(null)
 const showBatchActions = ref(false)
 const batchAction = ref('')
-const viewMode = ref('grid')
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
 const activeTab = ref('documents')
@@ -1014,6 +955,17 @@ const formatFileSize = (bytes) => {
 const formatDate = (dateString) => {
   if (!dateString) return ''
   return new Date(dateString).toLocaleDateString()
+}
+
+const getModelName = (doc) => {
+  const metaData = doc.meta_data || {}
+  // Check for specific model fields first
+  if (metaData.mistral_model) return metaData.mistral_model
+  if (metaData.vision_model) return metaData.vision_model
+  // Fallback to generic model field
+  if (metaData.model) return metaData.model
+  // No model for local OCR
+  return '—'
 }
 
 // Debounced search
