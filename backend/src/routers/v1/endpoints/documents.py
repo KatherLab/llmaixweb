@@ -9,7 +9,7 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session, contains_eager, selectinload
+from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
 from .... import models, schemas
 from ....core.security import get_current_user
@@ -73,6 +73,10 @@ def get_documents(
         bool | None,
         Query(description="Include archived (non-latest) document versions"),
     ] = False,
+    compute_stats: Annotated[
+        bool | None,
+        Query(description="Compute stats (recent_count, today_count, etc.)"),
+    ] = True,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.PaginatedDocuments:
@@ -82,6 +86,7 @@ def get_documents(
     F = models.File
 
     # Build base SELECT with filters (no limit/offset yet)
+    # Apply same filters as main query for accurate stats
     base = select(D).where(D.project_id == project_id)
 
     # By default, only show latest document versions (hide archived/history)
@@ -115,25 +120,74 @@ def get_documents(
         joined_for_search = True
 
     # total BEFORE slicing
+    # Use exact count - reliable and works with all query types
+    # For large tables, PostgreSQL will use index-only scans when possible
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
+
+    # Compute stats server-side using efficient COUNT queries
+    recent_count = None
+    today_count = None
+    week_count = None
+    month_count = None
+
+    if compute_stats:
+        now = datetime.datetime.now(datetime.UTC)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_ago = now - datetime.timedelta(days=7)
+        month_ago = now - datetime.timedelta(days=30)
+
+        # Build stats query with same filters as base
+        stats_base = select(func.count(D.id)).where(D.project_id == project_id)
+        if not include_archived:
+            stats_base = stats_base.where(D.is_latest.is_(True))
+        if file_id is not None:
+            stats_base = stats_base.where(D.original_file_id == file_id)
+        if file_preprocessing_task_id is not None:
+            stats_base = stats_base.where(
+                D.file_preprocessing_task_id == file_preprocessing_task_id
+            )
+        if config_id is not None:
+            stats_base = stats_base.where(D.preprocessing_config_id == config_id)
+
+        # Today count
+        today_count = db.scalar(stats_base.where(D.created_at >= today_start)) or 0
+
+        # Week count (last 7 days)
+        week_count = db.scalar(stats_base.where(D.created_at >= week_ago)) or 0
+
+        # Month count (last 30 days)
+        month_count = db.scalar(stats_base.where(D.created_at >= month_ago)) or 0
+
+        # Recent count (alias for week_count)
+        recent_count = week_count
 
     # Page query
     page_q = base.order_by(D.created_at.desc()).limit(limit).offset(offset)
 
-    # If you want to eagerly include original_file in the response (handy for the UI)
+    # Eager load relationships needed for the document list UI
     if joined_for_search:
         # We already joined File for search; use contains_eager to populate relationship
-        page_q = page_q.options(contains_eager(D.original_file))
+        page_q = page_q.options(
+            contains_eager(D.original_file),
+            selectinload(D.preprocessing_config),
+            selectinload(D.file_preprocessing_task),
+        )
     else:
-        # Otherwise, you can lazy-load or eager-load as you prefer:
-        # from sqlalchemy.orm import joinedload
-        # page_q = page_q.options(joinedload(D.original_file))
-        pass
+        # Always eager load to avoid N+1 queries in the UI
+        page_q = page_q.options(
+            joinedload(D.original_file),
+            selectinload(D.preprocessing_config),
+            selectinload(D.file_preprocessing_task),
+        )
 
     items = db.execute(page_q).scalars().all()
     return schemas.PaginatedDocuments(
         items=[schemas.Document.model_validate(d) for d in items],
         total=total,
+        recent_count=recent_count,
+        today_count=today_count,
+        week_count=week_count,
+        month_count=month_count,
     )
 
 

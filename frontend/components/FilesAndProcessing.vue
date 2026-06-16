@@ -104,6 +104,7 @@
           class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
         >
           <option value="">All Files</option>
+          <option value="not_preprocessed">Not processed</option>
           <option value="pending">Pending</option>
           <option value="processing">Processing</option>
           <option value="completed">Completed</option>
@@ -120,9 +121,14 @@
       </div>
     </div>
 
+    <!-- Loading Indicator -->
+    <div v-if="isLoading" class="flex justify-center py-12">
+      <LoadingSpinner size="large" />
+    </div>
+
     <!-- Files Table -->
     <FilesTable
-      v-if="files.length"
+      v-else-if="files.length"
       :files="displayFiles"
       :selected-files="selectedFiles"
       :sort-by="sortBy"
@@ -138,6 +144,8 @@
       @page-size-change="handlePageSizeChange"
       @sort="handleSort"
       @view-history="handleViewHistory"
+      @select-all-files="selectAllFiles"
+      @clear-selection="clearSelection"
     />
 
     <!-- Slide-in Preprocessing History Panel -->
@@ -1660,13 +1668,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
 import { useToast } from 'vue-toastification'
 import FilePreviewModal from './files/FilePreviewModal.vue'
 import FilesTable from './files/FilesTable.vue'
 import FileImportConfigModal from './files/FileImportConfigModal.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import { setEngineLabels, getEngineLabel, getEngineSubtitle } from '@/utils/ocrLabels'
 import { useScrollLock } from '@/composables/useScrollLock'
 import { websocketService } from '@/services/websocket.js'
@@ -1697,6 +1706,7 @@ const fileToDelete = ref(null)
 const showImportConfigModal = ref(false)
 const configuringFile = ref(null)
 const expandedTasks = ref(new Set()) // Multi-expand accordion state
+const isLoading = ref(true)
 
 // Duplicate preview state
 const showDuplicatePreviewModal = ref(false)
@@ -1704,10 +1714,13 @@ const duplicatePreview = ref(null)
 const pendingProcessingSettings = ref(null)
 const skipExisting = ref(false) // If true, only process files without existing documents
 
+// "Select all" across all pages state
+const selectAllMode = ref(false) // true = all files in project, false = only current page
+
 // Pagination state
 const pagination = ref({
   page: 1,
-  page_size: 25,
+  page_size: 50,
   total: 0,
   total_pages: 0,
   start: 0,
@@ -1737,8 +1750,15 @@ const visionMaxImageDim = ref(0)
 const showAdvanced = ref(false)
 const isSubmitting = ref(false)
 
+// Cache for preprocessing tasks to avoid refetching on every file refresh
+let cachedTasks = null
+let cachedTasksTimestamp = null
+const TASKS_CACHE_TTL_MS = 30000 // 30 seconds cache (increased for 50k+ files scaling)
+
 // Fetch files with preprocessing tasks (paginated)
-const fetchFiles = async () => {
+const fetchFiles = async (options = {}) => {
+  const { forceRefreshTasks = false } = options
+
   try {
     const params = new URLSearchParams({
       page: String(pagination.value.page),
@@ -1754,7 +1774,7 @@ const fetchFiles = async () => {
 
     // Add status filter
     if (filterStatus.value) {
-      params.append('file_type', filterStatus.value)
+      params.append('status', filterStatus.value)
     }
 
     const response = await api.get(`/project/${props.projectId}/file?${params}`)
@@ -1770,9 +1790,23 @@ const fetchFiles = async () => {
       end: Math.min(data.page * data.page_size, data.total),
     }
 
-    // Fetch all preprocessing tasks ONCE for the project
-    const tasksResponse = await api.get(`/project/${props.projectId}/preprocess?limit=100`)
-    const allTasks = tasksResponse.data || []
+    // Fetch preprocessing tasks with caching to avoid refetching on every file refresh
+    const now = Date.now()
+    const needTasks =
+      forceRefreshTasks ||
+      !cachedTasks ||
+      !cachedTasksTimestamp ||
+      now - cachedTasksTimestamp > TASKS_CACHE_TTL_MS
+
+    let allTasks = []
+    if (needTasks) {
+      const tasksResponse = await api.get(`/project/${props.projectId}/preprocess?limit=100`)
+      allTasks = tasksResponse.data || []
+      cachedTasks = allTasks
+      cachedTasksTimestamp = now
+    } else {
+      allTasks = cachedTasks
+    }
 
     // Build a map: file_id -> [tasks]
     const tasksByFileId = new Map()
@@ -1811,6 +1845,8 @@ const fetchFiles = async () => {
   } catch (err) {
     console.error('Failed to fetch files:', err)
     toast.error('Failed to load files')
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -1876,13 +1912,60 @@ const toggleSelection = (fileId) => {
   }
 }
 
-// Toggle select all
+// Toggle select all (for current page only)
 const toggleSelectAll = () => {
   if (selectedFiles.value.length === files.value.length) {
     selectedFiles.value = []
+    selectAllMode.value = false
   } else {
     selectedFiles.value = files.value.map((f) => f.id)
+    selectAllMode.value = false
   }
+}
+
+// Select ALL files across all pages (for 50k+ files)
+const selectAllFiles = async () => {
+  selectAllMode.value = true
+  // Fetch all file IDs from the project (server-side)
+  try {
+    // We need to fetch all file IDs - use a minimal request
+    // This is a one-time operation even for large projects
+    const allFileIds = []
+    let page = 1
+    const pageSize = 250 // Max allowed per page
+
+    while (true) {
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+        sort_by: sortBy.value,
+        sort_order: sortOrder.value,
+      })
+
+      if (searchQuery.value) params.append('search', searchQuery.value)
+      if (filterStatus.value) params.append('file_type', filterStatus.value)
+
+      const response = await api.get(`/project/${props.projectId}/file?${params}`)
+      const fileIds = response.data.items.map((f) => f.id)
+      allFileIds.push(...fileIds)
+
+      if (page >= response.data.total_pages) break
+      page++
+    }
+
+    selectedFiles.value = allFileIds
+    toast.success(`Selected all ${allFileIds.length} files`)
+  } catch (err) {
+    console.error('Failed to select all files:', err)
+    toast.error('Failed to select all files')
+    selectAllMode.value = false
+  }
+}
+
+// Clear selection
+const clearSelection = () => {
+  selectedFiles.value = []
+  selectAllMode.value = false
 }
 
 // Navigate to document
@@ -1914,7 +1997,10 @@ const deleteFile = async (file) => {
   try {
     await api.delete(`/project/${props.projectId}/file/${file.id}`)
     toast.success(`Deleted ${file.file_name}`)
-    await fetchFiles()
+    // Invalidate task cache when files change
+    cachedTasks = null
+    cachedTasksTimestamp = null
+    await fetchFiles({ forceRefreshTasks: true })
     emit('files-changed')
   } catch (err) {
     console.error('Failed to delete file:', err)
@@ -2229,8 +2315,11 @@ const confirmAndStartProcessing = async () => {
     skipExisting.value = false
     pendingProcessingSettings.value = null
 
-    // Refresh files
-    await fetchFiles()
+    // Invalidate task cache when starting new preprocessing
+    cachedTasks = null
+    cachedTasksTimestamp = null
+    // Refresh files with forced task refresh to show the new task immediately
+    await fetchFiles({ forceRefreshTasks: true })
 
     // Auto-open history panel for the first file to show the new task
     if (firstSelectedFileId) {
@@ -2315,7 +2404,10 @@ const uploadFiles = async (fileList) => {
 
   isSubmitting.value = false
   showUploadModal.value = false
-  await fetchFiles()
+  // Invalidate task cache when files change
+  cachedTasks = null
+  cachedTasksTimestamp = null
+  await fetchFiles({ forceRefreshTasks: true })
   emit('files-changed')
 }
 
@@ -2349,49 +2441,13 @@ const fetchOcrSettings = async () => {
   }
 }
 
-// Update only preprocessing tasks (for polling or WebSocket fallback)
-const updateProcessingTasks = async () => {
-  try {
-    const tasksResponse = await api.get(`/project/${props.projectId}/preprocess?limit=100`)
-    const allTasks = tasksResponse.data || []
-
-    // Build a map: file_id -> [tasks]
-    const tasksByFileId = new Map()
-    for (const task of allTasks) {
-      if (task.file_tasks && Array.isArray(task.file_tasks)) {
-        for (const ft of task.file_tasks) {
-          const fid = ft.file_id
-          if (!tasksByFileId.has(fid)) {
-            tasksByFileId.set(fid, [])
-          }
-          tasksByFileId.get(fid).push(task)
-        }
-      }
-    }
-
-    // Update tasks on existing file objects
-    for (const file of files.value) {
-      const fileTasks = tasksByFileId.get(file.id) || []
-      const oldTasks = file.preprocessing_tasks || []
-      const hasChanged =
-        JSON.stringify(oldTasks.map((t) => ({ id: t.id, status: t.status }))) !==
-        JSON.stringify(fileTasks.map((t) => ({ id: t.id, status: t.status })))
-
-      if (hasChanged) {
-        file.preprocessing_tasks = fileTasks.sort(
-          (a, b) => new Date(b.created_at) - new Date(a.created_at),
-        )
-        file._status = getFileStatus(file)
-      }
-    }
-  } catch (err) {
-    console.error('Failed to update processing tasks:', err)
-  }
-}
-
 // WebSocket subscription for preprocessing updates
 let wsPreprocessingUnsubscribe = null
 const seenTaskIds = new Set()
+
+// Debounce for refresh triggers (prevents multiple rapid refetches)
+let refreshDebounceTimer = null
+const REFRESH_DEBOUNCE_MS = 500 // Wait 500ms after last trigger before refetching
 
 const startWebSocket = () => {
   wsPreprocessingUnsubscribe = websocketService.onPreprocessingUpdate((data) => {
@@ -2411,8 +2467,8 @@ const startWebSocket = () => {
       ['completed', 'failed', 'cancelled'].includes(String(data.status || '').toLowerCase())
 
     if (isTerminalState || isNewTask) {
-      // Full refresh to get latest file and task status
-      fetchFiles()
+      // Use debounced refresh to prevent rapid refetches when multiple tasks complete
+      debouncedFetchFiles()
     } else {
       // For progress updates, merge the WebSocket data directly into files
       mergePreprocessingUpdate(data)
@@ -2475,6 +2531,21 @@ const stopWebSocket = () => {
     wsPreprocessingUnsubscribe()
     wsPreprocessingUnsubscribe = null
   }
+  if (refreshDebounceTimer) {
+    clearTimeout(refreshDebounceTimer)
+    refreshDebounceTimer = null
+  }
+}
+
+// Debounced refresh to prevent rapid refetches when multiple tasks update simultaneously
+const debouncedFetchFiles = () => {
+  if (refreshDebounceTimer) {
+    clearTimeout(refreshDebounceTimer)
+  }
+  refreshDebounceTimer = setTimeout(() => {
+    fetchFiles()
+    refreshDebounceTimer = null
+  }, REFRESH_DEBOUNCE_MS)
 }
 
 // Start WebSocket on mount (no polling needed)

@@ -134,8 +134,15 @@ class Document(DocumentBase):
 
 
 class PaginatedDocuments(UTCModel):
+    """Paginated response for document listing with stats"""
+
     items: List[Document]
     total: int
+    # Stats computed server-side to avoid loading all documents
+    recent_count: int | None = None  # Documents created in last 7 days
+    today_count: int | None = None  # Documents created today
+    week_count: int | None = None  # Documents created in last 7 days
+    month_count: int | None = None  # Documents created in last 30 days
 
 
 class DocumentSetBase(UTCModel):

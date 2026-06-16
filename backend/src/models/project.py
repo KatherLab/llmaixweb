@@ -154,8 +154,13 @@ class File(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    # Add index for hash lookups
-    __table_args__ = (Index("ix_file_hash_project", "file_hash", "project_id"),)
+    # Add indexes for common query patterns (optimized for 50k+ files)
+    __table_args__ = (
+        Index("ix_file_hash_project", "file_hash", "project_id"),
+        Index("ix_files_project_created", "project_id", "created_at"),
+        Index("ix_files_project_type", "project_id", "file_type"),
+        Index("ix_files_project_creator", "project_id", "file_creator"),
+    )
 
     project: Mapped["Project"] = relationship(back_populates="files")
     documents_as_original: Mapped[list["Document"]] = relationship(
@@ -270,6 +275,12 @@ class Document(Base):
         ),
         Index("ix_documents_latest", "is_latest"),
         Index("ix_documents_version_of", "version_of"),
+        # Composite indexes for common query patterns (optimized for 50k+ documents)
+        Index("ix_documents_project_created", "project_id", "created_at"),
+        Index("ix_documents_project_latest", "project_id", "is_latest"),
+        Index("ix_documents_project_file", "project_id", "original_file_id"),
+        Index("ix_documents_project_config", "project_id", "preprocessing_config_id"),
+        Index("ix_documents_project_task", "project_id", "file_preprocessing_task_id"),
     )
 
 
@@ -455,6 +466,9 @@ class FilePreprocessingTask(Base):
         MutableDict.as_mutable(JSON), nullable=True, default=dict
     )
 
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), nullable=True

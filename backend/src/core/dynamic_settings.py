@@ -1,6 +1,6 @@
 # backend/src/core/dynamic_settings.py
-from functools import lru_cache
 import sys
+from functools import lru_cache
 
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 # Use absolute imports for reliability across different run contexts
 try:
     from .config import SETTINGS_META, Settings
+
     _config_module_name = __name__.replace("dynamic_settings", "config")
 except ImportError:
     from backend.src.core.config import SETTINGS_META, Settings
+
     _config_module_name = "backend.src.core.config"
 
 try:

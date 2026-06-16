@@ -4,6 +4,39 @@
   >
     <!-- Table -->
     <div class="overflow-x-auto">
+      <!-- "Select All" banner - shown when files are selected and there are more pages -->
+      <div
+        v-if="selectedFiles.length > 0 && pagination.total > pagination.page_size"
+        class="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-4 py-2"
+      >
+        <div class="flex items-center justify-between">
+          <p class="text-sm text-blue-800 dark:text-blue-300">
+            <span class="font-medium">{{ selectedFiles.length }}</span>
+            file{{ selectedFiles.length !== 1 ? 's' : '' }} selected
+            <span
+              v-if="selectedFiles.length < pagination.total"
+              class="text-blue-600 dark:text-blue-400"
+            >
+              out of {{ pagination.total }} total
+            </span>
+          </p>
+          <button
+            v-if="selectedFiles.length < pagination.total"
+            class="text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 underline"
+            @click="$emit('select-all-files')"
+          >
+            Select all {{ pagination.total }} files in project
+          </button>
+          <button
+            v-if="selectedFiles.length === pagination.total"
+            class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+            @click="$emit('clear-selection')"
+          >
+            Clear selection
+          </button>
+        </div>
+      </div>
+
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50 dark:bg-slate-800">
           <tr>
@@ -291,6 +324,8 @@ const emit = defineEmits([
   'page-size-change',
   'sort',
   'view-history',
+  'select-all-files',
+  'clear-selection',
 ])
 
 const localPageSize = computed({

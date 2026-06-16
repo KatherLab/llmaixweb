@@ -10,14 +10,22 @@
         <span class="text-sm text-gray-700">Show all users' projects</span>
       </label>
     </div>
-    <div style="height: 500px; width: 100%">
+
+    <!-- Loading Indicator -->
+    <div v-if="isLoading" class="flex justify-center py-12">
+      <LoadingSpinner size="large" />
+    </div>
+
+    <!-- Grid -->
+    <div v-else style="height: 500px; width: 100%">
       <AgGridVue
         :row-data="rowData"
         :column-defs="columnDefs"
         :default-col-def="defaultColDef"
         :grid-options="gridOptions"
         :pagination="true"
-        :pagination-auto-page-size="true"
+        :pagination-page-size="20"
+        :pagination-auto-page-size="false"
         :theme="gridTheme"
         :components="components"
         style="width: 100%; height: 100%"
@@ -46,6 +54,7 @@ import { api as http } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { themeMaterial } from 'ag-grid-community'
+import LoadingSpinner from './common/LoadingSpinner.vue'
 
 // ---- auth / router ----
 const authStore = useAuthStore()
@@ -68,6 +77,7 @@ const rowData = ref([])
 const gridApi = ref(null)
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 const showAllProjects = ref(false)
+const isLoading = ref(true)
 
 // ---- Vue cell components (render functions; no runtime compiler needed) ----
 const ProjectCell = defineComponent({
@@ -257,6 +267,7 @@ onBeforeUnmount(() => {
 
 // ---- data ----
 const loadProjects = async () => {
+  isLoading.value = true
   try {
     const params = isAdmin.value && showAllProjects.value ? { all: true } : {}
     const response = await http.get('/project', { params })
@@ -270,6 +281,8 @@ const loadProjects = async () => {
     sizeToFitIfVisible()
   } catch (err) {
     console.error('Error loading projects:', err)
+  } finally {
+    isLoading.value = false
   }
 }
 

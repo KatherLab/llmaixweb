@@ -69,7 +69,11 @@ def get_project_files(
     project_id: int,
     # Filter parameters
     search: str | None = Query(None, description="Search in filename"),
-    file_type: str | None = Query(None, description="Filter by file type"),
+    file_type: str | None = Query(None, description="Filter by file type (MIME type)"),
+    status: str | None = Query(
+        None,
+        description="Filter by preprocessing status (pending, processing, completed, failed)",
+    ),
     file_creator: FileCreator | None = Query(None),
     date_from: datetime.datetime | None = Query(None),
     date_to: datetime.datetime | None = Query(None),
@@ -86,13 +90,91 @@ def get_project_files(
     """Get project files with advanced filtering, pagination, and sorting"""
     check_project_access(project_id, current_user, db)
 
-    query = select(models.File).where(models.File.project_id == project_id)
+    # Build base query with left join to get latest preprocessing task
+    # Subquery to get the latest task created_at per file
+    latest_task_date_subquery = (
+        select(
+            models.FilePreprocessingTask.file_id,
+            func.max(models.FilePreprocessingTask.created_at).label("latest_task_date"),
+        )
+        .group_by(models.FilePreprocessingTask.file_id)
+        .subquery()
+    )
+
+    # Subquery to get the latest task status per file
+    # Use MIN(id) to ensure only one row per file_id when multiple tasks have the same timestamp
+    latest_task_status_subquery = (
+        select(
+            models.FilePreprocessingTask.file_id,
+            func.min(models.FilePreprocessingTask.id).label("latest_task_id"),
+        )
+        .join(
+            latest_task_date_subquery,
+            and_(
+                models.FilePreprocessingTask.file_id
+                == latest_task_date_subquery.c.file_id,
+                models.FilePreprocessingTask.created_at
+                == latest_task_date_subquery.c.latest_task_date,
+            ),
+        )
+        .group_by(models.FilePreprocessingTask.file_id)
+        .subquery()
+    )
+
+    # Get the status for the latest task (join with the task table using the min id)
+    latest_task_status_with_status = (
+        select(
+            latest_task_status_subquery.c.file_id,
+            models.FilePreprocessingTask.status.label("latest_status"),
+        )
+        .join(
+            models.FilePreprocessingTask,
+            models.FilePreprocessingTask.id
+            == latest_task_status_subquery.c.latest_task_id,
+        )
+        .subquery()
+    )
+
+    query = (
+        select(models.File)
+        .where(models.File.project_id == project_id)
+        .outerjoin(
+            latest_task_status_with_status,
+            models.File.id == latest_task_status_with_status.c.file_id,
+        )
+    )
 
     # Apply filters
     if search:
         query = query.where(models.File.file_name.ilike(f"%{search}%"))
     if file_type:
         query = query.where(models.File.file_type == file_type)
+    if status:
+        # Filter by preprocessing status based on latest task
+        status_lower = status.lower()
+        if status_lower == "processing":
+            # 'processing' includes pending, processing, and in_progress
+            query = query.where(
+                latest_task_status_with_status.c.latest_status.in_(
+                    ["pending", "processing", "in_progress"]
+                )
+            )
+        elif status_lower in [
+            "pending",
+            "processing",
+            "in_progress",
+            "completed",
+            "failed",
+        ]:
+            query = query.where(
+                latest_task_status_with_status.c.latest_status == status_lower
+            )
+        elif status_lower in ["not_preprocessed", "notstarted", "none"]:
+            # Files without any preprocessing tasks
+            query = query.where(
+                latest_task_status_with_status.c.latest_status.is_(None)
+            )
+
     if file_creator is not None:
         query = query.where(models.File.file_creator == file_creator)
     if date_from:
@@ -112,6 +194,40 @@ def get_project_files(
         total_query = total_query.where(models.File.file_name.ilike(f"%{search}%"))
     if file_type:
         total_query = total_query.where(models.File.file_type == file_type)
+    if status:
+        # For status filter, we need to use the same subquery approach
+        status_lower = status.lower()
+        if status_lower == "processing":
+            total_query = total_query.select_from(
+                models.File.outerjoin(
+                    latest_task_status_with_status,
+                    models.File.id == latest_task_status_with_status.c.file_id,
+                )
+            ).where(
+                latest_task_status_with_status.c.latest_status.in_(
+                    ["pending", "processing", "in_progress"]
+                )
+            )
+        elif status_lower in [
+            "pending",
+            "processing",
+            "in_progress",
+            "completed",
+            "failed",
+        ]:
+            total_query = total_query.select_from(
+                models.File.outerjoin(
+                    latest_task_status_with_status,
+                    models.File.id == latest_task_status_with_status.c.file_id,
+                )
+            ).where(latest_task_status_with_status.c.latest_status == status_lower)
+        elif status_lower in ["not_preprocessed", "notstarted", "none"]:
+            total_query = total_query.select_from(
+                models.File.outerjoin(
+                    latest_task_status_with_status,
+                    models.File.id == latest_task_status_with_status.c.file_id,
+                )
+            ).where(latest_task_status_with_status.c.latest_status.is_(None))
     if file_creator is not None:
         total_query = total_query.where(models.File.file_creator == file_creator)
     if date_from:
@@ -141,6 +257,19 @@ def get_project_files(
     # Apply pagination
     offset = (page - 1) * page_size
     query = query.offset(offset).limit(page_size)
+
+    # Eager load relationships to avoid N+1 queries in UI
+    # Critical for performance with 50k+ files
+    query = query.options(
+        selectinload(models.File.preprocessing_tasks),
+        selectinload(models.File.file_preprocessing_tasks),
+        # Only load minimal fields for document relationships (avoid loading full text)
+        selectinload(models.File.documents_as_original).load_only(
+            models.Document.id,
+            models.Document.is_latest,
+            models.Document.document_name,
+        ),
+    )
 
     files = list(db.execute(query).scalars().all())
 

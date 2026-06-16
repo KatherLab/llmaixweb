@@ -605,7 +605,7 @@ const viewingDocument = ref(null)
 const showBatchActions = ref(false)
 const batchAction = ref('')
 const currentPage = ref(1)
-const itemsPerPage = ref(20)
+const itemsPerPage = ref(50)
 const activeTab = ref('documents')
 const showCreateGroupModal = ref(false)
 const createGroupWithDocs = ref([]) // Documents to pre-select when creating group
@@ -713,16 +713,15 @@ const fetchDocuments = async () => {
       date_from: date_from || undefined,
       date_to: date_to || undefined,
       include_archived: filters.value.includeArchived || undefined,
+      compute_stats: true, // Get server-side stats
     }
 
     const { data } = await api.get(`/project/${props.projectId}/document`, { params })
     serverItems.value = data.items
     totalCount.value = data.total
 
-    // Compute recent documents (last 7 days) from loaded items
-    const weekAgo = new Date()
-    weekAgo.setDate(weekAgo.getDate() - 7)
-    recentDocuments.value = data.items.filter((doc) => new Date(doc.created_at) > weekAgo).length
+    // Use server-side stats instead of client-side computation
+    recentDocuments.value = data.week_count || 0
 
     // Safety: if you navigated beyond last page due to a filter change, pull back
     if (
@@ -742,6 +741,7 @@ const fetchDocuments = async () => {
 }
 
 // Fetch all documents for the groups modal (with pagination)
+// Only called when user switches to Document Groups tab
 const fetchAllDocuments = async () => {
   if (allDocumentsLoaded.value) {
     return // Already fetched
@@ -992,11 +992,22 @@ watch(
 
 watch([currentPage, itemsPerPage], fetchDocuments)
 
+// Watch for tab change - load all documents only when switching to Groups tab
+watch(
+  () => activeTab.value,
+  (newTab) => {
+    if (newTab === 'groups' && !allDocumentsLoaded.value) {
+      fetchAllDocuments()
+    }
+  },
+)
+
 // Lifecycle
 onMounted(() => {
   fetchDocuments()
   fetchDocumentSets()
-  fetchAllDocuments() // Load all documents for groups modal
+  // Don't load all documents on mount - only when user switches to Groups tab
+  // fetchAllDocuments() // Moved to watch on activeTab
   // Load OCR display names from server
   api
     .get('/auth/settings')
