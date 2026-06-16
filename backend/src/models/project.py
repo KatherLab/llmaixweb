@@ -16,7 +16,7 @@ from sqlalchemy import (
     Table,
     UniqueConstraint,
 )
-from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from sqlalchemy.sql import func
 
@@ -220,6 +220,14 @@ class Document(Base):
         ForeignKey("files.id"), nullable=True
     )
 
+    # Version tracking (for document history)
+    is_latest: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, index=True
+    )
+    version_of: Mapped[int | None] = mapped_column(
+        ForeignKey("documents.id"), nullable=True
+    )  # Links to the "root" document for version chains
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -241,15 +249,27 @@ class Document(Base):
     document_sets: Mapped[list["DocumentSet"]] = relationship(
         secondary=document_set_association, back_populates="documents"
     )
+    # Version tracking relationships
+    parent_version: Mapped["Document | None"] = relationship(
+        foreign_keys=[version_of], remote_side="Document.id", backref="versions"
+    )
 
-    # Add unique constraint for duplicate detection
+    # Unique constraint to support document versioning.
+    # Only enforces uniqueness when is_latest=True, allowing unlimited
+    # archived versions (is_latest=False) for version history.
+    # Note: The actual partial constraint is created via migration
+    # (fix_document_versioning_constraint) using postgresql_where.
     __table_args__ = (
+        # This UniqueConstraint is for documentation/SQLAlchemy awareness.
+        # The actual DB constraint is partial (only when is_latest=True).
         UniqueConstraint(
             "original_file_id",
             "preprocessing_config_id",
             "document_name",
             name="_document_uniqueness",
         ),
+        Index("ix_documents_latest", "is_latest"),
+        Index("ix_documents_version_of", "version_of"),
     )
 
 
@@ -422,6 +442,9 @@ class FilePreprocessingTask(Base):
 
     # Track produced documents
     document_count: Mapped[int] = mapped_column(default=0)
+    document_ids: Mapped[list[int]] = mapped_column(
+        MutableList.as_mutable(JSON), nullable=True, default=list
+    )
 
     # Add these new fields
     file_name: Mapped[str] = mapped_column(String(255), nullable=True)

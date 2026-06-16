@@ -81,7 +81,7 @@ class DoclingServeClient:
         base_url: str,
         timeout_seconds: int = 600,
         max_retries: int = 1,
-        default_ocr_langs: list[str] | None = None,
+        default_ocr_langs: list[str] | str | None = None,
     ):
         if not base_url:
             raise DoclingServeError("docling-serve base URL is required")
@@ -89,7 +89,8 @@ class DoclingServeClient:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
-        self.default_ocr_langs = default_ocr_langs or ["deu", "eng"]
+        # Default to "auto" for automatic language detection
+        self.default_ocr_langs = default_ocr_langs or "auto"
 
         self._client = httpx.Client(timeout=timeout_seconds)
 
@@ -125,7 +126,7 @@ class DoclingServeClient:
         filename: str,
         *,
         force_ocr: bool = False,
-        ocr_langs: list[str] | None = None,
+        ocr_langs: list[str] | str | None = None,
     ) -> DoclingServeResult:
         """Convert PDF using Tesseract OCR.
 
@@ -133,7 +134,7 @@ class DoclingServeClient:
             file_content: Raw PDF file bytes.
             filename: Original filename (for logging).
             force_ocr: If True, force full-page OCR even if embedded text exists.
-            ocr_langs: OCR languages (defaults to instance default).
+            ocr_langs: OCR languages (defaults to instance default). Use "auto" for automatic detection.
 
         Returns:
             DoclingServeResult with extracted Markdown.
@@ -149,7 +150,7 @@ class DoclingServeClient:
             do_ocr=True,
             force_ocr=force_ocr,
             ocr_engine="tesseract",
-            ocr_langs=ocr_langs or self.default_ocr_langs,
+            ocr_langs=ocr_langs if ocr_langs is not None else self.default_ocr_langs,
         )
 
     def convert_image_tesseract(
@@ -158,7 +159,7 @@ class DoclingServeClient:
         filename: str,
         mime_type: str,
         *,
-        ocr_langs: list[str] | None = None,
+        ocr_langs: list[str] | str | None = None,
     ) -> DoclingServeResult:
         """Convert image using Tesseract OCR.
 
@@ -166,7 +167,7 @@ class DoclingServeClient:
             file_content: Raw image file bytes.
             filename: Original filename (for logging).
             mime_type: MIME type of the image (image/png, image/jpeg, etc.).
-            ocr_langs: OCR languages (defaults to instance default).
+            ocr_langs: OCR languages (defaults to instance default). Use "auto" for automatic detection.
 
         Returns:
             DoclingServeResult with extracted Markdown.
@@ -182,7 +183,7 @@ class DoclingServeClient:
             do_ocr=True,
             force_ocr=True,
             ocr_engine="tesseract",
-            ocr_langs=ocr_langs or self.default_ocr_langs,
+            ocr_langs=ocr_langs if ocr_langs is not None else self.default_ocr_langs,
         )
 
     def _convert(
@@ -194,7 +195,7 @@ class DoclingServeClient:
         do_ocr: bool,
         force_ocr: bool,
         ocr_engine: str | None = None,
-        ocr_langs: list[str] | None = None,
+        ocr_langs: list[str] | str | None = None,
     ) -> DoclingServeResult:
         """Send conversion request to docling-serve.
 
@@ -232,20 +233,26 @@ class DoclingServeClient:
             "to_formats": "md",
             "do_ocr": str(do_ocr).lower(),
             "force_ocr": str(force_ocr).lower(),
-            "image_export_mode": "placeholder",
             "table_mode": "fast",
             "abort_on_error": "false",
         }
 
+        # Only set image_export_mode when OCR is disabled.
+        # When do_ocr=true, docling-serve needs to export images for OCR,
+        # so we let it use its default behavior (omitting the parameter).
+        if not do_ocr:
+            data["image_export_mode"] = "placeholder"
+
         # Add OCR-specific fields if OCR is enabled
         if do_ocr:
             if ocr_engine:
-                data["ocr_engine"] = ocr_engine
+                data["ocr_preset"] = ocr_engine
             if ocr_langs:
-                # Encode list as comma-separated string for multipart form
+                # Encode list as comma-separated string for multipart form.
+                # If ocr_langs is "auto", omit the parameter to let Tesseract use system default.
                 if isinstance(ocr_langs, list):
                     data["ocr_lang"] = ",".join(ocr_langs)
-                else:
+                elif ocr_langs.lower() != "auto":
                     data["ocr_lang"] = ocr_langs
 
         last_error: DoclingServeError | None = None

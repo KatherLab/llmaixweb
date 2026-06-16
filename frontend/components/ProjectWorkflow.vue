@@ -10,13 +10,13 @@
         <div
           v-if="idx > 0"
           class="absolute left-0 top-1/2 h-0.5 w-1/2"
-          :class="[idx <= currentIdx ? 'bg-blue-400' : 'bg-gray-200']"
+          :class="[idx <= currentIdx ? 'bg-blue-400' : 'bg-gray-200 dark:bg-slate-700']"
           style="transform: translateY(-50%); z-index: 0"
         ></div>
         <div
           v-if="idx < steps.length - 1"
           class="absolute right-0 top-1/2 h-0.5 w-1/2"
-          :class="[idx < currentIdx ? 'bg-blue-400' : 'bg-gray-200']"
+          :class="[idx < currentIdx ? 'bg-blue-400' : 'bg-gray-200 dark:bg-slate-700']"
           style="transform: translateY(-50%); z-index: 0"
         ></div>
 
@@ -25,15 +25,15 @@
           class="relative z-10 flex items-center justify-center w-11 h-11 rounded-full border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
           :class="[
             idx < currentIdx
-              ? 'bg-blue-50 border-blue-300 shadow-sm'
+              ? 'bg-blue-50 dark:bg-slate-800 border-blue-300 dark:border-blue-700 shadow-sm'
               : idx === currentIdx
-                ? 'bg-white border-blue-500 shadow ring-2 ring-blue-200 scale-105'
-                : 'bg-white border-gray-300 shadow',
+                ? 'bg-white dark:bg-slate-900 border-blue-500 dark:border-blue-400 shadow ring-2 ring-blue-200 dark:ring-blue-800 scale-105'
+                : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-slate-700 shadow',
           ]"
           @click="$emit('change-step', step.id)"
         >
           <!-- Checkmark for completed -->
-          <span v-if="idx < currentIdx" class="text-blue-500">
+          <span v-if="idx < currentIdx" class="text-blue-500 dark:text-blue-400">
             <svg class="w-5 h-5" viewBox="0 0 20 20" fill="none">
               <path
                 d="M6 10.5l3 3 5-6"
@@ -48,7 +48,11 @@
           <span
             v-else
             class="text-base font-bold"
-            :class="idx === currentIdx ? 'text-blue-600' : 'text-blue-400'"
+            :class="
+              idx === currentIdx
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-blue-400 dark:text-blue-500'
+            "
           >
             {{ idx + 1 }}
           </span>
@@ -58,10 +62,10 @@
           class="mt-1 text-xs font-semibold leading-tight text-center"
           :class="[
             idx === currentIdx
-              ? 'text-blue-600'
+              ? 'text-blue-600 dark:text-blue-400'
               : idx < currentIdx
-                ? 'text-blue-400'
-                : 'text-gray-400',
+                ? 'text-blue-400 dark:text-blue-500'
+                : 'text-gray-400 dark:text-gray-500',
           ]"
         >
           {{ step.name }}
@@ -80,10 +84,9 @@ const props = defineProps({
 const emit = defineEmits(['change-step'])
 
 const steps = [
-  { id: 'files', name: 'Upload Files' },
-  { id: 'preprocessing', name: 'Preprocess' },
+  { id: 'files', name: 'Files & Preprocessing' },
   { id: 'documents', name: 'Documents' },
-  { id: 'schemas', name: 'Schemas' },
+  { id: 'schemas', name: 'Schemas & Prompts' },
   { id: 'trials', name: 'Run Trials' },
   { id: 'evaluation', name: 'Evaluation' },
 ]

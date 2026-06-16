@@ -1,14 +1,18 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-100 via-white to-blue-100">
+  <div
+    class="min-h-screen bg-gradient-to-br from-gray-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800"
+  >
     <!-- Glassy App Bar -->
-    <header class="sticky top-0 z-30 bg-white/70 shadow-lg backdrop-blur-lg transition-all">
+    <header
+      class="sticky top-0 z-30 bg-white/70 dark:bg-slate-900/70 shadow-lg backdrop-blur-lg transition-all"
+    >
       <div
         class="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0"
       >
         <div class="flex items-center">
           <RouterLink
             to="/projects"
-            class="text-blue-500 hover:text-blue-700 mr-4 rounded-lg transition-all"
+            class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 mr-4 rounded-lg transition-all"
           >
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24">
               <path
@@ -22,15 +26,21 @@
           </RouterLink>
           <div>
             <div class="flex items-center space-x-2">
-              <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 drop-shadow-sm">
+              <h1
+                class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white drop-shadow-sm"
+              >
                 {{ project.name }}
               </h1>
               <button
-                class="p-1 rounded-full hover:bg-gray-100 transition"
+                class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition"
                 aria-label="Project Settings"
                 @click="showSettingsModal = true"
               >
-                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24">
+                <svg
+                  class="w-5 h-5 text-gray-500 dark:text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -46,22 +56,26 @@
                 </svg>
               </button>
             </div>
-            <div v-if="project.description" class="text-gray-600 mt-1">
+            <div v-if="project.description" class="text-gray-600 dark:text-gray-400 mt-1">
               {{ project.description }}
             </div>
           </div>
         </div>
         <div class="flex items-center space-x-3">
           <span
-            class="px-4 py-1.5 text-xs font-bold rounded-full bg-green-50 text-green-700 border border-green-200 shadow-sm"
+            class="px-4 py-1.5 text-xs font-bold rounded-full bg-green-50 text-green-700 border border-green-200 shadow-sm dark:bg-green-900/30 dark:text-green-400 dark:border-green-700"
             >{{ project.status || 'Active' }}</span
           >
           <button
-            class="p-2 rounded-lg hover:bg-gray-200 transition"
+            class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-800 transition"
             aria-label="Project Settings"
             @click="showSettingsModal = true"
           >
-            <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+            <svg
+              class="w-5 h-5 text-gray-600 dark:text-gray-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
               <path
                 fill-rule="evenodd"
                 d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
@@ -87,12 +101,15 @@
       <!-- Loading, Error, Main Content -->
       <div v-if="isLoading" class="flex flex-col items-center py-24">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500"></div>
-        <span class="mt-4 text-gray-400 text-lg">Loading project...</span>
+        <span class="mt-4 text-gray-400 dark:text-gray-500 text-lg">Loading project...</span>
       </div>
 
-      <div v-else-if="error" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-xl">
+      <div
+        v-else-if="error"
+        class="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 dark:border-red-400 p-4 mb-4 rounded-xl"
+      >
         <div class="flex">
-          <svg class="h-6 w-6 text-red-400 mr-2" fill="none" viewBox="0 0 24 24">
+          <svg class="h-6 w-6 text-red-400 dark:text-red-300 mr-2" fill="none" viewBox="0 0 24 24">
             <path
               d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z"
               stroke="currentColor"
@@ -101,29 +118,23 @@
               stroke-linejoin="round"
             />
           </svg>
-          <div class="text-red-700">{{ error }}</div>
+          <div class="text-red-700 dark:text-red-300">{{ error }}</div>
         </div>
       </div>
 
       <!-- Workspace with glassmorphism -->
       <div
         v-else
-        class="relative bg-white/70 rounded-3xl shadow-2xl p-6 sm:p-8 mb-20 transition-all"
+        class="relative bg-white/70 dark:bg-slate-900/70 rounded-3xl shadow-2xl p-6 sm:p-8 mb-20 transition-all"
         style="backdrop-filter: blur(12px)"
       >
         <transition name="fade" mode="out-in">
           <!-- Show each tab as content, but only if it's currentStep -->
-          <FilesManagement
+          <FilesAndProcessing
             v-if="currentStep === 'files'"
             key="files"
             :project-id="projectId"
-            @files-uploaded="refreshProject"
-          />
-          <PreprocessingManagement
-            v-else-if="currentStep === 'preprocessing'"
-            key="preprocessing"
-            :project-id="projectId"
-            :files="project.files || []"
+            @files-changed="refreshProject"
           />
           <DocumentsManagement
             v-else-if="currentStep === 'documents'"
@@ -176,20 +187,24 @@
     <!-- Mobile: Workspace Tab Bar (at bottom) -->
     <div
       v-if="openTabs.length > 1"
-      class="fixed bottom-0 left-0 right-0 z-40 sm:hidden flex bg-white/80 backdrop-blur-lg border-t border-gray-200 rounded-t-2xl px-2 py-2 shadow-2xl"
+      class="fixed bottom-0 left-0 right-0 z-40 sm:hidden flex bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-slate-800 rounded-t-2xl px-2 py-2 shadow-2xl"
     >
       <div class="flex-1 flex justify-between">
         <button
           v-for="tab in openTabs"
           :key="tab"
           class="flex flex-col items-center px-1"
-          :class="currentStep === tab ? 'text-blue-600 font-bold' : 'text-gray-400'"
+          :class="
+            currentStep === tab
+              ? 'text-blue-600 dark:text-blue-400 font-bold'
+              : 'text-gray-400 dark:text-gray-500'
+          "
           @click="handleStepChange(tab)"
         >
           <span class="text-xs">{{ stepsMap[tab]?.name.split(' ')[0] }}</span>
           <span
             v-if="openTabs.length > 1"
-            class="text-[10px] text-gray-300"
+            class="text-[10px] text-gray-300 dark:text-gray-600"
             @click.stop="closeTab(tab)"
             >×</span
           >
@@ -200,12 +215,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, provide, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/services/api'
 import ProjectWorkflow from '@/components/ProjectWorkflow.vue'
-import FilesManagement from '@/components/FilesManagement.vue'
-import PreprocessingManagement from '@/components/PreprocessingManagement.vue'
+import FilesAndProcessing from '@/components/FilesAndProcessing.vue'
 import DocumentsManagement from '@/components/documents/DocumentsManagement.vue'
 import TrialsManagement from '@/components/TrialsManagement.vue'
 import SchemaManagement from '@/components/SchemaManagement.vue'
@@ -229,8 +243,7 @@ const showDeleteConfirmation = ref(false)
 
 // Workflow step management with tab workspace
 const steps = [
-  { id: 'files', name: 'Upload Files' },
-  { id: 'preprocessing', name: 'Preprocess Files' },
+  { id: 'files', name: 'Files & Preprocessing' },
   { id: 'documents', name: 'Documents' },
   { id: 'schemas', name: 'Schemas & Prompts' },
   { id: 'trials', name: 'Run Trials' },
@@ -245,6 +258,13 @@ const openTabs = ref([defaultStep])
 const openTabsStorageKey = `project-${projectId.value}-open-tabs`
 const currentStepStorageKey = `project-${projectId.value}-current-step`
 
+// Validate currentStep on change to prevent invalid states
+watch(currentStep, (val) => {
+  if (!validSteps.includes(val)) {
+    currentStep.value = 'files'
+  }
+})
+
 function persistWorkspace() {
   localStorage.setItem(openTabsStorageKey, JSON.stringify(openTabs.value))
   localStorage.setItem(currentStepStorageKey, currentStep.value)
@@ -253,10 +273,18 @@ function restoreWorkspace() {
   try {
     const open = JSON.parse(localStorage.getItem(openTabsStorageKey))
     const curr = localStorage.getItem(currentStepStorageKey)
-    if (Array.isArray(open) && open.length) openTabs.value = open
-    if (curr && openTabs.value.includes(curr)) currentStep.value = curr
+    // Filter to only valid steps
+    const validSteps = ['files', 'documents', 'schemas', 'trials', 'evaluation']
+    if (Array.isArray(open) && open.length) {
+      openTabs.value = open.filter((s) => validSteps.includes(s))
+    }
+    if (curr && validSteps.includes(curr) && openTabs.value.includes(curr)) {
+      currentStep.value = curr
+    } else {
+      currentStep.value = 'files' // Default to files
+    }
   } catch {
-    /* ignore */
+    currentStep.value = 'files'
   }
 }
 
@@ -264,7 +292,60 @@ function restoreWorkspace() {
 onMounted(() => {
   fetchProject()
   restoreWorkspace()
+  handleQueryParams()
 })
+
+// Watch for route query changes (e.g., from ActivityBell navigation)
+watch(
+  () => route.query,
+  (newQuery) => {
+    if (newQuery.expandTrial || newQuery.expandTask || newQuery.tab) {
+      handleQueryParams()
+    }
+  },
+)
+
+// Handle query parameters for tab and expand parameters
+function handleQueryParams() {
+  const queryTab = route.query.tab
+  const expandTask = route.query.expandTask
+  const expandTrial = route.query.expandTrial
+
+  // Handle tab switch from query
+  if (queryTab && validSteps.includes(queryTab)) {
+    handleStepChange(queryTab)
+  }
+
+  // Pass expand parameters to child components via custom events
+  // Need to wait for tab change to render the component first
+  if (expandTask) {
+    // Ensure we're on the files tab
+    if (currentStep.value !== 'files') {
+      handleStepChange('files')
+    }
+    // Wait for component to render and then dispatch event
+    setTimeout(() => {
+      document.dispatchEvent(
+        new CustomEvent('expand-preprocessing-task', { detail: { id: expandTask } }),
+      )
+      // Clean up query params after handling
+      router.replace({ query: { ...route.query, expandTask: undefined } })
+    }, 300)
+  }
+
+  if (expandTrial) {
+    // Ensure we're on the trials tab
+    if (currentStep.value !== 'trials') {
+      handleStepChange('trials')
+    }
+    // Wait for component to render and then dispatch event
+    setTimeout(() => {
+      document.dispatchEvent(new CustomEvent('expand-trial', { detail: { id: expandTrial } }))
+      // Clean up query params after handling
+      router.replace({ query: { ...route.query, expandTrial: undefined } })
+    }, 300)
+  }
+}
 
 // --- API ---
 const fetchProject = async () => {
@@ -282,13 +363,16 @@ const fetchProject = async () => {
 const refreshProject = () => fetchProject()
 
 // --- WORKFLOW & TAB LOGIC ---
+const validSteps = ['files', 'documents', 'schemas', 'trials', 'evaluation']
+
 function handleStepChange(stepId) {
+  if (!validSteps.includes(stepId)) return // Ignore invalid steps
   if (!openTabs.value.includes(stepId)) openTabs.value.push(stepId)
   currentStep.value = stepId
   persistWorkspace()
 }
 function updateOpenTabs(tabs) {
-  openTabs.value = tabs
+  openTabs.value = tabs.filter((s) => validSteps.includes(s))
   if (!openTabs.value.includes(currentStep.value)) {
     currentStep.value = openTabs.value[0] || defaultStep
   }

@@ -95,6 +95,16 @@ class FileFilter(BaseModel):
     max_size: int | None = None
 
 
+class PaginatedFiles(UTCModel):
+    """Paginated response for file listing"""
+
+    items: List[File]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 class DocumentBase(UTCModel):
     text: str
     document_name: str | None = None
@@ -115,6 +125,8 @@ class Document(DocumentBase):
     preprocessed_file: File | None = None
     preprocessing_config_id: int
     preprocessing_config: PreprocessingConfiguration | None = None
+    is_latest: bool = True
+    version_of: int | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -464,6 +476,7 @@ class FilePreprocessingTaskBase(UTCModel):
     warnings: dict | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None
+    document_ids: list[int] | None = Field(default_factory=list)
 
 
 class FilePreprocessingTask(FilePreprocessingTaskBase):
@@ -471,6 +484,15 @@ class FilePreprocessingTask(FilePreprocessingTaskBase):
     preprocessing_task_id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("document_ids", mode="before")
+    @classmethod
+    def set_default_document_ids(cls, v):
+        """Convert None to empty list and filter out None values from list"""
+        if v is None:
+            return []
+        # Filter out any None values that may exist in the list (from corrupted data)
+        return [x for x in v if x is not None]
 
 
 class PreprocessingTaskBase(UTCModel):
@@ -486,6 +508,9 @@ class PreprocessingTaskCreate(PreprocessingTaskBase):
     inline_config: PreprocessingConfigurationBase | None = None
 
     force_reprocess: bool = False
+    skip_existing: bool = (
+        False  # If True, skip files with existing documents for this config
+    )
     bypass_celery: bool = False
 
     # Optional API credentials for LLM preprocessing
@@ -535,6 +560,14 @@ class PreprocessingTask(PreprocessingTaskBase):
 
     skipped_files: int = 0
     task_metadata: dict | None = None
+
+    # Computed fields for document counts
+    @property
+    def documents_count(self) -> int:
+        """Total documents produced across all file tasks"""
+        return (
+            sum(ft.document_count for ft in self.file_tasks) if self.file_tasks else 0
+        )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -687,6 +720,42 @@ class EvaluationErrorSummary(BaseModel):
     error_types: dict[str, int]
     affected_documents: int
     errors: list[EvaluationError]
+
+
+class DuplicatePreviewItem(BaseModel):
+    """Information about a single file's existing documents"""
+
+    file_id: int
+    file_name: str
+    existing_document_count: int
+    existing_document_ids: list[int]
+    preprocessing_config_id: int | None = None
+    config_name: str | None = None
+
+
+class PdfEmbeddedTextInfo(BaseModel):
+    """Information about PDFs with embedded text that may not need OCR"""
+
+    file_id: int
+    file_name: str
+    has_embedded_text: bool
+    existing_document_ocr_method: str | None = (
+        None  # e.g., "docling_serve_no_ocr", "tesseract", "mistral_ocr"
+    )
+
+
+class PreprocessingDuplicatePreview(BaseModel):
+    """Response for preprocessing duplicate preview endpoint"""
+
+    has_duplicates: bool
+    files_with_duplicates: list[DuplicatePreviewItem]
+    total_files_to_process: int
+    files_without_duplicates: int
+    total_existing_documents: int
+    # PDFs with embedded text info (only populated when processing PDFs)
+    pdfs_with_embedded_text: list[PdfEmbeddedTextInfo] = Field(default_factory=list)
+    # Files that have existing documents with the exact same config
+    same_config_duplicates: list[DuplicatePreviewItem] = Field(default_factory=list)
 
 
 from .user import User, UserPublic  # noqa: E402, F401

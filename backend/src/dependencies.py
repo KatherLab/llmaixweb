@@ -8,8 +8,10 @@ import boto3
 from botocore.client import BaseClient
 from openai import OpenAI
 
-from .core.config import settings
+from .core.dynamic_settings import get_settings
 from .db.session import SessionLocal
+
+settings = get_settings()
 
 if settings.OPENAI_NO_API_CHECK:
     openai_client: OpenAI | None = None
@@ -115,5 +117,9 @@ def get_db() -> Generator:
     db = SessionLocal()
     try:
         yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()

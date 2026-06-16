@@ -4,11 +4,13 @@ Celery signal hooks + sweeper for the preprocessing pipeline.
 • Marks DB rows IN_PROGRESS / COMPLETED / FAILED in real‑time
 • Adds human‑readable messages when the worker crashes
 • Periodically fails orphaned file tasks and updates their parent task
+• Broadcasts task updates via WebSocket for real-time frontend updates
 """
 
 from __future__ import annotations
 
 import datetime
+import logging
 
 from celery import signals
 from celery.exceptions import SoftTimeLimitExceeded, WorkerLostError
@@ -17,16 +19,35 @@ from .. import models
 from ..dependencies import get_db
 from .celery_config import celery_app
 
+logger = logging.getLogger(__name__)
+
 
 # ────────────────── helpers ──────────────────
 def _update(
-    task_db_id: int, status: models.PreprocessingStatus, message: str | None = None
+    task_db_id: int,
+    status: models.PreprocessingStatus,
+    message: str | None = None,
+    broadcast: bool = False,
+    event: str | None = None,
 ):
-    """Safely update the PreprocessingTask row."""
+    """Safely update the PreprocessingTask row and associated file tasks."""
     with next(get_db()) as db:  # type: Session
         task = db.get(models.PreprocessingTask, task_db_id)
         if not task:
             return
+
+        # If failing the parent task, also fail all pending/in-progress file tasks
+        if status == models.PreprocessingStatus.FAILED:
+            now = datetime.datetime.now(datetime.UTC)
+            for ft in task.file_tasks:
+                if ft.status in (
+                    models.PreprocessingStatus.PENDING,
+                    models.PreprocessingStatus.IN_PROGRESS,
+                ):
+                    ft.status = models.PreprocessingStatus.FAILED
+                    ft.error_message = message or "Parent task failed"
+                    ft.completed_at = now
+
         task.status = status
         if message:
             task.message = message
@@ -36,6 +57,82 @@ def _update(
         ):
             task.completed_at = datetime.datetime.now(datetime.UTC)
         db.commit()
+
+        if broadcast:
+            # Determine event type based on status if not provided
+            if event is None:
+                if status == models.PreprocessingStatus.FAILED:
+                    event = "failed"
+                elif status == models.PreprocessingStatus.COMPLETED:
+                    event = "completed"
+                else:
+                    event = "progress"
+            _broadcast_preprocessing_update(task, event)
+
+
+def _broadcast_preprocessing_update(
+    task: models.PreprocessingTask, event: str = "progress"
+):
+    """Broadcast preprocessing task update via Redis pub/sub.
+
+    Since Celery workers run in separate processes/containers from FastAPI,
+    we use Redis pub/sub to send messages to the FastAPI backend, which then
+    broadcasts to connected WebSocket clients.
+    """
+    try:
+        from ..utils.redis_broadcast import publish_task_update
+
+        message = {
+            "type": "preprocessing_update",
+            "task_id": task.id,
+            "project_id": task.project_id,
+            "status": task.status,
+            "processed_files": task.processed_files,
+            "total_files": task.meta.get("total_files", 0) if task.meta else 0,
+            "failed_files": task.failed_files,
+            "cancelled_files": task.skipped_files,
+            "configuration_name": task.configuration.name
+            if task.configuration
+            else None,
+            "event": event,
+        }
+
+        if not publish_task_update(message):
+            logger.warning("Failed to publish preprocessing update via Redis")
+    except ImportError as e:
+        logger.debug("Redis broadcast not available: %s", e)
+    except Exception as e:
+        logger.error(f"Error broadcasting preprocessing update: {e}")
+
+
+def _broadcast_trial_update(trial: models.Trial, event: str):
+    """Broadcast trial task update via Redis pub/sub.
+
+    Since Celery workers run in separate processes/containers from FastAPI,
+    we use Redis pub/sub to send messages to the FastAPI backend, which then
+    broadcasts to connected WebSocket clients.
+    """
+    try:
+        from ..utils.redis_broadcast import publish_trial_update
+
+        message = {
+            "type": "trial_update",
+            "trial_id": trial.id,
+            "project_id": trial.project_id,
+            "status": trial.status,
+            "docs_done": trial.docs_done,
+            "documents_count": len(trial.document_ids) if trial.document_ids else 0,
+            "progress": float(trial.progress) if trial.progress else 0,
+            "name": trial.name,
+            "event": event,
+        }
+
+        if not publish_trial_update(message):
+            logger.warning("Failed to publish trial update via Redis")
+    except ImportError as e:
+        logger.debug("Redis broadcast not available: %s", e)
+    except Exception as e:
+        logger.error(f"Error broadcasting trial update: {e}")
 
 
 def _is_preprocess_task(sender_name: str) -> bool:
@@ -62,7 +159,7 @@ def mark_started(sender=None, task_id=None, args=None, **_):
 
 @signals.task_failure.connect
 def mark_failed(sender=None, task_id=None, exception=None, args=None, **_):
-    """Convert raw Celery errors into user‑friendly messages."""
+    """Convert raw Celery errors into user‑friendly messages and broadcast via WebSocket."""
     if not _is_preprocess_task(sender.name):
         return
 
@@ -78,7 +175,7 @@ def mark_failed(sender=None, task_id=None, exception=None, args=None, **_):
     else:
         friendly = str(exception) or "Preprocessing task failed with an unknown error."
 
-    _update(args[0], models.PreprocessingStatus.FAILED, friendly)
+    _update(args[0], models.PreprocessingStatus.FAILED, friendly, broadcast=True)
 
 
 # ────────────────── periodic sweeper ──────────────────
@@ -140,11 +237,17 @@ def sweep_orphans():
             parent.processed_files = completed
             parent.failed_files = failed
             parent.message = (
-                f"{completed}of{total} files processed successfully, "
+                f"{completed} of {total} files processed successfully, "
                 f"{failed} failed (worker crashed or was killed)."
             )
             parent.completed_at = datetime.datetime.now(datetime.UTC)
 
         db.commit()
+
+        # 3) broadcast updates for affected parent tasks
+        for pid in parent_ids:
+            parent = db.get(models.PreprocessingTask, pid)
+            if parent:
+                _broadcast_preprocessing_update(parent, "failed")
 
     return f"{affected} orphaned file tasks marked as FAILED"

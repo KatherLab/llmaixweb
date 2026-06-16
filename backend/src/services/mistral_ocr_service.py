@@ -26,7 +26,7 @@ class MistralOCRService:
         self,
         api_key: str,
         base_url: str = "https://api.mistral.ai",
-        model: str = "mistral-ocr-latest",
+        model: str = "mistral-ocr-latest",  # Default fallback, usually overridden by caller
     ):
         if not api_key:
             raise MistralOCRError("Mistral API key is required")

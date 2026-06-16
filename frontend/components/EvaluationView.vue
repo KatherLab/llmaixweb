@@ -1,25 +1,30 @@
 <template>
   <div class="evaluation-view p-4">
     <!-- Enhanced Error Banner -->
-    <div v-if="error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+    <div
+      v-if="error"
+      class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+    >
       <div class="flex items-start">
         <span class="w-5 h-5 text-red-400 mt-0.5 mr-3">⚠️</span>
         <div class="flex-1">
-          <h3 class="text-sm font-medium text-red-800">Evaluation System Error</h3>
-          <div v-if="typeof error === 'string'" class="mt-1 text-sm text-red-700">
+          <h3 class="text-sm font-medium text-red-800 dark:text-red-300">
+            Evaluation System Error
+          </h3>
+          <div v-if="typeof error === 'string'" class="mt-1 text-sm text-red-700 dark:text-red-400">
             {{ error }}
           </div>
           <div v-else class="mt-1">
-            <p class="text-sm text-red-700">{{ error.message }}</p>
+            <p class="text-sm text-red-700 dark:text-red-400">{{ error.message }}</p>
             <div v-if="error.errors && error.errors.length" class="mt-2">
-              <p class="text-xs font-medium text-red-800">Details:</p>
-              <ul class="mt-1 text-xs text-red-700 list-disc list-inside">
+              <p class="text-xs font-medium text-red-800 dark:text-red-300">Details:</p>
+              <ul class="mt-1 text-xs text-red-700 dark:text-red-400 list-disc list-inside">
                 <li v-for="err in error.errors" :key="err">{{ err }}</li>
               </ul>
             </div>
             <div v-if="error.suggestions && error.suggestions.length" class="mt-2">
-              <p class="text-xs font-medium text-red-800">Suggestions:</p>
-              <ul class="mt-1 text-xs text-red-700 list-disc list-inside">
+              <p class="text-xs font-medium text-red-800 dark:text-red-300">Suggestions:</p>
+              <ul class="mt-1 text-xs text-red-700 dark:text-red-400 list-disc list-inside">
                 <li v-for="suggestion in error.suggestions" :key="suggestion">{{ suggestion }}</li>
               </ul>
             </div>
@@ -27,7 +32,7 @@
           <div class="mt-3 flex gap-2">
             <button
               v-if="lastFailedOperation"
-              class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
+              class="text-sm bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 px-3 py-1 rounded hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
               :disabled="isRetrying"
               @click="retryLastOperation"
             >
@@ -37,7 +42,10 @@
               </span>
               <span v-else>Retry</span>
             </button>
-            <button class="text-sm text-red-600 hover:text-red-800" @click="clearError">
+            <button
+              class="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+              @click="clearError"
+            >
               Dismiss
             </button>
           </div>
@@ -47,12 +55,14 @@
 
     <div class="header flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold">Evaluation</h1>
-        <p class="text-gray-600">Compare trial results against ground truth data</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Evaluation</h1>
+        <p class="text-gray-600 dark:text-gray-400">
+          Compare trial results against ground truth data
+        </p>
       </div>
       <div class="flex gap-2">
         <button
-          class="px-4 py-2 rounded-md font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+          class="px-4 py-2 rounded-md font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600 dark:disabled:bg-blue-900"
           :disabled="loadingStates.groundTruthFiles"
           @click="showUploadModal = true"
         >
@@ -60,7 +70,7 @@
         </button>
         <button
           v-if="evaluations.length > 0"
-          class="px-4 py-2 rounded-md font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed"
+          class="px-4 py-2 rounded-md font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-600 dark:disabled:bg-green-900"
           :disabled="loadingStates.evaluations"
           @click="showExportModal = true"
         >
@@ -77,7 +87,7 @@
       <div
         class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"
       ></div>
-      <p class="mt-2 text-gray-500">Loading ground truth files...</p>
+      <p class="mt-2 text-gray-500 dark:text-gray-400">Loading ground truth files...</p>
     </div>
 
     <!-- No ground truth files yet -->
@@ -96,11 +106,11 @@
     <!-- Main evaluation interface -->
     <div v-else class="grid grid-cols-1 xl:grid-cols-4 gap-6">
       <!-- Ground truth files panel -->
-      <div class="bg-white shadow-sm rounded-lg p-4">
+      <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="font-medium">Ground Truth Files</h2>
+          <h2 class="font-medium text-gray-900 dark:text-white">Ground Truth Files</h2>
           <button
-            class="text-blue-600 hover:text-blue-800 text-sm"
+            class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm"
             @click="showGroundTruthManager = true"
           >
             Manage
@@ -110,34 +120,45 @@
           <div
             v-for="(gt, index) in groundTruthFiles"
             :key="gt.id"
-            class="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer transition-colors"
-            :class="{ 'border-blue-500 bg-blue-50': selectedGroundTruth?.id === gt.id }"
+            class="border dark:border-slate-700 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+            :class="{
+              'border-blue-500 bg-blue-50 dark:bg-blue-900/20': selectedGroundTruth?.id === gt.id,
+            }"
             @click="selectGroundTruthWithValidation(gt)"
           >
-            <div class="font-medium text-sm">{{ gt.name || `Ground Truth #${index + 1}` }}</div>
-            <div class="text-xs text-gray-500">
+            <div class="font-medium text-sm text-gray-900 dark:text-white">
+              {{ gt.name || `Ground Truth #${index + 1}` }}
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">
               {{ gt.format?.toUpperCase() }} • {{ formatDate(gt.created_at) }}
             </div>
-            <div v-if="gt.field_mappings?.length" class="text-xs text-green-600 mt-1">
+            <div
+              v-if="gt.field_mappings?.length"
+              class="text-xs text-green-600 dark:text-green-400 mt-1"
+            >
               {{ gt.field_mappings.length }} field mappings configured
             </div>
-            <div v-else class="text-xs text-yellow-600 mt-1">No field mappings configured</div>
+            <div v-else class="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+              No field mappings configured
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Trial selection and evaluation panel -->
-      <div class="bg-white shadow-sm rounded-lg p-4 xl:col-span-3">
-        <div v-if="!selectedGroundTruth" class="text-center py-12 text-gray-500">
+      <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4 xl:col-span-3">
+        <div v-if="!selectedGroundTruth" class="text-center py-12 text-gray-500 dark:text-gray-400">
           <span class="text-6xl text-gray-400 mb-3 block">📋</span>
-          <p>Select a ground truth file to start evaluation</p>
+          <p class="text-gray-700 dark:text-gray-300">
+            Select a ground truth file to start evaluation
+          </p>
         </div>
         <div v-else>
           <div class="flex justify-between items-center mb-4">
-            <h2 class="font-medium">Evaluation Dashboard</h2>
+            <h2 class="font-medium text-gray-900 dark:text-white">Evaluation Dashboard</h2>
             <div class="flex gap-2">
               <button
-                class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm hover:bg-blue-100 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                class="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:text-gray-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed"
                 :disabled="!canStartEvaluation"
                 @click="showTrialSelectorWithValidation"
               >
@@ -145,7 +166,7 @@
               </button>
               <button
                 v-if="selectedGroundTruth && !selectedGroundTruth.field_mappings?.length"
-                class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-md text-sm hover:bg-yellow-100 transition-colors"
+                class="px-3 py-1.5 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded-md text-sm hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
                 @click="previewGroundTruth"
               >
                 Preview & Configure
@@ -156,13 +177,15 @@
           <!-- Prerequisites Warning -->
           <div
             v-if="!canStartEvaluation"
-            class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md"
+            class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md"
           >
             <div class="flex">
               <span class="h-5 w-5 text-yellow-400">⚠️</span>
               <div class="ml-3">
-                <h3 class="text-sm font-medium text-yellow-800">Setup Required</h3>
-                <p class="mt-1 text-sm text-yellow-700">
+                <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                  Setup Required
+                </h3>
+                <p class="mt-1 text-sm text-yellow-700 dark:text-yellow-400">
                   {{ evaluationPrerequisiteMessage }}
                 </p>
               </div>
@@ -174,68 +197,84 @@
             <div
               class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"
             ></div>
-            <p class="mt-2 text-gray-500">Loading evaluations...</p>
+            <p class="mt-2 text-gray-500 dark:text-gray-400">Loading evaluations...</p>
           </div>
 
           <!-- Evaluation results table -->
-          <div v-else-if="evaluations.length === 0" class="text-center py-8 text-gray-500">
+          <div
+            v-else-if="evaluations.length === 0"
+            class="text-center py-8 text-gray-500 dark:text-gray-400"
+          >
             <span class="text-4xl text-gray-400 mb-2 block">📊</span>
-            <p>No evaluations yet. Select a trial to evaluate.</p>
+            <p class="text-gray-700 dark:text-gray-300">
+              No evaluations yet. Select a trial to evaluate.
+            </p>
           </div>
           <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
               <thead>
                 <tr>
                   <th
-                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                   >
                     Trial
                   </th>
                   <th
-                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                   >
                     Model
                   </th>
                   <th
-                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                   >
                     Overall Accuracy
                   </th>
                   <th
-                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                   >
                     Documents
                   </th>
                   <th
-                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                   >
                     Status
                   </th>
                   <th
-                    class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                   >
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="evaluation in evaluations" :key="evaluation.id" class="hover:bg-gray-50">
+              <tbody
+                class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700"
+              >
+                <tr
+                  v-for="evaluation in evaluations"
+                  :key="evaluation.id"
+                  class="hover:bg-gray-50 dark:hover:bg-slate-800"
+                >
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
-                    <div class="font-medium truncate" :title="getTrialName(evaluation.trial_id)">
+                    <div
+                      class="font-medium text-gray-900 dark:text-white truncate"
+                      :title="getTrialName(evaluation.trial_id)"
+                    >
                       {{ getTrialName(evaluation.trial_id) }}
                     </div>
-                    <div class="text-xs text-gray-500">
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
                       ID: {{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}
                     </div>
                   </td>
 
-                  <td class="px-4 py-3 whitespace-nowrap text-sm">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {{ getTrialModel(evaluation.trial_id) }}
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div class="flex items-center">
-                      <div class="mr-2">{{ getAccuracyPercentage(evaluation) }}%</div>
-                      <div class="w-16 bg-gray-200 rounded-full h-2">
+                      <div class="mr-2 text-gray-900 dark:text-white">
+                        {{ getAccuracyPercentage(evaluation) }}%
+                      </div>
+                      <div class="w-16 bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                         <div
                           class="bg-blue-600 h-2 rounded-full"
                           :style="{ width: `${getAccuracyPercentage(evaluation)}%` }"
@@ -243,19 +282,19 @@
                       </div>
                     </div>
                   </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {{ getDocumentCount(evaluation) }}
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <span
                       v-if="hasEvaluationErrors(evaluation)"
-                      class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full"
+                      class="px-2 py-1 text-xs font-medium bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-full"
                     >
                       Has Errors ({{ getErrorCount(evaluation) }})
                     </span>
                     <span
                       v-else
-                      class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full"
+                      class="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded-full"
                     >
                       Complete
                     </span>
@@ -263,7 +302,7 @@
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div class="flex gap-2">
                       <button
-                        class="text-blue-600 hover:text-blue-800 text-sm underline"
+                        class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm underline"
                         @click="viewEvaluationAnalysis(evaluation)"
                       >
                         Analysis
@@ -278,20 +317,20 @@
           <!-- (Optional) Trials pagination controls just for caching models -->
           <div v-if="trials.total > trials.limit" class="flex items-center justify-end gap-2 mt-4">
             <button
-              class="px-3 py-1 border rounded text-sm"
+              class="px-3 py-1 border dark:border-slate-700 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="trials.offset === 0 || loadingStates.trials"
               @click="pageBack"
             >
               Prev
             </button>
-            <span class="text-sm text-gray-600">
+            <span class="text-sm text-gray-600 dark:text-gray-400">
               {{ Math.min(trials.offset + 1, trials.total) }}–{{
                 Math.min(trials.offset + trials.items.length, trials.total)
               }}
               of {{ trials.total }}
             </span>
             <button
-              class="px-3 py-1 border rounded text-sm"
+              class="px-3 py-1 border dark:border-slate-700 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="trials.offset + trials.limit >= trials.total || loadingStates.trials"
               @click="pageForward"
             >

@@ -97,13 +97,45 @@ if celery_app:
                 for doc_id in document_ids:
                     doc_tasks[doc_id] = asyncio.create_task(_process(doc_id))
 
-                # Heartbeat: updates progress periodically
+                # Heartbeat: updates progress periodically + broadcasts via WebSocket
                 async def _progress_heartbeat():
                     try:
+                        last_broadcast = None
                         while True:
                             await asyncio.sleep(5)
                             with db_session() as db:
                                 update_trial_progress(db, trial_id)
+                                trial = db.get(models.Trial, trial_id)
+
+                                if trial:
+                                    # Broadcast update if status/progress changed
+                                    current_state = (
+                                        trial.status,
+                                        trial.docs_done,
+                                        trial.progress,
+                                    )
+                                    if last_broadcast != current_state:
+                                        last_broadcast = current_state
+                                        # Broadcast via Redis pub/sub
+                                        from ..utils.redis_broadcast import (
+                                            publish_trial_update,
+                                        )
+
+                                        message = {
+                                            "type": "trial_update",
+                                            "trial_id": trial.id,
+                                            "project_id": trial.project_id,
+                                            "status": trial.status,
+                                            "docs_done": trial.docs_done,
+                                            "documents_count": len(
+                                                trial.document_ids or []
+                                            ),
+                                            "progress": float(trial.progress or 0),
+                                            "name": trial.name,
+                                            "event": "progress",
+                                        }
+                                        publish_trial_update(message)
+
                             if all(t.done() for t in doc_tasks.values()):
                                 break
                     except Exception as exc:
@@ -158,22 +190,41 @@ if celery_app:
 
                     if cancelled:
                         trial.status = models.TrialStatus.CANCELLED
+                        event = "cancelled"
                         trial.meta = (trial.meta or {}) | {
                             "failures": failures,
                             "eta_seconds": 0,
                         }
                     elif done == total and not failures:
                         trial.status = models.TrialStatus.COMPLETED
+                        event = "completed"
                         trial.meta = (trial.meta or {}) | {
                             "failures": {},
                             "eta_seconds": 0,
                         }
                     else:
                         trial.status = models.TrialStatus.FAILED
+                        event = "failed"
                         trial.meta = (trial.meta or {}) | {
                             "failures": failures,
                             "eta_seconds": 0,
                         }
                     db.commit()
+
+                    # Broadcast final status via Redis pub/sub
+                    from ..utils.redis_broadcast import publish_trial_update
+
+                    message = {
+                        "type": "trial_update",
+                        "trial_id": trial.id,
+                        "project_id": trial.project_id,
+                        "status": trial.status,
+                        "docs_done": done,
+                        "documents_count": total,
+                        "progress": 1.0 if event == "completed" else 0,
+                        "name": trial.name,
+                        "event": event,
+                    }
+                    publish_trial_update(message)
 
         asyncio.run(_run())

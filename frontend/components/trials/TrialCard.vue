@@ -1,10 +1,14 @@
 <template>
   <div
-    class="group border border-gray-200 bg-white rounded-xl shadow hover:shadow-lg transition relative flex flex-col min-h-[220px]"
-    :class="{ 'ring-2 ring-blue-500': selected }"
+    :id="`trial-card-${trial.id}`"
+    class="group border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl shadow hover:shadow-lg dark:hover:shadow-xl transition relative flex flex-col min-h-[220px]"
+    :class="{
+      'ring-2 ring-blue-500': selected,
+      'ring-2 ring-emerald-500 bg-emerald-50 dark:bg-emerald-900/20': highlighted,
+    }"
   >
     <button
-      class="absolute top-4 right-4 z-10 bg-white border border-gray-300 rounded-full p-2 shadow-sm hover:ring-2 ring-blue-500 transition"
+      class="absolute top-4 right-4 z-10 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-full p-2 shadow-sm hover:ring-2 ring-blue-500 transition"
       :aria-label="selected ? 'Deselect' : 'Select'"
       @click.stop="toggleSelect"
     >
@@ -17,7 +21,7 @@
       </svg>
       <svg
         v-else
-        class="w-5 h-5 text-gray-400"
+        class="w-5 h-5 text-gray-400 dark:text-gray-500"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -31,27 +35,27 @@
       <div class="flex items-start justify-between gap-3 mb-2">
         <div class="min-w-0">
           <div class="flex items-center gap-2">
-            <span class="font-semibold text-lg truncate block">{{
+            <span class="font-semibold text-lg text-gray-900 dark:text-white truncate block">{{
               trial.name || `Trial #${trial.id}`
             }}</span>
             <span :class="['text-xs px-2 py-1 rounded-full font-medium', statusClass]">{{
               trial.status
             }}</span>
           </div>
-          <div v-if="trial.last_result_at" class="text-xs text-gray-400 mt-0.5">
+          <div v-if="trial.last_result_at" class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             Last result: {{ formatDate(trial.last_result_at) }}
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <span
-            class="text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-medium"
+            class="text-[11px] bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full font-medium"
             title="Processed results"
           >
             {{ trial.results_count || 0 }} res
           </span>
           <span
             v-if="trial.error_count && trial.error_count > 0"
-            class="text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold"
+            class="text-[11px] bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full font-semibold"
             title="Documents with errors"
           >
             {{ trial.error_count }} err
@@ -59,11 +63,11 @@
         </div>
       </div>
 
-      <div v-if="trial.description" class="text-sm text-gray-600 truncate mb-1">
+      <div v-if="trial.description" class="text-sm text-gray-600 dark:text-gray-400 truncate mb-1">
         {{ trial.description }}
       </div>
 
-      <div class="flex flex-wrap gap-2 text-xs text-gray-500 mb-2">
+      <div class="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
         <span><strong>Schema:</strong> {{ schema?.schema_name || '-' }}</span>
         <span v-if="prompt"><strong>Prompt:</strong> {{ prompt.name }}</span>
         <span><strong>LLM:</strong> {{ trial.llm_model }}</span>
@@ -76,13 +80,15 @@
       <!-- Progress -->
       <div v-if="isActive" class="flex flex-col gap-1 mt-2">
         <div class="flex items-center gap-2 text-xs">
-          <span class="font-medium text-blue-600">{{ docsDone }}/{{ totalDocs }} docs</span>
-          <span class="text-gray-500">{{ pretty(elapsedSeconds) }} elapsed</span>
-          <span v-if="etaSeconds && etaSeconds > 0" class="text-gray-500"
+          <span class="font-medium text-blue-600 dark:text-blue-400"
+            >{{ docsDone }}/{{ totalDocs }} docs</span
+          >
+          <span class="text-gray-500 dark:text-gray-400">{{ pretty(elapsedSeconds) }} elapsed</span>
+          <span v-if="etaSeconds && etaSeconds > 0" class="text-gray-500 dark:text-gray-400"
             >• ≈ {{ pretty(etaSeconds) }} left</span
           >
         </div>
-        <div class="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+        <div class="w-full h-1 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
           <div
             class="h-full bg-blue-500 transition-all duration-500"
             :style="{ width: progressPercent + '%' }"
@@ -93,7 +99,7 @@
       <!-- Compact end state -->
       <div
         v-else-if="trial.status === 'completed'"
-        class="mt-2 flex items-center gap-2 text-green-600 font-medium text-xs"
+        class="mt-2 flex items-center gap-2 text-green-600 dark:text-green-400 font-medium text-xs"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -107,7 +113,7 @@
       </div>
       <div
         v-else-if="trial.status === 'failed'"
-        class="mt-2 flex items-center gap-2 text-red-600 text-xs font-medium"
+        class="mt-2 flex items-center gap-2 text-red-600 dark:text-red-400 text-xs font-medium"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -122,31 +128,33 @@
     </div>
 
     <!-- Footer -->
-    <div class="border-t bg-gray-50 px-4 py-3 flex items-center justify-between rounded-b-xl gap-2">
+    <div
+      class="border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-4 py-3 flex items-center justify-between rounded-b-xl gap-2"
+    >
       <div class="flex gap-2 flex-wrap">
         <button
           v-if="isActive && trial.status !== 'cancelled'"
-          class="rounded-md bg-yellow-100 text-yellow-700 px-3 py-1 text-xs font-medium hover:bg-yellow-200 transition"
+          class="rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-3 py-1 text-xs font-medium hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition"
           @click.stop="emit('cancel', trial)"
         >
           Cancel
         </button>
 
         <button
-          class="rounded-md bg-blue-600 text-white px-3 py-1 text-xs font-medium hover:bg-blue-700 transition"
+          class="rounded-md bg-blue-600 text-white px-3 py-1 text-xs font-medium hover:bg-blue-700 dark:hover:bg-blue-800 transition"
           @click.stop="emit('view-results', trial)"
         >
           Results
         </button>
 
         <button
-          class="rounded-md border border-gray-300 text-gray-700 px-3 py-1 text-xs font-medium hover:bg-gray-100 transition"
+          class="rounded-md border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 text-xs font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition"
           @click.stop="emit('view-schema', trial)"
         >
           Schema
         </button>
         <button
-          class="rounded-md border border-gray-300 text-gray-700 px-3 py-1 text-xs font-medium hover:bg-gray-100 transition"
+          class="rounded-md border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 text-xs font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition"
           @click.stop="emit('view-prompt', trial)"
         >
           Prompt
@@ -154,7 +162,7 @@
 
         <button
           v-if="trial.status === 'completed'"
-          class="rounded-md bg-green-600 text-white px-3 py-1 text-xs font-medium hover:bg-green-700 transition"
+          class="rounded-md bg-green-600 text-white px-3 py-1 text-xs font-medium hover:bg-green-700 dark:hover:bg-green-800 transition"
           @click.stop="emit('download', trial)"
         >
           Download
@@ -163,19 +171,19 @@
 
       <div class="flex gap-2 flex-wrap">
         <button
-          class="rounded-md bg-gray-100 text-gray-700 px-3 py-1 text-xs font-medium hover:bg-gray-200 transition"
+          class="rounded-md bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition"
           @click.stop="emit('retry', trial)"
         >
           Retry
         </button>
         <button
-          class="rounded-md bg-purple-100 text-purple-700 px-3 py-1 text-xs font-medium hover:bg-purple-200 transition"
+          class="rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-3 py-1 text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition"
           @click.stop="emit('rename', trial)"
         >
           Rename
         </button>
         <button
-          class="rounded-md bg-red-100 text-red-700 px-3 py-1 text-xs font-medium hover:bg-red-200 transition"
+          class="rounded-md bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-3 py-1 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition"
           @click.stop="emit('delete', trial)"
         >
           Delete
@@ -193,6 +201,7 @@ const props = defineProps({
   schemas: { type: Array, required: true },
   prompts: { type: Array, required: true },
   selected: Boolean,
+  highlighted: Boolean,
 })
 const emit = defineEmits([
   'select',
@@ -212,12 +221,12 @@ const prompt = computed(() => props.prompts.find((p) => p.id === props.trial.pro
 const statusClass = computed(
   () =>
     ({
-      pending: 'bg-yellow-100 text-yellow-800',
-      processing: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800',
-      failed: 'bg-red-100 text-red-800',
-      cancelled: 'bg-gray-200 text-gray-500',
-    })[props.trial.status] || 'bg-gray-100 text-gray-800',
+      pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400',
+      processing: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400',
+      completed: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400',
+      failed: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400',
+      cancelled: 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400',
+    })[props.trial.status] || 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-400',
 )
 
 const isActive = computed(() => !['completed', 'failed', 'cancelled'].includes(props.trial.status))

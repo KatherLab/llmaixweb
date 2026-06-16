@@ -17,10 +17,7 @@ from ....core.security import (
 )
 from ....dependencies import get_db, remove_file
 from ....schemas import PasswordSet
-from ....utils.email_service import (
-    send_invitation_email,
-    send_password_reset_email,
-)
+from ....utils.email_service import send_invitation_email, send_password_reset_email
 from ....utils.enums import UserRole
 
 router = APIRouter()

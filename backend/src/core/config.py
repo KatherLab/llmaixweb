@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     MISTRAL_API_BASE: str = "https://api.mistral.ai"
     MISTRAL_API_KEY: str = ""
     MISTRAL_OCR_ENABLED: bool = False
+    MISTRAL_OCR_MODEL: str = "mistral-ocr-latest"
     MISTRAL_OCR_DISPLAY_NAME: str = "Mistral OCR API"
     MISTRAL_OCR_DISPLAY_SUBTITLE: str = "Best for complex layouts"
 
@@ -60,17 +61,20 @@ class Settings(BaseSettings):
     VISION_OCR_DISPLAY_SUBTITLE: str = "Best for complex documents"
 
     # Docling-serve remote OCR service configuration
-    DOCLING_SERVE_ENABLED: bool = True
+    DOCLING_SERVE_ENABLED: bool = False
     DOCLING_SERVE_URL: str = "http://docling-serve:5001"
     DOCLING_SERVE_TIMEOUT_SECONDS: int = 600
     DOCLING_SERVE_MAX_RETRIES: int = 1
+    DOCLING_SERVE_DISPLAY_NAME: str = "Quick (Local OCR)"
+    DOCLING_SERVE_DISPLAY_SUBTITLE: str = "Docling / Tesseract"
 
     # Default OCR settings for docling-serve
-    DOCLING_DEFAULT_OCR_LANGS: list[str] = Field(default_factory=lambda: ["deu", "eng"])
+    # Use "auto" for automatic language detection, or specify languages (e.g., "deu,eng" or ["deu", "eng"])
+    DOCLING_DEFAULT_OCR_LANGS: list[str] | str = Field(default="auto")
     DOCLING_DEFAULT_TABLE_MODE: str = "fast"
     DOCLING_IMAGE_EXPORT_MODE: str = "placeholder"
 
-    # Text extraction thresholds for quality checks
+    # Text extraction thresholds for quality checks (embedded text detection)
     DOCLING_MIN_EXTRACTED_CHARS_PDF: int = 100
     DOCLING_MIN_EXTRACTED_CHARS_IMAGE: int = 20
 
@@ -509,6 +513,14 @@ SETTINGS_META = {
         "category": "OCR",
         "label": "Mistral OCR Enabled",
     },
+    "MISTRAL_OCR_MODEL": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Mistral OCR Model",
+        "help": "Model name for Mistral OCR (e.g., 'mistral-ocr-latest'). Used for display/metadata when using custom Mistral OCR endpoints.",
+    },
     "MISTRAL_OCR_DISPLAY_NAME": {
         "type": "str",
         "secret": False,
@@ -522,6 +534,14 @@ SETTINGS_META = {
         "readonly": False,
         "category": "OCR",
         "label": "Mistral OCR Display Subtitle",
+    },
+    "VISION_OCR_ENABLED": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Vision LLM OCR Enabled",
+        "help": "Enable/disable the Vision LLM OCR engine. Can be overridden via .env file (VISION_OCR_ENABLED).",
     },
     "VISION_OCR_DISPLAY_NAME": {
         "type": "str",
@@ -548,8 +568,25 @@ SETTINGS_META = {
         "type": "bool",
         "secret": False,
         "readonly": False,
-        "category": "docling-serve",
-        "label": "docling-serve Enabled",
+        "category": "OCR",
+        "label": "Local OCR Enabled",
+        "help": "Enable/disable the local OCR engine (Docling/Tesseract). If disabled along with other OCR engines, PDF/image preprocessing will not be available.",
+    },
+    "DOCLING_SERVE_DISPLAY_NAME": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Local OCR Display Name",
+        "help": "Display name for the local OCR engine in the UI.",
+    },
+    "DOCLING_SERVE_DISPLAY_SUBTITLE": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "OCR",
+        "label": "Local OCR Display Subtitle",
+        "help": "Subtitle for the local OCR engine in the UI.",
     },
     "DOCLING_SERVE_URL": {
         "type": "str",
@@ -573,11 +610,12 @@ SETTINGS_META = {
         "label": "docling-serve Max Retries",
     },
     "DOCLING_DEFAULT_OCR_LANGS": {
-        "type": "list",
+        "type": "str",
         "secret": False,
         "readonly": False,
         "category": "OCR",
         "label": "Default OCR Languages",
+        "help": "Use 'auto' for automatic language detection (recommended), or specify languages as comma-separated values (e.g., 'deu,eng' or 'eng').",
     },
     "DOCLING_DEFAULT_TABLE_MODE": {
         "type": "str",

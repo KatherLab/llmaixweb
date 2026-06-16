@@ -9,9 +9,12 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from .... import models, schemas
-from ....core.config import settings
+from ....core.dynamic_settings import get_settings
 from ....core.security import create_access_token, verify_password
 from ....dependencies import get_db
+
+# Use dynamic settings (includes database overrides from admin UI)
+settings = get_settings()
 
 router = APIRouter()
 
@@ -33,6 +36,9 @@ def get_settings():
         "mistral_ocr_display_subtitle": settings.MISTRAL_OCR_DISPLAY_SUBTITLE,
         "vision_ocr_display_name": settings.VISION_OCR_DISPLAY_NAME,
         "vision_ocr_display_subtitle": settings.VISION_OCR_DISPLAY_SUBTITLE,
+        "docling_serve_enabled": settings.DOCLING_SERVE_ENABLED,
+        "docling_serve_display_name": settings.DOCLING_SERVE_DISPLAY_NAME,
+        "docling_serve_display_subtitle": settings.DOCLING_SERVE_DISPLAY_SUBTITLE,
     }
 
 

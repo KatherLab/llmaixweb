@@ -10,14 +10,70 @@ from .celery_config import celery_app
 
 log = logging.getLogger(__name__)
 
+
+def _broadcast_preprocessing_update(
+    task: models.PreprocessingTask, event: str = "progress"
+):
+    """Broadcast preprocessing task update via Redis pub/sub (for use in Celery tasks).
+
+    Since Celery workers run in separate processes/containers from FastAPI,
+    we use Redis pub/sub to send messages to the FastAPI backend, which then
+    broadcasts to connected WebSocket clients.
+
+    Includes full task data so frontend can display complete task information.
+    """
+    try:
+        from ..utils.redis_broadcast import publish_task_update
+
+        # Build full task data for frontend display
+        task_data = {
+            "type": "preprocessing_update",
+            "task_id": task.id,
+            "project_id": task.project_id,
+            "status": task.status.value
+            if hasattr(task.status, "value")
+            else str(task.status),
+            "processed_files": task.processed_files,
+            "total_files": task.meta.get("total_files", 0)
+            if task.meta
+            else task.total_files,
+            "failed_files": task.failed_files,
+            "cancelled_files": task.skipped_files,
+            "configuration_name": task.configuration.name
+            if task.configuration
+            else None,
+            "configuration": {
+                "id": task.configuration.id,
+                "name": task.configuration.name,
+                "additional_settings": task.configuration.additional_settings,
+            }
+            if task.configuration
+            else None,
+            "meta": task.meta,
+            "event": event,
+            "created_at": task.created_at.isoformat() if task.created_at else None,
+        }
+
+        publish_task_update(task_data)
+    except ImportError as e:
+        log.debug("Redis broadcast not available: %s", e)
+    except Exception as e:
+        log.error("Error broadcasting preprocessing update: %s", e, exc_info=True)
+
+
 if celery_app:
 
     @celery_app.task(
         bind=True,
-        autoretry_for=(Exception,),
-        retry_backoff=True,
-        max_retries=2,
+        # Note: We don't use autoretry_for because exceptions during processing
+        # are handled manually (file_task marked as FAILED). Auto-retry would
+        # cause "INTRANS" errors since the DB session is left in a bad state.
+        # Worker-lost detection is handled via started_at check in the task body.
         queue="preprocess",
+        # Ensure task acknowledgment happens AFTER the transaction completes
+        # to avoid leaving connections in INTRANS state on worker crash
+        acks_late=True,
+        reject_on_worker_lost=True,
     )
     def process_files_async(
         self,
@@ -29,6 +85,8 @@ if celery_app:
             failures = {}
 
             # --- Setup: fetch the task + mark IN_PROGRESS ---
+            # Use get_fresh_db() to ensure we get a clean connection
+            # even on retry (avoids "INTRANS" state from previous attempt)
             with next(get_db()) as db:
                 task: models.PreprocessingTask = db.get(
                     models.PreprocessingTask, task_id
@@ -43,7 +101,7 @@ if celery_app:
                     if base_url:
                         task.task_metadata["api_base_url"] = base_url
 
-                # ── Re-delivery after worker lost? ──────────────────────
+                # ── Re-delivery after worker lost / stale job detection ──
                 # When a worker is killed by SIGKILL (OOM etc.) Celery
                 # rejects the message and the broker re-queues it.  On the
                 # next delivery `started_at` will already be set (from the
@@ -51,28 +109,49 @@ if celery_app:
                 # IN_PROGRESS because the worker died before reaching the
                 # finalization block.  We detect this and fail immediately
                 # instead of looping forever.
+                # This also handles any edge cases where tasks get stuck
+                # in IN_PROGRESS due to unhandled exceptions or crashes.
                 now = dt.datetime.now(dt.UTC)
                 if task.started_at is not None and task.status in (
                     models.PreprocessingStatus.PENDING,
                     models.PreprocessingStatus.IN_PROGRESS,
                 ):
+                    # Check how long ago the task started
+                    time_since_start = (now - task.started_at).total_seconds()
                     task.status = models.PreprocessingStatus.FAILED
                     task.completed_at = now
-                    task.message = (
-                        "Preprocessing failed: the Celery worker was lost "
-                        "(out-of-memory or process crash). "
-                        "This file may be too large. Check worker logs for details."
-                    )
+                    if time_since_start > 300:  # More than 5 minutes
+                        task.message = (
+                            f"Preprocessing failed: worker crashed after {time_since_start:.0f}s "
+                            "(out-of-memory, process crash, or unhandled exception). "
+                            "This file may be too large. Check worker logs for details."
+                        )
+                    else:
+                        task.message = (
+                            "Preprocessing failed: detected stale/incomplete task "
+                            "(worker crash or unhandled exception). "
+                            "Check worker logs for details."
+                        )
+                    # Mark any pending/in-progress file tasks as failed
                     for ft in task.file_tasks:
-                        ft.status = models.PreprocessingStatus.FAILED
-                        ft.error_message = "Worker lost during processing"
-                        ft.completed_at = now
+                        if ft.status in (
+                            models.PreprocessingStatus.PENDING,
+                            models.PreprocessingStatus.IN_PROGRESS,
+                        ):
+                            ft.status = models.PreprocessingStatus.FAILED
+                            ft.error_message = task.message
+                            ft.completed_at = now
                     db.commit()
+
+                    # Broadcast the failure via WebSocket so UI updates in real-time
+                    _broadcast_preprocessing_update(task, "failed")
+
                     log.warning(
-                        "PreprocessingTask %s: worker was lost on a previous "
-                        "attempt (started_at=%s). Marking as FAILED.",
+                        "PreprocessingTask %s: detected stale task (started_at=%s, %ds ago). "
+                        "Marking as FAILED.",
                         task_id,
                         task.started_at,
+                        time_since_start,
                     )
                     return
 
@@ -109,22 +188,44 @@ if celery_app:
                                 return
 
                         def blocking_run():
+                            log.debug(
+                                "blocking_run: starting for file_task_id=%s",
+                                file_task_id,
+                            )
                             with next(get_db()) as db:
-                                _ = db.get(models.PreprocessingTask, task_id)
-                                file_task = db.get(
-                                    models.FilePreprocessingTask, file_task_id
-                                )
-                                pipeline = PreprocessingPipeline(
-                                    db,
-                                    task_id,
-                                    api_key=api_key,
-                                    base_url=base_url,
-                                )
-                                if pipeline.check_cancelled():
-                                    raise asyncio.CancelledError(
-                                        "Cancelled before processing file"
+                                try:
+                                    _ = db.get(models.PreprocessingTask, task_id)
+                                    file_task = db.get(
+                                        models.FilePreprocessingTask, file_task_id
                                     )
-                                pipeline._process_file_task(file_task)
+                                    log.debug(
+                                        "blocking_run: got file_task, creating pipeline"
+                                    )
+                                    pipeline = PreprocessingPipeline(
+                                        db,
+                                        task_id,
+                                        api_key=api_key,
+                                        base_url=base_url,
+                                    )
+                                    if pipeline.check_cancelled():
+                                        raise asyncio.CancelledError(
+                                            "Cancelled before processing file"
+                                        )
+                                    log.debug(
+                                        "blocking_run: calling _process_file_task"
+                                    )
+                                    pipeline._process_file_task(file_task)
+                                    log.debug(
+                                        "blocking_run: _process_file_task completed"
+                                    )
+                                except Exception as e:
+                                    # Explicit rollback before re-raising
+                                    # This ensures the connection is clean for Celery retry
+                                    log.error(
+                                        "blocking_run: exception: %s", e, exc_info=True
+                                    )
+                                    db.rollback()
+                                    raise
 
                         await asyncio.to_thread(blocking_run)
 
@@ -137,6 +238,8 @@ if celery_app:
                     raise
                 except Exception as exc:
                     failures[str(file_task_id)] = str(exc)
+                    # Use a fresh session for the status update to avoid any
+                    # transaction state issues from the failed operation
                     with next(get_db()) as db:
                         file_task = db.get(models.FilePreprocessingTask, file_task_id)
                         file_task.status = models.PreprocessingStatus.FAILED
@@ -148,66 +251,84 @@ if celery_app:
             for ft in file_tasks:
                 running_tasks[ft.id] = asyncio.create_task(process_file(ft.id))
 
-            # --- Heartbeat: update progress/meta/ETA for frontend ---
+            # --- Heartbeat: update progress/meta/ETA for frontend + WebSocket broadcast ---
             async def progress_heartbeat():
-                while True:
-                    await asyncio.sleep(3)
-                    with next(get_db()) as db:
-                        task = db.get(models.PreprocessingTask, task_id)
-                        total = len(task.file_tasks)
-                        completed = sum(
-                            1
-                            for f in task.file_tasks
-                            if f.status == models.PreprocessingStatus.COMPLETED
-                        )
-                        failed = sum(
-                            1
-                            for f in task.file_tasks
-                            if f.status == models.PreprocessingStatus.FAILED
-                        )
-                        cancelled = sum(
-                            1
-                            for f in task.file_tasks
-                            if f.status == models.PreprocessingStatus.CANCELLED
-                        )
-                        in_progress = sum(
-                            1
-                            for f in task.file_tasks
-                            if f.status == models.PreprocessingStatus.IN_PROGRESS
-                        )
+                last_broadcast = None
+                try:
+                    while True:
+                        await asyncio.sleep(3)
+                        with next(get_db()) as db:
+                            task = db.get(models.PreprocessingTask, task_id)
+                            total = len(task.file_tasks)
+                            completed = sum(
+                                1
+                                for f in task.file_tasks
+                                if f.status == models.PreprocessingStatus.COMPLETED
+                            )
+                            failed = sum(
+                                1
+                                for f in task.file_tasks
+                                if f.status == models.PreprocessingStatus.FAILED
+                            )
+                            cancelled = sum(
+                                1
+                                for f in task.file_tasks
+                                if f.status == models.PreprocessingStatus.CANCELLED
+                            )
+                            in_progress = sum(
+                                1
+                                for f in task.file_tasks
+                                if f.status == models.PreprocessingStatus.IN_PROGRESS
+                            )
 
-                        now = dt.datetime.now(dt.UTC)
-                        started = task.started_at or now
-                        elapsed = (now - started).total_seconds() if completed else 0
-                        remaining = total - completed - failed - cancelled
-                        eta = (
-                            int(elapsed / completed * remaining)
-                            if completed > 0 and remaining > 0
-                            else 0
-                        )
+                            now = dt.datetime.now(dt.UTC)
+                            started = task.started_at or now
+                            elapsed = (
+                                (now - started).total_seconds() if completed else 0
+                            )
+                            remaining = total - completed - failed - cancelled
+                            eta = (
+                                int(elapsed / completed * remaining)
+                                if completed > 0 and remaining > 0
+                                else 0
+                            )
 
-                        task.processed_files = completed + failed + cancelled
-                        task.failed_files = failed
-                        task.skipped_files = cancelled
-                        task.meta = (task.meta or {}) | {
-                            "eta_seconds": eta,
-                            "in_progress": in_progress,
-                            "total_files": total,
-                            "completed_files": completed,
-                            "failed_files": failed,
-                            "cancelled_files": cancelled,
-                        }
-                        db.commit()
-                        if all(
-                            f.status
-                            in [
-                                models.PreprocessingStatus.COMPLETED,
-                                models.PreprocessingStatus.FAILED,
-                                models.PreprocessingStatus.CANCELLED,
-                            ]
-                            for f in task.file_tasks
-                        ):
-                            break
+                            task.processed_files = completed + failed + cancelled
+                            task.failed_files = failed
+                            task.skipped_files = cancelled
+                            task.meta = (task.meta or {}) | {
+                                "eta_seconds": eta,
+                                "in_progress": in_progress,
+                                "total_files": total,
+                                "completed_files": completed,
+                                "failed_files": failed,
+                                "cancelled_files": cancelled,
+                            }
+                            db.commit()
+
+                            # Broadcast update via Redis pub/sub (FastAPI will relay to WebSocket clients)
+                            current_state = (task.status, completed, failed, cancelled)
+                            if last_broadcast != current_state:
+                                last_broadcast = current_state
+                                _broadcast_preprocessing_update(task, "progress")
+
+                            if all(
+                                f.status
+                                in [
+                                    models.PreprocessingStatus.COMPLETED,
+                                    models.PreprocessingStatus.FAILED,
+                                    models.PreprocessingStatus.CANCELLED,
+                                ]
+                                for f in task.file_tasks
+                            ):
+                                break
+                except asyncio.CancelledError:
+                    raise
+                except Exception as e:
+                    log.error(
+                        "Heartbeat error for task %s: %s", task_id, e, exc_info=True
+                    )
+                    raise
 
             # --- Cancellation watcher: cancels all running file tasks ---
             async def cancellation_watcher():
@@ -266,6 +387,7 @@ if celery_app:
 
                 if task.is_cancelled:
                     task.status = models.PreprocessingStatus.CANCELLED
+                    event = "cancelled"
                     # Handle keep/delete processed docs on cancel
                     if task.rollback_on_cancel:
                         deleted_count = 0
@@ -280,17 +402,23 @@ if celery_app:
                         task.message = "Task cancelled, keeping processed documents"
                 elif completed == total and total > 0:
                     task.status = models.PreprocessingStatus.COMPLETED
+                    event = "completed"
                     task.message = "All files processed successfully."
                 elif failed == total:
                     task.status = models.PreprocessingStatus.FAILED
+                    event = "failed"
                     task.message = "All files failed to preprocess."
                 else:
                     task.status = models.PreprocessingStatus.FAILED
+                    event = "failed"
                     task.message = (
                         f"{completed} of {total} files processed successfully, "
                         f"{failed} failed, {cancelled} cancelled."
                     )
                 db.commit()
+
+                # Broadcast final status via Redis pub/sub (FastAPI will relay to WebSocket clients)
+                _broadcast_preprocessing_update(task, event)
 
         asyncio.run(_run())
 
@@ -341,6 +469,8 @@ if celery_app:
                         "Marked PreprocessingTask %s as FAILED after all retries",
                         task_id,
                     )
+                    # Broadcast the failure via WebSocket
+                    _broadcast_preprocessing_update(task, "failed")
         except Exception as exc:
             log.error(
                 "Failed to update PreprocessingTask %s after task_failure: %s",

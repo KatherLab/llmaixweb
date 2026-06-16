@@ -69,6 +69,10 @@ def get_documents(
     ] = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
+    include_archived: Annotated[
+        bool | None,
+        Query(description="Include archived (non-latest) document versions"),
+    ] = False,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.PaginatedDocuments:
@@ -79,6 +83,10 @@ def get_documents(
 
     # Build base SELECT with filters (no limit/offset yet)
     base = select(D).where(D.project_id == project_id)
+
+    # By default, only show latest document versions (hide archived/history)
+    if not include_archived:
+        base = base.where(D.is_latest.is_(True))
 
     if file_id is not None:
         base = base.where(D.original_file_id == file_id)

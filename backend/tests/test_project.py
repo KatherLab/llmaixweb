@@ -145,7 +145,9 @@ def test_get_project_files(client, api_url):
     project_id = response.json()["id"]
     response = client.get(f"{api_url}/project/{project_id}/file", headers=headers)
     assert response.status_code == 200
-    assert len(response.json()) == 0  # No files uploaded yet
+    response_data = response.json()
+    assert response_data["total"] == 0  # No files uploaded yet
+    assert response_data["items"] == []
 
 
 # Test Upload File

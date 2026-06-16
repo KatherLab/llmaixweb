@@ -62,7 +62,7 @@ def check_project_access(
     )
 
 
-@router.get("", response_model=list[schemas.File])
+@router.get("", response_model=schemas.PaginatedFiles)
 def get_project_files(
     *,
     db: Session = Depends(get_db),
@@ -76,11 +76,14 @@ def get_project_files(
     min_size: int | None = Query(None, description="Minimum file size in bytes"),
     max_size: int | None = Query(None, description="Maximum file size in bytes"),
     # Pagination
-    skip: int = Query(0, ge=0),
-    limit: int = Query(0, ge=0, le=1000),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(25, ge=1, le=250, description="Items per page"),
+    # Sorting
+    sort_by: str = Query("created_at", description="Field to sort by"),
+    sort_order: str = Query("desc", description="Sort order (asc or desc)"),
     current_user: models.User = Depends(get_current_user),
-) -> list[schemas.File]:
-    """Get project files with advanced filtering"""
+) -> schemas.PaginatedFiles:
+    """Get project files with advanced filtering, pagination, and sorting"""
     check_project_access(project_id, current_user, db)
 
     query = select(models.File).where(models.File.project_id == project_id)
@@ -101,14 +104,56 @@ def get_project_files(
     if max_size is not None:
         query = query.where(models.File.file_size <= max_size)
 
-    # Order by created_at desc and apply pagination
-    if limit == 0:
-        query = query.order_by(models.File.created_at.desc()).offset(skip)
+    # Get total count before pagination
+    total_query = select(func.count(models.File.id)).where(
+        models.File.project_id == project_id
+    )
+    if search:
+        total_query = total_query.where(models.File.file_name.ilike(f"%{search}%"))
+    if file_type:
+        total_query = total_query.where(models.File.file_type == file_type)
+    if file_creator is not None:
+        total_query = total_query.where(models.File.file_creator == file_creator)
+    if date_from:
+        total_query = total_query.where(models.File.created_at >= date_from)
+    if date_to:
+        total_query = total_query.where(models.File.created_at <= date_to)
+    if min_size is not None:
+        total_query = total_query.where(models.File.file_size >= min_size)
+    if max_size is not None:
+        total_query = total_query.where(models.File.file_size <= max_size)
+
+    total = db.execute(total_query).scalar() or 0
+
+    # Apply sorting
+    valid_sort_fields = {
+        "file_name": models.File.file_name,
+        "file_type": models.File.file_type,
+        "file_size": models.File.file_size,
+        "created_at": models.File.created_at,
+    }
+    sort_field = valid_sort_fields.get(sort_by, models.File.created_at)
+    if sort_order.lower() == "asc":
+        query = query.order_by(sort_field.asc())
     else:
-        query = query.order_by(models.File.created_at.desc()).offset(skip).limit(limit)
+        query = query.order_by(sort_field.desc())
+
+    # Apply pagination
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
 
     files = list(db.execute(query).scalars().all())
-    return [schemas.File.model_validate(file) for file in files]
+
+    # Calculate total pages
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+
+    return schemas.PaginatedFiles(
+        items=[schemas.File.model_validate(file) for file in files],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.get("/stats", response_model=dict)

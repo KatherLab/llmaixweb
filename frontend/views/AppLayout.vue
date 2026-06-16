@@ -53,47 +53,61 @@
             </div>
           </div>
 
-          <div v-if="isAdmin" class="ml-4 relative">
-            <button
-              aria-label="Admin menu"
-              class="rounded-full p-2 hover:bg-blue-50 dark:hover:bg-slate-800 transition"
-              @click="showAdminMenu = !showAdminMenu"
-            >
-              <svg
-                class="w-6 h-6 text-blue-600 dark:text-blue-300"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
+          <div class="flex items-center gap-1">
+            <!-- Admin Settings (visible to admins only) -->
+            <div v-if="isAdmin" class="relative">
+              <button
+                aria-label="Admin menu"
+                class="rounded-full p-2 hover:bg-blue-50 dark:hover:bg-slate-800 transition"
+                @click="showAdminMenu = !showAdminMenu"
               >
-                <path
-                  d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7zm7-3.5c0-.8.7-1.4 1.5-1.4s1.5.6 1.5 1.4-.7 1.4-1.5 1.4-1.5-.6-1.5-1.4zm-14 0c0-.8.7-1.4 1.5-1.4S8 11.2 8 12s-.7 1.4-1.5 1.4S5 12.8 5 12z"
-                />
-                <circle cx="12" cy="12" r="10" stroke="currentColor" />
-              </svg>
-            </button>
-            <transition name="fade-slide">
-              <div
-                v-if="showAdminMenu"
-                class="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800 rounded-xl shadow-xl z-50"
-                @click.outside="showAdminMenu = false"
-              >
-                <router-link
-                  to="/admin/settings"
-                  class="block px-5 py-3 text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950"
-                  >Settings</router-link
+                <svg
+                  class="w-5 h-5 text-blue-600 dark:text-blue-300"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
                 >
-                <router-link
-                  to="/admin/celery"
-                  class="block px-5 py-3 text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950"
-                  >Celery & Queues</router-link
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </button>
+              <transition name="fade-slide">
+                <div
+                  v-if="showAdminMenu"
+                  class="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800 rounded-xl shadow-xl z-50"
+                  @click.outside="showAdminMenu = false"
                 >
-                <!-- Add more as needed -->
-              </div>
-            </transition>
-          </div>
+                  <router-link
+                    to="/admin/settings"
+                    class="block px-5 py-3 text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950"
+                    >Settings</router-link
+                  >
+                  <router-link
+                    to="/admin/celery"
+                    class="block px-5 py-3 text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950"
+                    >Celery & Queues</router-link
+                  >
+                  <!-- Add more as needed -->
+                </div>
+              </transition>
+            </div>
 
-          <div class="flex items-center">
+            <!-- Activity Bell (visible to all authenticated users) -->
+            <div v-if="isAuthenticated">
+              <ActivityBell />
+            </div>
+
             <!-- Dark mode toggle -->
             <button
               :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -392,6 +406,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api.js'
 import { useToast } from 'vue-toastification'
+import ActivityBell from '@/components/ActivityBell.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -404,20 +419,51 @@ const authReady = ref(false)
 const toast = useToast()
 
 const showAdminMenu = ref(false)
-const isDark = ref(false)
 
-function setDarkClass(val) {
+// Initialize dark mode state from localStorage or system preference
+const getInitialDarkMode = () => {
+  const saved = localStorage.getItem('darkMode')
+  if (saved !== null) {
+    return saved === '1'
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+}
+
+const isDark = ref(getInitialDarkMode())
+
+// Apply dark mode class on mount
+const applyDarkMode = (val) => {
   if (val) {
     document.documentElement.classList.add('dark')
   } else {
     document.documentElement.classList.remove('dark')
   }
+}
+
+// Apply initial dark mode immediately
+applyDarkMode(isDark.value)
+
+function setDarkClass(val) {
+  applyDarkMode(val)
   isDark.value = val
   localStorage.setItem('darkMode', val ? '1' : '0')
 }
 
 function toggleDarkMode() {
   setDarkClass(!isDark.value)
+}
+
+// Watch for system theme changes (only if user hasn't set explicit preference)
+if (typeof window !== 'undefined' && window.matchMedia) {
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  const handleChange = (e) => {
+    const saved = localStorage.getItem('darkMode')
+    if (saved === null) {
+      // User hasn't set explicit preference, follow system
+      setDarkClass(e.matches)
+    }
+  }
+  mediaQuery.addEventListener('change', handleChange)
 }
 
 onMounted(async () => {
@@ -434,17 +480,6 @@ onMounted(async () => {
   // Wait for authStore initialization
   await authStore.initialize()
   authReady.value = true
-
-  // Set dark mode on mount (from localStorage or system preference)
-  const saved = localStorage.getItem('darkMode')
-  if (
-    saved === '1' ||
-    (saved === null && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  ) {
-    setDarkClass(true)
-  } else {
-    setDarkClass(false)
-  }
 })
 
 const isAuthenticated = computed(() => authStore.isAuthenticated)

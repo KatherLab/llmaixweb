@@ -59,6 +59,53 @@ class PreprocessingPipeline:
             return True
         return False
 
+    def _broadcast_update(self, event: str = "progress"):
+        """Broadcast preprocessing update via WebSocket (for direct processing)."""
+        try:
+            import asyncio
+            import threading
+
+            from ..websocket_manager import manager
+
+            task_id = self.task.id
+            project_id = self.task.project_id
+            status = self.task.status
+            processed = self.task.processed_files
+            total = self.task.total_files
+            failed = self.task.failed_files
+            config_name = (
+                self.task.configuration.name if self.task.configuration else None
+            )
+
+            def do_broadcast():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    message = {
+                        "type": "preprocessing_update",
+                        "task_id": task_id,
+                        "project_id": project_id,
+                        "status": status,
+                        "processed_files": processed,
+                        "total_files": total,
+                        "failed_files": failed,
+                        "configuration_name": config_name,
+                        "event": event,
+                    }
+                    loop.run_until_complete(
+                        manager.broadcast_to_user(project_id, message)
+                    )
+                    loop.run_until_complete(manager.broadcast_to_admin(message))
+                finally:
+                    loop.close()
+
+            thread = threading.Thread(target=do_broadcast, daemon=True)
+            thread.start()
+        except ImportError:
+            pass  # WebSocket manager not available
+        except Exception as e:
+            logger.error(f"Error broadcasting preprocessing update: {e}")
+
     def process(self):
         """Main processing method."""
 
@@ -92,6 +139,9 @@ class PreprocessingPipeline:
                 )
                 self.db.commit()
 
+                # Broadcast progress update after each file
+                self._broadcast_update("progress")
+
             # ───── after the loop: fail anything still unfinished ───────────
             unfinished = 0
             for ft in self.task.file_tasks:
@@ -118,29 +168,39 @@ class PreprocessingPipeline:
             # ───── final status / message ───────────────────────────────────
             if self.cancelled:
                 # leave status/message set by the cancel workflow
-                pass
+                event = "cancelled"
             elif completed == total:
                 self.task.status = models.PreprocessingStatus.COMPLETED
                 self.task.message = "Processing completed successfully."
+                event = "completed"
             elif failed == total:
                 self.task.status = models.PreprocessingStatus.FAILED
                 self.task.message = "All files failed to preprocess."
                 logger.warning(
                     "All files failed to preprocess for task %s", self.task.id
                 )
+                event = "failed"
             else:
                 self.task.status = models.PreprocessingStatus.FAILED
                 self.task.message = (
                     f"{completed} of {total} files processed successfully, "
                     f"{failed} failed."
                 )
+                event = "failed"
 
             self.task.completed_at = datetime.datetime.now(datetime.UTC)
+
+            # Broadcast final status
+            self._broadcast_update(event)
 
         except Exception as e:
             # any unhandled exception ⇒ whole preprocessing task failed
             self.task.status = models.PreprocessingStatus.FAILED
             self.task.message = f"Processing failed: {str(e)}"
+            self.task.completed_at = datetime.datetime.now(datetime.UTC)
+            self.db.commit()
+            # Broadcast failure
+            self._broadcast_update("failed")
 
         # ───── persist final state ──────────────────────────────────────────
         self.db.commit()
@@ -177,12 +237,9 @@ class PreprocessingPipeline:
             # OCR languages from settings or additional_settings
             ocr_langs = additional.get("docling_ocr_languages")
             if ocr_langs is None:
-                ocr_langs = list(settings.DOCLING_DEFAULT_OCR_LANGS)
-            elif isinstance(ocr_langs, str):
-                if ocr_langs.lower() == "auto":
-                    ocr_langs = ["deu", "eng"]  # fallback from "auto"
-                else:
-                    ocr_langs = [ocr_langs]
+                # Default to "auto" for automatic language detection
+                ocr_langs = "auto"
+            # If ocr_langs is already a string (e.g., "auto") or list, use it as-is
 
             self._docling_serve_client = DoclingServeClient(
                 base_url=base_url,
@@ -192,23 +249,6 @@ class PreprocessingPipeline:
             )
 
         return self._docling_serve_client
-
-    def _has_useful_extracted_text(self, text: str, min_chars: int = 100) -> bool:
-        """Return True if extracted Markdown contains enough real text.
-
-        Strips common Markdown/table syntax to avoid accepting page
-        artifacts or formatting noise as useful content.
-        """
-        import re
-
-        if not text:
-            return False
-
-        # Remove common Markdown/table syntax and collapse whitespace.
-        cleaned = re.sub(r"[#*_`>\-|:\[\](){}]+", " ", text)
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
-
-        return len(cleaned) >= min_chars
 
     def _check_duplicate_case_ids(self, file: models.File, df: pd.DataFrame) -> None:
         """Check for duplicate case IDs before processing."""
@@ -243,6 +283,44 @@ class PreprocessingPipeline:
         try:
             file = file_task.file
 
+            # Safety check: detect if another task is already processing this file
+            # with the same config (race condition protection for simultaneous requests)
+            # This is a final safety net - the API endpoint should have already rejected
+            # such requests, but this catches any remaining race conditions
+            conflicting_task = (
+                self.db.query(models.FilePreprocessingTask)
+                .join(models.PreprocessingTask)
+                .filter(
+                    models.FilePreprocessingTask.file_id == file.id,
+                    models.PreprocessingTask.configuration_id == self.config.id,
+                    models.FilePreprocessingTask.id != file_task.id,
+                    models.FilePreprocessingTask.status.in_(
+                        [
+                            models.PreprocessingStatus.PENDING,
+                            models.PreprocessingStatus.IN_PROGRESS,
+                        ]
+                    ),
+                )
+                .first()
+            )
+            if conflicting_task:
+                # Another task is already processing this file with the same config
+                # Cancel this task to avoid duplicate document creation
+                file_task.status = models.PreprocessingStatus.CANCELLED
+                file_task.error_message = (
+                    f"Skipped: file is already being processed by task {conflicting_task.id} "
+                    f"(same file + config combination)"
+                )
+                file_task.completed_at = datetime.datetime.now(datetime.UTC)
+                self.db.commit()
+                logger.info(
+                    "Skipped file task %s for file %s: already being processed by task %s",
+                    file_task.id,
+                    file.file_name,
+                    conflicting_task.id,
+                )
+                return
+
             # Route to appropriate processor based on file type
             if file.file_type in [
                 models.FileType.TEXT_CSV,
@@ -256,7 +334,11 @@ class PreprocessingPipeline:
                 # PDF/Image files — route by OCR engine
                 documents = self._route_pdf_image(file, file_task)
 
+            # Flush to get document IDs before collecting them
+            self.db.flush()
+
             file_task.document_count = len(documents)
+            file_task.document_ids = [doc.id for doc in documents]
             file_task.status = models.PreprocessingStatus.COMPLETED
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
 
@@ -374,11 +456,91 @@ class PreprocessingPipeline:
         Returns:
             List of created Document objects.
         """
+        # Check if docling-serve is disabled and no OCR engines are available
+        # In this case, only PDFs with embedded text can be processed using pypdf directly
+        # Exception: DOCLING_LOCAL_FALLBACK=true allows using local Docling directly
+        if (
+            not settings.DOCLING_SERVE_ENABLED
+            and not settings.MISTRAL_OCR_ENABLED
+            and not settings.VISION_OCR_ENABLED
+        ):
+            file_content = get_file(file.file_uuid)
+            from ..services.pdf_text_probe import has_embedded_text
+
+            has_text = has_embedded_text(
+                file_content,
+                min_chars=settings.DOCLING_MIN_EXTRACTED_CHARS_PDF,
+                max_pages_to_check=8,
+            )
+
+            if has_text:
+                # Extract text directly using pypdf (no docling-serve needed)
+                return self._process_pdf_with_pypdf(file, file_task, file_content)
+            elif settings.DOCLING_LOCAL_FALLBACK:
+                # Use local Docling directly when fallback is enabled
+                from ..services.docling_serve_client import (
+                    DoclingServeError,
+                    _convert_with_local_docling,
+                )
+
+                try:
+                    result = _convert_with_local_docling(
+                        file_content=file_content,
+                        filename=file.file_name,
+                        mime_type="application/pdf",
+                        from_formats=["pdf"],
+                        do_ocr=True,
+                        force_ocr=True,
+                        ocr_engine="tesseract",
+                        ocr_langs=None,
+                    )
+                    doc = self._build_pdf_document(
+                        file=file,
+                        file_task=file_task,
+                        text=result.text,
+                        ocr_engine="tesseract",
+                        extraction_method="local_docling_fallback",
+                        ocr_applied=True,
+                    )
+                    return [doc]
+                except DoclingServeError as e:
+                    raise ValueError(
+                        f"PDF has no embedded text and local Docling fallback failed: {e}"
+                    )
+            else:
+                # No embedded text and no OCR available - fail with clear message
+                raise ValueError(
+                    "PDF has no embedded text and all OCR engines are disabled. "
+                    "Enable Local OCR (docling-serve), Mistral OCR, or Vision LLM in Admin Settings, "
+                    "or upload a PDF with embedded text."
+                )
+
         # Get quality thresholds from settings
         min_chars_pdf = settings.DOCLING_MIN_EXTRACTED_CHARS_PDF
 
+        # Helper to check if docling-serve is available
+        def docling_serve_available() -> bool:
+            return settings.DOCLING_SERVE_ENABLED
+
         # Force OCR mode - always use Tesseract with force_ocr=True
         if extraction_mode == "force_ocr" or force_ocr:
+            if not docling_serve_available():
+                # Fall back to pypdf for embedded text, or fail
+                file_content = get_file(file.file_uuid)
+                from ..services.pdf_text_probe import has_embedded_text
+
+                has_text = has_embedded_text(
+                    file_content,
+                    min_chars=min_chars_pdf,
+                    max_pages_to_check=8,
+                )
+                if has_text:
+                    return self._process_pdf_with_pypdf(file, file_task, file_content)
+                else:
+                    raise ValueError(
+                        "Force OCR requested but docling-serve is disabled. "
+                        "PDF has no embedded text to extract. Enable docling-serve or upload a PDF with embedded text."
+                    )
             return self._process_with_docling_serve_tesseract(
                 file,
                 file_task,
@@ -387,6 +549,23 @@ class PreprocessingPipeline:
 
         # Fast local OCR - always use Tesseract
         if extraction_mode == "fast_local_ocr":
+            if not docling_serve_available():
+                # Fall back to pypdf for embedded text, or fail
+                file_content = get_file(file.file_uuid)
+                from ..services.pdf_text_probe import has_embedded_text
+
+                has_text = has_embedded_text(
+                    file_content,
+                    min_chars=min_chars_pdf,
+                    max_pages_to_check=8,
+                )
+                if has_text:
+                    return self._process_pdf_with_pypdf(file, file_task, file_content)
+                else:
+                    raise ValueError(
+                        "Fast local OCR requested but docling-serve is disabled. "
+                        "PDF has no embedded text to extract. Enable docling-serve or upload a PDF with embedded text."
+                    )
             return self._process_with_docling_serve_tesseract(
                 file,
                 file_task,
@@ -407,25 +586,55 @@ class PreprocessingPipeline:
             )
 
             if has_text and not force_ocr:
-                # Use docling-serve without OCR
-                return self._process_with_docling_serve_no_ocr(file, file_task)
+                # Use docling-serve without OCR if available, otherwise use pypdf directly
+                if docling_serve_available():
+                    return self._process_with_docling_serve_no_ocr(file, file_task)
+                else:
+                    return self._process_pdf_with_pypdf(file, file_task, file_content)
             else:
-                # Use docling-serve with Tesseract OCR
-                return self._process_with_docling_serve_tesseract(
-                    file,
-                    file_task,
-                    force_full_page_ocr=False,
-                )
+                # Need OCR - use docling-serve if available
+                if docling_serve_available():
+                    return self._process_with_docling_serve_tesseract(
+                        file,
+                        file_task,
+                        force_full_page_ocr=False,
+                    )
+                else:
+                    # No embedded text and docling-serve disabled - fail with clear message
+                    raise ValueError(
+                        "PDF has no embedded text and docling-serve is disabled. "
+                        "Enable docling-serve in Admin Settings, or upload a PDF with embedded text."
+                    )
 
         # High accuracy remote mode - use remote OCR only if enabled and needed
         if extraction_mode == "high_accuracy_remote":
             if not remote_fallback:
-                # Remote fallback disabled - use local Tesseract
-                return self._process_with_docling_serve_tesseract(
-                    file,
-                    file_task,
-                    force_full_page_ocr=False,
-                )
+                # Remote fallback disabled - use local Tesseract (docling-serve)
+                if docling_serve_available():
+                    return self._process_with_docling_serve_tesseract(
+                        file,
+                        file_task,
+                        force_full_page_ocr=False,
+                    )
+                else:
+                    # Fall back to pypdf for embedded text, or fail
+                    file_content = get_file(file.file_uuid)
+                    from ..services.pdf_text_probe import has_embedded_text
+
+                    has_text = has_embedded_text(
+                        file_content,
+                        min_chars=min_chars_pdf,
+                        max_pages_to_check=8,
+                    )
+                    if has_text:
+                        return self._process_pdf_with_pypdf(
+                            file, file_task, file_content
+                        )
+                    else:
+                        raise ValueError(
+                            "PDF has no embedded text and docling-serve is disabled. "
+                            "Enable docling-serve or use remote OCR fallback."
+                        )
 
             # Check if we can avoid remote OCR (embedded text exists)
             if not force_ocr:
@@ -439,8 +648,13 @@ class PreprocessingPipeline:
                 )
 
                 if has_text:
-                    # Use local docling-serve without OCR
-                    return self._process_with_docling_serve_no_ocr(file, file_task)
+                    # Use local docling-serve without OCR if available, otherwise pypdf
+                    if docling_serve_available():
+                        return self._process_with_docling_serve_no_ocr(file, file_task)
+                    else:
+                        return self._process_pdf_with_pypdf(
+                            file, file_task, file_content
+                        )
 
             # Use remote OCR - respect the original ocr_engine setting
             if ocr_engine == "mistral_ocr" and settings.MISTRAL_OCR_ENABLED:
@@ -501,11 +715,60 @@ class PreprocessingPipeline:
             elif settings.VISION_OCR_ENABLED:
                 # Fallback to Vision if no specific engine requested
                 return self._process_with_llm_vision_ocr(file, file_task)
-            else:
-                # Remote fallback requested but not configured - use local
-                pass
+            # Remote fallback requested but not configured - fall through to local
 
-        # All other modes (auto, fast_local_ocr, force_ocr) or fallback:
+        # Check if docling-serve is available for local OCR
+        if not settings.DOCLING_SERVE_ENABLED:
+            # Check if local Docling fallback is available
+            if settings.DOCLING_LOCAL_FALLBACK:
+                # Use local Docling directly
+                from ..dependencies import get_file
+                from ..services.docling_serve_client import (
+                    DoclingServeError,
+                    _convert_with_local_docling,
+                )
+
+                file_content = get_file(file.file_uuid)
+                mime_type = (
+                    "image/png"
+                    if file.file_type == models.FileType.IMAGE_PNG
+                    else "image/jpeg"
+                )
+
+                try:
+                    result = _convert_with_local_docling(
+                        file_content=file_content,
+                        filename=file.file_name,
+                        mime_type=mime_type,
+                        from_formats=["image"],
+                        do_ocr=True,
+                        force_ocr=True,
+                        ocr_engine="tesseract",
+                        ocr_langs=None,
+                    )
+                    doc = self._build_pdf_document(
+                        file=file,
+                        file_task=file_task,
+                        text=result.text,
+                        ocr_engine="tesseract",
+                        extraction_method="local_docling_fallback",
+                        ocr_applied=True,
+                        extra_metadata={
+                            "file_type": file.file_type,
+                        },
+                    )
+                    return [doc]
+                except DoclingServeError as e:
+                    raise ValueError(
+                        f"Image processing requires OCR. docling-serve is disabled and local Docling fallback failed: {e}"
+                    )
+            else:
+                # No local OCR and no remote OCR available - fail
+                raise ValueError(
+                    "Image processing requires OCR. docling-serve is disabled and no remote OCR (Mistral/Vision) is available. "
+                    "Enable docling-serve in Admin Settings or configure Mistral OCR or Vision LLM."
+                )
+
         # Use docling-serve with Tesseract OCR
         return self._process_image_with_docling_serve_tesseract(file, file_task)
 
@@ -554,14 +817,6 @@ class PreprocessingPipeline:
         except DoclingServeError as e:
             raise ValueError(f"docling-serve image OCR failed: {e}")
 
-        min_chars = settings.DOCLING_MIN_EXTRACTED_CHARS_IMAGE
-
-        if not self._has_useful_extracted_text(result.text, min_chars=min_chars):
-            raise ValueError(
-                f"docling-serve Tesseract produced insufficient text for image {file.file_name} "
-                f"({len(result.text)} chars)"
-            )
-
         doc = self._build_pdf_document(
             file=file,
             file_task=file_task,
@@ -576,7 +831,6 @@ class PreprocessingPipeline:
             },
         )
 
-        self.db.add(doc)
         return [doc]
 
     def _process_with_docling_serve_tesseract(
@@ -618,14 +872,6 @@ class PreprocessingPipeline:
         except DoclingServeError as e:
             raise ValueError(f"docling-serve Tesseract extraction failed: {e}")
 
-        min_chars = settings.DOCLING_MIN_EXTRACTED_CHARS_PDF
-
-        if not self._has_useful_extracted_text(result.text, min_chars=min_chars):
-            raise ValueError(
-                f"docling-serve Tesseract produced insufficient text for {file.file_name} "
-                f"({len(result.text)} chars)"
-            )
-
         doc = self._build_pdf_document(
             file=file,
             file_task=file_task,
@@ -643,7 +889,6 @@ class PreprocessingPipeline:
             },
         )
 
-        self.db.add(doc)
         return [doc]
 
     def _process_with_docling_serve_no_ocr(
@@ -674,14 +919,6 @@ class PreprocessingPipeline:
         except DoclingServeError as e:
             raise ValueError(f"docling-serve extraction failed: {e}")
 
-        min_chars = settings.DOCLING_MIN_EXTRACTED_CHARS_PDF
-
-        if not self._has_useful_extracted_text(result.text, min_chars=min_chars):
-            raise ValueError(
-                f"docling-serve produced insufficient text for {file.file_name} "
-                f"({len(result.text)} chars)"
-            )
-
         doc = self._build_pdf_document(
             file=file,
             file_task=file_task,
@@ -696,7 +933,66 @@ class PreprocessingPipeline:
             },
         )
 
-        self.db.add(doc)
+        return [doc]
+
+    def _process_pdf_with_pypdf(
+        self,
+        file: models.File,
+        file_task: models.FilePreprocessingTask,
+        file_content: bytes,
+    ) -> List[models.Document]:
+        """Process a PDF with embedded text using pypdf directly (no docling-serve).
+
+        This is a fallback when all OCR engines are disabled but the PDF has
+        embedded text that can be extracted.
+
+        Args:
+            file: The file model.
+            file_task: The file preprocessing task.
+            file_content: The PDF file content.
+
+        Returns:
+            List of created Document objects.
+        """
+        import io
+
+        try:
+            from pypdf import PdfReader
+
+            pdf_reader = PdfReader(io.BytesIO(file_content))
+            text_parts = []
+
+            for page in pdf_reader.pages:
+                page_text = page.extract_text() or ""
+                text_parts.append(page_text)
+
+            extracted_text = "\n\n".join(text_parts).strip()
+
+            if not extracted_text:
+                raise ValueError("pypdf extracted no text from PDF")
+
+        except ImportError:
+            raise ValueError(
+                "pypdf is not installed. Install it with: pip install pypdf"
+            )
+        except Exception as e:
+            raise ValueError(f"pypdf PDF extraction failed: {e}")
+
+        doc = self._build_pdf_document(
+            file=file,
+            file_task=file_task,
+            text=extracted_text,
+            ocr_engine="pypdf",
+            extraction_method="pypdf_embedded_text",
+            ocr_applied=False,
+            extra_metadata={
+                "embedded_text_detected": True,
+                "force_ocr": False,
+                "engine_used": "pypdf",
+                "ocr_disabled_fallback": True,
+            },
+        )
+
         return [doc]
 
     def _build_pdf_document(
@@ -710,7 +1006,64 @@ class PreprocessingPipeline:
         ocr_applied: bool,
         extra_metadata: dict | None = None,
     ) -> models.Document:
-        """Build a PDF-derived Document with consistent metadata."""
+        """Build a PDF-derived Document with consistent metadata and versioning.
+
+        Implements document versioning: if a document with the same name/config
+        already exists, archive it (is_latest=False) and create a new version.
+
+        Handles re-processing safely by:
+        1. Finding ALL existing documents (both latest and archived)
+        2. Deleting only archived documents (is_latest=False) to free constraint slot
+        3. Archiving latest documents (is_latest=True) normally
+        4. Creating a new latest document
+        """
+
+        # Check for ALL existing documents with this key
+        all_existing_docs = (
+            self.db.query(models.Document)
+            .filter(
+                models.Document.original_file_id == file.id,
+                models.Document.preprocessing_config_id == self.config.id,
+                models.Document.document_name == file.file_name,
+            )
+            .all()
+        )
+
+        # Separate latest from archived
+        latest_docs = [d for d in all_existing_docs if d.is_latest]
+
+        # Determine version_of for the new document
+        version_of_root = None
+        replaced_doc_id = None
+
+        # The unique constraint on (file, config, name, is_latest) allows only ONE
+        # is_latest=False document per key. So we need to:
+        # 1. Delete orphaned archived docs first (free the constraint slot)
+        #    Note: We cannot delete archived docs referenced by latest docs' version_of
+        # 2. Then archive latest docs into the now-free slot
+
+        # The unique constraint on (file, config, name) only applies when
+        # is_latest=True, so we can have unlimited archived versions.
+        # Simply archive all latest documents, then create the new version.
+
+        # Archive latest documents
+        if latest_docs:
+            first_latest = latest_docs[0]
+            version_of_root = first_latest.version_of or first_latest.id
+            replaced_doc_id = first_latest.id
+
+            # Archive all latest documents (usually just one)
+            for doc in latest_docs:
+                doc.document_sets.clear()
+                doc.is_latest = False
+                doc.updated_at = datetime.datetime.now(datetime.UTC)
+                # Preserve version_of or point to root
+                if version_of_root:
+                    doc.version_of = version_of_root
+            self.db.flush()
+
+        # No need to touch archived_docs - they can coexist with unlimited versions
+
         metadata = {
             "file_type": file.file_type,
             "ocr_engine": ocr_engine,
@@ -721,7 +1074,11 @@ class PreprocessingPipeline:
         if extra_metadata:
             metadata.update(extra_metadata)
 
-        return models.Document(
+        if version_of_root:
+            metadata["version_of"] = version_of_root
+            metadata["replaced_document_id"] = replaced_doc_id
+
+        doc = models.Document(
             project_id=self.task.project_id,
             original_file_id=file.id,
             file_preprocessing_task_id=file_task.id,
@@ -729,7 +1086,87 @@ class PreprocessingPipeline:
             document_name=file.file_name,
             preprocessing_config_id=self.config.id,
             meta_data=metadata,
+            is_latest=True,
+            version_of=version_of_root,
         )
+        self.db.add(doc)
+        return doc
+
+    def _get_or_create_document(
+        self,
+        *,
+        file: models.File,
+        file_task: models.FilePreprocessingTask,
+        text: str,
+        document_name: str,
+        meta_data: dict,
+    ) -> models.Document:
+        """Get existing document or create new one with versioning.
+
+        Handles re-processing safely by:
+        1. Finding ALL existing documents (both latest and archived)
+        2. If latest exists: archive it normally
+        3. If only archived exists (failed re-process): delete orphans
+        4. Create a new latest document
+        """
+
+        # Check for ALL existing documents with this key
+        all_existing_docs = (
+            self.db.query(models.Document)
+            .filter(
+                models.Document.original_file_id == file.id,
+                models.Document.preprocessing_config_id == self.config.id,
+                models.Document.document_name == document_name,
+            )
+            .all()
+        )
+
+        # Separate latest from archived
+        latest_docs = [d for d in all_existing_docs if d.is_latest]
+
+        # Determine version_of for the new document
+        version_of_root = None
+        replaced_doc_id = None
+
+        # The unique constraint on (file, config, name) only applies when
+        # is_latest=True, so we can have unlimited archived versions.
+        # Simply archive all latest documents, then create the new version.
+
+        # Archive latest documents
+        if latest_docs:
+            first_latest = latest_docs[0]
+            version_of_root = first_latest.version_of or first_latest.id
+            replaced_doc_id = first_latest.id
+
+            # Archive all latest documents (usually just one)
+            for doc in latest_docs:
+                doc.document_sets.clear()
+                doc.is_latest = False
+                doc.updated_at = datetime.datetime.now(datetime.UTC)
+                # Preserve version_of or point to root
+                if version_of_root:
+                    doc.version_of = version_of_root
+            self.db.flush()
+
+        # Create new document version
+        doc_meta_data = meta_data.copy()
+        if version_of_root:
+            doc_meta_data["version_of"] = version_of_root
+            doc_meta_data["replaced_document_id"] = replaced_doc_id
+
+        doc = models.Document(
+            project_id=self.task.project_id,
+            original_file_id=file.id,
+            file_preprocessing_task_id=file_task.id,
+            text=text,
+            document_name=document_name,
+            preprocessing_config_id=self.config.id,
+            meta_data=doc_meta_data,
+            is_latest=True,
+            version_of=version_of_root,
+        )
+        self.db.add(doc)
+        return doc
 
     def _process_with_mistral_ocr(
         self, file: models.File, file_task: models.FilePreprocessingTask
@@ -753,27 +1190,24 @@ class PreprocessingPipeline:
                 "Set it in Additional Settings (mistral_api_key) or in the server config (MISTRAL_API_KEY)."
             )
 
-        model = additional.get("mistral_model", "mistral-ocr-latest")
+        model = additional.get("mistral_model", settings.MISTRAL_OCR_MODEL)
         base_url = settings.MISTRAL_API_BASE
 
         service = MistralOCRService(api_key=api_key, base_url=base_url, model=model)
         file_content = get_file(file.file_uuid)
         result = service.process(file_content)
 
-        doc = models.Document(
-            project_id=self.task.project_id,
-            original_file_id=file.id,
-            file_preprocessing_task_id=file_task.id,
+        doc = self._get_or_create_document(
+            file=file,
+            file_task=file_task,
             text=result.text,
             document_name=file.file_name,
-            preprocessing_config_id=self.config.id,
             meta_data={
                 "file_type": file.file_type,
                 "ocr_engine": "mistral_ocr",
                 "model": model,
             },
         )
-        self.db.add(doc)
         return [doc]
 
     def _process_with_llm_vision_ocr(
@@ -828,20 +1262,17 @@ class PreprocessingPipeline:
                 "total_pages": result.total_pages,
             }
 
-        doc = models.Document(
-            project_id=self.task.project_id,
-            original_file_id=file.id,
-            file_preprocessing_task_id=file_task.id,
+        doc = self._get_or_create_document(
+            file=file,
+            file_task=file_task,
             text=result.text,
             document_name=file.file_name,
-            preprocessing_config_id=self.config.id,
             meta_data={
                 "file_type": file.file_type,
                 "ocr_engine": "llm_vision",
                 "model": model,
             },
         )
-        self.db.add(doc)
         return [doc]
 
     def _process_table_file(
@@ -874,13 +1305,11 @@ class PreprocessingPipeline:
             # Convert entire dataframe to text
             text = df.to_string()
 
-            doc = models.Document(
-                project_id=self.task.project_id,
-                original_file_id=file.id,
-                file_preprocessing_task_id=file_task.id,
+            doc = self._get_or_create_document(
+                file=file,
+                file_task=file_task,
                 text=text,
                 document_name=file.file_name,
-                preprocessing_config_id=self.config.id,
                 meta_data={
                     "file_type": "table",
                     "preprocessing_strategy": "full_document",
@@ -888,7 +1317,6 @@ class PreprocessingPipeline:
                     "columns": list(df.columns),
                 },
             )
-            self.db.add(doc)
             documents.append(doc)
 
         elif strategy == models.PreprocessingStrategy.ROW_BY_ROW:
@@ -963,14 +1391,12 @@ class PreprocessingPipeline:
                 else:
                     doc_name = f"{file.file_name}_row_{idx}"
 
-                # Create document
-                doc = models.Document(
-                    project_id=self.task.project_id,
-                    original_file_id=file.id,
-                    file_preprocessing_task_id=file_task.id,
+                # Create or update document (idempotent)
+                doc = self._get_or_create_document(
+                    file=file,
+                    file_task=file_task,
                     text=content,
                     document_name=doc_name,
-                    preprocessing_config_id=self.config.id,
                     meta_data={
                         "row_index": int(idx),  # Convert numpy int to Python int
                         "source_columns": text_columns,
@@ -987,7 +1413,6 @@ class PreprocessingPipeline:
 
                 # Commit in batches for performance
                 if len(batch_documents) >= self.BATCH_SIZE:
-                    self.db.bulk_save_objects(batch_documents)
                     self.db.commit()
                     documents.extend(batch_documents)
                     batch_documents = []
@@ -998,7 +1423,6 @@ class PreprocessingPipeline:
 
             # Save remaining documents
             if batch_documents:
-                self.db.bulk_save_objects(batch_documents)
                 self.db.commit()
                 documents.extend(batch_documents)
 
@@ -1016,18 +1440,15 @@ class PreprocessingPipeline:
         # Decode text content
         text = file_content.decode("utf-8", errors="replace")
 
-        # Create document
-        doc = models.Document(
-            project_id=self.task.project_id,
-            original_file_id=file.id,
-            file_preprocessing_task_id=file_task.id,
+        # Create or update document (idempotent)
+        doc = self._get_or_create_document(
+            file=file,
+            file_task=file_task,
             text=text,
             document_name=file.file_name,
-            preprocessing_config_id=self.config.id,
             meta_data={"file_type": "text"},
         )
 
-        self.db.add(doc)
         return [doc]
 
 

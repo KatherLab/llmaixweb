@@ -3,37 +3,43 @@
     <!-- Header -->
     <div class="flex justify-between items-start">
       <div>
-        <h2 class="text-2xl font-bold text-gray-900">Documents</h2>
-        <p class="mt-1 text-sm text-gray-500">View and manage processed documents</p>
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Documents</h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          View and manage processed documents
+        </p>
       </div>
 
       <!-- Quick Stats -->
       <div class="flex items-center space-x-6">
         <div class="text-center">
-          <p class="text-2xl font-semibold text-gray-900">{{ totalCount }}</p>
-          <p class="text-xs text-gray-500">Total Documents</p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ totalCount }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Total Documents</p>
         </div>
         <div class="text-center">
-          <p class="text-2xl font-semibold text-blue-600">{{ recentDocuments }}</p>
-          <p class="text-xs text-gray-500">Last 7 days</p>
+          <p class="text-2xl font-semibold text-blue-600 dark:text-blue-400">
+            {{ recentDocuments }}
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Last 7 days</p>
         </div>
       </div>
     </div>
 
-    <div class="border-b border-gray-200">
+    <div class="border-b border-gray-200 dark:border-gray-700">
       <nav class="-mb-px flex space-x-8">
         <button
           :class="[
             'py-2 px-1 border-b-2 font-medium text-sm',
             activeTab === 'documents'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+              ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600',
           ]"
           @click="activeTab = 'documents'"
         >
           All Documents
           <!-- ✅ Server-side version -->
-          <span class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs">
+          <span
+            class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs dark:bg-gray-800 dark:text-gray-300"
+          >
             {{ totalCount }}
           </span>
         </button>
@@ -41,13 +47,15 @@
           :class="[
             'py-2 px-1 border-b-2 font-medium text-sm',
             activeTab === 'groups'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+              ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600',
           ]"
           @click="activeTab = 'groups'"
         >
           Document Groups
-          <span class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs">
+          <span
+            class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs dark:bg-gray-800 dark:text-gray-300"
+          >
             {{ documentSets.length }}
           </span>
         </button>
@@ -57,20 +65,24 @@
     <!-- Tab Content -->
     <div v-if="activeTab === 'documents'">
       <!-- Filters and Search -->
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+      <div
+        class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4"
+      >
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <!-- Search -->
           <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >Search</label
+            >
             <div class="relative">
               <input
                 v-model="filters.search"
                 type="text"
                 placeholder="Search in documents..."
-                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <svg
-                class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+                class="absolute left-3 top-2.5 h-5 w-5 text-gray-400 dark:text-gray-500"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -88,10 +100,12 @@
 
           <!-- Preprocessing Task Filter -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Preprocessing Task</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >Preprocessing Task</label
+            >
             <select
               v-model="filters.taskId"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Tasks</option>
               <option v-for="task in preprocessingTasks" :key="task.id" :value="task.id">
@@ -102,10 +116,12 @@
 
           <!-- Date Range -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >Date Range</label
+            >
             <select
               v-model="filters.dateRange"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Time</option>
               <option value="today">Today</option>
@@ -116,10 +132,12 @@
 
           <!-- Status Filter -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Processing Status</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >Processing Status</label
+            >
             <select
               v-model="filters.status"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Status</option>
               <option value="success">Success</option>
@@ -131,11 +149,46 @@
           <!-- Clear Filters -->
           <div class="flex items-end">
             <button
-              class="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              class="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               @click="clearFilters"
             >
               Clear Filters
             </button>
+          </div>
+        </div>
+
+        <!-- Archived Documents Toggle -->
+        <div
+          class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+        >
+          <div class="flex items-center gap-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                v-model="filters.includeArchived"
+                type="checkbox"
+                class="rounded text-blue-600 focus:ring-blue-500"
+              />
+              <span class="text-sm text-gray-700 dark:text-gray-300">
+                Include archived versions
+                <span v-if="filters.includeArchived" class="text-xs text-gray-500 ml-1">
+                  (showing document history)
+                </span>
+              </span>
+            </label>
+            <span
+              v-if="filters.includeArchived"
+              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700"
+            >
+              <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              History mode
+            </span>
           </div>
         </div>
       </div>
@@ -147,8 +200,8 @@
             :class="[
               'p-2 rounded-lg transition-colors',
               viewMode === 'grid'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-400 hover:text-gray-600',
+                ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
             ]"
             @click="viewMode = 'grid'"
           >
@@ -171,8 +224,8 @@
             :class="[
               'p-2 rounded-lg transition-colors',
               viewMode === 'list'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-400 hover:text-gray-600',
+                ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
             ]"
             @click="viewMode = 'list'"
           >
@@ -194,39 +247,41 @@
         </div>
 
         <div class="flex items-center space-x-3">
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-gray-500 dark:text-gray-400">
             {{ totalCount }} document{{ totalCount !== 1 ? 's' : '' }}
           </span>
 
           <div v-if="selectedDocuments.length > 0" class="flex items-center space-x-2">
-            <span class="text-sm text-gray-700"> {{ selectedDocuments.length }} selected </span>
+            <span class="text-sm text-gray-700 dark:text-gray-300">
+              {{ selectedDocuments.length }} selected
+            </span>
             <button
-              class="text-sm text-green-600 hover:text-green-800 font-medium"
+              class="text-sm text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 font-medium"
               @click="createGroupFromSelection"
             >
               Create Group
             </button>
-            <span class="text-gray-300">|</span>
+            <span class="text-gray-300 dark:text-gray-600">|</span>
             <button
-              class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
               @click="performBatchAction('reprocess')"
             >
               Reprocess
             </button>
             <button
-              class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
               @click="performBatchAction('export')"
             >
               Export
             </button>
             <button
-              class="text-sm text-red-600 hover:text-red-800 font-medium"
+              class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
               @click="performBatchAction('delete')"
             >
               Delete
             </button>
             <button
-              class="text-sm text-gray-600 hover:text-gray-800"
+              class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
               @click="selectedDocuments = []"
             >
               Clear
@@ -240,9 +295,12 @@
         <LoadingSpinner size="large" />
       </div>
 
-      <div v-else-if="serverItems.length === 0" class="bg-gray-50 rounded-lg p-12 text-center">
+      <div
+        v-else-if="serverItems.length === 0"
+        class="bg-gray-50 dark:bg-slate-800 rounded-lg p-12 text-center"
+      >
         <svg
-          class="mx-auto h-12 w-12 text-gray-400"
+          class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -255,8 +313,8 @@
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">No documents found</h3>
-        <p class="mt-1 text-sm text-gray-500">
+        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No documents found</h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
           {{
             filters.search
               ? 'Try adjusting your search or filters'
@@ -282,35 +340,38 @@
       </div>
 
       <!-- List View -->
-      <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+      <div
+        v-else
+        class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
+      >
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-slate-800">
             <tr>
               <th class="px-6 py-3 text-left">
                 <input
                   type="checkbox"
                   :checked="areAllDocumentsSelected"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-gray-600"
                   @change="toggleSelectAll"
                 />
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Document
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Configuration
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Processing
               </th>
               <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
                 Created
               </th>
@@ -319,13 +380,17 @@
               </th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="doc in serverItems" :key="doc.id" class="hover:bg-gray-50 transition-colors">
+          <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-700">
+            <tr
+              v-for="doc in serverItems"
+              :key="doc.id"
+              class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+            >
               <td class="px-6 py-4 whitespace-nowrap">
                 <input
                   type="checkbox"
                   :checked="selectedDocuments.includes(doc.id)"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-gray-600"
                   @change="toggleDocumentSelection(doc.id)"
                 />
               </td>
@@ -333,20 +398,20 @@
                 <div class="flex items-center">
                   <FileIcon :file-type="doc.original_file?.file_type" :size="40" />
                   <div class="ml-3">
-                    <p class="text-sm font-medium text-gray-900 truncate max-w-xs">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate max-w-xs">
                       {{ doc.original_file?.file_name || `Document #${doc.id}` }}
                     </p>
-                    <p class="text-xs text-gray-500">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
                       {{ formatFileSize(doc.original_file?.file_size) }}
                     </p>
                   </div>
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">
+                <div class="text-sm text-gray-900 dark:text-white">
                   {{ doc.preprocessing_config?.name || 'Custom Config' }}
                 </div>
-                <div class="text-xs text-gray-500">
+                <div class="text-xs text-gray-500 dark:text-gray-400">
                   {{
                     getEngineLabelWithKey(doc.preprocessing_config?.additional_settings?.ocr_engine)
                   }}
@@ -362,13 +427,13 @@
                   {{ doc.file_preprocessing_task?.status || 'Processed' }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {{ formatDate(doc.created_at) }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex items-center justify-end space-x-2">
                   <button
-                    class="text-blue-600 hover:text-blue-900"
+                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                     title="View"
                     @click="viewDocument(doc)"
                   >
@@ -394,7 +459,7 @@
                     </svg>
                   </button>
                   <button
-                    class="text-gray-600 hover:text-gray-900"
+                    class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
                     title="Download"
                     @click="downloadDocument(doc)"
                   >
@@ -423,19 +488,19 @@
       <!-- Pagination -->
       <div
         v-if="totalPages > 1"
-        class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6"
+        class="bg-white dark:bg-slate-900 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6"
       >
         <div class="flex-1 flex justify-between sm:hidden">
           <button
             :disabled="currentPage === 1"
-            class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
             @click="currentPage--"
           >
             Previous
           </button>
           <button
             :disabled="currentPage === totalPages"
-            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
             @click="currentPage++"
           >
             Next
@@ -444,7 +509,7 @@
         <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
             <!-- ✅ Server-side version -->
-            <p class="text-sm text-gray-700">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
               Showing
               <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span>
               to
@@ -463,7 +528,7 @@
             >
               <button
                 :disabled="currentPage === 1"
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 @click="currentPage = 1"
               >
                 <span class="sr-only">First</span>
@@ -488,8 +553,8 @@
                 :class="[
                   'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
                   page === currentPage
-                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50',
+                    ? 'z-10 bg-blue-50 dark:bg-blue-900 border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                    : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800',
                 ]"
                 @click="currentPage = page"
               >
@@ -497,7 +562,7 @@
               </button>
               <button
                 :disabled="currentPage === totalPages"
-                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 @click="currentPage = totalPages"
               >
                 <span class="sr-only">Last</span>
@@ -564,6 +629,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/services/api.js'
 import { useToast } from 'vue-toastification'
 import { debounce } from 'perfect-debounce'
@@ -583,6 +649,8 @@ const props = defineProps({
   },
 })
 
+const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 
 // State
@@ -611,6 +679,7 @@ const filters = ref({
   dateRange: '',
   ocrLanguage: '',
   status: '',
+  includeArchived: false,
 })
 
 // Stats - using server-side totalCount
@@ -657,6 +726,39 @@ const visiblePages = computed(() => {
   return pages.filter((p) => p === '...' || (p >= 1 && p <= total))
 })
 
+// Handle highlight query parameter (from preprocessing history "Go to Document" navigation)
+const handleHighlight = async () => {
+  const highlightId = route.query.highlight
+  if (!highlightId) return
+
+  try {
+    // Fetch the specific document by ID
+    const { data } = await api.get(`/project/${props.projectId}/document/${highlightId}`)
+    if (data) {
+      // Open the document viewer
+      viewingDocument.value = data
+      // Clear the highlight parameter without reloading
+      router.replace({ query: { ...route.query, highlight: undefined } })
+    }
+  } catch (error) {
+    console.error('Failed to load highlighted document:', error)
+    toast.error('Failed to load document')
+    // Still clear the parameter to avoid repeated errors
+    router.replace({ query: { ...route.query, highlight: undefined } })
+  }
+}
+
+// Watch for route query changes (e.g., highlight parameter from navigation)
+watch(
+  () => route.query.highlight,
+  (newHighlight) => {
+    if (newHighlight) {
+      handleHighlight()
+    }
+  },
+  { immediate: true },
+)
+
 // Methods
 const fetchDocuments = async () => {
   isLoading.value = true
@@ -669,6 +771,7 @@ const fetchDocuments = async () => {
       search: filters.value.search || undefined,
       date_from: date_from || undefined,
       date_to: date_to || undefined,
+      include_archived: filters.value.includeArchived || undefined,
     }
 
     const { data } = await api.get(`/project/${props.projectId}/document`, { params })
@@ -891,13 +994,13 @@ const clearFilters = () => {
 const getStatusClass = (status) => {
   switch (status) {
     case 'success':
-      return 'bg-green-100 text-green-800'
+      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
     case 'partial':
-      return 'bg-yellow-100 text-yellow-800'
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
     case 'failed':
-      return 'bg-red-100 text-red-800'
+      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
     default:
-      return 'bg-gray-100 text-gray-800'
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
   }
 }
 

@@ -3,17 +3,23 @@
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Trials</h1>
-        <p class="text-gray-500 mt-1">Run and manage information extraction trials</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Trials</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">
+          Run and manage information extraction trials
+        </p>
       </div>
       <div class="flex items-center gap-4">
         <label class="flex items-center text-sm gap-2">
-          <input v-model="showCompleted" type="checkbox" class="rounded border-gray-300" />
-          <span class="text-gray-700">Show completed</span>
+          <input
+            v-model="showCompleted"
+            type="checkbox"
+            class="rounded border-gray-300 dark:border-slate-700 dark:bg-slate-800"
+          />
+          <span class="text-gray-700 dark:text-gray-300">Show completed</span>
         </label>
         <Tooltip v-if="trialDisabled" :text="trialDisabledReason">
           <button
-            class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition disabled:bg-blue-300 disabled:cursor-not-allowed"
+            class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 dark:hover:bg-blue-800 transition disabled:bg-blue-300 disabled:cursor-not-allowed"
             :disabled="trialDisabled"
             type="button"
             @click="openCreateTrialModal"
@@ -23,7 +29,7 @@
         </Tooltip>
         <button
           v-else
-          class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition"
+          class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 dark:hover:bg-blue-800 transition"
           :disabled="trialDisabled"
           type="button"
           @click="openCreateTrialModal"
@@ -34,17 +40,21 @@
     </div>
 
     <!-- Filter Panel -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+    <div
+      class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4"
+    >
       <div class="grid grid-cols-1 md:grid-cols-7 gap-4">
         <!-- Search -->
         <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >Search</label
+          >
           <div class="relative">
             <input
               v-model="filters.search"
               type="text"
               placeholder="Search in name, description, or ID..."
-              class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               @keyup.enter="applyFilters"
             />
             <svg
@@ -65,10 +75,12 @@
 
         <!-- Status -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >Status</label
+          >
           <select
             v-model="filters.status"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
             @change="applyFilters"
           >
             <option value="">All</option>
@@ -82,10 +94,12 @@
 
         <!-- Schema -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Schema</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >Schema</label
+          >
           <select
             v-model="filters.schema_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
             @change="applyFilters"
           >
             <option value="">All</option>
@@ -97,10 +111,12 @@
 
         <!-- Prompt -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Prompt</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >Prompt</label
+          >
           <select
             v-model="filters.prompt_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
             @change="applyFilters"
           >
             <option value="">All</option>
@@ -112,22 +128,26 @@
 
         <!-- LLM Model -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">LLM Model</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >LLM Model</label
+          >
           <input
             v-model="filters.llm_model"
             type="text"
             placeholder="Exact match"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500"
             @keyup.enter="applyFilters"
           />
         </div>
 
         <!-- Failures -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Errors</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >Errors</label
+          >
           <select
             v-model="filters.has_failures"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
             @change="applyFilters"
           >
             <option value="">All</option>
@@ -138,10 +158,12 @@
 
         <!-- Date Range -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Created</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >Created</label
+          >
           <select
             v-model="filters.dateRange"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
             @change="applyFilters"
           >
             <option value="">All Time</option>
@@ -154,13 +176,13 @@
 
       <div class="mt-3 flex gap-2">
         <button
-          class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
+          class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 dark:hover:bg-blue-800"
           @click="applyFilters"
         >
           Apply
         </button>
         <button
-          class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 text-sm font-semibold hover:bg-gray-200"
+          class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 dark:text-gray-200 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-700"
           @click="clearFilters"
         >
           Clear
@@ -185,7 +207,7 @@
       <template #icon>
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="h-12 w-12 text-gray-400"
+          class="h-12 w-12 text-gray-400 dark:text-gray-500"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -210,6 +232,7 @@
           :schemas="schemas"
           :prompts="prompts"
           :selected="selectedTrials.includes(trial.id)"
+          :highlighted="highlightedTrialId === trial.id"
           @select="toggleTrialSelection(trial.id)"
           @rename="openRenameModal(trial)"
           @delete="confirmDeleteTrial(trial)"
@@ -225,7 +248,7 @@
       <!-- Pagination -->
       <div v-if="trials.length < totalTrials" class="flex justify-center">
         <button
-          class="px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 border border-gray-200"
+          class="px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700"
           @click="loadMore"
         >
           Load more ({{ trials.length }}/{{ totalTrials }})
@@ -300,6 +323,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { api } from '@/services/api'
+import { websocketService } from '@/services/websocket.js'
 import CreateTrialModal from '@/components/trials/CreateTrialModal.vue'
 import TrialCard from '@/components/trials/TrialCard.vue'
 import BatchActionsModal from '@/components/documents/BatchActionsModal.vue'
@@ -346,10 +370,27 @@ const showPromptModal = ref(false)
 const selectedPrompt = ref(null)
 const showDownloadModal = ref(false)
 const trialToDownload = ref(null)
+const highlightedTrialId = ref(null)
 
-const pollInterval = ref(null)
-const isPollingActive = ref(false)
-const POLL_INTERVAL_MS = 3000
+// Handle expand-trial event from ActivityBell
+const handleExpandTrial = (event) => {
+  const trialId = event.detail?.id
+  if (!trialId) return
+
+  highlightedTrialId.value = Number(trialId)
+
+  // Try to scroll to the trial card, retrying if it's not found yet
+  const tryScrollToTrial = (attempts = 0) => {
+    const card = document.getElementById(`trial-card-${trialId}`)
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    } else if (attempts < 5) {
+      // Retry after a short delay if card isn't found yet
+      setTimeout(() => tryScrollToTrial(attempts + 1), 200)
+    }
+  }
+  setTimeout(() => tryScrollToTrial(), 100)
+}
 
 const trialDisabled = computed(
   () =>
@@ -489,7 +530,6 @@ async function handleCreateTrial(trialData) {
     trials.value.unshift(response.data)
     totalTrials.value += 1
     isModalOpen.value = false
-    startPolling()
     toast.success('Trial created!')
   } catch {
     toast.error('Failed to create trial.')
@@ -529,7 +569,6 @@ function handleBatchActionComplete(updated = false) {
   showBatchModal.value = false
   if (updated) {
     resetAndFetch()
-    startPolling()
   }
 }
 
@@ -581,7 +620,6 @@ async function retryTrial(trial) {
     trials.value.unshift(response.data)
     totalTrials.value += 1
     toast.success('Trial restarted')
-    startPolling()
   } catch {
     toast.error('Failed to restart trial')
   }
@@ -609,47 +647,31 @@ function getActiveTrialIds() {
     .filter((t) => t.status === 'pending' || t.status === 'processing')
     .map((t) => t.id)
 }
-function startPolling() {
-  if (isPollingActive.value) return
-  isPollingActive.value = true
-  pollTrials()
-}
-function stopPolling() {
-  isPollingActive.value = false
-  if (pollInterval.value) {
-    clearTimeout(pollInterval.value)
-    pollInterval.value = null
-  }
+
+// WebSocket subscription for trial updates
+let wsTrialUnsubscribe = null
+
+const startWebSocket = () => {
+  wsTrialUnsubscribe = websocketService.onTrialUpdate((data) => {
+    // Only update if the trial belongs to this project
+    if (data.project_id !== props.projectId) return
+
+    // Update the trial in the list
+    const idx = trials.value.findIndex((t) => t.id === data.trial_id)
+    if (idx !== -1) {
+      trials.value[idx] = { ...trials.value[idx], ...data }
+    } else {
+      // New trial - fetch full list
+      resetAndFetch()
+    }
+  })
 }
 
-async function pollTrials() {
-  if (!isPollingActive.value) return
-  const activeIds = getActiveTrialIds()
-  if (activeIds.length === 0) {
-    stopPolling()
-    return
+const stopWebSocket = () => {
+  if (wsTrialUnsubscribe) {
+    wsTrialUnsubscribe()
+    wsTrialUnsubscribe = null
   }
-  let hadError = false
-  const updates = await Promise.all(
-    activeIds.map((id) =>
-      api
-        .get(`/project/${props.projectId}/trial/${id}`)
-        .then((r) => r.data)
-        .catch((err) => {
-          hadError = true
-          return null
-        }),
-    ),
-  )
-  if (hadError) {
-    toast.error('Failed to poll trial status')
-  }
-  for (const updated of updates) {
-    if (!updated) continue
-    const idx = trials.value.findIndex((t) => t.id === updated.id)
-    if (idx !== -1) trials.value[idx] = updated
-  }
-  pollInterval.value = setTimeout(pollTrials, POLL_INTERVAL_MS)
 }
 
 onMounted(async () => {
@@ -669,10 +691,13 @@ onMounted(async () => {
     error.value = err?.message || 'Failed to load'
   } finally {
     isLoading.value = false
-    startPolling()
+    startWebSocket()
   }
+  // Listen for expand event from ActivityBell
+  document.addEventListener('expand-trial', handleExpandTrial)
 })
 onUnmounted(() => {
-  stopPolling()
+  stopWebSocket()
+  document.removeEventListener('expand-trial', handleExpandTrial)
 })
 </script>

@@ -42,34 +42,33 @@ def check_project_access(
     )
 
 
-@router.post("/preprocess", response_model=schemas.PreprocessingTask)
-async def preprocess_project_data(
+@router.post(
+    "/preprocess/preview", response_model=schemas.PreprocessingDuplicatePreview
+)
+async def preview_preprocessing_duplicates(
     *,
     project_id: int,
     preprocessing_task: schemas.PreprocessingTaskCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> schemas.PreprocessingTask:
-    """Start preprocessing with advanced duplicate detection and progress tracking."""
-    check_project_access(project_id, current_user, db, "write")
+) -> schemas.PreprocessingDuplicatePreview:
+    """Preview which files would have document duplicates if processed.
+
+    This endpoint checks for existing documents that would be archived
+    (marked as is_latest=False) if the preprocessing task were to run.
+
+    Distinguishes between:
+    - same_config_duplicates: Files with existing documents using the exact same OCR config
+    - files_with_duplicates: All files with any existing documents (regardless of config)
+    - pdfs_with_embedded_text: PDFs where embedded text was detected (OCR may not affect result)
+    """
+    check_project_access(project_id, current_user, db, "read")
 
     if not preprocessing_task.inline_config:
         raise HTTPException(
             status_code=400,
             detail="inline_config is required",
         )
-
-    # Create configuration from inline config
-    config_dict = preprocessing_task.inline_config.model_dump(exclude={"bypass_celery"})
-    config = models.PreprocessingConfiguration(
-        project_id=project_id,
-        name=config_dict.get("name", f"Task {datetime.datetime.now(datetime.UTC)}"),
-        description=config_dict.get("description"),
-        additional_settings=config_dict.get("additional_settings"),
-    )
-    db.add(config)
-    db.commit()
-    db.refresh(config)
 
     # Validate files exist and belong to project
     files = (
@@ -89,32 +88,369 @@ async def preprocess_project_data(
             detail=f"Files not found or don't belong to project: {missing_ids}",
         )
 
-    # Create preprocessing task
-    task = models.PreprocessingTask(
-        project_id=project_id,
-        configuration_id=config.id,
-        total_files=len(files),
-        rollback_on_cancel=preprocessing_task.rollback_on_cancel,
+    # Check if any OCR engine is enabled when processing image files (PNG/JPEG).
+    # PDFs are still allowed - they can use pypdf for embedded text extraction.
+    # PDFs without embedded text will show a warning that OCR is not available.
+    from ....core.dynamic_settings import get_settings
+
+    settings = get_settings()
+
+    image_types = {
+        models.FileType.IMAGE_PNG,
+        models.FileType.IMAGE_JPEG,
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+    }
+
+    has_images = any(file.file_type in image_types for file in files)
+    any_ocr_enabled = (
+        settings.DOCLING_SERVE_ENABLED
+        or settings.MISTRAL_OCR_ENABLED
+        or settings.VISION_OCR_ENABLED
+        or settings.DOCLING_LOCAL_FALLBACK
     )
 
-    # Store API credentials in task metadata if provided
-    if preprocessing_task.api_key and preprocessing_task.base_url:
-        task.task_metadata = {
-            "custom_api_used": True,
-            "api_base_url": preprocessing_task.base_url,
-            # Don't store the actual API key for security
-        }
+    if has_images and not any_ocr_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "no_ocr_engine_enabled",
+                "message": "All OCR engines are disabled. At least one OCR engine must be enabled to process image files (PNG/JPEG).",
+                "hint": "Enable Local OCR, Mistral OCR, or Vision LLM in Admin Settings. PDF files can still be processed for embedded text extraction.",
+            },
+        )
 
-    db.add(task)
-    db.commit()
+    # Get or create config (don't commit - just for preview)
+    config_dict = preprocessing_task.inline_config.model_dump()
+    config = models.PreprocessingConfiguration(
+        project_id=project_id,
+        name=config_dict.get("name", "Preview Task"),
+        description=config_dict.get("description"),
+        additional_settings=config_dict.get("additional_settings"),
+    )
 
-    # Check for duplicates and create file tasks
-    file_tasks_to_process = []
-    skipped_files = 0
-    skipped_file_names = []
+    # Extract OCR engine info from additional_settings for comparison
+    additional_settings = config_dict.get("additional_settings", {})
+    new_ocr_engine = additional_settings.get("ocr_engine", "docling_tesseract")
+    new_force_ocr = additional_settings.get("force_ocr", False)
+
+    # Normalize OCR engine names for comparison
+    # Frontend sends "docling_tesseract" but backend stores "tesseract"
+    # This mapping ensures proper duplicate detection
+    def normalize_ocr_engine(engine: str) -> str:
+        """Normalize OCR engine names for comparison with stored metadata."""
+        if engine == "docling_tesseract":
+            return "tesseract"
+        return engine
+
+    new_ocr_engine_normalized = normalize_ocr_engine(new_ocr_engine)
+
+    # Check for duplicates
+    files_with_duplicates = []
+    same_config_duplicates = []
+    pdfs_with_embedded_text = []
+    total_existing_docs = 0
 
     for file in files:
-        # Check for existing documents with same configuration
+        # Count existing documents with same file/name combination (any config)
+        existing_docs = (
+            db.execute(
+                select(models.Document)
+                .where(
+                    models.Document.original_file_id == file.id,
+                    models.Document.is_latest.is_(True),
+                )
+                .where(models.Document.document_name.like(f"{file.file_name}%"))
+            )
+            .scalars()
+            .all()
+        )
+
+        if existing_docs:
+            files_with_duplicates.append(
+                schemas.DuplicatePreviewItem(
+                    file_id=file.id,
+                    file_name=file.file_name,
+                    existing_document_count=len(existing_docs),
+                    existing_document_ids=[d.id for d in existing_docs],
+                    preprocessing_config_id=config.id,
+                    config_name=config.name,
+                )
+            )
+            total_existing_docs += len(existing_docs)
+
+            # Check for same config duplicates (OCR engine + force_ocr setting match)
+            same_config_docs = []
+            for doc in existing_docs:
+                doc_meta = doc.meta_data or {}
+                doc_ocr_engine = doc_meta.get("ocr_engine")
+                doc_force_ocr = doc_meta.get("force_ocr", False)
+                doc_extraction_method = doc_meta.get("extraction_method", "")
+
+                # Check if this document was created with the same config
+                # For PDFs with embedded text, docling_serve_no_ocr produces the same result
+                # regardless of selected OCR engine (when force_ocr is False)
+                has_embedded_text = doc_meta.get("embedded_text_detected", False)
+
+                # Normalize the stored OCR engine for comparison
+                doc_ocr_engine_normalized = (
+                    normalize_ocr_engine(doc_ocr_engine) if doc_ocr_engine else ""
+                )
+
+                # Same config = same OCR engine AND same force_ocr setting
+                # OR both would use docling embedded text extraction (force_ocr=False for PDF)
+                is_same_config = (
+                    (
+                        doc_ocr_engine_normalized == new_ocr_engine_normalized
+                        and doc_force_ocr == new_force_ocr
+                    )
+                    or
+                    # Special case: PDF with embedded text, force_ocr=False for both
+                    (
+                        file.file_type == models.FileType.APPLICATION_PDF
+                        and has_embedded_text
+                        and not new_force_ocr
+                        and "no_ocr" in doc_extraction_method
+                    )
+                )
+
+                if is_same_config:
+                    same_config_docs.append(doc)
+
+            if same_config_docs:
+                same_config_duplicates.append(
+                    schemas.DuplicatePreviewItem(
+                        file_id=file.id,
+                        file_name=file.file_name,
+                        existing_document_count=len(same_config_docs),
+                        existing_document_ids=[d.id for d in same_config_docs],
+                        preprocessing_config_id=config.id,
+                        config_name=config.name,
+                    )
+                )
+
+            # Check for PDFs with embedded text
+            if file.file_type == models.FileType.APPLICATION_PDF and existing_docs:
+                for doc in existing_docs:
+                    doc_meta = doc.meta_data or {}
+                    has_embedded = doc_meta.get("embedded_text_detected", False)
+                    ocr_method = doc_meta.get("extraction_method")
+
+                    if has_embedded or (ocr_method and "no_ocr" in ocr_method):
+                        pdfs_with_embedded_text.append(
+                            schemas.PdfEmbeddedTextInfo(
+                                file_id=file.id,
+                                file_name=file.file_name,
+                                has_embedded_text=True,
+                                existing_document_ocr_method=ocr_method,
+                            )
+                        )
+                        break  # Only report once per file
+
+    return schemas.PreprocessingDuplicatePreview(
+        has_duplicates=len(files_with_duplicates) > 0,
+        files_with_duplicates=files_with_duplicates,
+        total_files_to_process=len(files),
+        files_without_duplicates=len(files) - len(files_with_duplicates),
+        total_existing_documents=total_existing_docs,
+        same_config_duplicates=same_config_duplicates,
+        pdfs_with_embedded_text=pdfs_with_embedded_text,
+    )
+
+
+@router.post("/preprocess", response_model=schemas.PreprocessingTask)
+async def preprocess_project_data(
+    *,
+    project_id: int,
+    preprocessing_task: schemas.PreprocessingTaskCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.PreprocessingTask:
+    """Start preprocessing with advanced duplicate detection and progress tracking."""
+    check_project_access(project_id, current_user, db, "write")
+
+    if not preprocessing_task.inline_config:
+        raise HTTPException(
+            status_code=400,
+            detail="inline_config is required",
+        )
+
+    # Get config settings from inline config
+    config_dict = preprocessing_task.inline_config.model_dump(exclude={"bypass_celery"})
+    new_additional_settings = config_dict.get("additional_settings", {})
+
+    # Try to find an existing config with matching settings
+    # This ensures document versioning works correctly when re-processing with same settings
+    # Note: We compare additional_settings (JSON) in Python since SQL JSON comparison is unreliable
+    all_configs = (
+        db.execute(
+            select(models.PreprocessingConfiguration).where(
+                models.PreprocessingConfiguration.project_id == project_id,
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    config = None
+    for existing_config in all_configs:
+        existing_settings = existing_config.additional_settings or {}
+        # Compare settings dicts (handle None values)
+        if existing_settings == new_additional_settings:
+            config = existing_config
+            break
+
+    if config:
+        # Reuse existing config - update name/description if provided
+        if config_dict.get("name"):
+            config.name = config_dict.get("name")
+        if config_dict.get("description"):
+            config.description = config_dict.get("description")
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    else:
+        # Create new configuration
+        config = models.PreprocessingConfiguration(
+            project_id=project_id,
+            name=config_dict.get("name", f"Task {datetime.datetime.now(datetime.UTC)}"),
+            description=config_dict.get("description"),
+            additional_settings=new_additional_settings,
+        )
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+
+    # Validate files exist and belong to project
+    files = (
+        db.execute(
+            select(models.File).where(
+                models.File.id.in_(preprocessing_task.file_ids),
+                models.File.project_id == project_id,
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if len(files) != len(preprocessing_task.file_ids):
+        missing_ids = set(preprocessing_task.file_ids) - {f.id for f in files}
+        raise HTTPException(
+            status_code=404,
+            detail=f"Files not found or don't belong to project: {missing_ids}",
+        )
+
+    # Validate CSV/XLSX files have preprocessing strategy configured
+    csv_xlsx_types = {
+        models.FileType.TEXT_CSV,
+        models.FileType.APPLICATION_VND_MS_EXCEL,
+        models.FileType.APPLICATION_VND_OPENXMLFORMATS_OFFICEDOCUMENT_SPREADSHEETML_SHEET,
+        "text/csv",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }
+    unconfigured_files = []
+    for file in files:
+        if file.file_type in csv_xlsx_types and not file.preprocessing_strategy:
+            unconfigured_files.append(
+                {
+                    "id": file.id,
+                    "name": file.file_name,
+                    "type": file.file_type,
+                }
+            )
+
+    if unconfigured_files:
+        file_names = ", ".join([f["name"] for f in unconfigured_files])
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "csv_xlsx_needs_config",
+                "message": f"CSV/XLSX files need import configuration before preprocessing. "
+                f"Please configure: {file_names}",
+                "unconfigured_files": unconfigured_files,
+            },
+        )
+
+    # Check if any OCR engine is enabled when processing image files (PNG/JPEG).
+    # PDFs are still allowed - they can use pypdf for embedded text extraction.
+    # PDFs without embedded text will show a warning that OCR is not available.
+    from ....core.dynamic_settings import get_settings
+
+    settings = get_settings()
+
+    image_types = {
+        models.FileType.IMAGE_PNG,
+        models.FileType.IMAGE_JPEG,
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+    }
+
+    has_images = any(file.file_type in image_types for file in files)
+    any_ocr_enabled = (
+        settings.DOCLING_SERVE_ENABLED
+        or settings.MISTRAL_OCR_ENABLED
+        or settings.VISION_OCR_ENABLED
+        or settings.DOCLING_LOCAL_FALLBACK
+    )
+
+    if has_images and not any_ocr_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "no_ocr_engine_enabled",
+                "message": "All OCR engines are disabled. At least one OCR engine must be enabled to process image files (PNG/JPEG).",
+                "hint": "Enable Local OCR, Mistral OCR, or Vision LLM in Admin Settings. PDF files can still be processed for embedded text extraction.",
+            },
+        )
+
+    # HARD CHECK: Reject request if any file is already being processed with this config
+    # This prevents all race conditions and duplicate document creation
+    in_progress_files = []
+    for file in files:
+        in_progress_file_task = (
+            db.execute(
+                select(models.FilePreprocessingTask)
+                .join(models.PreprocessingTask)
+                .where(
+                    models.FilePreprocessingTask.file_id == file.id,
+                    models.PreprocessingTask.configuration_id == config.id,
+                    models.FilePreprocessingTask.status.in_(
+                        [
+                            models.PreprocessingStatus.PENDING,
+                            models.PreprocessingStatus.IN_PROGRESS,
+                        ]
+                    ),
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if in_progress_file_task:
+            in_progress_files.append(
+                {
+                    "file_id": file.id,
+                    "file_name": file.file_name,
+                    "task_id": in_progress_file_task.preprocessing_task_id,
+                    "status": in_progress_file_task.status.value,
+                }
+            )
+
+    if in_progress_files:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "files_already_being_processed",
+                "message": "One or more files are already being processed with this configuration. "
+                "Please wait for the current preprocessing task to complete before resubmitting.",
+                "in_progress_files": in_progress_files,
+            },
+        )
+
+    # Check for existing documents (for skip_existing / force_reprocess logic)
+    files_with_existing_docs = []
+    for file in files:
         existing_docs = (
             db.execute(
                 select(models.Document).where(
@@ -125,24 +461,55 @@ async def preprocess_project_data(
             .scalars()
             .all()
         )
+        if existing_docs:
+            files_with_existing_docs.append((file, existing_docs))
 
-        if existing_docs and not preprocessing_task.force_reprocess:
-            # Skip this file
-            task.processed_files += 1
-            skipped_files += 1
-            skipped_file_names.append(file.file_name)
-            continue
+    # Handle skip_existing: filter out files with existing documents
+    files_to_process = []
+    skipped_file_names = []
+    if preprocessing_task.skip_existing:
+        for file in files:
+            has_existing = any(f.id == file.id for f, _ in files_with_existing_docs)
+            if has_existing:
+                skipped_file_names.append(file.file_name)
+                continue
+            files_to_process.append(file)
+    else:
+        files_to_process = list(files)
 
-        # Delete existing documents if force reprocess
-        if existing_docs and preprocessing_task.force_reprocess:
+    # Handle force_reprocess: delete existing documents
+    if preprocessing_task.force_reprocess:
+        for file, existing_docs in files_with_existing_docs:
             for doc in existing_docs:
                 doc.document_sets.clear()
                 db.delete(doc)
+        files_to_process = list(files)
 
+    # Create preprocessing task
+    task = models.PreprocessingTask(
+        project_id=project_id,
+        configuration_id=config.id,
+        total_files=len(files_to_process),
+        rollback_on_cancel=preprocessing_task.rollback_on_cancel,
+    )
+
+    # Store API credentials in task metadata if provided
+    if preprocessing_task.api_key and preprocessing_task.base_url:
+        task.task_metadata = {
+            "custom_api_used": True,
+            "api_base_url": preprocessing_task.base_url,
+        }
+
+    db.add(task)
+    db.flush()  # Ensure task.id is populated before creating file tasks
+
+    # Create file tasks for files to process
+    file_tasks_to_process = []
+    for file in files_to_process:
         file_task = models.FilePreprocessingTask(
             preprocessing_task_id=task.id,
             file_id=file.id,
-            file_name=file.file_name,  # Set file name immediately
+            file_name=file.file_name,
         )
         db.add(file_task)
         file_tasks_to_process.append(file_task)
@@ -150,24 +517,24 @@ async def preprocess_project_data(
     db.commit()
 
     # Update task with skipped files information
-    if skipped_files > 0:
+    if skipped_file_names:
         if not task.task_metadata:
             task.task_metadata = {}
-        task.task_metadata["skipped_files"] = skipped_files
+        task.task_metadata["skipped_files"] = len(skipped_file_names)
         task.task_metadata["skipped_file_names"] = skipped_file_names
-        task.skipped_files = skipped_files
+        task.skipped_files = len(skipped_file_names)
 
     if not file_tasks_to_process:
         task.status = models.PreprocessingStatus.COMPLETED
-        task.message = f"All files already processed with these settings. {skipped_files} files skipped."
+        task.message = f"All files already processed with these settings. {len(skipped_file_names)} files skipped."
         task.completed_at = datetime.datetime.now(datetime.UTC)
         db.commit()
         db.refresh(task)
         return schemas.PreprocessingTask.model_validate(task)
 
     # Set initial message
-    if skipped_files > 0:
-        task.message = f"Processing {len(file_tasks_to_process)} files. {skipped_files} files already processed and skipped."
+    if skipped_file_names:
+        task.message = f"Processing {len(file_tasks_to_process)} files. {len(skipped_file_names)} files already processed and skipped."
 
     bypass_celery = getattr(preprocessing_task, "bypass_celery", False)
     inline_cfg = getattr(preprocessing_task, "inline_config", None)
@@ -302,8 +669,13 @@ def cancel_preprocessing_task(
 
     check_project_access(project_id, current_user, db, "write")
 
+    # Load task with file_tasks relationship
     task = (
         db.query(models.PreprocessingTask)
+        .options(
+            selectinload(models.PreprocessingTask.file_tasks),
+            selectinload(models.PreprocessingTask.configuration),
+        )
         .filter(
             models.PreprocessingTask.id == task_id,
             models.PreprocessingTask.project_id == project_id,
@@ -352,7 +724,10 @@ def cancel_preprocessing_task(
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
 
     db.commit()
+
+    # Refresh to ensure we get the latest data including updated file_tasks
     db.refresh(task)
+    db.refresh(task.file_tasks)
 
     return schemas.PreprocessingTask.model_validate(task)
 

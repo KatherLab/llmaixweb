@@ -364,7 +364,9 @@
                 selectedEngine === 'docling_tesseract'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300',
+                !doclingOcrEnabled && 'opacity-50 cursor-not-allowed',
               ]"
+              :disabled="!doclingOcrEnabled"
               @click="selectedEngine = 'docling_tesseract'"
             >
               <svg
@@ -383,7 +385,9 @@
               </svg>
               <span class="font-medium text-sm">{{ getEngineLabel('docling_tesseract') }}</span>
               <span class="text-xs text-gray-500 mt-1 text-center"
-                >{{ getEngineSubtitle('docling_tesseract') }}<br />No configuration needed</span
+                >{{
+                  doclingOcrEnabled ? getEngineSubtitle('docling_tesseract') : 'Disabled by server'
+                }}<br />{{ doclingOcrEnabled ? 'No configuration needed' : '' }}</span
               >
             </button>
 
@@ -451,7 +455,17 @@
               }}</span>
             </button>
           </div>
-          <p class="text-xs text-gray-500 mt-2">
+          <!-- Warning: No OCR engines enabled -->
+          <div v-if="noOcrEnabled" class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p class="text-sm font-medium text-amber-900">
+              ⚠️ All OCR engines are disabled. Only PDFs with embedded text can be processed.
+            </p>
+            <p class="text-xs text-amber-700 mt-1">
+              Image files (PNG/JPEG) require OCR. Enable Local OCR, Mistral OCR, or Vision LLM in
+              Admin Settings to process images. PDFs will use pypdf for embedded text extraction.
+            </p>
+          </div>
+          <p v-else class="text-xs text-gray-500 mt-2">
             Note: For PDFs with embedded text, the engine will use embedded text by default. Enable
             "Force OCR" below to run OCR on all PDF pages.
           </p>
@@ -786,6 +800,7 @@ const availableFiles = ref([])
 const selectedFiles = ref([])
 const mistralOcrEnabled = ref(true)
 const visionOcrEnabled = ref(true)
+const doclingOcrEnabled = ref(true)
 const selectedTask = ref(null)
 const showCompletedTasks = ref(false)
 const showCancelDialog = ref(false)
@@ -857,6 +872,10 @@ const displayedCompletedTasks = computed(() => {
   return showAllCompleted.value ? f : f.slice(0, 5)
 })
 const canStartProcessing = computed(() => selectedFiles.value.length > 0 && !isSubmitting.value)
+const anyOcrEnabled = computed(
+  () => doclingOcrEnabled.value || mistralOcrEnabled.value || visionOcrEnabled.value,
+)
+const noOcrEnabled = computed(() => !anyOcrEnabled.value)
 
 // API
 const fetchPreprocessingTasks = async () => {
@@ -887,6 +906,8 @@ const fetchOcrSettings = async () => {
     if (r.data.mistral_ocr_enabled !== undefined)
       mistralOcrEnabled.value = r.data.mistral_ocr_enabled
     if (r.data.vision_ocr_enabled !== undefined) visionOcrEnabled.value = r.data.vision_ocr_enabled
+    if (r.data.docling_serve_enabled !== undefined)
+      doclingOcrEnabled.value = r.data.docling_serve_enabled
     // Store server-provided defaults for form fields (API key is NOT exposed)
     if (r.data.vision_ocr_model) {
       serverDefaults.value.vision_ocr_model = r.data.vision_ocr_model
@@ -900,7 +921,7 @@ const fetchOcrSettings = async () => {
       visionPrompt.value = r.data.vision_ocr_prompt
     }
     if (r.data.mistral_api_base) serverDefaults.value.mistral_api_base = r.data.mistral_api_base
-    // Populate dynamic OCR display names
+    // Populate dynamic OCR display names and enabled status
     setEngineLabels(r.data)
   } catch {
     /* defaults enabled */
@@ -998,7 +1019,15 @@ const startPreprocessing = async () => {
     toast.success('Preprocessing task started')
     setupPolling()
   } catch (e) {
-    toast.error(e.response?.data?.detail || 'Failed to start preprocessing')
+    const detail = e.response?.data?.detail
+    if (typeof detail === 'object' && detail?.message) {
+      // Structured error from backend (e.g., files_already_being_processed)
+      toast.error(detail.message)
+    } else if (typeof detail === 'string') {
+      toast.error(detail)
+    } else {
+      toast.error('Failed to start preprocessing')
+    }
   } finally {
     isSubmitting.value = false
   }
