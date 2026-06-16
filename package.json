@@ -33,7 +33,7 @@
     "marked": "18.0.5",
     "dompurify": "3.4.10",
     "crypto-js": "4.2.0",
-    "@floating-ui/vue": "1.1.11",
+    "@floating-ui/vue": "2.0.0",
     "jszip": "3.10.1"
   },
   "devDependencies": {
