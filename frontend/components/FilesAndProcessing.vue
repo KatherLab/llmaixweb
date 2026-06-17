@@ -2467,6 +2467,11 @@ const startWebSocket = () => {
       ['completed', 'failed', 'cancelled'].includes(String(data.status || '').toLowerCase())
 
     if (isTerminalState || isNewTask) {
+      // Invalidate task cache immediately for terminal states to force fresh fetch
+      if (isTerminalState) {
+        cachedTasks = null
+        cachedTasksTimestamp = null
+      }
       // Use debounced refresh to prevent rapid refetches when multiple tasks complete
       debouncedFetchFiles()
     } else {
@@ -2504,12 +2509,32 @@ const mergePreprocessingUpdate = (data) => {
         task_id: undefined, // Clean up the field
       }
 
-      // Preserve meta and configuration
+      // Preserve and merge meta and configuration
       if (data.meta) {
-        updatedTask.meta = data.meta
+        updatedTask.meta = { ...(existingTask.meta || {}), ...data.meta }
       }
       if (data.configuration) {
         updatedTask.configuration = data.configuration
+      }
+
+      // Calculate progress percentage if not provided but we have the data
+      if (!updatedTask.meta?.progress && updatedTask.meta?.total_files > 0) {
+        const completed = updatedTask.meta.completed_files || 0
+        const total = updatedTask.meta.total_files
+        updatedTask.meta = {
+          ...(updatedTask.meta || {}),
+          progress: (completed / total) * 100,
+        }
+      } else if (
+        !updatedTask.meta?.progress &&
+        updatedTask.processed_files > 0 &&
+        updatedTask.total_files > 0
+      ) {
+        // Fallback: calculate from processed_files/total_files
+        updatedTask.meta = {
+          ...(updatedTask.meta || {}),
+          progress: (updatedTask.processed_files / updatedTask.total_files) * 100,
+        }
       }
 
       file.preprocessing_tasks[taskIndex] = updatedTask
@@ -2543,7 +2568,8 @@ const debouncedFetchFiles = () => {
     clearTimeout(refreshDebounceTimer)
   }
   refreshDebounceTimer = setTimeout(() => {
-    fetchFiles()
+    // Always force refresh tasks when triggered by terminal state
+    fetchFiles({ forceRefreshTasks: true })
     refreshDebounceTimer = null
   }, REFRESH_DEBOUNCE_MS)
 }

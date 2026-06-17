@@ -41,26 +41,72 @@ def calculate_file_hash(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def get_file(file_name: str) -> bytes:
+def get_file(file_name: str, force_streaming: bool = False) -> bytes:
     """
     Retrieves a file from S3 or local storage.
 
+    For large files (exceeding FILE_STREAMING_THRESHOLD_BYTES), uses streaming
+    to reduce memory usage.
+
     Args:
         file_name (str): The name of the file to retrieve.
+        force_streaming (bool): Force streaming regardless of file size.
 
     Returns:
         bytes: The content of the file.
     """
     if settings.LOCAL_DIRECTORY:
         # check if the file exists in local storage
-        if not os.path.exists(f"{settings.LOCAL_DIRECTORY}/{file_name}"):
+        file_path = f"{settings.LOCAL_DIRECTORY}/{file_name}"
+        if not os.path.exists(file_path):
             raise FileNotFoundError(f"File {file_name} not found in local storage.")
-        with open(f"{settings.LOCAL_DIRECTORY}/{file_name}", "rb") as file:
-            return file.read()
+
+        # Check file size to decide whether to stream
+        file_size = os.path.getsize(file_path)
+        if force_streaming or file_size > settings.FILE_STREAMING_THRESHOLD_BYTES:
+            # Stream large files in chunks
+            chunks = []
+            with open(file_path, "rb") as f:
+                while True:
+                    chunk = f.read(settings.FILE_STREAM_CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+            return b"".join(chunks)
+        else:
+            # Read small files directly
+            with open(file_path, "rb") as file:
+                return file.read()
     else:
         assert s3_client is not None
-        response = s3_client.get_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)  # type: ignore
-        return response["Body"].read()
+        # For S3, check if we should use streaming
+        try:
+            head = s3_client.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)  # type: ignore
+            file_size = head.get("ContentLength", 0)
+        except Exception:
+            file_size = 0  # Unknown size, proceed without streaming
+
+        if force_streaming or file_size > settings.FILE_STREAMING_THRESHOLD_BYTES:
+            # Stream large files from S3
+            response = s3_client.get_object(  # type: ignore
+                Bucket=settings.S3_BUCKET_NAME,
+                Key=file_name,
+            )
+            # Use streaming body for large files
+            body = response["Body"]
+            chunks = []
+            while True:
+                chunk = body.read(settings.FILE_STREAM_CHUNK_SIZE)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            return b"".join(chunks)
+        else:
+            # Read small files directly
+            response = s3_client.get_object(
+                Bucket=settings.S3_BUCKET_NAME, Key=file_name
+            )  # type: ignore
+            return response["Body"].read()
 
 
 def save_file(file_content: bytes) -> str:

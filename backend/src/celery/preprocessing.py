@@ -4,6 +4,7 @@ import datetime as dt
 import logging
 
 from .. import models
+from ..core.config import settings
 from ..dependencies import get_db
 from ..utils.preprocessing import PreprocessingPipeline
 from .celery_config import celery_app
@@ -167,7 +168,37 @@ if celery_app:
                     if ft.status == models.PreprocessingStatus.PENDING
                 ]
 
-            sem = asyncio.Semaphore(5)
+                # Get configuration to determine appropriate concurrency
+                additional_settings = (
+                    task.configuration.additional_settings if task.configuration else {}
+                )
+                ocr_engine = additional_settings.get("ocr_engine", "docling_tesseract")
+                extraction_mode = additional_settings.get("extraction_mode", "auto")
+
+                # Determine concurrency limit based on OCR backend
+                # This ensures we don't overwhelm specific backends
+                if (
+                    ocr_engine == "mistral_ocr"
+                    or extraction_mode == "high_accuracy_remote"
+                ):
+                    max_concurrent = settings.MISTRAL_OCR_MAX_CONCURRENT_FILES
+                elif ocr_engine == "llm_vision":
+                    max_concurrent = settings.VISION_OCR_MAX_CONCURRENT_FILES
+                else:
+                    # Default to docling-serve or general limit
+                    max_concurrent = min(
+                        settings.DOCLING_SERVE_MAX_CONCURRENT_FILES,
+                        settings.PREPROCESS_MAX_CONCURRENT_FILES,
+                    )
+
+                log.info(
+                    "Starting preprocessing task %s with concurrency limit %d (OCR engine: %s)",
+                    task_id,
+                    max_concurrent,
+                    ocr_engine,
+                )
+
+            sem = asyncio.Semaphore(max_concurrent)
             running_tasks = {}
 
             # --- Process one file_task coroutine ---

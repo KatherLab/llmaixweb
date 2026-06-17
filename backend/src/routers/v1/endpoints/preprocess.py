@@ -149,6 +149,30 @@ async def preview_preprocessing_duplicates(
 
     new_ocr_engine_normalized = normalize_ocr_engine(new_ocr_engine)
 
+    # OPTIMIZATION: Batch query all existing documents in a single query
+    # instead of looping through files with O(n) queries.
+    # This reduces database load significantly for large file batches.
+
+    file_ids = [f.id for f in files]
+
+    # Single batched query for all existing documents
+    existing_docs_query = (
+        select(models.Document)
+        .where(
+            models.Document.original_file_id.in_(file_ids),
+            models.Document.is_latest.is_(True),
+        )
+        .order_by(models.Document.original_file_id)
+    )
+    all_existing_docs = db.execute(existing_docs_query).scalars().all()
+
+    # Group documents by file_id for efficient lookup
+    docs_by_file: dict[int, list[models.Document]] = {}
+    for doc in all_existing_docs:
+        if doc.original_file_id not in docs_by_file:
+            docs_by_file[doc.original_file_id] = []
+        docs_by_file[doc.original_file_id].append(doc)
+
     # Check for duplicates
     files_with_duplicates = []
     same_config_duplicates = []
@@ -156,19 +180,7 @@ async def preview_preprocessing_duplicates(
     total_existing_docs = 0
 
     for file in files:
-        # Count existing documents with same file/name combination (any config)
-        existing_docs = (
-            db.execute(
-                select(models.Document)
-                .where(
-                    models.Document.original_file_id == file.id,
-                    models.Document.is_latest.is_(True),
-                )
-                .where(models.Document.document_name.like(f"{file.file_name}%"))
-            )
-            .scalars()
-            .all()
-        )
+        existing_docs = docs_by_file.get(file.id, [])
 
         if existing_docs:
             files_with_duplicates.append(

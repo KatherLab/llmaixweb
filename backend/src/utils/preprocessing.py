@@ -273,8 +273,50 @@ class PreprocessingPipeline:
                 f"File: {file.file_name}"
             )
 
+    def _get_file_timeout(
+        self, file: models.File, extraction_mode: str | None = None
+    ) -> int:
+        """Get timeout in seconds for a file based on its type and OCR backend.
+
+        Args:
+            file: The file model to check.
+            extraction_mode: The OCR extraction mode being used (if applicable).
+
+        Returns:
+            Timeout in seconds for this file type/backend combination.
+        """
+        additional = self.config.additional_settings or {}
+        ocr_engine = additional.get("ocr_engine", "docling_tesseract")
+
+        # Determine which backend will be used
+        is_pdf = file.file_type == models.FileType.APPLICATION_PDF
+
+        # For table files (CSV/Excel) or plain text, use default timeout
+        if file.file_type in [
+            models.FileType.TEXT_CSV,
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            models.FileType.TEXT_PLAIN,
+        ]:
+            return settings.PREPROCESS_FILE_TIMEOUT_SECONDS
+
+        # For PDFs with embedded text (no OCR), use docling-serve timeout
+        if is_pdf and not additional.get("force_ocr", False):
+            # Check if we'd use embedded text extraction
+            if extraction_mode == "auto" or extraction_mode is None:
+                return settings.DOCLING_SERVE_FILE_TIMEOUT_SECONDS
+
+        # For remote OCR backends
+        if ocr_engine == "mistral_ocr" or extraction_mode == "high_accuracy_remote":
+            return settings.MISTRAL_OCR_FILE_TIMEOUT_SECONDS
+        if ocr_engine == "llm_vision":
+            return settings.VISION_OCR_FILE_TIMEOUT_SECONDS
+
+        # Default to docling-serve timeout for local OCR
+        return settings.DOCLING_SERVE_FILE_TIMEOUT_SECONDS
+
     def _process_file_task(self, file_task: models.FilePreprocessingTask):
-        """Process a single file task."""
+        """Process a single file task with timeout protection."""
         file_task.status = models.PreprocessingStatus.IN_PROGRESS
         file_task.started_at = datetime.datetime.now(datetime.UTC)
         file_task.file_name = file_task.file.file_name
@@ -321,18 +363,29 @@ class PreprocessingPipeline:
                 )
                 return
 
-            # Route to appropriate processor based on file type
+            # Get timeout for this file type/backend
+            additional = self.config.additional_settings or {}
+            extraction_mode = additional.get("extraction_mode", "auto")
+            timeout_seconds = self._get_file_timeout(file, extraction_mode)
+
+            # Route to appropriate processor based on file type with timeout
             if file.file_type in [
                 models.FileType.TEXT_CSV,
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ]:
-                documents = self._process_table_file(file, file_task)
+                documents = self._process_with_timeout(
+                    self._process_table_file, file, file_task, timeout_seconds
+                )
             elif file.file_type in [models.FileType.TEXT_PLAIN]:
-                documents = self._process_text_file(file, file_task)
+                documents = self._process_with_timeout(
+                    self._process_text_file, file, file_task, timeout_seconds
+                )
             else:
-                # PDF/Image files — route by OCR engine
-                documents = self._route_pdf_image(file, file_task)
+                # PDF/Image files — route by OCR engine with timeout
+                documents = self._process_with_timeout(
+                    self._route_pdf_image, file, file_task, timeout_seconds
+                )
 
             # Flush to get document IDs before collecting them
             self.db.flush()
@@ -350,6 +403,23 @@ class PreprocessingPipeline:
                 ).total_seconds()
                 file_task.processing_time = round(processing_time, 2)
 
+        except TimeoutError as e:
+            file_task.status = models.PreprocessingStatus.FAILED
+            timeout_seconds = self._get_file_timeout(
+                file_task.file,
+                additional.get("extraction_mode", "auto")
+                if "additional" in dir()
+                else "auto",
+            )
+            logger.error(
+                "Timeout processing file %s after %ds: %s",
+                file_task.file.file_name,
+                timeout_seconds,
+                e,
+            )
+            file_task.error_message = f"Processing timed out after {timeout_seconds} seconds. The file may be too large or the OCR service is unresponsive."
+            file_task.completed_at = datetime.datetime.now(datetime.UTC)
+
         except Exception as e:
             file_task.status = models.PreprocessingStatus.FAILED
             logger.error(
@@ -362,6 +432,53 @@ class PreprocessingPipeline:
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
 
         self.db.commit()
+
+    def _process_with_timeout(self, func, file, file_task, timeout_seconds: int):
+        """Execute a processing function with timeout protection.
+
+        Uses threading-based timeout which works in all contexts (including
+        threaded Celery workers and test environments).
+
+        Args:
+            func: The processing function to call.
+            file: The file model to pass to func.
+            file_task: The file preprocessing task model.
+            timeout_seconds: Timeout in seconds.
+
+        Returns:
+            Result of func(file, file_task).
+
+        Raises:
+            TimeoutError: If processing exceeds timeout.
+        """
+        import queue
+        import threading
+
+        result_queue = queue.Queue()
+        exception_queue = queue.Queue()
+
+        def target():
+            try:
+                result = func(file, file_task)
+                result_queue.put(result)
+            except Exception as e:
+                exception_queue.put(e)
+
+        thread = threading.Thread(target=target, daemon=True)
+        thread.start()
+
+        try:
+            # Wait for result with timeout
+            result = result_queue.get(timeout=timeout_seconds)
+            return result
+        except queue.Empty:
+            # Timeout occurred
+            raise TimeoutError(
+                f"Processing exceeded {timeout_seconds}s timeout for file {file.file_name}"
+            )
+        except Exception as e:
+            # Re-raise any exception from the worker thread
+            raise e
 
     def _route_pdf_image(
         self, file: models.File, file_task: models.FilePreprocessingTask
@@ -434,6 +551,25 @@ class PreprocessingPipeline:
 
         raise ValueError(f"Unsupported file type for OCR/extraction: {file.file_type}")
 
+    def _check_password_protected_pdf(self, file_content: bytes) -> bool:
+        """Check if a PDF is password-protected using pypdf.
+
+        Args:
+            file_content: Raw PDF file bytes.
+
+        Returns:
+            True if PDF is password-protected, False otherwise.
+        """
+        try:
+            from pypdf import PdfReader
+
+            reader = PdfReader(io.BytesIO(file_content))
+            return reader.is_encrypted
+        except Exception:
+            # If we can't read the PDF, assume it's not password-protected
+            # (it might be corrupted or invalid)
+            return False
+
     def _process_pdf(
         self,
         file: models.File,
@@ -456,6 +592,27 @@ class PreprocessingPipeline:
         Returns:
             List of created Document objects.
         """
+        file_content = get_file(file.file_uuid)
+
+        # Check for password-protected PDF
+        if self._check_password_protected_pdf(file_content):
+            if settings.PDF_HANDLE_PASSWORD_PROTECTED:
+                logger.warning(
+                    "PDF %s is password-protected. OCR will be attempted but may fail.",
+                    file.file_name,
+                )
+                file_task.warnings = {
+                    "messages": [
+                        "This PDF is password-protected. Text extraction may be incomplete."
+                    ]
+                }
+            else:
+                raise ValueError(
+                    f"PDF {file.file_name} is password-protected. "
+                    "Password-protected PDFs are not supported. "
+                    "Please remove the password or use an unprotected copy."
+                )
+
         # Check if docling-serve is disabled and no OCR engines are available
         # In this case, only PDFs with embedded text can be processed using pypdf directly
         # Exception: DOCLING_LOCAL_FALLBACK=true allows using local Docling directly
@@ -464,13 +621,12 @@ class PreprocessingPipeline:
             and not settings.MISTRAL_OCR_ENABLED
             and not settings.VISION_OCR_ENABLED
         ):
-            file_content = get_file(file.file_uuid)
             from ..services.pdf_text_probe import has_embedded_text
 
             has_text = has_embedded_text(
                 file_content,
                 min_chars=settings.DOCLING_MIN_EXTRACTED_CHARS_PDF,
-                max_pages_to_check=8,
+                max_pages_to_check=settings.PDF_MAX_PAGES_FOR_TEXT_PROBE,
             )
 
             if has_text:
@@ -1016,18 +1172,63 @@ class PreprocessingPipeline:
         2. Deleting only archived documents (is_latest=False) to free constraint slot
         3. Archiving latest documents (is_latest=True) normally
         4. Creating a new latest document
-        """
 
-        # Check for ALL existing documents with this key
-        all_existing_docs = (
-            self.db.query(models.Document)
-            .filter(
-                models.Document.original_file_id == file.id,
-                models.Document.preprocessing_config_id == self.config.id,
-                models.Document.document_name == file.file_name,
-            )
-            .all()
-        )
+        Uses database-level locking (FOR UPDATE) to prevent race conditions
+        when concurrent tasks process the same file with the same config.
+        """
+        # Use database-level locking to prevent race conditions.
+        # with_for_update(nowait=True) will raise if another transaction holds the lock,
+        # which we catch and retry after a brief wait.
+        max_retries = 3
+        retry_delay = 0.1  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                # Lock existing rows FOR UPDATE to prevent concurrent modifications
+                all_existing_docs = (
+                    self.db.query(models.Document)
+                    .filter(
+                        models.Document.original_file_id == file.id,
+                        models.Document.preprocessing_config_id == self.config.id,
+                        models.Document.document_name == file.file_name,
+                    )
+                    .with_for_update(nowait=True)
+                    .all()
+                )
+                break  # Lock acquired successfully
+            except Exception as e:
+                # Lock conflict - another transaction is modifying these documents
+                logger.warning(
+                    "Document versioning lock conflict for file %s (attempt %d/%d): %s",
+                    file.file_name,
+                    attempt + 1,
+                    max_retries,
+                    e,
+                )
+                if attempt == max_retries - 1:
+                    # All retries exhausted - check if documents already exist
+                    # and return existing latest if found (idempotent behavior)
+                    all_existing_docs = (
+                        self.db.query(models.Document)
+                        .filter(
+                            models.Document.original_file_id == file.id,
+                            models.Document.preprocessing_config_id == self.config.id,
+                            models.Document.document_name == file.file_name,
+                        )
+                        .all()
+                    )
+                    latest_docs = [d for d in all_existing_docs if d.is_latest]
+                    if latest_docs:
+                        logger.info(
+                            "Returning existing document for file %s after lock contention",
+                            file.file_name,
+                        )
+                        return latest_docs[0]
+                    # Re-raise if no existing document to return
+                    raise
+                import time
+
+                time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
 
         # Separate latest from archived
         latest_docs = [d for d in all_existing_docs if d.is_latest]
@@ -1108,18 +1309,61 @@ class PreprocessingPipeline:
         2. If latest exists: archive it normally
         3. If only archived exists (failed re-process): delete orphans
         4. Create a new latest document
-        """
 
-        # Check for ALL existing documents with this key
-        all_existing_docs = (
-            self.db.query(models.Document)
-            .filter(
-                models.Document.original_file_id == file.id,
-                models.Document.preprocessing_config_id == self.config.id,
-                models.Document.document_name == document_name,
-            )
-            .all()
-        )
+        Uses database-level locking (FOR UPDATE) to prevent race conditions
+        when concurrent tasks process the same file with the same config.
+        """
+        # Use database-level locking to prevent race conditions
+        max_retries = 3
+        retry_delay = 0.1  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                # Lock existing rows FOR UPDATE to prevent concurrent modifications
+                all_existing_docs = (
+                    self.db.query(models.Document)
+                    .filter(
+                        models.Document.original_file_id == file.id,
+                        models.Document.preprocessing_config_id == self.config.id,
+                        models.Document.document_name == document_name,
+                    )
+                    .with_for_update(nowait=True)
+                    .all()
+                )
+                break  # Lock acquired successfully
+            except Exception as e:
+                # Lock conflict - another transaction is modifying these documents
+                logger.warning(
+                    "Document versioning lock conflict for file %s (attempt %d/%d): %s",
+                    file.file_name,
+                    attempt + 1,
+                    max_retries,
+                    e,
+                )
+                if attempt == max_retries - 1:
+                    # All retries exhausted - check if documents already exist
+                    # and return existing latest if found (idempotent behavior)
+                    all_existing_docs = (
+                        self.db.query(models.Document)
+                        .filter(
+                            models.Document.original_file_id == file.id,
+                            models.Document.preprocessing_config_id == self.config.id,
+                            models.Document.document_name == document_name,
+                        )
+                        .all()
+                    )
+                    latest_docs = [d for d in all_existing_docs if d.is_latest]
+                    if latest_docs:
+                        logger.info(
+                            "Returning existing document for file %s after lock contention",
+                            file.file_name,
+                        )
+                        return latest_docs[0]
+                    # Re-raise if no existing document to return
+                    raise
+                import time
+
+                time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
 
         # Separate latest from archived
         latest_docs = [d for d in all_existing_docs if d.is_latest]
@@ -1193,7 +1437,13 @@ class PreprocessingPipeline:
         model = additional.get("mistral_model", settings.MISTRAL_OCR_MODEL)
         base_url = settings.MISTRAL_API_BASE
 
-        service = MistralOCRService(api_key=api_key, base_url=base_url, model=model)
+        # Pass retry settings from config
+        service = MistralOCRService(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
+            max_retries=settings.MISTRAL_OCR_MAX_RETRIES,
+        )
         file_content = get_file(file.file_uuid)
         result = service.process(file_content)
 
@@ -1243,12 +1493,15 @@ class PreprocessingPipeline:
         prompt = additional.get("vision_prompt") or settings.VISION_OCR_PROMPT
         max_image_dim = additional.get("vision_max_image_dim", 2048)
 
+        # Pass retry settings and concurrency from config
         service = LLMVisionOCRService(
             api_key=api_key,
             base_url=base_url,
             model=model,
             prompt=prompt,
             max_image_dim=max_image_dim,
+            max_retries=settings.VISION_OCR_MAX_RETRIES,
+            max_concurrency=settings.VISION_OCR_MAX_CONCURRENT_FILES,
         )
 
         file_content = get_file(file.file_uuid)
@@ -1277,10 +1530,64 @@ class PreprocessingPipeline:
         )
         return [doc]
 
+    def _detect_csv_encoding(self, file_content: bytes, fallback_chain: str) -> str:
+        """Detect CSV encoding using chardet or fallback chain.
+
+        Args:
+            file_content: Raw CSV file bytes.
+            fallback_chain: Comma-separated list of encodings to try.
+
+        Returns:
+            Detected or first successful encoding from fallback chain.
+        """
+        # Try chardet for automatic detection if available
+        if settings.CSV_DETECT_ENCODING:
+            try:
+                import chardet
+
+                result = chardet.detect(file_content[:1024])  # Sample first 1KB
+                if result and result.get("confidence", 0) > 0.7:
+                    detected_encoding = result.get("encoding", "utf-8")
+                    logger.info(
+                        "Detected CSV encoding: %s (confidence: %.2f)",
+                        detected_encoding,
+                        result.get("confidence", 0),
+                    )
+                    # Verify it works by trying to decode
+                    try:
+                        file_content.decode(detected_encoding)
+                        return detected_encoding
+                    except (UnicodeDecodeError, LookupError):
+                        logger.warning(
+                            "Detected encoding %s failed validation, using fallback",
+                            detected_encoding,
+                        )
+            except ImportError:
+                logger.debug(
+                    "chardet not installed, skipping automatic encoding detection"
+                )
+
+        # Try fallback chain
+        encodings = [e.strip() for e in fallback_chain.split(",")]
+        for encoding in encodings:
+            try:
+                file_content.decode(encoding)
+                logger.info("Using fallback encoding: %s", encoding)
+                return encoding
+            except (UnicodeDecodeError, LookupError):
+                continue
+
+        # Ultimate fallback
+        logger.warning("All encodings failed, using utf-8 with errors='replace'")
+        return "utf-8"
+
     def _process_table_file(
         self, file: models.File, file_task: models.FilePreprocessingTask
     ) -> List[models.Document]:
-        """Process CSV/Excel files using file metadata."""
+        """Process CSV/Excel files using file metadata.
+
+        Includes encoding detection with fallback chain for CSV files.
+        """
         documents = []
         file_content = get_file(file.file_uuid)
 
@@ -1294,7 +1601,24 @@ class PreprocessingPipeline:
         if strategy == models.PreprocessingStrategy.FULL_DOCUMENT:
             # Read entire file as one document
             if file.file_type == models.FileType.TEXT_CSV:
-                df = pd.read_csv(io.BytesIO(file_content))
+                # Detect encoding with fallback chain
+                encoding = self._detect_csv_encoding(
+                    file_content,
+                    settings.CSV_ENCODING_FALLBACK_CHAIN,
+                )
+                try:
+                    df = pd.read_csv(io.BytesIO(file_content), encoding=encoding)
+                except Exception as e:
+                    # Try with errors='replace' if encoding detection failed
+                    logger.warning(
+                        "CSV read with %s failed: %s, retrying with errors='replace'",
+                        encoding,
+                        e,
+                    )
+                    file_content_str = file_content.decode(
+                        encoding, errors="replace"
+                    ).encode("utf-8")
+                    df = pd.read_csv(io.BytesIO(file_content_str), encoding="utf-8")
             else:
                 df = pd.read_excel(io.BytesIO(file_content))
 
@@ -1317,6 +1641,9 @@ class PreprocessingPipeline:
                     "preprocessing_strategy": "full_document",
                     "total_rows": len(df),
                     "columns": list(df.columns),
+                    "detected_encoding": encoding
+                    if file.file_type == models.FileType.TEXT_CSV
+                    else None,
                 },
             )
             documents.append(doc)
@@ -1327,26 +1654,49 @@ class PreprocessingPipeline:
 
             # Extract settings
             delimiter = file_metadata.get("delimiter", ",")
-            encoding = file_metadata.get("encoding", "utf-8")
+            user_encoding = file_metadata.get("encoding", "utf-8")
             has_header = file_metadata.get("has_header", True)
             text_columns = file_metadata.get("text_columns", [])
             case_id_column = file_metadata.get("case_id_column")
 
             # Read file based on type
-            try:
-                if file.file_type == models.FileType.TEXT_CSV:
+            if file.file_type == models.FileType.TEXT_CSV:
+                # Detect encoding with fallback chain, respecting user selection
+                if settings.CSV_DETECT_ENCODING:
+                    encoding = self._detect_csv_encoding(
+                        file_content,
+                        f"{user_encoding},{settings.CSV_ENCODING_FALLBACK_CHAIN}",
+                    )
+                else:
+                    encoding = user_encoding
+
+                try:
                     df = pd.read_csv(
                         io.BytesIO(file_content),
                         encoding=encoding,
                         delimiter=delimiter,
                         header=0 if has_header else None,
                     )
-                else:
-                    df = pd.read_excel(
-                        io.BytesIO(file_content), header=0 if has_header else None
+                except Exception as e:
+                    # Try with errors='replace' if encoding detection failed
+                    logger.warning(
+                        "CSV read with %s failed: %s, retrying with errors='replace'",
+                        encoding,
+                        e,
                     )
-            except Exception as e:
-                raise ValueError(f"Failed to read file {file.file_name}: {str(e)}")
+                    file_content_str = file_content.decode(
+                        encoding, errors="replace"
+                    ).encode("utf-8")
+                    df = pd.read_csv(
+                        io.BytesIO(file_content_str),
+                        encoding="utf-8",
+                        delimiter=delimiter,
+                        header=0 if has_header else None,
+                    )
+            else:
+                df = pd.read_excel(
+                    io.BytesIO(file_content), header=0 if has_header else None
+                )
 
             # Check row limit
             if len(df) > self.MAX_ROWS_PER_FILE:

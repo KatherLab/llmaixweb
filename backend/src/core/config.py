@@ -109,6 +109,158 @@ class Settings(BaseSettings):
         description="How to start the preprocess worker pool",
     )  # Has to be solo for MacOS to avoid
 
+    # ─────────────────────────────────────────────────────────────
+    # Preprocessing Performance & Concurrency Settings
+    # ─────────────────────────────────────────────────────────────
+
+    # General file processing concurrency (max concurrent files in Celery task)
+    PREPROCESS_MAX_CONCURRENT_FILES: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Maximum number of files to process concurrently in a single preprocessing task",
+    )
+
+    # Per-file timeout (general default)
+    PREPROCESS_FILE_TIMEOUT_SECONDS: int = Field(
+        default=600,
+        ge=60,
+        le=7200,
+        description="Default timeout in seconds for processing a single file",
+    )
+
+    # ─────────────────────────────────────────────────────────────
+    # OCR Backend-Specific Concurrency Settings
+    # ─────────────────────────────────────────────────────────────
+
+    # Docling-serve (local Tesseract) concurrency
+    DOCLING_SERVE_MAX_CONCURRENT_FILES: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum concurrent files for docling-serve OCR",
+    )
+    DOCLING_SERVE_FILE_TIMEOUT_SECONDS: int = Field(
+        default=900,
+        ge=60,
+        le=7200,
+        description="Timeout in seconds for docling-serve OCR per file",
+    )
+
+    # Mistral OCR API concurrency
+    MISTRAL_OCR_MAX_CONCURRENT_FILES: int = Field(
+        default=2,
+        ge=1,
+        le=10,
+        description="Maximum concurrent files for Mistral OCR API",
+    )
+    MISTRAL_OCR_FILE_TIMEOUT_SECONDS: int = Field(
+        default=600,
+        ge=60,
+        le=7200,
+        description="Timeout in seconds for Mistral OCR API per file",
+    )
+    MISTRAL_OCR_MAX_RETRIES: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="Maximum retry attempts for Mistral OCR API requests",
+    )
+
+    # Vision LLM OCR concurrency
+    VISION_OCR_MAX_CONCURRENT_FILES: int = Field(
+        default=2,
+        ge=1,
+        le=10,
+        description="Maximum concurrent files for Vision LLM OCR API",
+    )
+    VISION_OCR_FILE_TIMEOUT_SECONDS: int = Field(
+        default=600,
+        ge=60,
+        le=7200,
+        description="Timeout in seconds for Vision LLM OCR API per file",
+    )
+    VISION_OCR_MAX_RETRIES: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="Maximum retry attempts for Vision LLM OCR API requests",
+    )
+
+    # ─────────────────────────────────────────────────────────────
+    # CSV/Excel Processing Settings
+    # ─────────────────────────────────────────────────────────────
+
+    # CSV encoding detection
+    CSV_ENCODING_FALLBACK_CHAIN: str = Field(
+        default="utf-8,cp1252,latin-1,iso-8859-1",
+        description="Comma-separated list of encodings to try when reading CSV files",
+    )
+    CSV_DETECT_ENCODING: bool = Field(
+        default=True,
+        description="Enable automatic encoding detection for CSV files",
+    )
+
+    # ─────────────────────────────────────────────────────────────
+    # PDF Processing Settings
+    # ─────────────────────────────────────────────────────────────
+
+    PDF_CHECK_EMBEDDED_TEXT: bool = Field(
+        default=True,
+        description="Check for embedded text in PDFs before OCR",
+    )
+    PDF_MAX_PAGES_FOR_TEXT_PROBE: int = Field(
+        default=8,
+        ge=1,
+        le=50,
+        description="Maximum pages to sample when checking for embedded text",
+    )
+    PDF_HANDLE_PASSWORD_PROTECTED: bool = Field(
+        default=False,
+        description="Attempt to handle password-protected PDFs (requires pypdf with encryption support)",
+    )
+
+    # ─────────────────────────────────────────────────────────────
+    # Image Processing Settings
+    # ─────────────────────────────────────────────────────────────
+
+    IMAGE_MAX_DIMENSION: int = Field(
+        default=4096,
+        ge=512,
+        le=16384,
+        description="Maximum image dimension - larger images will be resized before OCR",
+    )
+    IMAGE_HANDLE_EXIF_ROTATION: bool = Field(
+        default=True,
+        description="Apply EXIF orientation tag correction before OCR",
+    )
+
+    # ─────────────────────────────────────────────────────────────
+    # Streaming & Memory Settings
+    # ─────────────────────────────────────────────────────────────
+
+    FILE_STREAMING_THRESHOLD_BYTES: int = Field(
+        default=52428800,  # 50MB
+        ge=1048576,
+        le=524288000,
+        description="File size threshold above which streaming downloads are used",
+    )
+    FILE_STREAM_CHUNK_SIZE: int = Field(
+        default=8192,
+        ge=1024,
+        le=1048576,
+        description="Chunk size for streaming file downloads",
+    )
+
+    # ─────────────────────────────────────────────────────────────
+    # Logging & Debugging
+    # ─────────────────────────────────────────────────────────────
+
+    PREPROCESS_LOG_DOCUMENT_IDS: bool = Field(
+        default=False,
+        description="Log document IDs during creation (verbose)",
+    )
+
     @property
     def BACKEND_CORS_ORIGINS_LIST(self):
         if not self.BACKEND_CORS_ORIGINS:
@@ -658,5 +810,174 @@ SETTINGS_META = {
         "readonly": False,
         "category": "docling-serve",
         "label": "Local Docling Fallback Enabled",
+    },
+    # Preprocessing Performance & Concurrency
+    "PREPROCESS_MAX_CONCURRENT_FILES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Max Concurrent Files",
+        "help": "Maximum number of files to process concurrently in a single preprocessing task (1-20)",
+    },
+    "PREPROCESS_FILE_TIMEOUT_SECONDS": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "File Timeout (seconds)",
+        "help": "Default timeout in seconds for processing a single file (60-7200)",
+    },
+    # Docling-serve specific settings
+    "DOCLING_SERVE_MAX_CONCURRENT_FILES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Docling Max Concurrent Files",
+        "help": "Maximum concurrent files for docling-serve OCR (1-10)",
+    },
+    "DOCLING_SERVE_FILE_TIMEOUT_SECONDS": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Docling File Timeout (seconds)",
+        "help": "Timeout in seconds for docling-serve OCR per file (60-7200)",
+    },
+    # Mistral OCR specific settings
+    "MISTRAL_OCR_MAX_CONCURRENT_FILES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Mistral Max Concurrent Files",
+        "help": "Maximum concurrent files for Mistral OCR API (1-10)",
+    },
+    "MISTRAL_OCR_FILE_TIMEOUT_SECONDS": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Mistral File Timeout (seconds)",
+        "help": "Timeout in seconds for Mistral OCR API per file (60-7200)",
+    },
+    "MISTRAL_OCR_MAX_RETRIES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Mistral Max Retries",
+        "help": "Maximum retry attempts for Mistral OCR API requests (0-10)",
+    },
+    # Vision LLM OCR specific settings
+    "VISION_OCR_MAX_CONCURRENT_FILES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Vision Max Concurrent Files",
+        "help": "Maximum concurrent files for Vision LLM OCR API (1-10)",
+    },
+    "VISION_OCR_FILE_TIMEOUT_SECONDS": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Vision File Timeout (seconds)",
+        "help": "Timeout in seconds for Vision LLM OCR API per file (60-7200)",
+    },
+    "VISION_OCR_MAX_RETRIES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Vision Max Retries",
+        "help": "Maximum retry attempts for Vision LLM OCR API requests (0-10)",
+    },
+    # CSV/Excel processing settings
+    "CSV_ENCODING_FALLBACK_CHAIN": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "CSV Encoding Fallback Chain",
+        "help": "Comma-separated list of encodings to try when reading CSV files (e.g., 'utf-8,cp1252,latin-1')",
+    },
+    "CSV_DETECT_ENCODING": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Auto-detect CSV Encoding",
+        "help": "Enable automatic encoding detection for CSV files before using fallback chain",
+    },
+    # PDF processing settings
+    "PDF_CHECK_EMBEDDED_TEXT": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Check PDF Embedded Text",
+        "help": "Check for embedded text in PDFs before applying OCR",
+    },
+    "PDF_MAX_PAGES_FOR_TEXT_PROBE": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "PDF Text Probe Max Pages",
+        "help": "Maximum pages to sample when checking for embedded text (1-50)",
+    },
+    "PDF_HANDLE_PASSWORD_PROTECTED": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Handle Password-Protected PDFs",
+        "help": "Attempt to handle password-protected PDFs (requires pypdf with encryption support)",
+    },
+    # Image processing settings
+    "IMAGE_MAX_DIMENSION": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Max Image Dimension",
+        "help": "Maximum image dimension - larger images will be resized before OCR (512-16384)",
+    },
+    "IMAGE_HANDLE_EXIF_ROTATION": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Apply EXIF Rotation",
+        "help": "Apply EXIF orientation tag correction before OCR",
+    },
+    # Streaming & Memory settings
+    "FILE_STREAMING_THRESHOLD_BYTES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "File Streaming Threshold (bytes)",
+        "help": "File size threshold above which streaming downloads are used (default 50MB)",
+    },
+    "FILE_STREAM_CHUNK_SIZE": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "File Stream Chunk Size",
+        "help": "Chunk size for streaming file downloads in bytes (default 8KB)",
+    },
+    # Logging & Debugging
+    "PREPROCESS_LOG_DOCUMENT_IDS": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Log Document IDs",
+        "help": "Log document IDs during creation (verbose, for debugging)",
     },
 }
