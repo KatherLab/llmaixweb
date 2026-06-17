@@ -11,7 +11,7 @@
         Backend connection failed. Please check if the backend server is running.
       </div>
       <div class="w-full px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16 items-center">
+        <div class="flex justify-between h-14 items-center">
           <div class="flex items-center">
             <div class="flex-shrink-0 flex items-center mr-8">
               <router-link to="/">
@@ -27,7 +27,7 @@
                     ? 'text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400'
                     : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300 dark:text-slate-400 dark:hover:text-white',
                 ]"
-                class="inline-flex items-center px-4 h-16 text-base font-medium border-b-2 transition-all"
+                class="inline-flex items-center px-4 h-14 text-sm font-medium border-b-2 transition-all"
                 to="/projects"
               >
                 Projects
@@ -40,7 +40,7 @@
                     ? 'text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400'
                     : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300 dark:text-slate-400 dark:hover:text-white',
                 ]"
-                class="inline-flex items-center px-4 h-16 text-base font-medium border-b-2 transition-all"
+                class="inline-flex items-center px-4 h-14 text-sm font-medium border-b-2 transition-all"
                 to="/admin/user-management"
               >
                 User Management

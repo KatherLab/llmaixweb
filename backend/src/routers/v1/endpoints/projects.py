@@ -250,6 +250,8 @@ def get_projects(
     current_user: models.User = Depends(get_current_user),
     all: bool = False,
 ) -> list[schemas.Project]:
+    from sqlalchemy import func
+
     stmt = select(models.Project)
 
     if current_user.role == "admin":
@@ -257,6 +259,17 @@ def get_projects(
             stmt = stmt.where(models.Project.owner_id == current_user.id)
     else:
         stmt = stmt.where(models.Project.owner_id == current_user.id)
+
+    # Subquery to count documents per project
+    doc_count_subq = (
+        select(func.count(models.Document.id))
+        .where(models.Document.project_id == models.Project.id)
+        .where(models.Document.is_latest == True)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
+
+    stmt = stmt.add_columns(doc_count_subq.label("document_count"))
 
     stmt = stmt.options(
         # bring owner, but only minimal fields
@@ -267,7 +280,24 @@ def get_projects(
         noload(models.Project.documents),
     )
 
-    projects = list(db.execute(stmt).scalars().all())
+    results = list(db.execute(stmt).all())
+
+    # Build projects with document_count
+    projects = []
+    for project, doc_count in results:
+        project_dict = {
+            "id": project.id,
+            "name": project.name,
+            "description": project.description,
+            "status": project.status,
+            "owner_id": project.owner_id,
+            "owner": project.owner,
+            "document_count": doc_count or 0,
+            "created_at": project.created_at,
+            "updated_at": project.updated_at,
+        }
+        projects.append(schemas.Project(**project_dict))
+
     return projects
 
 

@@ -36,7 +36,6 @@ llmaixweb/
 ├── alembic/                  # Database migrations
 ├── pyproject.toml            # Python deps, Ruff config, project metadata
 ├── compose.yml               # Docker Compose (CPU)
-├── compose.gpu.yml           # Docker Compose (GPU)
 ├── compose.dev.yml           # Docker Compose (dev hot-reload)
 ├── compose.deepseek.yml      # Optional: self-hosted Mistral OCR (DeepSeek-OCR-2 + KatDocExtract, GPU)
 └── compose.vllm.yml          # Optional: self-hosted vLLM endpoint (e.g. Gemma 4 for Vision OCR, GPU)
@@ -72,13 +71,16 @@ Files are processed asynchronously via **Celery** to extract text content. The `
 - `PreprocessingConfiguration` — reusable settings presets (which OCR engine, parameters)
 
 **OCR engines (for PDFs/images):**
-1. **Docling** — embedded text extraction (tried first for PDFs, no OCR, falls back if insufficient text)
-2. **Local OCR (Docling + Tesseract)** — local OCR using Tesseract via the Docling pipeline
-3. **Mistral OCR** — API-based OCR via Mistral
+1. **Docling-serve** — remote service for embedded text extraction and Tesseract OCR (default, tried first for PDFs)
+2. **Local Docling fallback** — embedded Docling when docling-serve is unavailable (optional, requires `DOCLING_LOCAL_FALLBACK=true`)
+3. **Mistral OCR** — API-based OCR via Mistral or self-hosted DeepSeek-OCR-2 + KatDocExtract
 4. **Vision LLM OCR** — API-based OCR via any OpenAI-compatible vision model
 
 Both Mistral OCR and Vision LLM OCR can use self-hosted backends:
-`compose.deepseek.yml` provides a local Mistral OCR API; `compose.vllm.yml` provides a local OpenAI-compatible endpoint for Vision OCR. Point `MISTRAL_API_BASE` / `VISION_OCR_API_BASE` at the respective service.
+- `compose.deepseek.yml` provides a local Mistral OCR API (DeepSeek-OCR-2 + KatDocExtract)
+- `compose.vllm.yml` provides a local OpenAI-compatible endpoint for Vision OCR
+
+Point `MISTRAL_API_BASE` / `VISION_OCR_API_BASE` at the respective service.
 
 **For CSV/XLSX files:**
 - `full_document` strategy: entire table converted to text
@@ -187,24 +189,27 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 ### Routing Structure (`router/index.js`)
 ```
 /                           → AppLayout (navbar)
-  / (Landing)               → Dashboard
-  /projects                 → Project list
-  /projects/:projectId      → Project detail (workflow tabs)
-  /admin/user-management    → User management (admin only)
-  /admin/settings           → Settings (admin only)
-  /admin/celery             → Celery monitoring (admin only)
+  / (Landing)               → Landing
+  /projects                 → ProjectOverview
+  /projects/:projectId      → ProjectDetail (workflow tabs: Files → Preprocessing → Documents → Schemas → Trials → Evaluation)
+  /admin                    → AdminDashboard
+    /admin/settings         → AdminSettings
+    /admin/celery           → AdminCelery
+  /admin/user-management    → AdminUserManagement (admin only)
 /                           → AuthLayout (no navbar)
   /login                    → Login
   /register                 → Register
-  /invitation/:token        → Invitation registration
-  /first-admin              → First admin setup
+  /invitation/:token        → InvitationLanding
+  /first-admin              → FirstAdminSetup
+  /forgot-password          → ForgotPassword
+  /reset-password/:token    → ResetPassword
 ```
 
 **Route guards:**
 - `requiresAuth` → redirects to `/login` with return URL
 - `adminOnly` → redirects non-admins to `/`
 - First admin check runs before all routes; redirects to `/first-admin` if no admin exists
-- Logged-in users are redirected away from `/login`, `/register`, `/invitation/*`
+- Logged-in users are redirected away from `/login`, `/register`, `/invitation/*`, `/forgot-password`, `/reset-password/*`
 
 ### State Management
 - **Pinia stores** in `stores/`:
@@ -217,11 +222,25 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - Response interceptor: auto-logout on 401/403, toast notification
 
 ### Key UI Components
-- **`ProjectWorkflow.vue`** — step-based tabs showing the full pipeline (Files → Preprocessing → Documents → Schemas → Trials → Evaluation)
+
+**Views (page-level):**
+- **`Landing.vue`** — dashboard/landing page
+- **`ProjectOverview.vue`** — project list grid
+- **`ProjectDetail.vue`** — project detail with tabbed workflow interface
+- **`AdminUserManagement.vue`** — user and invitation management
+- **`AdminSettings.vue`** — system settings configuration
+- **`AdminCelery.vue`** — Celery task monitoring
+
+**Components (reusable):**
 - **`VisualSchemaEditor.vue`** / **`SchemaTree.vue`** — tree-based JSON schema editor
-- **`CreateTrialModal.vue`** — trial creation dialog with schema/prompt/model selection
-- **`EvaluationView.vue`** — metrics display with per-field accuracy
-- **Various admin views** — settings management, Celery monitoring, user/invitation management
+- **`SchemaManagement.vue`** — schema list and management interface
+- **`FilesAndProcessing.vue`** — file upload and preprocessing management
+- **`PreprocessingManagement.vue`** — preprocessing configuration and monitoring
+- **`DocumentDetailsModal.vue`** — document viewing and metadata
+- **`TrialsManagement.vue`** / **`CreateTrialModal.vue`** / **`TrialSelectorModal.vue`** — trial creation and management
+- **`EvaluationView.vue`** / **`EvaluationOverview.vue`** — metrics display with per-field accuracy
+- **`GroundTruthUploadModal.vue`** / **`GroundTruthManager.vue`** — ground truth file handling
+- **`ProjectGrid.vue`** / **`UserGrid.vue`** — data grids for projects and users
 
 ---
 
@@ -276,13 +295,12 @@ ENV_PATH=backend/.env.localtest uv run pytest --verbose --cov=backend --cov-repo
 Frontend tests are currently not set up.
 
 ### Docker
-- Five compose files compose together via `-f` flag pattern:
+- Four compose files compose together via `-f` flag pattern:
   - `compose.yml` — base (CPU), always required
-  - `compose.gpu.yml` — GPU-enabled backend
   - `compose.dev.yml` — local code hot-reload
   - `compose.deepseek.yml` — self-hosted Mistral OCR (vLLM + KatDocExtract, GPU)
   - `compose.vllm.yml` — self-hosted OpenAI-compatible endpoint (GPU)
-- Images: `ghcr.io/katherlab/llmaixweb-backend:cpu|gpu`, `ghcr.io/katherlab/llmaixweb-frontend:latest`
+- Images: `ghcr.io/katherlab/llmaixweb-backend:latest`, `ghcr.io/katherlab/llmaixweb-frontend:latest`
 - Database migrations run automatically on backend container startup
 
 ### Versioning
@@ -292,13 +310,13 @@ Frontend tests are currently not set up.
 
 #### Release Checklist
 1. **Bump frontend version** in `package.json` (root) — the `prebuild` script auto-syncs to `frontend/version.js` at build time
-2. **Bump backend version** in `pyproject.toml` (e.g. `version = "0.1.4"`)
+2. **Bump backend version** in `pyproject.toml` (e.g. `version = "0.3.3"`)
 3. **Lock dependencies** — run `uv lock` if any dependencies changed; the `uv.lock` file also tracks the `llmaixweb` version and will update automatically
 4. **Build and push images** — handled by GitHub Actions on release tag
 5. **Tag the release:**
    ```bash
-   git tag v0.0.3
-   git push origin v0.0.3
+   git tag v0.3.3
+   git push origin v0.3.3
    ```
 - Frontend and backend are separate Docker images, so they can be updated independently
 
@@ -309,7 +327,7 @@ Frontend tests are currently not set up.
 - **DB session**: Use `get_db()` dependency injection in routes, or `db_session()` context manager for standalone operations
 - **Frontend token**: Stored in `localStorage` under key `"token"`, managed by `auth.js` Pinia store
 - **File UUIDs**: Storage uses UUID-based filenames, the `file_uuid` field links DB records to stored files
-- **Docling fallback**: For PDFs, Docling is always tried first for embedded text. If insufficient (< 50 chars), falls back to configured OCR engine. Set `force_ocr=true` to skip Docling.
+- **Docling-serve**: For PDFs, docling-serve is tried first for embedded text. If insufficient (< 100 chars by default), falls back to configured OCR engine. Set `force_ocr=true` to skip.
 
 ### When Adding New Features
 1. **Backend model** → add to `models/project.py`, create Alembic migration

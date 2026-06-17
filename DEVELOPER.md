@@ -13,8 +13,8 @@ This project uses separate versioning for frontend and backend components.
 
 ### Current Versions
 
-- **Frontend**: `package.json` → `"version": "0.2.4"` (synced to `frontend/version.js` via `prebuild` script)
-- **Backend**: `pyproject.toml` → `version = "0.2.4"` (llmaixweb package version)
+- **Frontend**: `package.json` → `"version": "0.3.3"` (synced to `frontend/version.js` via `prebuild` script)
+- **Backend**: `pyproject.toml` → `version = "0.3.3"` (llmaixweb package version)
 
 ### Git Commit Hash
 
@@ -31,14 +31,14 @@ When making a release:
 
 1. **Update frontend version** in `package.json` (root):
    ```json
-   "version": "0.2.4"  // bump version
+   "version": "0.3.3"  // bump version
    ```
    The `prebuild` script (`frontend/update-version.js`) automatically syncs this to `frontend/version.js` at build time.
 
 2. **Update backend version** in `pyproject.toml`:
    ```toml
    [project]
-   version = "0.1.5"  // bump version
+   version = "0.3.3"  // bump version
    ```
 
 3. **Lock dependencies** — run `uv lock` to update `uv.lock` (it tracks the `llmaixweb` version from `pyproject.toml` and will update automatically):
@@ -48,10 +48,10 @@ When making a release:
 
 4. **Build and push images** (handled by GitHub Actions on release tag)
 
-4. **Tag the release** on GitHub:
+5. **Tag the release** on GitHub:
    ```bash
-   git tag v0.0.3
-   git push origin v0.0.3
+   git tag v0.3.3
+   git push origin v0.3.3
    ```
 
 ### Why Separate Versions?
@@ -64,15 +64,63 @@ When making a release:
 
 The application displays both versions in the footer of every page:
 ```
-Frontend Version: 0.0.2 | Backend Version: 0.1.3
+Frontend Version: 0.3.3 | Backend Version: 0.3.3
 ```
 
 Hover over each version to see the git commit hash:
 ```
-Frontend Version: 0.0.2 (hover: Commit: abc1234) | Backend Version: 0.1.3 (hover: Commit: def5678)
+Frontend Version: 0.3.3 (hover: Commit: abc1234) | Backend Version: 0.3.3 (hover: Commit: def5678)
 ```
 
 This helps users and support quickly identify version mismatches or outdated components.
+
+---
+
+## Configuration Guide
+
+### Environment Variables
+
+The application is configured via environment variables, loaded from a `.env` file (path controlled by `ENV_PATH`, defaults to `backend/.env`).
+
+#### Quick Start Configuration
+
+For a basic setup, only configure these variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `SECRET_KEY` | Session secret (min 16 chars) | `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `OPENAI_API_KEY` | API key for LLM provider | `sk-...` |
+| `OPENAI_API_BASE` | Base URL for OpenAI-compatible API | `https://api.openai.com/v1` |
+| `OPENAI_API_MODEL` | Default model to use | `gpt-4o` |
+
+All other defaults work with `docker compose` out of the box.
+
+#### Full Configuration Reference
+
+See `.env.example` for all available options. Key categories:
+
+| Category | Variables |
+|----------|-----------|
+| **LLM Provider** | `OPENAI_API_KEY`, `OPENAI_API_BASE`, `OPENAI_API_MODEL`, `OPENAI_NO_API_CHECK` |
+| **Security** | `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REQUIRE_INVITATION`, `ALLOW_FIRST_ADMIN_SETUP` |
+| **Storage** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_ENDPOINT_URL`, `S3_BUCKET_NAME` OR `LOCAL_DIRECTORY` |
+| **Database** | `POSTGRES_SERVER`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `SQLALCHEMY_DATABASE_URI` |
+| **Celery** | `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`, `DISABLE_CELERY`, `CELERY_PREPROCESS_POOL` |
+| **OCR Engines** | `DOCLING_*`, `MISTRAL_*`, `VISION_OCR_*` |
+| **Email/SMTP** | `EMAIL_ENABLED`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, etc. |
+
+### Runtime Settings Override
+
+Admin users can override certain settings at runtime via the Admin Settings UI. These are stored in the `app_settings` database table and cached via LRU cache. Settings marked as `readonly: True` in `SETTINGS_META` (`backend/src/core/config.py`) cannot be overridden.
+
+### Skip Runtime Checks
+
+Set `SKIP_RUNTIME_CHECKS=true` to bypass OpenAI/S3 validation (useful for Alembic migrations):
+```bash
+SKIP_RUNTIME_CHECKS=true uv run alembic upgrade head
+```
+
+---
 
 ## Database Migrations (Alembic)
 
@@ -135,7 +183,7 @@ The initial migration (`alembic/versions/2d2bfbbdcc04_initial.py`) creates all e
 
 ---
 
-## 🎨 Code Style & Linting
+## Code Style & Linting
 
 This project uses automated formatting and linting for both frontend and backend code.
 
@@ -176,7 +224,15 @@ uv run ruff check backend/src/    # Lint
 uv run ruff format backend/src/   # Auto-format
 ```
 
-Ruff configuration lives in `pyproject.toml` under `[tool.ruff]`.
+Ruff configuration lives in `pyproject.toml` under `[tool.ruff]`:
+```toml
+[tool.ruff]
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]  # Line length - too strict for strings/comments
+```
 
 ### Pre-Commit Checklist (Before Pushing)
 
@@ -193,7 +249,7 @@ ENV_PATH=backend/.env.localtest uv run pytest --verbose
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 ### Backend Tests
 
@@ -209,7 +265,7 @@ ENV_PATH=backend/.env.localtest uv run pytest --verbose --cov=backend --cov-repo
 
 ---
 
-## 🐳 Optional Compose Overlays
+## Optional Compose Overlays
 
 The repo ships two optional GPU-requiring compose overlays for self-hosted OCR and LLM inference:
 
@@ -281,19 +337,7 @@ The main LLM extraction path also accepts any OpenAI-compatible external API via
 
 ---
 
-## 📦 RustFS Storage (Optional)
-
-Start the RustFS server for local development:
-
-```bash
-rustfs server llmaixwebdata
-```
-
----
-
----
-
-## ✉️ Email Setup (Optional)
+## Email Setup (Optional)
 
 LLMAIx Web can send emails for user invitations and password resets via SMTP.
 
@@ -327,7 +371,7 @@ Templates use Jinja2 with inline CSS. Edit them to customize branding or content
 
 ---
 
-## 👥 Initialize Users
+## Initialize Users
 
 ```bash
 python -m backend.scripts.populate_users
@@ -343,4 +387,168 @@ docker compose exec -it backend \
 # Stopped stack
 docker compose run --rm -it backend \
   python -m backend.scripts.populate_users
+```
+
+---
+
+## Local Development Setup
+
+### Backend
+
+```bash
+# Create virtual environment with uv
+uv venv
+source .venv/bin/activate
+
+# Install dependencies
+uv sync
+
+# Run backend server
+cd backend/src
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Requirements:**
+- Python 3.13+
+- PostgreSQL (or SQLite for development without migrations)
+- Redis (for Celery)
+
+### Frontend
+
+```bash
+# Install dependencies
+npm install
+
+# Run dev server
+npm run dev
+```
+
+**Requirements:**
+- Node.js 18+
+
+### Hot-Reload with Docker
+
+For development with hot-reloading of code changes:
+
+```bash
+docker compose -f compose.yml -f compose.dev.yml up -d
+```
+
+This mounts local code directories into the containers, so changes are picked up automatically.
+
+---
+
+## Architecture Notes
+
+### Backend Structure
+
+```
+backend/src/
+├── main.py               # FastAPI app, CORS, Celery worker spawn
+├── core/
+│   ├── config.py         # Pydantic Settings, lazy loading, validation
+│   ├── security.py       # JWT, password hashing, OAuth2
+│   └── dynamic_settings.py  # DB-backed runtime settings
+├── db/
+│   └── session.py        # SQLAlchemy engine, session factory
+├── models/
+│   └── project.py        # SQLAlchemy ORM models
+├── schemas/
+│   └── project.py        # Pydantic request/response schemas
+├── routers/v1/endpoints/ # API route handlers
+│   ├── projects.py       # Main project router with sub-routers
+│   ├── files.py
+│   ├── preprocessing.py
+│   ├── documents.py
+│   ├── schemas.py
+│   ├── prompts.py
+│   ├── trials.py
+│   └── ...
+├── services/             # External service integrations (OCR)
+├── celery/
+│   ├── celery_config.py  # Celery app, queues, workers
+│   ├── preprocessing.py  # Celery preprocessing tasks
+│   └── info_extraction.py # Celery extraction tasks
+└── utils/
+    ├── preprocessing.py  # PreprocessingPipeline orchestrator
+    ├── info_extraction.py # LLM extraction logic
+    └── evaluation.py     # Evaluation metrics
+```
+
+### Frontend Structure
+
+```
+frontend/
+├── views/                # Page-level components (routed)
+│   ├── Dashboard.vue
+│   ├── ProjectOverview.vue
+│   ├── ProjectDetail.vue
+│   └── ...
+├── components/           # Reusable UI components
+│   ├── ProjectGrid.vue
+│   ├── VisualSchemaEditor.vue
+│   ├── CreateTrialModal.vue
+│   └── ...
+├── stores/               # Pinia state management
+│   ├── auth.js
+│   └── firstAdmin.js
+├── services/             # API client
+│   └── api.js
+├── router/               # Vue Router config
+│   └── index.js
+└── utils/                # Helpers, formatters
+```
+
+### Key Design Patterns
+
+1. **Lazy Settings Loading**: Settings are loaded lazily on first access to avoid requiring `.env` for operations like Alembic migrations (`core/config.py:_get_settings()`).
+
+2. **Storage Abstraction**: `dependencies.py` provides `get_file()`/`save_file()`/`remove_file()` that work with both local and S3 storage — always use these, never access storage directly.
+
+3. **Cancellation Pattern**: Both `PreprocessingTask` and `Trial` have `is_cancelled` + `rollback_on_cancel` flags. The Celery task checks `is_cancelled` periodically. Rollback deletes produced documents/results.
+
+4. **Embedded Text Shortcut**: For PDFs, Docling is always tried first for embedded text. If insufficient (< 100 chars by default), falls back to configured OCR engine. Set `force_ocr=true` to skip.
+
+5. **Dynamic Settings**: Admin panel changes are stored in `app_settings` DB table and loaded via `dynamic_settings.py` with LRU cache. Only non-readonly settings can be overridden.
+
+---
+
+## Debugging Tips
+
+### Check Service Health
+
+```bash
+docker compose ps                    # All services status
+docker compose logs backend          # Backend logs
+docker compose logs worker_default   # Default queue worker logs
+docker compose logs worker_preprocess  # Preprocessing worker logs
+```
+
+### Database Inspection
+
+```bash
+# Connect to Postgres
+docker compose exec postgres psql -U postgres -d llmaixweb
+
+# Check migration status
+SKIP_RUNTIME_CHECKS=true uv run alembic current
+```
+
+### File Storage
+
+```bash
+# RustFS web console (default credentials: rustfsadmin/rustfsadmin)
+open http://localhost:9001
+
+# Local storage (if configured)
+ls -la $LOCAL_DIRECTORY
+```
+
+### Celery Tasks
+
+```bash
+# Check Celery task queues (Redis)
+docker compose exec redis redis-cli
+> keys celery*
+> llen celery  # Check default queue length
 ```

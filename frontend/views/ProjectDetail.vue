@@ -2,80 +2,59 @@
   <div
     class="min-h-screen bg-gradient-to-br from-gray-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800"
   >
-    <!-- Glassy App Bar -->
+    <!-- Ultra-Compact Single-Row Header -->
     <header
-      class="sticky top-0 z-30 bg-white/70 dark:bg-slate-900/70 shadow-lg backdrop-blur-lg transition-all"
+      class="sticky top-0 z-30 bg-white/70 dark:bg-slate-900/70 shadow-md backdrop-blur-lg border-b border-gray-200/50 dark:border-slate-800/50 transition-all"
     >
-      <div
-        class="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0"
-      >
-        <div class="flex items-center">
-          <RouterLink
-            to="/projects"
-            class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 mr-4 rounded-lg transition-all"
-          >
-            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24">
-              <path
-                d="M15 19l-7-7 7-7"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </RouterLink>
-          <div>
-            <div class="flex items-center space-x-2">
-              <h1
-                class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white drop-shadow-sm"
-              >
-                {{ project.name }}
-              </h1>
-              <button
-                class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition"
-                aria-label="Project Settings"
-                @click="showSettingsModal = true"
-              >
-                <svg
-                  class="w-5 h-5 text-gray-500 dark:text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div v-if="project.description" class="text-gray-600 dark:text-gray-400 mt-1">
-              {{ project.description }}
-            </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6">
+        <div class="flex items-center justify-between h-12">
+          <!-- Left: Back + Project Name -->
+          <div class="flex items-center gap-2.5 min-w-0 flex-shrink-0">
+            <RouterLink
+              to="/projects"
+              class="flex-shrink-0 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              aria-label="Back to projects"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </RouterLink>
+            <h1
+              class="text-lg font-semibold text-gray-900 dark:text-white truncate max-w-[180px] sm:max-w-[220px] md:max-w-[300px]"
+            >
+              {{ project.name }}
+            </h1>
           </div>
-        </div>
-        <div class="flex items-center space-x-3">
-          <span
-            class="px-4 py-1.5 text-xs font-bold rounded-full bg-green-50 text-green-700 border border-green-200 shadow-sm dark:bg-green-900/30 dark:text-green-400 dark:border-green-700"
-            >{{ project.status || 'Active' }}</span
-          >
+
+          <!-- Center: Tab navigation (absolute centered) -->
+          <nav class="flex items-center gap-1 overflow-x-auto absolute left-1/2 -translate-x-1/2">
+            <button
+              v-for="step in steps"
+              :key="step.id"
+              class="px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-md transition-all"
+              :class="[
+                currentStep === step.id
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-slate-800 dark:hover:text-gray-200',
+              ]"
+              @click="handleStepChange(step.id)"
+            >
+              {{ step.name }}
+            </button>
+          </nav>
+
+          <!-- Right: Settings button -->
           <button
-            class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-800 transition"
+            class="flex-shrink-0 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-slate-800 rounded-lg transition-all"
             aria-label="Project Settings"
             @click="showSettingsModal = true"
           >
-            <svg
-              class="w-5 h-5 text-gray-600 dark:text-gray-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fill-rule="evenodd"
                 d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
@@ -87,17 +66,7 @@
       </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 py-4">
-      <!-- Modern Workflow Tabs -->
-      <div class="mb-4">
-        <ProjectWorkflow
-          :current-step="currentStep"
-          :open-tabs="openTabs"
-          @change-step="handleStepChange"
-          @update-open-tabs="updateOpenTabs"
-        />
-      </div>
-
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-4">
       <!-- Loading, Error, Main Content -->
       <div v-if="isLoading" class="flex flex-col items-center py-24">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500"></div>
@@ -183,34 +152,6 @@
       @confirm="deleteProject"
       @cancel="showDeleteConfirmation = false"
     />
-
-    <!-- Mobile: Workspace Tab Bar (at bottom) -->
-    <div
-      v-if="openTabs.length > 1"
-      class="fixed bottom-0 left-0 right-0 z-40 sm:hidden flex bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-slate-800 rounded-t-2xl px-2 py-2 shadow-2xl"
-    >
-      <div class="flex-1 flex justify-between">
-        <button
-          v-for="tab in openTabs"
-          :key="tab"
-          class="flex flex-col items-center px-1"
-          :class="
-            currentStep === tab
-              ? 'text-blue-600 dark:text-blue-400 font-bold'
-              : 'text-gray-400 dark:text-gray-500'
-          "
-          @click="handleStepChange(tab)"
-        >
-          <span class="text-xs">{{ stepsMap[tab]?.name.split(' ')[0] }}</span>
-          <span
-            v-if="openTabs.length > 1"
-            class="text-[10px] text-gray-300 dark:text-gray-600"
-            @click.stop="closeTab(tab)"
-            >×</span
-          >
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -218,7 +159,6 @@
 import { ref, computed, onMounted, provide, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/services/api'
-import ProjectWorkflow from '@/components/ProjectWorkflow.vue'
 import FilesAndProcessing from '@/components/FilesAndProcessing.vue'
 import DocumentsManagement from '@/components/documents/DocumentsManagement.vue'
 import TrialsManagement from '@/components/TrialsManagement.vue'
@@ -242,6 +182,7 @@ const showSettingsModal = ref(false)
 const showDeleteConfirmation = ref(false)
 
 // Workflow step management with tab workspace
+const validSteps = ['files', 'documents', 'schemas', 'trials', 'evaluation']
 const steps = [
   { id: 'files', name: 'Files & Preprocessing' },
   { id: 'documents', name: 'Documents' },
@@ -249,49 +190,18 @@ const steps = [
   { id: 'trials', name: 'Run Trials' },
   { id: 'evaluation', name: 'Evaluation' },
 ]
-const stepsMap = Object.fromEntries(steps.map((s) => [s.id, s]))
 const defaultStep = 'files'
 
 // Tabs (persisted in localStorage for true SaaS "workspace" vibes)
-const currentStep = ref(defaultStep)
-const openTabs = ref([defaultStep])
-const openTabsStorageKey = `project-${projectId.value}-open-tabs`
-const currentStepStorageKey = `project-${projectId.value}-current-step`
-
-// Validate currentStep on change to prevent invalid states
-watch(currentStep, (val) => {
-  if (!validSteps.includes(val)) {
-    currentStep.value = 'files'
-  }
+// Current step is managed via URL query param
+const currentStep = computed(() => {
+  const tab = route.query.tab
+  return validSteps.includes(tab) ? tab : defaultStep
 })
-
-function persistWorkspace() {
-  localStorage.setItem(openTabsStorageKey, JSON.stringify(openTabs.value))
-  localStorage.setItem(currentStepStorageKey, currentStep.value)
-}
-function restoreWorkspace() {
-  try {
-    const open = JSON.parse(localStorage.getItem(openTabsStorageKey))
-    const curr = localStorage.getItem(currentStepStorageKey)
-    // Filter to only valid steps
-    const validSteps = ['files', 'documents', 'schemas', 'trials', 'evaluation']
-    if (Array.isArray(open) && open.length) {
-      openTabs.value = open.filter((s) => validSteps.includes(s))
-    }
-    if (curr && validSteps.includes(curr) && openTabs.value.includes(curr)) {
-      currentStep.value = curr
-    } else {
-      currentStep.value = 'files' // Default to files
-    }
-  } catch {
-    currentStep.value = 'files'
-  }
-}
 
 // --- LIFECYCLE ---
 onMounted(() => {
   fetchProject()
-  restoreWorkspace()
   handleQueryParams()
 })
 
@@ -363,29 +273,11 @@ const fetchProject = async () => {
 const refreshProject = () => fetchProject()
 
 // --- WORKFLOW & TAB LOGIC ---
-const validSteps = ['files', 'documents', 'schemas', 'trials', 'evaluation']
-
 function handleStepChange(stepId) {
   if (!validSteps.includes(stepId)) return // Ignore invalid steps
-  if (!openTabs.value.includes(stepId)) openTabs.value.push(stepId)
   currentStep.value = stepId
-  persistWorkspace()
-}
-function updateOpenTabs(tabs) {
-  openTabs.value = tabs.filter((s) => validSteps.includes(s))
-  if (!openTabs.value.includes(currentStep.value)) {
-    currentStep.value = openTabs.value[0] || defaultStep
-  }
-  persistWorkspace()
-}
-function closeTab(tabId) {
-  if (openTabs.value.length <= 1) return
-  const idx = openTabs.value.indexOf(tabId)
-  openTabs.value.splice(idx, 1)
-  if (currentStep.value === tabId) {
-    currentStep.value = openTabs.value[idx - 1] || openTabs.value[0]
-  }
-  persistWorkspace()
+  // Update URL without adding history entry
+  router.replace({ query: { ...route.query, tab: stepId } })
 }
 
 // --- PROJECT EDIT LOGIC ---
@@ -396,7 +288,7 @@ const saveProjectEdits = async ({ name, description }) => {
     project.value = response.data
     toast.success('Project updated successfully')
     showSettingsModal.value = false
-  } catch (err) {
+  } catch {
     error.value = 'Failed to update project'
     toast.error('Failed to update project')
   } finally {
@@ -410,7 +302,7 @@ const deleteProject = async () => {
     await api.delete(`/project/${projectId.value}`)
     toast.success('Project deleted successfully')
     router.push('/projects')
-  } catch (err) {
+  } catch {
     toast.error('Failed to delete project')
   } finally {
     showDeleteConfirmation.value = false

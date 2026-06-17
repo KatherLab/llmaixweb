@@ -33,6 +33,7 @@ class Project(ProjectBase):
     id: int
     owner: UserPublic | None = None
     documents: list[Document] = Field(default_factory=list)
+    document_count: int = 0
     created_at: datetime
     updated_at: datetime
 

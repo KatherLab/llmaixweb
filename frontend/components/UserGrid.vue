@@ -1,5 +1,5 @@
 <template>
-  <div style="width: 100%; height: 500px">
+  <div class="h-full w-full">
     <AgGridVue
       :row-data="internalRowData"
       :column-defs="columnDefs"
@@ -9,7 +9,7 @@
       :theme="gridTheme"
       :grid-options="gridOptions"
       :components="components"
-      style="width: 100%; height: 100%"
+      class="h-full w-full"
       @grid-ready="onGridReady"
       @first-data-rendered="onFirstDataRendered"
       @grid-size-changed="onGridSizeChanged"
@@ -25,19 +25,53 @@ import { themeMaterial } from 'ag-grid-community'
 // Emits to parent
 const emit = defineEmits(['edit-requested'])
 
-// Theme (v34 :theme API)
-const gridTheme = themeMaterial.withParams({
-  spacing: 12,
-  borderRadius: 8,
-  rowHeight: 56,
-  headerHeight: 48,
-  listItemHeight: 40,
-  accentColor: '#3b82f6',
-  rowHoverColor: '#f3f4f6',
-  headerBackgroundColor: '#f9fafb',
-  headerTextColor: '#111827',
-  headerCellHoverBackgroundColor: '#e0e7ff',
-})
+// Theme (v34 :theme API) - with dark mode support
+const isDarkMode = () => {
+  if (typeof window !== 'undefined') {
+    return (
+      localStorage.getItem('darkMode') === '1' ||
+      (!localStorage.getItem('darkMode') &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches)
+    )
+  }
+  return false
+}
+
+const getGridTheme = () => {
+  const darkMode = isDarkMode()
+  return themeMaterial.withParams({
+    spacing: 12,
+    borderRadius: 8,
+    rowHeight: 56,
+    headerHeight: 48,
+    listItemHeight: 40,
+    accentColor: '#3b82f6',
+    rowHoverColor: darkMode ? '#1e293b' : '#f3f4f6',
+    headerBackgroundColor: darkMode ? '#1e293b' : '#f9fafb',
+    headerTextColor: darkMode ? '#e2e8f0' : '#111827',
+    headerCellHoverBackgroundColor: darkMode ? '#334155' : '#e0e7ff',
+    // Dark mode colors
+    backgroundColor: darkMode ? '#0f172a' : '#ffffff',
+    foregroundColor: darkMode ? '#f1f5f9' : '#111827',
+    rowBackgroundColor: darkMode ? '#0f172a' : '#ffffff',
+    rowForegroundColor: darkMode ? '#e2e8f0' : '#111827',
+    borderColor: darkMode ? '#334155' : '#e5e7eb',
+    controlBorderRadius: 8,
+  })
+}
+
+const gridTheme = ref(getGridTheme())
+
+// Watch for dark mode changes
+if (typeof window !== 'undefined') {
+  const observer = new MutationObserver(() => {
+    gridTheme.value = getGridTheme()
+  })
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+  })
+}
 
 // ----------------------------
 // Vue cell components (render)
@@ -62,13 +96,13 @@ const UserCell = defineComponent({
           'div',
           {
             class:
-              'flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center',
+              'flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 dark:bg-slate-700 flex items-center justify-center',
           },
-          [h('span', { class: 'text-blue-800 font-medium' }, initials)],
+          [h('span', { class: 'text-blue-800 dark:text-blue-300 font-medium' }, initials)],
         ),
         h('div', { class: 'ml-3' }, [
-          h('div', { class: 'text-sm font-medium text-gray-900' }, name || 'N/A'),
-          h('div', { class: 'text-sm text-gray-500' }, email),
+          h('div', { class: 'text-sm font-medium text-gray-900 dark:text-white' }, name || 'N/A'),
+          h('div', { class: 'text-sm text-gray-500 dark:text-slate-400' }, email),
         ]),
       ])
     }
@@ -82,7 +116,9 @@ const StatusCell = defineComponent({
     const onEdit = () => props.params.context?.emitEdit?.(props.params.data)
     return () => {
       const active = !!props.params.value
-      const cls = active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+      const cls = active
+        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+        : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
       const text = active ? 'Active' : 'Inactive'
       return h('div', { class: 'flex items-center h-full cursor-pointer', onClick: onEdit }, [
         h(
@@ -102,7 +138,7 @@ const RoleCell = defineComponent({
     const onEdit = () => props.params.context?.emitEdit?.(props.params.data)
     return () =>
       h('div', { class: 'flex items-center h-full cursor-pointer capitalize', onClick: onEdit }, [
-        h('span', String(props.params.value ?? '')),
+        h('span', { class: 'text-gray-900 dark:text-white' }, String(props.params.value ?? '')),
       ])
   },
 })
@@ -118,7 +154,7 @@ const ActionsCell = defineComponent({
           'button',
           {
             class:
-              'px-3 py-1.5 text-xs font-medium rounded text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition',
+              'px-3 py-1.5 text-xs font-medium rounded text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-slate-700 border border-blue-200 dark:border-slate-600 hover:bg-blue-100 dark:hover:bg-slate-600 transition',
             onClick: (e) => {
               e.stopPropagation()
               onEdit()
@@ -213,5 +249,85 @@ watch(
 :deep(.ag-center-cols-container) {
   display: flex;
   align-items: center;
+}
+
+/* Header text and icon styling for both light and dark mode */
+:deep(.ag-header-cell-text) {
+  color: #111827 !important;
+}
+:deep(.ag-cell-label-container) {
+  color: #111827 !important;
+}
+:deep(.ag-filter-icon) {
+  color: #6b7280 !important;
+}
+:deep(.ag-sort-icon) {
+  color: #6b7280 !important;
+}
+:deep(.ag-header-cell-label-container) {
+  color: #111827 !important;
+}
+
+/* Dark mode overrides for AG-Grid */
+html.dark :deep(.ag-header-cell-text) {
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-header-cell) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+html.dark :deep(.ag-cell-label-container) {
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-filter-icon) {
+  color: #94a3b8 !important;
+}
+html.dark :deep(.ag-sort-icon) {
+  color: #94a3b8 !important;
+}
+html.dark :deep(.ag-column-select-header) {
+  background-color: #1e293b !important;
+}
+html.dark :deep(.ag-body-container) {
+  background-color: #0f172a !important;
+}
+html.dark :deep(.ag-header) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+html.dark :deep(.ag-row) {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+html.dark :deep(.ag-cell) {
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-paging-panel) {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-paging-button) {
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-paging-button:disabled) {
+  color: #64748b !important;
+}
+html.dark :deep(.ag-input-field-input) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-filter-body) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+html.dark :deep(.ag-list-item) {
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-popup) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
 }
 </style>

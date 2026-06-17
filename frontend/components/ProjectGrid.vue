@@ -1,38 +1,47 @@
 <template>
-  <div>
-    <div v-if="isAdmin" class="flex items-center mb-3">
-      <label class="inline-flex items-center gap-2 cursor-pointer select-none">
-        <input
-          v-model="showAllProjects"
-          type="checkbox"
-          class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+  <div class="h-full flex flex-col min-h-0">
+    <!-- Header with title and admin toggle -->
+    <div
+      class="flex items-center justify-between mb-3 pb-3 border-b border-gray-200 dark:border-slate-700"
+    >
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Your Projects</h2>
+      <div v-if="isAdmin" class="flex items-center">
+        <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+          <input
+            v-model="showAllProjects"
+            type="checkbox"
+            class="rounded border-gray-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 shadow-sm focus:ring-blue-500"
+          />
+          <span class="text-sm text-gray-700 dark:text-slate-300">Show all users' projects</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Content area -->
+    <div class="flex-1 min-h-0">
+      <!-- Loading Indicator -->
+      <div v-if="isLoading" class="flex justify-center py-12">
+        <LoadingSpinner size="large" />
+      </div>
+
+      <!-- Grid -->
+      <div v-else class="h-full">
+        <AgGridVue
+          :row-data="rowData"
+          :column-defs="columnDefs"
+          :default-col-def="defaultColDef"
+          :grid-options="gridOptions"
+          :pagination="true"
+          :pagination-page-size="20"
+          :pagination-auto-page-size="false"
+          :theme="gridTheme"
+          :components="components"
+          class="h-full w-full"
+          @grid-ready="onGridReady"
+          @first-data-rendered="onFirstDataRendered"
+          @grid-size-changed="onGridSizeChanged"
         />
-        <span class="text-sm text-gray-700">Show all users' projects</span>
-      </label>
-    </div>
-
-    <!-- Loading Indicator -->
-    <div v-if="isLoading" class="flex justify-center py-12">
-      <LoadingSpinner size="large" />
-    </div>
-
-    <!-- Grid -->
-    <div v-else style="height: 500px; width: 100%">
-      <AgGridVue
-        :row-data="rowData"
-        :column-defs="columnDefs"
-        :default-col-def="defaultColDef"
-        :grid-options="gridOptions"
-        :pagination="true"
-        :pagination-page-size="20"
-        :pagination-auto-page-size="false"
-        :theme="gridTheme"
-        :components="components"
-        style="width: 100%; height: 100%"
-        @grid-ready="onGridReady"
-        @first-data-rendered="onFirstDataRendered"
-        @grid-size-changed="onGridSizeChanged"
-      />
+      </div>
     </div>
   </div>
 </template>
@@ -61,16 +70,52 @@ const authStore = useAuthStore()
 const router = useRouter()
 
 // ---- theme (v34 :theme) ----
-const gridTheme = themeMaterial.withParams({
-  spacing: 16,
-  borderRadius: 4,
-  rowHeight: 56,
-  headerHeight: 48,
-  accentColor: '#3b82f6',
-  rowHoverColor: '#f3f4f6',
-  primaryColor: '#3b82f6',
-  cellHorizontalPadding: 16,
-})
+// Check for dark mode
+const isDarkMode = () => {
+  if (typeof window !== 'undefined') {
+    return (
+      localStorage.getItem('darkMode') === '1' ||
+      (!localStorage.getItem('darkMode') &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches)
+    )
+  }
+  return false
+}
+
+const getGridTheme = () => {
+  const darkMode = isDarkMode()
+  return themeMaterial.withParams({
+    spacing: 12,
+    borderRadius: 8,
+    rowHeight: 56,
+    headerHeight: 48,
+    accentColor: '#3b82f6',
+    rowHoverColor: darkMode ? '#1e293b' : '#f3f4f6',
+    headerBackgroundColor: darkMode ? '#1e293b' : '#f9fafb',
+    headerTextColor: darkMode ? '#e2e8f0' : '#111827',
+    headerCellHoverBackgroundColor: darkMode ? '#334155' : '#e0e7ff',
+    // Dark mode colors
+    backgroundColor: darkMode ? '#0f172a' : '#ffffff',
+    foregroundColor: darkMode ? '#f1f5f9' : '#111827',
+    rowBackgroundColor: darkMode ? '#0f172a' : '#ffffff',
+    rowForegroundColor: darkMode ? '#e2e8f0' : '#111827',
+    borderColor: darkMode ? '#334155' : '#e5e7eb',
+    controlBorderRadius: 8,
+  })
+}
+
+const gridTheme = ref(getGridTheme())
+
+// Watch for dark mode changes
+if (typeof window !== 'undefined') {
+  const observer = new MutationObserver(() => {
+    gridTheme.value = getGridTheme()
+  })
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+  })
+}
 
 // ---- state ----
 const rowData = ref([])
@@ -90,37 +135,29 @@ const ProjectCell = defineComponent({
       h(
         'div',
         {
-          class: 'flex items-center h-full cursor-pointer text-blue-600 hover:text-blue-800',
+          class:
+            'flex items-center h-full cursor-pointer text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300',
           onClick: go,
         },
-        [
-          // keep it simple; omit the SVG to keep h() readable
-          h('span', { class: 'font-medium' }, String(props.params.value ?? '')),
-        ],
+        [h('span', { class: 'font-medium' }, String(props.params.value ?? ''))],
       )
   },
 })
 
-const StatusCell = defineComponent({
-  name: 'StatusCell',
+const DocumentCountCell = defineComponent({
+  name: 'DocumentCountCell',
   props: { params: { type: Object, required: true } },
   setup(props) {
     return () => {
-      const v = String(props.params.value ?? '')
-      const map = {
-        active: 'bg-green-100 text-green-800',
-        inactive: 'bg-red-100 text-red-800',
-        pending: 'bg-yellow-100 text-yellow-800',
-      }
-      const klass = map[v] || 'bg-gray-100 text-gray-800'
-      const label = v ? v.charAt(0).toUpperCase() + v.slice(1) : '—'
+      const count = props.params.value ?? 0
       return h('div', { class: 'flex items-center h-full' }, [
         h(
           'span',
           {
-            class: `px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${klass}`,
+            class:
+              'px-2.5 py-1 inline-flex text-xs leading-4 font-medium rounded-full bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-slate-600',
           },
-          label,
+          `${count} document${count !== 1 ? 's' : ''}`,
         ),
       ])
     }
@@ -139,7 +176,7 @@ const ActionsCell = defineComponent({
           'button',
           {
             class:
-              'inline-flex items-center px-3 py-1.5 text-xs font-medium rounded text-white bg-blue-500 hover:bg-blue-600',
+              'inline-flex items-center px-2.5 py-1 text-xs font-medium rounded text-white bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500',
             onClick: (e) => {
               e.stopPropagation()
               view()
@@ -168,13 +205,23 @@ const UserCell = defineComponent({
             'div',
             {
               class:
-                'flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center',
+                'flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-slate-700 flex items-center justify-center',
             },
-            [h('span', { class: 'text-blue-800 font-medium' }, initials)],
+            [
+              h(
+                'span',
+                { class: 'text-blue-800 dark:text-blue-300 font-medium text-xs' },
+                initials,
+              ),
+            ],
           ),
-          h('div', { class: 'ml-3' }, [
-            h('div', { class: 'text-sm font-medium text-gray-900' }, user.full_name || 'N/A'),
-            h('div', { class: 'text-sm text-gray-500' }, user.email || 'N/A'),
+          h('div', { class: 'ml-2' }, [
+            h(
+              'div',
+              { class: 'text-sm font-medium text-gray-900 dark:text-white' },
+              user.full_name || 'N/A',
+            ),
+            h('div', { class: 'text-xs text-gray-500 dark:text-slate-400' }, user.email || 'N/A'),
           ]),
         ]),
       ])
@@ -182,13 +229,18 @@ const UserCell = defineComponent({
   },
 })
 
-const components = { ProjectCell, StatusCell, ActionsCell, UserCell } // ag-grid-vue3 will use these by name. :contentReference[oaicite:2]{index=2}
+const components = { ProjectCell, DocumentCountCell, ActionsCell, UserCell } // ag-grid-vue3 will use these by name. :contentReference[oaicite:2]{index=2}
 
 // ---- column defs ----
 const baseColumnsComputed = computed(() => {
   const cols = [
     { field: 'name', headerName: 'Project', flex: 2, minWidth: 250, cellRenderer: 'ProjectCell' },
-    { field: 'status', headerName: 'Status', width: 140, cellRenderer: 'StatusCell' },
+    {
+      field: 'document_count',
+      headerName: 'Documents',
+      width: 140,
+      cellRenderer: 'DocumentCountCell',
+    },
     {
       field: 'created_at',
       headerName: 'Created',
@@ -273,6 +325,7 @@ const loadProjects = async () => {
     const response = await http.get('/project', { params })
     rowData.value = response.data.map((project) => ({
       ...project,
+      document_count: project.document_count ?? 0,
       user: {
         full_name: project.owner?.full_name || 'N/A',
         email: project.owner?.email || 'N/A',
@@ -325,5 +378,92 @@ onMounted(async () => {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }
-/* Theme class is injected by :theme */
+
+/* Header text and icon styling for both light and dark mode */
+:deep(.ag-header-cell-text) {
+  color: #111827 !important;
+}
+:deep(.ag-cell-label-container) {
+  color: #111827 !important;
+}
+:deep(.ag-filter-icon) {
+  color: #6b7280 !important;
+}
+:deep(.ag-sort-icon) {
+  color: #6b7280 !important;
+}
+:deep(.ag-header-cell-label-container) {
+  color: #111827 !important;
+}
+
+/* Dark mode overrides for AG-Grid */
+html.dark :deep(.ag-header-cell-text) {
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-header-cell) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+html.dark :deep(.ag-cell-label-container) {
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-filter-icon) {
+  color: #94a3b8 !important;
+}
+html.dark :deep(.ag-sort-icon) {
+  color: #94a3b8 !important;
+}
+html.dark :deep(.ag-header-cell-label-container) {
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-header-filter-input) {
+  background-color: #334155 !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-column-select-header) {
+  background-color: #1e293b !important;
+}
+html.dark :deep(.ag-body-container) {
+  background-color: #0f172a !important;
+}
+html.dark :deep(.ag-header) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+html.dark :deep(.ag-row) {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+html.dark :deep(.ag-cell) {
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-paging-panel) {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-paging-button) {
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-paging-button:disabled) {
+  color: #64748b !important;
+}
+html.dark :deep(.ag-input-field-input) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-filter-body) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+html.dark :deep(.ag-list-item) {
+  color: #e2e8f0 !important;
+}
+html.dark :deep(.ag-popup) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
 </style>
