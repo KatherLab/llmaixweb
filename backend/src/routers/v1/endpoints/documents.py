@@ -393,7 +393,7 @@ def create_document_set(
 def get_document_sets(
     project_id: int,
     include_auto_generated: bool = Query(
-        False, description="Include auto-generated sets from trials"
+        True, description="Include auto-generated sets from preprocessing"
     ),
     preprocessing_config_id: int = Query(
         None, description="Filter by preprocessing configuration"

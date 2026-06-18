@@ -134,9 +134,23 @@
                           <FileIcon :file-type="doc.original_file?.file_type" :size="32" />
                           <div class="ml-3">
                             <p class="text-sm font-medium text-gray-900">
-                              {{ doc.original_file?.file_name || `Document #${doc.id}` }}
+                              {{
+                                doc.document_name ||
+                                doc.original_file?.file_name ||
+                                `Document #${doc.id}`
+                              }}
                             </p>
-                            <p class="text-xs text-gray-500">
+                            <p
+                              v-if="
+                                doc.document_name &&
+                                doc.original_file?.file_name &&
+                                doc.document_name !== doc.original_file?.file_name
+                              "
+                              class="text-xs text-gray-500"
+                            >
+                              {{ doc.original_file?.file_name }}
+                            </p>
+                            <p v-else class="text-xs text-gray-500">
                               {{ formatFileSize(doc.original_file?.file_size) }}
                             </p>
                           </div>

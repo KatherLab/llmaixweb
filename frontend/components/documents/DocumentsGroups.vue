@@ -1,6 +1,6 @@
-<!-- DocumentGroups.vue -->
+<!-- DocumentsGroups.vue -->
 <template>
-  <div class="space-y-6">
+  <div class="space-y-4">
     <!-- Actions Bar -->
     <div class="flex justify-between items-center">
       <div class="flex items-center space-x-4">
@@ -24,10 +24,10 @@
             v-model="searchQuery"
             type="text"
             placeholder="Search groups..."
-            class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <svg
-            class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+            class="absolute left-3 top-2.5 h-5 w-5 text-gray-400 dark:text-gray-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -43,46 +43,23 @@
       </div>
 
       <div class="flex items-center space-x-2">
-        <span class="text-sm text-gray-500">View:</span>
-        <button
-          :class="[
-            'p-2 rounded-lg',
-            viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600',
-          ]"
-          @click="viewMode = 'grid'"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-            />
-          </svg>
-        </button>
-        <button
-          :class="[
-            'p-2 rounded-lg',
-            viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600',
-          ]"
-          @click="viewMode = 'list'"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 6h16M4 12h16M4 18h16"
-            />
-          </svg>
-        </button>
+        <span class="text-sm text-gray-500 dark:text-gray-400">
+          {{ totalCount }} group{{ totalCount !== 1 ? 's' : '' }}
+        </span>
       </div>
     </div>
 
-    <!-- Document Groups Grid/List -->
-    <div v-if="filteredGroups.length === 0" class="bg-gray-50 rounded-lg p-12 text-center">
+    <!-- Document Groups Table -->
+    <div v-if="isLoading" class="flex justify-center py-12">
+      <LoadingSpinner size="large" />
+    </div>
+
+    <div
+      v-else-if="serverItems.length === 0"
+      class="bg-gray-50 dark:bg-slate-800 rounded-lg p-12 text-center"
+    >
       <svg
-        class="mx-auto h-12 w-12 text-gray-400"
+        class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -94,52 +71,50 @@
           d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
         />
       </svg>
-      <h3 class="mt-2 text-sm font-medium text-gray-900">No document groups</h3>
-      <p class="mt-1 text-sm text-gray-500">Create your first group to organize documents</p>
+      <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No document groups</h3>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        {{
+          searchQuery
+            ? 'Try adjusting your search'
+            : 'Create your first group to organize documents'
+        }}
+      </p>
     </div>
 
-    <!-- Grid View -->
     <div
-      v-else-if="viewMode === 'grid'"
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+      v-else
+      class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
     >
-      <DocumentGroupCard
-        v-for="group in filteredGroups"
-        :key="group.id"
-        :group="group"
-        @edit="editGroup"
-        @delete="deleteGroup"
-        @view="viewGroup"
-      />
-    </div>
-
-    <!-- List View -->
-    <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-slate-800">
           <tr>
             <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
             >
               Group Name
             </th>
             <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
             >
               Documents
             </th>
             <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
             >
               Configuration
             </th>
             <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
             >
               Tags
             </th>
             <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+            >
+              Type
+            </th>
+            <th
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
             >
               Created
             </th>
@@ -148,43 +123,81 @@
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="group in filteredGroups" :key="group.id" class="hover:bg-gray-50">
-            <td class="px-6 py-4 whitespace-nowrap">
+        <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-700">
+          <tr
+            v-for="group in serverItems"
+            :key="group.id"
+            class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            <td class="px-6 py-4">
               <div>
-                <div class="text-sm font-medium text-gray-900">{{ group.name }}</div>
-                <div v-if="group.description" class="text-xs text-gray-500 truncate max-w-xs">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-gray-900 dark:text-white">{{
+                    group.name
+                  }}</span>
+                  <span
+                    v-if="group.is_auto_generated"
+                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                    title="Auto-generated during preprocessing"
+                  >
+                    Auto
+                  </span>
+                </div>
+                <div
+                  v-if="group.description"
+                  class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-md"
+                >
                   {{ group.description }}
                 </div>
               </div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <span class="text-sm text-gray-900">{{ group.documents.length }}</span>
+              <span class="text-sm text-gray-900 dark:text-white">{{
+                group.document_count || group.documents?.length || 0
+              }}</span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <span v-if="group.preprocessing_config" class="text-sm text-gray-900">
+              <span v-if="group.preprocessing_config" class="text-sm text-gray-900 dark:text-white">
                 {{ group.preprocessing_config.name }}
               </span>
-              <span v-else class="text-sm text-gray-500">Mixed</span>
+              <span v-else class="text-sm text-gray-500 dark:text-gray-400">Mixed</span>
             </td>
             <td class="px-6 py-4">
               <div class="flex flex-wrap gap-1">
                 <span
-                  v-for="tag in group.tags"
+                  v-for="tag in (group.tags || []).slice(0, 5)"
                   :key="tag"
-                  class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                  class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
                 >
                   {{ tag }}
                 </span>
+                <span
+                  v-if="(group.tags || []).length > 5"
+                  class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                >
+                  +{{ group.tags.length - 5 }}
+                </span>
               </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span
+                :class="[
+                  'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                  group.is_auto_generated
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                ]"
+              >
+                {{ group.is_auto_generated ? 'Auto-generated' : 'Manual' }}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
               {{ formatDate(group.created_at) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
               <div class="flex items-center justify-end space-x-2">
                 <button
-                  class="text-blue-600 hover:text-blue-900"
+                  class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                   title="View"
                   @click="viewGroup(group)"
                 >
@@ -204,7 +217,8 @@
                   </svg>
                 </button>
                 <button
-                  class="text-gray-600 hover:text-gray-900"
+                  v-if="!group.is_auto_generated"
+                  class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
                   title="Edit"
                   @click="editGroup(group)"
                 >
@@ -218,11 +232,24 @@
                   </svg>
                 </button>
                 <button
-                  class="text-red-600 hover:text-red-900"
-                  title="Delete"
+                  class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                  :title="
+                    group.trials && group.trials.length > 0
+                      ? 'Cannot delete - used by trial'
+                      : 'Delete'
+                  "
+                  :disabled="group.trials && group.trials.length > 0"
                   @click="deleteGroup(group)"
                 >
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    class="h-5 w-5"
+                    :class="
+                      group.trials && group.trials.length > 0 ? 'opacity-50 cursor-not-allowed' : ''
+                    "
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       stroke-linecap="round"
                       stroke-linejoin="round"
@@ -236,6 +263,92 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Pagination -->
+    <div
+      v-if="totalPages > 1"
+      class="bg-white dark:bg-slate-900 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6"
+    >
+      <div class="flex-1 flex justify-between sm:hidden">
+        <button
+          :disabled="currentPage === 1"
+          class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="currentPage--"
+        >
+          Previous
+        </button>
+        <button
+          :disabled="currentPage === totalPages"
+          class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="currentPage++"
+        >
+          Next
+        </button>
+      </div>
+      <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+          <p class="text-sm text-gray-700 dark:text-gray-300">
+            Showing
+            <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span>
+            to
+            <span class="font-medium">{{ Math.min(currentPage * itemsPerPage, totalCount) }}</span>
+            of
+            <span class="font-medium">{{ totalCount }}</span>
+            results
+          </p>
+        </div>
+        <div>
+          <nav
+            class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+            aria-label="Pagination"
+          >
+            <button
+              :disabled="currentPage === 1"
+              class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              @click="currentPage = 1"
+            >
+              <span class="sr-only">First</span>
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <button
+              v-for="page in visiblePages"
+              :key="page"
+              :class="[
+                'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
+                page === currentPage
+                  ? 'z-10 bg-blue-50 dark:bg-blue-900 border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800',
+              ]"
+              @click="currentPage = page"
+            >
+              {{ page }}
+            </button>
+            <button
+              :disabled="currentPage === totalPages"
+              class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              @click="currentPage = totalPages"
+            >
+              <span class="sr-only">Last</span>
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </nav>
+        </div>
+      </div>
     </div>
 
     <!-- Create/Edit Group Modal -->
@@ -261,22 +374,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '@/services/api'
 import { useToast } from 'vue-toastification'
 import { formatDate } from '@/utils/formatters'
-import DocumentGroupCard from './DocumentGroupCard.vue'
 import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
 import ViewDocumentGroupModal from './ViewDocumentGroupModal.vue'
+import LoadingSpinner from '../common/LoadingSpinner.vue'
 
 const props = defineProps({
   projectId: {
     type: [String, Number],
     required: true,
-  },
-  documents: {
-    type: Array,
-    default: () => [],
   },
   documentSets: {
     type: Array,
@@ -290,18 +399,103 @@ const toast = useToast()
 
 // State
 const searchQuery = ref('')
-const viewMode = ref('grid')
 const showCreateModal = ref(false)
 const editingGroup = ref(null)
 const viewingGroup = ref(null)
 const availableDocuments = ref([])
-const allDocumentsLoaded = ref(false)
+const isLoading = ref(true)
+const serverItems = ref([])
+const totalCount = ref(0)
+const currentPage = ref(1)
+const itemsPerPage = ref(20)
 
-// Fetch all documents for the modal (with pagination)
-const fetchAllDocuments = async () => {
-  if (allDocumentsLoaded.value) {
-    return
+// Server-side pagination
+const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / itemsPerPage.value)))
+
+const visiblePages = computed(() => {
+  const pages = []
+  const total = totalPages.value
+  const current = currentPage.value
+
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
+    }
+  } else {
+    if (current <= 3) {
+      for (let i = 1; i <= 5; i++) {
+        pages.push(i)
+      }
+      pages.push('...')
+      pages.push(total)
+    } else if (current >= total - 2) {
+      pages.push(1)
+      pages.push('...')
+      for (let i = total - 4; i <= total; i++) {
+        pages.push(i)
+      }
+    } else {
+      pages.push(1)
+      pages.push('...')
+      for (let i = current - 1; i <= current + 1; i++) {
+        pages.push(i)
+      }
+      pages.push('...')
+      pages.push(total)
+    }
   }
+
+  return pages.filter((p) => p === '...' || (p >= 1 && p <= total))
+})
+
+// Fetch document sets with pagination
+const fetchDocumentSets = async () => {
+  isLoading.value = true
+  try {
+    const params = {
+      include_auto_generated: true,
+    }
+
+    const { data } = await api.get(`/project/${props.projectId}/document-set`, { params })
+
+    // Apply search filter client-side
+    let filteredSets = data
+    if (searchQuery.value) {
+      const query = searchQuery.value.toLowerCase()
+      filteredSets = data.filter(
+        (group) =>
+          group.name.toLowerCase().includes(query) ||
+          group.description?.toLowerCase().includes(query) ||
+          group.tags?.some((tag) => tag.toLowerCase().includes(query)),
+      )
+    }
+
+    totalCount.value = filteredSets.length
+
+    // Apply pagination
+    const start = (currentPage.value - 1) * itemsPerPage.value
+    const end = start + itemsPerPage.value
+    serverItems.value = filteredSets.slice(start, end)
+
+    // Safety: if we're on a page that no longer exists after filtering, go to last page
+    if (
+      serverItems.value.length === 0 &&
+      totalCount.value > 0 &&
+      currentPage.value > totalPages.value
+    ) {
+      currentPage.value = totalPages.value
+      await fetchDocumentSets()
+    }
+  } catch (error) {
+    toast.error('Failed to load document groups')
+    console.error(error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Fetch all documents for the modal
+const fetchAllDocuments = async () => {
   try {
     const PAGE_SIZE = 500
     let offset = 0
@@ -318,31 +512,11 @@ const fetchAllDocuments = async () => {
     }
 
     availableDocuments.value = allDocs
-    allDocumentsLoaded.value = true
   } catch (error) {
     console.error('Failed to fetch all documents:', error)
     availableDocuments.value = []
   }
 }
-
-onMounted(() => {
-  fetchAllDocuments()
-})
-
-// Computed
-const filteredGroups = computed(() => {
-  if (!searchQuery.value) {
-    return props.documentSets
-  }
-
-  const query = searchQuery.value.toLowerCase()
-  return props.documentSets.filter(
-    (group) =>
-      group.name.toLowerCase().includes(query) ||
-      group.description?.toLowerCase().includes(query) ||
-      group.tags?.some((tag) => tag.toLowerCase().includes(query)),
-  )
-})
 
 // Methods
 const editGroup = (group) => {
@@ -359,6 +533,11 @@ const viewDocumentFromGroup = (doc) => {
 }
 
 const deleteGroup = async (group) => {
+  if (group.trials && group.trials.length > 0) {
+    toast.warning('Cannot delete group - it is used by a trial')
+    return
+  }
+
   if (
     !confirm(`Are you sure you want to delete "${group.name}"? The documents will not be deleted.`)
   ) {
@@ -369,6 +548,8 @@ const deleteGroup = async (group) => {
     await api.delete(`/project/${props.projectId}/document-set/${group.id}`)
     toast.success('Document group deleted successfully')
     emit('refresh')
+    currentPage.value = 1
+    fetchDocumentSets()
   } catch (error) {
     toast.error('Failed to delete document group')
     console.error(error)
@@ -394,9 +575,26 @@ const handleSaveGroup = async (groupData) => {
     }
     closeModal()
     emit('refresh')
+    currentPage.value = 1
+    fetchDocumentSets()
   } catch (error) {
     toast.error('Failed to save document group')
     console.error(error)
   }
 }
+
+// Watch for search query changes
+watch(searchQuery, () => {
+  currentPage.value = 1
+  fetchDocumentSets()
+})
+
+// Watch for page changes
+watch([currentPage, itemsPerPage], fetchDocumentSets)
+
+// Lifecycle
+onMounted(() => {
+  fetchAllDocuments()
+  fetchDocumentSets()
+})
 </script>
