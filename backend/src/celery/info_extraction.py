@@ -141,7 +141,9 @@ if celery_app:
                     try:
                         last_broadcast = None
                         while True:
-                            await asyncio.sleep(3)  # Faster updates (matching preprocessing)
+                            await asyncio.sleep(
+                                3
+                            )  # Faster updates (matching preprocessing)
                             with db_session() as db:
                                 update_trial_progress(db, trial_id)
                                 trial = db.get(models.Trial, trial_id)

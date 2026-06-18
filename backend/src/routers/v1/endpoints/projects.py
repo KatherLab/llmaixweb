@@ -264,7 +264,7 @@ def get_projects(
     doc_count_subq = (
         select(func.count(models.Document.id))
         .where(models.Document.project_id == models.Project.id)
-        .where(models.Document.is_latest == True)
+        .where(models.Document.is_latest)
         .correlate(models.Project)
         .scalar_subquery()
     )
