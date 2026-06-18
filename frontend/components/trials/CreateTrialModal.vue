@@ -297,6 +297,7 @@
                         class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         placeholder="e.g., sk-1234567890abcdef..."
                         type="password"
+                        autocomplete="off"
                       />
                     </div>
                     <div>
@@ -306,6 +307,7 @@
                         class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         placeholder="e.g., https://api.openai.com/v1"
                         type="text"
+                        autocomplete="off"
                       />
                     </div>
                   </div>

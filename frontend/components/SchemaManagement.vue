@@ -427,9 +427,51 @@
           <div
             class="p-6 border-b dark:border-slate-700 flex items-center justify-between flex-shrink-0"
           >
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-              {{ showEditModal ? 'Edit Schema' : 'Create New Schema' }}
-            </h3>
+            <div class="flex items-center gap-4">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                {{ showEditModal ? 'Edit Schema' : 'Create New Schema' }}
+              </h3>
+              <!-- Simple/Advanced Mode Toggle -->
+              <div class="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
+                <button
+                  type="button"
+                  :class="[
+                    'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
+                    !simpleMode
+                      ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-slate-400 hover:text-gray-900',
+                  ]"
+                  @click="simpleMode = false"
+                >
+                  Advanced
+                </button>
+                <button
+                  type="button"
+                  :class="[
+                    'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
+                    simpleMode
+                      ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-slate-400 hover:text-gray-900',
+                  ]"
+                  @click="simpleMode = true"
+                >
+                  Simple
+                </button>
+              </div>
+            </div>
+            <button
+              class="text-gray-400 hover:text-gray-500 dark:hover:text-slate-300"
+              @click="cancelSchemaModal"
+            >
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
           </div>
 
           <form
@@ -437,33 +479,40 @@
             @submit.prevent="showEditModal ? updateSchema() : createSchema()"
           >
             <div class="flex-1 flex flex-col min-h-0">
-              <!-- Schema Name Input -->
-              <div class="px-6 pt-4 pb-2 flex-shrink-0">
-                <label
-                  for="schema-name"
-                  class="block text-sm font-medium text-gray-700 dark:text-slate-300"
-                  >Schema Name</label
-                >
-                <input
-                  id="schema-name"
-                  v-model="schemaForm.schema_name"
-                  class="mt-1 block w-full max-w-md border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Enter schema name"
-                  required
-                />
-              </div>
-
-              <!-- Schema validation indicator -->
-              <div class="px-6 pb-2 flex items-center space-x-2">
-                <div
-                  v-if="schemaForm.schema_definition"
-                  class="flex items-center space-x-2 text-sm"
-                >
+              <!-- Schema Name Input (Modern) -->
+              <div class="px-6 pt-4 pb-3 flex-shrink-0">
+                <div class="flex items-center gap-3">
+                  <div class="flex-1 max-w-lg">
+                    <label
+                      for="schema-name"
+                      class="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-1.5"
+                      >Schema Name</label
+                    >
+                    <input
+                      id="schema-name"
+                      v-model="schemaForm.schema_name"
+                      class="block w-full border-0 border-b-2 border-gray-200 dark:border-slate-700 bg-transparent dark:bg-slate-800 dark:text-white px-3 py-2 text-lg font-semibold text-gray-900 dark:text-white focus:ring-0 focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors placeholder-gray-400"
+                      placeholder="e.g., Patient Information"
+                      required
+                    />
+                  </div>
+                  <!-- Validation Indicator -->
                   <div
-                    v-if="!schemaError"
-                    class="flex items-center text-green-600 dark:text-green-400"
+                    v-if="schemaForm.schema_definition"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+                    :class="
+                      !schemaError
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    "
                   >
-                    <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      v-if="!schemaError"
+                      class="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
@@ -471,10 +520,13 @@
                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    <span>Valid JSON Schema</span>
-                  </div>
-                  <div v-else class="flex items-center text-red-600 dark:text-red-400">
-                    <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      v-else
+                      class="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
@@ -482,13 +534,16 @@
                         d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    <span>Invalid Schema</span>
+                    <span>{{ !schemaError ? 'Valid' : 'Invalid' }}</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Tab Navigation -->
-              <div class="px-6 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
+              <!-- Tab Navigation (only show in Advanced mode) -->
+              <div
+                v-if="!simpleMode"
+                class="px-6 border-b border-gray-200 dark:border-slate-700 flex-shrink-0"
+              >
                 <nav class="-mb-px flex items-center justify-between">
                   <div class="flex space-x-8">
                     <button
@@ -544,11 +599,8 @@
                   </div>
 
                   <div class="flex items-center space-x-4">
-                    <!-- Advanced Features Toggle - Only show in Visual tab -->
-                    <label
-                      v-if="activeTab === 'visual'"
-                      class="flex items-center space-x-2 text-sm"
-                    >
+                    <!-- Advanced Features Toggle -->
+                    <label class="flex items-center space-x-2 text-sm">
                       <input
                         v-model="advancedMode"
                         type="checkbox"
@@ -559,11 +611,8 @@
                       >
                     </label>
 
-                    <!-- Split View Toggle - Only show in Visual tab -->
-                    <label
-                      v-if="activeTab === 'visual'"
-                      class="flex items-center space-x-2 text-sm"
-                    >
+                    <!-- Split View Toggle -->
+                    <label class="flex items-center space-x-2 text-sm">
                       <input
                         v-model="splitView"
                         type="checkbox"
@@ -598,53 +647,62 @@
               </div>
 
               <!-- Tab Content -->
-              <div
-                class="flex-1 min-h-0"
-                :class="splitView && activeTab === 'visual' ? 'flex' : ''"
-              >
-                <!-- Visual Editor Tab -->
-                <div
-                  v-if="activeTab === 'visual' || (splitView && activeTab === 'visual')"
-                  :class="[
-                    'bg-gray-50 dark:bg-slate-800',
-                    splitView && activeTab === 'visual'
-                      ? 'w-1/2 border-r dark:border-slate-700'
-                      : 'h-full',
-                  ]"
-                >
-                  <VisualSchemaEditor
-                    :schema="visualSchema"
-                    :advanced-mode="advancedMode"
-                    @update:schema="updateVisualSchema"
-                  />
+              <div class="flex-1 min-h-0 overflow-hidden">
+                <!-- Simple Mode Editor -->
+                <div v-if="simpleMode" class="h-full">
+                  <SimpleSchemaEditor :schema="simpleSchema" @update:schema="updateSimpleSchema" />
                 </div>
 
-                <!-- Raw JSON Tab -->
+                <!-- Advanced Mode: Visual/Raw Tabs -->
                 <div
-                  v-if="activeTab === 'raw' || (splitView && activeTab === 'visual')"
-                  :class="[
-                    'relative flex flex-col',
-                    splitView && activeTab === 'visual' ? 'w-1/2' : 'h-full',
-                  ]"
+                  v-else
+                  class="flex-1 min-h-0"
+                  :class="splitView && activeTab === 'visual' ? 'flex' : ''"
                 >
-                  <div class="flex-1 p-6 min-h-0">
-                    <textarea
-                      ref="rawJsonTextarea"
-                      v-model="schemaForm.schema_definition"
-                      class="block w-full h-full border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono resize-none"
-                      placeholder='{"type": "object", "properties": {...}}'
-                      required
-                      @input="onRawSchemaChange"
-                      @keydown="preserveCursorPosition"
-                    ></textarea>
-                    <button
-                      type="button"
-                      class="absolute top-8 right-8 px-2 py-1 text-xs bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded text-gray-700 dark:text-slate-300"
-                      title="Format JSON"
-                      @click="formatJsonInput"
-                    >
-                      Format
-                    </button>
+                  <!-- Visual Editor Tab -->
+                  <div
+                    v-if="activeTab === 'visual' || (splitView && activeTab === 'visual')"
+                    :class="[
+                      'bg-gray-50 dark:bg-slate-800',
+                      splitView && activeTab === 'visual'
+                        ? 'w-1/2 border-r dark:border-slate-700'
+                        : 'h-full',
+                    ]"
+                  >
+                    <VisualSchemaEditor
+                      :schema="visualSchema"
+                      :advanced-mode="advancedMode"
+                      @update:schema="updateVisualSchema"
+                    />
+                  </div>
+
+                  <!-- Raw JSON Tab -->
+                  <div
+                    v-if="activeTab === 'raw' || (splitView && activeTab === 'visual')"
+                    :class="[
+                      'relative flex flex-col',
+                      splitView && activeTab === 'visual' ? 'w-1/2' : 'h-full',
+                    ]"
+                  >
+                    <div class="flex-1 p-6 min-h-0">
+                      <textarea
+                        ref="rawJsonTextarea"
+                        v-model="schemaForm.schema_definition"
+                        class="block w-full h-full border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono resize-none"
+                        placeholder='{"type": "object", "properties": {...}}'
+                        required
+                        @input="onRawSchemaChange"
+                        @keydown="preserveCursorPosition"
+                      ></textarea>
+                      <button
+                        type="button"
+                        class="absolute top-8 right-8 px-2 py-1 text-xs bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded text-gray-700 dark:text-slate-300"
+                        title="Format JSON"
+                        @click="formatJsonInput"
+                      >
+                        Format
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -716,20 +774,43 @@
           <div
             class="p-6 border-b dark:border-slate-700 flex items-center justify-between flex-shrink-0"
           >
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-              {{ showEditPromptModal ? 'Edit Prompt' : 'Create New Prompt' }}
-            </h3>
+            <div class="flex items-center gap-4">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                {{ showEditPromptModal ? 'Edit Prompt' : 'Create New Prompt' }}
+              </h3>
+              <!-- Simple/Advanced Mode Toggle -->
+              <div class="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
+                <button
+                  type="button"
+                  :class="[
+                    'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
+                    !simplePromptMode
+                      ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-slate-400 hover:text-gray-900',
+                  ]"
+                  @click="simplePromptMode = false"
+                >
+                  Advanced
+                </button>
+                <button
+                  type="button"
+                  :class="[
+                    'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
+                    simplePromptMode
+                      ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-slate-400 hover:text-gray-900',
+                  ]"
+                  @click="simplePromptMode = true"
+                >
+                  Simple
+                </button>
+              </div>
+            </div>
             <button
               class="text-gray-400 hover:text-gray-500 dark:hover:text-slate-300"
               @click="cancelPromptModal"
             >
-              <svg
-                class="h-6 w-6"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -784,36 +865,61 @@
                 </div>
               </div>
 
-              <!-- Info Banner -->
-              <div
-                class="flex items-start bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
-              >
-                <div class="flex-shrink-0 mt-0.5">
-                  <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fill-rule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div class="ml-3">
-                  <h3 class="text-sm font-medium text-blue-900 dark:text-blue-300">
-                    Document Content Placeholder
-                  </h3>
-                  <p class="text-sm text-blue-800 dark:text-blue-300">
-                    Use
-                    <code
-                      class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded font-mono text-xs"
-                      >{document_content}</code
-                    >
-                    in your prompts where you want the document text to be inserted.
+              <!-- Simple Mode Prompt Editor -->
+              <div v-if="simplePromptMode" class="space-y-4">
+                <div>
+                  <label
+                    for="simple-prompt"
+                    class="block text-sm font-medium text-gray-800 dark:text-slate-200 mb-2"
+                  >
+                    Extraction Instruction
+                  </label>
+                  <textarea
+                    id="simple-prompt"
+                    v-model="promptForm.user_prompt"
+                    rows="6"
+                    class="block w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-lg shadow focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base px-4 py-3"
+                    placeholder="Based on the document content, extract these fields:"
+                    @input="validatePromptPlaceholder"
+                  />
+                  <p class="mt-2 text-xs text-gray-600 dark:text-slate-400">
+                    This will be used as the user prompt. The schema is automatically included.
                   </p>
                 </div>
               </div>
 
-              <!-- Prompt Sections -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <!-- Advanced Mode Prompt Sections -->
+              <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Info Banner - Advanced Mode Only -->
+                <div class="md:col-span-2">
+                  <div
+                    class="flex items-start bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+                  >
+                    <div class="flex-shrink-0 mt-0.5">
+                      <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fill-rule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div class="ml-3">
+                      <h3 class="text-sm font-medium text-blue-900 dark:text-blue-300">
+                        Document Content Placeholder
+                      </h3>
+                      <p class="text-sm text-blue-800 dark:text-blue-300">
+                        Use
+                        <code
+                          class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded font-mono text-xs"
+                          >{document_content}</code
+                        >
+                        in your prompts where you want the document text to be inserted.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- System Prompt -->
                 <div>
                   <div class="mb-2 flex items-center gap-2">
@@ -1337,6 +1443,7 @@ import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import { api } from '@/services/api'
 import { useToast } from 'vue-toastification'
 import VisualSchemaEditor from './VisualSchemaEditor.vue'
+import SimpleSchemaEditor from './SimpleSchemaEditor.vue'
 
 const props = defineProps({
   projectId: {
@@ -1431,6 +1538,14 @@ const visualSchema = ref({
 })
 const advancedMode = ref(false)
 const splitView = ref(false)
+
+// Simple mode refs (default to simple mode)
+const simpleMode = ref(true)
+const simpleSchema = ref({
+  type: 'object',
+  properties: {},
+})
+const simplePromptMode = ref(true)
 
 // Schema templates for medical documents
 const schemaTemplates = [
@@ -1569,6 +1684,13 @@ const schemaTemplates = [
 // Computed property for prompt validation
 const isPromptValid = computed(() => {
   if (!promptForm.value.name) return false
+
+  // In simple mode, only check user_prompt
+  if (simplePromptMode.value) {
+    return promptForm.value.user_prompt && promptForm.value.user_prompt.trim() !== ''
+  }
+
+  // Advanced mode validation
   if (!promptForm.value.system_prompt && !promptForm.value.user_prompt) return false
 
   const hasPlaceholder =
@@ -1579,11 +1701,28 @@ const isPromptValid = computed(() => {
   return hasPlaceholder
 })
 
+const hasDocumentContentPlaceholder = computed(
+  () =>
+    (promptForm.value.system_prompt &&
+      promptForm.value.system_prompt.includes('{document_content}')) ||
+    (promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}')),
+)
+
 const formErrors = computed(() => {
   const errors = []
   if (!promptForm.value.name || promptForm.value.name.trim() === '') {
     errors.push('Prompt name is required')
   }
+
+  // In simple mode, only check user_prompt
+  if (simplePromptMode.value) {
+    if (!promptForm.value.user_prompt || promptForm.value.user_prompt.trim() === '') {
+      errors.push('Extraction instruction is required')
+    }
+    return errors
+  }
+
+  // Advanced mode validation
   if (!promptForm.value.system_prompt && !promptForm.value.user_prompt) {
     errors.push('At least one prompt must be provided')
   }
@@ -1610,13 +1749,6 @@ const fetchPrompts = async () => {
     isLoadingPrompts.value = false
   }
 }
-
-const hasDocumentContentPlaceholder = computed(
-  () =>
-    (promptForm.value.system_prompt &&
-      promptForm.value.system_prompt.includes('{document_content}')) ||
-    (promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}')),
-)
 
 function insertPlaceholder(type) {
   if (hasDocumentContentPlaceholder.value) return // Defensive, shouldn't show if true.
@@ -1662,6 +1794,20 @@ function insertPlaceholder(type) {
 const validatePromptPlaceholder = () => {
   promptError.value = '' // Clear previous errors
 
+  // In simple mode, just check user_prompt has content
+  // Document content is auto-appended by backend
+  if (simplePromptMode.value) {
+    if (!promptForm.value.user_prompt || !promptForm.value.user_prompt.trim()) {
+      promptError.value = 'Please enter an extraction instruction'
+      return false
+    }
+    // In simple mode, system_prompt is empty (schema & document auto-injected by backend)
+    promptForm.value.system_prompt = ''
+    promptError.value = ''
+    return true
+  }
+
+  // Advanced mode validation (original)
   if (!promptForm.value.system_prompt && !promptForm.value.user_prompt) {
     promptError.value = 'At least one prompt (system or user) must be provided'
     return false
@@ -1801,6 +1947,7 @@ const useTemplate = () => {
 }
 
 const resetPromptForm = () => {
+  simplePromptMode.value = true // Reset to simple mode
   promptForm.value = {
     name: '',
     description: '',
@@ -2084,6 +2231,12 @@ const updateVisualSchema = (newSchema) => {
   })
 }
 
+const updateSimpleSchema = (newSchema) => {
+  simpleSchema.value = newSchema
+  schemaForm.value.schema_definition = JSON.stringify(newSchema, null, 2)
+  schemaError.value = ''
+}
+
 const preserveCursorPosition = (event) => {
   cursorPosition.value = event.target.selectionStart
 }
@@ -2130,10 +2283,11 @@ watch([showCreateModal, showEditModal], ([create, edit]) => {
   }
 })
 
-// Initialize visual schema when opening create modal
+// Initialize schema when opening create modal (default to simple mode)
 watch(showCreateModal, (newValue) => {
   if (newValue) {
-    activeTab.value = 'visual'
+    simpleMode.value = true // Default to simple mode
+    simpleSchema.value = { type: 'object', properties: {} }
     visualSchema.value = { type: 'object', properties: {} }
     schemaForm.value = {
       schema_name: '',
@@ -2142,14 +2296,16 @@ watch(showCreateModal, (newValue) => {
   }
 })
 
-// Initialize visual schema when opening edit modal
+// Initialize schema when opening edit modal (default to simple mode)
 watch(showEditModal, (newValue) => {
   if (newValue && currentSchema.value) {
-    activeTab.value = 'visual'
+    simpleMode.value = true // Default to simple mode
     try {
       const parsed = JSON.parse(schemaForm.value.schema_definition)
+      simpleSchema.value = parsed
       visualSchema.value = parsed
     } catch (err) {
+      simpleSchema.value = { type: 'object', properties: {} }
       visualSchema.value = { type: 'object', properties: {} }
     }
   }

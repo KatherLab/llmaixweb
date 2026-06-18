@@ -121,6 +121,37 @@
       </div>
     </div>
 
+    <!-- Hint: Select files to preprocess -->
+    <div
+      v-if="files.length > 0 && selectedFiles.length === 0 && !hasActivePreprocessingTasks"
+      class="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+    >
+      <svg
+        class="w-5 h-5 text-blue-600 flex-shrink-0"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <p class="text-sm text-blue-800">
+        <strong>Next step:</strong> Select files from the table below, then click
+        <span class="font-semibold">Configure Preprocessing</span> to extract text from your
+        documents.
+      </p>
+      <button
+        class="ml-auto text-sm text-blue-600 hover:text-blue-800 font-medium"
+        @click="selectedFiles = files.map((f) => f.id)"
+      >
+        Select all
+      </button>
+    </div>
+
     <!-- Loading Indicator -->
     <div v-if="isLoading" class="flex justify-center py-12">
       <LoadingSpinner size="large" />
@@ -2179,6 +2210,15 @@ const canStartProcessing = computed(() => {
     selectedFiles.value.length > 0 &&
     !isSubmitting.value &&
     unconfiguredCsvXlsxFiles.value.length === 0
+  )
+})
+
+// Check if any files have active preprocessing tasks
+const hasActivePreprocessingTasks = computed(() => {
+  return files.value.some((f) =>
+    f.preprocessing_tasks?.some((t) =>
+      ['pending', 'processing', 'in_progress'].includes(String(t.status || '').toLowerCase()),
+    ),
   )
 })
 

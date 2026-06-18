@@ -666,6 +666,115 @@ Document 3,This is the third document,Contains additional data,A"""
     assert doc1["meta_data"]["source_columns"] == ["description", "details"]
 
 
+# Test auto-generated document set for row-by-row preprocessing
+def test_row_by_row_document_set_auto_generation(client, api_url):
+    """Test that row-by-row preprocessing automatically creates a DocumentSet."""
+    user_data = {
+        "username": "admin@example.com",
+        "password": "adminpassword",
+    }
+    response = client.post(f"{api_url}/auth/login", data=user_data)
+    assert response.status_code == 200
+    access_token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Create a project
+    project_data = {
+        "name": "Test Document Set Project",
+        "description": "Test auto-generated document sets",
+    }
+    response = client.post(f"{api_url}/project", headers=headers, json=project_data)
+    assert response.status_code == 200
+    project_id = response.json()["id"]
+
+    # Create CSV content with case_id_column
+    csv_content = """patient_id,diagnosis,treatment
+P001,Diabetes,Insulin therapy
+P002,Hypertension,ACE inhibitors
+P003,Asthma,Bronchodilators"""
+
+    # Table processing settings with case_id_column
+    table_file_metadata = {
+        "delimiter": ",",
+        "encoding": "utf-8",
+        "has_header": True,
+        "text_columns": ["diagnosis", "treatment"],
+        "case_id_column": "patient_id",
+    }
+
+    # Upload CSV file
+    file_data = {
+        "file": ("patients.csv", csv_content.encode(), "text/csv"),
+    }
+    file_info = {
+        "file_name": "patients.csv",
+        "file_type": "text/csv",
+        "preprocessing_strategy": "row_by_row",
+        "file_metadata": table_file_metadata,
+    }
+    import json
+
+    response = client.post(
+        f"{api_url}/project/{project_id}/file",
+        headers=headers,
+        files=file_data,
+        data={"file_info": json.dumps(file_info)},
+    )
+    assert response.status_code == 200
+    file_id = response.json()["id"]
+
+    # Preprocess with inline config
+    preprocessing_data = {
+        "file_ids": [file_id],
+        "inline_config": {
+            "name": "Patient Row Processing",
+            "description": "Process each patient row as a document",
+        },
+        "bypass_celery": True,
+    }
+    response = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=headers,
+        json=preprocessing_data,
+    )
+    assert response.status_code == 200
+    task = response.json()
+    assert task["status"] == "completed"
+
+    # Check that document set was created (include auto-generated sets)
+    response = client.get(
+        f"{api_url}/project/{project_id}/document-set?include_auto_generated=true",
+        headers=headers,
+    )
+    assert response.status_code == 200
+    document_sets = response.json()
+
+    # Find the auto-generated set
+    auto_sets = [
+        ds
+        for ds in document_sets
+        if ds.get("is_auto_generated") and "patients.csv" in ds.get("name", "")
+    ]
+    assert len(auto_sets) == 1
+    document_set = auto_sets[0]
+
+    # Verify document set properties
+    assert document_set["name"] == "patients.csv (by patient_id)"
+    assert document_set["is_auto_generated"] is True
+    assert document_set["preprocessing_config_id"] is not None
+    assert "row-by-row" in document_set.get("tags", [])
+    assert "auto-generated" in document_set.get("tags", [])
+
+    # Verify documents are linked to the set (check via documents list)
+    assert len(document_set.get("documents", [])) == 3  # 3 rows in CSV
+
+    # Verify each document is in the set
+    doc_names = [doc["document_name"] for doc in document_set["documents"]]
+    assert "P001" in doc_names
+    assert "P002" in doc_names
+    assert "P003" in doc_names
+
+
 # Test Image File Processing
 def test_image_file_preprocessing(client, api_url, files_base_path):
     user_data = {
@@ -1211,18 +1320,20 @@ def test_prompt_crud(client, api_url):
     )
     assert response.status_code == 404
 
-    # Prompt creation: missing {document_content} triggers validation error
-    invalid_prompt = {
-        "name": "Invalid",
+    # Prompt creation: missing {document_content} is now allowed
+    # Document content is auto-appended by the backend if placeholder is missing
+    no_placeholder_prompt = {
+        "name": "No Placeholder",
         "system_prompt": "No placeholder here.",
         "user_prompt": "Nope.",
         "project_id": project_id,
     }
     response = client.post(
-        f"{api_url}/project/{project_id}/prompt", headers=headers, json=invalid_prompt
+        f"{api_url}/project/{project_id}/prompt",
+        headers=headers,
+        json=no_placeholder_prompt,
     )
-    assert response.status_code == 400
-    assert "document_content" in response.json()["detail"]
+    assert response.status_code == 200
 
 
 # Test Create Schema

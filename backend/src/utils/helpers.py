@@ -601,9 +601,11 @@ def make_naive_fields_timezone_aware(value: Any) -> Any:
 
 
 def validate_prompt(prompt: schemas.PromptCreate | schemas.PromptUpdate) -> None:
-    """Validate that the prompt contains the required placeholder and at least one prompt is present."""
-    placeholder = "{document_content}"
+    """Validate that at least one prompt is present.
 
+    Note: The {document_content} placeholder is no longer required.
+    If missing, the document content is auto-appended with clear markers.
+    """
     # Check that at least one prompt is provided
     if not prompt.system_prompt and not prompt.user_prompt:
         raise HTTPException(
@@ -611,18 +613,7 @@ def validate_prompt(prompt: schemas.PromptCreate | schemas.PromptUpdate) -> None
             detail="At least one of system_prompt or user_prompt must be provided",
         )
 
-    # Check that the placeholder exists in at least one of the prompts
-    has_placeholder = False
-    if prompt.system_prompt and placeholder in prompt.system_prompt:
-        has_placeholder = True
-    if prompt.user_prompt and placeholder in prompt.user_prompt:
-        has_placeholder = True
-
-    if not has_placeholder:
-        raise HTTPException(
-            status_code=400,
-            detail=f"The placeholder '{placeholder}' must be present in either system_prompt or user_prompt",
-        )
+    # Placeholder validation removed - document is auto-injected if placeholder is missing
 
 
 def flatten_dict(d, parent_key="", sep="."):

@@ -294,7 +294,7 @@ class DocumentSet(Base):
     description: Mapped[str] = mapped_column(String(500), nullable=True)
     is_auto_generated: Mapped[bool] = mapped_column(
         Boolean, default=False
-    )  # True for trial-created sets
+    )  # True for auto-created sets (e.g., row-by-row preprocessing, trial results)
 
     # Tags for categorization
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)

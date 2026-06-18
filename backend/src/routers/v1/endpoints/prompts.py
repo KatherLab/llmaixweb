@@ -190,9 +190,11 @@ def delete_prompt(
         raise HTTPException(status_code=404, detail="Prompt not found")
 
     # Check if the prompt is referenced by any trials
-    trial: models.Trial | None = db.execute(
-        select(models.Trial).where(models.Trial.prompt_id == prompt_id)
-    ).scalar_one_or_none()
+    trial = (
+        db.execute(select(models.Trial).where(models.Trial.prompt_id == prompt_id))
+        .scalars()
+        .first()
+    )
     if trial:
         raise HTTPException(
             status_code=400, detail="Cannot delete prompt referenced by a trial"

@@ -1715,6 +1715,12 @@ class PreprocessingPipeline:
             # Check for duplicate case IDs
             self._check_duplicate_case_ids(file, df)
 
+            # Create an auto-generated document set for this file's row-by-row documents
+            document_set = self._create_row_by_row_document_set(
+                file, df, case_id_column
+            )
+            documents_set_created = document_set is not None
+
             # Process rows in batches
             batch_documents = []
             total_rows = len(df)
@@ -1761,6 +1767,10 @@ class PreprocessingPipeline:
                     },
                 )
 
+                # Add document to the auto-generated set
+                if documents_set_created and doc not in document_set.documents:
+                    document_set.documents.append(doc)
+
                 batch_documents.append(doc)
 
                 # Commit in batches for performance
@@ -1802,6 +1812,80 @@ class PreprocessingPipeline:
         )
 
         return [doc]
+
+    def _create_row_by_row_document_set(
+        self, file: models.File, df, case_id_column: str | None
+    ) -> models.DocumentSet | None:
+        """Create an auto-generated DocumentSet for row-by-row documents from a single file.
+
+        Args:
+            file: The file model being processed.
+            df: The pandas DataFrame with the file's data.
+            case_id_column: The case ID column name (if any).
+
+        Returns:
+            The created DocumentSet, or None if creation failed.
+        """
+        try:
+            # Build a descriptive name for the document set
+            if case_id_column:
+                set_name = f"{file.file_name} (by {case_id_column})"
+            else:
+                set_name = f"{file.file_name} (row-by-row)"
+
+            # Check if an auto-generated set already exists for this file + config
+            existing_set = (
+                self.db.query(models.DocumentSet)
+                .filter(
+                    models.DocumentSet.project_id == self.task.project_id,
+                    models.DocumentSet.name == set_name,
+                    models.DocumentSet.is_auto_generated,
+                    models.DocumentSet.preprocessing_config_id == self.config.id,
+                )
+                .first()
+            )
+
+            if existing_set:
+                logger.info(
+                    "Document set already exists for row-by-row file %s: %s",
+                    file.file_name,
+                    set_name,
+                )
+                return existing_set
+
+            # Create new document set
+            description = (
+                f"Auto-generated document set for row-by-row preprocessing of {file.file_name}. "
+                f"Contains {len(df)} documents extracted from individual rows."
+            )
+
+            document_set = models.DocumentSet(
+                project_id=self.task.project_id,
+                name=set_name,
+                description=description,
+                is_auto_generated=True,
+                preprocessing_config_id=self.config.id,
+                tags=["row-by-row", "auto-generated", file.file_name],
+            )
+
+            self.db.add(document_set)
+            self.db.flush()  # Get the ID before committing
+
+            logger.info(
+                "Created auto-generated document set '%s' for file %s",
+                set_name,
+                file.file_name,
+            )
+
+            return document_set
+
+        except Exception as e:
+            logger.warning(
+                "Failed to create document set for row-by-row file %s: %s",
+                file.file_name,
+                e,
+            )
+            return None
 
 
 def process_files_with_config(task_id: int, db: Session):

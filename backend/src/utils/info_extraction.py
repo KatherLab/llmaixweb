@@ -561,14 +561,23 @@ def sanitize_for_prompt(text: str, *, collapse_space: bool = False) -> str:
 # =============================================================================
 
 
-def _build_messages(prompt: models.Prompt, document_text: str) -> list[dict]:
+def _build_messages(
+    prompt: models.Prompt, document_text: str, schema_definition: dict | None = None
+) -> list[dict]:
     """
     Inject the document text into user/system prompt templates.
 
     Safety notes:
-    - Warns if neither prompt contains {document_content} placeholder
+    - If {document_content} placeholder is present, replaces it with document text
+    - If placeholder is missing, auto-appends document with clear markers (simple mode)
     - Prefers document content in user message (not system message)
     - Adds injection protection guidance to system prompt
+    - Auto-appends JSON schema to user prompt if provided (for structured output)
+
+    Args:
+        prompt: The Prompt model with system_prompt and user_prompt
+        document_text: The document text to inject
+        schema_definition: Optional JSON schema to append to user prompt
     """
     placeholder = "{document_content}"
     clean_doc = sanitize_for_prompt(document_text, collapse_space=False)
@@ -580,18 +589,15 @@ def _build_messages(prompt: models.Prompt, document_text: str) -> list[dict]:
         prompt.system_prompt and placeholder in prompt.system_prompt
     )
     has_user_placeholder = prompt.user_prompt and placeholder in prompt.user_prompt
-
-    # Warn if no placeholder found (document content won't be injected)
-    if not has_system_placeholder and not has_user_placeholder:
-        logger.warning(
-            "Prompt does not contain '%s' placeholder - document content will not be injected",
-            placeholder,
-        )
+    has_any_placeholder = has_system_placeholder or has_user_placeholder
 
     # Build system prompt with injection protection guidance
     system_content = ""
     if prompt.system_prompt:
-        system_content = prompt.system_prompt.replace(placeholder, clean_doc)
+        if has_system_placeholder:
+            system_content = prompt.system_prompt.replace(placeholder, clean_doc)
+        else:
+            system_content = prompt.system_prompt
         # Add injection protection guidance if not already present
         if (
             "untrusted" not in system_content.lower()
@@ -607,13 +613,31 @@ def _build_messages(prompt: models.Prompt, document_text: str) -> list[dict]:
     if system_content:
         msgs.append({"role": "system", "content": system_content})
 
-    # Build user prompt - prefer putting document content here
+    # Build user prompt
     if prompt.user_prompt:
-        user_content = prompt.user_prompt.replace(placeholder, clean_doc)
+        if has_user_placeholder:
+            # Placeholder present - replace it
+            user_content = prompt.user_prompt.replace(placeholder, clean_doc)
+        else:
+            # No placeholder - auto-append document with clear markers (simple mode behavior)
+            user_content = prompt.user_prompt
+            if not has_any_placeholder:
+                user_content += (
+                    f"\n\n--- DOCUMENT CONTENT ---\n{clean_doc}\n--- END DOCUMENT ---"
+                )
+        # Auto-append JSON schema for structured output (if not already in prompt)
+        if schema_definition and "{schema" not in prompt.user_prompt.lower():
+            schema_json = json.dumps(schema_definition, indent=2)
+            user_content += f"\n\nExtract the data according to this JSON schema:\n```json\n{schema_json}\n```"
         msgs.append({"role": "user", "content": user_content})
     elif not msgs:
-        # Fallback: if no user prompt, create a minimal one
-        msgs.append({"role": "user", "content": clean_doc})
+        # Fallback: if no user prompt, create a minimal one with document markers
+        user_content = f"--- DOCUMENT CONTENT ---\n{clean_doc}\n--- END DOCUMENT ---"
+        # Auto-append JSON schema for structured output
+        if schema_definition:
+            schema_json = json.dumps(schema_definition, indent=2)
+            user_content += f"\n\nExtract the data according to this JSON schema:\n```json\n{schema_json}\n```"
+        msgs.append({"role": "user", "content": user_content})
 
     return msgs
 
@@ -733,7 +757,7 @@ async def extract_info_single_doc_async(
     kwargs = _completion_kwargs(
         llm_model,
         schema.schema_definition,
-        _build_messages(prompt, document.text),
+        _build_messages(prompt, document.text, schema.schema_definition),
         advanced_options,
         base_url,
     )
@@ -802,7 +826,7 @@ def extract_info_single_doc(
     kwargs = _completion_kwargs(
         llm_model,
         schema.schema_definition,
-        _build_messages(prompt, document.text),
+        _build_messages(prompt, document.text, schema.schema_definition),
         advanced_options,
         base_url,
     )
