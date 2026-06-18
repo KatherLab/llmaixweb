@@ -196,7 +196,7 @@ const props = defineProps({
   projectId: { type: [String, Number], required: true },
 })
 
-const emit = defineEmits(['close', 'complete'])
+const emit = defineEmits(['close', 'complete', 'deleted'])
 const toast = useToast()
 const modalRef = ref(null)
 
@@ -263,7 +263,7 @@ const performAction = async () => {
         break
       case 'delete':
         await deleteDocuments()
-        // Only emit complete if delete succeeded (errors handled inside deleteDocuments)
+        // Always close modal after delete - specific errors already shown
         emit('complete')
         return
     }
@@ -276,6 +276,10 @@ const performAction = async () => {
     }
   } finally {
     isProcessing.value = false
+    // Close modal after action completes (for delete, this happens after all attempts)
+    if (props.action === 'delete') {
+      emit('close')
+    }
   }
 }
 
@@ -299,10 +303,12 @@ const exportDocuments = async () => {
 
 const deleteDocuments = async () => {
   const failedDocs = []
+  const successDocs = []
 
   for (const docId of props.documents) {
     try {
       await api.delete(`/project/${props.projectId}/document/${docId}`)
+      successDocs.push(docId)
     } catch (error) {
       const errorMsg = error?.response?.data?.detail || 'Failed to delete document'
       failedDocs.push({ docId, error: errorMsg })
@@ -322,16 +328,19 @@ const deleteDocuments = async () => {
     }
   }
 
-  const successCount = props.documents.length - failedDocs.length
+  const successCount = successDocs.length
   if (successCount > 0) {
     toast.success(`${successCount} document${successCount !== 1 ? 's' : ''} deleted successfully`)
+    // Emit successfully deleted IDs so parent can update selection
+    emit('deleted', successDocs)
   }
 
   if (failedDocs.length > 0) {
     console.error('Failed to delete documents:', failedDocs)
-    // Throw to keep modal open if there were failures
-    throw new Error(`${failedDocs.length} document(s) could not be deleted`)
+    // Don't throw - close modal anyway but parent will know what was deleted
   }
+
+  return successDocs
 }
 
 // Lifecycle

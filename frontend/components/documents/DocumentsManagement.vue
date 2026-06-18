@@ -291,11 +291,6 @@
               <th
                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
-                Processing
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
                 Created
               </th>
               <th class="relative px-6 py-3">
@@ -346,26 +341,14 @@
                 <div class="text-sm text-gray-900 dark:text-white">
                   {{ doc.preprocessing_config?.name || 'Custom Config' }}
                 </div>
-                <div class="text-xs text-gray-500 dark:text-gray-400">
-                  {{
-                    getEngineLabelWithKey(doc.preprocessing_config?.additional_settings?.ocr_engine)
-                  }}
+                <div v-if="getOcrDisplay(doc)" class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ getOcrDisplay(doc) }}
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-900 dark:text-white">
                   {{ getModelName(doc) }}
                 </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span
-                  :class="[
-                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                    getStatusClass(doc.file_preprocessing_task?.status),
-                  ]"
-                >
-                  {{ doc.file_preprocessing_task?.status || 'Processed' }}
-                </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {{ formatDate(doc.created_at) }}
@@ -534,6 +517,7 @@
         :project-id="projectId"
         @close="showBatchActions = false"
         @complete="handleBatchComplete"
+        @deleted="handleDocumentsDeleted"
       />
 
       <!-- Create Document Group Modal (from documents tab) -->
@@ -550,7 +534,7 @@
     <div v-else-if="activeTab === 'groups'">
       <DocumentGroups
         :project-id="projectId"
-        @refresh="fetchDocumentSets"
+        @refresh="handleGroupsRefresh"
         @view-document="viewDocument"
       />
     </div>
@@ -572,7 +556,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/services/api.js'
 import { useToast } from 'vue-toastification'
 import { debounce } from 'perfect-debounce'
-import { getEngineLabelWithKey, setEngineLabels } from '@/utils/ocrLabels'
+import { setEngineLabels } from '@/utils/ocrLabels'
 import FileIcon from '../common/FileIcon.vue'
 import LoadingSpinner from '../common/LoadingSpinner.vue'
 import DocumentViewer from './DocumentViewer.vue'
@@ -870,10 +854,23 @@ const fetchAllDocuments = async () => {
   }
 }
 
+const handleDocumentsDeleted = (deletedIds) => {
+  // Remove successfully deleted documents from selection
+  selectedDocuments.value = selectedDocuments.value.filter((id) => !deletedIds.includes(id))
+}
+
 const handleBatchComplete = () => {
+  // Clear selection and close modal - fetchDocuments will be called separately
   selectedDocuments.value = []
   showBatchActions.value = false
+  // Refresh the document list
   fetchDocuments()
+}
+
+const handleGroupsRefresh = async () => {
+  // Refresh both groups and documents (since documents may have been deleted too)
+  await fetchDocumentGroupsCount()
+  await fetchDocuments()
 }
 
 const reprocessDocument = async (doc) => {
@@ -946,6 +943,87 @@ const getModelName = (doc) => {
   if (metaData.model) return metaData.model
   // No model for local OCR
   return '—'
+}
+
+/**
+ * Returns OCR display string only if OCR was actually used.
+ * Checks meta_data.ocr_engine to determine if OCR was applied.
+ * Returns null if no OCR was used (e.g., embedded text extraction, plain text files, CSV).
+ */
+const getOcrDisplay = (doc) => {
+  const metaData = doc.meta_data || {}
+  const ocrEngine = metaData.ocr_engine
+  const extractionMethod = metaData.extraction_method
+  const file_type = metaData.file_type
+
+  // If ocr_engine is explicitly set, show the appropriate label
+  if (ocrEngine) {
+    // Map internal engine names to display names
+    const engineLabels = {
+      tesseract: 'Tesseract OCR',
+      docling_tesseract: 'Tesseract OCR',
+      mistral_ocr: 'Mistral OCR',
+      llm_vision: 'Vision LLM OCR',
+    }
+
+    // Special case: pypdf is not OCR, it's embedded text extraction
+    if (ocrEngine === 'pypdf') {
+      return null
+    }
+
+    const label = engineLabels[ocrEngine]
+    if (label) {
+      return label
+    }
+  }
+
+  // No ocr_engine set - check extraction_method as fallback
+  if (extractionMethod) {
+    // Known non-OCR methods - return null
+    const nonOcrMethods = [
+      'docling_serve_no_ocr',
+      'pypdf_embedded_text',
+      'text_file_extraction',
+      'csv_full_document',
+      'csv_row_by_row',
+      'xlsx_full_document',
+      'xlsx_row_by_row',
+    ]
+    if (nonOcrMethods.includes(extractionMethod)) {
+      return null
+    }
+
+    // OCR methods
+    const ocrMethods = [
+      'docling_serve_tesseract_ocr',
+      'docling_serve_tesseract_force_ocr',
+      'docling_serve_tesseract_image_ocr',
+      'mistral_ocr',
+      'llm_vision_ocr',
+    ]
+    if (ocrMethods.includes(extractionMethod)) {
+      const engineLabels = {
+        tesseract: 'Tesseract OCR',
+        mistral_ocr: 'Mistral OCR',
+        llm_vision: 'Vision LLM OCR',
+      }
+      // Extract engine from method name
+      for (const [engine, label] of Object.entries(engineLabels)) {
+        if (extractionMethod.includes(engine)) {
+          return label
+        }
+      }
+      return 'OCR Applied'
+    }
+  }
+
+  // Check file_type - table and text files never need OCR
+  if (file_type === 'table' || file_type === 'text') {
+    return null
+  }
+
+  // Default: show nothing if we can't determine OCR was used
+  return null
 }
 
 // Debounced search

@@ -2272,11 +2272,20 @@ const startProcessing = async () => {
     if (visionMaxImageDim.value > 0) settings.vision_max_image_dim = visionMaxImageDim.value
   }
 
+  // Build descriptive task name based on selected engine
+  const engineNames = {
+    docling_tesseract: 'Local OCR (Docling)',
+    mistral_ocr: 'Mistral OCR',
+    llm_vision: 'Vision LLM',
+  }
+  const forceOcrText = forceOcr.value ? ' + Force OCR' : ''
+  const taskName = `${engineNames[selectedEngine.value] || 'Custom'}${forceOcrText}`
+
   // Store settings for later use
   pendingProcessingSettings.value = {
     file_ids: selectedFiles.value,
     inline_config: {
-      name: 'Quick Processing',
+      name: taskName,
       additional_settings: settings,
     },
   }

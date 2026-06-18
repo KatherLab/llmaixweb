@@ -89,6 +89,7 @@
               History
             </button>
             <button
+              v-if="hasDisplayableOriginalFile"
               class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               @click="toggleView"
             >
@@ -108,6 +109,27 @@
               </svg>
               {{ viewModeLabel }}
             </button>
+            <span
+              v-else-if="!hasDisplayableOriginalFile && hasText"
+              class="inline-flex items-center px-3 py-1.5 border border-gray-200 text-sm font-medium rounded-md text-gray-500 bg-gray-50"
+              title="Only text view is available"
+            >
+              <svg
+                class="h-4 w-4 mr-1.5"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              Text Only
+            </span>
             <button
               class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               @click="downloadDocument"
@@ -178,39 +200,47 @@
             </div>
             <!-- Side-by-side Compare View -->
             <div v-else-if="viewMode === 'compare'" class="flex h-full">
-              <!-- Left: Original File (PDF or Image) -->
-              <div class="w-1/2 border-r overflow-auto p-4 flex flex-col">
-                <h4 class="font-medium text-gray-700 mb-2">Original File</h4>
-                <!-- PDF Viewer -->
-                <iframe
-                  v-if="originalPdfUrl && originalFileType === 'pdf'"
-                  :src="originalPdfUrl"
-                  class="w-full flex-1"
-                  frameborder="0"
-                  title="Original PDF"
-                ></iframe>
-                <!-- Image Viewer -->
-                <div
-                  v-else-if="originalImageUrl && ['image'].includes(originalFileType)"
-                  class="flex-1 flex items-center justify-center bg-gray-100 rounded-lg p-4"
-                >
-                  <img
-                    :src="originalImageUrl"
-                    alt="Original document"
-                    class="max-w-full max-h-full object-contain"
+              <!-- Show split view only if displayable original file exists -->
+              <template v-if="hasDisplayableOriginalFile">
+                <!-- Left: Original File (PDF or Image) -->
+                <div class="w-1/2 border-r overflow-auto p-4 flex flex-col">
+                  <h4 class="font-medium text-gray-700 mb-2">Original File</h4>
+                  <!-- PDF Viewer -->
+                  <iframe
+                    v-if="originalPdfUrl && originalFileType === 'pdf'"
+                    :src="originalPdfUrl"
+                    class="w-full flex-1"
+                    frameborder="0"
+                    title="Original PDF"
+                  ></iframe>
+                  <!-- Image Viewer -->
+                  <div
+                    v-else-if="originalImageUrl && ['image'].includes(originalFileType)"
+                    class="flex-1 flex items-center justify-center bg-gray-100 rounded-lg p-4"
+                  >
+                    <img
+                      :src="originalImageUrl"
+                      alt="Original document"
+                      class="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                  <div v-else class="text-gray-400 flex items-center justify-center flex-1">
+                    No original file available
+                  </div>
+                </div>
+                <!-- Right: Extracted Text -->
+                <div class="w-1/2 overflow-auto p-4 flex flex-col">
+                  <h4 class="font-medium text-gray-700 mb-2">Extracted Text</h4>
+                  <div
+                    class="prose max-w-none bg-gray-50 p-2 rounded-lg flex-1"
+                    v-html="safeMarkdown"
                   />
                 </div>
-                <div v-else class="text-gray-400 flex items-center justify-center flex-1">
-                  No original file available
-                </div>
-              </div>
-              <!-- Right: Extracted Text -->
-              <div class="w-1/2 overflow-auto p-4 flex flex-col">
+              </template>
+              <!-- No displayable original file: show only extracted text (full width) -->
+              <div v-else class="w-full overflow-auto p-4 flex flex-col">
                 <h4 class="font-medium text-gray-700 mb-2">Extracted Text</h4>
-                <div
-                  class="prose max-w-none bg-gray-50 p-2 rounded-lg flex-1"
-                  v-html="safeMarkdown"
-                />
+                <div class="prose max-w-none bg-gray-50 p-4 rounded-lg" v-html="safeMarkdown" />
               </div>
             </div>
           </div>
@@ -496,7 +526,24 @@ const versions = ref([])
 const loadingVersions = ref(false)
 const selectedVersion = ref(null)
 
-const hasOriginalFile = computed(() => !!props.document.original_file?.id)
+// Check if document has an original file that can be displayed
+// For TXT files and row-by-row CSV/XLSX, the "original file" exists but shouldn't show split-screen
+// because the extracted text IS the original content (TXT) or represents partial data (CSV row)
+const hasDisplayableOriginalFile = computed(() => {
+  if (!props.document.original_file?.id) return false
+  if (!props.document.original_file?.file_type) return false
+
+  const fileType = props.document.original_file.file_type
+  // TXT files: extracted text is the original content - no split view needed
+  const isPlainText = fileType === 'text/plain'
+  // CSV/XLSX row-by-row: each doc is one row, not the full spreadsheet - no split view needed
+  const isCsvXlsxRowByRow = props.document.meta_data?.preprocessing_strategy === 'row_by_row'
+
+  if (isPlainText || isCsvXlsxRowByRow) return false
+
+  return true
+})
+
 const hasText = computed(() => !!props.document.text)
 
 // Get the current document (selected version or main document)
@@ -530,6 +577,8 @@ const originalFileType = computed(() => {
 
 const viewModeLabel = computed(() => {
   // Label describes what clicking will show, not current view
+  // No displayable original file: only text view available, no toggle
+  if (!hasDisplayableOriginalFile.value) return 'Text Only'
   if (viewMode.value === 'compare') return 'Show File' // clicking shows single file
   if (viewMode.value === 'pdf' || viewMode.value === 'image') return 'Show Text' // clicking shows text
   if (viewMode.value === 'text') return 'Show Both' // clicking shows compare (side-by-side)
@@ -642,11 +691,12 @@ const extractionMethodInfo = computed(() => {
 
 // Set default view mode: compare (file + text side-by-side) if both available
 const setDefaultViewMode = () => {
-  if (hasOriginalFile.value && hasText.value) {
+  if (hasDisplayableOriginalFile.value && hasText.value) {
     viewMode.value = 'compare'
-  } else if (hasOriginalFile.value) {
+  } else if (hasDisplayableOriginalFile.value) {
     viewMode.value = originalFileType.value === 'image' ? 'image' : 'pdf'
   } else {
+    // No displayable original file (TXT, row-by-row CSV, or no file): always show text view
     viewMode.value = 'text'
   }
 }
@@ -661,18 +711,24 @@ const safeMarkdown = computed(() => {
 const toggleView = () => {
   const isImage = originalFileType.value === 'image'
 
+  // No displayable original file: only text view is available
+  if (!hasDisplayableOriginalFile.value) {
+    viewMode.value = 'text'
+    return
+  }
+
   // Cycle: Compare → Single File (PDF/Image) → Text → Compare
   if (viewMode.value === 'compare') {
     // From compare: go to single file view
-    viewMode.value = hasOriginalFile.value ? (isImage ? 'image' : 'pdf') : 'text'
+    viewMode.value = isImage ? 'image' : 'pdf'
   } else if (viewMode.value === 'pdf' || viewMode.value === 'image') {
     // From single file: go to text
     viewMode.value = 'text'
   } else if (viewMode.value === 'text') {
     // From text: go to compare if we have file + text
-    if (hasOriginalFile.value && hasText.value) {
+    if (hasText.value) {
       viewMode.value = 'compare'
-    } else if (hasOriginalFile.value) {
+    } else {
       viewMode.value = isImage ? 'image' : 'pdf'
     }
   }

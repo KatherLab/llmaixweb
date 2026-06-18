@@ -1455,6 +1455,8 @@ class PreprocessingPipeline:
             meta_data={
                 "file_type": file.file_type,
                 "ocr_engine": "mistral_ocr",
+                "ocr_applied": True,
+                "extraction_method": "mistral_ocr",
                 "model": model,
                 "mistral_model": model,
             },
@@ -1524,6 +1526,8 @@ class PreprocessingPipeline:
             meta_data={
                 "file_type": file.file_type,
                 "ocr_engine": "llm_vision",
+                "ocr_applied": True,
+                "extraction_method": "llm_vision_ocr",
                 "model": model,
                 "vision_model": model,
             },

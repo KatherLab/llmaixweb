@@ -221,6 +221,56 @@ def get_document(
     return schemas.Document.model_validate(document)
 
 
+def cleanup_empty_preprocessing_tasks(
+    db: Session, file_preprocessing_task_id: int | None
+) -> None:
+    """Clean up FilePreprocessingTask and PreprocessingTask when they have no remaining documents.
+
+    This function:
+    1. Checks if the FilePreprocessingTask has any remaining documents
+    2. If empty, deletes the FilePreprocessingTask
+    3. If parent PreprocessingTask has no more FilePreprocessingTask children, deletes it too
+    """
+    if file_preprocessing_task_id is None:
+        return
+
+    file_task = db.get(models.FilePreprocessingTask, file_preprocessing_task_id)
+    if not file_task:
+        return
+
+    # Check if there are any remaining documents for this file task
+    remaining_docs = db.execute(
+        select(models.Document.id).where(
+            models.Document.file_preprocessing_task_id == file_preprocessing_task_id
+        )
+    ).scalar_one_or_none()
+
+    if remaining_docs is not None:
+        # Still has documents, don't clean up
+        return
+
+    # No remaining documents - delete the FilePreprocessingTask
+    preprocessing_task_id = file_task.preprocessing_task_id
+
+    db.delete(file_task)
+    db.flush()  # Ensure deletion is staged before checking parent
+
+    # Check if parent PreprocessingTask has any remaining FilePreprocessingTask children
+    remaining_file_tasks = db.execute(
+        select(models.FilePreprocessingTask.id).where(
+            models.FilePreprocessingTask.preprocessing_task_id == preprocessing_task_id
+        )
+    ).scalar_one_or_none()
+
+    if remaining_file_tasks is None:
+        # No remaining file tasks - delete the parent PreprocessingTask
+        preprocessing_task = db.get(models.PreprocessingTask, preprocessing_task_id)
+        if preprocessing_task:
+            db.delete(preprocessing_task)
+
+    db.commit()
+
+
 @router.delete("/document/{document_id}")
 def delete_document(
     *,
@@ -291,6 +341,9 @@ def delete_document(
             detail=f"Document is part of {len(document.document_sets)} document sets. Remove from sets first.",
         )
 
+    # Store file_preprocessing_task_id before deletion for cleanup
+    file_preprocessing_task_id = document.file_preprocessing_task_id
+
     # --- Preprocessed file deletion logic as before ---
     if document.preprocessed_file_id:
         other_docs_using_file = db.execute(
@@ -311,6 +364,9 @@ def delete_document(
 
     db.delete(document)
     db.commit()
+
+    # Clean up empty preprocessing tasks after document deletion
+    cleanup_empty_preprocessing_tasks(db, file_preprocessing_task_id)
 
     return {"detail": "Document deleted successfully"}
 
@@ -477,26 +533,39 @@ def update_document_set(
 
 @router.delete(
     "/document-set/{set_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    status_code=status.HTTP_200_OK,
     summary="Delete a document set (only if not used by any trial)",
 )
 def delete_document_set(
     project_id: int,
     set_id: int,
+    delete_documents: bool = Query(
+        False,
+        description="Also delete all documents in this set (if not referenced elsewhere)",
+    ),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Delete a document set.
+
+    If delete_documents=True, also attempts to delete all documents in the set.
+    Documents that are referenced in trials, trial results, evaluations, or other
+    document sets will not be deleted (errors are logged but don't prevent set deletion).
+    """
     # 1. Permission check
     check_project_access(project_id, current_user, db, "write")
 
-    # 2. Fetch the document set, ensure it belongs to project
+    # 2. Fetch the document set with relationships
     doc_set = db.execute(
         select(models.DocumentSet)
         .where(
             models.DocumentSet.id == set_id,
             models.DocumentSet.project_id == project_id,
         )
-        .options(selectinload(models.DocumentSet.trials))
+        .options(
+            selectinload(models.DocumentSet.trials),
+            selectinload(models.DocumentSet.documents),
+        )
     ).scalar_one_or_none()
 
     if not doc_set:
@@ -509,16 +578,91 @@ def delete_document_set(
             detail="Cannot delete document set: one or more trials reference it.",
         )
 
-    # 4. Delete the set and its associations
-    # Remove document associations (optional, for clean DB)
-    db.execute(
-        document_set_association.delete().where(
-            document_set_association.c.document_set_id == set_id
-        )
-    )
+    # 4. Optionally delete documents first
+    deleted_doc_ids = []
+    file_preprocessing_task_ids = set()  # Track tasks for cleanup
+    if delete_documents:
+        for doc in doc_set.documents:
+            # Check if document can be safely deleted
+            can_delete = True
+
+            # Check trial references (via document_ids JSON list)
+            trials_with_doc = (
+                db.execute(
+                    select(models.Trial).where(models.Trial.project_id == project_id)
+                )
+                .scalars()
+                .all()
+            )
+            if any(
+                t.document_ids and doc.id in t.document_ids for t in trials_with_doc
+            ):
+                can_delete = False
+
+            # Check trial results
+            if db.execute(
+                select(models.TrialResult).where(
+                    models.TrialResult.document_id == doc.id
+                )
+            ).scalar_one_or_none():
+                can_delete = False
+
+            # Check evaluation metrics
+            if db.execute(
+                select(models.EvaluationMetric).where(
+                    models.EvaluationMetric.document_id == doc.id
+                )
+            ).scalar_one_or_none():
+                can_delete = False
+
+            # Check other document sets
+            if doc.document_sets and any(s.id != set_id for s in doc.document_sets):
+                can_delete = False
+
+            if can_delete:
+                # Track file_preprocessing_task_id for cleanup after deletion
+                if doc.file_preprocessing_task_id:
+                    file_preprocessing_task_ids.add(doc.file_preprocessing_task_id)
+
+                # Delete preprocessed file if not used by other docs
+                if doc.preprocessed_file_id:
+                    other_docs = db.execute(
+                        select(models.Document).where(
+                            models.Document.preprocessed_file_id
+                            == doc.preprocessed_file_id,
+                            models.Document.id != doc.id,
+                        )
+                    ).scalar_one_or_none()
+
+                    if not other_docs:
+                        try:
+                            preprocessed_file = db.get(
+                                models.File, doc.preprocessed_file_id
+                            )
+                            if preprocessed_file:
+                                remove_file(preprocessed_file.file_uuid)
+                                db.delete(preprocessed_file)
+                        except Exception as e:
+                            print(
+                                f"Error deleting preprocessed file for doc {doc.id}: {e}"
+                            )
+
+                deleted_doc_ids.append(doc.id)
+                db.delete(doc)
+
+    # 5. Delete the document set
+    # Note: Association rows in document_set_association are automatically handled:
+    # - If documents were deleted above, their associations are already gone (cascade from Document)
+    # - Remaining associations will be deleted when doc_set is deleted (many-to-many cleanup)
     db.delete(doc_set)
     db.commit()
-    return
+
+    # Clean up empty preprocessing tasks after document deletion
+    for task_id in file_preprocessing_task_ids:
+        cleanup_empty_preprocessing_tasks(db, task_id)
+
+    # Return info about what was deleted (for frontend feedback)
+    return {"deleted_set_id": set_id, "deleted_document_ids": deleted_doc_ids}
 
 
 @router.post("/document-set/{set_id}/download-all")

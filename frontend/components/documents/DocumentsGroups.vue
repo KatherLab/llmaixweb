@@ -85,184 +85,191 @@
       v-else
       class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
     >
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-slate-800">
-          <tr>
-            <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-slate-800">
+            <tr>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Group Name
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Documents
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Configuration
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Tags
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Type
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Created
+              </th>
+              <th class="relative px-6 py-3">
+                <span class="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-700">
+            <tr
+              v-for="group in serverItems"
+              :key="group.id"
+              class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
             >
-              Group Name
-            </th>
-            <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-            >
-              Documents
-            </th>
-            <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-            >
-              Configuration
-            </th>
-            <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-            >
-              Tags
-            </th>
-            <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-            >
-              Type
-            </th>
-            <th
-              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-            >
-              Created
-            </th>
-            <th class="relative px-6 py-3">
-              <span class="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-700">
-          <tr
-            v-for="group in serverItems"
-            :key="group.id"
-            class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-          >
-            <td class="px-6 py-4">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-medium text-gray-900 dark:text-white">{{
-                    group.name
-                  }}</span>
-                  <span
-                    v-if="group.is_auto_generated"
-                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                    title="Auto-generated during preprocessing"
+              <td class="px-6 py-4">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{
+                      group.name
+                    }}</span>
+                    <span
+                      v-if="group.is_auto_generated"
+                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                      title="Auto-generated during preprocessing"
+                    >
+                      Auto
+                    </span>
+                  </div>
+                  <div
+                    v-if="group.description"
+                    class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-md"
                   >
-                    Auto
+                    {{ group.description }}
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm text-gray-900 dark:text-white">{{
+                  group.document_count || group.documents?.length || 0
+                }}</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span
+                  v-if="group.preprocessing_config"
+                  class="text-sm text-gray-900 dark:text-white"
+                >
+                  {{ group.preprocessing_config.name }}
+                </span>
+                <span v-else class="text-sm text-gray-500 dark:text-gray-400">Mixed</span>
+              </td>
+              <td class="px-6 py-4">
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="tag in (group.tags || []).slice(0, 5)"
+                    :key="tag"
+                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                  >
+                    {{ tag }}
+                  </span>
+                  <span
+                    v-if="(group.tags || []).length > 5"
+                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                  >
+                    +{{ group.tags.length - 5 }}
                   </span>
                 </div>
-                <div
-                  v-if="group.description"
-                  class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-md"
-                >
-                  {{ group.description }}
-                </div>
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="text-sm text-gray-900 dark:text-white">{{
-                group.document_count || group.documents?.length || 0
-              }}</span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span v-if="group.preprocessing_config" class="text-sm text-gray-900 dark:text-white">
-                {{ group.preprocessing_config.name }}
-              </span>
-              <span v-else class="text-sm text-gray-500 dark:text-gray-400">Mixed</span>
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex flex-wrap gap-1">
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
                 <span
-                  v-for="tag in (group.tags || []).slice(0, 5)"
-                  :key="tag"
-                  class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                  :class="[
+                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                    group.is_auto_generated
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                  ]"
                 >
-                  {{ tag }}
+                  {{ group.is_auto_generated ? 'Auto-generated' : 'Manual' }}
                 </span>
-                <span
-                  v-if="(group.tags || []).length > 5"
-                  class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                >
-                  +{{ group.tags.length - 5 }}
-                </span>
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span
-                :class="[
-                  'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                  group.is_auto_generated
-                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-                ]"
-              >
-                {{ group.is_auto_generated ? 'Auto-generated' : 'Manual' }}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-              {{ formatDate(group.created_at) }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <div class="flex items-center justify-end space-x-2">
-                <button
-                  class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                  title="View"
-                  @click="viewGroup(group)"
-                >
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  v-if="!group.is_auto_generated"
-                  class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
-                  title="Edit"
-                  @click="editGroup(group)"
-                >
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                  :title="
-                    group.trials && group.trials.length > 0
-                      ? 'Cannot delete - used by trial'
-                      : 'Delete'
-                  "
-                  :disabled="group.trials && group.trials.length > 0"
-                  @click="deleteGroup(group)"
-                >
-                  <svg
-                    class="h-5 w-5"
-                    :class="
-                      group.trials && group.trials.length > 0 ? 'opacity-50 cursor-not-allowed' : ''
-                    "
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                {{ formatDate(group.created_at) }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div class="flex items-center justify-end space-x-2">
+                  <button
+                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                    title="View"
+                    @click="viewGroup(group)"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    v-if="!group.is_auto_generated"
+                    class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
+                    title="Edit"
+                    @click="editGroup(group)"
+                  >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                    :title="
+                      group.trials && group.trials.length > 0
+                        ? 'Cannot delete - used by trial'
+                        : 'Delete'
+                    "
+                    :disabled="group.trials && group.trials.length > 0"
+                    @click="deleteGroup(group)"
+                  >
+                    <svg
+                      class="h-5 w-5"
+                      :class="
+                        group.trials && group.trials.length > 0
+                          ? 'opacity-50 cursor-not-allowed'
+                          : ''
+                      "
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Pagination -->
@@ -370,6 +377,114 @@
       @edit="editGroup"
       @view-document="viewDocumentFromGroup"
     />
+
+    <!-- Delete Group Confirmation Modal -->
+    <Teleport to="body">
+      <transition name="fade">
+        <div
+          v-if="showDeleteModal"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+          @click.self="showDeleteModal = false"
+        >
+          <div
+            class="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-gray-200"
+            @click.stop
+          >
+            <div class="px-6 py-4 border-b bg-red-50 rounded-t-2xl">
+              <div class="flex items-center gap-3">
+                <svg
+                  class="h-6 w-6 text-red-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <h3 class="text-lg font-semibold text-red-900">Delete Document Group</h3>
+              </div>
+            </div>
+
+            <div class="p-6 space-y-4">
+              <p class="text-gray-700">
+                Are you sure you want to delete "<strong>{{ groupToDelete?.name }}</strong
+                >"?
+              </p>
+
+              <div
+                v-if="groupToDelete?.documents?.length > 0"
+                class="bg-yellow-50 border border-yellow-200 rounded-lg p-3"
+              >
+                <p class="text-sm text-yellow-800">
+                  This group contains
+                  <strong>{{ groupToDelete.documents.length }}</strong> document(s).
+                </p>
+              </div>
+
+              <div v-if="groupToDelete?.documents?.length > 0" class="flex items-center">
+                <input
+                  v-model="deleteDocumentsToo"
+                  type="checkbox"
+                  class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                />
+                <label class="ml-2 text-sm text-gray-700">
+                  Also delete all documents in this group (if not referenced elsewhere)
+                </label>
+              </div>
+
+              <div class="flex items-center">
+                <input
+                  v-model="confirmDeleteGroup"
+                  type="checkbox"
+                  class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                />
+                <label class="ml-2 text-sm text-gray-700">
+                  I understand that this action cannot be undone
+                </label>
+              </div>
+            </div>
+
+            <div class="px-6 py-4 bg-gray-50 border-t rounded-b-2xl flex justify-end gap-3">
+              <button
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                @click="showDeleteModal = false"
+              >
+                Cancel
+              </button>
+              <button
+                :disabled="!canDeleteGroup"
+                class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed"
+                @click="confirmDeleteGroupAction"
+              >
+                <span v-if="isDeleting" class="flex items-center gap-2">
+                  <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    />
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Deleting...
+                </span>
+                <span v-else>Delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
@@ -409,6 +524,13 @@ const totalCount = ref(0)
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
 
+// Delete modal state
+const showDeleteModal = ref(false)
+const groupToDelete = ref(null)
+const deleteDocumentsToo = ref(false)
+const confirmDeleteGroup = ref(false)
+const isDeleting = ref(false)
+
 // Server-side pagination
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / itemsPerPage.value)))
 
@@ -446,6 +568,10 @@ const visiblePages = computed(() => {
   }
 
   return pages.filter((p) => p === '...' || (p >= 1 && p <= total))
+})
+
+const canDeleteGroup = computed(() => {
+  return confirmDeleteGroup.value && !isDeleting.value
 })
 
 // Fetch document sets with pagination
@@ -532,27 +658,57 @@ const viewDocumentFromGroup = (doc) => {
   emit('view-document', doc)
 }
 
-const deleteGroup = async (group) => {
+const deleteGroup = (group) => {
   if (group.trials && group.trials.length > 0) {
     toast.warning('Cannot delete group - it is used by a trial')
     return
   }
 
-  if (
-    !confirm(`Are you sure you want to delete "${group.name}"? The documents will not be deleted.`)
-  ) {
-    return
-  }
+  groupToDelete.value = group
+  deleteDocumentsToo.value = false
+  confirmDeleteGroup.value = false
+  showDeleteModal.value = true
+}
+
+const confirmDeleteGroupAction = async () => {
+  if (!canDeleteGroup.value || !groupToDelete.value) return
+
+  isDeleting.value = true
 
   try {
-    await api.delete(`/project/${props.projectId}/document-set/${group.id}`)
-    toast.success('Document group deleted successfully')
+    // Use backend cascade delete with query parameter
+    const params = deleteDocumentsToo.value ? { delete_documents: true } : undefined
+    const response = await api.delete(
+      `/project/${props.projectId}/document-set/${groupToDelete.value.id}`,
+      { params },
+    )
+
+    // Parse response - handle both 200 OK with body and 204 No Content
+    const deletedDocs = response.data?.deleted_document_ids || []
+
+    if (deleteDocumentsToo.value) {
+      if (deletedDocs.length > 0) {
+        toast.success(`Group and ${deletedDocs.length} document(s) deleted successfully`)
+      } else {
+        // No documents were deleted - they must all be referenced elsewhere
+        toast.warning('Group deleted, but documents could not be deleted (referenced elsewhere).')
+      }
+    } else {
+      toast.success('Document group deleted successfully')
+    }
+
+    showDeleteModal.value = false
+    groupToDelete.value = null
+    deleteDocumentsToo.value = false
+    confirmDeleteGroup.value = false
     emit('refresh')
     currentPage.value = 1
     fetchDocumentSets()
   } catch (error) {
-    toast.error('Failed to delete document group')
+    toast.error(error?.response?.data?.detail || 'Failed to delete document group')
     console.error(error)
+  } finally {
+    isDeleting.value = false
   }
 }
 
