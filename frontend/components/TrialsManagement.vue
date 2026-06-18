@@ -654,12 +654,27 @@ let wsTrialUnsubscribe = null
 const startWebSocket = () => {
   wsTrialUnsubscribe = websocketService.onTrialUpdate((data) => {
     // Only update if the trial belongs to this project
-    if (data.project_id !== props.projectId) return
+    if (String(data.project_id) !== String(props.projectId)) return
 
     // Update the trial in the list
     const idx = trials.value.findIndex((t) => t.id === data.trial_id)
     if (idx !== -1) {
-      trials.value[idx] = { ...trials.value[idx], ...data }
+      const existingTrial = trials.value[idx]
+      const updatedTrial = {
+        ...existingTrial,
+        ...data,
+        id: data.trial_id,
+        trial_id: undefined,
+      }
+
+      // Preserve and merge meta object
+      if (data.meta) {
+        updatedTrial.meta = { ...(existingTrial.meta || {}), ...data.meta }
+      }
+
+      // Trigger reactivity
+      trials.value[idx] = updatedTrial
+      trials.value = [...trials.value]
     } else {
       // New trial - fetch full list
       resetAndFetch()

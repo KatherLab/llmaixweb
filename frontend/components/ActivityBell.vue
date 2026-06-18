@@ -643,8 +643,15 @@ const handleTrialUpdate = (data) => {
       id: trialId,
       trial_id: undefined,
     }
+
+    // Preserve and merge meta object
+    if (data.meta) {
+      updatedTask.meta = { ...(task.meta || {}), ...data.meta }
+    }
+
     trialTasks.value[existingIndex] = updatedTask
   } else {
+    // New trial - fetch full data from server
     fetchAllTasks(true)
   }
 }

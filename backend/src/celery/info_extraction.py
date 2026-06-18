@@ -14,6 +14,44 @@ from .celery_config import celery_app
 
 log = logging.getLogger(__name__)
 
+
+def _broadcast_trial_update(trial: models.Trial, event: str = "progress"):
+    """Broadcast trial task update via Redis pub/sub (for use in Celery tasks).
+
+    Since Celery workers run in separate processes/containers from FastAPI,
+    we use Redis pub/sub to send messages to the FastAPI backend, which then
+    broadcasts to connected WebSocket clients.
+
+    Includes full trial data so frontend can display complete trial information.
+    """
+    try:
+        from ..utils.redis_broadcast import publish_trial_update
+
+        # Build full trial data for frontend display
+        trial_data = {
+            "type": "trial_update",
+            "trial_id": trial.id,
+            "project_id": trial.project_id,
+            "status": trial.status.value
+            if hasattr(trial.status, "value")
+            else str(trial.status),
+            "docs_done": trial.docs_done,
+            "documents_count": len(trial.document_ids) if trial.document_ids else 0,
+            "progress": float(trial.progress) if trial.progress else 0,
+            "name": trial.name,
+            "started_at": trial.started_at.isoformat() if trial.started_at else None,
+            "finished_at": trial.finished_at.isoformat() if trial.finished_at else None,
+            "meta": trial.meta,
+            "event": event,
+        }
+
+        publish_trial_update(trial_data)
+    except ImportError as e:
+        log.debug("Redis broadcast not available: %s", e)
+    except Exception as e:
+        log.error("Error broadcasting trial update: %s", e, exc_info=True)
+
+
 if celery_app:
 
     @celery_app.task(
@@ -79,6 +117,7 @@ if celery_app:
                                     prompt_id=prompt_id,
                                     project_id=project_id,
                                     advanced_options=advanced_options,
+                                    base_url=base_url,
                                 )
 
                         except asyncio.CancelledError:
@@ -102,7 +141,7 @@ if celery_app:
                     try:
                         last_broadcast = None
                         while True:
-                            await asyncio.sleep(5)
+                            await asyncio.sleep(3)  # Faster updates (matching preprocessing)
                             with db_session() as db:
                                 update_trial_progress(db, trial_id)
                                 trial = db.get(models.Trial, trial_id)
@@ -116,25 +155,7 @@ if celery_app:
                                     )
                                     if last_broadcast != current_state:
                                         last_broadcast = current_state
-                                        # Broadcast via Redis pub/sub
-                                        from ..utils.redis_broadcast import (
-                                            publish_trial_update,
-                                        )
-
-                                        message = {
-                                            "type": "trial_update",
-                                            "trial_id": trial.id,
-                                            "project_id": trial.project_id,
-                                            "status": trial.status,
-                                            "docs_done": trial.docs_done,
-                                            "documents_count": len(
-                                                trial.document_ids or []
-                                            ),
-                                            "progress": float(trial.progress or 0),
-                                            "name": trial.name,
-                                            "event": "progress",
-                                        }
-                                        publish_trial_update(message)
+                                        _broadcast_trial_update(trial, "progress")
 
                             if all(t.done() for t in doc_tasks.values()):
                                 break
@@ -212,19 +233,6 @@ if celery_app:
                     db.commit()
 
                     # Broadcast final status via Redis pub/sub
-                    from ..utils.redis_broadcast import publish_trial_update
-
-                    message = {
-                        "type": "trial_update",
-                        "trial_id": trial.id,
-                        "project_id": trial.project_id,
-                        "status": trial.status,
-                        "docs_done": done,
-                        "documents_count": total,
-                        "progress": 1.0 if event == "completed" else 0,
-                        "name": trial.name,
-                        "event": event,
-                    }
-                    publish_trial_update(message)
+                    _broadcast_trial_update(trial, event)
 
         asyncio.run(_run())
