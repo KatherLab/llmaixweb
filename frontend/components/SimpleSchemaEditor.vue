@@ -65,118 +65,181 @@
       </div>
 
       <div v-else class="space-y-2">
+        <!-- Read-only fields notice -->
         <div
-          v-for="(field, index) in fields"
-          :key="field.id"
-          :data-index="index"
-          :class="[
-            'group flex items-center gap-3 p-3 rounded-xl border transition-all duration-200',
-            draggingIndex === index
-              ? 'border-indigo-400 bg-indigo-50 shadow-md scale-[1.02]'
-              : 'border-gray-200 hover:border-indigo-300 hover:shadow-sm bg-gray-50/50 hover:bg-white',
-          ]"
-          draggable
-          @dragstart="handleDragStart"
-          @dragend="handleDragEnd"
-          @dragover="handleDragOver"
-          @dragleave="handleDragLeave"
-          @drop="handleDrop"
+          v-if="hasReadonlyFields"
+          class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800"
         >
-          <!-- Drag Handle -->
-          <div
-            class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200/50 transition-all"
-            title="Drag to reorder"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 8h16M4 16h16"
-              />
-            </svg>
-          </div>
-
-          <!-- Field Number Badge -->
-          <div
-            :class="[
-              'flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-all',
-              draggingIndex === index
-                ? 'bg-indigo-200 text-indigo-800'
-                : 'bg-gray-200 text-gray-600',
-            ]"
-          >
-            {{ index + 1 }}
-          </div>
-
-          <!-- Field Name Input -->
-          <div class="flex-1 min-w-0">
-            <input
-              v-model="field.name"
-              class="w-full bg-transparent border-0 border-b border-gray-300 focus:border-indigo-500 focus:ring-0 text-sm font-medium text-gray-900 placeholder-gray-400 transition-colors py-1.5"
-              placeholder="field_name (e.g., patient_name)"
-              @input="emitChange"
+          <svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01M5 13l-1.5 7h15L17 13M5 13l1.5-7h11L19 13M5 13h14"
             />
-          </div>
+          </svg>
+          <span>
+            Fields with nested groups, lists, or advanced settings are read-only here — edit them in
+            <strong>Advanced mode</strong>.
+          </span>
+        </div>
 
-          <!-- Type Selector with Icon -->
-          <div class="flex-shrink-0">
-            <div class="relative">
-              <select
-                v-model="field.type"
-                class="appearance-none bg-white border border-gray-300 hover:border-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg text-sm font-medium py-2 pl-3 pr-8 cursor-pointer transition-all"
-                @change="emitChange"
-              >
-                <option value="String">Text</option>
-                <option value="Number">Number</option>
-                <option value="Integer">Integer</option>
-                <option value="Boolean">Yes/No</option>
-                <option value="Date">Date</option>
-                <option value="DateTime">Date & Time</option>
-                <option value="Email">Email</option>
-              </select>
-              <svg
-                class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+        <div v-for="(field, index) in fields" :key="field.id">
+          <!-- Read-only hint row (nested objects/arrays, enums, constraints, …) -->
+          <div
+            v-if="field.kind === 'readonly'"
+            class="group flex items-center gap-3 p-3 rounded-xl border border-amber-200 bg-amber-50/60"
+            :title="`Read-only — edit “${field.name}” in Advanced mode`"
+          >
+            <!-- Lock icon (in place of the drag handle) -->
+            <div class="flex-shrink-0 p-2 text-amber-500 rounded-lg">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M19 9l-7 7-7-7"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                 />
               </svg>
             </div>
+
+            <!-- Type badge -->
+            <div
+              class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-amber-200 text-amber-800 text-[10px] font-semibold"
+            >
+              {{ readonlyTypeLabel(field) }}
+            </div>
+
+            <!-- Field name (read-only) -->
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-700 truncate">{{ field.name }}</p>
+              <p v-if="field.description" class="text-xs text-gray-500 truncate">
+                {{ field.description }}
+              </p>
+            </div>
+
+            <!-- Hint to edit in Advanced mode -->
+            <div class="flex-1 min-w-0 hidden lg:block">
+              <p class="text-xs text-amber-700 truncate">Edit in Advanced mode</p>
+            </div>
+
+            <!-- Spacer to align with the editable rows' remove button -->
+            <div class="flex-shrink-0 w-8"></div>
           </div>
 
-          <!-- Description Input -->
-          <div class="flex-1 min-w-0 hidden lg:block">
-            <input
-              v-model="field.description"
-              class="w-full bg-transparent border-0 border-b border-gray-300 focus:border-indigo-500 focus:ring-0 text-xs text-gray-600 placeholder-gray-400 transition-colors py-1.5"
-              placeholder="What is this field? (optional)"
-              @input="emitChange"
-            />
-          </div>
-
-          <!-- Remove Button -->
-          <button
-            type="button"
-            class="flex-shrink-0 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-            title="Remove field"
-            @click="removeField(field.id)"
+          <!-- Editable row -->
+          <div
+            v-else
+            :data-index="index"
+            :class="[
+              'group flex items-center gap-3 p-3 rounded-xl border transition-all duration-200',
+              draggingIndex === index
+                ? 'border-indigo-400 bg-indigo-50 shadow-md scale-[1.02]'
+                : 'border-gray-200 hover:border-indigo-300 hover:shadow-sm bg-gray-50/50 hover:bg-white',
+            ]"
+            draggable
+            @dragstart="handleDragStart"
+            @dragend="handleDragEnd"
+            @dragover="handleDragOver"
+            @dragleave="handleDragLeave"
+            @drop="handleDrop"
           >
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            <!-- Drag Handle -->
+            <div
+              class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200/50 transition-all"
+              title="Drag to reorder"
+            >
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 8h16M4 16h16"
+                />
+              </svg>
+            </div>
+
+            <!-- Field Number Badge -->
+            <div
+              :class="[
+                'flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-all',
+                draggingIndex === index
+                  ? 'bg-indigo-200 text-indigo-800'
+                  : 'bg-gray-200 text-gray-600',
+              ]"
+            >
+              {{ index + 1 }}
+            </div>
+
+            <!-- Field Name Input -->
+            <div class="flex-1 min-w-0">
+              <input
+                v-model="field.name"
+                class="w-full bg-transparent border-0 border-b border-gray-300 focus:border-indigo-500 focus:ring-0 text-sm font-medium text-gray-900 placeholder-gray-400 transition-colors py-1.5"
+                placeholder="field_name (e.g., patient_name)"
+                @input="emitChange"
               />
-            </svg>
-          </button>
+            </div>
+
+            <!-- Type Selector with Icon -->
+            <div class="flex-shrink-0">
+              <div class="relative">
+                <select
+                  v-model="field.type"
+                  class="appearance-none bg-white border border-gray-300 hover:border-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg text-sm font-medium py-2 pl-3 pr-8 cursor-pointer transition-all"
+                  @change="emitChange"
+                >
+                  <option value="String">Text</option>
+                  <option value="Number">Number</option>
+                  <option value="Integer">Integer</option>
+                  <option value="Boolean">Yes/No</option>
+                  <option value="Date">Date</option>
+                  <option value="DateTime">Date & Time</option>
+                  <option value="Email">Email</option>
+                </select>
+                <svg
+                  class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Description Input -->
+            <div class="flex-1 min-w-0 hidden lg:block">
+              <input
+                v-model="field.description"
+                class="w-full bg-transparent border-0 border-b border-gray-300 focus:border-indigo-500 focus:ring-0 text-xs text-gray-600 placeholder-gray-400 transition-colors py-1.5"
+                placeholder="What is this field? (optional)"
+                @input="emitChange"
+              />
+            </div>
+
+            <!-- Remove Button -->
+            <button
+              type="button"
+              class="flex-shrink-0 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+              title="Remove field"
+              @click="removeField(field.id)"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -224,7 +287,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 const props = defineProps({
   schema: {
@@ -240,6 +303,12 @@ const fields = ref([])
 const draggingIndex = ref(-1)
 const dragOverIndex = ref(-1)
 const isInternalChange = ref(false)
+
+// Last schema received from the parent (external). Kept so `buildSchema` can
+// preserve root-level keys (e.g. `required`, `additionalProperties`) and any
+// read-only properties verbatim, instead of rebuilding the whole schema from
+// only the editable fields (which would silently drop advanced features).
+const originalSchema = ref(null)
 
 // Generate unique ID
 let fieldIdCounter = 0
@@ -259,14 +328,43 @@ const typeMapping = {
   Email: { type: 'string', format: 'email' },
 }
 
+// Types and formats the simple editor can represent losslessly. Anything else
+// (nested objects/arrays, enums, constraints, unknown formats…) is shown as a
+// read-only hint and passed through untouched on rebuild.
+const SIMPLE_TYPES = ['string', 'number', 'integer', 'boolean']
+const KNOWN_FORMATS = ['date', 'time', 'date-time', 'email']
+
+const isSimpleEditable = (propSchema) => {
+  if (!propSchema || !SIMPLE_TYPES.includes(propSchema.type)) return false
+  const allowedKeys = new Set(['type', 'title', 'description', 'format'])
+  for (const key of Object.keys(propSchema)) {
+    if (!allowedKeys.has(key)) return false
+  }
+  if (propSchema.format && !KNOWN_FORMATS.includes(propSchema.format)) return false
+  return true
+}
+
+// Human-readable label for a read-only property's type
+const readonlyTypeLabel = (field) => {
+  const t = field.rawSchema?.type
+  if (t === 'object') return 'Group'
+  if (t === 'array') return 'List'
+  if (t === 'string') return 'Text'
+  if (t === 'number') return 'Number'
+  if (t === 'integer') return 'Integer'
+  if (t === 'boolean') return 'Yes/No'
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : 'Advanced'
+}
+
+const hasReadonlyFields = computed(() => fields.value.some((f) => f.kind === 'readonly'))
+
 // Convert JSON Schema → Simple fields
 const parseSchema = (schema) => {
   const parsedFields = []
   const props = schema?.properties || {}
 
   for (const [name, propSchema] of Object.entries(props)) {
-    // Only include simple types (not nested objects or arrays)
-    if (['string', 'number', 'integer', 'boolean'].includes(propSchema.type)) {
+    if (isSimpleEditable(propSchema)) {
       // Find matching simple type
       let matchedType = 'String'
       for (const [simpleType, jsonSchema] of Object.entries(typeMapping)) {
@@ -286,9 +384,20 @@ const parseSchema = (schema) => {
 
       parsedFields.push({
         id: generateId(),
+        kind: 'simple',
         name,
         type: matchedType,
         description: propSchema.description || '',
+      })
+    } else {
+      // Nested objects/arrays and anything the simple editor can't represent
+      // losslessly become read-only hints, preserved verbatim on rebuild.
+      parsedFields.push({
+        id: generateId(),
+        kind: 'readonly',
+        name,
+        description: propSchema.description || '',
+        rawSchema: propSchema,
       })
     }
   }
@@ -296,20 +405,33 @@ const parseSchema = (schema) => {
   return parsedFields
 }
 
-// Convert Simple fields → JSON Schema
+// Convert Simple fields → JSON Schema.
+// Rebuilds editable fields from scratch but preserves read-only (advanced)
+// properties and root-level keys verbatim, so editing simple fields never
+// drops nested structures, `required`, etc.
 const buildSchema = () => {
-  const schema = {
-    type: 'object',
-    properties: {},
-  }
+  const schema = originalSchema.value
+    ? JSON.parse(JSON.stringify(originalSchema.value))
+    : { type: 'object' }
+  if (!schema.type) schema.type = 'object'
+
+  const properties = {}
 
   for (const field of fields.value) {
     if (!field.name || !field.name.trim()) continue
 
+    if (field.kind === 'readonly') {
+      properties[field.name.trim()] = JSON.parse(JSON.stringify(field.rawSchema))
+      continue
+    }
+
     const mapping = typeMapping[field.type] || typeMapping.String
     const propSchema = {
       type: mapping.type,
-      title: field.name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+      title: field.name
+        .trim()
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (l) => l.toUpperCase()),
     }
 
     if (mapping.format) {
@@ -320,7 +442,19 @@ const buildSchema = () => {
       propSchema.description = field.description.trim()
     }
 
-    schema.properties[field.name.trim()] = propSchema
+    properties[field.name.trim()] = propSchema
+  }
+
+  schema.properties = properties
+
+  // Drop `required` entries for properties that no longer exist
+  if (Array.isArray(schema.required)) {
+    schema.required = schema.required.filter((name) =>
+      Object.prototype.hasOwnProperty.call(properties, name),
+    )
+    if (schema.required.length === 0) {
+      delete schema.required
+    }
   }
 
   return schema
@@ -337,6 +471,7 @@ const emitChange = () => {
 const addField = () => {
   fields.value.push({
     id: generateId(),
+    kind: 'simple',
     name: '',
     type: 'String',
     description: '',
@@ -393,7 +528,10 @@ const handleDrop = (e) => {
   dragOverIndex.value = -1
 }
 
-// Watch for external schema changes (not from internal updates)
+// Watch for external schema changes (not from internal updates).
+// The field list always mirrors `props.schema`, including an empty
+// schema (so deletions made elsewhere are reflected here). Starter
+// fields for new schemas are seeded by the parent, not on mount.
 watch(
   () => props.schema,
   (newSchema) => {
@@ -403,42 +541,12 @@ watch(
       return
     }
     if (newSchema && Object.keys(newSchema).length > 0) {
-      const parsed = parseSchema(newSchema)
-      if (parsed.length > 0) {
-        fields.value = parsed
-      }
+      originalSchema.value = newSchema
+      fields.value = parseSchema(newSchema)
     }
   },
   { deep: true, immediate: true },
 )
-
-// Initialize with starter fields
-onMounted(() => {
-  if (fields.value.length === 0) {
-    // Start with 3 helpful starter fields as examples
-    fields.value = [
-      {
-        id: generateId(),
-        name: 'patient_name',
-        type: 'String',
-        description: 'Full name of the patient',
-      },
-      {
-        id: generateId(),
-        name: 'date_of_birth',
-        type: 'Date',
-        description: 'Patient date of birth',
-      },
-      {
-        id: generateId(),
-        name: 'medical_record_number',
-        type: 'String',
-        description: 'Unique medical record ID',
-      },
-    ]
-    emitChange()
-  }
-})
 </script>
 
 <style scoped>

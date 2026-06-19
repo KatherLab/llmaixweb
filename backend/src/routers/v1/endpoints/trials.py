@@ -210,6 +210,9 @@ def get_trials(
     ] = None,
     schema_id: Annotated[int | None, Query()] = None,
     prompt_id: Annotated[int | None, Query()] = None,
+    document_set_id: Annotated[
+        int | None, Query(description="Filter trials run against a document set")
+    ] = None,
     llm_model: Annotated[str | None, Query()] = None,
     has_failures: Annotated[
         bool | None, Query(description="true/false; meta.failures length > 0")
@@ -244,6 +247,9 @@ def get_trials(
 
     if prompt_id is not None:
         base = base.where(T.prompt_id == prompt_id)
+
+    if document_set_id is not None:
+        base = base.where(T.document_set_id == document_set_id)
 
     if llm_model:
         base = base.where(T.llm_model == llm_model)

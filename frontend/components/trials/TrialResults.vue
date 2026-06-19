@@ -411,7 +411,7 @@
                           <span
                             class="inline-block animate-spin h-8 w-8 border-4 border-blue-400 border-t-transparent rounded-full"
                           ></span>
-                          <span class="mt-2 text-gray-500 block">Loading PDF…</span>
+                          <span class="mt-2 text-gray-500 block">Loading preview…</span>
                         </div>
                         <span v-else class="text-gray-500">Failed to load preview</span>
                       </div>
@@ -494,6 +494,7 @@
                         {{ viewMode[index] === 'vertical' ? 'Side by Side View' : 'Vertical View' }}
                       </button>
                       <button
+                        v-if="documentMeta[index]?.previewable"
                         class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
                         @click="toggleDocumentPanel(index)"
                       >
@@ -580,6 +581,9 @@ const viewMode = ref({})
 const documentPdfUrls = ref({})
 const documentPdfLoading = ref({})
 const showDocumentPanel = ref({})
+// per-result: { previewable, fileId } — drives whether the "View Original
+// Document" button is shown at all (hidden when there's nothing to render)
+const documentMeta = ref({})
 const showReasoningPanel = ref({}) // reasoning accordion
 
 const renderMarkdown = (text) => {
@@ -659,23 +663,36 @@ const fetchData = async () => {
   }
 }
 
-// Load per-document display labels
+// Load per-document display labels + original-file previewability
 const loadDocumentNames = async () => {
   if (!trial.value?.results?.length) return
   for (let i = 0; i < trial.value.results.length; i++) {
     try {
       const docId = docIdForIndex(i)
-      if (!docId) continue
+      if (!docId) {
+        documentMeta.value[i] = { previewable: false, fileId: null }
+        continue
+      }
       const r = await api.get(`/project/${props.projectId}/document/${docId}`)
       const d = r.data
       documentLabels.value[i] = {
         name: d.document_name || d.original_file?.file_name || `Document ${docId}`,
         original: d.original_file?.file_name || '',
       }
+      // Only PDFs/images can be shown inline; the "View Original Document"
+      // button is hidden for everything else (txt, csv, xlsx, …) so no split
+      // screen is offered when there's nothing to render.
+      const { previewable } = analyzeOriginalFile(d)
+      const fileId =
+        d.preprocessed_file_id && d.preprocessed_file?.file_type === 'application/pdf'
+          ? d.preprocessed_file_id
+          : d.original_file_id
+      documentMeta.value[i] = { previewable, fileId: previewable ? fileId : null }
     } catch (err) {
       console.error(`Label load failed index ${i}:`, err)
       const fallbackId = docIdForIndex(i)
       documentLabels.value[i] = { name: `Document (ID: ${fallbackId ?? 'unknown'})`, original: '' }
+      documentMeta.value[i] = { previewable: false, fileId: null }
     }
   }
 }
@@ -700,35 +717,41 @@ const toggleResultExpansion = async (i) => {
 const toggleViewMode = (i) => {
   viewMode.value[i] = viewMode.value[i] === 'vertical' ? 'horizontal' : 'vertical'
 }
-// >>> REPLACE: resolve doc id from the result row
+// Decide whether the original file can be rendered as an inline preview.
+// Mirrors DocumentViewer.vue's detection (hasDisplayableOriginalFile +
+// originalFileType): only PDFs and images are previewable. TXT files and
+// row-by-row CSV/XLSX have no separate original (the extracted text IS the
+// content); other types (CSV/XLSX full-document, DOCX, …) can't be shown
+// inline. The caller hides the "View Original Document" button for these.
+const analyzeOriginalFile = (d) => {
+  const fileType = d?.original_file?.file_type
+  if (!fileType) return { previewable: false }
+  if (fileType === 'application/pdf' || fileType.startsWith('image/')) return { previewable: true }
+  return { previewable: false }
+}
+
 const toggleDocumentPanel = async (i) => {
   showDocumentPanel.value[i] = !showDocumentPanel.value[i]
-  if (showDocumentPanel.value[i] && !documentPdfUrls.value[i] && !documentPdfLoading.value[i]) {
-    documentPdfLoading.value[i] = true
-    try {
-      const docId = docIdForIndex(i)
-      if (!docId) throw new Error('Missing document_id for this result')
-      const r = await api.get(`/project/${props.projectId}/document/${docId}`)
-      const d = r.data
-      let fileId
-      if (d.preprocessed_file_id && d.preprocessed_file?.file_type === 'application/pdf')
-        fileId = d.preprocessed_file_id
-      else if (['application/pdf', 'image/png', 'image/jpeg'].includes(d.original_file?.file_type))
-        fileId = d.original_file_id
-      if (fileId) {
-        const fr = await api.get(
-          `/project/${props.projectId}/file/${fileId}/content?preview=true`,
-          { responseType: 'blob' },
-        )
-        const blob = new Blob([fr.data], { type: fr.headers['content-type'] })
-        documentPdfUrls.value[i] = URL.createObjectURL(blob)
-      }
-    } catch (err) {
-      console.error(err)
-      toast.error('Failed to load document')
-    } finally {
-      documentPdfLoading.value[i] = false
-    }
+  if (!showDocumentPanel.value[i]) return
+  // Already resolved — just show the existing preview
+  if (documentPdfUrls.value[i] || documentPdfLoading.value[i]) return
+  const meta = documentMeta.value[i]
+  // No inline-previewable original (txt/csv/xlsx/…) → button is hidden, so this
+  // should not be reachable; bail out defensively.
+  if (!meta?.previewable || !meta?.fileId) return
+  documentPdfLoading.value[i] = true
+  try {
+    const fr = await api.get(
+      `/project/${props.projectId}/file/${meta.fileId}/content?preview=true`,
+      { responseType: 'blob' },
+    )
+    const blob = new Blob([fr.data], { type: fr.headers['content-type'] })
+    documentPdfUrls.value[i] = URL.createObjectURL(blob)
+  } catch (err) {
+    console.error(err)
+    toast.error('Failed to load document')
+  } finally {
+    documentPdfLoading.value[i] = false
   }
 }
 

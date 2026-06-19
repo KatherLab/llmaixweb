@@ -31,9 +31,9 @@
       </div>
     </div>
 
-    <!-- Upload Zone -->
+    <!-- Upload Zone (only shown when no files exist AND no filters are active) -->
     <div
-      v-if="!files.length"
+      v-if="!files.length && !hasLoadedFiles && !hasActiveFilters"
       class="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-12 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors bg-gray-50 dark:bg-slate-800/50"
       :class="{ 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-slate-800': isDragging }"
       @dragover.prevent="isDragging = true"
@@ -76,17 +76,23 @@
     </div>
 
     <!-- Filters & Search -->
-    <div v-else class="flex items-center justify-between gap-4">
-      <div class="flex items-center gap-3 flex-1">
-        <div class="relative flex-1 max-w-md">
+    <div
+      v-else
+      class="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700"
+    >
+      <!-- Top row: Search + Status + File Type -->
+      <div class="flex items-center gap-3">
+        <!-- Search -->
+        <div class="relative flex-1 max-w-sm">
           <input
             v-model="searchQuery"
             type="text"
             placeholder="Search files..."
-            class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+            class="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+            @input="debouncedFetchFilesSearch"
           />
           <svg
-            class="absolute left-3 top-2.5 h-5 w-5 text-gray-400 dark:text-gray-500"
+            class="absolute left-3 top-2.5 h-4 w-4 text-gray-400 dark:text-gray-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -99,25 +105,227 @@
             />
           </svg>
         </div>
+
+        <!-- Status Filter -->
         <select
           v-model="filterStatus"
-          class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+          class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          @change="fetchFiles"
         >
-          <option value="">All Files</option>
-          <option value="not_preprocessed">Not processed</option>
-          <option value="pending">Pending</option>
+          <option value="">All Status</option>
+          <option value="not_preprocessed">Not Processed</option>
           <option value="processing">Processing</option>
           <option value="completed">Completed</option>
           <option value="failed">Failed</option>
         </select>
+
+        <!-- File Type Filter -->
+        <select
+          v-model="filterFileType"
+          class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          @change="fetchFiles"
+        >
+          <option value="">All Types</option>
+          <option value="application/pdf">PDF</option>
+          <option value="image/png">PNG</option>
+          <option value="image/jpeg">JPEG</option>
+          <option value="text/csv">CSV</option>
+          <option value="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            XLSX
+          </option>
+          <option value="application/vnd.ms-excel">XLS</option>
+          <option value="text/plain">TXT</option>
+          <option value="application/msword">DOC</option>
+          <option value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+            DOCX
+          </option>
+        </select>
+
+        <!-- Date Range Filter -->
+        <select
+          v-model="filterDateRange"
+          class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          @change="handleDateRangeChange"
+        >
+          <option value="">All Time</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week">Last 7 Days</option>
+          <option value="month">Last 30 Days</option>
+          <option value="custom">Custom Range...</option>
+        </select>
+
+        <!-- Clear Filters -->
+        <button
+          v-if="hasActiveFilters"
+          class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+          title="Clear all filters"
+          @click="clearFilters"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+
+        <div class="ml-auto text-sm text-gray-500 dark:text-gray-400">
+          {{ pagination.total }} files
+        </div>
       </div>
-      <div class="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input v-model="showUnprocessedOnly" type="checkbox" class="rounded text-blue-600" />
-          <span>Show only unprocessed</span>
-        </label>
-        <span class="text-gray-400 dark:text-gray-500">|</span>
-        <span>{{ pagination.total }} files total</span>
+
+      <!-- Custom Date Range Picker (shown when "Custom Range" is selected) -->
+      <div
+        v-if="filterDateRange === 'custom'"
+        class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
+      >
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600 dark:text-gray-300">From:</label>
+          <input
+            v-model="customDateFrom"
+            type="date"
+            class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+            @change="applyCustomDateRange"
+          />
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600 dark:text-gray-300">To:</label>
+          <input
+            v-model="customDateTo"
+            type="date"
+            class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+            @change="applyCustomDateRange"
+          />
+        </div>
+        <button
+          class="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+          @click="applyCustomDateRange"
+        >
+          Apply
+        </button>
+      </div>
+
+      <!-- Active Filters Summary -->
+      <div
+        v-if="hasActiveFilters"
+        class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
+      >
+        <span class="text-xs text-gray-500 dark:text-gray-400">Active filters:</span>
+        <span
+          v-if="searchQuery"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full"
+        >
+          Search: "{{ searchQuery }}"
+          <button
+            class="hover:text-red-600"
+            @click="
+              () => {
+                searchQuery = ''
+                debouncedFetchFilesSearch()
+              }
+            "
+          >
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filterStatus"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full"
+        >
+          Status: {{ filterStatus }}
+          <button
+            class="hover:text-red-600"
+            @click="
+              () => {
+                filterStatus = ''
+                fetchFiles()
+              }
+            "
+          >
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filterFileType"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full"
+        >
+          Type: {{ getFileTypeLabel(filterFileType) }}
+          <button
+            class="hover:text-red-600"
+            @click="
+              () => {
+                filterFileType = ''
+                fetchFiles()
+              }
+            "
+          >
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filterDateRange && filterDateRange !== 'custom'"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full"
+        >
+          Date: {{ getDateRangeLabel(filterDateRange) }}
+          <button
+            class="hover:text-red-600"
+            @click="
+              () => {
+                filterDateRange = ''
+                fetchFiles()
+              }
+            "
+          >
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filterDateRange === 'custom' && customDateFrom"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full"
+        >
+          Date: {{ customDateFrom }} → {{ customDateTo || 'present' }}
+          <button class="hover:text-red-600" @click="clearCustomDateRange()">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
       </div>
     </div>
 
@@ -159,7 +367,7 @@
 
     <!-- Files Table -->
     <FilesTable
-      v-else-if="files.length"
+      v-else-if="hasLoadedFiles"
       :files="displayFiles"
       :selected-files="selectedFiles"
       :sort-by="sortBy"
@@ -702,7 +910,36 @@
     </Teleport>
 
     <!-- Empty State -->
-    <div v-if="!files.length && !isDragging" class="text-center py-12">
+    <div v-if="!files.length && !isDragging && hasLoadedFiles" class="text-center py-12">
+      <svg
+        class="mx-auto h-16 w-16 text-gray-300"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
+      </svg>
+      <p class="mt-4 text-lg font-medium text-gray-900 dark:text-white">
+        No files match your filters
+      </p>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        Try adjusting or clearing your filters to see more results
+      </p>
+      <button
+        class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+        @click="clearFilters"
+      >
+        Clear All Filters
+      </button>
+    </div>
+
+    <!-- True Empty State (no files uploaded yet) -->
+    <div v-if="!files.length && !isDragging && !hasLoadedFiles" class="text-center py-12">
       <svg
         class="mx-auto h-16 w-16 text-gray-300"
         fill="none"
@@ -1726,7 +1963,8 @@ const files = ref([])
 const selectedFiles = ref([])
 const searchQuery = ref('')
 const filterStatus = ref('')
-const showUnprocessedOnly = ref(false)
+const filterFileType = ref('')
+const filterDateRange = ref('')
 const isDragging = ref(false)
 const showUploadModal = ref(false)
 const showProcessingPanel = ref(false)
@@ -1738,6 +1976,36 @@ const showImportConfigModal = ref(false)
 const configuringFile = ref(null)
 const expandedTasks = ref(new Set()) // Multi-expand accordion state
 const isLoading = ref(true)
+const hasLoadedFiles = ref(false) // Track if we've ever loaded files (for filter UX)
+
+// Debounce timer for search
+let searchDebounceTimer = null
+
+// Custom date range state
+const customDateFrom = ref('')
+const customDateTo = ref('')
+
+// File type labels mapping
+const fileTypeLabels = {
+  'application/pdf': 'PDF',
+  'image/png': 'PNG',
+  'image/jpeg': 'JPEG',
+  'text/csv': 'CSV',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
+  'application/vnd.ms-excel': 'XLS',
+  'text/plain': 'TXT',
+  'application/msword': 'DOC',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+}
+
+// Date range labels mapping
+const dateRangeLabels = {
+  today: 'Today',
+  yesterday: 'Yesterday',
+  week: 'Last 7 Days',
+  month: 'Last 30 Days',
+  custom: 'Custom Range',
+}
 
 // Duplicate preview state
 const showDuplicatePreviewModal = ref(false)
@@ -1786,6 +2054,70 @@ let cachedTasks = null
 let cachedTasksTimestamp = null
 const TASKS_CACHE_TTL_MS = 30000 // 30 seconds cache (increased for 50k+ files scaling)
 
+// Compute date bounds for date range filter
+const getDateBounds = (range) => {
+  const now = new Date()
+  const start = new Date(now)
+
+  if (range === 'today') {
+    start.setHours(0, 0, 0, 0)
+    return { date_from: start.toISOString(), date_to: now.toISOString() }
+  } else if (range === 'yesterday') {
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+    yesterday.setHours(0, 0, 0, 0)
+    start.setHours(23, 59, 59, 999)
+    return { date_from: yesterday.toISOString(), date_to: start.toISOString() }
+  } else if (range === 'week') {
+    start.setDate(now.getDate() - 7)
+    return { date_from: start.toISOString(), date_to: now.toISOString() }
+  } else if (range === 'month') {
+    start.setDate(now.getDate() - 30)
+    return { date_from: start.toISOString(), date_to: now.toISOString() }
+  } else if (range === 'custom' && customDateFrom.value) {
+    const from = new Date(customDateFrom.value)
+    from.setHours(0, 0, 0, 0)
+    const to = customDateTo.value ? new Date(customDateTo.value) : now
+    to.setHours(23, 59, 59, 999)
+    return { date_from: from.toISOString(), date_to: to.toISOString() }
+  }
+  return {}
+}
+
+// Handle date range change
+const handleDateRangeChange = () => {
+  if (filterDateRange.value === 'custom') {
+    // Don't fetch yet - wait for user to select dates
+    return
+  }
+  pagination.value.page = 1
+  fetchFiles()
+}
+
+// Apply custom date range
+const applyCustomDateRange = () => {
+  pagination.value.page = 1
+  fetchFiles()
+}
+
+// Clear custom date range
+const clearCustomDateRange = () => {
+  customDateFrom.value = ''
+  customDateTo.value = ''
+  filterDateRange.value = ''
+  fetchFiles()
+}
+
+// Get file type label
+const getFileTypeLabel = (type) => {
+  return fileTypeLabels[type] || type
+}
+
+// Get date range label
+const getDateRangeLabel = (range) => {
+  return dateRangeLabels[range] || range
+}
+
 // Fetch files with preprocessing tasks (paginated)
 const fetchFiles = async (options = {}) => {
   const { forceRefreshTasks = false } = options
@@ -1806,6 +2138,18 @@ const fetchFiles = async (options = {}) => {
     // Add status filter
     if (filterStatus.value) {
       params.append('status', filterStatus.value)
+    }
+
+    // Add file type filter
+    if (filterFileType.value) {
+      params.append('file_type', filterFileType.value)
+    }
+
+    // Add date range filter
+    if (filterDateRange.value) {
+      const { date_from, date_to } = getDateBounds(filterDateRange.value)
+      if (date_from) params.append('date_from', date_from)
+      if (date_to) params.append('date_to', date_to)
     }
 
     const response = await api.get(`/project/${props.projectId}/file?${params}`)
@@ -1866,6 +2210,9 @@ const fetchFiles = async (options = {}) => {
 
     files.value = filesWithTasks
 
+    // Mark that we've loaded files at least once (for filter UX)
+    hasLoadedFiles.value = true
+
     // Update historyFile if panel is open
     if (showHistoryPanel.value && historyFile.value) {
       const updatedHistoryFile = filesWithTasks.find((f) => f.id === historyFile.value.id)
@@ -1905,6 +2252,31 @@ const getFileStatus = (file) => {
   } else {
     return 'failed'
   }
+}
+
+// Check if any filters are active
+const hasActiveFilters = computed(() => {
+  return searchQuery.value || filterFileType.value || filterDateRange.value
+})
+
+// Clear all filters
+const clearFilters = () => {
+  searchQuery.value = ''
+  filterFileType.value = ''
+  filterDateRange.value = ''
+  pagination.value.page = 1
+  fetchFiles()
+}
+
+// Debounced fetch for search input
+const debouncedFetchFilesSearch = () => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = setTimeout(() => {
+    pagination.value.page = 1
+    fetchFiles()
+  }, 300)
 }
 
 // Pagination handlers

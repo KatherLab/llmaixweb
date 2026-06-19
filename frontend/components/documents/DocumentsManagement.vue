@@ -51,130 +51,220 @@
     <div v-if="activeTab === 'documents'">
       <!-- Filters and Search -->
       <div
-        class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4"
+        class="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700 mb-4"
       >
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Top row: Search + Filters -->
+        <div class="flex items-center gap-3">
           <!-- Search -->
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >Search</label
+          <div class="relative flex-1 max-w-sm">
+            <input
+              v-model="filters.search"
+              type="text"
+              placeholder="Search documents..."
+              class="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+              @input="debouncedFetchDocuments"
+            />
+            <svg
+              class="absolute left-3 top-2.5 h-4 w-4 text-gray-400 dark:text-gray-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-            <div class="relative">
-              <input
-                v-model="filters.search"
-                type="text"
-                placeholder="Search in documents..."
-                class="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
-              <svg
-                class="absolute left-3 top-2.5 h-5 w-5 text-gray-400 dark:text-gray-500"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
+            </svg>
           </div>
 
-          <!-- Preprocessing Task Filter -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >Preprocessing Task</label
-            >
-            <select
-              v-model="filters.taskId"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Tasks</option>
-              <option v-for="task in preprocessingTasks" :key="task.id" :value="task.id">
-                Task #{{ task.id }} ({{ task.documentCount }} docs)
-              </option>
-            </select>
-          </div>
+          <!-- OCR Engine Filter -->
+          <select
+            v-model="filters.ocrEngine"
+            class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+            @change="fetchDocuments"
+          >
+            <option value="">All OCR Engines</option>
+            <option value="pypdf">Embedded Text (pypdf)</option>
+            <option value="tesseract">Local OCR (Tesseract)</option>
+            <option value="mistral_ocr">Mistral OCR</option>
+            <option value="llm_vision">Vision LLM</option>
+          </select>
 
-          <!-- Date Range -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >Date Range</label
-            >
-            <select
-              v-model="filters.dateRange"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 days</option>
-              <option value="month">Last 30 days</option>
-            </select>
-          </div>
-
-          <!-- Status Filter -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >Processing Status</label
-            >
-            <select
-              v-model="filters.status"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Status</option>
-              <option value="success">Success</option>
-              <option value="partial">Partial Success</option>
-              <option value="failed">Failed</option>
-            </select>
-          </div>
+          <!-- Date Range Filter -->
+          <select
+            v-model="filters.dateRange"
+            class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+            @change="handleDateRangeChange"
+          >
+            <option value="">All Time</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="week">Last 7 Days</option>
+            <option value="month">Last 30 Days</option>
+            <option value="custom">Custom Range...</option>
+          </select>
 
           <!-- Clear Filters -->
-          <div class="flex items-end">
-            <button
-              class="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              @click="clearFilters"
-            >
-              Clear Filters
-            </button>
+          <button
+            v-if="hasActiveFilters"
+            class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            title="Clear all filters"
+            @click="clearFilters"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+
+          <div class="ml-auto text-sm text-gray-500 dark:text-gray-400">
+            {{ totalCount }} documents
           </div>
         </div>
 
-        <!-- Archived Documents Toggle -->
+        <!-- Custom Date Range Picker (shown when "Custom Range" is selected) -->
         <div
-          class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+          v-if="filters.dateRange === 'custom'"
+          class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
         >
           <div class="flex items-center gap-2">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                v-model="filters.includeArchived"
-                type="checkbox"
-                class="rounded text-blue-600 focus:ring-blue-500"
-              />
-              <span class="text-sm text-gray-700 dark:text-gray-300">
-                Include archived versions
-                <span v-if="filters.includeArchived" class="text-xs text-gray-500 ml-1">
-                  (showing document history)
-                </span>
-              </span>
-            </label>
-            <span
-              v-if="filters.includeArchived"
-              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700"
-            >
-              <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <label class="text-sm text-gray-600 dark:text-gray-300">From:</label>
+            <input
+              v-model="customDateFrom"
+              type="date"
+              class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+              @change="applyCustomDateRange"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-600 dark:text-gray-300">To:</label>
+            <input
+              v-model="customDateTo"
+              type="date"
+              class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+              @change="applyCustomDateRange"
+            />
+          </div>
+          <button
+            class="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+            @click="applyCustomDateRange"
+          >
+            Apply
+          </button>
+        </div>
+
+        <!-- Active Filters Summary -->
+        <div
+          v-if="hasActiveFilters"
+          class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
+        >
+          <span class="text-xs text-gray-500 dark:text-gray-400">Active filters:</span>
+          <span
+            v-if="filters.search"
+            class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full"
+          >
+            Search: "{{ filters.search }}"
+            <button class="hover:text-red-600" @click="clearSearchFilter()">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-              History mode
+            </button>
+          </span>
+          <span
+            v-if="filters.ocrEngine"
+            class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full"
+          >
+            OCR: {{ getOcrEngineLabel(filters.ocrEngine) }}
+            <button class="hover:text-red-600" @click="clearOcrEngineFilter()">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </span>
+          <span
+            v-if="filters.dateRange && filters.dateRange !== 'custom'"
+            class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full"
+          >
+            Date: {{ getDateRangeLabel(filters.dateRange) }}
+            <button class="hover:text-red-600" @click="clearDateRangeFilter()">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </span>
+          <span
+            v-if="filters.dateRange === 'custom' && customDateFrom"
+            class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full"
+          >
+            Date: {{ customDateFrom }} → {{ customDateTo || 'present' }}
+            <button class="hover:text-red-600" @click="clearCustomDateRange()">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </span>
+          <span
+            v-if="filters.includeArchived"
+            class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full"
+          >
+            Archived
+            <button class="hover:text-red-600" @click="clearArchivedFilter()">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </span>
+        </div>
+
+        <!-- Archived Toggle (inline with other filters) -->
+        <div
+          class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
+        >
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              v-model="filters.includeArchived"
+              type="checkbox"
+              class="rounded text-blue-600 focus:ring-blue-500"
+              @change="fetchDocuments"
+            />
+            <span class="text-sm text-gray-700 dark:text-gray-300">
+              Include archived versions
+              <span v-if="filters.includeArchived" class="text-xs text-gray-500 ml-1">
+                (showing document history)
+              </span>
             </span>
-          </div>
+          </label>
         </div>
       </div>
 
@@ -229,8 +319,49 @@
         <LoadingSpinner size="large" />
       </div>
 
+      <!-- Empty State: No documents (either no documents exist or filters returned no results) -->
       <div
-        v-else-if="serverItems.length === 0"
+        v-else-if="hasLoadedDocuments && serverItems.length === 0"
+        class="bg-gray-50 dark:bg-slate-800 rounded-lg p-12 text-center"
+      >
+        <svg
+          class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+        <h3 class="mt-2 text-lg font-medium text-gray-900 dark:text-white">
+          {{ hasActiveFilters ? 'No documents match your filters' : 'No documents found' }}
+        </h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {{
+            hasActiveFilters
+              ? 'Try adjusting or clearing your filters to see more results'
+              : filters.search
+                ? 'Try adjusting your search or filters'
+                : 'Process some files to see documents here'
+          }}
+        </p>
+        <button
+          v-if="hasActiveFilters"
+          class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          @click="clearFilters"
+        >
+          Clear All Filters
+        </button>
+      </div>
+
+      <!-- True Empty State: No documents processed yet -->
+      <div
+        v-else-if="!hasLoadedDocuments && serverItems.length === 0"
         class="bg-gray-50 dark:bg-slate-800 rounded-lg p-12 text-center"
       >
         <svg
@@ -247,13 +378,9 @@
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No documents found</h3>
+        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No documents yet</h3>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {{
-            filters.search
-              ? 'Try adjusting your search or filters'
-              : 'Process some files to see documents here'
-          }}
+          Process some files in the Files & Preprocessing tab to see documents here
         </p>
       </div>
 
@@ -578,7 +705,6 @@ const toast = useToast()
 // State
 const documents = ref([]) // All documents for groups modal
 const allDocumentsLoaded = ref(false) // Track if we've fetched all documents
-const preprocessingTasks = ref([])
 const isLoading = ref(true)
 const selectedDocuments = ref([])
 const viewingDocument = ref(null)
@@ -596,12 +722,123 @@ const documentGroupsCount = ref(0) // count of document groups
 // Filters
 const filters = ref({
   search: '',
-  taskId: '',
   dateRange: '',
-  ocrLanguage: '',
-  status: '',
+  ocrEngine: '',
   includeArchived: false,
 })
+
+// Custom date range state
+const customDateFrom = ref('')
+const customDateTo = ref('')
+
+// Debounce timer for search
+let searchDebounceTimer = null
+
+// Track if we've ever loaded documents (for filter UX)
+const hasLoadedDocuments = ref(false)
+
+// OCR engine labels mapping
+const ocrEngineLabels = {
+  pypdf: 'Embedded Text',
+  tesseract: 'Local OCR',
+  mistral_ocr: 'Mistral OCR',
+  llm_vision: 'Vision LLM',
+}
+
+// Date range labels mapping
+const dateRangeLabels = {
+  today: 'Today',
+  yesterday: 'Yesterday',
+  week: 'Last 7 Days',
+  month: 'Last 30 Days',
+  custom: 'Custom Range',
+}
+
+// Check if any filters are active
+const hasActiveFilters = computed(() => {
+  return (
+    filters.value.search ||
+    filters.value.dateRange ||
+    filters.value.ocrEngine ||
+    (filters.value.dateRange === 'custom' && customDateFrom.value) ||
+    filters.value.includeArchived
+  )
+})
+
+// Get OCR engine label
+const getOcrEngineLabel = (engine) => {
+  return ocrEngineLabels[engine] || engine
+}
+
+// Get date range label
+const getDateRangeLabel = (range) => {
+  return dateRangeLabels[range] || range
+}
+
+// Compute date bounds for date range filter
+const computeDateBounds = (range) => {
+  const now = new Date()
+  const start = new Date(now)
+
+  if (range === 'today') {
+    start.setHours(0, 0, 0, 0)
+    return { date_from: start.toISOString(), date_to: now.toISOString() }
+  } else if (range === 'yesterday') {
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+    yesterday.setHours(0, 0, 0, 0)
+    start.setHours(23, 59, 59, 999)
+    return { date_from: yesterday.toISOString(), date_to: start.toISOString() }
+  } else if (range === 'week') {
+    start.setDate(now.getDate() - 7)
+    return { date_from: start.toISOString(), date_to: now.toISOString() }
+  } else if (range === 'month') {
+    start.setDate(now.getDate() - 30)
+    return { date_from: start.toISOString(), date_to: now.toISOString() }
+  } else if (range === 'custom' && customDateFrom.value) {
+    const from = new Date(customDateFrom.value)
+    from.setHours(0, 0, 0, 0)
+    const to = customDateTo.value ? new Date(customDateTo.value) : now
+    to.setHours(23, 59, 59, 999)
+    return { date_from: from.toISOString(), date_to: to.toISOString() }
+  }
+  return {}
+}
+
+// Handle date range change
+const handleDateRangeChange = () => {
+  if (filters.value.dateRange === 'custom') {
+    // Don't fetch yet - wait for user to select dates
+    return
+  }
+  currentPage.value = 1
+  fetchDocuments()
+}
+
+// Apply custom date range
+const applyCustomDateRange = () => {
+  currentPage.value = 1
+  fetchDocuments()
+}
+
+// Clear custom date range
+const clearCustomDateRange = () => {
+  customDateFrom.value = ''
+  customDateTo.value = ''
+  filters.value.dateRange = ''
+  fetchDocuments()
+}
+
+// Debounced fetch for search
+const debouncedFetchDocuments = () => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = setTimeout(() => {
+    currentPage.value = 1
+    fetchDocuments()
+  }, 300)
+}
 
 // Stats - using server-side totalCount
 const totalDocuments = computed(() => totalCount.value)
@@ -686,17 +923,20 @@ const fetchDocuments = async () => {
     const params = {
       limit: itemsPerPage.value,
       offset: (currentPage.value - 1) * itemsPerPage.value,
-      file_preprocessing_task_id: filters.value.taskId || undefined,
       search: filters.value.search || undefined,
       date_from: date_from || undefined,
       date_to: date_to || undefined,
       include_archived: filters.value.includeArchived || undefined,
+      ocr_engine: filters.value.ocrEngine || undefined,
       compute_stats: true, // Get server-side stats
     }
 
     const { data } = await api.get(`/project/${props.projectId}/document`, { params })
     serverItems.value = data.items
     totalCount.value = data.total
+
+    // Mark that we've loaded documents at least once (for filter UX)
+    hasLoadedDocuments.value = true
 
     // Safety: if you navigated beyond last page due to a filter change, pull back
     if (
@@ -713,21 +953,6 @@ const fetchDocuments = async () => {
   } finally {
     isLoading.value = false
   }
-}
-
-// Helper stays the same; include if you don't have it yet
-function computeDateBounds(range) {
-  if (!range) return {}
-  const now = new Date()
-  const start = new Date(now)
-  if (range === 'today') {
-    start.setHours(0, 0, 0, 0)
-  } else if (range === 'week') {
-    start.setDate(now.getDate() - 7)
-  } else if (range === 'month') {
-    start.setDate(now.getDate() - 30)
-  }
-  return { date_from: start.toISOString(), date_to: now.toISOString() }
 }
 
 const toggleDocumentSelection = (docId) => {
@@ -901,12 +1126,34 @@ const reprocessDocument = async (doc) => {
 const clearFilters = () => {
   filters.value = {
     search: '',
-    taskId: '',
     dateRange: '',
-    ocrLanguage: '',
-    status: '',
+    ocrEngine: '',
+    includeArchived: false,
   }
+  customDateFrom.value = ''
+  customDateTo.value = ''
   currentPage.value = 1
+  fetchDocuments()
+}
+
+const clearSearchFilter = () => {
+  filters.value.search = ''
+  debouncedFetchDocuments()
+}
+
+const clearOcrEngineFilter = () => {
+  filters.value.ocrEngine = ''
+  fetchDocuments()
+}
+
+const clearDateRangeFilter = () => {
+  filters.value.dateRange = ''
+  fetchDocuments()
+}
+
+const clearArchivedFilter = () => {
+  filters.value.includeArchived = false
+  fetchDocuments()
 }
 
 const getStatusClass = (status) => {
@@ -1036,12 +1283,7 @@ const debouncedSearch = debounce(() => {
 watch(() => filters.value.search, debouncedSearch)
 
 watch(
-  [
-    () => filters.value.taskId,
-    () => filters.value.dateRange,
-    //() => filters.value.ocrLanguage,  // only if supported server-side
-    //() => filters.value.status        // only if supported server-side
-  ],
+  () => filters.value.dateRange,
   () => {
     currentPage.value = 1
     fetchDocuments()

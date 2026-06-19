@@ -501,13 +501,13 @@
                     v-if="schemaForm.schema_definition"
                     class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
                     :class="
-                      !schemaError
+                      isSchemaValid
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                         : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                     "
                   >
                     <svg
-                      v-if="!schemaError"
+                      v-if="isSchemaValid"
                       class="h-4 w-4"
                       fill="none"
                       stroke="currentColor"
@@ -534,7 +534,7 @@
                         d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    <span>{{ !schemaError ? 'Valid' : 'Invalid' }}</span>
+                    <span>{{ isSchemaValid ? 'Valid' : 'Invalid' }}</span>
                   </div>
                 </div>
               </div>
@@ -647,7 +647,7 @@
               </div>
 
               <!-- Tab Content -->
-              <div class="flex-1 min-h-0 overflow-hidden">
+              <div class="flex-1 min-h-0 overflow-hidden flex flex-col">
                 <!-- Simple Mode Editor -->
                 <div v-if="simpleMode" class="h-full">
                   <SimpleSchemaEditor :schema="simpleSchema" @update:schema="updateSimpleSchema" />
@@ -728,8 +728,8 @@
               </button>
               <button
                 type="submit"
-                class="inline-flex justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                :disabled="isSubmitting"
+                class="inline-flex justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="isSubmitting || !isSchemaValid"
               >
                 <svg
                   v-if="isSubmitting"
@@ -1547,6 +1547,32 @@ const simpleSchema = ref({
 })
 const simplePromptMode = ref(true)
 
+// Starter fields seeded for a brand-new schema (matches the fields the
+// SimpleSchemaEditor used to auto-insert on mount). Seeded here — instead
+// of in the editor's onMounted — so it only applies to new schemas, not to
+// every remount caused by toggling Simple/Advanced mode.
+const STARTER_SCHEMA = {
+  type: 'object',
+  properties: {
+    patient_name: {
+      type: 'string',
+      title: 'Patient Name',
+      description: 'Full name of the patient',
+    },
+    date_of_birth: {
+      type: 'string',
+      format: 'date',
+      title: 'Date Of Birth',
+      description: 'Patient date of birth',
+    },
+    medical_record_number: {
+      type: 'string',
+      title: 'Medical Record Number',
+      description: 'Unique medical record ID',
+    },
+  },
+}
+
 // Schema templates for medical documents
 const schemaTemplates = [
   {
@@ -2153,17 +2179,33 @@ const editSchema = (schema) => {
   showEditModal.value = true
 }
 
-const validateSchema = (schema) => {
+// A schema is saveable when it parses to an object with at least one property.
+const isSchemaValid = computed(() => {
   try {
-    console.log('Validating schema:', schema)
-    const schemaCopy = JSON.parse(JSON.stringify(schema))
-    delete schemaCopy.$schema
-    schemaError.value = ''
-    return true
-  } catch (err) {
-    schemaError.value = 'Invalid JSON: ' + err.message
+    const parsed = JSON.parse(schemaForm.value.schema_definition)
+    return (
+      !!parsed &&
+      typeof parsed === 'object' &&
+      !!parsed.properties &&
+      Object.keys(parsed.properties).length > 0
+    )
+  } catch {
     return false
   }
+})
+
+const validateSchema = (schema) => {
+  schemaError.value = ''
+  if (
+    !schema ||
+    typeof schema !== 'object' ||
+    !schema.properties ||
+    Object.keys(schema.properties).length === 0
+  ) {
+    schemaError.value = 'Schema must contain at least one field.'
+    return false
+  }
+  return true
 }
 
 const onRawSchemaChange = () => {
@@ -2274,6 +2316,26 @@ watch(activeTab, (newTab) => {
   }
 })
 
+// Sync the working copy of whichever editor we're switching INTO from the
+// canonical schema string. `visualSchema` and `simpleSchema` are independent
+// copies that are only refreshed from `schemaForm` on modal open otherwise, so
+// without this, edits made in one mode (e.g. deleting a field in Advanced) would
+// not appear in the other until the schema is saved and re-opened.
+watch(simpleMode, (isSimple) => {
+  try {
+    const parsed = JSON.parse(
+      schemaForm.value.schema_definition || '{"type": "object", "properties": {}}',
+    )
+    if (isSimple) {
+      simpleSchema.value = parsed
+    } else {
+      visualSchema.value = parsed
+    }
+  } catch (err) {
+    console.warn('Invalid JSON when switching schema editor mode, keeping current state')
+  }
+})
+
 // Watch for modal changes
 watch([showCreateModal, showEditModal], ([create, edit]) => {
   if (create || edit) {
@@ -2287,11 +2349,14 @@ watch([showCreateModal, showEditModal], ([create, edit]) => {
 watch(showCreateModal, (newValue) => {
   if (newValue) {
     simpleMode.value = true // Default to simple mode
-    simpleSchema.value = { type: 'object', properties: {} }
-    visualSchema.value = { type: 'object', properties: {} }
+    // Seed starter fields for a new schema (SimpleSchemaEditor no longer
+    // auto-seeds on mount).
+    const starter = JSON.parse(JSON.stringify(STARTER_SCHEMA))
+    simpleSchema.value = starter
+    visualSchema.value = JSON.parse(JSON.stringify(STARTER_SCHEMA))
     schemaForm.value = {
       schema_name: '',
-      schema_definition: JSON.stringify({ type: 'object', properties: {} }, null, 2),
+      schema_definition: JSON.stringify(STARTER_SCHEMA, null, 2),
     }
   }
 })
@@ -2321,11 +2386,13 @@ watch(
   { deep: true },
 )
 
-// Watch visual schema changes
+// Watch visual schema changes (advanced mode only).
+// In simple mode the SimpleSchemaEditor drives `schemaForm` via `updateSimpleSchema`;
+// syncing from `visualSchema` here would clobber it with the (empty) visual schema.
 watch(
   visualSchema,
   (newSchema) => {
-    if (isUpdatingFromWatch) return
+    if (isUpdatingFromWatch || simpleMode.value) return
 
     // Clear any pending updates
     if (updateTimeout) {

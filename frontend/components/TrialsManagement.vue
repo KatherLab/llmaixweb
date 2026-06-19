@@ -9,14 +9,6 @@
         </p>
       </div>
       <div class="flex items-center gap-4">
-        <label class="flex items-center text-sm gap-2">
-          <input
-            v-model="showCompleted"
-            type="checkbox"
-            class="rounded border-gray-300 dark:border-slate-700 dark:bg-slate-800"
-          />
-          <span class="text-gray-700 dark:text-gray-300">Show completed</span>
-        </label>
         <Tooltip v-if="trialDisabled" :text="trialDisabledReason">
           <button
             class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 dark:hover:bg-blue-800 transition disabled:bg-blue-300 disabled:cursor-not-allowed"
@@ -41,152 +33,322 @@
 
     <!-- Filter Panel -->
     <div
-      class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4"
+      class="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700"
     >
-      <div class="grid grid-cols-1 md:grid-cols-7 gap-4">
+      <!-- Top row: Search + Filters -->
+      <div class="flex flex-wrap items-center gap-3">
         <!-- Search -->
-        <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >Search</label
+        <div class="relative flex-1 max-w-sm min-w-[200px]">
+          <input
+            v-model="filters.search"
+            type="text"
+            placeholder="Search trials..."
+            class="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+            @input="debouncedFetchTrials"
+          />
+          <svg
+            class="absolute left-3 top-2.5 h-4 w-4 text-gray-400 dark:text-gray-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-          <div class="relative">
-            <input
-              v-model="filters.search"
-              type="text"
-              placeholder="Search in name, description, or ID..."
-              class="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              @keyup.enter="applyFilters"
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
-            <svg
-              class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
+          </svg>
+        </div>
+
+        <!-- Status -->
+        <select
+          v-model="filters.status"
+          class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          @change="applyFilters"
+        >
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+
+        <!-- Schema -->
+        <select
+          v-model="filters.schema_id"
+          class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          @change="applyFilters"
+        >
+          <option value="">All Schemas</option>
+          <option v-for="schema in schemas" :key="schema.id" :value="schema.id">
+            {{ schema.schema_name }}
+          </option>
+        </select>
+
+        <!-- Prompt -->
+        <select
+          v-model="filters.prompt_id"
+          class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          @change="applyFilters"
+        >
+          <option value="">All Prompts</option>
+          <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id">
+            {{ prompt.name }}
+          </option>
+        </select>
+
+        <!-- Document Group -->
+        <select
+          v-model="filters.document_set_id"
+          class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          @change="applyFilters"
+        >
+          <option value="">All Groups</option>
+          <option v-for="group in documentGroups" :key="group.id" :value="group.id">
+            {{ group.name }}
+          </option>
+        </select>
+
+        <!-- LLM Model -->
+        <select
+          v-model="filters.llm_model"
+          class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          @change="applyFilters"
+        >
+          <option value="">All Models</option>
+          <option v-for="model in availableTrialModels" :key="model" :value="model">
+            {{ model }}
+          </option>
+        </select>
+
+        <!-- Errors -->
+        <select
+          v-model="filters.has_failures"
+          class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          @change="applyFilters"
+        >
+          <option value="">All</option>
+          <option :value="true">Has errors</option>
+          <option :value="false">No errors</option>
+        </select>
+
+        <!-- Date Range -->
+        <select
+          v-model="filters.dateRange"
+          class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          @change="handleDateRangeChange"
+        >
+          <option value="">All Time</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week">Last 7 Days</option>
+          <option value="month">Last 30 Days</option>
+          <option value="custom">Custom Range...</option>
+        </select>
+
+        <!-- Clear Filters -->
+        <button
+          v-if="hasActiveFilters"
+          class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+          title="Clear all filters"
+          @click="clearFilters"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+
+        <div class="ml-auto text-sm text-gray-500 dark:text-gray-400">{{ totalTrials }} trials</div>
+      </div>
+
+      <!-- Custom Date Range Picker (shown when "Custom Range" is selected) -->
+      <div
+        v-if="filters.dateRange === 'custom'"
+        class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
+      >
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600 dark:text-gray-300">From:</label>
+          <input
+            v-model="customDateFrom"
+            type="date"
+            class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+            @change="applyCustomDateRange"
+          />
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-gray-600 dark:text-gray-300">To:</label>
+          <input
+            v-model="customDateTo"
+            type="date"
+            class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+            @change="applyCustomDateRange"
+          />
+        </div>
+        <button
+          class="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+          @click="applyCustomDateRange"
+        >
+          Apply
+        </button>
+      </div>
+
+      <!-- Active Filters Summary -->
+      <div
+        v-if="hasActiveFilters"
+        class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
+      >
+        <span class="text-xs text-gray-500 dark:text-gray-400">Active filters:</span>
+        <span
+          v-if="filters.search"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full"
+        >
+          Search: "{{ filters.search }}"
+          <button class="hover:text-red-600" @click="clearSearchFilter">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                d="M6 18L18 6M6 6l12 12"
               />
             </svg>
-          </div>
-        </div>
-
-        <!-- Status -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >Status</label
-          >
-          <select
-            v-model="filters.status"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-            @change="applyFilters"
-          >
-            <option value="">All</option>
-            <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="completed">Completed</option>
-            <option value="failed">Failed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-
-        <!-- Schema -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >Schema</label
-          >
-          <select
-            v-model="filters.schema_id"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-            @change="applyFilters"
-          >
-            <option value="">All</option>
-            <option v-for="schema in schemas" :key="schema.id" :value="schema.id">
-              {{ schema.schema_name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Prompt -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >Prompt</label
-          >
-          <select
-            v-model="filters.prompt_id"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-            @change="applyFilters"
-          >
-            <option value="">All</option>
-            <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id">
-              {{ prompt.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- LLM Model -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >LLM Model</label
-          >
-          <input
-            v-model="filters.llm_model"
-            type="text"
-            placeholder="Exact match"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500"
-            @keyup.enter="applyFilters"
-          />
-        </div>
-
-        <!-- Failures -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >Errors</label
-          >
-          <select
-            v-model="filters.has_failures"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-            @change="applyFilters"
-          >
-            <option value="">All</option>
-            <option :value="true">Has errors</option>
-            <option :value="false">No errors</option>
-          </select>
-        </div>
-
-        <!-- Date Range -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >Created</label
-          >
-          <select
-            v-model="filters.dateRange"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-            @change="applyFilters"
-          >
-            <option value="">All Time</option>
-            <option value="today">Today</option>
-            <option value="week">Last 7 days</option>
-            <option value="month">Last 30 days</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="mt-3 flex gap-2">
-        <button
-          class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 dark:hover:bg-blue-800"
-          @click="applyFilters"
+          </button>
+        </span>
+        <span
+          v-if="filters.status"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full"
         >
-          Apply
-        </button>
-        <button
-          class="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 dark:text-gray-200 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-700"
-          @click="clearFilters"
+          Status: {{ statusLabel(filters.status) }}
+          <button class="hover:text-red-600" @click="clearStatusFilter">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filters.schema_id"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full"
         >
-          Clear
-        </button>
+          Schema: {{ schemaName(filters.schema_id) }}
+          <button class="hover:text-red-600" @click="clearSchemaFilter">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filters.prompt_id"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-full"
+        >
+          Prompt: {{ promptName(filters.prompt_id) }}
+          <button class="hover:text-red-600" @click="clearPromptFilter">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filters.document_set_id"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full"
+        >
+          Group: {{ groupName(filters.document_set_id) }}
+          <button class="hover:text-red-600" @click="clearDocumentSetFilter">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filters.llm_model"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full"
+        >
+          Model: {{ filters.llm_model }}
+          <button class="hover:text-red-600" @click="clearLlmModelFilter">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filters.has_failures !== '' && filters.has_failures !== null"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full"
+        >
+          Errors: {{ filters.has_failures ? 'Has errors' : 'No errors' }}
+          <button class="hover:text-red-600" @click="clearHasFailuresFilter">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filters.dateRange && filters.dateRange !== 'custom'"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full"
+        >
+          Date: {{ dateRangeLabel(filters.dateRange) }}
+          <button class="hover:text-red-600" @click="clearDateRangeFilter">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          v-if="filters.dateRange === 'custom' && customDateFrom"
+          class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full"
+        >
+          Date: {{ customDateFrom }} → {{ customDateTo || 'present' }}
+          <button class="hover:text-red-600" @click="clearCustomDateRange">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </span>
       </div>
     </div>
 
@@ -320,7 +482,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { debounce } from 'perfect-debounce'
 import { useToast } from 'vue-toastification'
 import { api } from '@/services/api'
 import { websocketService } from '@/services/websocket.js'
@@ -347,6 +510,7 @@ const toast = useToast()
 const documents = ref([])
 const schemas = ref([])
 const prompts = ref([])
+const documentGroups = ref([])
 const trials = ref([])
 const totalTrials = ref(0)
 const limit = ref(20)
@@ -356,7 +520,6 @@ const error = ref(null)
 const isModalOpen = ref(false)
 const isConfirmDialogOpen = ref(false)
 const trialToDelete = ref(null)
-const showCompleted = ref(true)
 const showRenameModal = ref(false)
 const editingTrial = ref(null)
 const selectedTrials = ref([])
@@ -414,31 +577,99 @@ const filters = ref({
   status: '',
   schema_id: '',
   prompt_id: '',
+  document_set_id: '',
   llm_model: '',
   has_failures: '',
   dateRange: '',
 })
 
-function mapDateRangeToBounds(range) {
+// Custom date range state
+const customDateFrom = ref('')
+const customDateTo = ref('')
+
+// Label maps for chips
+const dateRangeLabels = {
+  today: 'Today',
+  yesterday: 'Yesterday',
+  week: 'Last 7 Days',
+  month: 'Last 30 Days',
+  custom: 'Custom Range',
+}
+
+const statusLabels = {
+  pending: 'Pending',
+  processing: 'Processing',
+  completed: 'Completed',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+}
+
+const dateRangeLabel = (range) => dateRangeLabels[range] || range
+const statusLabel = (status) => statusLabels[status] || status
+const schemaName = (id) => schemas.value.find((s) => s.id === id)?.schema_name || `#${id}`
+const promptName = (id) => prompts.value.find((p) => p.id === id)?.name || `#${id}`
+const groupName = (id) => documentGroups.value.find((g) => g.id === id)?.name || `#${id}`
+
+// Check if any filters are active
+const hasActiveFilters = computed(() => {
+  return (
+    filters.value.search ||
+    filters.value.status ||
+    filters.value.schema_id ||
+    filters.value.prompt_id ||
+    filters.value.document_set_id ||
+    filters.value.llm_model ||
+    (filters.value.has_failures !== '' && filters.value.has_failures !== null) ||
+    filters.value.dateRange
+  )
+})
+
+// Compute date bounds for date range filter
+const getDateBounds = (range) => {
   const now = new Date()
-  let from = null,
-    to = null
+  const start = new Date(now)
+
   if (range === 'today') {
-    from = new Date()
-    from.setHours(0, 0, 0, 0)
-    to = new Date()
-    to.setHours(23, 59, 59, 999)
+    start.setHours(0, 0, 0, 0)
+    return { date_from: start.toISOString(), date_to: now.toISOString() }
+  } else if (range === 'yesterday') {
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+    yesterday.setHours(0, 0, 0, 0)
+    start.setHours(23, 59, 59, 999)
+    return { date_from: yesterday.toISOString(), date_to: start.toISOString() }
   } else if (range === 'week') {
-    from = new Date(now)
-    from.setDate(now.getDate() - 7)
+    start.setDate(now.getDate() - 7)
+    return { date_from: start.toISOString(), date_to: now.toISOString() }
   } else if (range === 'month') {
-    from = new Date(now)
-    from.setDate(now.getDate() - 30)
+    start.setDate(now.getDate() - 30)
+    return { date_from: start.toISOString(), date_to: now.toISOString() }
+  } else if (range === 'custom' && customDateFrom.value) {
+    const from = new Date(customDateFrom.value)
+    from.setHours(0, 0, 0, 0)
+    const to = customDateTo.value ? new Date(customDateTo.value) : now
+    to.setHours(23, 59, 59, 999)
+    return { date_from: from.toISOString(), date_to: to.toISOString() }
   }
-  return {
-    date_from: from ? from.toISOString() : undefined,
-    date_to: to ? to.toISOString() : undefined,
-  }
+  return {}
+}
+
+// Handle date range change
+const handleDateRangeChange = () => {
+  // Don't fetch yet when "Custom Range" is selected — wait for date inputs
+  if (filters.value.dateRange === 'custom') return
+  applyFilters()
+}
+
+const applyCustomDateRange = () => {
+  applyFilters()
+}
+
+const clearCustomDateRange = () => {
+  customDateFrom.value = ''
+  customDateTo.value = ''
+  filters.value.dateRange = ''
+  applyFilters()
 }
 
 const availableTrialModels = computed(() => {
@@ -452,10 +683,46 @@ function clearFilters() {
     status: '',
     schema_id: '',
     prompt_id: '',
+    document_set_id: '',
     llm_model: '',
     has_failures: '',
     dateRange: '',
   }
+  customDateFrom.value = ''
+  customDateTo.value = ''
+  applyFilters()
+}
+
+const clearSearchFilter = () => {
+  filters.value.search = ''
+  applyFilters()
+}
+const clearStatusFilter = () => {
+  filters.value.status = ''
+  applyFilters()
+}
+const clearSchemaFilter = () => {
+  filters.value.schema_id = ''
+  applyFilters()
+}
+const clearPromptFilter = () => {
+  filters.value.prompt_id = ''
+  applyFilters()
+}
+const clearDocumentSetFilter = () => {
+  filters.value.document_set_id = ''
+  applyFilters()
+}
+const clearLlmModelFilter = () => {
+  filters.value.llm_model = ''
+  applyFilters()
+}
+const clearHasFailuresFilter = () => {
+  filters.value.has_failures = ''
+  applyFilters()
+}
+const clearDateRangeFilter = () => {
+  filters.value.dateRange = ''
   applyFilters()
 }
 
@@ -465,18 +732,13 @@ function paramsFromFilters() {
   if (filters.value.status) params.status = filters.value.status
   if (filters.value.schema_id) params.schema_id = filters.value.schema_id
   if (filters.value.prompt_id) params.prompt_id = filters.value.prompt_id
+  if (filters.value.document_set_id) params.document_set_id = filters.value.document_set_id
   if (filters.value.llm_model) params.llm_model = filters.value.llm_model
   if (filters.value.has_failures !== '' && filters.value.has_failures !== null)
     params.has_failures = filters.value.has_failures
-  const { date_from, date_to } = mapDateRangeToBounds(filters.value.dateRange)
+  const { date_from, date_to } = getDateBounds(filters.value.dateRange)
   if (date_from) params.date_from = date_from
   if (date_to) params.date_to = date_to
-
-  // status toggle: hide completed/failed when showCompleted=false
-  if (!showCompleted.value) {
-    // If user didn’t pick a status, default to only active
-    if (!params.status) params.status = 'processing' // not perfect; better approach: add server multi-status. For now we keep client-side hide below.
-  }
   return params
 }
 
@@ -514,12 +776,10 @@ function applyFilters() {
   resetAndFetch()
 }
 
-watch([showCompleted], () => {
-  // We do client-side hide for completed/failed when the toggle is off:
-  // If you want perfect server-side behavior, extend API with multi-status.
-  // For now, simply refetch to the top for UX.
-  resetAndFetch()
-})
+// Debounced fetch for search input
+const debouncedFetchTrials = debounce(() => {
+  applyFilters()
+}, 300)
 
 function openCreateTrialModal() {
   isModalOpen.value = true
@@ -691,16 +951,22 @@ const stopWebSocket = () => {
 
 onMounted(async () => {
   try {
-    const [documentsResponse, schemasResponse, promptsResponse] = await Promise.all([
-      api.get(`/project/${props.projectId}/document`),
-      api.get(`/project/${props.projectId}/schema`),
-      api.get(`/project/${props.projectId}/prompt`),
-    ])
+    const [documentsResponse, schemasResponse, promptsResponse, groupsResponse] = await Promise.all(
+      [
+        api.get(`/project/${props.projectId}/document`),
+        api.get(`/project/${props.projectId}/schema`),
+        api.get(`/project/${props.projectId}/prompt`),
+        api.get(`/project/${props.projectId}/document-set`, {
+          params: { include_auto_generated: true },
+        }),
+      ],
+    )
     documents.value = Array.isArray(documentsResponse.data)
       ? documentsResponse.data
       : documentsResponse.data?.items || []
     schemas.value = schemasResponse.data
     prompts.value = promptsResponse.data
+    documentGroups.value = groupsResponse.data
     await resetAndFetch()
   } catch (err) {
     error.value = err?.message || 'Failed to load'

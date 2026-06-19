@@ -67,6 +67,9 @@ def get_documents(
         datetime.datetime | None,
         Query(description="ISO datetime upper bound (exclusive)"),
     ] = None,
+    ocr_engine: Annotated[
+        str | None, Query(description="Filter by OCR engine (pypdf, tesseract, mistral_ocr, llm_vision)")
+    ] = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
     include_archived: Annotated[
@@ -106,6 +109,11 @@ def get_documents(
         base = base.where(D.created_at >= date_from)
     if date_to is not None:
         base = base.where(D.created_at < date_to)
+
+    # Filter by OCR engine (stored in meta_data JSON)
+    if ocr_engine is not None:
+        # PostgreSQL JSON operator for ocr_engine field
+        base = base.where(D.meta_data["ocr_engine"].as_string() == ocr_engine)
 
     joined_for_search = False
     if search:
@@ -148,6 +156,8 @@ def get_documents(
             )
         if config_id is not None:
             stats_base = stats_base.where(D.preprocessing_config_id == config_id)
+        if ocr_engine is not None:
+            stats_base = stats_base.where(D.meta_data["ocr_engine"].as_string() == ocr_engine)
 
         # Today count
         today_count = db.scalar(stats_base.where(D.created_at >= today_start)) or 0

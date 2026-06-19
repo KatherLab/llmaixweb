@@ -187,59 +187,55 @@ def get_project_files(
         query = query.where(models.File.file_size <= max_size)
 
     # Get total count before pagination
-    total_query = select(func.count(models.File.id)).where(
+    # Build the count query with the same joins and filters as the main query
+    count_query = select(func.count(models.File.id)).where(
         models.File.project_id == project_id
     )
+
+    # Apply the same filters to the count query
     if search:
-        total_query = total_query.where(models.File.file_name.ilike(f"%{search}%"))
+        count_query = count_query.where(models.File.file_name.ilike(f"%{search}%"))
     if file_type:
-        total_query = total_query.where(models.File.file_type == file_type)
+        count_query = count_query.where(models.File.file_type == file_type)
     if status:
-        # For status filter, we need to use the same subquery approach
+        # For status filter, we need to join with the status subquery
+        count_query = count_query.outerjoin(
+            latest_task_status_with_status,
+            models.File.id == latest_task_status_with_status.c.file_id,
+        )
         status_lower = status.lower()
         if status_lower == "processing":
-            total_query = total_query.select_from(
-                models.File.outerjoin(
-                    latest_task_status_with_status,
-                    models.File.id == latest_task_status_with_status.c.file_id,
-                )
-            ).where(
+            # 'processing' includes pending, processing, and in_progress
+            count_query = count_query.where(
                 latest_task_status_with_status.c.latest_status.in_(
                     ["pending", "processing", "in_progress"]
                 )
             )
         elif status_lower in [
             "pending",
-            "processing",
-            "in_progress",
             "completed",
             "failed",
         ]:
-            total_query = total_query.select_from(
-                models.File.outerjoin(
-                    latest_task_status_with_status,
-                    models.File.id == latest_task_status_with_status.c.file_id,
-                )
-            ).where(latest_task_status_with_status.c.latest_status == status_lower)
+            count_query = count_query.where(
+                latest_task_status_with_status.c.latest_status == status_lower
+            )
         elif status_lower in ["not_preprocessed", "notstarted", "none"]:
-            total_query = total_query.select_from(
-                models.File.outerjoin(
-                    latest_task_status_with_status,
-                    models.File.id == latest_task_status_with_status.c.file_id,
-                )
-            ).where(latest_task_status_with_status.c.latest_status.is_(None))
+            # Files without any preprocessing tasks
+            count_query = count_query.where(
+                latest_task_status_with_status.c.latest_status.is_(None)
+            )
     if file_creator is not None:
-        total_query = total_query.where(models.File.file_creator == file_creator)
+        count_query = count_query.where(models.File.file_creator == file_creator)
     if date_from:
-        total_query = total_query.where(models.File.created_at >= date_from)
+        count_query = count_query.where(models.File.created_at >= date_from)
     if date_to:
-        total_query = total_query.where(models.File.created_at <= date_to)
+        count_query = count_query.where(models.File.created_at <= date_to)
     if min_size is not None:
-        total_query = total_query.where(models.File.file_size >= min_size)
+        count_query = count_query.where(models.File.file_size >= min_size)
     if max_size is not None:
-        total_query = total_query.where(models.File.file_size <= max_size)
+        count_query = count_query.where(models.File.file_size <= max_size)
 
-    total = db.execute(total_query).scalar() or 0
+    total = db.execute(count_query).scalar() or 0
 
     # Apply sorting
     valid_sort_fields = {
