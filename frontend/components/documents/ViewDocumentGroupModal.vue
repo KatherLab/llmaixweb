@@ -86,7 +86,7 @@
             <!-- Documents List -->
             <div>
               <div class="flex justify-between items-center mb-4">
-                <h4 class="font-medium text-gray-900">Documents ({{ group.documents.length }})</h4>
+                <h4 class="font-medium text-gray-900">Documents ({{ docTotal }})</h4>
                 <div class="flex items-center gap-2">
                   <button
                     class="text-sm text-blue-600 hover:text-blue-800"
@@ -128,7 +128,17 @@
                     </tr>
                   </thead>
                   <tbody class="bg-white divide-y divide-gray-200">
-                    <tr v-for="doc in group.documents" :key="doc.id" class="hover:bg-gray-50">
+                    <tr v-if="docLoading">
+                      <td colspan="4" class="px-6 py-8 text-center text-gray-400">
+                        Loading documents…
+                      </td>
+                    </tr>
+                    <tr v-else-if="documents.length === 0">
+                      <td colspan="4" class="px-6 py-8 text-center text-gray-400">
+                        No documents in this set
+                      </td>
+                    </tr>
+                    <tr v-for="doc in documents" :key="doc.id" class="hover:bg-gray-50">
                       <td class="px-6 py-4">
                         <div class="flex items-center">
                           <FileIcon :file-type="doc.original_file?.file_type" :size="32" />
@@ -173,6 +183,32 @@
                     </tr>
                   </tbody>
                 </table>
+
+                <!-- Pagination -->
+                <div
+                  v-if="docTotalPages > 1"
+                  class="bg-gray-50 px-4 py-2 flex items-center justify-between border-t"
+                >
+                  <span class="text-xs text-gray-500">
+                    Page {{ docPage }} of {{ docTotalPages }} ({{ docTotal }} documents)
+                  </span>
+                  <div class="flex gap-2">
+                    <button
+                      class="px-3 py-1 text-sm border rounded disabled:opacity-50"
+                      :disabled="docPage <= 1"
+                      @click="prevDocPage"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      class="px-3 py-1 text-sm border rounded disabled:opacity-50"
+                      :disabled="docPage >= docTotalPages"
+                      @click="nextDocPage"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -235,7 +271,54 @@ const usageStats = ref({
   lastUsed: null,
 })
 
-// Load usage statistics
+// Paginated documents of this set — fetched on demand instead of reading
+// `group.documents` (which the set list no longer carries).
+const documents = ref([])
+const docTotal = ref(props.group.document_count ?? 0)
+const docPage = ref(1)
+const docPageSize = ref(25)
+const docLoading = ref(false)
+
+const docTotalPages = computed(() =>
+  docPageSize.value ? Math.ceil(docTotal.value / docPageSize.value) : 1,
+)
+
+const fetchDocuments = async () => {
+  docLoading.value = true
+  try {
+    const { data } = await api.get(`/project/${props.projectId}/document`, {
+      params: {
+        document_set_id: props.group.id,
+        limit: docPageSize.value,
+        offset: (docPage.value - 1) * docPageSize.value,
+        compute_stats: false,
+      },
+    })
+    documents.value = data.items || []
+    docTotal.value = data.total ?? documents.value.length
+  } catch (error) {
+    console.error('Failed to load set documents:', error)
+    documents.value = []
+  } finally {
+    docLoading.value = false
+  }
+}
+
+const prevDocPage = () => {
+  if (docPage.value > 1) {
+    docPage.value--
+    fetchDocuments()
+  }
+}
+
+const nextDocPage = () => {
+  if (docPage.value < docTotalPages.value) {
+    docPage.value++
+    fetchDocuments()
+  }
+}
+
+// Load usage statistics + first page of documents
 onMounted(async () => {
   try {
     const response = await api.get(
@@ -245,6 +328,7 @@ onMounted(async () => {
   } catch (error) {
     console.error('Failed to load usage stats:', error)
   }
+  await fetchDocuments()
 })
 
 const viewDocument = (doc) => {
@@ -252,7 +336,7 @@ const viewDocument = (doc) => {
 }
 
 const exportDocumentList = () => {
-  const data = props.group.documents.map((doc) => ({
+  const data = documents.value.map((doc) => ({
     id: doc.id,
     filename: doc.original_file?.file_name || `Document #${doc.id}`,
     configuration: doc.preprocessing_config?.name || 'N/A',
@@ -280,7 +364,7 @@ const exportDocumentList = () => {
 }
 
 const downloadAllDocuments = async () => {
-  if (!confirm(`Download all ${props.group.documents.length} documents?`)) {
+  if (!confirm(`Download all ${docTotal.value} documents?`)) {
     return
   }
 

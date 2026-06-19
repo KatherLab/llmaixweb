@@ -134,10 +134,36 @@ class Document(DocumentBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DocumentListItem(UTCModel):
+    """Lightweight Document for list views — excludes the heavy `text` column.
+
+    The full `text` is only returned by `GET /document/{id}` (used by the
+    document viewer). List/picker views use this so a 500-row page doesn't
+    ferry multi-MB OCR payloads.
+    """
+
+    id: int
+    project_id: int
+    document_name: str | None = None
+    meta_data: dict | None = None
+    original_file_id: int
+    original_file: File | None = None
+    preprocessed_file_id: int | None = None
+    preprocessed_file: File | None = None
+    preprocessing_config_id: int
+    preprocessing_config: PreprocessingConfiguration | None = None
+    is_latest: bool = True
+    version_of: int | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class PaginatedDocuments(UTCModel):
     """Paginated response for document listing with stats"""
 
-    items: List[Document]
+    items: List[DocumentListItem]
     total: int
     # Stats computed server-side to avoid loading all documents
     recent_count: int | None = None  # Documents created in last 7 days
@@ -227,19 +253,36 @@ class DocumentBulkAction(BaseModel):
     force: bool = False
 
 
-class DocumentSetSummary(BaseModel):
-    """Summary information for document set listing"""
+class DocumentSetSummary(UTCModel):
+    """Lightweight document-set info for list views.
+
+    Carries aggregate counts instead of the full `documents` collection so the
+    set list doesn't N+1-load every member document (with `text`) per set.
+    """
 
     id: int
+    project_id: int
     name: str
     description: str | None = None
-    document_count: int
-    tags: list[str]
-    preprocessing_config_name: str | None = None
-    is_auto_generated: bool
+    tags: list[str] = []
+    is_auto_generated: bool = False
+    preprocessing_config: PreprocessingConfiguration | None = None
     created_at: datetime
-    last_used: datetime | None = None
-    usage_count: int
+    updated_at: datetime
+    document_count: int = 0
+    trials_count: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedDocumentSets(UTCModel):
+    """Paginated response for document-set listing"""
+
+    items: List[DocumentSetSummary]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 class DocumentSetDetail(DocumentSet):
@@ -779,11 +822,14 @@ from .user import User, UserPublic  # noqa: E402, F401
 # --- Rebuild forward refs for Pydantic v2 / FastAPI ---
 for _m in [
     Document,
+    DocumentListItem,
     File,
     PreprocessingConfiguration,
     FilePreprocessingTask,
     PreprocessingTask,
     DocumentSet,
+    DocumentSetSummary,
+    PaginatedDocumentSets,
     TrialResult,
     Trial,
     Evaluation,

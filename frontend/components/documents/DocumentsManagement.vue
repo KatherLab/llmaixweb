@@ -1308,7 +1308,7 @@ const fetchDocumentGroupsCount = async () => {
     const { data } = await api.get(`/project/${props.projectId}/document-set`, {
       params: { include_auto_generated: true },
     })
-    documentGroupsCount.value = data.length
+    documentGroupsCount.value = data.total
   } catch (error) {
     console.error('Failed to fetch document groups count:', error)
   }

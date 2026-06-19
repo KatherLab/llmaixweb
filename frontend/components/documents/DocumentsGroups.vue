@@ -154,7 +154,7 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="text-sm text-gray-900 dark:text-white">{{
-                  group.document_count || group.documents?.length || 0
+                  group.document_count ?? 0
                 }}</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -237,21 +237,13 @@
                   </button>
                   <button
                     class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                    :title="
-                      group.trials && group.trials.length > 0
-                        ? 'Cannot delete - used by trial'
-                        : 'Delete'
-                    "
-                    :disabled="group.trials && group.trials.length > 0"
+                    :title="group.trials_count > 0 ? 'Cannot delete - used by trial' : 'Delete'"
+                    :disabled="group.trials_count > 0"
                     @click="deleteGroup(group)"
                   >
                     <svg
                       class="h-5 w-5"
-                      :class="
-                        group.trials && group.trials.length > 0
-                          ? 'opacity-50 cursor-not-allowed'
-                          : ''
-                      "
+                      :class="group.trials_count > 0 ? 'opacity-50 cursor-not-allowed' : ''"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -362,7 +354,6 @@
     <CreateDocumentGroupModal
       v-if="showCreateModal || editingGroup"
       :group="editingGroup"
-      :documents="availableDocuments"
       :project-id="projectId"
       @close="closeModal"
       @save="handleSaveGroup"
@@ -416,16 +407,16 @@
               </p>
 
               <div
-                v-if="groupToDelete?.documents?.length > 0"
+                v-if="groupToDelete?.document_count > 0"
                 class="bg-yellow-50 border border-yellow-200 rounded-lg p-3"
               >
                 <p class="text-sm text-yellow-800">
                   This group contains
-                  <strong>{{ groupToDelete.documents.length }}</strong> document(s).
+                  <strong>{{ groupToDelete.document_count }}</strong> document(s).
                 </p>
               </div>
 
-              <div v-if="groupToDelete?.documents?.length > 0" class="flex items-center">
+              <div v-if="groupToDelete?.document_count > 0" class="flex items-center">
                 <input
                   v-model="deleteDocumentsToo"
                   type="checkbox"
@@ -517,7 +508,6 @@ const searchQuery = ref('')
 const showCreateModal = ref(false)
 const editingGroup = ref(null)
 const viewingGroup = ref(null)
-const availableDocuments = ref([])
 const isLoading = ref(true)
 const serverItems = ref([])
 const totalCount = ref(0)
@@ -574,36 +564,23 @@ const canDeleteGroup = computed(() => {
   return confirmDeleteGroup.value && !isDeleting.value
 })
 
-// Fetch document sets with pagination
+// Fetch document sets with server-side pagination + search
 const fetchDocumentSets = async () => {
   isLoading.value = true
   try {
-    const params = {
-      include_auto_generated: true,
-    }
+    const { data } = await api.get(`/project/${props.projectId}/document-set`, {
+      params: {
+        include_auto_generated: true,
+        search: searchQuery.value || undefined,
+        limit: itemsPerPage.value,
+        offset: (currentPage.value - 1) * itemsPerPage.value,
+      },
+    })
 
-    const { data } = await api.get(`/project/${props.projectId}/document-set`, { params })
+    serverItems.value = data.items || []
+    totalCount.value = data.total ?? serverItems.value.length
 
-    // Apply search filter client-side
-    let filteredSets = data
-    if (searchQuery.value) {
-      const query = searchQuery.value.toLowerCase()
-      filteredSets = data.filter(
-        (group) =>
-          group.name.toLowerCase().includes(query) ||
-          group.description?.toLowerCase().includes(query) ||
-          group.tags?.some((tag) => tag.toLowerCase().includes(query)),
-      )
-    }
-
-    totalCount.value = filteredSets.length
-
-    // Apply pagination
-    const start = (currentPage.value - 1) * itemsPerPage.value
-    const end = start + itemsPerPage.value
-    serverItems.value = filteredSets.slice(start, end)
-
-    // Safety: if we're on a page that no longer exists after filtering, go to last page
+    // Safety: if we're on a page that no longer exists, pull back to the last page
     if (
       serverItems.value.length === 0 &&
       totalCount.value > 0 &&
@@ -617,30 +594,6 @@ const fetchDocumentSets = async () => {
     console.error(error)
   } finally {
     isLoading.value = false
-  }
-}
-
-// Fetch all documents for the modal
-const fetchAllDocuments = async () => {
-  try {
-    const PAGE_SIZE = 500
-    let offset = 0
-    let allDocs = []
-    let hasMore = true
-
-    while (hasMore) {
-      const { data } = await api.get(`/project/${props.projectId}/document`, {
-        params: { limit: PAGE_SIZE, offset },
-      })
-      allDocs = allDocs.concat(data.items || [])
-      hasMore = data.items && data.items.length === PAGE_SIZE
-      offset += PAGE_SIZE
-    }
-
-    availableDocuments.value = allDocs
-  } catch (error) {
-    console.error('Failed to fetch all documents:', error)
-    availableDocuments.value = []
   }
 }
 
@@ -659,7 +612,7 @@ const viewDocumentFromGroup = (doc) => {
 }
 
 const deleteGroup = (group) => {
-  if (group.trials && group.trials.length > 0) {
+  if (group.trials_count > 0) {
     toast.warning('Cannot delete group - it is used by a trial')
     return
   }
@@ -739,10 +692,14 @@ const handleSaveGroup = async (groupData) => {
   }
 }
 
-// Watch for search query changes
+// Watch for search query changes (debounced → server-side search)
+let searchDebounce = null
 watch(searchQuery, () => {
-  currentPage.value = 1
-  fetchDocumentSets()
+  clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => {
+    currentPage.value = 1
+    fetchDocumentSets()
+  }, 300)
 })
 
 // Watch for page changes
@@ -750,7 +707,6 @@ watch([currentPage, itemsPerPage], fetchDocumentSets)
 
 // Lifecycle
 onMounted(() => {
-  fetchAllDocuments()
   fetchDocumentSets()
 })
 </script>

@@ -174,7 +174,34 @@
           <div class="flex-1 overflow-auto">
             <!-- Text View -->
             <div v-if="viewMode === 'text'" class="p-6">
-              <div class="prose max-w-none bg-gray-50 p-4 rounded-lg" v-html="safeMarkdown" />
+              <div v-if="textLoading" class="flex items-center justify-center py-12 text-gray-400">
+                <svg
+                  class="animate-spin h-6 w-6 mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span>Loading text…</span>
+              </div>
+              <div
+                v-else
+                class="prose max-w-none bg-gray-50 p-4 rounded-lg"
+                v-html="safeMarkdown"
+              />
             </div>
             <!-- PDF View -->
             <div v-else-if="viewMode === 'pdf' && originalPdfUrl" class="h-full">
@@ -392,9 +419,7 @@
                   </div>
                   <div>
                     <dt class="text-gray-500">Text Length</dt>
-                    <dd class="text-gray-900">
-                      {{ (selectedVersion?.text || document.text)?.length || 0 }} characters
-                    </dd>
+                    <dd class="text-gray-900">{{ fullText?.length || 0 }} characters</dd>
                   </div>
                   <div v-if="selectedVersion && !selectedVersion.is_latest">
                     <dt class="text-gray-500">Archived</dt>
@@ -526,6 +551,12 @@ const versions = ref([])
 const loadingVersions = ref(false)
 const selectedVersion = ref(null)
 
+// Full text is fetched on demand (GET /document/{id}); list items no longer
+// carry the (potentially large) `text` column, so we can't read it from the
+// passed-in document object.
+const fullText = ref(null)
+const textLoading = ref(false)
+
 // Check if document has an original file that can be displayed
 // For TXT files and row-by-row CSV/XLSX, the "original file" exists but shouldn't show split-screen
 // because the extracted text IS the original content (TXT) or represents partial data (CSV row)
@@ -544,7 +575,7 @@ const hasDisplayableOriginalFile = computed(() => {
   return true
 })
 
-const hasText = computed(() => !!props.document.text)
+const hasText = computed(() => !!fullText.value)
 
 // Get the current document (selected version or main document)
 const currentDocument = computed(() => {
@@ -703,7 +734,7 @@ const setDefaultViewMode = () => {
 
 // Markdown rendering with XSS sanitizing
 const safeMarkdown = computed(() => {
-  const text = currentDocument.value?.text || props.document.text
+  const text = fullText.value
   if (!text) return '<em>No text content available</em>'
   return DOMPurify.sanitize(marked.parse(text))
 })
@@ -813,6 +844,22 @@ const getModelName = (doc) => {
   return ''
 }
 
+// Fetch the full document (with text) for a given document id. List items no
+// longer include `text`, so the viewer pulls it on demand.
+const fetchFullText = async (docId) => {
+  if (!docId) return
+  textLoading.value = true
+  try {
+    const { data } = await api.get(`/project/${props.projectId}/document/${docId}`)
+    fullText.value = data?.text ?? null
+  } catch (error) {
+    console.error('Failed to load document text:', error)
+    fullText.value = null
+  } finally {
+    textLoading.value = false
+  }
+}
+
 // Fetch all versions of this document
 const fetchVersions = async () => {
   if (!props.document.original_file_id) return
@@ -849,6 +896,8 @@ const fetchVersions = async () => {
 // Select a version to view
 const selectVersion = (version) => {
   selectedVersion.value = version
+  // Load that version's text (versions list items don't carry `text`).
+  fetchFullText(version.id)
   // Emit event to parent to reload document with new version
   emit('update-document', version)
 }
@@ -877,6 +926,9 @@ const restoreVersion = async (version) => {
 onMounted(async () => {
   document.body.style.overflow = 'hidden'
   try {
+    // Fetch the full document text (list items no longer carry `text`).
+    await fetchFullText(props.document.id)
+
     if (props.document.original_file?.id) {
       const response = await api.get(
         `/project/${props.projectId}/file/${props.document.original_file.id}/content?preview=true`,
@@ -900,10 +952,11 @@ onMounted(async () => {
   }
 })
 
-// Watch for document changes and refetch versions
+// Watch for document changes and refetch versions + text
 watch(
   () => props.document?.id,
-  async () => {
+  async (newId) => {
+    fetchFullText(newId)
     await fetchVersions()
   },
 )

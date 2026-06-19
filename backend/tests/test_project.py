@@ -402,12 +402,19 @@ def test_preprocess_project_data_v2(
     documents = response.json()
     assert len(documents["items"]) >= 1
     document = documents["items"][0]
-    assert document["text"] is not None
+    # `text` is not included in list items (DocumentListItem); fetch the full
+    # document to verify its text content.
+    response = client.get(
+        f"{api_url}/project/{project_id}/document/{document['id']}", headers=headers
+    )
+    assert response.status_code == 200
+    full_document = response.json()
+    assert full_document["text"] is not None
     assert document["document_name"] == file_name
 
     # Check the text content of the document
     if expected_text:
-        assert expected_text in document["text"]
+        assert expected_text in full_document["text"]
 
     # Check preprocessed file if it exists
     if document.get("preprocessed_file_id"):
@@ -661,7 +668,11 @@ Document 3,This is the third document,Contains additional data,A"""
 
     # Check document content
     doc1 = next(d for d in documents if d["document_name"] == "Document 1")
-    assert doc1["text"] == "This is the first document Contains important information"
+    # `text` is not included in list items; fetch the full document.
+    full_doc1 = client.get(
+        f"{api_url}/project/{project_id}/document/{doc1['id']}", headers=headers
+    ).json()
+    assert full_doc1["text"] == "This is the first document Contains important information"
     assert doc1["meta_data"]["row_index"] == 0
     assert doc1["meta_data"]["source_columns"] == ["description", "details"]
 
@@ -752,7 +763,7 @@ P003,Asthma,Bronchodilators"""
     # Find the auto-generated set
     auto_sets = [
         ds
-        for ds in document_sets
+        for ds in document_sets["items"]
         if ds.get("is_auto_generated") and "patients.csv" in ds.get("name", "")
     ]
     assert len(auto_sets) == 1
@@ -761,15 +772,21 @@ P003,Asthma,Bronchodilators"""
     # Verify document set properties
     assert document_set["name"] == "patients.csv (by patient_id)"
     assert document_set["is_auto_generated"] is True
-    assert document_set["preprocessing_config_id"] is not None
+    assert document_set["preprocessing_config"] is not None
+    assert document_set["preprocessing_config"]["id"] is not None
     assert "row-by-row" in document_set.get("tags", [])
     assert "auto-generated" in document_set.get("tags", [])
 
-    # Verify documents are linked to the set (check via documents list)
-    assert len(document_set.get("documents", [])) == 3  # 3 rows in CSV
+    # Summary carries a count instead of the member documents.
+    assert document_set["document_count"] == 3  # 3 rows in CSV
 
-    # Verify each document is in the set
-    doc_names = [doc["document_name"] for doc in document_set["documents"]]
+    # Verify the linked documents via the document_set_id filter (paginated).
+    set_docs = client.get(
+        f"{api_url}/project/{project_id}/document",
+        headers=headers,
+        params={"document_set_id": document_set["id"], "limit": 100},
+    ).json()
+    doc_names = [doc["document_name"] for doc in set_docs["items"]]
     assert "P001" in doc_names
     assert "P002" in doc_names
     assert "P003" in doc_names
@@ -837,7 +854,11 @@ def test_image_file_preprocessing(client, api_url, files_base_path):
 
     # Find the document for our image
     image_doc = next(d for d in documents["items"] if d["original_file_id"] == file_id)
-    assert image_doc["text"] is not None  # Should contain OCR text
+    # `text` is not included in list items; fetch the full document.
+    full_image_doc = client.get(
+        f"{api_url}/project/{project_id}/document/{image_doc['id']}", headers=headers
+    ).json()
+    assert full_image_doc["text"] is not None  # Should contain OCR text
     assert image_doc["meta_data"]["file_type"] == "image/png"
 
 
@@ -1028,7 +1049,11 @@ def test_excel_file_preprocessing(client, api_url):
 
     # Verify document content
     doc_a = next(d for d in excel_docs if d["document_name"] == "Doc A")
-    assert doc_a["text"] == "Title 1 Content for A Meta A"
+    # `text` is not included in list items; fetch the full document.
+    full_doc_a = client.get(
+        f"{api_url}/project/{project_id}/document/{doc_a['id']}", headers=headers
+    ).json()
+    assert full_doc_a["text"] == "Title 1 Content for A Meta A"
     assert doc_a["meta_data"]["row_index"] == 0
 
 
@@ -1188,7 +1213,7 @@ def test_document_set_crud_and_stats(client, api_url):
     # Get sets
     resp = client.get(f"{api_url}/project/{pid}/document-set", headers=headers)
     sets = resp.json()
-    assert any(s["id"] == set_id for s in sets)
+    assert any(s["id"] == set_id for s in sets["items"])
 
     # Get set stats
     stats = client.get(

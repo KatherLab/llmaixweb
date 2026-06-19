@@ -107,39 +107,41 @@
                   Select Documents <span class="text-red-500">*</span>
                 </label>
                 <span class="text-sm text-gray-500">
-                  {{ formData.document_ids.length }} selected
+                  {{ selectedCount }} selected
+                  <span v-if="loadingExisting" class="text-gray-400">(loading existing…)</span>
                 </span>
               </div>
 
-              <!-- Quick Filters -->
+              <!-- Search (server-side) -->
               <div class="flex gap-2 mb-2">
                 <input
                   v-model="searchTerm"
                   type="text"
                   placeholder="Search documents..."
                   class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  @input="onSearchInput"
                 />
-                <input type="hidden" value="" />
               </div>
 
               <!-- Document List -->
               <div class="border rounded-md overflow-hidden max-h-64 overflow-y-auto">
-                <div v-if="filteredDocuments.length === 0" class="p-4 text-center text-gray-500">
+                <div v-if="searchLoading" class="p-4 text-center text-gray-500">Searching…</div>
+                <div v-else-if="searchResults.length === 0" class="p-4 text-center text-gray-500">
                   No documents found
                 </div>
                 <div v-else>
                   <div
-                    v-for="doc in filteredDocuments"
+                    v-for="doc in searchResults"
                     :key="doc.id"
                     :class="[
                       'p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 flex items-center',
-                      { 'bg-blue-50': formData.document_ids.includes(doc.id) },
+                      { 'bg-blue-50': isSelected(doc.id) },
                     ]"
                     @click="toggleDocument(doc.id)"
                   >
                     <input
                       type="checkbox"
-                      :checked="formData.document_ids.includes(doc.id)"
+                      :checked="isSelected(doc.id)"
                       class="mr-3"
                       readonly
                       @click.stop
@@ -157,14 +159,36 @@
                 </div>
               </div>
 
-              <div class="flex gap-2 mt-2">
-                <button class="text-sm text-blue-600 hover:text-blue-800" @click="selectAll">
-                  Select All Visible
-                </button>
-                <span class="text-gray-300">|</span>
-                <button class="text-sm text-blue-600 hover:text-blue-800" @click="clearSelection">
-                  Clear Selection
-                </button>
+              <!-- Pagination + bulk actions -->
+              <div class="flex items-center justify-between gap-2 mt-2">
+                <div class="flex gap-2">
+                  <button class="text-sm text-blue-600 hover:text-blue-800" @click="selectAll">
+                    Select All Visible
+                  </button>
+                  <span class="text-gray-300">|</span>
+                  <button class="text-sm text-blue-600 hover:text-blue-800" @click="clearSelection">
+                    Clear Selection
+                  </button>
+                </div>
+                <div v-if="searchTotalPages > 1" class="flex items-center gap-2">
+                  <span class="text-xs text-gray-500">
+                    {{ searchPage }}/{{ searchTotalPages }}
+                  </span>
+                  <button
+                    class="px-2 py-1 text-sm border rounded disabled:opacity-50"
+                    :disabled="searchPage <= 1"
+                    @click="prevSearchPage"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    class="px-2 py-1 text-sm border rounded disabled:opacity-50"
+                    :disabled="searchPage >= searchTotalPages"
+                    @click="nextSearchPage"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -189,14 +213,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '@/services/api'
 import { formatDate } from '@/utils/formatters'
 import { useScrollLock } from '@/composables/useScrollLock'
 
 const props = defineProps({
   group: { type: Object, default: null },
-  documents: { type: Array, required: true },
   projectId: { type: [String, Number], required: true },
   visible: { type: Boolean, default: true }, // allow parent to show/hide
   selectedDocumentIds: { type: Array, default: null }, // optional pre-selected documents
@@ -210,12 +233,27 @@ const formData = ref({
   name: '',
   description: '',
   tags: [],
-  document_ids: [],
 })
 
 const initialFormState = ref('')
 const newTag = ref('')
+
+// Selection is held as a Set of document ids so it persists across search pages.
+const selectedIds = ref(new Set())
+const selectedCount = computed(() => selectedIds.value.size)
+
+// Server-side paginated search (replaces loading every document into memory).
 const searchTerm = ref('')
+const searchResults = ref([])
+const searchTotal = ref(0)
+const searchPage = ref(1)
+const searchPageSize = ref(50)
+const searchLoading = ref(false)
+const loadingExisting = ref(false)
+
+const searchTotalPages = computed(() =>
+  searchPageSize.value ? Math.ceil(searchTotal.value / searchPageSize.value) : 1,
+)
 
 // Serialize form for dirty check
 function serializeForm(data) {
@@ -223,8 +261,85 @@ function serializeForm(data) {
     name: data.name,
     description: data.description,
     tags: [...data.tags].sort(),
-    document_ids: [...data.document_ids].sort(),
+    document_ids: [...selectedIds.value].sort(),
   })
+}
+
+let searchDebounce = null
+const onSearchInput = () => {
+  clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => {
+    searchPage.value = 1
+    fetchSearch()
+  }, 300)
+}
+
+const fetchSearch = async () => {
+  searchLoading.value = true
+  try {
+    const { data } = await api.get(`/project/${props.projectId}/document`, {
+      params: {
+        search: searchTerm.value || undefined,
+        limit: searchPageSize.value,
+        offset: (searchPage.value - 1) * searchPageSize.value,
+        compute_stats: false,
+      },
+    })
+    searchResults.value = data.items || []
+    searchTotal.value = data.total ?? searchResults.value.length
+  } catch (error) {
+    console.error('Failed to search documents:', error)
+    searchResults.value = []
+  } finally {
+    searchLoading.value = false
+  }
+}
+
+const prevSearchPage = () => {
+  if (searchPage.value > 1) {
+    searchPage.value--
+    fetchSearch()
+  }
+}
+
+const nextSearchPage = () => {
+  if (searchPage.value < searchTotalPages.value) {
+    searchPage.value++
+    fetchSearch()
+  }
+}
+
+// In edit mode, pre-select the documents already in this set. Fetched by
+// document_set_id (ids only — list items carry no `text`), accumulated across
+// pages so selection survives regardless of set size.
+const loadExistingSelection = async () => {
+  if (!props.group) return
+  loadingExisting.value = true
+  try {
+    const PAGE = 500
+    let offset = 0
+    let hasMore = true
+    while (hasMore) {
+      const { data } = await api.get(`/project/${props.projectId}/document`, {
+        params: {
+          document_set_id: props.group.id,
+          limit: PAGE,
+          offset,
+          compute_stats: false,
+        },
+      })
+      const items = data.items || []
+      const next = new Set(selectedIds.value)
+      for (const d of items) next.add(d.id)
+      selectedIds.value = next
+      hasMore = items.length === PAGE
+      offset += PAGE
+    }
+  } catch (error) {
+    console.error('Failed to load existing selection:', error)
+  } finally {
+    loadingExisting.value = false
+  }
 }
 
 // Setup initial data and save initial state for dirty check
@@ -234,36 +349,27 @@ onMounted(async () => {
       name: props.group.name,
       description: props.group.description || '',
       tags: [...(props.group.tags || [])],
-      document_ids: props.group.documents.map((d) => d.id),
     }
+    await loadExistingSelection()
   } else if (props.selectedDocumentIds && props.selectedDocumentIds.length > 0) {
-    // Pre-select documents if provided
-    formData.value.document_ids = [...props.selectedDocumentIds]
+    const next = new Set(selectedIds.value)
+    props.selectedDocumentIds.forEach((id) => next.add(id))
+    selectedIds.value = next
   }
   initialFormState.value = serializeForm(formData.value)
+  await fetchSearch()
 })
 
 // Computed
-const filteredDocuments = computed(() => {
-  let docs = [...props.documents]
-  if (searchTerm.value) {
-    const search = searchTerm.value.toLowerCase()
-    docs = docs.filter(
-      (doc) =>
-        doc.original_file?.file_name?.toLowerCase().includes(search) ||
-        doc.text?.toLowerCase().includes(search),
-    )
-  }
-  return docs
-})
-
 const isFormValid = computed(() => {
-  return formData.value.name.trim() && formData.value.document_ids.length > 0
+  return formData.value.name.trim() && selectedIds.value.size > 0
 })
 
 const isDirty = computed(() => {
   return serializeForm(formData.value) !== initialFormState.value
 })
+
+const isSelected = (id) => selectedIds.value.has(id)
 
 // Methods
 const addTag = () => {
@@ -277,20 +383,21 @@ const removeTag = (index) => {
   formData.value.tags.splice(index, 1)
 }
 const toggleDocument = (docId) => {
-  const index = formData.value.document_ids.indexOf(docId)
-  if (index === -1) {
-    formData.value.document_ids.push(docId)
+  const next = new Set(selectedIds.value)
+  if (next.has(docId)) {
+    next.delete(docId)
   } else {
-    formData.value.document_ids.splice(index, 1)
+    next.add(docId)
   }
+  selectedIds.value = next
 }
 const selectAll = () => {
-  const visibleIds = filteredDocuments.value.map((d) => d.id)
-  const newIds = visibleIds.filter((id) => !formData.value.document_ids.includes(id))
-  formData.value.document_ids.push(...newIds)
+  const next = new Set(selectedIds.value)
+  searchResults.value.forEach((d) => next.add(d.id))
+  selectedIds.value = next
 }
 const clearSelection = () => {
-  formData.value.document_ids = []
+  selectedIds.value = new Set()
 }
 
 // Close handlers with confirmation if dirty
@@ -313,7 +420,7 @@ const handleSave = () => {
     name: formData.value.name.trim(),
     description: formData.value.description.trim(),
     tags: formData.value.tags,
-    document_ids: formData.value.document_ids,
+    document_ids: [...selectedIds.value],
   })
 }
 </script>

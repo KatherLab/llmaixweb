@@ -3,13 +3,14 @@
 
 import datetime
 import io
+import urllib.parse
 import zipfile
-from typing import Annotated, List
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
+from sqlalchemy.orm import Session, contains_eager, defer, joinedload, selectinload
 
 from .... import models, schemas
 from ....core.security import get_current_user
@@ -73,6 +74,9 @@ def get_documents(
             description="Filter by OCR engine (pypdf, tesseract, mistral_ocr, llm_vision)"
         ),
     ] = None,
+    document_set_id: Annotated[
+        int | None, Query(description="Filter by document set membership")
+    ] = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
     include_archived: Annotated[
@@ -117,6 +121,10 @@ def get_documents(
     if ocr_engine is not None:
         # PostgreSQL JSON operator for ocr_engine field
         base = base.where(D.meta_data["ocr_engine"].as_string() == ocr_engine)
+
+    if document_set_id is not None:
+        # Membership filter via the association table (EXISTS subquery).
+        base = base.where(D.document_sets.any(models.DocumentSet.id == document_set_id))
 
     joined_for_search = False
     if search:
@@ -163,6 +171,10 @@ def get_documents(
             stats_base = stats_base.where(
                 D.meta_data["ocr_engine"].as_string() == ocr_engine
             )
+        if document_set_id is not None:
+            stats_base = stats_base.where(
+                D.document_sets.any(models.DocumentSet.id == document_set_id)
+            )
 
         # Today count
         today_count = db.scalar(stats_base.where(D.created_at >= today_start)) or 0
@@ -186,6 +198,7 @@ def get_documents(
             contains_eager(D.original_file),
             selectinload(D.preprocessing_config),
             selectinload(D.file_preprocessing_task),
+            defer(D.text),
         )
     else:
         # Always eager load to avoid N+1 queries in the UI
@@ -193,11 +206,12 @@ def get_documents(
             joinedload(D.original_file),
             selectinload(D.preprocessing_config),
             selectinload(D.file_preprocessing_task),
+            defer(D.text),
         )
 
     items = db.execute(page_q).scalars().all()
     return schemas.PaginatedDocuments(
-        items=[schemas.Document.model_validate(d) for d in items],
+        items=[schemas.DocumentListItem.model_validate(d) for d in items],
         total=total,
         recent_count=recent_count,
         today_count=today_count,
@@ -488,7 +502,7 @@ def create_document_set(
     return schemas.DocumentSet.model_validate(db_set)
 
 
-@router.get("/document-set", response_model=List[schemas.DocumentSet])
+@router.get("/document-set", response_model=schemas.PaginatedDocumentSets)
 def get_document_sets(
     project_id: int,
     include_auto_generated: bool = Query(
@@ -497,36 +511,90 @@ def get_document_sets(
     preprocessing_config_id: int = Query(
         None, description="Filter by preprocessing configuration"
     ),
-    tag: str = Query(None, description="Filter by tag"),
+    tag: Annotated[str | None, Query(description="Filter by tag")] = None,
+    search: Annotated[
+        str | None, Query(description="Search name/description (case-insensitive)")
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 25,
+    offset: Annotated[int, Query(ge=0)] = 0,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> List[schemas.DocumentSet]:
+) -> schemas.PaginatedDocumentSets:
     check_project_access(project_id, current_user, db, "read")
 
-    query = select(models.DocumentSet).where(
-        models.DocumentSet.project_id == project_id
-    )
+    DS = models.DocumentSet
+
+    query = select(DS).where(DS.project_id == project_id)
 
     if not include_auto_generated:
-        query = query.where(~models.DocumentSet.is_auto_generated)
+        query = query.where(~DS.is_auto_generated)
 
     if preprocessing_config_id:
-        query = query.where(
-            models.DocumentSet.preprocessing_config_id == preprocessing_config_id
-        )
+        query = query.where(DS.preprocessing_config_id == preprocessing_config_id)
 
-    if tag:
-        # In-Python filtering to avoid JSON `LIKE` incompatibility with PostgreSQL
-        pass  # Filtered below after fetch
+    if search:
+        pattern = f"%{search}%"
+        query = query.where(or_(DS.name.ilike(pattern), DS.description.ilike(pattern)))
 
-    sets = (
-        db.execute(query.order_by(models.DocumentSet.created_at.desc())).scalars().all()
+    # Eager-load preprocessing_config (used by the list card); do NOT load
+    # `documents` — counts are computed below for the page only.
+    query = query.options(selectinload(DS.preprocessing_config)).order_by(
+        DS.created_at.desc()
     )
 
-    if tag:
-        sets = [s for s in sets if s.tags and tag in s.tags]
+    all_sets = db.execute(query).scalars().all()
 
-    return [schemas.DocumentSet.model_validate(s) for s in sets]
+    # Tag filter is JSON-array membership; kept in Python for SQLite/Postgres
+    # parity (sets are bounded per project, so this is not a scaling concern).
+    if tag:
+        all_sets = [s for s in all_sets if s.tags and tag in s.tags]
+
+    total = len(all_sets)
+    page_sets = all_sets[offset : offset + limit]
+    total_pages = (total + limit - 1) // limit if limit else 1
+    page = offset // limit + 1 if limit else 1
+
+    # Compute member/trial counts for the page's sets only (two grouped queries,
+    # not one-per-set).
+    set_ids = [s.id for s in page_sets]
+    doc_counts: dict[int, int] = {}
+    trial_counts: dict[int, int] = {}
+    if set_ids:
+        doc_counts = dict(
+            db.execute(
+                select(
+                    document_set_association.c.document_set_id,
+                    func.count(),
+                )
+                .where(document_set_association.c.document_set_id.in_(set_ids))
+                .group_by(document_set_association.c.document_set_id)
+            ).all()
+        )
+        trial_counts = dict(
+            db.execute(
+                select(
+                    models.Trial.document_set_id,
+                    func.count(),
+                )
+                .where(models.Trial.document_set_id.in_(set_ids))
+                .group_by(models.Trial.document_set_id)
+            ).all()
+        )
+
+    items = []
+    for s in page_sets:
+        summary = schemas.DocumentSetSummary.model_validate(s)
+        summary.document_count = doc_counts.get(s.id, 0)
+        summary.trials_count = trial_counts.get(s.id, 0)
+        items.append(summary)
+
+    return schemas.PaginatedDocumentSets(
+        items=items,
+        total=total,
+        page=page,
+        page_size=limit,
+        total_pages=total_pages,
+    )
 
 
 @router.patch("/document-set/{set_id}", response_model=schemas.DocumentSet)
@@ -720,6 +788,70 @@ def delete_document_set(
     return {"deleted_set_id": set_id, "deleted_document_ids": deleted_doc_ids}
 
 
+class _StreamingZipSink:
+    """Forward-only file-like sink for :mod:`zipfile`.
+
+    ``zipfile.ZipFile`` in write mode only calls ``write()`` and ``tell()`` (it
+    records offsets from ``tell()`` and writes the central directory on
+    ``close()`` without seeking back). This lets us drain the bytes it produces
+    incrementally and stream them to the client, so a 100k-document set doesn't
+    get buffered entirely in memory (or on disk) before the first byte ships.
+    """
+
+    def __init__(self) -> None:
+        self._chunks: list[bytes] = []
+        self._pos = 0
+
+    def write(self, data) -> None:
+        if data:
+            b = bytes(data)
+            self._chunks.append(b)
+            self._pos += len(b)
+
+    def tell(self) -> int:
+        return self._pos
+
+    def seek(self, offset: int, whence: int = 0) -> int:
+        # zipfile only uses tell() in write mode; allow the no-op seek-to-current
+        # it occasionally issues, and refuse anything else rather than corrupt.
+        if whence == 1 and offset == 0:
+            return self._pos
+        raise io.UnsupportedOperation("forward-only stream does not support seek")
+
+    def flush(self) -> None:  # pragma: no cover - zipfile calls this
+        pass
+
+    def drain(self) -> bytes:
+        if not self._chunks:
+            return b""
+        data = b"".join(self._chunks)
+        self._chunks.clear()
+        return data
+
+
+def _stream_set_zip(file_rows: list[tuple[str, str]]):
+    """Yield a ZIP archive byte-stream for ``(file_name, file_uuid)`` entries.
+
+    Each file's content is read from storage (via ``get_file``) lazily as the
+    stream is consumed, so we never hold more than one file's bytes in memory.
+    """
+    sink = _StreamingZipSink()
+    zf = zipfile.ZipFile(sink, "w", zipfile.ZIP_DEFLATED)
+    try:
+        for file_name, file_uuid in file_rows:
+            try:
+                content = get_file(file_uuid)
+                zf.writestr(file_name, content)
+            except Exception as e:
+                # Log and continue with the other files.
+                print(f"Error adding file {file_name}: {e}")
+            yield sink.drain()
+        zf.close()  # writes the central directory
+        yield sink.drain()
+    finally:
+        zf.close()
+
+
 @router.post("/document-set/{set_id}/download-all")
 def download_all_documents(
     project_id: int,
@@ -727,48 +859,46 @@ def download_all_documents(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Download all documents in a set as a ZIP file"""
+    """Download all documents in a set as a (streamed) ZIP file"""
     check_project_access(project_id, current_user, db, "read")
 
     doc_set = db.execute(
-        select(models.DocumentSet)
-        .where(
+        select(models.DocumentSet).where(
             models.DocumentSet.id == set_id, models.DocumentSet.project_id == project_id
-        )
-        .options(
-            selectinload(models.DocumentSet.documents).selectinload(
-                models.Document.original_file
-            )
         )
     ).scalar_one_or_none()
 
     if not doc_set:
         raise HTTPException(status_code=404, detail="Document set not found")
 
-    # Create ZIP file in memory
-    zip_buffer = io.BytesIO()
+    # Collect only (file_name, file_uuid) for the set's members — do not load
+    # the Document rows (and especially not the `text` column). File contents
+    # are read lazily from storage during streaming.
+    file_rows = db.execute(
+        select(models.File.file_name, models.File.file_uuid)
+        .join(
+            models.Document,
+            models.Document.original_file_id == models.File.id,
+        )
+        .join(
+            document_set_association,
+            document_set_association.c.document_id == models.Document.id,
+        )
+        .where(
+            document_set_association.c.document_set_id == set_id,
+            models.Document.project_id == project_id,
+        )
+    ).all()
 
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        for doc in doc_set.documents:
-            if doc.original_file:
-                try:
-                    # Get file content
-                    file_content = get_file(doc.original_file.file_uuid)
-
-                    # Add to ZIP with original filename
-                    zip_file.writestr(doc.original_file.file_name, file_content)
-                except Exception as e:
-                    # Log error but continue with other files
-                    print(f"Error adding file {doc.original_file.file_name}: {e}")
-
-    zip_buffer.seek(0)
+    # RFC 5987 / safely-quoted filename for the Content-Disposition header.
+    safe_name = doc_set.name.replace(" ", "_") or "documents"
+    quoted = urllib.parse.quote(f"{safe_name}_documents.zip")
+    disposition = f"attachment; filename=\"{quoted}\"; filename*=UTF-8''{quoted}"
 
     return StreamingResponse(
-        zip_buffer,
+        _stream_set_zip(file_rows),
         media_type="application/zip",
-        headers={
-            "Content-Disposition": f"attachment; filename={doc_set.name.replace(' ', '_')}_documents.zip"
-        },
+        headers={"Content-Disposition": disposition},
     )
 
 
@@ -783,9 +913,7 @@ def get_document_set_stats(
     check_project_access(project_id, current_user, db, "read")
 
     doc_set = db.execute(
-        select(models.DocumentSet)
-        .options(selectinload(models.DocumentSet.documents))
-        .where(
+        select(models.DocumentSet).where(
             models.DocumentSet.id == set_id, models.DocumentSet.project_id == project_id
         )
     ).scalar_one_or_none()
@@ -793,8 +921,17 @@ def get_document_set_stats(
     if not doc_set:
         raise HTTPException(status_code=404, detail="Document set not found")
 
-    # Get document IDs in this set
-    doc_ids = [doc.id for doc in doc_set.documents]
+    # Get document IDs in this set directly from the association table — avoids
+    # loading every member Document (incl. the `text` column) as an ORM object.
+    doc_ids = (
+        db.execute(
+            select(document_set_association.c.document_id).where(
+                document_set_association.c.document_set_id == set_id
+            )
+        )
+        .scalars()
+        .all()
+    )
 
     if not doc_ids:
         return schemas.DocumentSetStats(

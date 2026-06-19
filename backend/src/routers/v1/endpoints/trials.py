@@ -92,29 +92,42 @@ def create_trial(
             raise HTTPException(
                 status_code=404, detail="Document set not found in this project"
             )
-        # Fetch all doc IDs from set
-        document_ids = [doc.id for doc in document_set.documents]
-        if not document_ids:
-            raise HTTPException(status_code=400, detail="Document set is empty")
-    elif trial.document_ids:
-        # Explicit document IDs
-        document_ids = trial.document_ids
-        # Check all are in project
-        existing_documents = (
+        # Fetch doc IDs from the set without materializing full Document rows
+        # (the relationship would load 100k ORM objects incl. the text column).
+        document_ids = (
             db.execute(
                 select(models.Document.id).where(
-                    models.Document.project_id == project_id
+                    models.Document.document_sets.any(
+                        models.DocumentSet.id == trial.document_set_id
+                    )
                 )
             )
             .scalars()
             .all()
         )
-        for document_id in document_ids:
-            if document_id not in existing_documents:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Document with id {document_id} not found in project {project_id}",
+        if not document_ids:
+            raise HTTPException(status_code=400, detail="Document set is empty")
+    elif trial.document_ids:
+        # Explicit document IDs
+        document_ids = trial.document_ids
+        # Verify all requested documents belong to this project. Done in SQL to
+        # avoid loading every project document ID + an O(n²) membership scan.
+        found_ids = set(
+            db.execute(
+                select(models.Document.id).where(
+                    models.Document.id.in_(document_ids),
+                    models.Document.project_id == project_id,
                 )
+            )
+            .scalars()
+            .all()
+        )
+        missing_ids = [doc_id for doc_id in document_ids if doc_id not in found_ids]
+        if missing_ids:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Document(s) with id(s) {missing_ids} not found in project {project_id}",
+            )
     else:
         raise HTTPException(
             status_code=400,
