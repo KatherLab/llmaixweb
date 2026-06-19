@@ -68,8 +68,8 @@
       </div>
 
       <div class="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
-        <span><strong>Schema:</strong> {{ schema?.schema_name || '-' }}</span>
-        <span v-if="prompt"><strong>Prompt:</strong> {{ prompt.name }}</span>
+        <span><strong>Schema:</strong> {{ schemaName }}</span>
+        <span v-if="promptName"><strong>Prompt:</strong> {{ promptName }}</span>
         <span><strong>LLM:</strong> {{ trial.llm_model }}</span>
         <span><strong>Started:</strong> {{ formatDate(trial.created_at) }}</span>
         <span v-if="trial.documents_count != null"
@@ -217,6 +217,12 @@ const emit = defineEmits([
 
 const schema = computed(() => props.schemas.find((s) => s.id === props.trial.schema_id))
 const prompt = computed(() => props.prompts.find((p) => p.id === props.trial.prompt_id))
+// Prefer the name frozen in the trial snapshot (matches what actually ran);
+// fall back to the live schema/prompt name for legacy trials without snapshots.
+const schemaName = computed(
+  () => props.trial.schema_snapshot?.schema_name || schema.value?.schema_name || '-',
+)
+const promptName = computed(() => props.trial.prompt_snapshot?.name || prompt.value?.name)
 
 const statusClass = computed(
   () =>

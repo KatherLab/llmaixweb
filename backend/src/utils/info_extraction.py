@@ -14,6 +14,7 @@ import json
 import logging
 import re
 import unicodedata
+from types import SimpleNamespace
 from typing import Any, Literal
 
 import jsonschema
@@ -562,7 +563,7 @@ def sanitize_for_prompt(text: str, *, collapse_space: bool = False) -> str:
 
 
 def _build_messages(
-    prompt: models.Prompt, document_text: str, schema_definition: dict | None = None
+    prompt: Any, document_text: str, schema_definition: dict | None = None
 ) -> list[dict]:
     """
     Inject the document text into user/system prompt templates.
@@ -748,16 +749,34 @@ async def extract_info_single_doc_async(
     base_url: str | None = None,
 ) -> None:
     """Async extraction for a single document."""
-    schema: models.Schema = db_session.get(models.Schema, schema_id)
-    prompt: models.Prompt = db_session.get(models.Prompt, prompt_id)
-    document: models.Document = db_session.get(models.Document, document_id)
-    if not (schema and prompt and document):
-        raise ValueError("schema / prompt / document not found")
+    trial = db_session.get(models.Trial, trial_id)
+    document = db_session.get(models.Document, document_id)
+    if not (trial and document):
+        raise ValueError("trial / document not found")
+
+    # Use the schema/prompt snapshot frozen at trial creation so the stored
+    # result matches the record shown to the user. Fall back to the live rows
+    # for trials created before snapshots existed.
+    schema_def = (trial.schema_snapshot or {}).get("schema_definition")
+    prompt_obj: Any = None
+    if trial.prompt_snapshot:
+        ps = trial.prompt_snapshot
+        prompt_obj = SimpleNamespace(
+            system_prompt=ps.get("system_prompt"),
+            user_prompt=ps.get("user_prompt"),
+        )
+    if schema_def is None:
+        schema = db_session.get(models.Schema, schema_id)
+        schema_def = schema.schema_definition if schema else None
+    if prompt_obj is None:
+        prompt_obj = db_session.get(models.Prompt, prompt_id)
+    if schema_def is None or prompt_obj is None:
+        raise ValueError("schema / prompt not found")
 
     kwargs = _completion_kwargs(
         llm_model,
-        schema.schema_definition,
-        _build_messages(prompt, document.text, schema.schema_definition),
+        schema_def,
+        _build_messages(prompt_obj, document.text, schema_def),
         advanced_options,
         base_url,
     )
@@ -779,8 +798,8 @@ async def extract_info_single_doc_async(
         )
         bumped_kwargs = _completion_kwargs(
             llm_model,
-            schema.schema_definition,
-            _build_messages(prompt, document.text),
+            schema_def,
+            _build_messages(prompt_obj, document.text),
             bumped_adv,
             base_url,
         )
@@ -792,7 +811,7 @@ async def extract_info_single_doc_async(
         document_id,
         response,
         advanced_options,
-        schema.schema_definition,
+        schema_def,
     )
 
 
@@ -810,11 +829,29 @@ def extract_info_single_doc(
     advanced_options: dict | None = None,
 ) -> None:
     """Sync extraction for a single document."""
-    schema: models.Schema = db_session.get(models.Schema, schema_id)
-    prompt: models.Prompt = db_session.get(models.Prompt, prompt_id)
-    document: models.Document = db_session.get(models.Document, document_id)
-    if not (schema and prompt and document):
-        raise ValueError("schema / prompt / document not found")
+    trial = db_session.get(models.Trial, trial_id)
+    document = db_session.get(models.Document, document_id)
+    if not (trial and document):
+        raise ValueError("trial / document not found")
+
+    # Use the schema/prompt snapshot frozen at trial creation so the stored
+    # result matches the record shown to the user. Fall back to the live rows
+    # for trials created before snapshots existed.
+    schema_def = (trial.schema_snapshot or {}).get("schema_definition")
+    prompt_obj: Any = None
+    if trial.prompt_snapshot:
+        ps = trial.prompt_snapshot
+        prompt_obj = SimpleNamespace(
+            system_prompt=ps.get("system_prompt"),
+            user_prompt=ps.get("user_prompt"),
+        )
+    if schema_def is None:
+        schema = db_session.get(models.Schema, schema_id)
+        schema_def = schema.schema_definition if schema else None
+    if prompt_obj is None:
+        prompt_obj = db_session.get(models.Prompt, prompt_id)
+    if schema_def is None or prompt_obj is None:
+        raise ValueError("schema / prompt not found")
 
     client = OpenAI(
         api_key=api_key,
@@ -825,8 +862,8 @@ def extract_info_single_doc(
 
     kwargs = _completion_kwargs(
         llm_model,
-        schema.schema_definition,
-        _build_messages(prompt, document.text, schema.schema_definition),
+        schema_def,
+        _build_messages(prompt_obj, document.text, schema_def),
         advanced_options,
         base_url,
     )
@@ -848,8 +885,8 @@ def extract_info_single_doc(
         )
         bumped_kwargs = _completion_kwargs(
             llm_model,
-            schema.schema_definition,
-            _build_messages(prompt, document.text),
+            schema_def,
+            _build_messages(prompt_obj, document.text),
             bumped_adv,
             base_url,
         )
@@ -861,7 +898,7 @@ def extract_info_single_doc(
         document_id,
         response,
         advanced_options,
-        schema.schema_definition,
+        schema_def,
     )
 
 

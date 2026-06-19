@@ -3,7 +3,7 @@
     <transition name="fade">
       <div
         v-if="open"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+        class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/30 backdrop-blur-md"
         @click.self="$emit('close')"
       >
         <div
@@ -22,7 +22,15 @@
               </svg>
             </button>
           </div>
-          <h4 class="font-semibold mb-2">{{ schema?.schema_name }}</h4>
+          <div class="flex items-center gap-2 mb-2">
+            <h4 class="font-semibold">{{ schema?.schema_name }}</h4>
+            <span
+              v-if="isSnapshot"
+              class="text-[10px] uppercase tracking-wide bg-blue-100 text-blue-700 px-2 py-0.5 rounded"
+              title="Frozen copy of the schema as it was when the trial ran"
+              >Snapshot</span
+            >
+          </div>
           <pre class="bg-gray-50 border rounded-md p-4 overflow-x-auto text-xs font-mono max-h-96"
             >{{ JSON.stringify(schema?.schema_definition, null, 2) }}
         </pre
@@ -48,6 +56,7 @@ import { useScrollLock } from '@/composables/useScrollLock'
 const props = defineProps({
   open: Boolean,
   schema: Object,
+  isSnapshot: { type: Boolean, default: false },
 })
 const toast = useToast()
 

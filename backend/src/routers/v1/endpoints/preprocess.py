@@ -136,8 +136,12 @@ async def preview_preprocessing_duplicates(
     new_force_ocr = additional_settings.get("force_ocr", False)
     # Model names for duplicate detection (user may change model while keeping same engine)
     # Must use same defaults as actual processing to ensure proper comparison
-    new_mistral_model = additional_settings.get("mistral_model") or settings.MISTRAL_OCR_MODEL
-    new_vision_model = additional_settings.get("vision_model") or settings.VISION_OCR_MODEL or "gpt-4o"
+    new_mistral_model = (
+        additional_settings.get("mistral_model") or settings.MISTRAL_OCR_MODEL
+    )
+    new_vision_model = (
+        additional_settings.get("vision_model") or settings.VISION_OCR_MODEL or "gpt-4o"
+    )
 
     # Normalize OCR engine names for comparison
     # Frontend sends "docling_tesseract" but backend stores "tesseract"

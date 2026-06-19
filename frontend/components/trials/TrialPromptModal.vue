@@ -3,7 +3,7 @@
     <transition name="fade">
       <div
         v-if="open"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+        class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/30 backdrop-blur-md"
         @click.self="$emit('close')"
       >
         <div
@@ -23,7 +23,15 @@
             </button>
           </div>
           <div class="mb-2">
-            <h4 class="font-semibold">{{ prompt?.name }}</h4>
+            <div class="flex items-center gap-2">
+              <h4 class="font-semibold">{{ prompt?.name }}</h4>
+              <span
+                v-if="isSnapshot"
+                class="text-[10px] uppercase tracking-wide bg-blue-100 text-blue-700 px-2 py-0.5 rounded"
+                title="Frozen copy of the prompt as it was when the trial ran"
+                >Snapshot</span
+              >
+            </div>
             <p v-if="prompt?.description" class="text-sm text-gray-600">{{ prompt.description }}</p>
           </div>
           <div class="mb-3">
@@ -61,6 +69,7 @@ import { useScrollLock } from '@/composables/useScrollLock'
 const props = defineProps({
   open: Boolean,
   prompt: Object,
+  isSnapshot: { type: Boolean, default: false },
 })
 const toast = useToast()
 

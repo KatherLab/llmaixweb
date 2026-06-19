@@ -134,7 +134,7 @@ def create_trial(
         name=trial.name,
         description=trial.description,
         schema_id=trial.schema_id,
-        prompt_id=str(trial.prompt_id),
+        prompt_id=trial.prompt_id,
         project_id=project_id,
         llm_model=llm_model,
         api_key=api_key,
@@ -145,6 +145,18 @@ def create_trial(
         else None,
         bypass_celery=trial.bypass_celery,
         advanced_options=trial.advanced_options or {},
+        # Freeze the schema + prompt so the trial record stays accurate even
+        # if the source is edited (or deleted) later.
+        schema_snapshot={
+            "schema_name": schema.schema_name,
+            "schema_definition": schema.schema_definition,
+        },
+        prompt_snapshot={
+            "name": prompt.name,
+            "description": prompt.description,
+            "system_prompt": prompt.system_prompt,
+            "user_prompt": prompt.user_prompt,
+        },
     )
 
     # 5. Kick-off extraction ----------------------------------------------------
@@ -639,22 +651,30 @@ def download_trial_results(
             and isinstance(v, (str, int, float, bool, dict, list, type(None)))
         }
     )
-    prompt_dict = filter_sensitive_keys(
-        {
-            k: v
-            for k, v in (prompt.__dict__ if prompt else {}).items()
-            if not k.startswith("_")
-            and isinstance(v, (str, int, float, bool, dict, list, type(None)))
-        }
-    )
-    schema_dict = filter_sensitive_keys(
-        {
-            k: v
-            for k, v in (schema.__dict__ if schema else {}).items()
-            if not k.startswith("_")
-            and isinstance(v, (str, int, float, bool, dict, list, type(None)))
-        }
-    )
+    # Prefer the frozen snapshots captured at trial creation; fall back to the
+    # live schema/prompt rows for trials created before snapshots existed.
+    if trial.prompt_snapshot:
+        prompt_dict = filter_sensitive_keys(dict(trial.prompt_snapshot))
+    else:
+        prompt_dict = filter_sensitive_keys(
+            {
+                k: v
+                for k, v in (prompt.__dict__ if prompt else {}).items()
+                if not k.startswith("_")
+                and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+            }
+        )
+    if trial.schema_snapshot:
+        schema_dict = filter_sensitive_keys(dict(trial.schema_snapshot))
+    else:
+        schema_dict = filter_sensitive_keys(
+            {
+                k: v
+                for k, v in (schema.__dict__ if schema else {}).items()
+                if not k.startswith("_")
+                and isinstance(v, (str, int, float, bool, dict, list, type(None)))
+            }
+        )
 
     for d in (trial_dict, prompt_dict, schema_dict):
         for key in list(d.keys()):

@@ -108,6 +108,36 @@
                     </div>
                   </div>
                   <div class="flex flex-col items-start md:items-end gap-2 min-w-[200px]">
+                    <div class="flex gap-2">
+                      <button
+                        class="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
+                        @click="openSchemaModal"
+                      >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        View Schema
+                      </button>
+                      <button
+                        class="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
+                        @click="openPromptModal"
+                      >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 9h8m-8 4h8m-8 4h5M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5z"
+                          />
+                        </svg>
+                        View Prompt
+                      </button>
+                    </div>
                     <span
                       class="text-sm bg-blue-50 px-4 py-2 rounded-lg font-medium text-blue-800 shadow-sm"
                     >
@@ -544,6 +574,20 @@
             </div>
           </div>
         </div>
+
+        <!-- Schema / Prompt snapshots (frozen at trial run) -->
+        <TrialSchemaModal
+          :open="showSchemaModal"
+          :schema="schemaForModal"
+          :is-snapshot="schemaIsSnapshot"
+          @close="showSchemaModal = false"
+        />
+        <TrialPromptModal
+          :open="showPromptModal"
+          :prompt="promptForModal"
+          :is-snapshot="promptIsSnapshot"
+          @close="showPromptModal = false"
+        />
       </div>
     </transition>
   </teleport>
@@ -556,6 +600,8 @@ import { api } from '@/services/api.js'
 import { formatDate } from '@/utils/formatters.js'
 import { useToast } from 'vue-toastification'
 import JsonViewer from '../JsonViewer.vue'
+import TrialSchemaModal from './TrialSchemaModal.vue'
+import TrialPromptModal from './TrialPromptModal.vue'
 import { marked } from 'marked'
 
 const props = defineProps({
@@ -585,6 +631,32 @@ const showDocumentPanel = ref({})
 // Document" button is shown at all (hidden when there's nothing to render)
 const documentMeta = ref({})
 const showReasoningPanel = ref({}) // reasoning accordion
+
+// Schema / Prompt snapshot display (frozen at trial run; fallback to live for
+// trials created before snapshots existed)
+const showSchemaModal = ref(false)
+const showPromptModal = ref(false)
+const schemaFallback = ref(null) // live schema fetched for legacy trials
+const schemaForModal = computed(() => trial.value?.schema_snapshot || schemaFallback.value || null)
+const promptForModal = computed(() => trial.value?.prompt_snapshot || trial.value?.prompt || null)
+const schemaIsSnapshot = computed(() => !!trial.value?.schema_snapshot)
+const promptIsSnapshot = computed(() => !!trial.value?.prompt_snapshot)
+
+async function openSchemaModal() {
+  // Legacy trials have no snapshot — fetch the live schema as a best-effort fallback.
+  if (!trial.value?.schema_snapshot && trial.value?.schema_id && !schemaFallback.value) {
+    try {
+      const res = await api.get(`/project/${props.projectId}/schema/${trial.value.schema_id}`)
+      schemaFallback.value = res.data
+    } catch (err) {
+      console.error('Failed to load schema for trial:', err)
+    }
+  }
+  showSchemaModal.value = true
+}
+function openPromptModal() {
+  showPromptModal.value = true
+}
 
 const renderMarkdown = (text) => {
   try {

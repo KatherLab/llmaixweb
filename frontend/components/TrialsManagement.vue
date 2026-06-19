@@ -463,12 +463,14 @@
       v-if="showSchemaModal"
       :open="showSchemaModal"
       :schema="selectedSchema"
+      :is-snapshot="schemaIsSnapshot"
       @close="showSchemaModal = false"
     />
     <TrialPromptModal
       v-if="showPromptModal"
       :open="showPromptModal"
       :prompt="selectedPrompt"
+      :is-snapshot="promptIsSnapshot"
       @close="showPromptModal = false"
     />
     <DownloadModal
@@ -529,8 +531,10 @@ const showTrialResultsModal = ref(false)
 const selectedTrialId = ref(null)
 const showSchemaModal = ref(false)
 const selectedSchema = ref(null)
+const schemaIsSnapshot = ref(false)
 const showPromptModal = ref(false)
 const selectedPrompt = ref(null)
+const promptIsSnapshot = ref(false)
 const showDownloadModal = ref(false)
 const trialToDownload = ref(null)
 const highlightedTrialId = ref(null)
@@ -894,11 +898,17 @@ function viewTrialResults(trial) {
   showTrialResultsModal.value = true
 }
 function viewTrialSchema(trial) {
-  selectedSchema.value = schemas.value.find((s) => s.id === trial.schema_id)
+  // Prefer the frozen snapshot captured at trial run; fall back to the live
+  // schema for trials created before snapshots existed.
+  selectedSchema.value =
+    trial.schema_snapshot || schemas.value.find((s) => s.id === trial.schema_id) || null
+  schemaIsSnapshot.value = !!trial.schema_snapshot
   showSchemaModal.value = true
 }
 function viewTrialPrompt(trial) {
-  selectedPrompt.value = prompts.value.find((p) => p.id === trial.prompt_id)
+  selectedPrompt.value =
+    trial.prompt_snapshot || prompts.value.find((p) => p.id === trial.prompt_id) || null
+  promptIsSnapshot.value = !!trial.prompt_snapshot
   showPromptModal.value = true
 }
 

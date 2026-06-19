@@ -292,7 +292,11 @@ def get_file_stats(
     """Get file statistics for the project"""
     check_project_access(project_id, current_user, db)
 
-    # Base query
+    # Base query (shared by the aggregate and per-type stats below).
+    # NB: previously the aggregate rebuilt its own WHERE with a buggy
+    # `file_creator == file_creator if file_creator else True` that parsed as
+    # `file_creator == (file_creator or True)`, returning 0 totals when no
+    # file_creator filter was supplied. Reusing base_query fixes that.
     base_query = select(models.File).where(models.File.project_id == project_id)
     if file_creator is not None:
         base_query = base_query.where(models.File.file_creator == file_creator)
@@ -303,10 +307,7 @@ def get_file_stats(
             func.count(models.File.id).label("total_files"),
             func.sum(models.File.file_size).label("total_size"),
             func.count(distinct(models.File.file_hash)).label("unique_files"),
-        ).where(
-            models.File.project_id == project_id,
-            models.File.file_creator == file_creator if file_creator else True,
-        )
+        ).select_from(base_query.subquery())
     ).first()
 
     # Get files by type

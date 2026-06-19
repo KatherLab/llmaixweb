@@ -68,7 +68,10 @@ def get_documents(
         Query(description="ISO datetime upper bound (exclusive)"),
     ] = None,
     ocr_engine: Annotated[
-        str | None, Query(description="Filter by OCR engine (pypdf, tesseract, mistral_ocr, llm_vision)")
+        str | None,
+        Query(
+            description="Filter by OCR engine (pypdf, tesseract, mistral_ocr, llm_vision)"
+        ),
     ] = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -157,7 +160,9 @@ def get_documents(
         if config_id is not None:
             stats_base = stats_base.where(D.preprocessing_config_id == config_id)
         if ocr_engine is not None:
-            stats_base = stats_base.where(D.meta_data["ocr_engine"].as_string() == ocr_engine)
+            stats_base = stats_base.where(
+                D.meta_data["ocr_engine"].as_string() == ocr_engine
+            )
 
         # Today count
         today_count = db.scalar(stats_base.where(D.created_at >= today_start)) or 0
@@ -249,11 +254,17 @@ def cleanup_empty_preprocessing_tasks(
         return
 
     # Check if there are any remaining documents for this file task
-    remaining_docs = db.execute(
-        select(models.Document.id).where(
-            models.Document.file_preprocessing_task_id == file_preprocessing_task_id
+    # Existence check: multiple rows are expected → .scalars().first()
+    # (scalar_one_or_none raises MultipleResultsFound on >1 row).
+    remaining_docs = (
+        db.execute(
+            select(models.Document.id).where(
+                models.Document.file_preprocessing_task_id == file_preprocessing_task_id
+            )
         )
-    ).scalar_one_or_none()
+        .scalars()
+        .first()
+    )
 
     if remaining_docs is not None:
         # Still has documents, don't clean up
@@ -266,11 +277,16 @@ def cleanup_empty_preprocessing_tasks(
     db.flush()  # Ensure deletion is staged before checking parent
 
     # Check if parent PreprocessingTask has any remaining FilePreprocessingTask children
-    remaining_file_tasks = db.execute(
-        select(models.FilePreprocessingTask.id).where(
-            models.FilePreprocessingTask.preprocessing_task_id == preprocessing_task_id
+    remaining_file_tasks = (
+        db.execute(
+            select(models.FilePreprocessingTask.id).where(
+                models.FilePreprocessingTask.preprocessing_task_id
+                == preprocessing_task_id
+            )
         )
-    ).scalar_one_or_none()
+        .scalars()
+        .first()
+    )
 
     if remaining_file_tasks is None:
         # No remaining file tasks - delete the parent PreprocessingTask
@@ -323,9 +339,17 @@ def delete_document(
         )
 
     # --- Check if document is used in any trial results ---
-    trial_result = db.execute(
-        select(models.TrialResult).where(models.TrialResult.document_id == document_id)
-    ).scalar_one_or_none()
+    # A document can have results across many trials; use .scalars().first()
+    # (scalar_one_or_none raises MultipleResultsFound when >1 row exists).
+    trial_result = (
+        db.execute(
+            select(models.TrialResult).where(
+                models.TrialResult.document_id == document_id
+            )
+        )
+        .scalars()
+        .first()
+    )
     if trial_result:
         raise HTTPException(
             status_code=400,
@@ -333,11 +357,15 @@ def delete_document(
         )
 
     # --- (Optional) Check if document is used in any evaluation metric ---
-    metric = db.execute(
-        select(models.EvaluationMetric).where(
-            models.EvaluationMetric.document_id == document_id
+    metric = (
+        db.execute(
+            select(models.EvaluationMetric).where(
+                models.EvaluationMetric.document_id == document_id
+            )
         )
-    ).scalar_one_or_none()
+        .scalars()
+        .first()
+    )
     if metric:
         raise HTTPException(
             status_code=400,
@@ -356,12 +384,17 @@ def delete_document(
 
     # --- Preprocessed file deletion logic as before ---
     if document.preprocessed_file_id:
-        other_docs_using_file = db.execute(
-            select(models.Document).where(
-                models.Document.preprocessed_file_id == document.preprocessed_file_id,
-                models.Document.id != document_id,
+        other_docs_using_file = (
+            db.execute(
+                select(models.Document).where(
+                    models.Document.preprocessed_file_id
+                    == document.preprocessed_file_id,
+                    models.Document.id != document_id,
+                )
             )
-        ).scalar_one_or_none()
+            .scalars()
+            .first()
+        )
 
         if not other_docs_using_file:
             preprocessed_file = db.get(models.File, document.preprocessed_file_id)
@@ -609,20 +642,28 @@ def delete_document_set(
             ):
                 can_delete = False
 
-            # Check trial results
-            if db.execute(
-                select(models.TrialResult).where(
-                    models.TrialResult.document_id == doc.id
+            # Check trial results (a doc may have results across many trials)
+            if (
+                db.execute(
+                    select(models.TrialResult).where(
+                        models.TrialResult.document_id == doc.id
+                    )
                 )
-            ).scalar_one_or_none():
+                .scalars()
+                .first()
+            ):
                 can_delete = False
 
-            # Check evaluation metrics
-            if db.execute(
-                select(models.EvaluationMetric).where(
-                    models.EvaluationMetric.document_id == doc.id
+            # Check evaluation metrics (many per document)
+            if (
+                db.execute(
+                    select(models.EvaluationMetric).where(
+                        models.EvaluationMetric.document_id == doc.id
+                    )
                 )
-            ).scalar_one_or_none():
+                .scalars()
+                .first()
+            ):
                 can_delete = False
 
             # Check other document sets
@@ -636,13 +677,17 @@ def delete_document_set(
 
                 # Delete preprocessed file if not used by other docs
                 if doc.preprocessed_file_id:
-                    other_docs = db.execute(
-                        select(models.Document).where(
-                            models.Document.preprocessed_file_id
-                            == doc.preprocessed_file_id,
-                            models.Document.id != doc.id,
+                    other_docs = (
+                        db.execute(
+                            select(models.Document).where(
+                                models.Document.preprocessed_file_id
+                                == doc.preprocessed_file_id,
+                                models.Document.id != doc.id,
+                            )
                         )
-                    ).scalar_one_or_none()
+                        .scalars()
+                        .first()
+                    )
 
                     if not other_docs:
                         try:

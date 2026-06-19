@@ -375,6 +375,10 @@ class Trial(TrialBase):
     finished_at: datetime | None = None  # set when everything is done
     meta: dict | None = None  # currently holds {"eta_seconds": …}
 
+    # Frozen schema/prompt captured at trial creation (None for legacy trials)
+    schema_snapshot: dict | None = None
+    prompt_snapshot: dict | None = None
+
     # Never expose API keys or base URLs in API responses
     api_key: str | None = Field(default=None, exclude=True)
     base_url: str | None = Field(default=None, exclude=True)
@@ -409,6 +413,10 @@ class TrialSummary(UTCModel):
     started_at: datetime | None = None
     finished_at: datetime | None = None
     meta: dict | None = None
+
+    # Frozen schema/prompt captured at trial creation (None for legacy trials)
+    schema_snapshot: dict | None = None
+    prompt_snapshot: dict | None = None
 
     # Optional small relationships you may show in cards
     prompt: "Prompt | None" = None

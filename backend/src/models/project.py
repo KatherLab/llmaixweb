@@ -189,6 +189,9 @@ document_set_association = Table(
     Base.metadata,
     Column("document_id", ForeignKey("documents.id"), primary_key=True),
     Column("document_set_id", ForeignKey("document_sets.id"), primary_key=True),
+    # PK leads with document_id; index the reverse direction so "all documents
+    # in a set" (document_set_id lookups) doesn't seq-scan at 100k+ members.
+    Index("ix_document_set_association_document_set_id", "document_set_id"),
 )
 
 
@@ -483,6 +486,13 @@ class FilePreprocessingTask(Base):
         back_populates="file_preprocessing_task", cascade="all, delete-orphan"
     )
 
+    __table_args__ = (
+        Index(
+            "ix_file_preprocessing_tasks_preprocessing_task_id", "preprocessing_task_id"
+        ),
+        Index("ix_file_preprocessing_tasks_file_id", "file_id"),
+    )
+
 
 class Prompt(Base):
     __tablename__ = "prompts"
@@ -552,6 +562,11 @@ class Trial(Base):
     base_url: Mapped[str] = mapped_column(String(512))
     bypass_celery: Mapped[bool] = mapped_column(Boolean, default=False)
     advanced_options: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    # Frozen copies of the schema + prompt at trial-creation time, so the
+    # record reflects exactly what was used even if the source is edited later.
+    schema_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
+    prompt_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
 
     # ── progress tracking ───────────────────────────────────────────────────────
     docs_done: Mapped[int] = mapped_column(Integer, default=0)
@@ -623,6 +638,9 @@ class TrialResult(Base):
             "document_id",
             name="uq_trial_document",  # <-- prevents duplicates
         ),
+        # The (trial_id, document_id) unique constraint covers trial_id-leading
+        # lookups; document_id-only lookups (deletes, downloads, stats) need this.
+        Index("ix_trial_results_document_id", "document_id"),
     )
 
 
@@ -680,6 +698,11 @@ class EvaluationMetric(Base):
     evaluation: Mapped["Evaluation"] = relationship(back_populates="detailed_metrics")
     document: Mapped["Document"] = relationship()
 
+    __table_args__ = (
+        Index("ix_evaluation_metrics_evaluation_id", "evaluation_id"),
+        Index("ix_evaluation_metrics_document_id", "document_id"),
+    )
+
 
 class GroundTruth(Base):
     __tablename__ = "ground_truth"
@@ -706,6 +729,8 @@ class GroundTruth(Base):
         back_populates="ground_truth", cascade="all, delete-orphan"
     )
 
+    __table_args__ = (Index("ix_ground_truth_project_id", "project_id"),)
+
 
 class Evaluation(Base):
     __tablename__ = "evaluations"
@@ -729,4 +754,9 @@ class Evaluation(Base):
     ground_truth: Mapped["GroundTruth"] = relationship(back_populates="evaluations")
     detailed_metrics: Mapped[list["EvaluationMetric"]] = relationship(
         back_populates="evaluation", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        Index("ix_evaluations_trial_id", "trial_id"),
+        Index("ix_evaluations_groundtruth_id", "groundtruth_id"),
     )
