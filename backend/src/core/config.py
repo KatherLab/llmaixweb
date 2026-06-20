@@ -1,6 +1,7 @@
 # backend/src/core/config.py
 import os
 import sys
+import threading
 from pathlib import Path
 
 import boto3
@@ -426,24 +427,77 @@ class Settings(BaseSettings):
 # Lazy initialization - settings are validated only when first accessed
 # This avoids requiring .env file for operations like Alembic migrations
 _settings_instance: Settings | None = None
+_settings_lock = threading.Lock()
 
 
 def _get_settings() -> Settings:
-    """Get settings instance, initializing on first access."""
+    """Get the live settings instance, initializing on first access.
+
+    Thread-safe: the first access validates the config (OpenAI/S3 checks in
+    Settings.__init__). Subsequent calls return the cached instance.
+    """
     global _settings_instance
     if _settings_instance is None:
-        try:
-            _settings_instance = Settings()
-        except ValidationError as e:
-            print("Configuration Error:")
-            print(e)
-            print("Please check your .env file or environment variables.")
-            sys.exit(1)
+        with _settings_lock:
+            if _settings_instance is None:
+                try:
+                    _settings_instance = Settings()
+                except ValidationError as e:
+                    print("Configuration Error:")
+                    print(e)
+                    print("Please check your .env file or environment variables.")
+                    sys.exit(1)
     return _settings_instance
 
 
+def apply_runtime_overrides(overrides: dict) -> None:
+    """Apply DB-backed runtime overrides to the live settings singleton.
+
+    Uses ``model_validate`` so DB string values are coerced to the correct
+    field types (int/bool/etc.), but — unlike ``Settings(**overrides)`` — it
+    does NOT re-run ``__init__``'s OpenAI/S3 network validation. That avoids
+    latency and a potential ``sys.exit(1)`` on every admin settings save.
+
+    Only call this after the singleton has been initialized (e.g. from
+    ``dynamic_settings`` once the DB is available).
+    """
+    global _settings_instance
+    if not overrides:
+        return
+    base = _get_settings()
+    merged = {**base.model_dump(), **overrides}
+    _settings_instance = Settings.model_validate(merged)
+
+
+class _SettingsProxy:
+    """Transparent proxy to the live :class:`Settings` instance.
+
+    ``from ..core.config import settings`` binds this proxy rather than a
+    concrete ``Settings`` object, so attribute access always reads the current
+    ``_settings_instance``. This lets runtime overrides applied via
+    :func:`apply_runtime_overrides` (triggered by the admin panel through
+    ``dynamic_settings.reload_settings_cache``) propagate to modules that
+    captured ``settings`` at import time. Attribute access is O(1) after the
+    first load (the instance is cached in ``_settings_instance``).
+    """
+
+    __slots__ = ()
+
+    def __getattr__(self, name: str):
+        return getattr(_get_settings(), name)
+
+    def __repr__(self) -> str:
+        return f"<_SettingsProxy -> {_get_settings()!r}>"
+
+
+#: Module-level settings accessor. Use ``from ..core.config import settings``
+#: or ``from ..core import config; config.settings`` — both resolve to this
+#: proxy, which always reflects the latest runtime overrides.
+settings = _SettingsProxy()
+
+
 def __getattr__(name: str) -> Settings:
-    """Lazy load settings on first attribute access."""
+    """Lazy load settings on first attribute access (fallback)."""
     if name == "settings":
         return _get_settings()
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

@@ -1075,6 +1075,10 @@ def evaluate_trial(
                         "Check that your ground truth file contains keys that match your document IDs or filenames"
                     )
             raise HTTPException(status_code=400, detail=error_details)
+    except HTTPException:
+        # Re-raise the structured validation error (with errors + suggestions)
+        # so it reaches the client instead of being flattened by the handler below.
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Validation failed: {str(e)}")
 

@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 
 from mistralai.client import Mistral
 
+from ..core.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -156,7 +158,11 @@ class MistralOCRService:
 
         # Helper functions for each API call
         def upload_document():
-            with Mistral(api_key=self.api_key, server_url=self.server_url) as mistral:
+            with Mistral(
+                api_key=self.api_key,
+                server_url=self.server_url,
+                timeout_ms=settings.LLM_REQUEST_TIMEOUT_SECONDS * 1000,
+            ) as mistral:
                 return mistral.files.upload(
                     file={
                         "file_name": f"document.{document_type}",
@@ -166,11 +172,19 @@ class MistralOCRService:
                 )
 
         def get_signed_url(file_id: str):
-            with Mistral(api_key=self.api_key, server_url=self.server_url) as mistral:
+            with Mistral(
+                api_key=self.api_key,
+                server_url=self.server_url,
+                timeout_ms=settings.LLM_REQUEST_TIMEOUT_SECONDS * 1000,
+            ) as mistral:
                 return mistral.files.get_signed_url(file_id=file_id)
 
         def process_ocr(document_url: str):
-            with Mistral(api_key=self.api_key, server_url=self.server_url) as mistral:
+            with Mistral(
+                api_key=self.api_key,
+                server_url=self.server_url,
+                timeout_ms=settings.LLM_REQUEST_TIMEOUT_SECONDS * 1000,
+            ) as mistral:
                 return mistral.ocr.process(
                     model=self.model,
                     document={

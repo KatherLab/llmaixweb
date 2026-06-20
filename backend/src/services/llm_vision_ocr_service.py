@@ -63,7 +63,11 @@ class LLMVisionOCRService:
             raise LLMVisionOCRError("Vision LLM API key is required")
         if not base_url:
             raise LLMVisionOCRError("Vision LLM base URL is required")
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+        )
         self.model = model
         self.prompt = prompt or self.DEFAULT_PROMPT
         self.max_image_dim = max_image_dim

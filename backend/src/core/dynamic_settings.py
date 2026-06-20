@@ -1,5 +1,5 @@
 # backend/src/core/dynamic_settings.py
-import sys
+import logging
 from functools import lru_cache
 
 from sqlalchemy.exc import OperationalError
@@ -25,6 +25,8 @@ try:
 except ImportError:
     from backend.src.models import AppSetting
 
+logger = logging.getLogger(__name__)
+
 
 def get_db_overrides(db: Session) -> dict:
     try:
@@ -42,18 +44,40 @@ def get_db_overrides(db: Session) -> dict:
 
 @lru_cache()
 def get_settings() -> Settings:
+    """Return the live settings proxy, applying DB overrides to the singleton.
+
+    Returns the module-level proxy from ``core.config`` (not a concrete
+    instance) so that ``settings = get_settings()`` bindings reflect runtime
+    overrides applied here and by :func:`reload_settings_cache`, instead of
+    freezing the instance at import time. Overrides are applied to the shared
+    singleton (via ``config.apply_runtime_overrides``) on first load and on
+    each reload; the ``lru_cache`` ensures the DB is only queried once per
+    cache lifetime.
+    """
+    from .config import apply_runtime_overrides
+    from .config import settings as _settings_proxy
+
     with SessionLocal() as db:
         overrides = get_db_overrides(db)
-        return Settings(**overrides)
+    if overrides:
+        try:
+            apply_runtime_overrides(overrides)
+        except Exception as e:
+            # Don't let an invalid override value break settings access —
+            # fall back to the existing (base) instance.
+            logger.warning("Failed to apply runtime settings overrides: %s", e)
+    return _settings_proxy
 
 
 def reload_settings_cache():
-    """Clear the dynamic settings cache and the config module's cached instance."""
-    # Clear the lru_cache for get_settings()
-    get_settings.cache_clear()
+    """Clear the dynamic settings cache and reapply DB overrides.
 
-    # Clear the cached instance in the config module
-    # Use the module name we determined at import time
-    if _config_module_name in sys.modules:
-        config_module = sys.modules[_config_module_name]
-        setattr(config_module, "_settings_instance", None)
+    Clears the ``lru_cache`` on :func:`get_settings` and re-runs it so that
+    fresh DB overrides are applied to the shared config singleton. Because
+    ``settings`` everywhere is a proxy to that singleton, the new values
+    propagate to all modules (including those that bound ``settings`` at
+    import time).
+    """
+    get_settings.cache_clear()
+    # Re-trigger override application to the shared singleton.
+    get_settings()

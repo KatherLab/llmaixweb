@@ -57,8 +57,14 @@ if celery_app:
 
     @celery_app.task(
         bind=True,
-        autoretry_for=(Exception,),
-        retry_backoff=True,
+        # Note: We deliberately don't use autoretry_for. Catastrophic failures
+        # (e.g. AsyncOpenAI client construction, exceptions escaping _run()) are
+        # caught below and the Trial is marked FAILED. With autoretry_for, the
+        # re-raised exception would trigger a Celery retry that re-runs the
+        # entire trial from scratch, resurrecting a FAILED trial (status flaps
+        # FAILED -> IN_PROGRESS -> ...). Per-document failures are handled
+        # inside _run() and never reach this handler. Matches the preprocessing
+        # task (see celery/preprocessing.py).
         acks_late=True,
     )
     def extract_info_celery(
@@ -219,6 +225,20 @@ if celery_app:
                     if cancelled:
                         trial.status = models.TrialStatus.CANCELLED
                         event = "cancelled"
+                        # Honor rollback_on_cancel: delete any TrialResult rows
+                        # produced before cancellation was detected. This mirrors
+                        # the preprocessing task's rollback (celery/preprocessing.py).
+                        # Safe to do here because finalization runs after all
+                        # in-flight doc tasks have settled, so no new results are
+                        # being created concurrently.
+                        if trial.rollback_on_cancel:
+                            db.execute(
+                                models.TrialResult.__table__.delete().where(
+                                    models.TrialResult.trial_id == trial_id
+                                )
+                            )
+                            trial.docs_done = 0
+                            trial.progress = 0.0
                         trial.meta = (trial.meta or {}) | {
                             "failures": failures,
                             "eta_seconds": 0,

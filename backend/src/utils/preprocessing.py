@@ -608,10 +608,16 @@ class PreprocessingPipeline:
             result = result_queue.get(timeout=timeout_seconds)
             return result
         except queue.Empty:
-            # Timeout occurred
-            raise TimeoutError(
-                f"Processing exceeded {timeout_seconds}s timeout for file {file.file_name}"
-            )
+            # The worker may have raised before producing a result. Surface the
+            # real exception instead of a misleading TimeoutError; only report a
+            # timeout if the worker is genuinely still running.
+            try:
+                exc = exception_queue.get_nowait()
+                raise exc
+            except queue.Empty:
+                raise TimeoutError(
+                    f"Processing exceeded {timeout_seconds}s timeout for file {file.file_name}"
+                )
         except Exception as e:
             # Re-raise any exception from the worker thread
             raise e

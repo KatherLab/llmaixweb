@@ -99,18 +99,20 @@ async def _redis_subscriber_task():
         # Yield control back to event loop so startup can complete
         await asyncio.sleep(0)
 
-        # Use get_message with short timeout for responsive async loop
+        # Use get_message with short timeout for responsive async loop.
+        # redis-py's pubsub.get_message() is a BLOCKING call; running it
+        # directly on the event loop stalls all async handlers (including
+        # WebSocket broadcasts) for the full timeout window each iteration.
+        # Offload it to a worker thread so the loop stays responsive.
         while True:
             try:
                 # Short timeout (100ms) so we don't block shutdown
-                message = pubsub.get_message(timeout=0.1)
+                message = await asyncio.to_thread(pubsub.get_message, timeout=0.1)
                 if message and message["type"] == "message":
                     data = json.loads(message["data"])
                     # Broadcast to all connected clients (admin + all users)
                     # The frontend filters by project_id on its end
                     await manager.broadcast_to_all(data)
-                # Small sleep to prevent tight loop when no messages
-                await asyncio.sleep(0.01)
             except Exception as e:
                 logger.error(f"Redis message processing error: {e}", exc_info=True)
     except asyncio.CancelledError:
