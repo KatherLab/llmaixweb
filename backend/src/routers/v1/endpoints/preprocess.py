@@ -835,7 +835,7 @@ def get_preprocessing_progress(
     return schemas.PreprocessingTask.model_validate(task)
 
 
-@router.get("/preprocess/{task_id}/retry-failed")
+@router.post("/preprocess/{task_id}/retry-failed")
 def retry_failed_files(
     *,
     project_id: int,
@@ -843,14 +843,21 @@ def retry_failed_files(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
-    """Create a new task to retry failed files from a previous task."""
+    """Create a new task to retry failed files from a previous task.
+
+    POST (not GET) because it mutates state: it creates a PreprocessingTask,
+    commits, and dispatches Celery work. A GET would be unsafe — browser
+    prefetch/link prefetch or crawlers could silently trigger retries.
+    """
     check_project_access(project_id, current_user, db, "write")
 
     original_task = db.execute(
-        select(models.PreprocessingTask).where(
+        select(models.PreprocessingTask)
+        .where(
             models.PreprocessingTask.id == task_id,
             models.PreprocessingTask.project_id == project_id,
         )
+        .options(selectinload(models.PreprocessingTask.file_tasks))
     ).scalar_one_or_none()
 
     if not original_task:

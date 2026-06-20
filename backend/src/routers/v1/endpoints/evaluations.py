@@ -9,7 +9,7 @@ import pandas as pd
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from .... import models, schemas
 from ....core.security import get_current_user
@@ -797,11 +797,26 @@ def get_evaluation_errors(
 
     errors = query.limit(limit).all()
 
+    # Batch-load the referenced documents (with their original file) in one
+    # query instead of one query + lazy load per error (N+1).
+    doc_ids = {error.document_id for error in errors if error.document_id}
+    documents_by_id: dict[int, models.Document] = {}
+    if doc_ids:
+        documents_by_id = {
+            doc.id: doc
+            for doc in db.execute(
+                select(models.Document)
+                .where(models.Document.id.in_(doc_ids))
+                .options(selectinload(models.Document.original_file))
+            )
+            .scalars()
+            .all()
+        }
+
     # Build error details
     error_details = []
     for error in errors:
-        # Get document info
-        document = db.query(models.Document).get(error.document_id)
+        document = documents_by_id.get(error.document_id) if error.document_id else None
 
         error_detail = {
             "document_id": error.document_id,

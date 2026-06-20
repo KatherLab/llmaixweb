@@ -4,6 +4,7 @@
 import datetime
 import io
 import json
+import logging
 import zipfile
 
 from fastapi import (
@@ -32,6 +33,8 @@ from ....dependencies import (
 )
 from ....utils.enums import FileCreator
 from ....utils.helpers import detect_structured_mime
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -964,7 +967,7 @@ def batch_delete_files(
 
 
 @router.post("/download-zip")
-async def download_files_as_zip(
+def download_files_as_zip(
     *,
     db: Session = Depends(get_db),
     project_id: int,
@@ -972,8 +975,38 @@ async def download_files_as_zip(
     include_metadata: bool = Body(True),
     current_user: models.User = Depends(get_current_user),
 ) -> Response:
-    """Download multiple files as a ZIP archive"""
+    """Download multiple files as a ZIP archive.
+
+    Plain (non-async) ``def`` so FastAPI runs it in a threadpool — the handler
+    does blocking sync I/O (``get_file`` reads from disk/S3 and the DB session
+    is synchronous), which would otherwise block the event loop for the entire
+    request.
+    """
     check_project_access(project_id, current_user, db)
+
+    # Cap the number of files to bound memory/time for ZIP assembly.
+    max_files = 200
+    if len(file_ids) > max_files:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot zip more than {max_files} files at once "
+            f"(requested {len(file_ids)}).",
+        )
+
+    # Batch-load all requested files in one query instead of one per id (N+1).
+    files = (
+        db.execute(
+            select(models.File).where(
+                models.File.project_id == project_id,
+                models.File.id.in_(file_ids),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    # Preserve the requested order.
+    files_by_id = {f.id: f for f in files}
+    ordered_files = [files_by_id[i] for i in file_ids if i in files_by_id]
 
     # Create ZIP file in memory
     zip_buffer = io.BytesIO()
@@ -981,16 +1014,7 @@ async def download_files_as_zip(
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         files_metadata = []
 
-        for file_id in file_ids:
-            file = db.execute(
-                select(models.File).where(
-                    models.File.id == file_id, models.File.project_id == project_id
-                )
-            ).scalar_one_or_none()
-
-            if not file:
-                continue
-
+        for file in ordered_files:
             try:
                 # Get file content
                 file_content = get_file(file.file_uuid)
@@ -1018,7 +1042,7 @@ async def download_files_as_zip(
                     )
 
             except Exception as e:
-                print(f"Error adding file {file.file_name} to ZIP: {e}")
+                logger.error("Error adding file %s to ZIP: %s", file.file_name, e)
                 continue
 
         # Add metadata file if requested
@@ -1046,7 +1070,7 @@ async def download_files_as_zip(
 
 
 @router.post("/move")
-async def move_files(
+def move_files(
     *,
     db: Session = Depends(get_db),
     project_id: int,
@@ -1054,7 +1078,11 @@ async def move_files(
     target_project_id: int = Body(...),
     current_user: models.User = Depends(get_current_user),
 ) -> dict:
-    """Move files to another project"""
+    """Move files to another project.
+
+    Plain (non-async) ``def`` so FastAPI runs it in a threadpool — the handler
+    uses a synchronous DB session, which would otherwise block the event loop.
+    """
     # Check access to both source and target projects
     check_project_access(project_id, current_user, db, permission="write")
     check_project_access(target_project_id, current_user, db, permission="write")

@@ -45,6 +45,36 @@ def check_project_access(
     )
 
 
+def _trials_referencing_docs(
+    db: Session, project_id: int, doc_ids: list[int]
+) -> list[tuple[int, str | None, datetime.datetime | None]]:
+    """Return ``(id, name, created_at)`` for trials in ``project_id`` whose
+    ``document_ids`` JSON list contains any of ``doc_ids``.
+
+    Loads only lightweight columns instead of full Trial rows (which include
+    ``meta``, ``advanced_options``, schema/prompt snapshots, etc.). Membership
+    is checked in Python to stay compatible with both SQLite (tests) and
+    PostgreSQL (prod), since JSON array containment operators differ between
+    the two.
+    """
+    if not doc_ids:
+        return []
+    doc_id_set = set(doc_ids)
+    rows = db.execute(
+        select(
+            models.Trial.id,
+            models.Trial.name,
+            models.Trial.document_ids,
+            models.Trial.created_at,
+        ).where(models.Trial.project_id == project_id)
+    ).all()
+    return [
+        (row[0], row[1], row[3])
+        for row in rows
+        if row[2] and doc_id_set.intersection(row[2])
+    ]
+
+
 @router.get("/document", response_model=None)  # keep None just for the test
 def get_documents(
     project_id: Annotated[int, Path()],
@@ -332,24 +362,14 @@ def delete_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     # --- Check for usage in any trial (document_ids is a JSON list) ---
-    # Use in-Python filtering to avoid JSON operator incompatibility between SQLite and PostgreSQL
-    trials_with_doc = (
-        db.execute(select(models.Trial).where(models.Trial.project_id == project_id))
-        .scalars()
-        .all()
-    )
-    trials_with_doc = next(
-        (
-            t
-            for t in trials_with_doc
-            if t.document_ids and document_id in t.document_ids
-        ),
-        None,
-    )
-    if trials_with_doc:
+    # Membership is checked in Python to avoid JSON operator incompatibility
+    # between SQLite and PostgreSQL; only lightweight columns are loaded.
+    referencing = _trials_referencing_docs(db, project_id, [document_id])
+    if referencing:
+        trial_id, trial_name, _ = referencing[0]
         raise HTTPException(
             status_code=400,
-            detail=f"Document is referenced in trial '{trials_with_doc.name or trials_with_doc.id}'. Remove from trial(s) first.",
+            detail=f"Document is referenced in trial '{trial_name or trial_id}'. Remove from trial(s) first.",
         )
 
     # --- Check if document is used in any trial results ---
@@ -693,21 +713,27 @@ def delete_document_set(
     deleted_doc_ids = []
     file_preprocessing_task_ids = set()  # Track tasks for cleanup
     if delete_documents:
+        # Load trial-referenced doc IDs once for the whole set instead of
+        # re-querying every trial per document (was O(docs × trials)).
+        set_doc_ids = [doc.id for doc in doc_set.documents]
+        referenced_doc_ids: set[int] = set()
+        if set_doc_ids:
+            rows = db.execute(
+                select(models.Trial.document_ids).where(
+                    models.Trial.project_id == project_id
+                )
+            ).all()
+            ref_set = set(set_doc_ids)
+            for (trial_doc_ids,) in rows:
+                if trial_doc_ids and ref_set.intersection(trial_doc_ids):
+                    referenced_doc_ids.update(ref_set.intersection(trial_doc_ids))
+
         for doc in doc_set.documents:
             # Check if document can be safely deleted
             can_delete = True
 
             # Check trial references (via document_ids JSON list)
-            trials_with_doc = (
-                db.execute(
-                    select(models.Trial).where(models.Trial.project_id == project_id)
-                )
-                .scalars()
-                .all()
-            )
-            if any(
-                t.document_ids and doc.id in t.document_ids for t in trials_with_doc
-            ):
+            if doc.id in referenced_doc_ids:
                 can_delete = False
 
             # Check trial results (a doc may have results across many trials)
@@ -938,25 +964,16 @@ def get_document_set_stats(
             trials_count=0, extractions_count=0, last_used=None
         )
 
-    # For SQLite, we need to check JSON array membership differently
-    # Count trials that contain ANY of these document IDs
-    trials_with_docs = (
-        db.execute(select(models.Trial).where(models.Trial.project_id == project_id))
-        .scalars()
-        .all()
-    )
+    # Count trials that contain ANY of these document IDs. Membership is
+    # checked in Python for SQLite/PostgreSQL compatibility; only lightweight
+    # columns are loaded instead of full Trial rows.
+    trials_with_docs = _trials_referencing_docs(db, project_id, doc_ids)
 
-    # Filter trials that contain any of our document IDs
-    trials_count = 0
+    trials_count = len(trials_with_docs)
     last_trial_date = None
-
-    for trial in trials_with_docs:
-        if trial.document_ids and any(
-            doc_id in trial.document_ids for doc_id in doc_ids
-        ):
-            trials_count += 1
-            if not last_trial_date or trial.created_at > last_trial_date:
-                last_trial_date = trial.created_at
+    for _trial_id, _name, created_at in trials_with_docs:
+        if created_at and (not last_trial_date or created_at > last_trial_date):
+            last_trial_date = created_at
 
     # Count total extractions (trial results for these documents)
     extractions_count = (

@@ -911,7 +911,12 @@ _JSON_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.IGNORECASE)
 
 
 def _extract_json_snippet(s: str) -> str:
-    """Trim to the first complete top-level JSON object/array; remove code fences."""
+    """Trim to the first complete top-level JSON object/array; remove code fences.
+
+    Tracks string-literal state so braces/brackets that appear *inside* string
+    values don't prematurely balance the nesting stack (e.g. ``{"a": "}"}``
+    must not be truncated at the ``}`` inside the string).
+    """
     if not isinstance(s, str):
         s = "" if s is None else str(s)
 
@@ -924,10 +929,23 @@ def _extract_json_snippet(s: str) -> str:
     start = min(starts)
 
     stack: list[str] = []
+    in_string = False
+    escape = False
     i = start
     while i < len(s):
         ch = s[i]
-        if ch in "{[":
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch in "{[":
             stack.append("}" if ch == "{" else "]")
         elif ch in "}]":
             if not stack or ch != stack[-1]:

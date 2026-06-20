@@ -4,6 +4,7 @@
 import json
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 from thefuzz import fuzz
@@ -73,11 +74,21 @@ async def upload_groundtruth(
         if not upload_file:
             raise HTTPException(status_code=400, detail="No file provided")
         file_content = await upload_file.read()
-    file_uuid = save_file(file_content)
+    # save_file() does blocking disk/S3 I/O; run it in a threadpool so the
+    # event loop isn't blocked for the duration of the write.
+    file_uuid = await run_in_threadpool(save_file, file_content)
+    # Derive a name safely: ``file`` may be None in the multiple_json path
+    # (where the caller must pass ``name`` explicitly).
+    fallback_name = file.filename if file else None
+    gt_name = name or fallback_name
+    if not gt_name:
+        raise HTTPException(
+            status_code=400, detail="A name is required when no single file is provided"
+        )
     # Create ground truth record
     gt = models.GroundTruth(
         project_id=project_id,
-        name=name or file.filename,
+        name=gt_name,
         format=format,
         file_uuid=file_uuid,
     )

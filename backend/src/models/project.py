@@ -292,6 +292,10 @@ class DocumentSet(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
 
+    __table_args__ = (
+        Index("ix_document_sets_project_created", "project_id", "created_at"),
+    )
+
     # Add metadata for better organization
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(String(500), nullable=True)
@@ -342,6 +346,14 @@ class PreprocessingConfiguration(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    __table_args__ = (
+        Index(
+            "ix_preprocessing_configurations_project_created",
+            "project_id",
+            "created_at",
+        ),
+    )
     description: Mapped[str] = mapped_column(String(500), nullable=True)
 
     # Engine settings are stored in additional_settings
@@ -382,6 +394,11 @@ class PreprocessingTask(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     configuration_id: Mapped[int] = mapped_column(
         ForeignKey("preprocessing_configurations.id"), nullable=True
+    )
+
+    __table_args__ = (
+        Index("ix_preprocessing_tasks_project_created", "project_id", "created_at"),
+        Index("ix_preprocessing_tasks_configuration_id", "configuration_id"),
     )
 
     status: Mapped[PreprocessingStatus] = mapped_column(
@@ -503,6 +520,8 @@ class Prompt(Base):
     system_prompt: Mapped[str] = mapped_column(String, nullable=True)
     user_prompt: Mapped[str] = mapped_column(String, nullable=True)
 
+    __table_args__ = (Index("ix_prompts_project_created", "project_id", "created_at"),)
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -519,6 +538,8 @@ class Schema(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     schema_name: Mapped[str] = mapped_column(String(100), nullable=False)
     schema_definition: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+    __table_args__ = (Index("ix_schemas_project_created", "project_id", "created_at"),)
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -551,6 +572,11 @@ class Trial(Base):
     schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"))
     prompt_id: Mapped[int] = mapped_column(ForeignKey("prompts.id"))
     document_set_id: Mapped[int | None] = mapped_column(ForeignKey("document_sets.id"))
+
+    __table_args__ = (
+        Index("ix_trials_project_created", "project_id", "created_at"),
+        Index("ix_trials_project_status", "project_id", "status"),
+    )
 
     # ── config ──────────────────────────────────────────────────────────────────
     document_ids: Mapped[list[int]] = mapped_column(JSON, default=list)

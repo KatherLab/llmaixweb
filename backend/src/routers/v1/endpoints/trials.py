@@ -362,20 +362,15 @@ def get_trials(
         all_ids_rows = db.execute(base.with_only_columns(T.id)).all()
         all_ids = [r[0] for r in all_ids_rows]
         if all_ids:
-            all_trials = (
-                db.execute(
-                    select(T).where(T.id.in_(all_ids)).options(noload(T.results))
-                )
-                .scalars()
-                .all()
-            )
+            # Load only (id, meta) instead of full Trial rows — the failure
+            # check only needs ``meta.failures``, so avoid hydrating
+            # schema/prompt snapshots, advanced_options, document_ids, etc.
+            meta_rows = db.execute(select(T.id, T.meta).where(T.id.in_(all_ids))).all()
             total = 0
-            for t in all_trials:
+            for _id, _meta in meta_rows:
                 _has = False
-                if isinstance(t.meta, dict) and isinstance(
-                    t.meta.get("failures"), dict
-                ):
-                    _has = len(t.meta["failures"]) > 0
+                if isinstance(_meta, dict) and isinstance(_meta.get("failures"), dict):
+                    _has = len(_meta["failures"]) > 0
                 if (has_failures and _has) or (has_failures is False and not _has):
                     total += 1
         else:
@@ -655,31 +650,38 @@ def download_trial_results(
     all_result_keys = set()
     all_prep_keys = set()
 
+    # Batch-load all documents (with their original file + preprocessing config)
+    # in a single query instead of 3 queries per result (N+1).
+    doc_ids = [result.document_id for result in results]
+    docs = (
+        db.execute(
+            select(models.Document)
+            .where(models.Document.id.in_(doc_ids))
+            .options(
+                selectinload(models.Document.original_file),
+                selectinload(models.Document.preprocessing_config),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for doc in docs:
+        document_cache[doc.id] = doc
+        if doc.original_file_id:
+            # Cache the file (may be None) so it isn't re-queried per result.
+            file_cache[doc.original_file_id] = doc.original_file
+        if doc.preprocessing_config_id:
+            # Cache the config (may be None) so it isn't re-queried per result.
+            prep_conf = doc.preprocessing_config
+            preprocessing_config_cache[doc.preprocessing_config_id] = prep_conf
+            if prep_conf:
+                all_prep_keys.update(
+                    _extract_keys(filter_sensitive_keys(prep_conf.__dict__))
+                )
+        all_meta_keys.update(_extract_keys(doc.meta_data or {}))
+
     for result in results:
-        doc = db.execute(
-            select(models.Document).where(models.Document.id == result.document_id)
-        ).scalar_one_or_none()
-        document_cache[result.document_id] = doc
-        if doc:
-            if doc.original_file_id and doc.original_file_id not in file_cache:
-                file_cache[doc.original_file_id] = db.execute(
-                    select(models.File).where(models.File.id == doc.original_file_id)
-                ).scalar_one_or_none()
-            prep_conf = None
-            if doc.preprocessing_config_id:
-                prep_conf = db.execute(
-                    select(models.PreprocessingConfiguration).where(
-                        models.PreprocessingConfiguration.id
-                        == doc.preprocessing_config_id
-                    )
-                ).scalar_one_or_none()
-                if prep_conf:
-                    preprocessing_config_cache[doc.preprocessing_config_id] = prep_conf
-                    all_prep_keys.update(
-                        _extract_keys(filter_sensitive_keys(prep_conf.__dict__))
-                    )
-            all_meta_keys.update(_extract_keys(doc.meta_data or {}))
-            all_result_keys.update(_extract_keys(result.result or {}))
+        all_result_keys.update(_extract_keys(result.result or {}))
 
     trial_dict = filter_sensitive_keys(
         {

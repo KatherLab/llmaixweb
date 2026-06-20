@@ -1870,9 +1870,21 @@ class PreprocessingPipeline:
             # Process rows in batches
             batch_documents = []
             total_rows = len(df)
+            # Track documents already added to the set with an O(1) set lookup
+            # instead of ``doc not in document_set.documents`` (which is O(n)
+            # per row → O(n²) over a large CSV). Uses ORM identity hashing, so
+            # it does not depend on the document's PK being flushed.
+            added_docs: set[models.Document] = set()
+            # Throttle the cancellation check: check_cancelled() does a DB
+            # round-trip (db.refresh), so calling it per row caused one query
+            # per row (e.g. 100k queries for a 100k-row CSV). Checking every
+            # N rows keeps cancellation responsive without saturating the DB.
+            cancel_check_interval = 100
+            row_counter = 0
 
             for idx, row in df.iterrows():
-                if self.check_cancelled():
+                row_counter += 1
+                if row_counter % cancel_check_interval == 0 and self.check_cancelled():
                     break
 
                 # Build document content from specified columns
@@ -1913,9 +1925,10 @@ class PreprocessingPipeline:
                     },
                 )
 
-                # Add document to the auto-generated set
-                if documents_set_created and doc not in document_set.documents:
+                # Add document to the auto-generated set (O(1) membership check)
+                if documents_set_created and doc not in added_docs:
                     document_set.documents.append(doc)
+                    added_docs.add(doc)
 
                 batch_documents.append(doc)
 

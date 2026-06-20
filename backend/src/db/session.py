@@ -15,7 +15,15 @@ engine = create_engine(
     # Ensure connections are properly reset when returned to pool
     pool_reset_on_return="rollback",
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# expire_on_commit=False: after a commit, keep loaded attribute values in
+# memory instead of expiring them (which would force a lazy SELECT on the next
+# access). Celery tasks and broadcast helpers routinely read task/trial
+# attributes immediately after committing; with the default (True) each such
+# access re-queried the DB. Objects are short-lived (request/task scope) and
+# re-fetched explicitly when fresh data is needed (db.refresh / db.get).
+SessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
+)
 
 
 def init_db() -> None:

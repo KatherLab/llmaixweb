@@ -144,25 +144,42 @@ def get_recent_trials(
 
     trials = db.execute(query).scalars().all()
 
+    if not trials:
+        return []
+
+    trial_ids = [trial.id for trial in trials]
+
+    # Fetch per-trial aggregates in two grouped queries instead of 2 queries
+    # per trial inside the loop (N+1).
+    counts_by_trial = {
+        row[0]: (row[1] or 0)
+        for row in db.execute(
+            select(
+                models.TrialResult.trial_id,
+                func.count(models.TrialResult.id),
+            )
+            .where(models.TrialResult.trial_id.in_(trial_ids))
+            .group_by(models.TrialResult.trial_id)
+        ).all()
+    }
+
+    last_result_by_trial = {
+        row[0]: row[1]
+        for row in db.execute(
+            select(
+                models.TrialResult.trial_id,
+                func.max(models.TrialResult.created_at),
+            )
+            .where(models.TrialResult.trial_id.in_(trial_ids))
+            .group_by(models.TrialResult.trial_id)
+        ).all()
+    }
+
     # Build TrialSummary objects with computed fields
     result = []
     for trial in trials:
-        # Count results
-        results_count = (
-            db.execute(
-                select(func.count(models.TrialResult.id)).where(
-                    models.TrialResult.trial_id == trial.id
-                )
-            ).scalar()
-            or 0
-        )
-
-        # Get last result time
-        last_result = db.execute(
-            select(func.max(models.TrialResult.created_at)).where(
-                models.TrialResult.trial_id == trial.id
-            )
-        ).scalar()
+        results_count = counts_by_trial.get(trial.id, 0)
+        last_result = last_result_by_trial.get(trial.id)
 
         # Count errors from meta.failures
         error_count = None
