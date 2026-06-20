@@ -119,7 +119,9 @@ def _broadcast_trial_update(trial: models.Trial, event: str):
             "type": "trial_update",
             "trial_id": trial.id,
             "project_id": trial.project_id,
-            "status": trial.status,
+            "status": trial.status.value
+            if hasattr(trial.status, "value")
+            else str(trial.status),
             "docs_done": trial.docs_done,
             "documents_count": len(trial.document_ids) if trial.document_ids else 0,
             "progress": float(trial.progress) if trial.progress else 0,
@@ -179,24 +181,8 @@ def mark_failed(sender=None, task_id=None, exception=None, args=None, **_):
 
 
 # ────────────────── periodic sweeper ──────────────────
-@celery_app.on_after_configure.connect
-def _setup_sweeper(sender, **_):
-    """
-    Every 5 minutes:
-      • mark any FilePreprocessingTask stuck in PENDING/IN_PROGRESS
-        for >30 min as FAILED
-      • update counters + message on their parent PreprocessingTask
-    """
-    sender.add_periodic_task(
-        300,  # seconds
-        sweep_orphans.s(),
-        name="sweep_orphaned_file_tasks",
-    )
-
-
-@celery_app.task
 def sweep_orphans():
-    cutoff = datetime.datetime.utcnow() - datetime.timedelta(minutes=30)
+    cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=30)
     with next(get_db()) as db:
         # 1) fail orphaned file tasks
         q = db.query(models.FilePreprocessingTask).filter(
@@ -250,4 +236,52 @@ def sweep_orphans():
             if parent:
                 _broadcast_preprocessing_update(parent, "failed")
 
-    return f"{affected} orphaned file tasks marked as FAILED"
+        # 4) fail stuck Trials. The extraction heartbeat bumps `updated_at` every
+        # few seconds, so a PROCESSING trial whose `updated_at` is older than the
+        # cutoff has a dead worker (crash / OOM / SIGKILL) — the top-level
+        # try/except in extract_info_celery only catches exceptions, not a hard
+        # worker kill, so without this the trial would stay PROCESSING forever.
+        trial_cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
+            minutes=10
+        )
+        stuck_trials = (
+            db.query(models.Trial)
+            .filter(
+                models.Trial.status == models.TrialStatus.PROCESSING,
+                models.Trial.updated_at < trial_cutoff,
+            )
+            .all()
+        )
+        for trial in stuck_trials:
+            trial.status = models.TrialStatus.FAILED
+            trial.finished_at = datetime.datetime.now(datetime.UTC)
+            trial.meta = (trial.meta or {}) | {
+                "failures": {"_sweeper": "Marked FAILED by sweeper (worker lost)"},
+                "eta_seconds": 0,
+            }
+            affected += 1
+        db.commit()
+
+        for trial in stuck_trials:
+            _broadcast_trial_update(trial, "failed")
+
+    return f"{affected} orphaned file tasks / stuck trials marked as FAILED"
+
+
+# Register the sweeper as a periodic Celery task. Guarded so the module can be
+# imported even when Celery is disabled (celery_app is None) — e.g. in tests or
+# DISABLE_CELERY mode. Under normal operation this module is imported inside
+# celery_config's `if not DISABLE_CELERY` block, where celery_app is set.
+if celery_app is not None:
+    sweep_orphans = celery_app.task(
+        name="backend.src.celery.task_signals.sweep_orphans"
+    )(sweep_orphans)
+
+    @celery_app.on_after_configure.connect
+    def _setup_sweeper(sender, **_):
+        """Register the periodic orphan sweeper (every 5 minutes)."""
+        sender.add_periodic_task(
+            300,  # seconds
+            sweep_orphans.s(),
+            name="sweep_orphaned_file_tasks",
+        )

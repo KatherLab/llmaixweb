@@ -1,7 +1,7 @@
 # backend/src/routers/v1/endpoints/llm.py
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,12 @@ from .... import models
 from ....core.config import settings
 from ....core.security import get_current_user
 from ....dependencies import get_db
+from ....schemas.other import (
+    LLMConnectionRequest,
+    LLMModelSchemaTestRequest,
+    LLMModelTestRequest,
+    LLMVlmImageSupportRequest,
+)
 from ....utils.helpers import test_remote_image_support
 from ....utils.info_extraction import (
     get_available_models,
@@ -20,12 +26,17 @@ from ....utils.info_extraction import (
 router = APIRouter()
 
 
-@router.get("/models", response_model=dict[str, Any])
+def _resolve_creds(api_key: str | None, base_url: str | None) -> tuple[str | None, str | None]:
+    """Fall back to the system-wide configured LLM credentials when not supplied."""
+    return api_key or settings.OPENAI_API_KEY, base_url or settings.OPENAI_API_BASE
+
+
+@router.post("/models", response_model=dict[str, Any])
 def get_available_llm_models(
-    api_key: str | None = settings.OPENAI_API_KEY,
-    base_url: str | None = settings.OPENAI_API_BASE,
+    body: LLMConnectionRequest | None = None,
     current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    api_key, base_url = _resolve_creds(*(body.api_key, body.base_url) if body else (None, None))
     if api_key is None or base_url is None:
         return {
             "success": False,
@@ -38,10 +49,10 @@ def get_available_llm_models(
 
 @router.post("/test-connection", response_model=dict[str, Any])
 def test_api_connection_endpoint(
-    api_key: str | None = settings.OPENAI_API_KEY,
-    base_url: str | None = settings.OPENAI_API_BASE,
+    body: LLMConnectionRequest | None = None,
     current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    api_key, base_url = _resolve_creds(*(body.api_key, body.base_url) if body else (None, None))
     if api_key is None or base_url is None:
         return {
             "success": False,
@@ -53,11 +64,13 @@ def test_api_connection_endpoint(
 
 @router.post("/test-model", response_model=dict[str, Any])
 def test_llm_model_endpoint(
-    api_key: str | None = settings.OPENAI_API_KEY,
-    base_url: str | None = settings.OPENAI_API_BASE,
-    llm_model: str | None = settings.OPENAI_API_MODEL,
+    body: LLMModelTestRequest | None = None,
     current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    api_key, base_url = _resolve_creds(
+        *(body.api_key, body.base_url) if body else (None, None)
+    )
+    llm_model = (body.llm_model if body else None) or settings.OPENAI_API_MODEL
     if api_key is None or base_url is None or llm_model is None:
         return {
             "success": False,
@@ -69,17 +82,13 @@ def test_llm_model_endpoint(
 
 @router.post("/test-model-schema", response_model=dict[str, Any])
 def test_model_with_schema_endpoint(
-    api_key: str | None = settings.OPENAI_API_KEY,
-    base_url: str | None = settings.OPENAI_API_BASE,
-    llm_model: str | None = settings.OPENAI_API_MODEL,
-    schema_id: int | None = None,
-    max_completion_tokens: int | None = None,
-    temperature: float | None = None,
-    reasoning_effort: str | None = None,  # "low" | "medium" | "high"
+    body: LLMModelSchemaTestRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Test if a model supports structured output with a specific schema"""
+    api_key, base_url = _resolve_creds(body.api_key, body.base_url)
+    llm_model = body.llm_model or settings.OPENAI_API_MODEL
     if api_key is None or base_url is None or llm_model is None:
         return {
             "success": False,
@@ -87,16 +96,29 @@ def test_model_with_schema_endpoint(
             "error_type": "incomplete_config",
         }
 
-    if schema_id is None:
+    if body.schema_id is None:
         return {
             "success": False,
             "message": "Schema ID is required for testing structured output.",
             "error_type": "missing_schema",
         }
 
-    # Get the schema
+    # Verify the caller owns the project before reading its schema (the router
+    # is not nested under /{project_id}, so scope explicitly to avoid leaking
+    # another project's schema_definition).
+    project = db.execute(
+        select(models.Project).where(models.Project.id == body.project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     schema = db.execute(
-        select(models.Schema).where(models.Schema.id == schema_id)
+        select(models.Schema).where(
+            models.Schema.id == body.schema_id,
+            models.Schema.project_id == body.project_id,
+        )
     ).scalar_one_or_none()
 
     if not schema:
@@ -107,12 +129,12 @@ def test_model_with_schema_endpoint(
         }
 
     adv: dict[str, Any] = {}
-    if max_completion_tokens is not None:
-        adv["max_completion_tokens"] = max_completion_tokens
-    if temperature is not None:
-        adv["temperature"] = temperature
-    if reasoning_effort:
-        adv["reasoning_effort"] = reasoning_effort
+    if body.max_completion_tokens is not None:
+        adv["max_completion_tokens"] = body.max_completion_tokens
+    if body.temperature is not None:
+        adv["temperature"] = body.temperature
+    if body.reasoning_effort:
+        adv["reasoning_effort"] = body.reasoning_effort
 
     # Test the model with structured output
     return test_model_with_schema(
@@ -120,23 +142,19 @@ def test_model_with_schema_endpoint(
     )
 
 
-@router.get("/test-vlm-image-support")
+@router.post("/test-vlm-image-support")
 def test_vlm_image_support(
-    *,
-    db: Session = Depends(get_db),
-    model: str,
-    api_key: str | None = None,
-    base_url: str | None = None,
+    body: LLMVlmImageSupportRequest | None = None,
     current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """
     Test if a VLM model supports image input.
-    All params are optional (except model).
+    All credential fields are optional and fall back to system defaults.
     """
-
-    # Use default settings if not provided
-    api_key = api_key or settings.OPENAI_API_KEY
-    base_url = base_url or settings.OPENAI_API_BASE
+    api_key, base_url = _resolve_creds(
+        *(body.api_key, body.base_url) if body else (None, None)
+    )
+    model = body.llm_model if body else None
 
     if not api_key or not base_url or not model:
         return {

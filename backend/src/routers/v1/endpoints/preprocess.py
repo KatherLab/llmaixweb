@@ -225,10 +225,24 @@ async def preview_preprocessing_duplicates(
                 # For mistral_ocr: also require same mistral_model
                 # For llm_vision: also require same vision_model
                 # OR both would use docling embedded text extraction (force_ocr=False for PDF)
+                #
+                # force_ocr is a PDF-specific concept: it forces OCR even when a PDF has
+                # embedded text. For every other file type (images, spreadsheets, text)
+                # OCR is either always required or never used, so force_ocr is irrelevant
+                # and the frontend never sends it for them. Enforcing the match for images
+                # caused a regression: the docling-serve image path stores force_ocr=True
+                # (images always need OCR) while re-processing sends force_ocr=False (the
+                # frontend default), so same-config duplicates were never detected and the
+                # reprocessing warning modal never appeared. Only enforce it for PDFs.
+                force_ocr_relevant = file.file_type == models.FileType.APPLICATION_PDF
+                force_ocr_matches = (
+                    doc_force_ocr == new_force_ocr
+                ) or not force_ocr_relevant
+
                 is_same_config = (
                     (
                         doc_ocr_engine_normalized == new_ocr_engine_normalized
-                        and doc_force_ocr == new_force_ocr
+                        and force_ocr_matches
                         # Model comparison: only check if engine matches
                         and (
                             # mistral_ocr engine: compare mistral_model

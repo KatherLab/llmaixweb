@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from .. import models
 from ..core.config import settings
+from ..db.session import db_session
 from ..dependencies import get_file
 from .helpers import _make_aware
 
@@ -36,6 +37,9 @@ class PreprocessingPipeline:
         self.cancelled = False
         self.client = None
         self._docling_serve_client = None
+        # Set when a per-file timeout leaves a zombie worker thread holding
+        # `self.db`; the main loop must abort and finalize via fresh sessions.
+        self._timeout_abort = False
 
         # Store API credentials in task metadata if custom ones provided
         if api_key and base_url:
@@ -126,6 +130,13 @@ class PreprocessingPipeline:
 
                 self._process_file_task(file_task)
 
+                # A per-file timeout leaves a zombie worker thread that may
+                # still be using `self.db`. Abort the batch and finalize via
+                # fresh sessions so the main thread never races that thread.
+                if self._timeout_abort:
+                    self._finalize_after_timeout(file_task.id)
+                    return
+
                 # update overall counters for the UI
                 self.task.processed_files = sum(
                     1
@@ -204,6 +215,118 @@ class PreprocessingPipeline:
 
         # ───── persist final state ──────────────────────────────────────────
         self.db.commit()
+
+    def _fail_file_task_fresh(self, file_task_id: int, message: str) -> None:
+        """Mark a single file task FAILED in a fresh session.
+
+        Used after a per-file timeout: the timed-out worker thread may still be
+        using ``self.db``, so the failure is recorded in an independent session
+        to avoid concurrent (non-thread-safe) session access.
+        """
+        try:
+            with db_session() as fresh_db:
+                ft = fresh_db.get(models.FilePreprocessingTask, file_task_id)
+                if ft and ft.status in (
+                    models.PreprocessingStatus.PENDING,
+                    models.PreprocessingStatus.IN_PROGRESS,
+                ):
+                    ft.status = models.PreprocessingStatus.FAILED
+                    ft.error_message = message
+                    ft.completed_at = datetime.datetime.now(datetime.UTC)
+        except Exception:
+            logger.exception(
+                "Failed to mark file task %s FAILED after timeout", file_task_id
+            )
+
+    def _finalize_after_timeout(self, timed_out_file_task_id: int) -> None:
+        """Abort the batch after a per-file timeout and finalize in fresh sessions.
+
+        A timed-out worker thread keeps running and may keep using ``self.db``,
+        so the whole remaining finalization (fail unfinished file tasks, mark the
+        parent task FAILED, broadcast) happens through independent sessions — the
+        main thread never touches ``self.db`` again.
+        """
+        task_id = self.task.id
+        logger.warning(
+            "PreprocessingTask %s: aborting batch after file task %s timed out",
+            task_id,
+            timed_out_file_task_id,
+        )
+        try:
+            with db_session() as fresh_db:
+                task = fresh_db.get(models.PreprocessingTask, task_id)
+                if not task:
+                    return
+
+                now = datetime.datetime.now(datetime.UTC)
+                for ft in task.file_tasks:
+                    if ft.status in (
+                        models.PreprocessingStatus.PENDING,
+                        models.PreprocessingStatus.IN_PROGRESS,
+                    ):
+                        ft.status = models.PreprocessingStatus.FAILED
+                        ft.error_message = (
+                            "Skipped: a preceding file timed out and aborted the batch."
+                        )
+                        ft.completed_at = now
+
+                total = len(task.file_tasks)
+                completed = sum(
+                    1
+                    for ft in task.file_tasks
+                    if ft.status == models.PreprocessingStatus.COMPLETED
+                )
+                failed = total - completed
+
+                task.processed_files = completed
+                task.failed_files = failed
+                task.status = models.PreprocessingStatus.FAILED
+                task.message = (
+                    f"Processing aborted: a file exceeded its timeout and the "
+                    f"batch was stopped to protect the database session. "
+                    f"{completed} of {total} files processed successfully, "
+                    f"{failed} failed."
+                )
+                task.completed_at = now
+
+                # Capture values for broadcast before the session closes.
+                broadcast_payload = {
+                    "type": "preprocessing_update",
+                    "task_id": task.id,
+                    "project_id": task.project_id,
+                    "status": task.status.value
+                    if hasattr(task.status, "value")
+                    else str(task.status),
+                    "processed_files": task.processed_files,
+                    "total_files": task.meta.get("total_files", 0)
+                    if task.meta
+                    else task.total_files,
+                    "failed_files": task.failed_files,
+                    "cancelled_files": task.skipped_files,
+                    "configuration_name": task.configuration.name
+                    if task.configuration
+                    else None,
+                    "event": "failed",
+                }
+        except Exception:
+            logger.exception(
+                "PreprocessingTask %s: failed to finalize after timeout", task_id
+            )
+            return
+
+        # Publish via Redis (works from the Celery worker process); never
+        # touches self.db.
+        try:
+            from ..utils.redis_broadcast import publish_task_update
+
+            if not publish_task_update(broadcast_payload):
+                logger.warning(
+                    "PreprocessingTask %s: failed to broadcast timeout abort", task_id
+                )
+        except Exception:
+            logger.exception(
+                "PreprocessingTask %s: failed to publish timeout broadcast", task_id
+            )
 
     def _validate_csv_metadata(self, file: models.File) -> None:
         """Validate CSV/XLSX file metadata before processing."""
@@ -317,6 +440,7 @@ class PreprocessingPipeline:
 
     def _process_file_task(self, file_task: models.FilePreprocessingTask):
         """Process a single file task with timeout protection."""
+        file_task_id = file_task.id  # local copy; safe to use after a timeout
         file_task.status = models.PreprocessingStatus.IN_PROGRESS
         file_task.started_at = datetime.datetime.now(datetime.UTC)
         file_task.file_name = file_task.file.file_name
@@ -367,6 +491,10 @@ class PreprocessingPipeline:
             additional = self.config.additional_settings or {}
             extraction_mode = additional.get("extraction_mode", "auto")
             timeout_seconds = self._get_file_timeout(file, extraction_mode)
+            # Capture as locals so the TimeoutError handler (which must not
+            # touch self.db while a zombie thread may be using it) doesn't need
+            # to read ORM attributes.
+            file_name_local = file_task.file_name or file.file_name
 
             # Route to appropriate processor based on file type with timeout
             if file.file_type in [
@@ -404,21 +532,29 @@ class PreprocessingPipeline:
                 file_task.processing_time = round(processing_time, 2)
 
         except TimeoutError as e:
-            file_task.status = models.PreprocessingStatus.FAILED
-            timeout_seconds = self._get_file_timeout(
-                file_task.file,
-                additional.get("extraction_mode", "auto")
-                if "additional" in dir()
-                else "auto",
+            # The worker thread that timed out is still alive and may keep
+            # using `self.db` (SQLAlchemy sessions are not thread-safe). Mark
+            # the file task FAILED in a FRESH session and signal the batch to
+            # abort, so the main thread never touches `self.db` again while
+            # the zombie thread might still be using it.
+            #
+            # NOTE: do NOT access relationships on `file_task` here (e.g.
+            # `file_task.file`) — that would lazy-load through `self.db` and
+            # race the zombie thread. Use only direct columns / locals.
+            self._timeout_abort = True
+            file_name = (
+                file_name_local if "file_name_local" in dir() else f"#{file_task_id}"
             )
-            logger.error(
-                "Timeout processing file %s after %ds: %s",
-                file_task.file.file_name,
-                timeout_seconds,
-                e,
+            # `timeout_seconds` is computed before the timed-out call; fall back
+            # gracefully if control reached here before it was set.
+            secs = timeout_seconds if "timeout_seconds" in dir() else 0
+            logger.error("Timeout processing file %s after %ds: %s", file_name, secs, e)
+            msg = (
+                f"Processing timed out after {secs} seconds. "
+                "The file may be too large or the OCR service is unresponsive."
             )
-            file_task.error_message = f"Processing timed out after {timeout_seconds} seconds. The file may be too large or the OCR service is unresponsive."
-            file_task.completed_at = datetime.datetime.now(datetime.UTC)
+            self._fail_file_task_fresh(file_task_id, msg)
+            return
 
         except Exception as e:
             file_task.status = models.PreprocessingStatus.FAILED

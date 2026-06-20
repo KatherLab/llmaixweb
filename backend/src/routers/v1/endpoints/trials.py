@@ -66,13 +66,19 @@ def create_trial(
         )
 
     schema: models.Schema | None = db.execute(
-        select(models.Schema).where(models.Schema.id == trial.schema_id)
+        select(models.Schema).where(
+            models.Schema.id == trial.schema_id,
+            models.Schema.project_id == project_id,
+        )
     ).scalar_one_or_none()
     if not schema:
         raise HTTPException(status_code=404, detail="Schema not found")
 
     prompt: models.Prompt | None = db.execute(
-        select(models.Prompt).where(models.Prompt.id == trial.prompt_id)
+        select(models.Prompt).where(
+            models.Prompt.id == trial.prompt_id,
+            models.Prompt.project_id == project_id,
+        )
     ).scalar_one_or_none()
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
@@ -187,24 +193,43 @@ def create_trial(
             update_trial_progress,
         )
 
-        for doc_id in document_ids:
-            extract_info_single_doc(
-                db_session=db,
-                trial_id=trial_db.id,
-                document_id=doc_id,
-                llm_model=llm_model,
-                api_key=api_key,
-                base_url=base_url,
-                schema_id=trial.schema_id,
-                prompt_id=trial.prompt_id,
-                project_id=project_id,
-                advanced_options=trial_db.advanced_options,
-            )
-            update_trial_progress(db, trial_db.id)
+        try:
+            for doc_id in document_ids:
+                extract_info_single_doc(
+                    db_session=db,
+                    trial_id=trial_db.id,
+                    document_id=doc_id,
+                    llm_model=llm_model,
+                    api_key=api_key,
+                    base_url=base_url,
+                    schema_id=trial.schema_id,
+                    prompt_id=trial.prompt_id,
+                    project_id=project_id,
+                    advanced_options=trial_db.advanced_options,
+                )
+                update_trial_progress(db, trial_db.id)
 
-        trial_db.status = models.TrialStatus.COMPLETED
-        trial_db.finished_at = datetime.datetime.now(datetime.UTC)
-        db.commit()
+            trial_db.status = models.TrialStatus.COMPLETED
+            trial_db.finished_at = datetime.datetime.now(datetime.UTC)
+            db.commit()
+        except Exception:
+            # Without this the trial stays stuck in PROCESSING forever after a
+            # synchronous extraction failure (bad API key, network error, …).
+            db.rollback()
+            trial_db = db.get(models.Trial, trial_db.id)
+            if trial_db and trial_db.status not in (
+                models.TrialStatus.COMPLETED,
+                models.TrialStatus.FAILED,
+                models.TrialStatus.CANCELLED,
+            ):
+                trial_db.status = models.TrialStatus.FAILED
+                trial_db.finished_at = datetime.datetime.now(datetime.UTC)
+                trial_db.meta = (trial_db.meta or {}) | {
+                    "failures": {"_sync": "synchronous extraction raised an exception"},
+                    "eta_seconds": 0,
+                }
+                db.commit()
+            raise
     else:
         from ....celery.info_extraction import extract_info_celery
 
@@ -583,7 +608,7 @@ def download_trial_results(
 ) -> Response:
     """Download trial results, with a separate metadata.json for trial/prompt/schema metadata."""
 
-    def filter_sensitive_keys(d, blacklist=("api_key",)):
+    def filter_sensitive_keys(d, blacklist=("api_key", "api_key_encrypted")):
         if not d:
             return {}
         return {k: v for k, v in d.items() if k not in blacklist}

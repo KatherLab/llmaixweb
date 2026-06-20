@@ -27,6 +27,13 @@ if not settings.DISABLE_CELERY:
             "visibility_timeout": 3600,  # re‑queue an un‑acked msg after 1h
         },
         worker_prefetch_multiplier=1,  # one job at a time per child process
+        # Hard backstop against runaway / hung tasks. Generous (6h) so it never
+        # false-kills a legitimate long batch; the per-call timeouts (LLM/OCR)
+        # and the periodic stuck-task sweeper catch real hangs far earlier.
+        # SoftTimeLimitExceeded is an Exception, so the trial task's top-level
+        # try/except finalizes it as FAILED; preprocessing handles it per-file.
+        task_soft_time_limit=21600,  # 6 hours
+        task_time_limit=21700,  # 6h + 100s (hard kill)
     )
 
     # — Queues —
@@ -36,5 +43,8 @@ if not settings.DISABLE_CELERY:
         Queue("preprocess"),  # heavy OCR / preprocessing pipeline
     )
 
-    # Import signal handlers once the app is ready
-    # from . import task_signals  # noqa: E402  (must come after celery_app is defined)
+    # Import signal handlers + periodic sweeper once the app is ready. This
+    # must run inside the `not DISABLE_CELERY` guard: task_signals registers
+    # `@celery_app.task` / `@celery_app.on_after_configure` decorators at
+    # import time, which would crash if `celery_app` were None.
+    from . import task_signals  # noqa: E402, F401

@@ -177,16 +177,27 @@ class EvaluationEngine:
 
             document = document_lookup[doc_id]
 
-            # Try to find ground truth key
-            gt_key = self._find_document_key_enhanced(doc_id, document, gt_data)
-            if not gt_key:
-                gt_key = document.document_name if document.document_name else "Unknown"
-                if gt_key == "Unknown":
-                    unmatched_documents.append({"doc_id": doc_id, "filename": gt_key})
-                else:
-                    matched_count += 1
-            else:
+            # Try to find ground truth key. Use the SAME matcher as the actual
+            # evaluation (_find_document_key_by_data) so the validation match
+            # rate reflects what evaluation will really achieve — previously
+            # this used _find_document_key_enhanced, which only checks
+            # original_file.file_name and misses document_name / doc_id matches.
+            doc_info = {
+                "document_name": document.document_name,
+                "filename": document.original_file.file_name
+                if document.original_file
+                else None,
+            }
+            gt_key = self._find_document_key_by_data(doc_id, doc_info, gt_data)
+            if gt_key:
                 matched_count += 1
+            else:
+                # No real ground-truth match — always unmatched, regardless of
+                # whether the document has a name. (Previously a document with a
+                # name but no GT match was counted as matched, inflating the
+                # match percentage and suppressing the mismatch warnings.)
+                label = document.document_name if document.document_name else "Unknown"
+                unmatched_documents.append({"doc_id": doc_id, "filename": label})
 
         # Calculate match percentage
         match_percentage = (

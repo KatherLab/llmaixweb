@@ -40,6 +40,15 @@ class Settings(BaseSettings):
     OPENAI_API_BASE: str | None = None
     OPENAI_API_MODEL: str = ""
     OPENAI_NO_API_CHECK: bool = False
+    # Per-request timeout for LLM completion calls (seconds). The openai SDK
+    # defaults to 600s; making it explicit + configurable bounds hung calls so
+    # a single unresponsive endpoint can't stall a trial indefinitely.
+    LLM_REQUEST_TIMEOUT_SECONDS: int = Field(
+        default=300,
+        ge=10,
+        le=3600,
+        description="Timeout in seconds for a single LLM completion request",
+    )
 
     MISTRAL_API_BASE: str = "https://api.mistral.ai"
     MISTRAL_API_KEY: str = ""

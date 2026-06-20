@@ -17,11 +17,11 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.ext.mutable import MutableDict, MutableList
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from ..db.base import Base
-from ..utils.crypto import encrypt
+from ..utils.crypto import decrypt, encrypt
 from ..utils.enums import (
     ComparisonMethod,
     FieldType,
@@ -558,7 +558,10 @@ class Trial(Base):
         Enum(TrialStatus, native_enum=False, length=20), default=TrialStatus.PENDING
     )
     llm_model: Mapped[str] = mapped_column(String(255))
-    api_key: Mapped[str] = mapped_column(String(512))
+    # Stored encrypted (Fernet). Read/written via the `api_key` property below,
+    # which decrypts on read and encrypts on write — so `trial.api_key` always
+    # yields the plaintext key without ever persisting it.
+    api_key_encrypted: Mapped[str] = mapped_column("api_key_encrypted", String(512))
     base_url: Mapped[str] = mapped_column(String(512))
     bypass_celery: Mapped[bool] = mapped_column(Boolean, default=False)
     advanced_options: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -601,13 +604,15 @@ class Trial(Base):
         back_populates="trial", cascade="all, delete-orphan"
     )
 
-    @validates("api_key")
-    def _validate_api_key(self, key: str, value: str) -> str:
-        """Automatically encrypt API keys before storing in the database."""
-        # Only encrypt non-empty, non-encrypted-looking values
-        if value and not value.startswith("gAAAAA"):
-            return encrypt(value)
-        return value
+    @property
+    def api_key(self) -> str:
+        """Plaintext API key (decrypted on read)."""
+        return decrypt(self.api_key_encrypted)
+
+    @api_key.setter
+    def api_key(self, value: str) -> None:
+        """Encrypt the plaintext key before storing it."""
+        self.api_key_encrypted = encrypt(value) if value else ""
 
     def cancel(self):
         self.is_cancelled = True

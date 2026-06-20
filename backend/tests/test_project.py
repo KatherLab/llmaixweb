@@ -1630,7 +1630,7 @@ def test_get_available_llm_models(client, api_url):
     token = login.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    resp = client.get(f"{api_url}/project/llm/models", headers=headers)
+    resp = client.post(f"{api_url}/project/llm/models", headers=headers)
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data.get("success") is True
@@ -3003,3 +3003,102 @@ def test_llm_json_schema_with_minimal_data():
     print(f"Minimal data test result: {result}")
     # Note: The LLM may hallucinate or return null/empty for missing fields
     # This test documents the actual behavior
+
+
+# Test preprocessing duplicate preview detects same-config reprocessing for images
+# Regression: the docling-serve image path stores force_ocr=True in document metadata
+# (images always need OCR), but the frontend sends force_ocr=False (the default, which
+# is PDF-specific). The preview's force_ocr comparison therefore failed for images, so
+# same_config_duplicates was empty and the reprocessing warning modal never appeared.
+def test_preprocess_preview_detects_same_config_image_duplicate(
+    client, api_url, files_base_path
+):
+    import uuid
+
+    from ..src.db.session import SessionLocal
+    from ..src.models.project import Document, File, PreprocessingConfiguration
+    from ..src.utils.enums import FileCreator, FileType, PreprocessingStrategy
+
+    user_data = {"username": "test@example.com", "password": "testpassword"}
+    response = client.post(f"{api_url}/auth/login", data=user_data)
+    assert response.status_code == 200
+    access_token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    response = client.post(
+        f"{api_url}/project",
+        headers=headers,
+        json={"name": "Image Dup Project", "description": "regression test"},
+    )
+    assert response.status_code == 200
+    project_id = response.json()["id"]
+
+    # Seed a File + PreprocessingConfiguration + Document directly via the DB,
+    # mirroring what the docling-serve image OCR path produces. The preview endpoint
+    # only reads these rows (not the file bytes), so no storage upload is needed.
+    db = SessionLocal()
+    try:
+        config = PreprocessingConfiguration(
+            project_id=project_id,
+            name="Prev Config",
+            additional_settings={"ocr_engine": "docling_tesseract"},
+        )
+        db.add(config)
+        db.flush()
+
+        file = File(
+            project_id=project_id,
+            file_uuid=str(uuid.uuid4()),
+            file_name="scan.jpg",
+            file_type=FileType.IMAGE_JPEG,
+            file_creator=FileCreator.user,
+            preprocessing_strategy=PreprocessingStrategy.FULL_DOCUMENT,
+            file_metadata={},
+            file_hash="0" * 64,
+        )
+        db.add(file)
+        db.flush()
+
+        doc = Document(
+            project_id=project_id,
+            original_file_id=file.id,
+            preprocessing_config_id=config.id,
+            text="ocr'd text",
+            document_name="scan.jpg",
+            is_latest=True,
+            meta_data={
+                "ocr_engine": "tesseract",
+                "force_ocr": True,  # hardcoded by the docling-serve image path
+                "extraction_method": "docling_serve_tesseract_image_ocr",
+                "file_type": FileType.IMAGE_JPEG,
+            },
+        )
+        db.add(doc)
+        db.commit()
+        file_id = file.id
+    finally:
+        db.close()
+
+    # Re-process the same image with the same engine and the frontend-default
+    # force_ocr=False. This must be detected as a same-config duplicate.
+    preview = client.post(
+        f"{api_url}/project/{project_id}/preprocess/preview",
+        headers=headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": {
+                "name": "Reprocess",
+                "additional_settings": {
+                    "ocr_engine": "docling_tesseract",
+                    "force_ocr": False,
+                },
+            },
+        },
+    )
+    assert preview.status_code == 200, preview.text
+    data = preview.json()
+    same_config = data["same_config_duplicates"]
+    assert len(same_config) == 1, (
+        f"Expected the reprocessed JPG to be a same-config duplicate, got: {data}"
+    )
+    assert same_config[0]["file_id"] == file_id

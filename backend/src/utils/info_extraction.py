@@ -30,6 +30,7 @@ from openai import (
 from sqlalchemy import func, select
 
 from .. import models
+from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -856,7 +857,7 @@ def extract_info_single_doc(
     client = OpenAI(
         api_key=api_key,
         base_url=base_url,
-        timeout=60.0,
+        timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
         max_retries=3,
     )
 

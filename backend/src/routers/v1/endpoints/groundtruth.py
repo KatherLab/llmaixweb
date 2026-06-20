@@ -807,8 +807,24 @@ def validate_json_ground_truth(
     if current_user.role != "admin" and project.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    groundtruth = db.get(models.GroundTruth, groundtruth_id)
-    schema = db.get(models.Schema, schema_id)
+    # Fetch by (id, project_id) — a bare-PK lookup would let a caller pass
+    # another project's groundtruth/schema id and read cross-project data.
+    groundtruth = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.id == groundtruth_id,
+            models.GroundTruth.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise HTTPException(status_code=404, detail="Ground truth file not found")
+
+    schema = db.execute(
+        select(models.Schema).where(
+            models.Schema.id == schema_id, models.Schema.project_id == project_id
+        )
+    ).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found")
 
     # Only for JSON format
     if groundtruth.format not in ["json", "zip"]:

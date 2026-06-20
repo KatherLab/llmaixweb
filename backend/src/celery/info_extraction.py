@@ -8,6 +8,7 @@ from openai import AsyncOpenAI
 from sqlalchemy import func, select
 
 from .. import models
+from ..core.config import settings
 from ..db.session import db_session
 from ..utils.info_extraction import extract_info_single_doc_async, update_trial_progress
 from .celery_config import celery_app
@@ -74,7 +75,11 @@ if celery_app:
     ) -> None:
         async def _run():
             # Create one client per task
-            async with AsyncOpenAI(api_key=api_key, base_url=base_url) as client:
+            async with AsyncOpenAI(
+                api_key=api_key,
+                base_url=base_url,
+                timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+            ) as client:
                 failures: Dict[str, str] = {}
                 doc_tasks: Dict[int, asyncio.Task] = {}
 
@@ -237,4 +242,34 @@ if celery_app:
                     # Broadcast final status via Redis pub/sub
                     _broadcast_trial_update(trial, event)
 
-        asyncio.run(_run())
+        try:
+            asyncio.run(_run())
+        except Exception as exc:
+            # Catastrophic failure outside the per-document handler (e.g. the
+            # AsyncOpenAI client couldn't be constructed, or something escaped
+            # _run() before finalization). Without this the Trial row stays
+            # stuck in PROCESSING forever — per-doc failures are already
+            # handled inside _run(), this only covers exceptions that escape it.
+            log.exception("Trial %s: catastrophic failure, marking FAILED", trial_id)
+            try:
+                with db_session() as db:
+                    trial = db.get(models.Trial, trial_id)
+                    if trial and trial.status not in (
+                        models.TrialStatus.COMPLETED,
+                        models.TrialStatus.FAILED,
+                        models.TrialStatus.CANCELLED,
+                    ):
+                        trial.status = models.TrialStatus.FAILED
+                        trial.finished_at = dt.datetime.now(dt.UTC)
+                        trial.meta = (trial.meta or {}) | {
+                            "failures": {"_task": str(exc)},
+                            "eta_seconds": 0,
+                        }
+                        db.commit()
+                        _broadcast_trial_update(trial, "failed")
+            except Exception:
+                log.exception(
+                    "Trial %s: failed to mark FAILED after catastrophic error",
+                    trial_id,
+                )
+            raise
