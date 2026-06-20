@@ -148,6 +148,17 @@ def create_trial(
     if llm_model is None or api_key is None or base_url is None:
         raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
 
+    # Only admins may run extraction synchronously in the request thread
+    # (bypass_celery). It blocks a FastAPI worker for the whole trial and,
+    # since the caller also supplies base_url/api_key, makes the server issue
+    # synchronous requests to a user-chosen URL (SSRF). Non-admins must go
+    # through Celery. Mirrors the preprocessing router's guard. Checked before
+    # any DB writes so a 403 doesn't leave an orphaned PROCESSING row behind.
+    if trial.bypass_celery and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403, detail="Only admins may set bypass_celery"
+        )
+
     # 4. Create trial object
     trial_db = models.Trial(
         name=trial.name,

@@ -378,9 +378,15 @@ class TrialBase(UTCModel):
     prompt_id: int
     document_ids: list[int] | None = None  # Make optional
     document_set_id: int | None = None  # Add this for selecting entire sets
-    llm_model: str | None = settings.OPENAI_API_MODEL
-    api_key: str | None = settings.OPENAI_API_KEY
-    base_url: str | None = settings.OPENAI_API_BASE
+    # Defaults intentionally None: a Pydantic field default is evaluated at
+    # class-definition time and embedded verbatim in the generated OpenAPI
+    # schema, so defaulting these to settings.* would publish the server's
+    # configured API key / base URL / model in /openapi.json and Swagger UI.
+    # The router resolves the settings fallback at request time instead
+    # (trials.py: `trial.api_key or settings.OPENAI_API_KEY`).
+    llm_model: str | None = None
+    api_key: str | None = None
+    base_url: str | None = None
     bypass_celery: bool = False
     advanced_options: dict | None = None
 

@@ -69,7 +69,7 @@ def get_settings() -> Settings:
     return _settings_proxy
 
 
-def reload_settings_cache():
+def reload_settings_cache(broadcast: bool = True) -> None:
     """Clear the dynamic settings cache and reapply DB overrides.
 
     Clears the ``lru_cache`` on :func:`get_settings` and re-runs it so that
@@ -77,7 +77,24 @@ def reload_settings_cache():
     ``settings`` everywhere is a proxy to that singleton, the new values
     propagate to all modules (including those that bound ``settings`` at
     import time).
+
+    When ``broadcast`` is True (default), also publishes a cache-invalidation
+    message over Redis so that Celery worker processes — which run in separate
+    processes with their own ``@lru_cache`` and never see the web process's
+    cache clear — reload their own cached settings. Without this, admin config
+    changes (e.g. disabling a remote OCR engine) wouldn't take effect in
+    workers until a restart. The worker-side subscriber calls this with
+    ``broadcast=False`` to avoid a re-broadcast loop.
     """
     get_settings.cache_clear()
     # Re-trigger override application to the shared singleton.
     get_settings()
+
+    if broadcast:
+        try:
+            from ..utils.redis_broadcast import publish_settings_invalidate
+
+            publish_settings_invalidate()
+        except Exception as e:
+            # Best-effort: if Redis is down, workers stay stale until restart.
+            logger.debug("Could not broadcast settings invalidation: %s", e)

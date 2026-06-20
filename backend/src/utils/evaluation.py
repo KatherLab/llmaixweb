@@ -17,6 +17,28 @@ from .helpers import flatten_dict
 from .json_utils import make_jsonable
 
 
+def _is_missing(value: Any) -> bool:
+    """True if ``value`` is None/NaN/empty — safe for array-like values.
+
+    ``pd.isna`` returns a numpy bool *array* (not a scalar) when given a list
+    or array, and using that in a boolean expression raises
+    ``ValueError: The truth value of an array ... is ambiguous``. That crashed
+    evaluation for any schema field holding a list (common in lab data) and —
+    because the per-document eval handler swallows the exception — silently
+    marked those documents 0% accurate. Guard array-likes explicitly.
+    """
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value == ""
+    if isinstance(value, (list, tuple, dict, set)):
+        return len(value) == 0
+    try:
+        return bool(pd.isna(value))
+    except (TypeError, ValueError):
+        return False
+
+
 class EvaluationEngine:
     """Main evaluation engine with enhanced concurrency handling."""
 
@@ -931,7 +953,7 @@ class ValueComparator:
 
     def _convert_value(self, value: Any, field_type: str) -> Any:
         """Convert value to appropriate type."""
-        if value is None or pd.isna(value):
+        if _is_missing(value):
             return None
         if field_type == "number":
             try:
@@ -1073,7 +1095,7 @@ class ValueComparator:
         """Convert value to date."""
         if isinstance(value, datetime):
             return value.date()
-        if pd.isna(value):
+        if _is_missing(value):
             return None
         str_val = str(value).strip()
         # Try common date formats

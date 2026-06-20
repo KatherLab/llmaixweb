@@ -320,8 +320,16 @@ class DocumentSet(Base):
 
     # Relationships
     project: Mapped["Project"] = relationship(back_populates="document_sets")
+    # NOTE: no "delete-orphan" here. Trial.document_set_id is nullable and
+    # trials are routinely created without a set, so unlinking a trial from a
+    # set (setting document_set = None) must NOT delete the trial — and with
+    # "delete-orphan" it would, silently destroying the trial plus its
+    # TrialResults and Evaluations. Deleting a DocumentSet nulls the FK
+    # instead (see ondelete="SET NULL" on Trial.document_set_id); the
+    # delete_document_set endpoint additionally rejects sets still referenced
+    # by a trial.
     trials: Mapped[list["Trial"]] = relationship(
-        "Trial", back_populates="document_set", cascade="all, delete-orphan"
+        "Trial", back_populates="document_set", cascade="all"
     )
 
     documents: Mapped[list["Document"]] = relationship(
@@ -571,7 +579,9 @@ class Trial(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
     schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"))
     prompt_id: Mapped[int] = mapped_column(ForeignKey("prompts.id"))
-    document_set_id: Mapped[int | None] = mapped_column(ForeignKey("document_sets.id"))
+    document_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("document_sets.id", ondelete="SET NULL")
+    )
 
     __table_args__ = (
         Index("ix_trials_project_created", "project_id", "created_at"),

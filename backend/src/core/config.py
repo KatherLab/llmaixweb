@@ -569,7 +569,11 @@ SETTINGS_META = {
     },
     "SQLALCHEMY_DATABASE_URI": {
         "type": "str",
-        "secret": False,
+        # Secret: the assembled URI embeds the DB password
+        # (postgresql://user:password@host/db). Marking it secret masks it in
+        # the admin GET /settings response, where a plain secret:False would
+        # otherwise expose the database credentials.
+        "secret": True,
         "readonly": True,
         "category": "Database",
         "label": "DB URI",

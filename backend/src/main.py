@@ -76,9 +76,9 @@ async def _redis_subscriber_task():
     from .utils.redis_broadcast import TASK_UPDATE_CHANNEL
 
     try:
-        from .utils.redis_broadcast import get_redis_client
+        from .utils.redis_broadcast import new_dedicated_redis_client
 
-        redis_client = get_redis_client()
+        redis_client = new_dedicated_redis_client()
         if not redis_client:
             logger.warning(
                 "Redis not available - real-time Celery task updates disabled"

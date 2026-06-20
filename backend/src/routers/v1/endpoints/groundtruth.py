@@ -93,7 +93,17 @@ async def upload_groundtruth(
         file_uuid=file_uuid,
     )
     db.add(gt)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        # Bytes are already in storage with no DB row. Roll back and remove
+        # the orphaned file so a failed commit doesn't leak storage.
+        db.rollback()
+        try:
+            remove_file(file_uuid)
+        except Exception:
+            pass
+        raise
     db.refresh(gt)
     return schemas.GroundTruth.model_validate(gt)
 

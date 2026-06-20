@@ -499,7 +499,18 @@ def upload_file(
     )
 
     db.add(new_file)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        # The bytes are already on disk/S3 with no DB row referencing them.
+        # Roll back the session and remove the orphaned file so a failed
+        # commit (constraint violation, DB error) doesn't leak storage.
+        db.rollback()
+        try:
+            remove_file(file_uuid)
+        except Exception:
+            pass
+        raise
     db.refresh(new_file)
     return schemas.File.model_validate(new_file)
 

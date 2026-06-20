@@ -80,6 +80,33 @@ if celery_app:
         advanced_options: Dict[str, Any] | None = None,
     ) -> None:
         async def _run():
+            # Stale-task / re-delivery guard. With task_acks_late=True and a
+            # Redis visibility_timeout, a message can be redelivered after a
+            # worker loss or a long-running task exceeding the visibility
+            # window — while the original worker (or the sweeper in
+            # task_signals.py) may have already finalized this trial as
+            # FAILED/CANCELLED/COMPLETED. Re-running would resurrect a failed
+            # trial (status flaps FAILED -> ... -> COMPLETED) and waste LLM
+            # cost on duplicate calls. Bail out if the trial is already
+            # terminal. This mirrors the preprocessing task's stale-task
+            # detection (celery/preprocessing.py).
+            with db_session() as db:
+                trial = db.get(models.Trial, trial_id)
+                if trial is None:
+                    log.warning("Trial %s: not found, skipping", trial_id)
+                    return
+                if trial.status in (
+                    models.TrialStatus.COMPLETED,
+                    models.TrialStatus.FAILED,
+                    models.TrialStatus.CANCELLED,
+                ):
+                    log.warning(
+                        "Trial %s: already terminal (%s), skipping re-delivery",
+                        trial_id,
+                        trial.status,
+                    )
+                    return
+
             # Create one client per task
             async with AsyncOpenAI(
                 api_key=api_key,

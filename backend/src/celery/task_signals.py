@@ -285,3 +285,74 @@ if celery_app is not None:
             sweep_orphans.s(),
             name="sweep_orphaned_file_tasks",
         )
+
+    # ────────────────── runtime-settings propagation ──────────────────
+    # Each Celery worker process keeps its own @lru_cache'd copy of the
+    # settings (see core/dynamic_settings.py). When an admin changes a
+    # setting in the web process, reload_settings_cache() publishes an
+    # invalidation message; this subscriber, started once per worker process,
+    # receives it and reloads the local cache. Without it, worker config is
+    # stale until process restart (e.g. an OCR engine disabled for privacy
+    # would keep running in workers).
+    def _settings_invalidation_listener() -> None:
+        import json
+        import threading
+
+        from ..utils.redis_broadcast import subscribe_settings_invalidate
+
+        def _loop():
+            pubsub = subscribe_settings_invalidate()
+            if pubsub is None:
+                logger.info(
+                    "Redis unavailable — worker settings cache will not "
+                    "auto-refresh; changes apply after worker restart"
+                )
+                return
+            logger.info("Subscribed to settings-invalidation channel")
+            try:
+                while True:
+                    # Blocking get_message with a timeout so the thread can
+                    # react to messages without busy-looping.
+                    message = pubsub.get_message(timeout=5.0)
+                    if message and message.get("type") == "message":
+                        try:
+                            data = json.loads(message["data"])
+                        except Exception:
+                            data = {}
+                        if data.get("type") == "settings_invalidate":
+                            try:
+                                from ..core.dynamic_settings import (
+                                    reload_settings_cache,
+                                )
+
+                                # broadcast=False: this is the receiving side;
+                                # don't re-publish (avoids a loop).
+                                reload_settings_cache(broadcast=False)
+                                logger.info(
+                                    "Reloaded settings cache after "
+                                    "invalidation broadcast"
+                                )
+                            except Exception as e:
+                                logger.error(
+                                    "Failed to reload settings cache: %s",
+                                    e,
+                                    exc_info=True,
+                                )
+            except Exception as e:
+                logger.warning("Settings invalidation listener stopped: %s", e)
+            finally:
+                try:
+                    pubsub.unsubscribe()
+                    pubsub.close()
+                except Exception:
+                    pass
+
+        # Daemon so it never blocks process shutdown.
+        threading.Thread(
+            target=_loop, name="settings-invalidate-sub", daemon=True
+        ).start()
+
+    @signals.worker_process_init.connect
+    def _start_settings_listener(**_):
+        """Start the settings-invalidation subscriber per worker process."""
+        _settings_invalidation_listener()

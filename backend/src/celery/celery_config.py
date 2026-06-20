@@ -23,8 +23,14 @@ if not settings.DISABLE_CELERY:
     celery_app.conf.update(
         task_acks_late=True,  # ACK after the task has succeeded
         task_reject_on_worker_lost=True,  # mark FAILURE if worker seg‑faults / OOMs
+        # Must be strictly greater than task_time_limit below: with Redis
+        # transport the broker re-queues any un-acked message once this elapses.
+        # If it's shorter than the hard time limit, a long-but-legitimate task
+        # gets redelivered to a second worker while the original is still
+        # running → double execution (duplicate LLM calls, duplicate docs,
+        # status flaps). 8h comfortably exceeds the 6h+100s hard limit.
         broker_transport_options={
-            "visibility_timeout": 3600,  # re‑queue an un‑acked msg after 1h
+            "visibility_timeout": 28800,  # re‑queue an un‑acked msg after 8h
         },
         worker_prefetch_multiplier=1,  # one job at a time per child process
         # Hard backstop against runaway / hung tasks. Generous (6h) so it never
