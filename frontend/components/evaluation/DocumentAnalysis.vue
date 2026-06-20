@@ -335,7 +335,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import JsonViewer from '@/components/JsonViewer.vue'
+import JsonViewer from '@/components/common/JsonViewer.vue'
 
 const props = defineProps({
   projectId: {

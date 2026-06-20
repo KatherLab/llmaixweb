@@ -497,11 +497,11 @@ import TrialResults from '@/components/trials/TrialResults.vue'
 import TrialSchemaModal from '@/components/trials/TrialSchemaModal.vue'
 import TrialPromptModal from '@/components/trials/TrialPromptModal.vue'
 import DownloadModal from '@/components/trials/DownloadModal.vue'
-import LoadingSpinner from '@/components/LoadingSpinner.vue'
-import EmptyState from '@/components/EmptyState.vue'
-import ConfirmationDialog from '@/components/ConfirmationDialog.vue'
-import ErrorBanner from '@/components/ErrorBanner.vue'
-import Tooltip from '@/components/Tooltip.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import Tooltip from '@/components/common/Tooltip.vue'
 
 const props = defineProps({
   projectId: { type: [String, Number], required: true },

@@ -300,7 +300,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import FileIcon from './FileIcon.vue'
+import FileIcon from '@/components/common/FileIcon.vue'
 
 const props = defineProps({
   files: { type: Array, required: true },

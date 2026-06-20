@@ -366,7 +366,7 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from '@/services/api'
 import { formatDate } from '@/utils/formatters'
 import { useToast } from 'vue-toastification'
-import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue'
+import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreviewModal.vue'
 import { useScrollLock } from '@/composables/useScrollLock'
 
 useScrollLock({ autoLock: true })

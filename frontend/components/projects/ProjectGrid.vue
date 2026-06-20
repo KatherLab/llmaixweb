@@ -63,7 +63,7 @@ import { api as http } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { themeMaterial } from 'ag-grid-community'
-import LoadingSpinner from './common/LoadingSpinner.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 // ---- auth / router ----
 const authStore = useAuthStore()

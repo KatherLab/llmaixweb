@@ -406,7 +406,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api.js'
 import { useToast } from 'vue-toastification'
-import ActivityBell from '@/components/ActivityBell.vue'
+import ActivityBell from '@/components/admin/ActivityBell.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

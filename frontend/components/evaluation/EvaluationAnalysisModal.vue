@@ -190,10 +190,10 @@ import { useScrollLock } from '@/composables/useScrollLock'
 useScrollLock({ autoLock: true })
 
 // Import sub-components
-import EvaluationOverview from '@/components/EvaluationOverview.vue'
+import EvaluationOverview from '@/components/evaluation/EvaluationOverview.vue'
 import DocumentAnalysis from '@/components/evaluation/DocumentAnalysis.vue'
 import FieldErrorAnalysis from '@/components/evaluation/FieldErrorAnalysis.vue'
-import IndividualDocumentView from '@/components/IndividualDocumentView.vue'
+import IndividualDocumentView from '@/components/documents/IndividualDocumentView.vue'
 
 const props = defineProps({
   projectId: {

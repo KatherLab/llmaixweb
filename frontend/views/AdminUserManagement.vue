@@ -654,8 +654,8 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import UserGrid from '@/components/UserGrid.vue'
-import InvitationGrid from '@/components/InvitationGrid.vue'
+import UserGrid from '@/components/admin/UserGrid.vue'
+import InvitationGrid from '@/components/admin/InvitationGrid.vue'
 import { api } from '@/services/api'
 import { useToast } from 'vue-toastification'
 import { themeMaterial, iconSetMaterial } from 'ag-grid-community'

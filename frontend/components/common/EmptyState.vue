@@ -1,6 +1,6 @@
 <!-- src/components/EmptyState.vue -->
 <script setup>
-import Tooltip from '@/components/Tooltip.vue'
+import Tooltip from '@/components/common/Tooltip.vue'
 
 defineProps({
   title: { type: String, required: true },

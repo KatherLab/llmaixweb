@@ -43,7 +43,7 @@
 </template>
 
 <script setup>
-import ProjectGrid from '@/components/ProjectGrid.vue'
-import CreateProjectButton from '@/components/CreateProjectButton.vue'
+import ProjectGrid from '@/components/projects/ProjectGrid.vue'
+import CreateProjectButton from '@/components/projects/CreateProjectButton.vue'
 // Optionally import a SearchBar or FilterControls here in the future
 </script>
