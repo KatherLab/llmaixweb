@@ -12,7 +12,7 @@ dependencies = [
     "pydantic_settings==2.14.2",
     "openai==2.43.0",
     "bcrypt==5.0.0",
-    "boto3==1.43.34",
+    "boto3==1.43.36",
     "mistralai==2.4.13",
     "pypdf==6.13.3",
     "redis==8.0.0",
