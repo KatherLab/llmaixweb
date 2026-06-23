@@ -1154,7 +1154,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = "==0.137.2" },
     { name = "httpx2", specifier = "==2.4.0" },
     { name = "jsonschema", specifier = "==4.26.0" },
-    { name = "mistralai", specifier = "==2.4.13" },
+    { name = "mistralai", specifier = "==2.5.0" },
     { name = "openai", specifier = "==2.43.0" },
     { name = "opencv-python-headless", specifier = "==4.13.0.92" },
     { name = "pandas", specifier = "==3.0.3" },
@@ -1300,7 +1300,7 @@ wheels = [
 
 [[package]]
 name = "mistralai"
-version = "2.4.13"
+version = "2.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "eval-type-backport" },
@@ -1312,9 +1312,9 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/41/b4/a3ac4178a650f56c0132e43b0ac76a3ba7893104850a159715cb2be1d3b8/mistralai-2.4.13.tar.gz", hash = "sha256:881b0e4bd2c6aef0576350cb484a1c875bbd714ca86d18440979b24735356dfb", size = 497685, upload-time = "2026-06-19T11:52:34.539Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c8/88/960acba5e95998b4a09998d14ff95a25ada8c96ce8670091e3bf85f25696/mistralai-2.5.0.tar.gz", hash = "sha256:b2724154f62f6505d22027cbdb414e2bb143474bb51f89dc362afb1b141d2bae", size = 504089, upload-time = "2026-06-23T17:05:22.687Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/8d/8e3e3eb134b4682ad605d8200d9ac6911560b9c80b040b5e268d4d586da0/mistralai-2.4.13-py3-none-any.whl", hash = "sha256:07122b24992867e2b81b99b28f09c8f7521693963aeb1f0b37f793c3408a10b2", size = 1195068, upload-time = "2026-06-19T11:52:32.831Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/31/472fa3c766aa9b7869dceb6804344cc9945115ae2ee871258b404d0e7c84/mistralai-2.5.0-py3-none-any.whl", hash = "sha256:f29813f1c2e4c19d24707cb5f74ea5c071d106fcaa84dd856a7e4f2d36d908b2", size = 1216614, upload-time = "2026-06-23T17:05:20.819Z" },
 ]
 
 [[package]]
