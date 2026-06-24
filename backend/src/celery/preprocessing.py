@@ -273,6 +273,22 @@ if celery_app:
                                     )
                                     db.rollback()
                                     raise
+                                finally:
+                                    # A fresh pipeline is built per file task in
+                                    # the async path; close its OpenAI/docling-serve
+                                    # clients so their httpx pools don't leak across
+                                    # the (potentially long-lived) Celery worker.
+                                    # ``pipeline`` may be unbound if the constructor
+                                    # itself raised, so guard before closing.
+                                    try:
+                                        pipeline.close()
+                                    except UnboundLocalError:
+                                        pass
+                                    except Exception:
+                                        log.debug(
+                                            "blocking_run: error closing pipeline",
+                                            exc_info=True,
+                                        )
 
                         await asyncio.to_thread(blocking_run)
 

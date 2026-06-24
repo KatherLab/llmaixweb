@@ -134,12 +134,12 @@ def _detect_provider(base_url: str) -> str:
 def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str, Any]:
     """Test LLM connection with a specific model by making a test completion."""
     try:
-        client = _test_client(api_key, base_url)
-        client.chat.completions.create(
-            model=llm_model,
-            messages=[{"role": "user", "content": "Test"}],
-            max_tokens=1,
-        )
+        with _test_client(api_key, base_url) as client:
+            client.chat.completions.create(
+                model=llm_model,
+                messages=[{"role": "user", "content": "Test"}],
+                max_tokens=1,
+            )
         return {"success": True, "message": "Model test successful"}
     except AuthenticationError:
         return {
@@ -199,9 +199,9 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
 def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
     """Get list of available models from the API."""
     try:
-        client = _test_client(api_key, base_url)
-        response = client.models.list()
-        models_list = [model.id for model in response.data]
+        with _test_client(api_key, base_url) as client:
+            response = client.models.list()
+            models_list = [model.id for model in response.data]
         return {
             "success": True,
             "models": models_list,
@@ -240,8 +240,8 @@ def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
 def test_api_connection(api_key: str, base_url: str) -> dict[str, Any]:
     """Test API connection by trying to list models."""
     try:
-        client = _test_client(api_key, base_url)
-        response = client.models.list()
+        with _test_client(api_key, base_url) as client:
+            response = client.models.list()
         return {
             "success": True,
             "message": "API connection successful",
@@ -297,55 +297,56 @@ def test_model_with_schema(
         - error_type: str | None
     """
     try:
-        client = _test_client(api_key, base_url)
+        with _test_client(api_key, base_url) as client:
+            # Use a small but reasonable completion cap to avoid length errors
+            # while still allowing a meaningful response
+            probe_tokens = 32
 
-        # Use a small but reasonable completion cap to avoid length errors
-        # while still allowing a meaningful response
-        probe_tokens = 32
-
-        kwargs: dict[str, Any] = {
-            "model": llm_model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "Respond with a single word: 'test'",
-                }
-            ],
-            "max_tokens": probe_tokens,
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "test_schema",
-                    "schema": schema_definition,
-                    "strict": True,
+            kwargs: dict[str, Any] = {
+                "model": llm_model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "Respond with a single word: 'test'",
+                    }
+                ],
+                "max_tokens": probe_tokens,
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "test_schema",
+                        "schema": schema_definition,
+                        "strict": True,
+                    },
                 },
-            },
-        }
+            }
 
-        # Apply advanced params if present
-        if adv:
-            if (
-                "max_completion_tokens" in adv
-                and adv["max_completion_tokens"] is not None
-            ):
-                kwargs["max_completion_tokens"] = adv["max_completion_tokens"]
-                kwargs.pop("max_tokens", None)
+            # Apply advanced params if present
+            if adv:
+                if (
+                    "max_completion_tokens" in adv
+                    and adv["max_completion_tokens"] is not None
+                ):
+                    kwargs["max_completion_tokens"] = adv["max_completion_tokens"]
+                    kwargs.pop("max_tokens", None)
 
-            if "temperature" in adv and adv["temperature"] is not None:
-                kwargs["temperature"] = adv["temperature"]
+                if "temperature" in adv and adv["temperature"] is not None:
+                    kwargs["temperature"] = adv["temperature"]
 
-            if "reasoning_effort" in adv and adv["reasoning_effort"]:
-                provider = _detect_provider(base_url)
-                profile = PROVIDER_PROFILES.get(provider, PROVIDER_PROFILES["generic"])
-                if profile["supports_reasoning_effort"]:
-                    kwargs["reasoning_effort"] = adv["reasoning_effort"]
-                    extra_body = dict(kwargs.get("extra_body") or {})
-                    allowed = set(extra_body.get("allowed_openai_params", []))
-                    allowed.add("reasoning_effort")
-                    extra_body["allowed_openai_params"] = list(allowed)
-                    kwargs["extra_body"] = extra_body
+                if "reasoning_effort" in adv and adv["reasoning_effort"]:
+                    provider = _detect_provider(base_url)
+                    profile = PROVIDER_PROFILES.get(
+                        provider, PROVIDER_PROFILES["generic"]
+                    )
+                    if profile["supports_reasoning_effort"]:
+                        kwargs["reasoning_effort"] = adv["reasoning_effort"]
+                        extra_body = dict(kwargs.get("extra_body") or {})
+                        allowed = set(extra_body.get("allowed_openai_params", []))
+                        allowed.add("reasoning_effort")
+                        extra_body["allowed_openai_params"] = list(allowed)
+                        kwargs["extra_body"] = extra_body
 
-        response = client.chat.completions.create(**kwargs)
+            response = client.chat.completions.create(**kwargs)
 
         finish_reason = getattr(response.choices[0], "finish_reason", None)
         warning = None
@@ -884,44 +885,43 @@ def extract_info_single_doc(
     if schema_def is None or prompt_obj is None:
         raise ValueError("schema / prompt not found")
 
-    client = OpenAI(
+    with OpenAI(
         api_key=api_key,
         base_url=base_url,
         timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
         max_retries=3,
-    )
-
-    kwargs = _completion_kwargs(
-        llm_model,
-        schema_def,
-        _build_messages(prompt_obj, document.text, schema_def),
-        advanced_options,
-        base_url,
-    )
-    response = client.chat.completions.create(**kwargs)
-
-    finish_reason = getattr(response.choices[0], "finish_reason", None)
-    raw_content = response.choices[0].message.content
-    has_reasoning = bool(
-        getattr(response.choices[0].message, "reasoning_content", None)
-    )
-
-    # Retry with bumped tokens if truncated due to length
-    if (finish_reason == "length") and (
-        raw_content is None
-        or (isinstance(raw_content, str) and raw_content.strip() == "")
-    ):
-        bumped_adv = _bump_for_length(
-            advanced_options, getattr(response, "usage", None), has_reasoning
-        )
-        bumped_kwargs = _completion_kwargs(
+    ) as client:
+        kwargs = _completion_kwargs(
             llm_model,
             schema_def,
-            _build_messages(prompt_obj, document.text),
-            bumped_adv,
+            _build_messages(prompt_obj, document.text, schema_def),
+            advanced_options,
             base_url,
         )
-        response = client.chat.completions.create(**bumped_kwargs)
+        response = client.chat.completions.create(**kwargs)
+
+        finish_reason = getattr(response.choices[0], "finish_reason", None)
+        raw_content = response.choices[0].message.content
+        has_reasoning = bool(
+            getattr(response.choices[0].message, "reasoning_content", None)
+        )
+
+        # Retry with bumped tokens if truncated due to length
+        if (finish_reason == "length") and (
+            raw_content is None
+            or (isinstance(raw_content, str) and raw_content.strip() == "")
+        ):
+            bumped_adv = _bump_for_length(
+                advanced_options, getattr(response, "usage", None), has_reasoning
+            )
+            bumped_kwargs = _completion_kwargs(
+                llm_model,
+                schema_def,
+                _build_messages(prompt_obj, document.text),
+                bumped_adv,
+                base_url,
+            )
+            response = client.chat.completions.create(**bumped_kwargs)
 
     _store_result(
         db_session,

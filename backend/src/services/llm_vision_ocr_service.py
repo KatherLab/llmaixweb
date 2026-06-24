@@ -76,6 +76,33 @@ class LLMVisionOCRService:
         self.base_retry_delay = retry_delay
         self.retry_backoff = retry_backoff
 
+    def close(self) -> None:
+        """Close the underlying OpenAI/httpx client.
+
+        The service is instantiated per file in the preprocessing pipeline and
+        previously never closed, leaking an httpx connection pool per use. Safe
+        to call when the client was already closed.
+        """
+        client = self.client
+        self.client = None
+        if client is not None:
+            close = getattr(client, "close", None)
+            if close is not None:
+                try:
+                    close()
+                except Exception:
+                    logger.debug(
+                        "Error closing LLMVisionOCRService OpenAI client",
+                        exc_info=True,
+                    )
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
     def _is_retryable_exception(self, exc: Exception) -> bool:
         """Check if an exception is retryable."""
         exc_str = str(exc).lower()

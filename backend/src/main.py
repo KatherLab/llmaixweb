@@ -17,13 +17,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from ._version import get_git_commit, get_version
 from .celery.celery_config import celery_app
 from .core.dynamic_settings import get_settings
+from .core.rate_limit import limiter
 from .db.session import init_db
 from .routers.v1.endpoints import admin, auth, projects, users
 from .utils.logging_config import setup_logging
@@ -33,6 +33,37 @@ from .websocket_manager import manager
 settings = get_settings()
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_project_owner(data: dict) -> int | None:
+    """Resolve the owner user id for a task-update payload's project.
+
+    Returns the ``Project.owner_id`` for the payload's ``project_id``, or
+    ``None`` if the payload has no project id, the project was deleted, or the
+    DB is unavailable. ``None`` means the update is delivered to admins only
+    (never to a non-owner), so a missing/unknown project never leaks an update
+    to the wrong user. The query is a single point lookup by project id.
+    """
+    project_id = data.get("project_id")
+    if project_id is None:
+        return None
+    try:
+        from sqlalchemy import select
+
+        from .db.session import SessionLocal
+        from .models.project import Project
+
+        db = SessionLocal()
+        try:
+            owner_id = db.execute(
+                select(Project.owner_id).where(Project.id == project_id)
+            ).scalar_one_or_none()
+            return owner_id
+        finally:
+            db.close()
+    except Exception as e:
+        logger.debug(f"Could not resolve owner for project {project_id}: {e}")
+        return None
 
 
 def _resolve_celery_pool(pool: str) -> str:
@@ -134,16 +165,21 @@ async def _redis_subscriber_task():
                 message = await asyncio.to_thread(pubsub.get_message, timeout=0.1)
                 if message and message["type"] == "message":
                     data = json.loads(message["data"])
-                    # Broadcast to all connected clients (admin + all users)
-                    # The frontend filters by project_id on its end
-                    await manager.broadcast_to_all(data)
+                    # Filter server-side by project ownership: deliver only to
+                    # the project owner + admins. Previously this was broadcast
+                    # to every connected user and the frontend was trusted to
+                    # filter — a client that didn't filter could observe other
+                    # users' task progress/metadata.
+                    owner_id = await asyncio.to_thread(_resolve_project_owner, data)
+                    await manager.broadcast_to_project(owner_id, data)
             except Exception as e:
                 logger.error(f"Redis message processing error: {e}", exc_info=True)
     except asyncio.CancelledError:
         logger.info("Redis subscriber task cancelled")
     finally:
         try:
-            pubsub.unsubscribe()
+            if pubsub is not None:
+                pubsub.unsubscribe()
             redis_client.close()
         except Exception:
             pass
@@ -203,11 +239,8 @@ async def lifespan(app):
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 
 # ── Rate limiting ──────────────────────────────────────────────
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=[],
-    storage_uri="memory://",
-)
+# Shared limiter instance (Redis-backed when the broker is Redis, so counters
+# are shared across workers; memory-backed otherwise). See core/rate_limit.py.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

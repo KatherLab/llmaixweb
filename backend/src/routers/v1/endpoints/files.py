@@ -17,7 +17,7 @@ from fastapi import (
     Query,
     UploadFile,
 )
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy import and_, distinct, func, or_, select
 from sqlalchemy.orm import Session, selectinload
@@ -28,8 +28,10 @@ from ....dependencies import (
     calculate_file_hash,
     get_db,
     get_file,
+    read_upload_with_limit,
     remove_file,
     save_file,
+    stream_file,
 )
 from ....models.project import document_set_association
 from ....utils.enums import FileCreator
@@ -373,7 +375,7 @@ def get_project_file(
     return schemas.File.model_validate(file)
 
 
-@router.get("/{file_id}/content", response_class=Response)
+@router.get("/{file_id}/content", response_class=StreamingResponse)
 def get_project_file_content(
     *,
     db: Session = Depends(get_db),
@@ -381,7 +383,7 @@ def get_project_file_content(
     file_id: int,
     preview: bool = Query(False),
     current_user: models.User = Depends(get_current_user),
-) -> Response:
+) -> StreamingResponse:
     """Retrieve the content of a file associated with a project."""
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -404,14 +406,17 @@ def get_project_file_content(
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
 
-    # Retrieve the file content from storage
-    file_content = get_file(file.file_uuid)
-
+    # Stream the file from storage so a large PDF/image never has to be held in
+    # memory in full before being sent to the client.
     if preview:
         headers = {"Content-Disposition": f"inline; filename={file.file_name}"}
     else:
         headers = {"Content-Disposition": f"attachment; filename={file.file_name}"}
-    return Response(content=file_content, media_type=file.file_type, headers=headers)
+    return StreamingResponse(
+        stream_file(file.file_uuid),
+        media_type=file.file_type,
+        headers=headers,
+    )
 
 
 @router.post("", response_model=schemas.File)
@@ -433,8 +438,9 @@ def upload_file(
 
     check_project_access(project_id, current_user, db, permission="write")
 
-    # Read file content *once*
-    file_content = file.file.read()
+    # Read file content *once*, capped at MAX_UPLOAD_SIZE_BYTES (rejects 413
+    # before an oversized upload can exhaust memory).
+    file_content = read_upload_with_limit(file)
     file_size = len(file_content)
     file_hash = calculate_file_hash(file_content)
 

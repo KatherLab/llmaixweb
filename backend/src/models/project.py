@@ -329,7 +329,15 @@ class DocumentSet(Base):
     # delete_document_set endpoint additionally rejects sets still referenced
     # by a trial.
     trials: Mapped[list["Trial"]] = relationship(
-        "Trial", back_populates="document_set", cascade="all"
+        "Trial",
+        back_populates="document_set",
+        # Let the DB handle deletion (Trial.document_set_id has
+        # ondelete="SET NULL"): passive_deletes=True tells SQLAlchemy NOT to
+        # load the trials and ORM-DELETE them when a DocumentSet is deleted.
+        # With cascade="all" (the previous setting) the ORM would emit DELETEs
+        # for every trial, silently destroying the trials and their cascaded
+        # TrialResults/Evaluations — the opposite of the SET NULL intent above.
+        passive_deletes=True,
     )
 
     documents: Mapped[list["Document"]] = relationship(

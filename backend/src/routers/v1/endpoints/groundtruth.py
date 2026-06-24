@@ -12,7 +12,13 @@ from thefuzz import fuzz
 
 from .... import models, schemas
 from ....core.security import get_current_user
-from ....dependencies import get_db, remove_file, save_file
+from ....dependencies import (
+    get_db,
+    read_upload_with_limit,
+    read_upload_with_limit_async,
+    remove_file,
+    save_file,
+)
 from ....utils.helpers import extract_field_types_from_schema
 
 logger = logging.getLogger(__name__)
@@ -57,7 +63,7 @@ async def upload_groundtruth(
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zf:
             for idx, json_file in enumerate(files):
-                content = await json_file.read()
+                content = await read_upload_with_limit_async(json_file)
                 # Validate it's valid JSON
                 try:
                     json.loads(content)
@@ -76,7 +82,7 @@ async def upload_groundtruth(
         upload_file = file or (files[0] if files else None)
         if not upload_file:
             raise HTTPException(status_code=400, detail="No file provided")
-        file_content = await upload_file.read()
+        file_content = await read_upload_with_limit_async(upload_file)
     # save_file() does blocking disk/S3 I/O; run it in a threadpool so the
     # event loop isn't blocked for the duration of the write.
     file_uuid = await run_in_threadpool(save_file, file_content)
@@ -287,7 +293,7 @@ def update_groundtruth(
         # leaves the DB row pointing at deleted storage.
         old_file_uuid = groundtruth.file_uuid
 
-        file_content = file.file.read()
+        file_content = read_upload_with_limit(file)
         file_uuid = save_file(file_content)
         groundtruth.file_uuid = file_uuid
 

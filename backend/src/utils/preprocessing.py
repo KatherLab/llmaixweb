@@ -84,6 +84,32 @@ class PreprocessingPipeline:
             return True
         return False
 
+    def close(self) -> None:
+        """Release the pipeline's HTTP clients.
+
+        The OpenAI client (with its httpx connection pool) and the lazily-created
+        DoclingServeClient are never closed otherwise; in the Celery path a new
+        pipeline is constructed per file task, so leaking them accumulates open
+        sockets/file descriptors across a long-running worker. Safe to call when
+        the clients were never created (they stay ``None``).
+        """
+        client = self.client
+        self.client = None
+        if client is not None:
+            close = getattr(client, "close", None)
+            if close is not None:
+                try:
+                    close()
+                except Exception:
+                    logger.debug("Error closing pipeline OpenAI client", exc_info=True)
+        dsc = self._docling_serve_client
+        self._docling_serve_client = None
+        if dsc is not None:
+            try:
+                dsc.close()
+            except Exception:
+                logger.debug("Error closing docling-serve client", exc_info=True)
+
     def _broadcast_update(self, event: str = "progress"):
         """Broadcast a preprocessing update for direct (bypass_celery) processing.
 
@@ -224,9 +250,12 @@ class PreprocessingPipeline:
             self.db.commit()
             # Broadcast failure
             self._broadcast_update("failed")
-
-        # ───── persist final state ──────────────────────────────────────────
-        self.db.commit()
+        finally:
+            # ───── persist final state ──────────────────────────────────────
+            self.db.commit()
+            # Always release the pipeline's HTTP clients (OpenAI + docling-serve)
+            # so per-file-task pipelines in the Celery path don't leak pools.
+            self.close()
 
     def _fail_file_task_fresh(self, file_task_id: int, message: str) -> None:
         """Mark a single file task FAILED in a fresh session.
@@ -1692,8 +1721,12 @@ class PreprocessingPipeline:
         prompt = additional.get("vision_prompt") or settings.VISION_OCR_PROMPT
         max_image_dim = additional.get("vision_max_image_dim", 2048)
 
-        # Pass retry settings and concurrency from config
-        service = LLMVisionOCRService(
+        # Pass retry settings and concurrency from config. Use the service as a
+        # context manager so its OpenAI/httpx client is closed after use (this
+        # method runs per file; leaking the client accumulates connection pools).
+        file_content = get_file(file.file_uuid)
+        is_pdf = file.file_type == models.FileType.APPLICATION_PDF
+        with LLMVisionOCRService(
             api_key=api_key,
             base_url=base_url,
             model=model,
@@ -1701,11 +1734,8 @@ class PreprocessingPipeline:
             max_image_dim=max_image_dim,
             max_retries=settings.VISION_OCR_MAX_RETRIES,
             max_concurrency=settings.VISION_OCR_MAX_CONCURRENT_FILES,
-        )
-
-        file_content = get_file(file.file_uuid)
-        is_pdf = file.file_type == models.FileType.APPLICATION_PDF
-        result = service.process(file_content, is_pdf=is_pdf)
+        ) as service:
+            result = service.process(file_content, is_pdf=is_pdf)
 
         # Surface partial failures as warnings on the file task
         if result.failed_pages > 0:

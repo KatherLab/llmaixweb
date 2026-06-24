@@ -4,12 +4,11 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from .... import models, schemas
 from ....core.dynamic_settings import get_settings
+from ....core.rate_limit import limiter
 from ....core.security import create_access_token, verify_password
 from ....dependencies import get_db
 
@@ -17,9 +16,6 @@ from ....dependencies import get_db
 settings = get_settings()
 
 router = APIRouter()
-
-# Shared limiter instance (injected from app state by FastAPI)
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/settings")

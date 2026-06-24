@@ -3,12 +3,11 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Body, Depends, Form, HTTPException, Path, Request, status
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from .... import models, schemas
 from ....core.config import settings
+from ....core.rate_limit import limiter
 from ....core.security import (
     get_admin_user,
     get_current_user,
@@ -21,9 +20,6 @@ from ....utils.email_service import send_invitation_email, send_password_reset_e
 from ....utils.enums import UserRole
 
 router = APIRouter()
-
-# Shared limiter instance for rate-limited endpoints
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/first-admin-check")

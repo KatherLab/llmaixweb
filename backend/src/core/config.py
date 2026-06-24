@@ -261,6 +261,12 @@ class Settings(BaseSettings):
         le=1048576,
         description="Chunk size for streaming file downloads",
     )
+    MAX_UPLOAD_SIZE_BYTES: int = Field(
+        default=524288000,  # 500MB
+        ge=1048576,  # at least 1MB
+        le=5368709120,  # cap at 5GB
+        description="Maximum allowed size for a single uploaded file (files/ground truth)",
+    )
 
     # ─────────────────────────────────────────────────────────────
     # Logging & Debugging
@@ -1037,6 +1043,14 @@ SETTINGS_META = {
         "category": "Preprocessing",
         "label": "File Stream Chunk Size",
         "help": "Chunk size for streaming file downloads in bytes (default 8KB)",
+    },
+    "MAX_UPLOAD_SIZE_BYTES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Storage",
+        "label": "Max Upload Size (bytes)",
+        "help": "Maximum allowed size for a single uploaded file, e.g. PDFs/images/ground truth (default 500MB). Uploads exceeding this are rejected with 413 before being fully read.",
     },
     # Logging & Debugging
     "PREPROCESS_LOG_DOCUMENT_IDS": {

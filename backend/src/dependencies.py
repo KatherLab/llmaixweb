@@ -66,70 +66,142 @@ def calculate_file_hash(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+def read_upload_with_limit(file, max_bytes: int | None = None) -> bytes:
+    """Read an uploaded file into memory, aborting if it exceeds the size cap.
+
+    ``file`` is a Starlette ``UploadFile``. Reading via ``file.file.read()``
+    loads the entire upload into memory unbounded — a malicious or accidental
+    huge upload would OOM the process. We check ``Content-Length`` first for an
+    early rejection, then read in chunks so a lying/absent header can't bypass
+    the cap. Raises ``HTTPException(413)`` on overflow.
+
+    Synchronous variant — use in ``def`` endpoints. For ``async def`` endpoints
+    use :func:`read_upload_with_limit_async`.
+    """
+    from fastapi import HTTPException
+
+    limit = max_bytes if max_bytes is not None else settings.MAX_UPLOAD_SIZE_BYTES
+
+    # Fast path: trust the declared content length when present.
+    declared = getattr(file, "size", None)
+    if declared is not None and declared > limit:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+        )
+
+    chunks: list[bytes] = []
+    total = 0
+    chunk_size = settings.FILE_STREAM_CHUNK_SIZE
+    while True:
+        chunk = file.file.read(chunk_size)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > limit:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+async def read_upload_with_limit_async(file, max_bytes: int | None = None) -> bytes:
+    """Async counterpart to :func:`read_upload_with_limit`.
+
+    Uses ``await file.read(chunk)`` so the event loop isn't blocked while
+    reading from a ``def``-style SpooledTemporaryFile in an ``async def``
+    endpoint. Same size-cap behaviour and 413 on overflow.
+    """
+    from fastapi import HTTPException
+
+    limit = max_bytes if max_bytes is not None else settings.MAX_UPLOAD_SIZE_BYTES
+
+    declared = getattr(file, "size", None)
+    if declared is not None and declared > limit:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+        )
+
+    chunks: list[bytes] = []
+    total = 0
+    chunk_size = settings.FILE_STREAM_CHUNK_SIZE
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > limit:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def stream_file(file_name: str):
+    """Yield a file's content in chunks from S3 or local storage.
+
+    A generator that reads ``FILE_STREAM_CHUNK_SIZE`` bytes at a time, so a
+    caller wrapping this in :class:`StreamingResponse` can ship a large file
+    to the client without ever holding the whole file in memory. For local
+    storage the file handle is closed when the generator is exhausted or
+    garbage-collected; for S3 the streaming body is closed in a ``finally``.
+    """
+    chunk_size = settings.FILE_STREAM_CHUNK_SIZE
+    if settings.LOCAL_DIRECTORY:
+        file_path = f"{settings.LOCAL_DIRECTORY}/{file_name}"
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File {file_name} not found in local storage.")
+        with open(file_path, "rb") as f:
+            while True:
+                chunk = f.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+    else:
+        s3 = get_s3_client()
+        response = s3.get_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
+        body = response["Body"]
+        try:
+            while True:
+                chunk = body.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            # Release the S3 streaming body (and its underlying socket) even on
+            # early client disconnect / exception, so connections aren't leaked.
+            close = getattr(body, "close", None)
+            if close is not None:
+                try:
+                    close()
+                except Exception:
+                    pass
+
+
 def get_file(file_name: str, force_streaming: bool = False) -> bytes:
     """
-    Retrieves a file from S3 or local storage.
+    Retrieves a file from S3 or local storage as bytes.
 
-    For large files (exceeding FILE_STREAMING_THRESHOLD_BYTES), uses streaming
-    to reduce memory usage.
+    Note: the ``force_streaming`` flag and ``FILE_STREAMING_THRESHOLD_BYTES``
+    threshold are retained for compatibility, but since this function returns
+    the full file as ``bytes`` the file is necessarily held in memory once
+    returned regardless. Callers that need true constant-memory delivery
+    (e.g. HTTP download endpoints) should use :func:`stream_file` with a
+    ``StreamingResponse`` instead.
 
     Args:
         file_name (str): The name of the file to retrieve.
-        force_streaming (bool): Force streaming regardless of file size.
+        force_streaming (bool): Unused — kept for backwards compatibility.
 
     Returns:
         bytes: The content of the file.
     """
-    if settings.LOCAL_DIRECTORY:
-        # check if the file exists in local storage
-        file_path = f"{settings.LOCAL_DIRECTORY}/{file_name}"
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File {file_name} not found in local storage.")
-
-        # Check file size to decide whether to stream
-        file_size = os.path.getsize(file_path)
-        if force_streaming or file_size > settings.FILE_STREAMING_THRESHOLD_BYTES:
-            # Stream large files in chunks
-            chunks = []
-            with open(file_path, "rb") as f:
-                while True:
-                    chunk = f.read(settings.FILE_STREAM_CHUNK_SIZE)
-                    if not chunk:
-                        break
-                    chunks.append(chunk)
-            return b"".join(chunks)
-        else:
-            # Read small files directly
-            with open(file_path, "rb") as file:
-                return file.read()
-    else:
-        s3 = get_s3_client()
-        # For S3, check if we should use streaming
-        try:
-            head = s3.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
-            file_size = head.get("ContentLength", 0)
-        except ClientError:
-            file_size = 0  # Unknown size, proceed without streaming
-
-        if force_streaming or file_size > settings.FILE_STREAMING_THRESHOLD_BYTES:
-            # Stream large files from S3
-            response = s3.get_object(
-                Bucket=settings.S3_BUCKET_NAME,
-                Key=file_name,
-            )
-            # Use streaming body for large files
-            body = response["Body"]
-            chunks = []
-            while True:
-                chunk = body.read(settings.FILE_STREAM_CHUNK_SIZE)
-                if not chunk:
-                    break
-                chunks.append(chunk)
-            return b"".join(chunks)
-        else:
-            # Read small files directly
-            response = s3.get_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
-            return response["Body"].read()
+    return b"".join(stream_file(file_name))
 
 
 def save_file(file_content: bytes) -> str:
