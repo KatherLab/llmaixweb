@@ -7,40 +7,8 @@
       <span class="text-xs text-gray-500">{{ selectedIds.length }} selected</span>
     </div>
 
-    <div class="border-b mb-4 flex space-x-4">
-      <button
-        :class="[
-          'py-2 px-1 border-b-2 font-medium text-sm transition-all',
-          mode === 'individual'
-            ? 'border-blue-500 text-blue-600'
-            : 'border-transparent text-gray-500 hover:text-gray-700',
-        ]"
-        @click="mode = 'individual'"
-      >
-        Individual
-      </button>
-      <button
-        :class="[
-          'py-2 px-1 border-b-2 font-medium text-sm transition-all',
-          mode === 'groups'
-            ? 'border-blue-500 text-blue-600'
-            : 'border-transparent text-gray-500 hover:text-gray-700',
-        ]"
-        @click="mode = 'groups'"
-      >
-        Groups
-      </button>
-      <button
-        :class="[
-          'py-2 px-1 border-b-2 font-medium text-sm transition-all',
-          mode === 'smart'
-            ? 'border-blue-500 text-blue-600'
-            : 'border-transparent text-gray-500 hover:text-gray-700',
-        ]"
-        @click="mode = 'smart'"
-      >
-        Smart
-      </button>
+    <div class="mb-4">
+      <BaseTabGroup v-model="mode" :tabs="tabs" tone="blue" />
     </div>
 
     <!-- INDIVIDUAL (server-side pagination) -->
@@ -92,6 +60,7 @@ import { useToast } from 'vue-toastification'
 import { trialsApi } from '@/services/trialsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { useDocumentPagination } from '@/composables/useDocumentPagination'
+import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import DocumentIndividualPicker from './DocumentIndividualPicker.vue'
 import DocumentGroupPicker from './DocumentGroupPicker.vue'
 import DocumentSmartPicker from './DocumentSmartPicker.vue'
@@ -105,6 +74,13 @@ const props = defineProps({
 
 const mode = defineModel('mode', { type: String, default: 'individual' })
 const selectedIds = defineModel('selectedIds', { type: Array, default: () => [] })
+
+// Tab config for BaseTabGroup
+const tabs = [
+  { label: 'Individual', value: 'individual' },
+  { label: 'Groups', value: 'groups' },
+  { label: 'Smart', value: 'smart' },
+]
 
 const toast = useToast()
 

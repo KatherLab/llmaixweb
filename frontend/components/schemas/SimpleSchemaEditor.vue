@@ -6,11 +6,7 @@
         <h3 class="text-base font-semibold text-gray-900">Extract Fields</h3>
         <p class="text-sm text-gray-500 mt-0.5">Drag to reorder • Click field to edit</p>
       </div>
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all hover:shadow"
-        @click="addField"
-      >
+      <BaseButton class="shadow-sm hover:shadow" @click="addField">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
@@ -20,7 +16,7 @@
           />
         </svg>
         Add Field
-      </button>
+      </BaseButton>
     </div>
 
     <!-- Fields List -->
@@ -47,11 +43,7 @@
         <p class="text-sm text-gray-500 mb-6">
           Add fields to define what information to extract from your documents
         </p>
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all"
-          @click="addField"
-        >
+        <BaseButton class="shadow-sm" @click="addField">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -61,7 +53,7 @@
             />
           </svg>
           Add Your First Field
-        </button>
+        </BaseButton>
       </div>
 
       <div v-else class="space-y-2">
@@ -288,6 +280,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const props = defineProps({
   schema: {

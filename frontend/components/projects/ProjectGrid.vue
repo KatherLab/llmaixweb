@@ -64,6 +64,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useGridTheme } from '@/composables/useGridTheme'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import { formatDate } from '@/utils/formatters'
 
 // ---- auth / router ----
 const authStore = useAuthStore()
@@ -201,7 +202,7 @@ const baseColumnsComputed = computed(() => {
       field: 'created_at',
       headerName: 'Created',
       width: 160,
-      valueFormatter: (p) => (p.value ? new Date(p.value).toLocaleDateString() : ''),
+      valueFormatter: (p) => (p.value ? formatDate(p.value) : ''),
     },
     { field: 'actions', headerName: 'Actions', width: 120, cellRenderer: 'ActionsCell' },
   ]

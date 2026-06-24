@@ -41,23 +41,20 @@
             <StatusBadge :status="trial.status" class="px-2 py-1" />
           </div>
           <div v-if="trial.last_result_at" class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-            Last result: {{ formatDate(trial.last_result_at) }}
+            Last result: {{ formatDateFull(trial.last_result_at) }}
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <span
-            class="text-[11px] bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full font-medium"
-            title="Processed results"
+          <StatusBadge color="gray" class="text-[11px] font-medium" title="Processed results"
+            >{{ trial.results_count || 0 }} res</StatusBadge
           >
-            {{ trial.results_count || 0 }} res
-          </span>
-          <span
+          <StatusBadge
             v-if="trial.error_count && trial.error_count > 0"
-            class="text-[11px] bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full font-semibold"
+            color="red"
+            class="text-[11px]"
             title="Documents with errors"
+            >{{ trial.error_count }} err</StatusBadge
           >
-            {{ trial.error_count }} err
-          </span>
         </div>
       </div>
 
@@ -69,7 +66,7 @@
         <span><strong>Schema:</strong> {{ schemaName }}</span>
         <span v-if="promptName"><strong>Prompt:</strong> {{ promptName }}</span>
         <span><strong>LLM:</strong> {{ trial.llm_model }}</span>
-        <span><strong>Started:</strong> {{ formatDate(trial.created_at) }}</span>
+        <span><strong>Started:</strong> {{ formatDateFull(trial.created_at) }}</span>
         <span v-if="trial.documents_count != null"
           ><strong>Docs:</strong> {{ trial.documents_count }}</span
         >
@@ -140,42 +137,47 @@
           Cancel
         </button>
 
-        <button
-          class="rounded-md bg-blue-600 text-white px-3 py-1 text-xs font-medium hover:bg-blue-700 dark:hover:bg-blue-800 transition"
+        <BaseButton
+          variant="primary"
+          size="sm"
+          class="dark:hover:bg-blue-800"
           @click.stop="emit('view-results', trial)"
+          >Results</BaseButton
         >
-          Results
-        </button>
 
-        <button
-          class="rounded-md border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 text-xs font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition"
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          class="dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"
           @click.stop="emit('view-schema', trial)"
+          >Schema</BaseButton
         >
-          Schema
-        </button>
-        <button
-          class="rounded-md border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 text-xs font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition"
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          class="dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"
           @click.stop="emit('view-prompt', trial)"
+          >Prompt</BaseButton
         >
-          Prompt
-        </button>
 
-        <button
+        <BaseButton
           v-if="trial.status === 'completed'"
-          class="rounded-md bg-green-600 text-white px-3 py-1 text-xs font-medium hover:bg-green-700 dark:hover:bg-green-800 transition"
+          variant="success"
+          size="sm"
+          class="dark:hover:bg-green-800"
           @click.stop="emit('download', trial)"
+          >Download</BaseButton
         >
-          Download
-        </button>
       </div>
 
       <div class="flex gap-2 flex-wrap">
-        <button
-          class="rounded-md bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition"
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          class="dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
           @click.stop="emit('retry', trial)"
+          >Retry</BaseButton
         >
-          Retry
-        </button>
         <button
           class="rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-3 py-1 text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition"
           @click.stop="emit('rename', trial)"
@@ -196,7 +198,8 @@
 <script setup>
 import { computed } from 'vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import { formatDuration } from '@/utils/formatters'
+import BaseButton from '@/components/common/BaseButton.vue'
+import { formatDuration, formatDateFull } from '@/utils/formatters'
 
 const props = defineProps({
   trial: { type: Object, required: true },
@@ -246,10 +249,6 @@ const elapsedSeconds = computed(() =>
 )
 const etaSeconds = computed(() => props.trial.meta?.eta_seconds ?? 0)
 
-function formatDate(dateString) {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleString()
-}
 function toggleSelect() {
   emit('select', props.trial.id)
 }

@@ -270,14 +270,9 @@
 
     <!-- Footer Actions -->
     <template #footer>
-      <button
-        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors text-sm font-medium"
-        @click="emit('cancel')"
-      >
-        Cancel
-      </button>
-      <button
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+      <BaseButton variant="secondary" @click="emit('cancel')">Cancel</BaseButton>
+      <BaseButton
+        class="flex items-center gap-2"
         @click="emit('confirm', { skipExisting: skipExisting })"
       >
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -291,7 +286,7 @@
         <template v-if="skipExisting">Process New Files Only</template>
         <template v-else-if="hasSameConfigDuplicates">Archive & Continue</template>
         <template v-else>Continue</template>
-      </button>
+      </BaseButton>
     </template>
   </BaseModal>
 </template>
@@ -299,6 +294,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const props = defineProps({
   open: { type: Boolean, required: true },

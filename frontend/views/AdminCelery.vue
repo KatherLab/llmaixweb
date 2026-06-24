@@ -8,16 +8,11 @@
       Celery Workers & Queues
     </h2>
     <div v-if="loading" class="py-8 flex justify-center">
-      <div class="animate-spin w-8 h-8 border-b-4 border-blue-500 rounded-full"></div>
+      <LoadingSpinner size="medium" />
     </div>
     <div v-else>
       <div class="flex gap-4 mb-8">
-        <button
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition"
-          @click="fetchAll"
-        >
-          Refresh
-        </button>
+        <BaseButton variant="primary" @click="fetchAll">Refresh</BaseButton>
       </div>
       <div>
         <h3 class="font-semibold text-lg mb-2">Workers</h3>
@@ -41,22 +36,21 @@
             class="rounded-lg px-3 py-2 border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-300"
             placeholder="Paste task ID here"
           />
-          <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-            Inspect
-          </button>
+          <BaseButton type="submit" variant="primary">Inspect</BaseButton>
         </form>
         <div v-if="taskStatus">
           <pre
             class="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-100 dark:border-slate-800 overflow-x-auto text-sm"
             >{{ pretty(taskStatus) }}</pre
           >
-          <button
+          <BaseButton
             v-if="['PENDING', 'STARTED', 'RETRY'].includes(taskStatus.status)"
-            class="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold"
+            variant="danger"
+            class="mt-2"
             @click="revokeTask(taskStatus.id)"
           >
             Revoke/Terminate
-          </button>
+          </BaseButton>
         </div>
       </div>
       <div v-if="revokedId" class="mt-4 text-green-700 dark:text-green-400 font-semibold">
@@ -69,6 +63,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { adminApi } from '@/services/adminApi'
+import BaseButton from '@/components/common/BaseButton.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const loading = ref(true)
 const error = ref('')
@@ -96,7 +93,7 @@ async function fetchAll() {
   try {
     await Promise.all([fetchWorkers(), fetchQueues()])
   } catch (e) {
-    error.value = e?.response?.data?.detail || 'Failed to fetch celery status'
+    error.value = extractErrorMessage(e, 'Failed to fetch celery status')
   } finally {
     loading.value = false
   }
@@ -109,7 +106,7 @@ async function inspectTask() {
     const res = await adminApi.celeryTask(taskId.value)
     taskStatus.value = res.data
   } catch (e) {
-    error.value = e?.response?.data?.detail || 'Failed to inspect task'
+    error.value = extractErrorMessage(e, 'Failed to inspect task')
   }
 }
 async function revokeTask(id) {
@@ -124,7 +121,7 @@ async function revokeTask(id) {
     // Optionally refresh queue info
     await fetchAll()
   } catch (e) {
-    error.value = e?.response?.data?.detail || 'Failed to revoke task'
+    error.value = extractErrorMessage(e, 'Failed to revoke task')
   }
 }
 onMounted(fetchAll)

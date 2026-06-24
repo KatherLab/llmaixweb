@@ -31,12 +31,14 @@
             User Management
           </h1>
         </div>
-        <button
-          class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg shadow transition"
+        <BaseButton
+          variant="primary"
+          size="sm"
+          class="dark:bg-blue-500 dark:hover:bg-blue-600"
           @click="showInviteModal = true"
         >
           + Invite User
-        </button>
+        </BaseButton>
       </div>
     </header>
 
@@ -58,16 +60,11 @@
                   >{{ users.length }} total</span
                 >
               </h2>
-              <input
-                v-model="userSearch"
-                type="search"
-                placeholder="Search users…"
-                class="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition w-56"
-              />
+              <SearchInput v-model="userSearch" placeholder="Search users…" />
             </div>
             <div class="flex-1 min-h-0">
               <div v-if="loading" class="flex justify-center py-12">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-4 border-blue-500"></div>
+                <LoadingSpinner size="medium" />
               </div>
               <UserGrid
                 v-else
@@ -103,17 +100,12 @@
                   class="text-xs bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-100 dark:border-slate-600"
                   >{{ activeInvitations }} active</span
                 >
-                <input
-                  v-model="invitationSearch"
-                  type="search"
-                  placeholder="Search invitations…"
-                  class="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition w-56"
-                />
+                <SearchInput v-model="invitationSearch" placeholder="Search invitations…" />
               </div>
             </div>
             <div class="flex-1 min-h-0">
               <div v-if="loadingInvitations" class="flex justify-center py-12">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-4 border-blue-500"></div>
+                <LoadingSpinner size="medium" />
               </div>
               <InvitationGrid
                 v-else
@@ -178,8 +170,11 @@ import InvitationGrid from '@/components/admin/InvitationGrid.vue'
 import InviteUserModal from '@/components/admin/InviteUserModal.vue'
 import EditUserModal from '@/components/admin/EditUserModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import SearchInput from '@/components/common/SearchInput.vue'
 import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 const toast = useToast()
 

@@ -9,10 +9,7 @@
         </p>
       </div>
       <div class="flex items-center space-x-3">
-        <button
-          class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-          @click="showUploadModal = true"
-        >
+        <BaseButton variant="secondary" @click="showUploadModal = true">
           <svg
             class="w-5 h-5 mr-2 text-gray-500 dark:text-gray-400"
             fill="none"
@@ -27,7 +24,7 @@
             />
           </svg>
           Upload Files
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -77,12 +74,14 @@
         <span class="font-semibold">Configure Preprocessing</span> to extract text from your
         documents.
       </p>
-      <button
-        class="ml-auto text-sm text-blue-600 hover:text-blue-800 font-medium"
+      <BaseButton
+        variant="ghost"
+        size="sm"
+        class="ml-auto font-medium"
         @click="selectedFiles = files.map((f) => f.id)"
       >
         Select all
-      </button>
+      </BaseButton>
     </div>
 
     <!-- Loading Indicator -->
@@ -149,12 +148,7 @@
       <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
         Try adjusting or clearing your filters to see more results
       </p>
-      <button
-        class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-        @click="clearFilters"
-      >
-        Clear All Filters
-      </button>
+      <BaseButton class="mt-4" @click="clearFilters">Clear All Filters</BaseButton>
     </div>
 
     <!-- Floating Batch Toolbar -->
@@ -187,23 +181,16 @@
           </svg>
           {{ unconfiguredCsvXlsxFiles.length }} needs config
         </span>
-        <button
-          class="text-sm text-gray-300 hover:text-white underline"
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          class="text-gray-300 underline"
           @click="selectedFiles = []"
         >
           Clear
-        </button>
+        </BaseButton>
         <div class="w-px h-5 bg-gray-700" />
-        <button
-          :disabled="unconfiguredCsvXlsxFiles.length > 0"
-          :class="[
-            'inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-            unconfiguredCsvXlsxFiles.length > 0
-              ? 'bg-gray-600 cursor-not-allowed opacity-75'
-              : 'bg-blue-600 hover:bg-blue-700',
-          ]"
-          @click="openProcessingPanel"
-        >
+        <BaseButton :disabled="unconfiguredCsvXlsxFiles.length > 0" @click="openProcessingPanel">
           <svg
             v-if="unconfiguredCsvXlsxFiles.length === 0"
             class="w-4 h-4 mr-2"
@@ -237,7 +224,7 @@
               ? 'Configure Files First'
               : 'Configure Preprocessing'
           }}
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -321,10 +308,12 @@ import PreprocessingConfigPanel from '@/components/files/PreprocessingConfigPane
 import UploadFilesModal from '@/components/files/UploadFilesModal.vue'
 import DuplicatePreviewModal from '@/components/files/DuplicatePreviewModal.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { setEngineLabels } from '@/utils/ocrLabels'
 import { getDateRangeBounds } from '@/utils/dateRange'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { usePreprocessingUpdates } from '@/composables/usePreprocessingUpdates'
+import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
   projectId: { type: [String, Number], required: true },
@@ -856,14 +845,7 @@ const startProcessing = async (payload) => {
   } catch (err) {
     console.error('Failed to check for duplicates:', err)
     isSubmitting.value = false
-    const detail = err.response?.data?.detail
-    let errorMsg = 'Failed to check for existing documents'
-    if (Array.isArray(detail) && detail.length > 0) {
-      const firstError = detail[0]
-      errorMsg = firstError.msg || JSON.stringify(firstError)
-    } else if (typeof detail === 'string') {
-      errorMsg = detail
-    }
+    const errorMsg = extractErrorMessage(err, 'Failed to check for existing documents')
     toast.error(errorMsg)
     pendingProcessingSettings.value = null
   }

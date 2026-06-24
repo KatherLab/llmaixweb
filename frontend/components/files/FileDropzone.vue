@@ -28,15 +28,12 @@
       Drop files here or click to upload
     </p>
     <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">PDF, PNG, JPG, DOCX, CSV, XLSX, TXT</p>
-    <button
-      :class="[
-        'mt-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium',
-        compact ? 'px-6 py-2.5 text-sm' : 'px-6 py-2',
-      ]"
+    <BaseButton
+      :class="['mt-6', compact ? 'px-6 py-2.5 text-sm' : 'px-6 py-2']"
       @click="inputRef?.click()"
     >
       Browse Files
-    </button>
+    </BaseButton>
     <input
       ref="inputRef"
       type="file"
@@ -50,6 +47,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 defineProps({
   compact: { type: Boolean, default: false },

@@ -297,9 +297,7 @@
                   {{ documentContents[docEval.document_id] }}
                 </div>
                 <div v-else-if="loadingDocuments[docEval.document_id]" class="text-center py-8">
-                  <div
-                    class="inline-block animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"
-                  ></div>
+                  <LoadingSpinner size="small" />
                   <p class="mt-2 text-gray-500 text-sm">Loading...</p>
                 </div>
                 <div v-else class="text-center py-8">
@@ -336,6 +334,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import JsonViewer from '@/components/common/JsonViewer.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 const props = defineProps({
   documentEvaluations: {

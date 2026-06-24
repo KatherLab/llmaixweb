@@ -49,31 +49,19 @@
           </div>
 
           <!-- Tab Navigation -->
-          <div class="px-8 py-3 border-b bg-gradient-to-r from-blue-50/70 to-white/80">
-            <nav class="flex space-x-8">
-              <button
-                v-for="tab in availableTabs"
-                :key="tab.id"
-                class="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200"
-                :class="{
-                  'border-blue-500 text-blue-700': activeTab === tab.id,
-                  'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300':
-                    activeTab !== tab.id,
-                }"
-                @click="activeTab = tab.id"
-              >
-                <span class="flex items-center gap-2">
-                  <span class="text-lg">{{ tab.icon }}</span>
-                  {{ tab.name }}
-                  <span
-                    v-if="tab.badge"
-                    class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs ml-1"
-                  >
-                    {{ tab.badge }}
-                  </span>
-                </span>
-              </button>
-            </nav>
+          <div class="px-8 py-3 bg-gradient-to-r from-blue-50/70 to-white/80">
+            <BaseTabGroup
+              v-model="activeTab"
+              :tabs="
+                availableTabs.map((t) => ({
+                  label: t.name,
+                  value: t.id,
+                  icon: t.icon,
+                  badge: t.badge,
+                }))
+              "
+              tone="blue"
+            />
           </div>
 
           <!-- Error Display -->
@@ -102,9 +90,9 @@
           <!-- Tab Content -->
           <div class="flex-1 overflow-y-auto bg-white/60">
             <div v-if="isLoading" class="text-center py-16">
-              <span
-                class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-3"
-              ></span>
+              <div class="mb-3">
+                <LoadingSpinner size="medium" />
+              </div>
               <span class="text-gray-500">Loading evaluation details...</span>
             </div>
 
@@ -180,10 +168,13 @@ import { evaluationsApi } from '@/services/evaluationsApi'
 import { documentsApi } from '@/services/documentsApi'
 import { formatDate } from '@/utils/formatters.js'
 import { useScrollLock } from '@/composables/useScrollLock'
+import { extractErrorMessage } from '@/utils/errors'
 
 useScrollLock({ autoLock: true })
 
 // Import sub-components
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import EvaluationOverview from '@/components/evaluation/EvaluationOverview.vue'
 import DocumentAnalysis from '@/components/evaluation/DocumentAnalysis.vue'
 import FieldErrorAnalysis from '@/components/evaluation/FieldErrorAnalysis.vue'
@@ -344,7 +335,7 @@ const fetchAllData = async () => {
         } catch (err) {
           return {
             document_id: docMetric.document_id,
-            error: err.response?.data?.detail || err.message,
+            error: extractErrorMessage(err),
             accuracy: 0,
             correct_fields: 0,
             total_fields: 0,
@@ -371,7 +362,7 @@ const fetchAllData = async () => {
     } else if (err.response?.status === 403) {
       error.value = 'You do not have permission to view this evaluation.'
     } else {
-      error.value = `Failed to load evaluation data: ${err.response?.data?.detail || err.message}`
+      error.value = `Failed to load evaluation data: ${extractErrorMessage(err)}`
     }
   } finally {
     isLoading.value = false

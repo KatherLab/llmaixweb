@@ -7,12 +7,9 @@
           Define the structure for information extraction
         </p>
       </div>
-      <button
-        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200"
-        @click="emit('create')"
-      >
+      <BaseButton @click="emit('create')">
         <svg
-          class="h-5 w-5 mr-2"
+          class="h-5 w-5"
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
@@ -24,55 +21,20 @@
           />
         </svg>
         Create Schema
-      </button>
+      </BaseButton>
     </div>
 
     <div v-if="isLoading" class="flex justify-center py-12">
-      <svg
-        class="animate-spin h-8 w-8 text-indigo-600"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
-        ></circle>
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        ></path>
-      </svg>
+      <LoadingSpinner size="medium" />
     </div>
 
-    <div
+    <EmptyState
       v-else-if="schemas.length === 0"
-      class="bg-gray-50 dark:bg-slate-800 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-12 text-center"
-    >
-      <svg
-        class="mx-auto h-12 w-12 text-gray-400"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-        />
-      </svg>
-      <p class="mt-2 text-sm text-gray-600 dark:text-slate-300">No schemas created yet</p>
-      <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">
-        Create a schema to define the structure for information extraction
-      </p>
-    </div>
+      title="No schemas created yet"
+      description="Create a schema to define the structure for information extraction"
+      action-text="Create Schema"
+      @action="emit('create')"
+    />
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div
@@ -158,6 +120,9 @@
 <script setup>
 import { formatDate } from '@/utils/formatters'
 import { formatJSON } from '@/utils/schemaTemplates'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 defineProps({
   schemas: {

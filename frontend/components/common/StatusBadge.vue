@@ -12,7 +12,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { getStatusBadgeClass } from '@/utils/statusStyles'
+import { getStatusBadgeClass, getPillClass } from '@/utils/statusStyles'
 
 defineOptions({ inheritAttrs: false })
 
@@ -25,7 +25,16 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  // When set, uses the generic color pill map (dark-mode aware) instead of the
+  // status map. Use for semantic non-status pills (counts, "active", match/
+  // mismatch, …). Values: blue|green|yellow|red|purple|indigo|teal|cyan|orange|gray
+  color: {
+    type: String,
+    default: '',
+  },
 })
 
-const badgeClass = computed(() => getStatusBadgeClass(props.status))
+const badgeClass = computed(() =>
+  props.color ? getPillClass(props.color) : getStatusBadgeClass(props.status),
+)
 </script>

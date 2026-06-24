@@ -1,15 +1,20 @@
 <template>
   <Teleport to="body">
-    <transition name="base-modal-fade">
+    <transition :name="transitionName">
       <div
         v-if="open"
-        class="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
+        :class="[
+          'fixed inset-0 z-[10000] bg-black/30 backdrop-blur-md',
+          placement === 'right' ? 'flex justify-end' : 'flex items-center justify-center p-4',
+        ]"
         @click="onBackdropClick"
       >
         <div
           ref="panelRef"
           :class="[
-            'relative bg-white rounded-2xl shadow-2xl w-full flex flex-col max-h-[90vh] border border-gray-200 overflow-hidden',
+            placement === 'right'
+              ? 'relative h-full w-full flex flex-col bg-white shadow-xl border-l border-gray-200 overflow-hidden'
+              : 'relative bg-white rounded-2xl shadow-2xl w-full flex flex-col max-h-[90vh] border border-gray-200 overflow-hidden',
             sizeClass,
             panelClass,
           ]"
@@ -79,6 +84,11 @@ const props = defineProps({
     default: 'md',
     // 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
   },
+  placement: {
+    type: String,
+    default: 'center',
+    // 'center' (modal dialog) | 'right' (slide-in drawer)
+  },
   closeable: {
     type: Boolean,
     default: true,
@@ -113,7 +123,13 @@ const emit = defineEmits(['close'])
 
 const panelRef = ref(null)
 
+const transitionName = computed(() =>
+  props.placement === 'right' ? 'base-drawer-slide' : 'base-modal-fade',
+)
+
 const sizeClass = computed(() => {
+  // Drawers ignore the centered-dialog max-width map; width comes from panelClass.
+  if (props.placement === 'right') return ''
   const sizes = {
     sm: 'max-w-md',
     md: 'max-w-lg',
@@ -169,5 +185,24 @@ onUnmounted(() => {
 .base-modal-fade-enter-from,
 .base-modal-fade-leave-to {
   opacity: 0;
+}
+
+/* Slide-in drawer transition (right-anchored). The whole overlay fades while
+   the panel translates in/out from the right edge. */
+.base-drawer-slide-enter-active,
+.base-drawer-slide-leave-active {
+  transition: opacity 0.3s ease-in-out;
+}
+.base-drawer-slide-enter-active > div,
+.base-drawer-slide-leave-active > div {
+  transition: transform 0.3s ease-in-out;
+}
+.base-drawer-slide-enter-from,
+.base-drawer-slide-leave-to {
+  opacity: 0;
+}
+.base-drawer-slide-enter-from > div,
+.base-drawer-slide-leave-to > div {
+  transform: translateX(100%);
 }
 </style>

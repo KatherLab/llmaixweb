@@ -1,27 +1,18 @@
 <template>
   <div class="mt-4 flex-1 flex flex-col">
     <div class="flex gap-2 mb-3">
-      <input
-        v-model="searchTerm"
-        class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-        placeholder="Search documents (text or filename)…"
-        type="text"
-      />
-      <button
-        class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
+      <SearchInput v-model="searchTerm" placeholder="Search documents (text or filename)…" />
+      <BaseButton
+        variant="secondary"
+        size="sm"
         title="Select all matching documents"
         :disabled="isSelectingAll || isLoadingDocs"
         @click="emit('select-all')"
+        >{{ isSelectingAll ? 'Selecting…' : 'Select All' }}</BaseButton
       >
-        {{ isSelectingAll ? 'Selecting…' : 'Select All' }}
-      </button>
-      <button
-        class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
-        title="Clear selection"
-        @click="emit('clear')"
+      <BaseButton variant="secondary" size="sm" title="Clear selection" @click="emit('clear')"
+        >Clear</BaseButton
       >
-        Clear
-      </button>
     </div>
 
     <div class="border rounded-md overflow-hidden flex-1 min-h-[100px] flex flex-col">
@@ -89,20 +80,20 @@
           {{ Math.max(1, Math.ceil(totalDocs / pageSize)) }}
         </div>
         <div class="flex items-center gap-2">
-          <button
-            class="px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+          <BaseButton
+            variant="secondary"
+            size="sm"
             :disabled="page <= 1 || isLoadingDocs"
             @click="emit('prev-page')"
+            >Prev</BaseButton
           >
-            Prev
-          </button>
-          <button
-            class="px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+          <BaseButton
+            variant="secondary"
+            size="sm"
             :disabled="page >= Math.ceil(totalDocs / pageSize) || isLoadingDocs"
             @click="emit('next-page')"
+            >Next</BaseButton
           >
-            Next
-          </button>
         </div>
       </div>
     </div>
@@ -112,6 +103,8 @@
 <script setup>
 import { formatDate } from '@/utils/formatters.js'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import SearchInput from '@/components/common/SearchInput.vue'
 
 defineProps({
   selectedIds: {

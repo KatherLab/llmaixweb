@@ -32,20 +32,8 @@
     />
 
     <template #footer>
-      <button
-        type="button"
-        class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-        @click="$emit('close')"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-        @click="save"
-      >
-        Save Changes
-      </button>
+      <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
+      <BaseButton @click="save">Save Changes</BaseButton>
     </template>
   </BaseModal>
 </template>
@@ -53,6 +41,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import PropertyDetailsEditor from './PropertyDetailsEditor.vue'
 
 const props = defineProps({

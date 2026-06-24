@@ -7,12 +7,9 @@
           Configure how the LLM extracts information from documents
         </p>
       </div>
-      <button
-        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200"
-        @click="emit('create')"
-      >
+      <BaseButton @click="emit('create')">
         <svg
-          class="h-5 w-5 mr-2"
+          class="h-5 w-5"
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
@@ -24,55 +21,20 @@
           />
         </svg>
         Create Prompt
-      </button>
+      </BaseButton>
     </div>
 
     <div v-if="isLoading" class="flex justify-center py-12">
-      <svg
-        class="animate-spin h-8 w-8 text-indigo-600"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
-        ></circle>
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        ></path>
-      </svg>
+      <LoadingSpinner size="medium" />
     </div>
 
-    <div
+    <EmptyState
       v-else-if="prompts.length === 0"
-      class="bg-gray-50 dark:bg-slate-800 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-12 text-center"
-    >
-      <svg
-        class="mx-auto h-12 w-12 text-gray-400"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-        />
-      </svg>
-      <p class="mt-2 text-sm text-gray-600 dark:text-slate-300">No prompts created yet</p>
-      <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">
-        Create a prompt to guide the LLM in extracting information
-      </p>
-    </div>
+      title="No prompts created yet"
+      description="Create a prompt to guide the LLM in extracting information"
+      action-text="Create Prompt"
+      @action="emit('create')"
+    />
 
     <div v-else class="grid grid-cols-1 gap-6">
       <div
@@ -156,12 +118,12 @@
                   class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider"
                   >System Prompt</span
                 >
-                <span
+                <StatusBadge
                   v-if="prompt.system_prompt.includes('{document_content}')"
-                  class="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full"
-                >
-                  Contains placeholder
-                </span>
+                  color="green"
+                  label="Contains placeholder"
+                  class="ml-2"
+                />
               </div>
               <p class="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap">
                 {{ truncateText(prompt.system_prompt, 200) }}
@@ -173,12 +135,12 @@
                   class="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider"
                   >User Prompt</span
                 >
-                <span
+                <StatusBadge
                   v-if="prompt.user_prompt.includes('{document_content}')"
-                  class="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full"
-                >
-                  Contains placeholder
-                </span>
+                  color="green"
+                  label="Contains placeholder"
+                  class="ml-2"
+                />
               </div>
               <p class="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap">
                 {{ truncateText(prompt.user_prompt, 200) }}
@@ -193,6 +155,10 @@
 
 <script setup>
 import { formatDate, truncateText } from '@/utils/formatters'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 
 defineProps({
   prompts: {

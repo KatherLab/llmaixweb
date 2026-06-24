@@ -7,10 +7,9 @@
     >
       <div class="flex flex-col gap-0.5">
         <div class="flex items-center flex-wrap gap-2">
-          <span
-            class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-base font-bold"
-            >{{ index + 1 }}</span
-          >
+          <StatusBadge color="blue" class="w-7 h-7 justify-center text-base font-bold">{{
+            index + 1
+          }}</StatusBadge>
           <span class="font-medium text-gray-800">{{
             label?.name || 'Loading document name...'
           }}</span>
@@ -156,8 +155,10 @@
 
       <!-- Row actions -->
       <div class="mt-6 flex flex-wrap gap-3 justify-end">
-        <button
-          class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          class="shadow-sm"
           @click="$emit('toggle-view-mode')"
         >
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -169,7 +170,7 @@
             />
           </svg>
           {{ viewMode === 'vertical' ? 'Side by Side View' : 'Vertical View' }}
-        </button>
+        </BaseButton>
         <button
           v-if="documentMeta?.previewable"
           class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
@@ -194,6 +195,8 @@
 
 <script setup>
 import JsonViewer from '@/components/common/JsonViewer.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import ResultDocumentPreview from './ResultDocumentPreview.vue'
 import ResultReasoningPanel from './ResultReasoningPanel.vue'
 import { renderMarkdown, isMarkdown } from '@/utils/markdown.js'

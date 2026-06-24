@@ -24,13 +24,13 @@
           <div>
             <dt class="text-gray-500">Created</dt>
             <dd class="text-gray-900">
-              {{ formatDateTime(selectedVersion?.created_at || document.created_at) }}
+              {{ formatDateFull(selectedVersion?.created_at || document.created_at) }}
             </dd>
           </div>
           <div>
             <dt class="text-gray-500">File Size</dt>
             <dd class="text-gray-900">
-              {{ formatFileSize(document.original_file?.file_size) }}
+              {{ formatFileSize(document.original_file?.file_size, 'Unknown') }}
             </dd>
           </div>
           <div>
@@ -39,7 +39,7 @@
           </div>
           <div v-if="selectedVersion && !selectedVersion.is_latest">
             <dt class="text-gray-500">Archived</dt>
-            <dd class="text-gray-900">{{ formatDateTime(selectedVersion.updated_at) }}</dd>
+            <dd class="text-gray-900">{{ formatDateFull(selectedVersion.updated_at) }}</dd>
           </div>
         </dl>
       </div>
@@ -90,13 +90,14 @@
       <!-- Actions -->
       <div class="pt-4 border-t space-y-2">
         <!-- Restore button for archived versions -->
-        <button
+        <BaseButton
           v-if="selectedVersion && !selectedVersion.is_latest"
-          class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+          variant="success"
+          class="w-full"
           @click="$emit('restore-version', selectedVersion)"
         >
           <svg
-            class="h-4 w-4 mr-2"
+            class="h-4 w-4"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -110,13 +111,10 @@
             />
           </svg>
           Restore This Version
-        </button>
-        <button
-          class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-          @click="$emit('reprocess', document)"
-        >
+        </BaseButton>
+        <BaseButton variant="primary" class="w-full" @click="$emit('reprocess', document)">
           <svg
-            class="h-4 w-4 mr-2"
+            class="h-4 w-4"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -130,7 +128,7 @@
             />
           </svg>
           Reprocess Document
-        </button>
+        </BaseButton>
       </div>
     </div>
   </div>
@@ -138,7 +136,9 @@
 
 <script setup>
 import JsonViewer from '@/components/common/JsonViewer.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { getEngineLabelWithKey } from '@/utils/ocrLabels'
+import { formatDateFull, formatFileSize } from '@/utils/formatters'
 
 defineProps({
   document: { type: Object, required: true },
@@ -147,22 +147,6 @@ defineProps({
 })
 
 defineEmits(['restore-version', 'reprocess'])
-
-// NOTE: formatDateTime / formatFileSize are preserved verbatim from the
-// original DocumentViewer rather than imported from utils/formatters, to avoid
-// behavior drift (utils uses a different locale + '0 B' fallback vs 'Unknown').
-// Consolidation is a Phase 3 concern.
-const formatDateTime = (dateString) => {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleString()
-}
-
-const formatFileSize = (bytes) => {
-  if (!bytes) return 'Unknown'
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
-}
 
 const getModelName = (doc) => {
   if (!doc) return ''

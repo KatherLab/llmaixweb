@@ -14,19 +14,10 @@
       rows="2"
     />
     <template #footer>
-      <button
-        class="px-3 py-1 rounded text-gray-600 bg-gray-100 hover:bg-gray-200"
-        @click="$emit('close')"
+      <BaseButton variant="secondary" size="sm" @click="$emit('close')">Cancel</BaseButton>
+      <BaseButton variant="primary" size="sm" :disabled="!name.trim()" @click="submit"
+        >Save</BaseButton
       >
-        Cancel
-      </button>
-      <button
-        :disabled="!name.trim()"
-        class="px-3 py-1 rounded text-white bg-blue-600 hover:bg-blue-700"
-        @click="submit"
-      >
-        Save
-      </button>
     </template>
   </BaseModal>
 </template>
@@ -34,6 +25,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const props = defineProps({
   open: Boolean,

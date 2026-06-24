@@ -83,20 +83,21 @@
         </div>
       </div>
       <div class="mt-7 flex justify-end gap-2">
-        <button
-          type="button"
-          class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+        <BaseButton
+          variant="secondary"
+          class="dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700"
           @click="emit('close')"
         >
           Cancel
-        </button>
-        <button
+        </BaseButton>
+        <BaseButton
           type="submit"
+          variant="primary"
           :disabled="isInviting"
-          class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 dark:bg-blue-500 rounded-lg shadow-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition disabled:opacity-50"
+          class="dark:bg-blue-500 dark:hover:bg-blue-600"
         >
           {{ isInviting ? 'Sending...' : 'Send Invitation' }}
-        </button>
+        </BaseButton>
       </div>
     </form>
   </BaseModal>
@@ -105,7 +106,9 @@
 <script setup>
 import { ref, watch } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { usersApi } from '@/services/usersApi'
+import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
   open: { type: Boolean, required: true },
@@ -155,14 +158,7 @@ async function sendInvitation() {
     inviteSuccess.value = true
     emit('invited')
   } catch (error) {
-    if (error.response?.data?.detail) {
-      inviteError.value = error.response.data.detail
-    } else if (error.response?.data) {
-      const validationError = error.response.data[0]
-      inviteError.value = validationError?.msg || 'Failed to send invitation.'
-    } else {
-      inviteError.value = 'Failed to send invitation. Please try again.'
-    }
+    inviteError.value = extractErrorMessage(error, 'Failed to send invitation. Please try again.')
   } finally {
     isInviting.value = false
   }

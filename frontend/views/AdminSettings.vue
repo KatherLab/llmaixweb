@@ -106,20 +106,17 @@
                   class="rounded-lg px-3 py-2 border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-white flex-1"
                   placeholder="Enter new value"
                 />
-                <button
-                  type="button"
-                  class="px-3 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700"
-                  @click="saveSecret(key)"
-                >
+                <BaseButton type="button" variant="primary" size="sm" @click="saveSecret(key)">
                   Save
-                </button>
-                <button
+                </BaseButton>
+                <BaseButton
                   type="button"
-                  class="px-3 py-2 rounded bg-gray-200 text-gray-600 font-semibold hover:bg-gray-300"
+                  variant="secondary"
+                  size="sm"
                   @click="cancelSecretInput(key)"
                 >
                   Cancel
-                </button>
+                </BaseButton>
               </div>
             </div>
           </template>
@@ -177,26 +174,16 @@
         </div>
       </div>
       <div class="mt-8 flex gap-4">
-        <button
-          type="submit"
-          :disabled="saving"
-          class="bg-blue-600 text-white px-6 py-2 rounded font-bold shadow hover:bg-blue-700 transition"
-        >
-          <span v-if="saving"
-            ><span
-              class="animate-spin inline-block mr-2 w-4 h-4 border-b-2 border-white rounded-full"
-            ></span
-            >Saving...</span
-          >
-          <span v-else>Save</span>
-        </button>
-        <button
-          type="button"
-          class="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-6 py-2 rounded font-semibold border border-gray-200 dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-700 transition"
+        <BaseButton type="submit" variant="primary" :loading="saving" :disabled="saving">
+          {{ saving ? 'Saving...' : 'Save' }}
+        </BaseButton>
+        <BaseButton
+          variant="secondary"
+          class="dark:bg-slate-800 dark:text-gray-200 dark:border-slate-700 dark:hover:bg-slate-700"
           @click="resetDraft"
         >
           Reset
-        </button>
+        </BaseButton>
       </div>
       <div v-if="success" class="mt-5 text-green-600 dark:text-green-400 font-semibold">
         Settings saved!
@@ -210,6 +197,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { adminApi } from '@/services/adminApi'
+import BaseButton from '@/components/common/BaseButton.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const settings = reactive({})
 const draft = reactive({})
@@ -263,7 +252,7 @@ async function saveSecret(key) {
       success.value = false
     }, 1200)
   } catch (e) {
-    error.value = e?.response?.data?.detail || 'Failed to save secret'
+    error.value = extractErrorMessage(e, 'Failed to save secret')
   } finally {
     saving.value = false
   }
@@ -283,7 +272,7 @@ async function clearSecret(key) {
       success.value = false
     }, 1200)
   } catch (e) {
-    error.value = e?.response?.data?.detail || 'Failed to clear secret'
+    error.value = extractErrorMessage(e, 'Failed to clear secret')
   } finally {
     saving.value = false
   }
@@ -343,7 +332,7 @@ async function save() {
       success.value = false
     }, 1200)
   } catch (e) {
-    error.value = e?.response?.data?.detail || 'Failed to save settings'
+    error.value = extractErrorMessage(e, 'Failed to save settings')
   } finally {
     saving.value = false
   }
@@ -357,7 +346,7 @@ async function deleteOverride(key) {
     settings[key].overridden = false
     draft[key] = settings[key].original
   } catch (e) {
-    error.value = e?.response?.data?.detail || 'Failed to remove override'
+    error.value = extractErrorMessage(e, 'Failed to remove override')
   }
 }
 

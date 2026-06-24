@@ -364,34 +364,14 @@
             >
               {{ passwordSuccess }}
             </div>
-            <button
-              :disabled="isChangingPassword"
-              class="mt-2 w-full py-2.5 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            <BaseButton
               type="submit"
+              :loading="isChangingPassword"
+              :disabled="isChangingPassword"
+              class="mt-2 w-full"
             >
-              <svg
-                v-if="isChangingPassword"
-                class="animate-spin h-5 w-5 mr-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                />
-                <path
-                  class="opacity-75"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  fill="currentColor"
-                />
-              </svg>
-              <span>{{ isChangingPassword ? 'Updating...' : 'Update Password' }}</span>
-            </button>
+              {{ isChangingPassword ? 'Updating...' : 'Update Password' }}
+            </BaseButton>
           </form>
         </div>
       </div>
@@ -408,6 +388,8 @@ import { versionApi } from '@/services/versionApi'
 import { usersApi } from '@/services/usersApi'
 import { useToast } from 'vue-toastification'
 import ActivityBell from '@/components/admin/ActivityBell.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -570,7 +552,7 @@ async function handleChangePassword() {
       closeChangePasswordModal()
     }, 1100)
   } catch (err) {
-    passwordError.value = err?.response?.data?.detail || 'Password change failed.'
+    passwordError.value = extractErrorMessage(err, 'Password change failed.')
     toast.error(passwordError.value)
   } finally {
     isChangingPassword.value = false

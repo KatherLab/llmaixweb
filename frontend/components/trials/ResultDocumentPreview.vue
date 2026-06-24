@@ -20,9 +20,7 @@
       class="rounded-md"
     ></iframe>
     <div v-else-if="pdfLoading" class="text-center py-10">
-      <span
-        class="inline-block animate-spin h-8 w-8 border-4 border-blue-400 border-t-transparent rounded-full"
-      ></span>
+      <LoadingSpinner size="medium" />
       <span class="mt-2 text-gray-500 block">Loading preview…</span>
     </div>
     <span v-else class="text-gray-500">Failed to load preview</span>
@@ -30,6 +28,8 @@
 </template>
 
 <script setup>
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+
 defineProps({
   pdfUrl: {
     type: String,

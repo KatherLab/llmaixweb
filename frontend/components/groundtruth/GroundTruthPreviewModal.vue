@@ -1,339 +1,313 @@
 <template>
-  <Teleport to="body">
-    <transition name="fade">
-      <div
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-2"
-        @click="close"
-      >
-        <div
-          class="bg-white/90 rounded-2xl border border-gray-200 shadow-2xl w-full max-w-8xl min-h-[420px] max-h-[90vh] flex flex-col overflow-hidden"
-          @click.stop
-        >
-          <!-- HEADER -->
-          <header
-            class="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-white/80 to-blue-50/70 sticky top-0 z-10 rounded-t-2xl"
+  <BaseModal
+    :open="true"
+    size="full"
+    panel-class="bg-white/90 max-w-none min-h-[420px]"
+    header-class="bg-gradient-to-r from-white/80 to-blue-50/70 sticky top-0 z-10 rounded-t-2xl"
+    body-class="flex flex-col"
+    footer-class="bg-white/90 flex-col md:flex-row md:items-center justify-between! sticky bottom-0 z-10 rounded-b-2xl shadow text-[15px]"
+    @close="close"
+  >
+    <template #header>
+      <div>
+        <h2 class="text-xl font-bold tracking-tight mb-0.5">Configure Ground Truth Mapping</h2>
+        <div class="flex items-center gap-2 text-[11px] text-gray-500">
+          <span class="font-mono text-blue-700">Project {{ projectId }}</span>
+          <span
+            v-if="selectedSchemaId"
+            class="inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-800"
+            >{{ schemaDisplayName }}</span
           >
-            <div>
-              <h2 class="text-xl font-bold tracking-tight mb-0.5">
-                Configure Ground Truth Mapping
-              </h2>
-              <div class="flex items-center gap-2 text-[11px] text-gray-500">
-                <span class="font-mono text-blue-700">Project {{ projectId }}</span>
-                <span
-                  v-if="selectedSchemaId"
-                  class="inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-800"
-                  >{{ schemaDisplayName }}</span
-                >
-              </div>
-            </div>
-            <button
-              class="text-gray-400 hover:text-red-500 transition rounded-full bg-white/60 p-1.5 shadow"
-              title="Close"
-              @click="close"
-            >
+        </div>
+      </div>
+    </template>
+
+    <!-- TOP CONTROLS -->
+    <section
+      class="flex flex-wrap md:flex-nowrap items-center gap-3 px-6 py-3 border-b bg-white/90 backdrop-blur rounded-t-none z-10 text-[15px]"
+    >
+      <div>
+        <label class="text-[15px] font-medium mr-2">Schema</label>
+        <select
+          v-model="selectedSchemaId"
+          class="px-2 py-1.5 rounded-lg border border-blue-200 bg-white/70 text-[15px] shadow focus:ring-2 focus:ring-blue-400 transition"
+          @change="onSchemaChange"
+        >
+          <option value="" disabled>Select schema...</option>
+          <option v-for="s in schemas" :key="s.id" :value="s.id">
+            {{ s.schema_name }} ({{ s.id }})
+          </option>
+        </select>
+      </div>
+      <div v-if="schemaFieldPaths.length" class="text-xs text-gray-400">
+        <span class="font-mono text-blue-600">{{ schemaFieldPaths.length }}</span> fields
+      </div>
+      <div class="flex-1"></div>
+      <ValidationBanner :status="validationStatus" class="mr-3" />
+      <div>
+        <IdFieldSelector
+          v-if="showIdSelector"
+          :is-json="isJsonFormat"
+          :is-tabular="isTabularFormat"
+          :id-column="idColumn"
+          :json-id-field="jsonIdField"
+          :available-columns="displayedColumns"
+          :id-candidates="idCandidates"
+          :current-id-column="currentIdColumn"
+          class="ml-2"
+          @update:id-column="updateIdColumn"
+          @update:json-id-field="updateJsonIdField"
+        />
+      </div>
+    </section>
+
+    <!-- MAIN CONTENT: EVEN 3 COLUMNS, SCROLLS IF NEEDED -->
+    <div
+      class="flex-1 flex flex-col md:flex-row min-h-0 bg-gradient-to-br from-white/95 to-blue-50/80 overflow-y-auto"
+    >
+      <!-- LEFT: SCHEMA FIELDS -->
+      <section class="w-full md:w-1/3 flex flex-col border-r bg-white/80 p-4 min-w-0">
+        <div class="mb-2 text-base font-semibold text-blue-800 flex items-center gap-2">
+          <span>Schema Fields</span>
+          <span
+            v-if="requiredFields.length"
+            class="ml-2 px-2 py-0.5 rounded-full text-pink-700 bg-pink-50 text-xs"
+            >required: {{ requiredFields.length }}</span
+          >
+        </div>
+        <div class="flex-1 overflow-auto custom-scrollbar pr-1.5 min-w-0 text-[13px]">
+          <FieldTree
+            :fields="schemaFieldTree"
+            :types="schemaFieldTypes"
+            :required="requiredFields"
+            :selected="selectedSchemaField"
+            :disabled="!selectedSchemaId"
+            node-color="text-blue-700"
+            :mapped="mappedSchemaPaths"
+            :highlight="highlightRequiredUnmapped"
+            @select="onSchemaFieldSelect"
+          />
+        </div>
+      </section>
+
+      <!-- CENTER: MAPPING PANEL -->
+      <section
+        class="w-full md:w-1/3 flex flex-col border-r bg-gradient-to-b from-blue-50/80 to-blue-100/80 px-3 pt-6 pb-2 min-w-0"
+      >
+        <div class="flex flex-col gap-3 mb-3">
+          <BaseButton
+            :disabled="!canAddMapping"
+            class="w-full py-1.5 font-semibold text-[15px] active:scale-95"
+            @click="addMapping"
+          >
+            <span class="flex items-center justify-center gap-2">
               <svg
-                class="w-6 h-6"
+                class="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
                 viewBox="0 0 24 24"
               >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M10 14L21 3M21 3v7.5M21 3h-7.5"
+                />
               </svg>
-            </button>
-          </header>
-
-          <!-- TOP CONTROLS -->
-          <section
-            class="flex flex-wrap md:flex-nowrap items-center gap-3 px-6 py-3 border-b bg-white/90 backdrop-blur rounded-t-none z-10 text-[15px]"
+              Map
+            </span>
+          </BaseButton>
+          <BaseButton
+            variant="secondary"
+            :disabled="!selectedSchemaId"
+            class="w-full py-1.5 text-xs font-bold"
+            @click="autoMap"
           >
-            <div>
-              <label class="text-[15px] font-medium mr-2">Schema</label>
-              <select
-                v-model="selectedSchemaId"
-                class="px-2 py-1.5 rounded-lg border border-blue-200 bg-white/70 text-[15px] shadow focus:ring-2 focus:ring-blue-400 transition"
-                @change="onSchemaChange"
+            <span class="flex items-center justify-center gap-2">
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
               >
-                <option value="" disabled>Select schema...</option>
-                <option v-for="s in schemas" :key="s.id" :value="s.id">
-                  {{ s.schema_name }} ({{ s.id }})
-                </option>
-              </select>
-            </div>
-            <div v-if="schemaFieldPaths.length" class="text-xs text-gray-400">
-              <span class="font-mono text-blue-600">{{ schemaFieldPaths.length }}</span> fields
-            </div>
-            <div class="flex-1"></div>
-            <ValidationBanner :status="validationStatus" class="mr-3" />
-            <div>
-              <IdFieldSelector
-                v-if="showIdSelector"
-                :is-json="isJsonFormat"
-                :is-tabular="isTabularFormat"
-                :id-column="idColumn"
-                :json-id-field="jsonIdField"
-                :available-columns="displayedColumns"
-                :id-candidates="idCandidates"
-                :current-id-column="currentIdColumn"
-                class="ml-2"
-                @update:id-column="updateIdColumn"
-                @update:json-id-field="updateJsonIdField"
-              />
-            </div>
-          </section>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364-6.364l-2.121 2.121M7.757 16.243l-2.121 2.121M16.243 16.243l2.121 2.121M7.757 7.757L5.636 5.636"
+                />
+              </svg>
+              Auto-map all fields
+            </span>
+          </BaseButton>
+        </div>
+        <div class="flex-1 overflow-auto px-0.5 min-w-0 text-[13px]">
+          <MappingList
+            :mappings="mappings"
+            :schema-field-types="schemaFieldTypes"
+            :ground-truth-field-types="groundTruthFieldTypes"
+            :schema-selected="!!selectedSchemaId"
+            @remove="removeMapping"
+          />
+        </div>
+        <BaseButton
+          v-if="mappings.length"
+          variant="ghost"
+          size="sm"
+          class="mt-2 text-xs text-red-600 font-semibold hover:underline hover:text-red-700"
+          @click="clearMappings"
+        >
+          Clear all mappings
+        </BaseButton>
+      </section>
 
-          <!-- MAIN CONTENT: EVEN 3 COLUMNS, SCROLLS IF NEEDED -->
+      <!-- RIGHT: GT FIELDS + SAMPLE (SAMPLE ALWAYS AT BOTTOM) -->
+      <section class="w-full md:w-1/3 flex flex-col bg-white/90 p-4 min-w-0">
+        <div class="mb-2 text-base font-semibold text-purple-900 flex items-center gap-2">
+          Ground Truth Fields
+          <span v-if="groundTruthFieldPaths.length" class="ml-2 text-gray-400 text-xs"
+            >{{ groundTruthFieldPaths.length }} fields</span
+          >
+        </div>
+        <div class="flex-1 overflow-auto custom-scrollbar pr-1.5 min-w-0 text-[13px]">
+          <FieldTree
+            :fields="groundTruthFieldTree"
+            :types="groundTruthFieldTypes"
+            :selected="selectedGroundTruthField"
+            :disabled="!selectedSchemaId"
+            node-color="text-purple-700"
+            :mapped="mappedGtPaths"
+            @select="onGroundTruthFieldSelect"
+          />
+        </div>
+        <div class="mt-2">
+          <GroundTruthSample
+            v-if="sampleDoc"
+            :doc="sampleDoc"
+            :format="groundTruth.format"
+            class="w-full"
+          />
+        </div>
+      </section>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div
+      v-if="loading"
+      class="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-20 rounded-2xl"
+    >
+      <LoadingSpinner size="large" />
+      <div class="mt-3 text-blue-600 font-bold text-lg">Loading...</div>
+    </div>
+
+    <template #footer>
+      <div>
+        <span v-if="!selectedSchemaId" class="text-gray-500">
+          Please select a schema to start mapping fields.
+        </span>
+        <span
+          v-else-if="mappings.length && !mappingComplete"
+          class="text-yellow-700 font-medium flex items-center gap-2"
+        >
+          <svg
+            class="w-5 h-5 text-yellow-500"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" x2="12" y1="8" y2="12" />
+            <circle cx="12" cy="16" r="1" />
+          </svg>
+          Warning: not all required fields are mapped!
+        </span>
+        <span
+          v-if="isTabularFormat && !idColumn"
+          class="block mt-1 text-xs text-red-600 font-semibold flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" />
+            <circle cx="12" cy="16" r="1" fill="currentColor" />
+          </svg>
+          Please select the ID column before saving.
+        </span>
+      </div>
+      <div class="flex items-center gap-5">
+        <BaseButton
+          variant="secondary"
+          class="px-5 py-2 rounded-full font-semibold text-sm"
+          @click="close"
+        >
+          Cancel
+        </BaseButton>
+
+        <!-- Tooltip-Enabled Save Button -->
+        <div class="relative">
+          <button
+            ref="saveBtnRef"
+            :disabled="saveDisabled"
+            :class="[
+              'ml-2 px-7 py-2 rounded-full font-bold text-base transition shadow-xl',
+              saveDisabled
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                : 'bg-gradient-to-r from-blue-600 via-purple-500 to-pink-400 text-white hover:scale-105 hover:shadow-2xl',
+            ]"
+            style="pointer-events: auto !important"
+            @mouseenter="showTooltip = saveDisabled"
+            @mouseleave="showTooltip = false"
+            @focus="showTooltip = saveDisabled"
+            @blur="showTooltip = false"
+            @click="!saveDisabled && saveMappings()"
+          >
+            <span v-if="!justSaved">Save Mappings</span>
+            <span v-else class="flex items-center gap-2">
+              <svg
+                class="w-5 h-5 text-green-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Saved!
+            </span>
+          </button>
+          <!-- Tooltip -->
           <div
-            class="flex-1 flex flex-col md:flex-row min-h-0 bg-gradient-to-br from-white/95 to-blue-50/80 overflow-y-auto"
+            v-if="saveDisabled && showTooltip"
+            ref="tooltipRef"
+            :style="floatingStyles"
+            class="z-50 bg-gray-800 text-white text-xs rounded px-3 py-2 absolute shadow-lg"
           >
-            <!-- LEFT: SCHEMA FIELDS -->
-            <section class="w-full md:w-1/3 flex flex-col border-r bg-white/80 p-4 min-w-0">
-              <div class="mb-2 text-base font-semibold text-blue-800 flex items-center gap-2">
-                <span>Schema Fields</span>
-                <span
-                  v-if="requiredFields.length"
-                  class="ml-2 px-2 py-0.5 rounded-full text-pink-700 bg-pink-50 text-xs"
-                  >required: {{ requiredFields.length }}</span
-                >
-              </div>
-              <div class="flex-1 overflow-auto custom-scrollbar pr-1.5 min-w-0 text-[13px]">
-                <FieldTree
-                  :fields="schemaFieldTree"
-                  :types="schemaFieldTypes"
-                  :required="requiredFields"
-                  :selected="selectedSchemaField"
-                  :disabled="!selectedSchemaId"
-                  node-color="text-blue-700"
-                  :mapped="mappedSchemaPaths"
-                  :highlight="highlightRequiredUnmapped"
-                  @select="onSchemaFieldSelect"
-                />
-              </div>
-            </section>
-
-            <!-- CENTER: MAPPING PANEL -->
-            <section
-              class="w-full md:w-1/3 flex flex-col border-r bg-gradient-to-b from-blue-50/80 to-blue-100/80 px-3 pt-6 pb-2 min-w-0"
-            >
-              <div class="flex flex-col gap-3 mb-3">
-                <button
-                  :disabled="!canAddMapping"
-                  class="bg-blue-600 text-white w-full py-1.5 rounded-lg shadow font-semibold text-[15px] hover:bg-blue-700 active:scale-95 transition"
-                  :class="{ 'opacity-50 cursor-not-allowed': !canAddMapping }"
-                  @click="addMapping"
-                >
-                  <span class="flex items-center justify-center gap-2">
-                    <svg
-                      class="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M10 14L21 3M21 3v7.5M21 3h-7.5"
-                      />
-                    </svg>
-                    Map
-                  </span>
-                </button>
-                <button
-                  :disabled="!selectedSchemaId"
-                  class="bg-white/95 border border-blue-200 text-blue-700 w-full py-1.5 rounded-lg shadow text-xs font-bold hover:bg-blue-100 transition"
-                  @click="autoMap"
-                >
-                  <span class="flex items-center justify-center gap-2">
-                    <svg
-                      class="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364-6.364l-2.121 2.121M7.757 16.243l-2.121 2.121M16.243 16.243l2.121 2.121M7.757 7.757L5.636 5.636"
-                      />
-                    </svg>
-                    Auto-map all fields
-                  </span>
-                </button>
-              </div>
-              <div class="flex-1 overflow-auto px-0.5 min-w-0 text-[13px]">
-                <MappingList
-                  :mappings="mappings"
-                  :schema-field-types="schemaFieldTypes"
-                  :ground-truth-field-types="groundTruthFieldTypes"
-                  :schema-selected="!!selectedSchemaId"
-                  @remove="removeMapping"
-                />
-              </div>
-              <button
-                v-if="mappings.length"
-                class="mt-2 text-xs text-red-600 font-semibold hover:underline hover:text-red-700 transition"
-                @click="clearMappings"
-              >
-                Clear all mappings
-              </button>
-            </section>
-
-            <!-- RIGHT: GT FIELDS + SAMPLE (SAMPLE ALWAYS AT BOTTOM) -->
-            <section class="w-full md:w-1/3 flex flex-col bg-white/90 p-4 min-w-0">
-              <div class="mb-2 text-base font-semibold text-purple-900 flex items-center gap-2">
-                Ground Truth Fields
-                <span v-if="groundTruthFieldPaths.length" class="ml-2 text-gray-400 text-xs"
-                  >{{ groundTruthFieldPaths.length }} fields</span
-                >
-              </div>
-              <div class="flex-1 overflow-auto custom-scrollbar pr-1.5 min-w-0 text-[13px]">
-                <FieldTree
-                  :fields="groundTruthFieldTree"
-                  :types="groundTruthFieldTypes"
-                  :selected="selectedGroundTruthField"
-                  :disabled="!selectedSchemaId"
-                  node-color="text-purple-700"
-                  :mapped="mappedGtPaths"
-                  @select="onGroundTruthFieldSelect"
-                />
-              </div>
-              <div class="mt-2">
-                <GroundTruthSample
-                  v-if="sampleDoc"
-                  :doc="sampleDoc"
-                  :format="groundTruth.format"
-                  class="w-full"
-                />
-              </div>
-            </section>
-          </div>
-
-          <!-- FOOTER -->
-          <footer
-            class="bg-white/90 px-6 py-4 border-t flex flex-col md:flex-row md:items-center justify-between sticky bottom-0 z-10 rounded-b-2xl shadow gap-3 text-[15px]"
-          >
-            <div>
-              <span v-if="!selectedSchemaId" class="text-gray-500">
-                Please select a schema to start mapping fields.
-              </span>
-              <span
-                v-else-if="mappings.length && !mappingComplete"
-                class="text-yellow-700 font-medium flex items-center gap-2"
-              >
-                <svg
-                  class="w-5 h-5 text-yellow-500"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" x2="12" y1="8" y2="12" />
-                  <circle cx="12" cy="16" r="1" />
-                </svg>
-                Warning: not all required fields are mapped!
-              </span>
-              <span
-                v-if="isTabularFormat && !idColumn"
-                class="block mt-1 text-xs text-red-600 font-semibold flex items-center gap-2"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                  <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" />
-                  <circle cx="12" cy="16" r="1" fill="currentColor" />
-                </svg>
-                Please select the ID column before saving.
-              </span>
-            </div>
-            <div class="flex items-center gap-5">
-              <button
-                class="px-5 py-2 border border-gray-300 rounded-full text-gray-700 hover:bg-gray-100 font-semibold text-sm transition"
-                @click="close"
-              >
-                Cancel
-              </button>
-
-              <!-- Tooltip-Enabled Save Button -->
-              <div class="relative">
-                <button
-                  ref="saveBtnRef"
-                  :disabled="saveDisabled"
-                  :class="[
-                    'ml-2 px-7 py-2 rounded-full font-bold text-base transition shadow-xl',
-                    saveDisabled
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
-                      : 'bg-gradient-to-r from-blue-600 via-purple-500 to-pink-400 text-white hover:scale-105 hover:shadow-2xl',
-                  ]"
-                  style="pointer-events: auto !important"
-                  @mouseenter="showTooltip = saveDisabled"
-                  @mouseleave="showTooltip = false"
-                  @focus="showTooltip = saveDisabled"
-                  @blur="showTooltip = false"
-                  @click="!saveDisabled && saveMappings()"
-                >
-                  <span v-if="!justSaved">Save Mappings</span>
-                  <span v-else class="flex items-center gap-2">
-                    <svg
-                      class="w-5 h-5 text-green-300"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="3"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Saved!
-                  </span>
-                </button>
-                <!-- Tooltip -->
-                <div
-                  v-if="saveDisabled && showTooltip"
-                  ref="tooltipRef"
-                  :style="floatingStyles"
-                  class="z-50 bg-gray-800 text-white text-xs rounded px-3 py-2 absolute shadow-lg"
-                >
-                  {{ saveDisabledReason }}
-                </div>
-              </div>
-            </div>
-          </footer>
-
-          <!-- Loading Overlay -->
-          <div
-            v-if="loading"
-            class="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-20 rounded-2xl"
-          >
-            <div
-              class="animate-spin w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full"
-            ></div>
-            <div class="mt-3 text-blue-600 font-bold text-lg">Loading...</div>
+            {{ saveDisabledReason }}
           </div>
         </div>
       </div>
-    </transition>
-  </Teleport>
+    </template>
+  </BaseModal>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/vue'
-import { useScrollLock } from '@/composables/useScrollLock'
+import BaseModal from '@/components/common/BaseModal.vue'
 import FieldTree from '@/components/groundtruth/FieldTree.vue'
 import MappingList from '@/components/groundtruth/MappingList.vue'
 import ValidationBanner from '@/components/groundtruth/ValidationBanner.vue'
 import GroundTruthSample from '@/components/groundtruth/GroundTruthSample.vue'
 import IdFieldSelector from '@/components/groundtruth/IdFieldSelector.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { schemasApi } from '@/services/schemasApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
-
-useScrollLock({ autoLock: true })
 
 const props = defineProps({
   projectId: { type: [String, Number], default: undefined },
@@ -699,7 +673,7 @@ function updateIdColumn(val) {
 function updateJsonIdField(val) {
   jsonIdField.value = val
 }
-watch(idColumn, (val, prev) => {
+watch(idColumn, (val) => {
   if (isTabularFormat.value && val && val !== currentIdColumn.value) {
     saveIdColumn()
   }

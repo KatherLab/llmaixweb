@@ -10,24 +10,26 @@
       </div>
       <div class="flex items-center gap-4">
         <Tooltip v-if="trialDisabled" :text="trialDisabledReason">
-          <button
-            class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 dark:hover:bg-blue-800 transition disabled:bg-blue-300 disabled:cursor-not-allowed"
+          <BaseButton
+            variant="primary"
+            size="lg"
+            class="font-semibold shadow dark:hover:bg-blue-800"
             :disabled="trialDisabled"
             type="button"
             @click="openCreateTrialModal"
+            >Start New Trial</BaseButton
           >
-            Start New Trial
-          </button>
         </Tooltip>
-        <button
+        <BaseButton
           v-else
-          class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 dark:hover:bg-blue-800 transition"
+          variant="primary"
+          size="lg"
+          class="font-semibold shadow dark:hover:bg-blue-800"
           :disabled="trialDisabled"
           type="button"
           @click="openCreateTrialModal"
+          >Start New Trial</BaseButton
         >
-          Start New Trial
-        </button>
       </div>
     </div>
 
@@ -131,12 +133,12 @@
 
       <!-- Pagination -->
       <div v-if="trials.length < totalTrials" class="flex justify-center">
-        <button
-          class="px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-800 dark:text-gray-200 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700"
+        <BaseButton
+          variant="secondary"
+          class="font-semibold border-gray-200 dark:text-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700"
           @click="loadMore"
+          >Load more ({{ trials.length }}/{{ totalTrials }})</BaseButton
         >
-          Load more ({{ trials.length }}/{{ totalTrials }})
-        </button>
       </div>
     </div>
 
@@ -232,6 +234,8 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import Tooltip from '@/components/common/Tooltip.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
   projectId: { type: [String, Number], required: true },
@@ -393,7 +397,7 @@ async function fetchTrials({ reset = false } = {}) {
     const items = data.items || []
     trials.value = reset ? items : [...trials.value, ...items]
   } catch (err) {
-    error.value = err?.message || 'Failed to load trials'
+    error.value = extractErrorMessage(err, 'Failed to load trials')
   } finally {
     isLoading.value = false
   }
@@ -577,7 +581,7 @@ onMounted(async () => {
     documentGroups.value = groupsResponse.data
     await resetAndFetch()
   } catch (err) {
-    error.value = err?.message || 'Failed to load'
+    error.value = extractErrorMessage(err, 'Failed to load')
   } finally {
     isLoading.value = false
     startWebSocket()

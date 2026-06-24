@@ -35,35 +35,16 @@
           />
 
           <!-- Empty State -->
-          <div
+          <EmptyState
             v-if="
               currentSchema.type === 'object' &&
               (!currentSchema.properties || Object.keys(currentSchema.properties).length === 0)
             "
-            class="mt-6 text-center py-12 border-2 border-dashed border-gray-300 rounded-lg"
-          >
-            <svg
-              class="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-              />
-            </svg>
-            <p class="mt-2 text-sm text-gray-600">No properties defined</p>
-            <button
-              type="button"
-              class="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-              @click="showAddPropertyModal = true"
-            >
-              Add First Property
-            </button>
-          </div>
+            class="mt-6"
+            title="No properties defined"
+            action-text="Add First Property"
+            @action="showAddPropertyModal = true"
+          />
         </div>
       </div>
     </div>
@@ -107,6 +88,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { StringIcon, NumberIcon, BooleanIcon, ObjectIcon, ArrayIcon } from '@/utils/schemaTypeIcons'
+import EmptyState from '@/components/common/EmptyState.vue'
 import SchemaBlock from './SchemaBlock.vue'
 import SchemaTree from './SchemaTree.vue'
 import SchemaEditorToolbar from './SchemaEditorToolbar.vue'

@@ -85,9 +85,7 @@
         v-if="innerIdColumn === '__field__' && innerJsonIdField"
         class="text-xs mt-1 text-purple-700 font-mono"
       >
-        <span
-          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200"
-        >
+        <StatusBadge color="purple" class="gap-1 font-bold border border-purple-200">
           <!-- Key SVG -->
           <svg
             class="w-4 h-4 inline-block"
@@ -100,7 +98,7 @@
             <path d="M12 17v4M12 3v4" />
           </svg>
           {{ innerJsonIdField }}
-        </span>
+        </StatusBadge>
       </div>
     </template>
     <div class="text-xs text-gray-500 mt-1">
@@ -111,6 +109,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 const props = defineProps({
   isJson: Boolean,
   isTabular: Boolean,

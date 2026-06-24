@@ -23,14 +23,15 @@
     </div>
     <div class="flex items-center space-x-2">
       <!-- Version History Button -->
-      <button
+      <BaseButton
         v-if="hasVersionHistory"
-        class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+        variant="secondary"
+        size="sm"
         :title="showVersionHistory ? 'Hide version history' : 'Show version history'"
         @click="$emit('toggle-version-history')"
       >
         <svg
-          class="h-4 w-4 mr-1.5"
+          class="h-4 w-4"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -43,21 +44,17 @@
             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <span
-          v-if="versionCount > 0"
-          class="bg-blue-100 text-blue-800 text-xs font-semibold mr-1 px-2 py-0.5 rounded-full"
-        >
-          {{ versionCount }}
-        </span>
+        <StatusBadge v-if="versionCount > 0" color="blue">{{ versionCount }}</StatusBadge>
         History
-      </button>
-      <button
+      </BaseButton>
+      <BaseButton
         v-if="hasDisplayableOriginalFile"
-        class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+        variant="secondary"
+        size="sm"
         @click="$emit('toggle-view')"
       >
         <svg
-          class="h-4 w-4 mr-1.5"
+          class="h-4 w-4"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -71,7 +68,7 @@
           />
         </svg>
         {{ viewModeLabel }}
-      </button>
+      </BaseButton>
       <span
         v-else-if="!hasDisplayableOriginalFile && hasText"
         class="inline-flex items-center px-3 py-1.5 border border-gray-200 text-sm font-medium rounded-md text-gray-500 bg-gray-50"
@@ -93,12 +90,9 @@
         </svg>
         Text Only
       </span>
-      <button
-        class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-        @click="$emit('download')"
-      >
+      <BaseButton variant="secondary" size="sm" @click="$emit('download')">
         <svg
-          class="h-4 w-4 mr-1.5"
+          class="h-4 w-4"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -112,7 +106,7 @@
           />
         </svg>
         Download
-      </button>
+      </BaseButton>
       <button class="text-gray-400 hover:text-gray-500" @click="$emit('close')">
         <svg
           class="h-6 w-6"
@@ -135,6 +129,8 @@
 
 <script setup>
 import ExtractionMethodBadge from './ExtractionMethodBadge.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 
 defineProps({
   document: { type: Object, required: true },

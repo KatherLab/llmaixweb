@@ -37,10 +37,7 @@
       </div>
       <div class="flex flex-col items-start md:items-end gap-2 min-w-[200px]">
         <div class="flex gap-2">
-          <button
-            class="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
-            @click="$emit('open-schema')"
-          >
+          <BaseButton variant="secondary" size="sm" class="shadow-sm" @click="$emit('open-schema')">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 stroke-linecap="round"
@@ -50,11 +47,8 @@
               />
             </svg>
             View Schema
-          </button>
-          <button
-            class="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
-            @click="$emit('open-prompt')"
-          >
+          </BaseButton>
+          <BaseButton variant="secondary" size="sm" class="shadow-sm" @click="$emit('open-prompt')">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 stroke-linecap="round"
@@ -64,7 +58,7 @@
               />
             </svg>
             View Prompt
-          </button>
+          </BaseButton>
         </div>
         <span class="text-sm bg-blue-50 px-4 py-2 rounded-lg font-medium text-blue-800 shadow-sm">
           {{ trial.results?.length || 0 }} documents processed
@@ -101,6 +95,7 @@
 
 <script setup>
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { formatDate } from '@/utils/formatters.js'
 
 defineProps({

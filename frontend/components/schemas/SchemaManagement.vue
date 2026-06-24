@@ -25,12 +25,9 @@
                 />
               </svg>
               <span>JSON Schemas</span>
-              <span
-                v-if="schemas.length > 0"
-                class="ml-2 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 py-0.5 px-2 rounded-full text-xs"
-              >
-                {{ schemas.length }}
-              </span>
+              <StatusBadge v-if="schemas.length > 0" color="gray" class="ml-2">{{
+                schemas.length
+              }}</StatusBadge>
             </div>
           </button>
 
@@ -53,12 +50,9 @@
                 />
               </svg>
               <span>Extraction Prompts</span>
-              <span
-                v-if="prompts.length > 0"
-                class="ml-2 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 py-0.5 px-2 rounded-full text-xs"
-              >
-                {{ prompts.length }}
-              </span>
+              <StatusBadge v-if="prompts.length > 0" color="gray" class="ml-2">{{
+                prompts.length
+              }}</StatusBadge>
             </div>
           </button>
         </nav>
@@ -153,6 +147,8 @@ import PromptFormModal from './PromptFormModal.vue'
 import SchemaViewModal from './SchemaViewModal.vue'
 import PromptViewModal from './PromptViewModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
   projectId: {
@@ -265,7 +261,7 @@ const deleteSchema = async () => {
     showDeleteModal.value = false
     toast.success(`Schema "${schemaToDelete.value.schema_name}" deleted successfully`)
   } catch (err) {
-    const errorMessage = err.response?.data?.detail || 'Failed to delete schema'
+    const errorMessage = extractErrorMessage(err, 'Failed to delete schema')
     toast.error(errorMessage)
     console.error(err)
   } finally {
@@ -317,7 +313,7 @@ const deletePrompt = async () => {
     toast.success(`Prompt "${promptToDelete.value.name}" deleted successfully`)
   } catch (err) {
     console.error('Failed to delete prompt:', err)
-    const errorMessage = err.response?.data?.detail || 'Failed to delete prompt'
+    const errorMessage = extractErrorMessage(err, 'Failed to delete prompt')
     toast.error(errorMessage)
   } finally {
     isDeleting.value = false

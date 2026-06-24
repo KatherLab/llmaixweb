@@ -36,9 +36,9 @@
           <div class="flex-1 overflow-y-auto p-8 bg-white/70">
             <!-- Loading -->
             <div v-if="isLoading" class="flex flex-col items-center justify-center py-16">
-              <span
-                class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-3"
-              ></span>
+              <span class="mb-3">
+                <LoadingSpinner size="medium" inline label="" />
+              </span>
               <span class="mt-2 text-gray-500">Loading trial results…</span>
             </div>
             <!-- Error -->
@@ -174,6 +174,8 @@ import TrialDocumentErrors from './TrialDocumentErrors.vue'
 import TrialResultCard from './TrialResultCard.vue'
 import TrialSchemaModal from './TrialSchemaModal.vue'
 import TrialPromptModal from './TrialPromptModal.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
   projectId: { type: [String, Number], required: true },
@@ -275,7 +277,7 @@ const fetchData = async () => {
     if (trial.value?.results?.length) loadDocumentNames()
   } catch (err) {
     console.error('Error loading trial:', err)
-    error.value = err?.message || 'Failed to load trial data'
+    error.value = extractErrorMessage(err, 'Failed to load trial data')
   } finally {
     isLoading.value = false
   }

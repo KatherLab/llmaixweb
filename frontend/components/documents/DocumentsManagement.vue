@@ -10,42 +10,12 @@
       </div>
     </div>
 
-    <div class="border-b border-gray-200 dark:border-gray-700">
-      <nav class="-mb-px flex space-x-8">
-        <button
-          :class="[
-            'py-2 px-1 border-b-2 font-medium text-sm',
-            activeTab === 'documents'
-              ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600',
-          ]"
-          @click="activeTab = 'documents'"
-        >
-          All Documents
-          <span
-            class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs dark:bg-gray-800 dark:text-gray-300"
-          >
-            {{ totalCount }}
-          </span>
-        </button>
-        <button
-          :class="[
-            'py-2 px-1 border-b-2 font-medium text-sm',
-            activeTab === 'groups'
-              ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600',
-          ]"
-          @click="activeTab = 'groups'"
-        >
-          Document Groups
-          <span
-            class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs dark:bg-gray-800 dark:text-gray-300"
-          >
-            {{ documentGroupsCount }}
-          </span>
-        </button>
-      </nav>
-    </div>
+    <BaseTabGroup v-model="activeTab" :tabs="tabs" tone="blue">
+      <template #tab="{ tab }">
+        {{ tab.label }}
+        <StatusBadge color="gray" class="ml-2">{{ tab.badge }}</StatusBadge>
+      </template>
+    </BaseTabGroup>
 
     <!-- Tab Content -->
     <div v-if="activeTab === 'documents'">
@@ -147,13 +117,9 @@
                 : 'Process some files to see documents here'
           }}
         </p>
-        <button
-          v-if="hasActiveFilters"
-          class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          @click="clearFilters"
-        >
+        <BaseButton v-if="hasActiveFilters" variant="primary" class="mt-4" @click="clearFilters">
           Clear All Filters
-        </button>
+        </BaseButton>
       </div>
 
       <!-- True Empty State: No documents processed yet -->
@@ -257,6 +223,9 @@ import { setEngineLabels } from '@/utils/ocrLabels'
 import { getDateRangeBounds } from '@/utils/dateRange'
 import LoadingSpinner from '../common/LoadingSpinner.vue'
 import PaginationControls from '../common/PaginationControls.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { usePagination } from '@/composables/usePagination'
 import DocumentViewer from './DocumentViewer.vue'
@@ -265,6 +234,7 @@ import DocumentGroups from './DocumentsGroups.vue'
 import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
 import DocumentsFilters from './DocumentsFilters.vue'
 import DocumentsTable from './DocumentsTable.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
   projectId: {
@@ -298,6 +268,12 @@ const showCreateGroupModal = ref(false)
 const createGroupWithDocs = ref([]) // Documents to pre-select when creating group
 const serverItems = ref([]) // current page rows from the server
 const documentGroupsCount = ref(0) // count of document groups
+
+// Tab config for BaseTabGroup (badges rendered via #tab scoped slot to keep StatusBadge styling)
+const tabs = computed(() => [
+  { label: 'All Documents', value: 'documents', badge: totalCount.value },
+  { label: 'Document Groups', value: 'groups', badge: documentGroupsCount.value },
+])
 
 // Filters
 const filters = ref({
@@ -578,7 +554,7 @@ const reprocessDocument = async (doc) => {
     toast.success('Document reprocessing started!')
     fetchDocuments()
   } catch (error) {
-    toast.error(error?.response?.data?.detail?.[0]?.msg || 'Failed to start reprocessing')
+    toast.error(extractErrorMessage(error, 'Failed to start reprocessing'))
     console.error(error)
   }
 }

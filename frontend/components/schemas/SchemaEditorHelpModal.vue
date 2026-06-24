@@ -40,19 +40,14 @@
     </div>
 
     <template #footer>
-      <button
-        type="button"
-        class="w-full px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-        @click="$emit('close')"
-      >
-        Close
-      </button>
+      <BaseButton variant="secondary" class="w-full" @click="$emit('close')">Close</BaseButton>
     </template>
   </BaseModal>
 </template>
 
 <script setup>
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 defineProps({
   open: {

@@ -4,10 +4,7 @@
     <!-- Actions Bar -->
     <div class="flex justify-between items-center">
       <div class="flex items-center space-x-4">
-        <button
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          @click="showCreateModal = true"
-        >
+        <BaseButton variant="primary" @click="showCreateModal = true">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -17,29 +14,9 @@
             />
           </svg>
           Create Group
-        </button>
+        </BaseButton>
 
-        <div class="relative">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search groups..."
-            class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <svg
-            class="absolute left-3 top-2.5 h-5 w-5 text-gray-400 dark:text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-        </div>
+        <SearchInput v-model="searchQuery" placeholder="Search groups..." />
       </div>
 
       <div class="flex items-center space-x-2">
@@ -293,112 +270,26 @@
     />
 
     <!-- Delete Group Confirmation Modal -->
-    <Teleport to="body">
-      <transition name="fade">
-        <div
-          v-if="showDeleteModal"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
-          @click.self="showDeleteModal = false"
-        >
-          <div
-            class="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-gray-200"
-            @click.stop
-          >
-            <div class="px-6 py-4 border-b bg-red-50 rounded-t-2xl">
-              <div class="flex items-center gap-3">
-                <svg
-                  class="h-6 w-6 text-red-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-                <h3 class="text-lg font-semibold text-red-900">Delete Document Group</h3>
-              </div>
-            </div>
-
-            <div class="p-6 space-y-4">
-              <p class="text-gray-700">
-                Are you sure you want to delete "<strong>{{ groupToDelete?.name }}</strong
-                >"?
-              </p>
-
-              <div
-                v-if="groupToDelete?.document_count > 0"
-                class="bg-yellow-50 border border-yellow-200 rounded-lg p-3"
-              >
-                <p class="text-sm text-yellow-800">
-                  This group contains
-                  <strong>{{ groupToDelete.document_count }}</strong> document(s).
-                </p>
-              </div>
-
-              <div v-if="groupToDelete?.document_count > 0" class="flex items-center">
-                <input
-                  v-model="deleteDocumentsToo"
-                  type="checkbox"
-                  class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                />
-                <label class="ml-2 text-sm text-gray-700">
-                  Also delete all documents in this group (if not referenced elsewhere)
-                </label>
-              </div>
-
-              <div class="flex items-center">
-                <input
-                  v-model="confirmDeleteGroup"
-                  type="checkbox"
-                  class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                />
-                <label class="ml-2 text-sm text-gray-700">
-                  I understand that this action cannot be undone
-                </label>
-              </div>
-            </div>
-
-            <div class="px-6 py-4 bg-gray-50 border-t rounded-b-2xl flex justify-end gap-3">
-              <button
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                @click="showDeleteModal = false"
-              >
-                Cancel
-              </button>
-              <button
-                :disabled="!canDeleteGroup"
-                class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed"
-                @click="confirmDeleteGroupAction"
-              >
-                <span v-if="isDeleting" class="flex items-center gap-2">
-                  <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    />
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Deleting...
-                </span>
-                <span v-else>Delete</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </transition>
-    </Teleport>
+    <ConfirmationDialog
+      :open="showDeleteModal"
+      title="Delete Document Group"
+      :message="deleteMessage"
+      confirm-text="Delete"
+      :loading="isDeleting"
+      @confirm="confirmDeleteGroupAction"
+      @cancel="showDeleteModal = false"
+    >
+      <div v-if="groupToDelete?.document_count > 0" class="flex items-center -mt-3 mb-2">
+        <input
+          v-model="deleteDocumentsToo"
+          type="checkbox"
+          class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+        />
+        <label class="ml-2 text-sm text-gray-700 dark:text-slate-300">
+          Also delete all documents in this group (if not referenced elsewhere)
+        </label>
+      </div>
+    </ConfirmationDialog>
   </div>
 </template>
 
@@ -411,7 +302,11 @@ import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
 import ViewDocumentGroupModal from './ViewDocumentGroupModal.vue'
 import LoadingSpinner from '../common/LoadingSpinner.vue'
 import PaginationControls from '../common/PaginationControls.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import SearchInput from '@/components/common/SearchInput.vue'
 import { usePagination } from '@/composables/usePagination'
+import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
   projectId: {
@@ -447,15 +342,22 @@ const currentPage = pagination.currentPage
 const showDeleteModal = ref(false)
 const groupToDelete = ref(null)
 const deleteDocumentsToo = ref(false)
-const confirmDeleteGroup = ref(false)
 const isDeleting = ref(false)
 
 // Server-side pagination
 const totalPages = pagination.totalPages
 const visiblePages = pagination.visiblePages
 
-const canDeleteGroup = computed(() => {
-  return confirmDeleteGroup.value && !isDeleting.value
+const canDeleteGroup = computed(() => !isDeleting.value)
+
+// Message for the delete confirmation dialog (includes document count warning)
+const deleteMessage = computed(() => {
+  if (!groupToDelete.value) return ''
+  let msg = `Are you sure you want to delete "${groupToDelete.value.name}"?`
+  if (groupToDelete.value.document_count > 0) {
+    msg += ` This group contains ${groupToDelete.value.document_count} document(s).`
+  }
+  return msg
 })
 
 // Fetch document sets with server-side pagination + search
@@ -511,7 +413,6 @@ const deleteGroup = (group) => {
 
   groupToDelete.value = group
   deleteDocumentsToo.value = false
-  confirmDeleteGroup.value = false
   showDeleteModal.value = true
 }
 
@@ -545,12 +446,11 @@ const confirmDeleteGroupAction = async () => {
     showDeleteModal.value = false
     groupToDelete.value = null
     deleteDocumentsToo.value = false
-    confirmDeleteGroup.value = false
     emit('refresh')
     currentPage.value = 1
     fetchDocumentSets()
   } catch (error) {
-    toast.error(error?.response?.data?.detail || 'Failed to delete document group')
+    toast.error(extractErrorMessage(error, 'Failed to delete document group'))
     console.error(error)
   } finally {
     isDeleting.value = false

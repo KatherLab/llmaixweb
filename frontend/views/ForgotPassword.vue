@@ -97,6 +97,7 @@
 import { ref } from 'vue'
 import { usersApi } from '@/services/usersApi'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const step = ref(1)
 const email = ref('')
@@ -116,10 +117,8 @@ async function handleForgotPassword() {
   } catch (err) {
     if (err.response?.status === 429) {
       error.value = 'Too many requests. Please try again later.'
-    } else if (err.response?.data?.detail) {
-      error.value = err.response.data.detail
     } else {
-      error.value = 'An unexpected error occurred. Please try again.'
+      error.value = extractErrorMessage(err, 'An unexpected error occurred. Please try again.')
     }
     console.error('Forgot password error:', err)
   } finally {

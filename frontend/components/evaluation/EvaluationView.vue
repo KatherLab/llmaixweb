@@ -1,57 +1,15 @@
 <template>
   <div class="evaluation-view p-4">
-    <!-- Enhanced Error Banner -->
-    <div
+    <!-- Error Banner -->
+    <ErrorBanner
       v-if="error"
-      class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-    >
-      <div class="flex items-start">
-        <span class="w-5 h-5 text-red-400 mt-0.5 mr-3">⚠️</span>
-        <div class="flex-1">
-          <h3 class="text-sm font-medium text-red-800 dark:text-red-300">
-            Evaluation System Error
-          </h3>
-          <div v-if="typeof error === 'string'" class="mt-1 text-sm text-red-700 dark:text-red-400">
-            {{ error }}
-          </div>
-          <div v-else class="mt-1">
-            <p class="text-sm text-red-700 dark:text-red-400">{{ error.message }}</p>
-            <div v-if="error.errors && error.errors.length" class="mt-2">
-              <p class="text-xs font-medium text-red-800 dark:text-red-300">Details:</p>
-              <ul class="mt-1 text-xs text-red-700 dark:text-red-400 list-disc list-inside">
-                <li v-for="err in error.errors" :key="err">{{ err }}</li>
-              </ul>
-            </div>
-            <div v-if="error.suggestions && error.suggestions.length" class="mt-2">
-              <p class="text-xs font-medium text-red-800 dark:text-red-300">Suggestions:</p>
-              <ul class="mt-1 text-xs text-red-700 dark:text-red-400 list-disc list-inside">
-                <li v-for="suggestion in error.suggestions" :key="suggestion">{{ suggestion }}</li>
-              </ul>
-            </div>
-          </div>
-          <div class="mt-3 flex gap-2">
-            <button
-              v-if="lastFailedOperation"
-              class="text-sm bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 px-3 py-1 rounded hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
-              :disabled="isRetrying"
-              @click="retryLastOperation"
-            >
-              <span v-if="isRetrying" class="flex items-center">
-                <span class="animate-spin -ml-1 mr-1 h-3 w-3">⟳</span>
-                Retrying...
-              </span>
-              <span v-else>Retry</span>
-            </button>
-            <button
-              class="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-              @click="clearError"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      :message="errorMessage"
+      dismissable
+      :retry-text="lastFailedOperation ? (isRetrying ? 'Retrying...' : 'Retry') : ''"
+      :retry-loading="isRetrying"
+      @dismiss="clearError"
+      @retry="retryLastOperation"
+    />
 
     <div class="header flex justify-between items-center mb-6">
       <div>
@@ -84,9 +42,7 @@
 
     <!-- Loading States -->
     <div v-if="loadingStates.groundTruthFiles" class="text-center py-8">
-      <div
-        class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"
-      ></div>
+      <LoadingSpinner size="medium" />
       <p class="mt-2 text-gray-500 dark:text-gray-400">Loading ground truth files...</p>
     </div>
 
@@ -194,9 +150,7 @@
 
           <!-- Loading evaluations -->
           <div v-if="loadingStates.evaluations" class="text-center py-8">
-            <div
-              class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"
-            ></div>
+            <LoadingSpinner size="medium" />
             <p class="mt-2 text-gray-500 dark:text-gray-400">Loading evaluations...</p>
           </div>
 
@@ -286,18 +240,16 @@
                     {{ getDocumentCount(evaluation) }}
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
-                    <span
+                    <StatusBadge
                       v-if="hasEvaluationErrors(evaluation)"
-                      class="px-2 py-1 text-xs font-medium bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-full"
+                      color="red"
+                      class="py-1 font-medium"
                     >
                       Has Errors ({{ getErrorCount(evaluation) }})
-                    </span>
-                    <span
-                      v-else
-                      class="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded-full"
-                    >
+                    </StatusBadge>
+                    <StatusBadge v-else color="green" class="py-1 font-medium">
                       Complete
-                    </span>
+                    </StatusBadge>
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div class="flex gap-2">
@@ -315,28 +267,14 @@
           </div>
 
           <!-- (Optional) Trials pagination controls just for caching models -->
-          <div v-if="trials.total > trials.limit" class="flex items-center justify-end gap-2 mt-4">
-            <button
-              class="px-3 py-1 border dark:border-slate-700 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="trials.offset === 0 || loadingStates.trials"
-              @click="pageBack"
-            >
-              Prev
-            </button>
-            <span class="text-sm text-gray-600 dark:text-gray-400">
-              {{ Math.min(trials.offset + 1, trials.total) }}–{{
-                Math.min(trials.offset + trials.items.length, trials.total)
-              }}
-              of {{ trials.total }}
-            </span>
-            <button
-              class="px-3 py-1 border dark:border-slate-700 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="trials.offset + trials.limit >= trials.total || loadingStates.trials"
-              @click="pageForward"
-            >
-              Next
-            </button>
-          </div>
+          <PaginationControls
+            v-if="trialsTotalPages > 1"
+            v-model="trialsCurrentPage"
+            :total-pages="trialsTotalPages"
+            :visible-pages="trialsVisiblePages"
+            :total-items="trials.total"
+            :page-size="trials.limit"
+          />
         </div>
       </div>
     </div>
@@ -394,12 +332,17 @@ import { evaluationsApi } from '@/services/evaluationsApi'
 import { formatDate } from '@/utils/formatters'
 import { useToast } from 'vue-toastification'
 import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import PaginationControls from '@/components/common/PaginationControls.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import GroundTruthUploadModal from '@/components/groundtruth/GroundTruthUploadModal.vue'
 import GroundTruthManager from '@/components/groundtruth/GroundTruthManager.vue'
 import TrialSelectorModal from '@/components/trials/TrialSelectorModal.vue'
 import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreviewModal.vue'
 import MetricsExportModal from '@/components/evaluation/MetricsExportModal.vue'
 import EvaluationAnalysisModal from '@/components/evaluation/EvaluationAnalysisModal.vue'
+import { describeHttpError } from '@/utils/errors'
 
 const props = defineProps({
   projectId: {
@@ -472,6 +415,20 @@ const evaluationPrerequisiteMessage = computed(() => {
   return ''
 })
 
+// Flatten error (string or object) into a single message for ErrorBanner
+const errorMessage = computed(() => {
+  if (!error.value) return ''
+  if (typeof error.value === 'string') return error.value
+  const parts = [error.value.message].filter(Boolean)
+  if (error.value.errors?.length) {
+    parts.push('Details: ' + error.value.errors.join('; '))
+  }
+  if (error.value.suggestions?.length) {
+    parts.push('Suggestions: ' + error.value.suggestions.join('; '))
+  }
+  return parts.join(' — ')
+})
+
 // Utility functions
 const clearError = () => {
   error.value = null
@@ -481,21 +438,7 @@ const clearError = () => {
 const handleApiError = (err, operation) => {
   console.error(`${operation} failed:`, err)
 
-  let errorMessage
-
-  if (!err.response) {
-    errorMessage = `Network error during ${operation}. Please check your connection and try again.`
-  } else if (err.response.status === 400) {
-    errorMessage = `${operation} failed: ${err.response.data?.detail || err.message}`
-  } else if (err.response.status === 403) {
-    errorMessage = `Permission denied: You don't have access to ${operation.toLowerCase()}.`
-  } else if (err.response.status === 404) {
-    errorMessage = `Resource not found during ${operation}. Please refresh and try again.`
-  } else if (err.response.status === 500) {
-    errorMessage = `Server error during ${operation}. Please try again later or contact support.`
-  } else {
-    errorMessage = `${operation} failed: ${err.response?.data?.detail || err.message}`
-  }
+  const errorMessage = describeHttpError(err, operation)
 
   error.value = errorMessage
   toast.error(errorMessage)
@@ -569,16 +512,42 @@ const fetchTrials = async (opts = {}) => {
   }
 }
 
-const pageBack = () => {
-  const newOffset = Math.max(0, trials.value.offset - trials.value.limit)
-  fetchTrials({ offset: newOffset, limit: trials.value.limit })
-}
-const pageForward = () => {
-  const newOffset = Math.min(trials.value.total, trials.value.offset + trials.value.limit)
-  if (newOffset !== trials.value.offset) {
+// Page-based view over the offset-based trials pagination (for PaginationControls)
+const trialsTotalPages = computed(() =>
+  trials.value.limit ? Math.max(1, Math.ceil(trials.value.total / trials.value.limit)) : 1,
+)
+const trialsCurrentPage = computed({
+  get: () => (trials.value.limit ? Math.floor(trials.value.offset / trials.value.limit) + 1 : 1),
+  set: (newPage) => {
+    if (loadingStates.value.trials) return
+    const newOffset = (newPage - 1) * trials.value.limit
+    if (newOffset === trials.value.offset) return
     fetchTrials({ offset: newOffset, limit: trials.value.limit })
+  },
+})
+const trialsVisiblePages = computed(() => {
+  const pages = []
+  const total = trialsTotalPages.value
+  const current = trialsCurrentPage.value
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else if (current <= 3) {
+    for (let i = 1; i <= 5; i++) pages.push(i)
+    pages.push('...')
+    pages.push(total)
+  } else if (current >= total - 2) {
+    pages.push(1)
+    pages.push('...')
+    for (let i = total - 4; i <= total; i++) pages.push(i)
+  } else {
+    pages.push(1)
+    pages.push('...')
+    for (let i = current - 1; i <= current + 1; i++) pages.push(i)
+    pages.push('...')
+    pages.push(total)
   }
-}
+  return pages.filter((p) => p === '...' || (p >= 1 && p <= total))
+})
 
 // Lazy fetch full trial (only if a view ever needs more than the summary)
 const fetchTrialIfMissing = async (id) => {

@@ -20,20 +20,23 @@
               out of {{ pagination.total }} total
             </span>
           </p>
-          <button
+          <BaseButton
             v-if="selectedFiles.length < pagination.total"
-            class="text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 underline"
+            variant="ghost"
+            size="sm"
+            class="font-medium underline"
             @click="$emit('select-all-files')"
           >
             Select all {{ pagination.total }} files in project
-          </button>
-          <button
+          </BaseButton>
+          <BaseButton
             v-if="selectedFiles.length === pagination.total"
-            class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+            variant="ghost"
+            size="sm"
             @click="$emit('clear-selection')"
           >
             Clear selection
-          </button>
+          </BaseButton>
         </div>
       </div>
 
@@ -124,41 +127,36 @@
                         file.preprocessing_strategy === 'row_by_row' ? 'Row-by-Row' : 'Full Table'
                       }}
                     </span>
-                    <button
+                    <BaseButton
                       v-if="isCSVXLSX(file)"
-                      class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs underline"
+                      variant="ghost"
+                      size="sm"
+                      class="text-xs underline"
                       @click.stop="$emit('configure-import', file)"
                     >
                       {{ file.preprocessing_strategy ? 'Edit' : 'Configure' }}
-                    </button>
+                    </BaseButton>
                   </div>
                 </div>
               </div>
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
-              <span
-                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
-              >
+              <StatusBadge color="gray" class="font-medium">
                 {{ getFileTypeLabel(file.file_type) }}
-              </span>
+              </StatusBadge>
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-              {{ formatFileSize(file.file_size) }}
+              {{ formatFileSize(file.file_size, 'Unknown') }}
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
               <span :title="formatDateFull(file.created_at)">{{
-                formatDate(file.created_at)
+                formatDateSmart(file.created_at)
               }}</span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap">
-              <span
-                :class="[
-                  'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                  getStatusClass(file),
-                ]"
-              >
+              <StatusBadge :status="file._status || 'not_preprocessed'" class="font-medium">
                 {{ getStatusLabel(file) }}
-              </span>
+              </StatusBadge>
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-right">
               <div class="flex items-center justify-end gap-1">
@@ -274,24 +272,26 @@
               <option value="250">250</option>
             </select>
           </label>
-          <button
-            class="px-3 py-1 text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          <BaseButton
+            variant="secondary"
+            size="sm"
             :disabled="pagination.page === 1"
             @click="$emit('page-change', pagination.page - 1)"
           >
             Previous
-          </button>
+          </BaseButton>
           <span class="text-sm text-gray-600 dark:text-gray-400">
             Page <span class="font-medium">{{ pagination.page }}</span> of
             <span class="font-medium">{{ pagination.totalPages }}</span>
           </span>
-          <button
-            class="px-3 py-1 text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          <BaseButton
+            variant="secondary"
+            size="sm"
             :disabled="pagination.page === pagination.totalPages"
             @click="$emit('page-change', pagination.page + 1)"
           >
             Next
-          </button>
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -301,6 +301,9 @@
 <script setup>
 import { computed } from 'vue'
 import FileIcon from '@/components/common/FileIcon.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import { formatFileSize, formatDateSmart, formatDateFull } from '@/utils/formatters'
 
 const props = defineProps({
   files: { type: Array, required: true },
@@ -357,28 +360,6 @@ function isCSVXLSX(file) {
   )
 }
 
-function formatFileSize(bytes) {
-  if (!bytes) return 'Unknown'
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
-}
-
-function formatDate(dateString) {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = now - date
-  if (diff < 86400000) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  if (diff < 604800000) return date.toLocaleDateString([], { weekday: 'short' })
-  return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function formatDateFull(dateString) {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleString()
-}
-
 function getFileTypeLabel(mimeType) {
   const typeMap = {
     'application/pdf': 'PDF',
@@ -391,17 +372,6 @@ function getFileTypeLabel(mimeType) {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word',
   }
   return typeMap[mimeType] || 'File'
-}
-
-function getStatusClass(file) {
-  const status = file._status || 'not_preprocessed'
-  const statusMap = {
-    completed: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
-    processing: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
-    failed: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
-    not_preprocessed: 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-300',
-  }
-  return statusMap[status] || statusMap.not_preprocessed
 }
 
 function getStatusLabel(file) {

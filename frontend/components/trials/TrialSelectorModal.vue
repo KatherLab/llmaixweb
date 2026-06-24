@@ -1,364 +1,265 @@
 <template>
-  <Teleport to="body">
-    <transition name="fade">
-      <div
-        class="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50"
-        @click="handleClose"
-      >
-        <div
-          class="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-2xl max-h-[90vh] flex flex-col"
-          @click.stop
+  <BaseModal
+    :open="true"
+    size="lg"
+    title="Evaluate Trial"
+    header-class="bg-gray-50"
+    body-class="p-0 flex flex-col min-h-0"
+    @close="handleClose"
+  >
+    <!-- Error Display -->
+    <div v-if="error" class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+      <div class="flex items-start">
+        <svg
+          class="w-5 h-5 text-red-400 mt-0.5 mr-3"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          <div
-            class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-2xl"
-          >
-            <h3 class="text-lg font-semibold text-gray-900">Evaluate Trial</h3>
-            <button
-              class="text-gray-400 hover:text-gray-600 transition-colors"
-              @click="handleClose"
-            >
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <!-- Error Display -->
-          <div v-if="error" class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div class="flex items-start">
-              <svg
-                class="w-5 h-5 text-red-400 mt-0.5 mr-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <div class="flex-1">
-                <h4 class="text-sm font-medium text-red-800">Evaluation Error</h4>
-                <p class="mt-1 text-sm text-red-700">{{ error }}</p>
-                <div class="mt-3 flex gap-2">
-                  <button
-                    v-if="lastFailedOperation"
-                    class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
-                    :disabled="isRetrying"
-                    @click="retryLastOperation"
-                  >
-                    <span v-if="isRetrying" class="flex items-center">
-                      <svg
-                        class="animate-spin -ml-1 mr-1 h-3 w-3"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          class="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          stroke-width="4"
-                        ></circle>
-                        <path
-                          class="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Retrying...
-                    </span>
-                    <span v-else>Retry</span>
-                  </button>
-                  <button class="text-sm text-red-600 hover:text-red-800" @click="clearError">
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex-1 overflow-y-auto p-6">
-            <!-- Prerequisites Warning -->
-            <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
-              <div class="flex">
-                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fill-rule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-                <div class="ml-3">
-                  <h3 class="text-sm font-medium text-yellow-800">
-                    Schema-specific field mappings required
-                  </h3>
-                  <p class="mt-1 text-sm text-yellow-700">
-                    Each trial requires field mappings for its specific schema. Trials without
-                    mappings will be grayed out.
-                    <button class="underline hover:no-underline" @click="showMappingModal = true">
-                      Configure mappings
-                    </button>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Loading State -->
-            <div v-if="loadingStates.trials" class="text-center py-8">
-              <div
-                class="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"
-              ></div>
-              <p class="mt-2 text-gray-500">Loading trials and checking mappings...</p>
-            </div>
-
-            <!-- No Trials State -->
-            <div v-else-if="trials.items.length === 0" class="text-center py-8 text-gray-500">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-12 w-12 mx-auto text-gray-400 mb-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-              <p>No completed trials available for evaluation</p>
-              <p class="text-sm text-gray-400 mt-1">
-                Run some trials first to evaluate them against ground truth
-              </p>
-            </div>
-
-            <!-- Trials List -->
-            <div v-else>
-              <div class="mb-4">
-                <h4 class="font-medium text-gray-900 mb-2">Select a trial to evaluate</h4>
-                <p class="text-sm text-gray-600">
-                  Choose from completed trials to compare against your ground truth data.
-                </p>
-                <div class="mt-3 flex gap-4 text-sm">
-                  <span class="text-gray-600">
-                    Total trials: <span class="font-medium">{{ trials.total }}</span>
-                  </span>
-                  <span class="text-green-600">
-                    Ready for evaluation:
-                    <span class="font-medium">{{
-                      availableTrials.filter((t) => t.hasMappings).length
-                    }}</span>
-                  </span>
-                  <span class="text-red-600">
-                    Missing mappings:
-                    <span class="font-medium">{{
-                      availableTrials.filter((t) => !t.hasMappings).length
-                    }}</span>
-                  </span>
-                </div>
-              </div>
-
-              <!-- Mapping Status Loading -->
-              <div v-if="loadingStates.mappings" class="text-center py-4">
-                <div
-                  class="inline-block animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"
-                ></div>
-                <p class="mt-2 text-sm text-gray-500">Checking field mappings...</p>
-              </div>
-
-              <div class="space-y-3 max-h-96 overflow-y-auto">
-                <div
-                  v-for="trial in availableTrials"
-                  :key="trial.id"
-                  class="border rounded-lg p-4 transition-colors"
-                  :class="{
-                    'border-blue-500 bg-blue-50 cursor-pointer hover:bg-blue-100':
-                      trial.hasMappings && selectedTrial?.id === trial.id,
-                    'border-gray-300 cursor-pointer hover:bg-gray-50':
-                      trial.hasMappings && selectedTrial?.id !== trial.id,
-                    'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60': !trial.hasMappings,
-                  }"
-                  @click="
-                    trial.hasMappings ? selectTrial(trial) : showMappingRequiredTooltip(trial)
-                  "
-                >
-                  <div class="flex justify-between items-start">
-                    <div class="flex-1">
-                      <div class="flex items-center gap-3 mb-2">
-                        <h5
-                          class="font-medium text-gray-900 truncate"
-                          :title="trialDisplayName(trial)"
-                        >
-                          {{ trialDisplayName(trial) }}
-                        </h5>
-                        <div class="text-xs text-gray-500">ID: {{ trial.id }}</div>
-                        <span
-                          class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                        >
-                          {{ trial.status }}
-                        </span>
-                        <span
-                          v-if="trial.hasMappings"
-                          class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                        >
-                          ✓ Mappings Ready
-                        </span>
-                        <span
-                          v-else-if="trial.mappingStatus === 'loading'"
-                          class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600"
-                        >
-                          Checking...
-                        </span>
-                        <span
-                          v-else
-                          class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"
-                        >
-                          ⚠ No Mappings
-                        </span>
-                      </div>
-                      <div class="text-sm text-gray-600 grid grid-cols-2 gap-y-1 gap-x-4">
-                        <div><span class="font-medium">Model:</span> {{ trial.llm_model }}</div>
-                        <div>
-                          <span class="font-medium">Schema:</span>
-                          {{ getSchemaName(trial.schema_id) }}
-                        </div>
-                        <div>
-                          <span class="font-medium">Documents:</span> {{ trial.documents_count }}
-                        </div>
-                        <div>
-                          <span class="font-medium">Results:</span> {{ trial.results_count }}
-                        </div>
-                        <div>
-                          <span class="font-medium">Created:</span>
-                          {{ formatDate(trial.created_at) }}
-                        </div>
-                        <div>
-                          <span class="font-medium">Last result:</span>
-                          {{ trial.last_result_at ? formatDate(trial.last_result_at) : '—' }}
-                        </div>
-                        <div
-                          v-if="trial.has_failures !== null && trial.has_failures !== undefined"
-                          class="col-span-2"
-                        >
-                          <span
-                            v-if="trial.has_failures"
-                            class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
-                          >
-                            Errors: {{ trial.error_count || 0 }}
-                          </span>
-                          <span
-                            v-else
-                            class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                          >
-                            No Errors
-                          </span>
-                        </div>
-                      </div>
-                      <div
-                        v-if="!trial.hasMappings && trial.mappingStatus !== 'loading'"
-                        class="mt-2 text-xs text-red-600"
-                      >
-                        Configure field mappings for "{{ getSchemaName(trial.schema_id) }}" schema
-                        to enable evaluation
-                      </div>
-                    </div>
-                    <div class="flex flex-col items-end gap-2">
-                      <div
-                        v-if="isAlreadyEvaluated(trial)"
-                        class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded"
-                      >
-                        Already evaluated
-                      </div>
-                      <div class="text-xs text-gray-500">{{ trial.results_count }} results</div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Load more for pagination -->
-                <div v-if="trials.items.length < trials.total" class="pt-2 flex justify-center">
-                  <button
-                    class="px-4 py-2 border rounded-md text-sm"
-                    :disabled="loadingStates.trials"
-                    @click="loadMore"
-                  >
-                    {{ loadingStates.trials ? 'Loading...' : 'Load more' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3 bg-gray-50 rounded-b-2xl"
-          >
-            <button
-              type="button"
-              class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-              @click="handleClose"
-            >
-              Cancel
-            </button>
-            <button
-              class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              :disabled="!canEvaluate"
-              @click="evaluateTrialWithValidation"
-            >
-              <span v-if="isEvaluating" class="flex items-center">
-                <svg
-                  class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Evaluating...
-              </span>
-              <span v-else>
-                {{
-                  selectedTrial
-                    ? `Evaluate ${trialDisplayName(selectedTrial)}`
-                    : 'Select Trial First'
-                }}
-              </span>
-            </button>
-          </div>
-
-          <!-- Field Mapping Modal -->
-          <GroundTruthPreviewModal
-            v-if="showMappingModal"
-            :project-id="projectId"
-            :ground-truth="groundTruth"
-            @close="showMappingModal = false"
-            @configured="onMappingConfigured"
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
+        </svg>
+        <div class="flex-1">
+          <h4 class="text-sm font-medium text-red-800">Evaluation Error</h4>
+          <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+          <div class="mt-3 flex gap-2">
+            <button
+              v-if="lastFailedOperation"
+              class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
+              :disabled="isRetrying"
+              @click="retryLastOperation"
+            >
+              <span v-if="isRetrying" class="flex items-center">
+                <span class="-ml-1 mr-1">
+                  <LoadingSpinner size="small" color="current" inline />
+                </span>
+                Retrying...
+              </span>
+              <span v-else>Retry</span>
+            </button>
+            <button class="text-sm text-red-600 hover:text-red-800" @click="clearError">
+              Dismiss
+            </button>
+          </div>
         </div>
       </div>
-    </transition>
-  </Teleport>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6">
+      <!-- Prerequisites Warning -->
+      <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+        <div class="flex">
+          <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fill-rule="evenodd"
+              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-yellow-800">
+              Schema-specific field mappings required
+            </h3>
+            <p class="mt-1 text-sm text-yellow-700">
+              Each trial requires field mappings for its specific schema. Trials without mappings
+              will be grayed out.
+              <button class="underline hover:no-underline" @click="showMappingModal = true">
+                Configure mappings
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="loadingStates.trials" class="text-center py-8">
+        <LoadingSpinner size="medium" />
+        <p class="mt-2 text-gray-500">Loading trials and checking mappings...</p>
+      </div>
+
+      <!-- No Trials State -->
+      <div v-else-if="trials.items.length === 0" class="text-center py-8 text-gray-500">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-12 w-12 mx-auto text-gray-400 mb-3"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+          />
+        </svg>
+        <p>No completed trials available for evaluation</p>
+        <p class="text-sm text-gray-400 mt-1">
+          Run some trials first to evaluate them against ground truth
+        </p>
+      </div>
+
+      <!-- Trials List -->
+      <div v-else>
+        <div class="mb-4">
+          <h4 class="font-medium text-gray-900 mb-2">Select a trial to evaluate</h4>
+          <p class="text-sm text-gray-600">
+            Choose from completed trials to compare against your ground truth data.
+          </p>
+          <div class="mt-3 flex gap-4 text-sm">
+            <span class="text-gray-600">
+              Total trials: <span class="font-medium">{{ trials.total }}</span>
+            </span>
+            <span class="text-green-600">
+              Ready for evaluation:
+              <span class="font-medium">{{
+                availableTrials.filter((t) => t.hasMappings).length
+              }}</span>
+            </span>
+            <span class="text-red-600">
+              Missing mappings:
+              <span class="font-medium">{{
+                availableTrials.filter((t) => !t.hasMappings).length
+              }}</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Mapping Status Loading -->
+        <div v-if="loadingStates.mappings" class="text-center py-4">
+          <LoadingSpinner size="small" />
+          <p class="mt-2 text-sm text-gray-500">Checking field mappings...</p>
+        </div>
+
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+          <div
+            v-for="trial in availableTrials"
+            :key="trial.id"
+            class="border rounded-lg p-4 transition-colors"
+            :class="{
+              'border-blue-500 bg-blue-50 cursor-pointer hover:bg-blue-100':
+                trial.hasMappings && selectedTrial?.id === trial.id,
+              'border-gray-300 cursor-pointer hover:bg-gray-50':
+                trial.hasMappings && selectedTrial?.id !== trial.id,
+              'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60': !trial.hasMappings,
+            }"
+            @click="trial.hasMappings ? selectTrial(trial) : showMappingRequiredTooltip(trial)"
+          >
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <h5 class="font-medium text-gray-900 truncate" :title="trialDisplayName(trial)">
+                    {{ trialDisplayName(trial) }}
+                  </h5>
+                  <div class="text-xs text-gray-500">ID: {{ trial.id }}</div>
+                  <StatusBadge :status="trial.status" class="px-2 py-1 font-medium" />
+                  <StatusBadge
+                    v-if="trial.hasMappings"
+                    color="blue"
+                    label="✓ Mappings Ready"
+                    class="px-2 py-1 font-medium"
+                  />
+                  <StatusBadge
+                    v-else-if="trial.mappingStatus === 'loading'"
+                    color="gray"
+                    label="Checking..."
+                    class="px-2 py-1 font-medium"
+                  />
+                  <StatusBadge
+                    v-else
+                    color="red"
+                    label="⚠ No Mappings"
+                    class="px-2 py-1 font-medium"
+                  />
+                </div>
+                <div class="text-sm text-gray-600 grid grid-cols-2 gap-y-1 gap-x-4">
+                  <div><span class="font-medium">Model:</span> {{ trial.llm_model }}</div>
+                  <div>
+                    <span class="font-medium">Schema:</span>
+                    {{ getSchemaName(trial.schema_id) }}
+                  </div>
+                  <div><span class="font-medium">Documents:</span> {{ trial.documents_count }}</div>
+                  <div><span class="font-medium">Results:</span> {{ trial.results_count }}</div>
+                  <div>
+                    <span class="font-medium">Created:</span>
+                    {{ formatDate(trial.created_at) }}
+                  </div>
+                  <div>
+                    <span class="font-medium">Last result:</span>
+                    {{ trial.last_result_at ? formatDate(trial.last_result_at) : '—' }}
+                  </div>
+                  <div
+                    v-if="trial.has_failures !== null && trial.has_failures !== undefined"
+                    class="col-span-2"
+                  >
+                    <StatusBadge v-if="trial.has_failures" color="red" class="font-medium">
+                      Errors: {{ trial.error_count || 0 }}
+                    </StatusBadge>
+                    <StatusBadge v-else color="green" label="No Errors" class="font-medium" />
+                  </div>
+                </div>
+                <div
+                  v-if="!trial.hasMappings && trial.mappingStatus !== 'loading'"
+                  class="mt-2 text-xs text-red-600"
+                >
+                  Configure field mappings for "{{ getSchemaName(trial.schema_id) }}" schema to
+                  enable evaluation
+                </div>
+              </div>
+              <div class="flex flex-col items-end gap-2">
+                <div
+                  v-if="isAlreadyEvaluated(trial)"
+                  class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded"
+                >
+                  Already evaluated
+                </div>
+                <div class="text-xs text-gray-500">{{ trial.results_count }} results</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Load more for pagination -->
+          <div v-if="trials.items.length < trials.total" class="pt-2 flex justify-center">
+            <BaseButton variant="secondary" :disabled="loadingStates.trials" @click="loadMore">{{
+              loadingStates.trials ? 'Loading...' : 'Load more'
+            }}</BaseButton>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <template #footer>
+      <BaseButton variant="secondary" type="button" @click="handleClose">Cancel</BaseButton>
+      <BaseButton
+        variant="primary"
+        class="shadow-sm"
+        :loading="isEvaluating"
+        :disabled="!canEvaluate"
+        @click="evaluateTrialWithValidation"
+      >
+        {{
+          isEvaluating
+            ? 'Evaluating...'
+            : selectedTrial
+              ? `Evaluate ${trialDisplayName(selectedTrial)}`
+              : 'Select Trial First'
+        }}
+      </BaseButton>
+    </template>
+  </BaseModal>
+
+  <!-- Field Mapping Modal -->
+  <GroundTruthPreviewModal
+    v-if="showMappingModal"
+    :project-id="projectId"
+    :ground-truth="groundTruth"
+    @close="showMappingModal = false"
+    @configured="onMappingConfigured"
+  />
 </template>
 
 <script setup>
@@ -369,10 +270,12 @@ import { evaluationsApi } from '@/services/evaluationsApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
 import { useToast } from 'vue-toastification'
+import BaseModal from '@/components/common/BaseModal.vue'
 import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreviewModal.vue'
-import { useScrollLock } from '@/composables/useScrollLock'
-
-useScrollLock({ autoLock: true })
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import { describeHttpError, extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
   projectId: {
@@ -462,21 +365,7 @@ const trialDisplayName = (trial) =>
 const handleApiError = (err, operation) => {
   console.error(`${operation} failed:`, err)
 
-  let errorMessage
-
-  if (!err.response) {
-    errorMessage = `Network error during ${operation}. Please check your connection and try again.`
-  } else if (err.response.status === 400) {
-    errorMessage = `${operation} failed: ${err.response.data?.detail || err.message}`
-  } else if (err.response.status === 403) {
-    errorMessage = `Permission denied: You don't have access to ${operation.toLowerCase()}.`
-  } else if (err.response.status === 404) {
-    errorMessage = `Resource not found during ${operation}. Please refresh and try again.`
-  } else if (err.response.status === 500) {
-    errorMessage = `Server error during ${operation}. Please try again later or contact support.`
-  } else {
-    errorMessage = `${operation} failed: ${err.response?.data?.detail || err.message}`
-  }
+  const errorMessage = describeHttpError(err, operation)
 
   error.value = errorMessage
   toast.error(errorMessage)
@@ -667,7 +556,7 @@ const evaluateTrialWithValidation = async () => {
     lastFailedOperation.value = null
   } catch (err) {
     if (err.response?.status === 400) {
-      const detail = err.response.data?.detail || err.message
+      const detail = extractErrorMessage(err)
       if (detail.includes('No field mapping found')) {
         error.value = `Field mappings missing: ${detail}`
         toast.error('Field mappings are required but not found. Please configure them first.')
@@ -712,14 +601,3 @@ onMounted(() => {
   fetchData()
 })
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

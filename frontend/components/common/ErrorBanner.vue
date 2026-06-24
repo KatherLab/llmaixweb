@@ -8,9 +8,17 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  retryText: {
+    type: String,
+    default: '',
+  },
+  retryLoading: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['dismiss'])
+const emit = defineEmits(['dismiss', 'retry'])
 </script>
 
 <template>
@@ -33,8 +41,21 @@ const emit = defineEmits(['dismiss'])
       <div class="ml-3 flex-1">
         <p class="text-sm text-red-700">{{ message }}</p>
       </div>
-      <div v-if="dismissable" class="ml-auto pl-3">
-        <button class="inline-flex text-red-400 hover:text-red-500" @click="emit('dismiss')">
+      <div v-if="dismissable || retryText" class="ml-auto pl-3 flex items-center gap-3">
+        <button
+          v-if="retryText"
+          type="button"
+          class="text-sm font-medium text-red-700 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="retryLoading"
+          @click="emit('retry')"
+        >
+          {{ retryLoading ? 'Retrying...' : retryText }}
+        </button>
+        <button
+          v-if="dismissable"
+          class="inline-flex text-red-400 hover:text-red-500"
+          @click="emit('dismiss')"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="h-5 w-5"

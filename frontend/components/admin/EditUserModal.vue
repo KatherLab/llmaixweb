@@ -176,34 +176,35 @@
             <p class="text-xs text-red-600 dark:text-red-400 mt-1">
               Delete this user and all associated data. This cannot be undone.
             </p>
-            <button
-              type="button"
-              class="mt-3 px-4 py-1.5 text-xs font-semibold text-white bg-red-600 dark:bg-red-500 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition"
+            <BaseButton
+              variant="danger"
+              size="sm"
+              class="mt-3 dark:bg-red-500 dark:hover:bg-red-600"
               @click="confirmDeleteFromModal"
             >
               Delete User
-            </button>
+            </BaseButton>
           </div>
         </div>
       </div>
     </div>
 
     <template #footer>
-      <button
-        type="button"
-        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+      <BaseButton
+        variant="secondary"
+        class="dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700"
         @click="emit('close')"
       >
         Cancel
-      </button>
-      <button
-        type="button"
+      </BaseButton>
+      <BaseButton
+        variant="primary"
         :disabled="isSavingEdit"
-        class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 dark:bg-blue-500 rounded-lg shadow-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition disabled:opacity-50"
+        class="dark:bg-blue-500 dark:hover:bg-blue-600"
         @click="saveEditUser"
       >
         {{ isSavingEdit ? 'Saving...' : 'Save Changes' }}
-      </button>
+      </BaseButton>
     </template>
   </BaseModal>
 </template>
@@ -212,6 +213,7 @@
 import { ref, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
 

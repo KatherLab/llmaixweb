@@ -86,6 +86,7 @@ import { useToast } from 'vue-toastification'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useFileDownload } from '@/composables/useFileDownload'
+import { useScrollLock } from '@/composables/useScrollLock'
 import DocumentViewerHeader from './DocumentViewerHeader.vue'
 import DocumentTextView from './DocumentTextView.vue'
 import DocumentFilePreview from './DocumentFilePreview.vue'
@@ -101,6 +102,8 @@ const props = defineProps({
 const emit = defineEmits(['close', 'reprocess', 'update-document'])
 const toast = useToast()
 const { downloadBlob } = useFileDownload()
+// Ref-counted scroll lock — unlocks only when no viewer/modal holds the lock.
+useScrollLock({ autoLock: true })
 const viewMode = ref('text')
 const originalPdfUrl = ref('')
 const originalImageUrl = ref('')
@@ -312,7 +315,6 @@ const restoreVersion = async (version) => {
 }
 
 onMounted(async () => {
-  document.body.style.overflow = 'hidden'
   try {
     // Fetch the full document text (list items no longer carry `text`).
     await fetchFullText(props.document.id)
@@ -349,7 +351,6 @@ watch(
 )
 
 onUnmounted(() => {
-  document.body.style.overflow = ''
   if (originalPdfUrl.value) window.URL.revokeObjectURL(originalPdfUrl.value)
   if (originalImageUrl.value) window.URL.revokeObjectURL(originalImageUrl.value)
 })

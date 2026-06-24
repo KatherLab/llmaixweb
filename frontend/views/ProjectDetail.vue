@@ -69,7 +69,7 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 py-4">
       <!-- Loading, Error, Main Content -->
       <div v-if="isLoading" class="flex flex-col items-center py-24">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500"></div>
+        <LoadingSpinner size="large" />
         <span class="mt-4 text-gray-400 dark:text-gray-500 text-lg">Loading project...</span>
       </div>
 
@@ -167,6 +167,7 @@ import EvaluationView from '@/components/evaluation/EvaluationView.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import ProjectSettingsModal from '@/components/projects/ProjectSettingsModal.vue'
 import { useToast } from 'vue-toastification'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 // --- DATA ---
 const route = useRoute()

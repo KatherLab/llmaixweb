@@ -22,6 +22,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { getPillClass } from '@/utils/statusStyles'
 
 defineOptions({ inheritAttrs: false })
 
@@ -39,19 +40,5 @@ const props = defineProps({
 
 defineEmits(['remove'])
 
-const colorClass = computed(() => {
-  const colors = {
-    blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-    green: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-    yellow: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
-    red: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-    purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-    indigo: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300',
-    teal: 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300',
-    cyan: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300',
-    orange: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
-    gray: 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300',
-  }
-  return colors[props.color] || colors.blue
-})
+const colorClass = computed(() => getPillClass(props.color))
 </script>

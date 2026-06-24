@@ -111,6 +111,7 @@ import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const router = useRouter()
 const route = useRoute()
@@ -207,7 +208,7 @@ async function handleSubmit() {
     toast.success('Registration successful! Logging you in...')
     router.push(authStore.isAdmin ? '/' : '/')
   } catch (err) {
-    error.value = err.response?.data?.detail || 'Registration failed. Please try again.'
+    error.value = extractErrorMessage(err, 'Registration failed. Please try again.')
     toast.error(error.value)
   } finally {
     isLoading.value = false

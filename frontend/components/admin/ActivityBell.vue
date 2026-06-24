@@ -73,21 +73,7 @@
         <div ref="scrollContainer" class="flex-1 overflow-y-auto">
           <!-- Loading state (only on initial load) -->
           <div v-if="isLoading && !hasLoadedOnce" class="flex items-center justify-center py-12">
-            <svg class="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              />
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />
-            </svg>
+            <LoadingSpinner size="medium" />
           </div>
 
           <!-- Empty state -->
@@ -389,6 +375,8 @@ import { projectsApi } from '@/services/projectsApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { useToast } from 'vue-toastification'
 import { websocketService } from '@/services/websocket.js'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import { formatRelativeTime } from '@/utils/formatters'
 
 const router = useRouter()
 const toast = useToast()
@@ -515,14 +503,16 @@ const getProgressPercent = (task) => {
 }
 
 const formatTaskTime = (task) => {
-  const now = new Date()
+  if (!task?.created_at) return ''
   const taskDate = new Date(task.created_at)
-  const diff = now - taskDate
-
-  if (diff < 60000) return 'Just now'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-  return taskDate.toLocaleDateString()
+  if (isNaN(taskDate)) return ''
+  // Tasks older than 24h fall back to a locale date (matches the original
+  // behavior; displayed tasks are fetched with a 24h window anyway).
+  if (Date.now() - taskDate.getTime() >= 86400000) return taskDate.toLocaleDateString()
+  // Delegates the "just now"/"m ago"/"h ago" tiers to the shared formatter;
+  // ActivityBell capitalizes "Just now" in the UI.
+  const result = formatRelativeTime(task.created_at)
+  return result === 'just now' ? 'Just now' : result
 }
 
 const dismissTask = (type, id) => {

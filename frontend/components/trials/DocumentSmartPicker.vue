@@ -34,26 +34,20 @@
     </div>
 
     <div class="flex flex-wrap gap-2 pt-2">
-      <button
-        class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
-        @click="emit('select-recent', 7)"
+      <BaseButton variant="secondary" size="sm" @click="emit('select-recent', 7)"
+        >Last 7 days</BaseButton
       >
-        Last 7 days
-      </button>
-      <button
-        class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-sm rounded-md"
-        @click="emit('select-recent', 30)"
+      <BaseButton variant="secondary" size="sm" @click="emit('select-recent', 30)"
+        >Last 30 days</BaseButton
       >
-        Last 30 days
-      </button>
-      <button
-        class="px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 text-sm rounded-md"
+      <BaseButton
+        variant="primary"
+        size="sm"
         :disabled="!dateRange.start && !dateRange.end"
         title="Apply explicit date range"
         @click="emit('apply-date-range', { start: dateRange.start, end: dateRange.end })"
+        >Apply Date Range</BaseButton
       >
-        Apply Date Range
-      </button>
     </div>
 
     <div v-if="selectedIds.length > 0" class="mt-4 p-3 bg-blue-50 rounded-lg">
@@ -108,6 +102,7 @@
 <script setup>
 import { ref } from 'vue'
 import { formatDate } from '@/utils/formatters.js'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 defineProps({
   previousTrials: {

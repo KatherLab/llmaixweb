@@ -11,26 +11,7 @@
       class="bg-white border border-gray-200 rounded-xl p-8 shadow-sm text-center"
     >
       <div class="mx-auto mb-4 w-12 h-12">
-        <svg
-          class="animate-spin h-10 w-10 text-blue-600 mx-auto"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          />
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
-        </svg>
+        <LoadingSpinner size="medium" />
       </div>
       <p class="text-sm text-gray-500">Validating your reset link...</p>
     </div>
@@ -148,6 +129,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { usersApi } from '@/services/usersApi'
 import { useToast } from 'vue-toastification'
 import BaseButton from '@/components/common/BaseButton.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const router = useRouter()
 const route = useRoute()
@@ -208,10 +191,8 @@ async function handleResetPassword() {
   } catch (err) {
     if (err.response?.status === 404) {
       state.value = 'invalid'
-    } else if (err.response?.data?.detail) {
-      error.value = err.response.data.detail
     } else {
-      error.value = 'An unexpected error occurred. Please try again.'
+      error.value = extractErrorMessage(err, 'An unexpected error occurred. Please try again.')
     }
     console.error('Reset password error:', err)
   } finally {

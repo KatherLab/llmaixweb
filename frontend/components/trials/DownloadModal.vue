@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { trialsApi } from '@/services/trialsApi'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
 
 const { downloadFromApi } = useFileDownload()
@@ -139,34 +140,10 @@ async function download() {
     </div>
 
     <template #footer>
-      <button
-        class="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
-        @click="$emit('close')"
-      >
-        Cancel
-      </button>
-      <button
-        :disabled="isDownloading"
-        class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
-        @click="download"
-      >
-        <svg v-if="isDownloading" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          />
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          />
-        </svg>
-        {{ isDownloading ? 'Downloading...' : 'Download' }}
-      </button>
+      <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
+      <BaseButton variant="primary" :loading="isDownloading" @click="download">{{
+        isDownloading ? 'Downloading...' : 'Download'
+      }}</BaseButton>
     </template>
   </BaseModal>
 </template>

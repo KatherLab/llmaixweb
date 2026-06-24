@@ -21,18 +21,14 @@
     </div>
 
     <template #footer>
-      <button
-        class="inline-flex justify-center px-4 py-2 border border-gray-300 dark:border-slate-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600"
-        @click="emit('close')"
-      >
-        Close
-      </button>
+      <BaseButton variant="secondary" @click="emit('close')">Close</BaseButton>
     </template>
   </BaseModal>
 </template>
 
 <script setup>
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { formatJSON } from '@/utils/schemaTemplates'
 
 defineProps({

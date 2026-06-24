@@ -5,28 +5,7 @@
     <!-- Top row: Search + Status + File Type -->
     <div class="flex items-center gap-3">
       <!-- Search -->
-      <div class="relative flex-1 max-w-sm">
-        <input
-          v-model="search"
-          type="text"
-          placeholder="Search files..."
-          class="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-          @input="onSearchInput"
-        />
-        <svg
-          class="absolute left-3 top-2.5 h-4 w-4 text-gray-400 dark:text-gray-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-      </div>
+      <SearchInput v-model="search" placeholder="Search files..." @input="onSearchInput" />
 
       <!-- Status Filter -->
       <select
@@ -120,12 +99,7 @@
           @change="emit('fetch')"
         />
       </div>
-      <button
-        class="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-        @click="emit('fetch')"
-      >
-        Apply
-      </button>
+      <BaseButton variant="ghost" size="sm" @click="emit('fetch')">Apply</BaseButton>
     </div>
 
     <!-- Active Filters Summary -->
@@ -134,86 +108,36 @@
       class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
     >
       <span class="text-xs text-gray-500 dark:text-gray-400">Active filters:</span>
-      <span
+      <FilterChip
         v-if="search"
-        class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full"
-      >
-        Search: "{{ search }}"
-        <button class="hover:text-red-600" @click="clearSearch">
-          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </span>
-      <span
+        :label="`Search: &quot;${search}&quot;`"
+        color="blue"
+        @remove="clearSearch"
+      />
+      <FilterChip
         v-if="status"
-        class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full"
-      >
-        Status: {{ status }}
-        <button class="hover:text-red-600" @click="clearField('status')">
-          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </span>
-      <span
+        :label="`Status: ${status}`"
+        color="green"
+        @remove="clearField('status')"
+      />
+      <FilterChip
         v-if="fileType"
-        class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full"
-      >
-        Type: {{ getFileTypeLabel(fileType) }}
-        <button class="hover:text-red-600" @click="clearField('fileType')">
-          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </span>
-      <span
+        :label="`Type: ${getFileTypeLabel(fileType)}`"
+        color="purple"
+        @remove="clearField('fileType')"
+      />
+      <FilterChip
         v-if="dateRange && dateRange !== 'custom'"
-        class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full"
-      >
-        Date: {{ getDateRangeLabel(dateRange) }}
-        <button class="hover:text-red-600" @click="clearField('dateRange')">
-          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </span>
-      <span
+        :label="`Date: ${getDateRangeLabel(dateRange)}`"
+        color="orange"
+        @remove="clearField('dateRange')"
+      />
+      <FilterChip
         v-if="dateRange === 'custom' && customFrom"
-        class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full"
-      >
-        Date: {{ customFrom }} → {{ customTo || 'present' }}
-        <button class="hover:text-red-600" @click="clearCustomDateRange">
-          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </span>
+        :label="`Date: ${customFrom} → ${customTo || 'present'}`"
+        color="orange"
+        @remove="clearCustomDateRange"
+      />
     </div>
   </div>
 </template>
@@ -221,6 +145,9 @@
 <script setup>
 import { computed } from 'vue'
 import { getDateRangeLabel } from '@/utils/dateRange'
+import SearchInput from '@/components/common/SearchInput.vue'
+import FilterChip from '@/components/common/FilterChip.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 defineProps({
   totalCount: { type: Number, default: 0 },

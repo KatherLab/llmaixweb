@@ -1,6 +1,7 @@
 <!-- src/components/EmptyState.vue -->
 <script setup>
 import Tooltip from '@/components/common/Tooltip.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 defineProps({
   title: { type: String, required: true },
@@ -36,22 +37,13 @@ const emit = defineEmits(['action'])
     <p class="mt-1 text-sm text-gray-500">{{ description }}</p>
     <div class="mt-6 flex flex-col items-center">
       <Tooltip v-if="disabled && disabledReason" :text="disabledReason">
-        <button
-          :disabled="disabled"
-          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
-          @click="emit('action')"
-        >
+        <BaseButton variant="primary" :disabled="disabled" @click="emit('action')">
           {{ actionText }}
-        </button>
+        </BaseButton>
       </Tooltip>
-      <button
-        v-else
-        :disabled="disabled"
-        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
-        @click="emit('action')"
-      >
+      <BaseButton v-else variant="primary" :disabled="disabled" @click="emit('action')">
         {{ actionText }}
-      </button>
+      </BaseButton>
     </div>
   </div>
 </template>

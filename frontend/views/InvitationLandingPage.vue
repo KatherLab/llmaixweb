@@ -1,9 +1,7 @@
 <template>
   <div class="w-full max-w-md">
     <div v-if="loading" class="flex flex-col items-center justify-center py-16">
-      <div
-        class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"
-      ></div>
+      <LoadingSpinner size="large" />
       <p class="mt-4 text-gray-500">Verifying your invitation...</p>
     </div>
 
@@ -51,12 +49,9 @@
         This invitation was sent to <span class="font-medium">{{ invitedEmail }}</span>
       </p>
       <div class="mt-6">
-        <button
-          class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          @click="goToRegister"
-        >
+        <BaseButton variant="primary" class="w-full" @click="goToRegister">
           Create your account
-        </button>
+        </BaseButton>
         <div class="mt-4 text-center">
           <router-link to="/login" class="text-sm font-medium text-blue-600 hover:underline">
             Already have an account? Sign in
@@ -72,6 +67,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usersApi } from '@/services/usersApi'
 import { useToast } from 'vue-toastification'
+import BaseButton from '@/components/common/BaseButton.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 const route = useRoute()
 const router = useRouter()

@@ -133,9 +133,7 @@
         <div class="text-sm text-gray-800 whitespace-pre-wrap">{{ documentContent }}</div>
       </div>
       <div v-else-if="loadingContent" class="text-center py-8">
-        <div
-          class="inline-block animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"
-        ></div>
+        <LoadingSpinner size="small" />
         <p class="mt-2 text-gray-500 text-sm">Loading document content...</p>
       </div>
       <div v-else class="text-center py-8">
@@ -147,6 +145,8 @@
 </template>
 
 <script setup>
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+
 const props = defineProps({
   document: {
     type: Object,

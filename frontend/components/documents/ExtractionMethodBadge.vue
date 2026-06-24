@@ -1,11 +1,7 @@
 <template>
   <span
     v-if="extractionMethodInfo"
-    :class="[
-      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-      extractionMethodInfo.bgClass,
-      extractionMethodInfo.textClass,
-    ]"
+    :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium', pillClass]"
     :title="extractionMethodInfo.description"
   >
     <svg
@@ -28,12 +24,14 @@
 
 <script setup>
 import { computed } from 'vue'
+import { getPillClass } from '@/utils/statusStyles'
 
 const props = defineProps({
   document: { type: Object, required: true },
 })
 
-// Extraction method info for display badges
+// Extraction method info for display badges. `color` keys into the shared
+// getPillClass map (dark-mode aware) instead of hard-coded bg/text classes.
 const extractionMethodInfo = computed(() => {
   const metaData = props.document.meta_data || {}
   const extractionMethod = metaData.extraction_method
@@ -56,8 +54,7 @@ const extractionMethodInfo = computed(() => {
   ) {
     return {
       label: 'Text Extraction',
-      bgClass: 'bg-blue-100',
-      textClass: 'text-blue-800',
+      color: 'blue',
       description: 'Extracted from embedded PDF text (no OCR)',
       icon: true,
       iconPath: textIconPath,
@@ -70,8 +67,7 @@ const extractionMethodInfo = computed(() => {
   ) {
     return {
       label: 'Local OCR',
-      bgClass: 'bg-green-100',
-      textClass: 'text-green-800',
+      color: 'green',
       description: 'Processed with local Tesseract OCR',
       icon: true,
       iconPath: ocrIconPath,
@@ -81,8 +77,7 @@ const extractionMethodInfo = computed(() => {
   if (extractionMethod === 'docling_serve_tesseract_force_ocr') {
     return {
       label: 'Force OCR',
-      bgClass: 'bg-amber-100',
-      textClass: 'text-amber-800',
+      color: 'yellow',
       description: 'Full-page OCR forced (even if embedded text exists)',
       icon: true,
       iconPath: ocrIconPath,
@@ -92,8 +87,7 @@ const extractionMethodInfo = computed(() => {
   if (ocrEngine === 'mistral_ocr' || engineUsed === 'mistral_ocr') {
     return {
       label: 'Mistral OCR',
-      bgClass: 'bg-purple-100',
-      textClass: 'text-purple-800',
+      color: 'purple',
       description: 'Processed with Mistral AI OCR API',
       icon: true,
       iconPath: remoteIconPath,
@@ -103,8 +97,7 @@ const extractionMethodInfo = computed(() => {
   if (ocrEngine === 'llm_vision' || engineUsed === 'llm_vision') {
     return {
       label: 'Vision LLM',
-      bgClass: 'bg-indigo-100',
-      textClass: 'text-indigo-800',
+      color: 'indigo',
       description: 'Processed with Vision LLM API',
       icon: true,
       iconPath: remoteIconPath,
@@ -115,8 +108,7 @@ const extractionMethodInfo = computed(() => {
   if (extractionMethod?.includes('no_ocr')) {
     return {
       label: 'Text Extraction',
-      bgClass: 'bg-blue-100',
-      textClass: 'text-blue-800',
+      color: 'blue',
       description: 'Extracted from embedded PDF text',
       icon: true,
       iconPath: textIconPath,
@@ -126,8 +118,7 @@ const extractionMethodInfo = computed(() => {
   if (extractionMethod?.includes('tesseract') || extractionMethod?.includes('ocr')) {
     return {
       label: 'OCR',
-      bgClass: 'bg-green-100',
-      textClass: 'text-green-800',
+      color: 'green',
       description: 'Processed with OCR',
       icon: true,
       iconPath: ocrIconPath,
@@ -136,4 +127,8 @@ const extractionMethodInfo = computed(() => {
 
   return null
 })
+
+const pillClass = computed(() =>
+  extractionMethodInfo.value ? getPillClass(extractionMethodInfo.value.color) : '',
+)
 </script>

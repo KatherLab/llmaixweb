@@ -72,19 +72,8 @@
       </div>
 
       <div class="mt-6 flex justify-end space-x-3">
-        <button
-          type="button"
-          class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-          @click="$emit('close')"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-        >
-          Add {{ advancedMode ? 'Property' : 'Field' }}
-        </button>
+        <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
+        <BaseButton type="submit">Add {{ advancedMode ? 'Property' : 'Field' }}</BaseButton>
       </div>
     </form>
   </BaseModal>
@@ -93,6 +82,7 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const props = defineProps({
   open: {

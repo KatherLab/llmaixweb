@@ -33,3 +33,36 @@ export function extractErrorMessage(err, fallback = 'Something went wrong') {
 
   return fallback
 }
+
+/**
+ * Describe an API error in the context of a user-facing operation.
+ *
+ * Maps common HTTP status codes to actionable messages, falling back to the
+ * extracted detail. Replaces the copy-pasted `err.response.status` switches in
+ * EvaluationView / TrialSelectorModal (and similar). Returns a string suitable
+ * for toasts / error banners.
+ *
+ * @param {unknown} err - The caught error
+ * @param {string} operation - Human-readable operation name (e.g. "Loading trials")
+ * @returns {string} Human-readable error message
+ */
+export function describeHttpError(err, operation) {
+  const detail = extractErrorMessage(err, '')
+
+  if (!err?.response) {
+    return `Network error during ${operation}. Please check your connection and try again.`
+  }
+
+  switch (err.response.status) {
+    case 400:
+      return `${operation} failed: ${detail || err.message}`
+    case 403:
+      return `Permission denied: You don't have access to ${operation.toLowerCase()}.`
+    case 404:
+      return `Resource not found during ${operation}. Please refresh and try again.`
+    case 500:
+      return `Server error during ${operation}. Please try again later or contact support.`
+    default:
+      return `${operation} failed: ${detail || err.message}`
+  }
+}

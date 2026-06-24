@@ -106,43 +106,15 @@
     </div>
 
     <template #footer>
-      <button
-        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-        @click="$emit('close')"
-      >
-        Cancel
-      </button>
-      <button
+      <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
+      <BaseButton
+        :variant="action === 'delete' ? 'danger' : 'primary'"
         :disabled="!canPerformAction"
-        :class="[
-          'px-4 py-2 text-sm font-medium rounded-lg',
-          action === 'delete'
-            ? 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300'
-            : 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300',
-          'disabled:cursor-not-allowed',
-        ]"
+        :loading="isProcessing"
         @click="performAction"
       >
-        <span v-if="isProcessing" class="flex items-center">
-          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
-          Processing...
-        </span>
-        <span v-else>{{ actionButtonText }}</span>
-      </button>
+        {{ isProcessing ? 'Processing...' : actionButtonText }}
+      </BaseButton>
     </template>
   </BaseModal>
 </template>
@@ -154,6 +126,8 @@ import { trialsApi } from '@/services/trialsApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
   action: { type: String, required: true },
@@ -295,7 +269,7 @@ const deleteDocuments = async () => {
       await deleteFn(props.projectId, docId)
       successDocs.push(docId)
     } catch (error) {
-      const errorMsg = error?.response?.data?.detail || `Failed to delete ${label}`
+      const errorMsg = extractErrorMessage(error, `Failed to delete ${label}`)
       failedDocs.push({ docId, error: errorMsg })
 
       // Show specific error for each failed item

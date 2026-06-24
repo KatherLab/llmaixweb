@@ -92,6 +92,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { extractErrorMessage } from '@/utils/errors'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -139,7 +140,7 @@ async function handleSubmit() {
     toast.success('Admin account created! Welcome 👋')
     router.push('/')
   } catch (err) {
-    error.value = err.response?.data?.detail || 'Failed to create admin. Try again.'
+    error.value = extractErrorMessage(err, 'Failed to create admin. Try again.')
     toast.error(error.value)
   } finally {
     isLoading.value = false

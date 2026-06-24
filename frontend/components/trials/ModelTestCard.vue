@@ -14,26 +14,13 @@
     >
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <svg
+          <LoadingSpinner
             v-if="status.type === 'loading'"
-            class="animate-spin w-5 h-5 text-blue-500"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              fill="currentColor"
-            ></path>
-          </svg>
+            size="small"
+            color="blue"
+            inline
+            label=""
+          />
           <svg
             v-else-if="status.type === 'warning'"
             class="w-5 h-5 text-yellow-500"
@@ -108,28 +95,13 @@
             </p>
           </div>
         </div>
-        <button
-          :disabled="isTesting || !llmModel || !schemaId"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center gap-2"
+        <BaseButton
+          variant="primary"
+          :loading="isTesting"
+          :disabled="!llmModel || !schemaId"
           @click="emit('test')"
+          >{{ isTesting ? 'Testing...' : 'Test Model' }}</BaseButton
         >
-          <svg v-if="isTesting" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              fill="currentColor"
-            ></path>
-          </svg>
-          {{ isTesting ? 'Testing...' : 'Test Model' }}
-        </button>
       </div>
       <div
         v-if="status.type === 'warning'"
@@ -145,6 +117,9 @@
 </template>
 
 <script setup>
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+
 defineProps({
   status: {
     type: Object,

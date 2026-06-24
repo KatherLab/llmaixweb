@@ -130,21 +130,18 @@
     </div>
 
     <template #footer>
-      <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md" @click="tryClose">
-        Cancel
-      </button>
-      <button
+      <BaseButton variant="secondary" @click="tryClose">Cancel</BaseButton>
+      <BaseButton
+        variant="primary"
         :disabled="!isFormValid"
         :title="
           !isFormValid
             ? 'Please ensure all required fields are filled, model is tested with schema, and configuration is valid'
             : ''
         "
-        class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md disabled:bg-blue-300 disabled:cursor-not-allowed"
         @click="handleSubmit"
+        >Start Trial</BaseButton
       >
-        Start Trial
-      </button>
     </template>
   </BaseModal>
 </template>
@@ -153,6 +150,7 @@
 import { computed, ref, toRef, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import TrialMetadataCard from './TrialMetadataCard.vue'
 import TrialPromptSelect from './TrialPromptSelect.vue'
 import TrialSchemaSelect from './TrialSchemaSelect.vue'

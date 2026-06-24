@@ -25,18 +25,14 @@
       }}</pre>
     </div>
     <template #footer>
-      <button
-        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        @click="copyPrompt"
-      >
-        Copy
-      </button>
+      <BaseButton variant="primary" @click="copyPrompt">Copy</BaseButton>
     </template>
   </BaseModal>
 </template>
 <script setup>
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const props = defineProps({
   open: Boolean,

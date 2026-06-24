@@ -17,26 +17,7 @@
 
       <!-- Loading State -->
       <div v-if="loadingVersions" class="text-center py-8">
-        <svg
-          class="animate-spin h-6 w-6 text-blue-600 mx-auto"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          ></path>
-        </svg>
+        <LoadingSpinner size="small" />
         <p class="text-xs text-gray-500 mt-2">Loading versions...</p>
       </div>
 
@@ -100,6 +81,9 @@
 </template>
 
 <script setup>
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import { formatRelativeTime as sharedFormatRelativeTime } from '@/utils/formatters'
+
 defineProps({
   loadingVersions: { type: Boolean, default: false },
   versions: { type: Array, default: () => [] },
@@ -109,24 +93,15 @@ defineProps({
 
 defineEmits(['close', 'select-version'])
 
-// Format relative time (e.g., "2 hours ago")
-// NOTE: local copy preserved verbatim from the original DocumentViewer to avoid
-// behavior drift vs utils/formatters.formatRelativeTime (different day cutoff +
-// locale). Consolidation is a Phase 3 concern.
+// Format relative time (e.g., "2 hours ago"). Delegates the just-now/m/h/d
+// tiers to the shared formatter; versions older than a week fall back to a
+// locale date (preserves the original 7-day cutoff vs the shared 30-day one).
 const formatRelativeTime = (dateString) => {
   if (!dateString) return ''
   const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now - date
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffMins < 1) return 'just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
+  if (isNaN(date)) return ''
+  if (Date.now() - date.getTime() >= 604800000) return date.toLocaleDateString()
+  return sharedFormatRelativeTime(dateString)
 }
 
 // Get short extraction method label

@@ -30,10 +30,11 @@ export function formatDate(dateString, includeTime = false) {
 /**
  * Format file size to a human-readable string
  * @param {number} bytes - Size in bytes
+ * @param {string} [fallback='0 B'] - Value returned when bytes is missing/invalid
  * @returns {string} Formatted size
  */
-export function formatFileSize(bytes) {
-  if (!bytes || isNaN(bytes)) return '0 B'
+export function formatFileSize(bytes, fallback = '0 B') {
+  if (!bytes || isNaN(bytes)) return fallback
 
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   let i = 0
@@ -79,6 +80,38 @@ export function formatDuration(seconds) {
  */
 export function formatDateTime(dateString) {
   return formatDate(dateString, true)
+}
+
+/**
+ * "Smart" date formatter: shows time-of-day for today, weekday for this week,
+ * otherwise a short date. Replaces the per-component relative date formatters
+ * that were inlined in FilesTable / similar.
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted date string
+ */
+export function formatDateSmart(dateString) {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  if (isNaN(date)) return 'Invalid date'
+
+  const now = new Date()
+  const diff = now - date
+  if (diff < 86400000) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  if (diff < 604800000) return date.toLocaleDateString([], { weekday: 'short' })
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/**
+ * Format a date string as a full locale string (date + time). Replaces the
+ * per-component `new Date(x).toLocaleString()` wrappers.
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted date+time string
+ */
+export function formatDateFull(dateString) {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  if (isNaN(date)) return ''
+  return date.toLocaleString()
 }
 
 /**
