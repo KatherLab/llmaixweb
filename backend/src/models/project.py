@@ -81,7 +81,9 @@ class Project(Base):
     ground_truth_files: Mapped[list["GroundTruth"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    owner_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     owner: Mapped["User"] = relationship(back_populates="projects")  # noqa: F821
     preprocessing_configurations: Mapped[list["PreprocessingConfiguration"]] = (
         relationship(back_populates="project", cascade="all, delete-orphan")
@@ -233,7 +235,7 @@ class Document(Base):
         Boolean, default=True, nullable=False, index=True
     )
     version_of: Mapped[int | None] = mapped_column(
-        ForeignKey("documents.id"), nullable=True
+        ForeignKey("documents.id", ondelete="SET NULL"), nullable=True
     )  # Links to the "root" document for version chains
 
     created_at: Mapped[DateTime] = mapped_column(
@@ -304,7 +306,7 @@ class DocumentSet(Base):
     )  # True for auto-created sets (e.g., row-by-row preprocessing, trial results)
 
     # Tags for categorization
-    tags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    tags: Mapped[list[str]] = mapped_column(MutableList.as_mutable(JSON), default=list)
 
     # Track preprocessing configuration if all docs share one
     preprocessing_config_id: Mapped[int] = mapped_column(
@@ -374,7 +376,9 @@ class PreprocessingConfiguration(Base):
 
     # Engine settings are stored in additional_settings
     # Additional settings
-    additional_settings: Mapped[dict] = mapped_column(JSON, nullable=True)
+    additional_settings: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=True
+    )
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -444,7 +448,9 @@ class PreprocessingTask(Base):
     estimated_completion: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    meta: Mapped[dict] = mapped_column(JSON, default=dict)  # ETA, etc.
+    meta: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), default=dict
+    )  # ETA, etc.
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -577,7 +583,9 @@ class Schema(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     schema_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    schema_definition: Mapped[dict] = mapped_column(JSON, nullable=False)
+    schema_definition: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=False
+    )
 
     __table_args__ = (Index("ix_schemas_project_created", "project_id", "created_at"),)
     created_at: Mapped[DateTime] = mapped_column(
@@ -621,7 +629,9 @@ class Trial(Base):
     )
 
     # ── config ──────────────────────────────────────────────────────────────────
-    document_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
+    document_ids: Mapped[list[int]] = mapped_column(
+        MutableList.as_mutable(JSON), default=list
+    )
     status: Mapped[TrialStatus] = mapped_column(
         Enum(TrialStatus, native_enum=False, length=20), default=TrialStatus.PENDING
     )
@@ -632,12 +642,18 @@ class Trial(Base):
     api_key_encrypted: Mapped[str] = mapped_column("api_key_encrypted", String(512))
     base_url: Mapped[str] = mapped_column(String(512))
     bypass_celery: Mapped[bool] = mapped_column(Boolean, default=False)
-    advanced_options: Mapped[dict] = mapped_column(JSON, default=dict)
+    advanced_options: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), default=dict
+    )
 
     # Frozen copies of the schema + prompt at trial-creation time, so the
     # record reflects exactly what was used even if the source is edited later.
-    schema_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
-    prompt_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
+    schema_snapshot: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=True
+    )
+    prompt_snapshot: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), nullable=True
+    )
 
     # ── progress tracking ───────────────────────────────────────────────────────
     docs_done: Mapped[int] = mapped_column(Integer, default=0)
@@ -646,7 +662,9 @@ class Trial(Base):
     finished_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    meta: Mapped[dict] = mapped_column(JSON, default=dict)  # ETA etc.
+    meta: Mapped[dict] = mapped_column(
+        MutableDict.as_mutable(JSON), default=dict
+    )  # ETA etc.
 
     # Cancellation settings
     is_cancelled: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -691,8 +709,10 @@ class TrialResult(Base):
     __tablename__ = "trial_results"
     id: Mapped[int] = mapped_column(primary_key=True)
     trial_id: Mapped[int] = mapped_column(ForeignKey("trials.id"), nullable=False)
-    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), nullable=False)
-    result: Mapped[dict] = mapped_column(JSON, nullable=False)
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="RESTRICT"), nullable=False
+    )
+    result: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), nullable=False)
     additional_content: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON), nullable=True
     )
@@ -758,7 +778,9 @@ class EvaluationMetric(Base):
     evaluation_id: Mapped[int] = mapped_column(
         ForeignKey("evaluations.id"), nullable=False
     )
-    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), nullable=False)
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="RESTRICT"), nullable=False
+    )
     field_name: Mapped[str] = mapped_column(String(200), nullable=False)
     ground_truth_value: Mapped[str] = mapped_column(String, nullable=True)
     predicted_value: Mapped[str] = mapped_column(String, nullable=True)
@@ -816,7 +838,9 @@ class Evaluation(Base):
     field_metrics: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON), nullable=False
     )
-    document_metrics: Mapped[list] = mapped_column(JSON, nullable=False)
+    document_metrics: Mapped[list] = mapped_column(
+        MutableList.as_mutable(JSON), nullable=False
+    )
     confusion_matrices: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON), nullable=True
     )

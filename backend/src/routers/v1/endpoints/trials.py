@@ -5,6 +5,7 @@ import csv
 import datetime
 import io
 import json
+import logging
 import zipfile
 from typing import Annotated, cast
 
@@ -19,6 +20,8 @@ from ....core.config import settings
 from ....core.security import get_current_user
 from ....dependencies import get_db, get_file
 from ....utils.helpers import flatten_dict
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -596,8 +599,10 @@ def delete_trial(
         db.commit()
     except SQLAlchemyError as e:
         db.rollback()
+        logger.error("Database error deleting trial %s: %s", trial_id, e, exc_info=True)
         raise HTTPException(
-            status_code=500, detail=f"Database error during deletion: {e}"
+            status_code=500,
+            detail="Database error during deletion. See server logs for details.",
         )
 
     return trial_data
@@ -1123,7 +1128,17 @@ def evaluate_trial(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
+        logger.error(
+            "Evaluation failed for trial %s / ground truth %s: %s",
+            trial_id,
+            groundtruth_id,
+            e,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Evaluation failed. See server logs for details.",
+        )
 
     # Batch-load all EvaluationMetric rows for this evaluation once and group
     # them in Python, instead of one query per field (sample errors) and one

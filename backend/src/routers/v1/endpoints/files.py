@@ -256,8 +256,15 @@ def get_project_files(
     query = query.options(
         selectinload(models.File.preprocessing_tasks),
         selectinload(models.File.file_preprocessing_tasks),
-        # Only load minimal fields for document relationships (avoid loading full text)
+        # Only load minimal fields for document relationships (avoid loading
+        # full text). All four are loaded because `File.is_linked` checks all
+        # of them — a missing one triggers a lazy N+1 per file.
         selectinload(models.File.documents_as_original).load_only(
+            models.Document.id,
+            models.Document.is_latest,
+            models.Document.document_name,
+        ),
+        selectinload(models.File.documents_as_preprocessed).load_only(
             models.Document.id,
             models.Document.is_latest,
             models.Document.document_name,
@@ -963,6 +970,16 @@ def batch_delete_files(
 ) -> dict:
     """Delete multiple files at once"""
     check_project_access(project_id, current_user, db, permission="write")
+
+    # Cap the batch size to bound time/resource use (each delete does a
+    # selectinload + storage removal). Matches the download-zip cap.
+    max_files = 200
+    if len(file_ids) > max_files:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete more than {max_files} files at once "
+            f"(requested {len(file_ids)}).",
+        )
 
     deleted = []
     errors = []

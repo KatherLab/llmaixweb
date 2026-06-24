@@ -427,7 +427,16 @@ def preview_groundtruth(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load ground truth: {e}")
+        logger.error(
+            "Failed to load ground truth %s: %s",
+            getattr(groundtruth, "id", "?"),
+            e,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to load ground truth. See server logs for details.",
+        )
 
     # Collect field paths + types from a sample document
     def collect_paths(doc: dict, prefix=""):

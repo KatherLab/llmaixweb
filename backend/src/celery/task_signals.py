@@ -22,6 +22,12 @@ from .celery_config import celery_app
 
 logger = logging.getLogger(__name__)
 
+# How long to wait between (re)subscription attempts for the
+# settings-invalidation channel when Redis is unavailable or the connection
+# drops. Keeps the listener alive so a recovering Redis is picked up without
+# a worker restart.
+_SETTINGS_SUBSCRIBE_RETRY_SECONDS = 30.0
+
 
 # ────────────────── helpers ──────────────────
 def _update(
@@ -235,23 +241,47 @@ def sweep_orphans():
 
         db.commit()
 
-        # 2) refresh parent tasks so their summary & message are accurate
+        # 2) refresh parent tasks so their summary & message are accurate.
+        # Only finalize a parent here when it has NO file tasks still in
+        # flight — otherwise marking it FAILED now would flap back to
+        # COMPLETED once the still-running files finish on a live worker.
+        # Count failures explicitly so CANCELLED files aren't miscounted as
+        # failed (the old `failed = total - completed` counted every non-
+        # completed status, including CANCELLED and still-running, as failed).
+        in_flight_statuses = (
+            models.PreprocessingStatus.PENDING,
+            models.PreprocessingStatus.IN_PROGRESS,
+        )
+        finalized_parent_ids: set[int] = set()
         for pid in parent_ids:
             parent = db.get(models.PreprocessingTask, pid)
             if not parent:
                 continue
 
-            total = len(parent.file_tasks)
+            file_tasks = parent.file_tasks
+            total = len(file_tasks)
             completed = sum(
                 1
-                for ft in parent.file_tasks
+                for ft in file_tasks
                 if ft.status == models.PreprocessingStatus.COMPLETED
             )
-            failed = total - completed
+            failed = sum(
+                1 for ft in file_tasks if ft.status == models.PreprocessingStatus.FAILED
+            )
+            in_flight = sum(1 for ft in file_tasks if ft.status in in_flight_statuses)
 
-            parent.status = models.PreprocessingStatus.FAILED
+            # Keep the persisted counters current regardless.
             parent.processed_files = completed
             parent.failed_files = failed
+
+            if in_flight > 0:
+                # Some files are still being processed by a live worker; leave
+                # the parent's status alone and let the normal completion path
+                # set the final FAILED/COMPLETED tally once they finish.
+                continue
+
+            finalized_parent_ids.add(pid)
+            parent.status = models.PreprocessingStatus.FAILED
             parent.message = (
                 f"{completed} of {total} files processed successfully, "
                 f"{failed} failed (worker crashed or was killed)."
@@ -260,8 +290,9 @@ def sweep_orphans():
 
         db.commit()
 
-        # 3) broadcast updates for affected parent tasks
-        for pid in parent_ids:
+        # 3) broadcast updates for parents we actually finalized. Parents with
+        # files still in flight are left untouched (no status flap).
+        for pid in finalized_parent_ids:
             parent = db.get(models.PreprocessingTask, pid)
             if parent:
                 _broadcast_preprocessing_update(parent, "failed")
@@ -331,51 +362,61 @@ if celery_app is not None:
         from ..utils.redis_broadcast import subscribe_settings_invalidate
 
         def _loop():
-            pubsub = subscribe_settings_invalidate()
-            if pubsub is None:
-                logger.info(
-                    "Redis unavailable — worker settings cache will not "
-                    "auto-refresh; changes apply after worker restart"
-                )
-                return
-            logger.info("Subscribed to settings-invalidation channel")
-            try:
-                while True:
-                    # Blocking get_message with a timeout so the thread can
-                    # react to messages without busy-looping.
-                    message = pubsub.get_message(timeout=5.0)
-                    if message and message.get("type") == "message":
-                        try:
-                            data = json.loads(message["data"])
-                        except Exception:
-                            data = {}
-                        if data.get("type") == "settings_invalidate":
-                            try:
-                                from ..core.dynamic_settings import (
-                                    reload_settings_cache,
-                                )
+            # Retry the subscription: if Redis is unavailable at worker start
+            # (or drops mid-run), re-attempt periodically so a Redis that comes
+            # back online is picked up without a worker restart. Previously a
+            # single None from subscribe_settings_invalidate() aborted the
+            # listener for the life of the process.
+            pubsub = None
+            while True:
+                pubsub = subscribe_settings_invalidate()
+                if pubsub is None:
+                    import time
 
-                                # broadcast=False: this is the receiving side;
-                                # don't re-publish (avoids a loop).
-                                reload_settings_cache(broadcast=False)
-                                logger.info(
-                                    "Reloaded settings cache after "
-                                    "invalidation broadcast"
-                                )
-                            except Exception as e:
-                                logger.error(
-                                    "Failed to reload settings cache: %s",
-                                    e,
-                                    exc_info=True,
-                                )
-            except Exception as e:
-                logger.warning("Settings invalidation listener stopped: %s", e)
-            finally:
+                    time.sleep(_SETTINGS_SUBSCRIBE_RETRY_SECONDS)
+                    continue
+                logger.info("Subscribed to settings-invalidation channel")
                 try:
-                    pubsub.unsubscribe()
-                    pubsub.close()
-                except Exception:
-                    pass
+                    while True:
+                        # Blocking get_message with a timeout so the thread can
+                        # react to messages without busy-looping.
+                        message = pubsub.get_message(timeout=5.0)
+                        if message and message.get("type") == "message":
+                            try:
+                                data = json.loads(message["data"])
+                            except Exception:
+                                data = {}
+                            if data.get("type") == "settings_invalidate":
+                                try:
+                                    from ..core.dynamic_settings import (
+                                        reload_settings_cache,
+                                    )
+
+                                    # broadcast=False: this is the receiving
+                                    # side; don't re-publish (avoids a loop).
+                                    reload_settings_cache(broadcast=False)
+                                    logger.info(
+                                        "Reloaded settings cache after "
+                                        "invalidation broadcast"
+                                    )
+                                except Exception as e:
+                                    logger.error(
+                                        "Failed to reload settings cache: %s",
+                                        e,
+                                        exc_info=True,
+                                    )
+                except Exception as e:
+                    logger.warning("Settings invalidation listener disconnected: %s", e)
+                finally:
+                    try:
+                        pubsub.unsubscribe()
+                        pubsub.close()
+                    except Exception:
+                        pass
+                # Connection lost — loop and re-subscribe.
+                import time
+
+                time.sleep(_SETTINGS_SUBSCRIBE_RETRY_SECONDS)
 
         # Daemon so it never blocks process shutdown.
         threading.Thread(

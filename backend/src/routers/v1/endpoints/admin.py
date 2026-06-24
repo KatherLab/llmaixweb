@@ -1,6 +1,6 @@
 # backend/src/routers/v1/endpoints/admin.py
 from celery.result import AsyncResult
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from backend.src.models import PreprocessingTask
@@ -178,10 +178,18 @@ def revoke_task(
 # (Optional) List failed tasks from your DB (example below assumes PreprocessingTask table)
 @router.get("/celery/failed-tasks")
 def get_failed_tasks(
-    current_user=Depends(get_admin_user), db: Session = Depends(get_db)
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    current_user=Depends(get_admin_user),
+    db: Session = Depends(get_db),
 ):
     failed = (
-        db.query(PreprocessingTask).filter(PreprocessingTask.status == "failed").all()
+        db.query(PreprocessingTask)
+        .filter(PreprocessingTask.status == "failed")
+        .order_by(PreprocessingTask.id.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
     )
     # Format as desired
     return [

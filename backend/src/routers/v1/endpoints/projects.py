@@ -387,7 +387,13 @@ def update_project(
             status_code=403, detail="Not authorized to update this project"
         )
 
-    for key, value in project.model_dump(exclude_unset=True).items():
+    update_data = project.model_dump(exclude_unset=True)
+    # Ownership transfer is admin-only: a non-admin owner must not be able to
+    # reassign the project to another user (privilege/visibility escalation).
+    if current_user.role != "admin":
+        update_data.pop("owner_id", None)
+
+    for key, value in update_data.items():
         setattr(existing_project, key, value)
 
     db.add(existing_project)

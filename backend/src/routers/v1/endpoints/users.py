@@ -2,7 +2,17 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Body, Depends, Form, HTTPException, Path, Request, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    Form,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from .... import models, schemas
@@ -197,9 +207,13 @@ def create_user(
 def list_users(
     current_user: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db),
+    limit: int = Query(1000, ge=1, le=10000),
+    offset: int = Query(0, ge=0),
 ) -> list[schemas.UserResponse]:
     """List all users (admin only)."""
-    users = db.query(models.User).all()
+    users = (
+        db.query(models.User).order_by(models.User.id).limit(limit).offset(offset).all()
+    )
     return [schemas.UserResponse.model_validate(user) for user in users]
 
 
@@ -410,9 +424,17 @@ def invite(
 def list_invitations(
     current_user: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db),
+    limit: int = Query(1000, ge=1, le=10000),
+    offset: int = Query(0, ge=0),
 ) -> list[schemas.InvitationResponse]:
     """List all invitations (admin only)."""
-    invitations = db.query(models.Invitation).all()
+    invitations = (
+        db.query(models.Invitation)
+        .order_by(models.Invitation.id)
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
     return [
         schemas.InvitationResponse.model_validate(invitation)
         for invitation in invitations

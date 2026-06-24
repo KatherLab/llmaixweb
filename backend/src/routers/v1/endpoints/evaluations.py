@@ -555,6 +555,15 @@ def batch_evaluate_trials(
     current_user: models.User = Depends(get_current_user),
 ) -> list[schemas.EvaluationSummary]:
     """Evaluate multiple trials against ground truth."""
+    # Cap the batch to bound work (each trial evaluation recomputes metrics
+    # across all its documents).
+    max_trials = 200
+    if len(trial_ids) > max_trials:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot evaluate more than {max_trials} trials at once "
+            f"(requested {len(trial_ids)}).",
+        )
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
@@ -614,6 +623,15 @@ def compare_evaluations(
     current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Compare multiple evaluations side by side."""
+    # Cap the number of evaluations in a single comparison to bound the
+    # side-by-side matrix and per-eval queries.
+    max_evaluations = 10
+    if len(evaluation_ids) > max_evaluations:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot compare more than {max_evaluations} evaluations at once "
+            f"(requested {len(evaluation_ids)}).",
+        )
 
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -744,7 +762,7 @@ def get_evaluation_errors(
     evaluation_id: int,
     field_name: str | None = Query(None),
     error_type: str | None = Query(None),
-    limit: int = Query(100),
+    limit: int = Query(100, ge=1, le=1000),
     current_user: models.User = Depends(get_current_user),
 ) -> list[dict]:
     """Get detailed error analysis for an evaluation."""

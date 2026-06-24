@@ -638,7 +638,13 @@ async def preprocess_project_data(
             task.status = models.PreprocessingStatus.FAILED
             task.message = f"Processing failed: {str(e)}"
             db.commit()
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.error(
+                "Preprocessing failed for task %s: %s", task.id, e, exc_info=True
+            )
+            raise HTTPException(
+                status_code=500,
+                detail="Preprocessing failed. See server logs for details.",
+            )
     else:
         from ....celery.preprocessing import process_files_async
 

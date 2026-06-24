@@ -206,7 +206,14 @@ class PreprocessingPipeline:
                 for ft in self.task.file_tasks
                 if ft.status == models.PreprocessingStatus.COMPLETED
             )
-            failed = total - completed  # everything else is FAILED now
+            # Count failures explicitly so CANCELLED files aren't miscounted
+            # as failed (total - completed would count any non-completed
+            # status, including CANCELLED).
+            failed = sum(
+                1
+                for ft in self.task.file_tasks
+                if ft.status == models.PreprocessingStatus.FAILED
+            )
 
             # Sync the persisted counters with the final tally (the per-file
             # in-place increments don't cover the just-auto-failed unfinished
@@ -317,7 +324,12 @@ class PreprocessingPipeline:
                     for ft in task.file_tasks
                     if ft.status == models.PreprocessingStatus.COMPLETED
                 )
-                failed = total - completed
+                # Count failures explicitly (see _finalize note re: CANCELLED).
+                failed = sum(
+                    1
+                    for ft in task.file_tasks
+                    if ft.status == models.PreprocessingStatus.FAILED
+                )
 
                 task.processed_files = completed
                 task.failed_files = failed
@@ -649,7 +661,23 @@ class PreprocessingPipeline:
                 result = func(file, file_task)
                 result_queue.put(result)
             except Exception as e:
-                exception_queue.put(e)
+                # If the main thread already timed out and aborted, this zombie
+                # thread's result/exception is discarded anyway. Its `self.db`
+                # usage may race the main session's closure (sessions aren't
+                # thread-safe), surfacing as a ResourceClosed/StatementError
+                # here — log it at debug rather than propagating a confusing
+                # error, since the timeout path already recorded the failure in
+                # a fresh session.
+                if self._timeout_abort:
+                    logger.debug(
+                        "Zombie worker thread for file task %s ended with "
+                        "%s after timeout abort (discarded): %s",
+                        file_task.id,
+                        type(e).__name__,
+                        e,
+                    )
+                else:
+                    exception_queue.put(e)
 
         def _heartbeat():
             now = datetime.datetime.now(datetime.UTC)

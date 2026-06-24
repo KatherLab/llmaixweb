@@ -4,6 +4,7 @@
 import json
 import logging
 import threading
+import time
 from typing import Any
 
 import redis
@@ -32,6 +33,12 @@ _redis_client: redis.Redis | None = None
 _redis_client_lock = threading.Lock()
 _redis_client_unavailable = object()  # sentinel: we tried and Redis is down
 _redis_client_state: Any = None
+# Monotonic timestamp at which the "unavailable" sentinel was set. We retry
+# connecting after this many seconds so a Redis that comes back online is
+# picked up without a process restart. Without this, the unavailable state
+# was cached forever (a transient Redis outage permanently disabled pub/sub).
+_REDIS_RETRY_SECONDS = 30.0
+_redis_unavailable_at: float = 0.0
 
 
 def _new_redis_client() -> redis.Redis | None:
@@ -58,25 +65,31 @@ def get_redis_client() -> redis.Redis | None:
     """Return the shared Redis client for pub/sub, creating it on first use.
 
     Returns None if Redis is unavailable (cached so we don't retry-connect on
-    every heartbeat tick). The returned client is shared and must NOT be
-    closed by callers — it lives for the process. For a client you intend to
-    close yourself (e.g. a long-lived subscriber), use
-    :func:`new_dedicated_redis_client`.
+    every heartbeat tick, but re-checked after ``_REDIS_RETRY_SECONDS`` so a
+    Redis that recovers is picked up without a restart). The returned client
+    is shared and must NOT be closed by callers — it lives for the process.
+    For a client you intend to close yourself (e.g. a long-lived subscriber),
+    use :func:`new_dedicated_redis_client`.
     """
-    global _redis_client, _redis_client_state
+    global _redis_client, _redis_client_state, _redis_unavailable_at
     if _redis_client is not None:
         return _redis_client
-    if _redis_client_state is _redis_client_unavailable:
+    if _redis_client_state is _redis_client_unavailable and (
+        time.monotonic() - _redis_unavailable_at < _REDIS_RETRY_SECONDS
+    ):
         return None
     with _redis_client_lock:
         # Re-check inside the lock: another thread may have initialized it.
         if _redis_client is not None:
             return _redis_client
-        if _redis_client_state is _redis_client_unavailable:
+        if _redis_client_state is _redis_client_unavailable and (
+            time.monotonic() - _redis_unavailable_at < _REDIS_RETRY_SECONDS
+        ):
             return None
         client = _new_redis_client()
         if client is None:
             _redis_client_state = _redis_client_unavailable
+            _redis_unavailable_at = time.monotonic()
             return None
         _redis_client = client
         return _redis_client

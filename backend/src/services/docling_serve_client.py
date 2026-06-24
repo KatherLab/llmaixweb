@@ -82,6 +82,8 @@ class DoclingServeClient:
         timeout_seconds: int = 600,
         max_retries: int = 1,
         default_ocr_langs: list[str] | str | None = None,
+        retry_backoff: float = 2.0,
+        base_retry_delay: float = 1.0,
     ):
         if not base_url:
             raise DoclingServeError("docling-serve base URL is required")
@@ -89,6 +91,8 @@ class DoclingServeClient:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
+        self.retry_backoff = retry_backoff
+        self.base_retry_delay = base_retry_delay
         # Default to "auto" for automatic language detection
         self.default_ocr_langs = default_ocr_langs or "auto"
 
@@ -332,6 +336,24 @@ class DoclingServeClient:
             except DoclingServeError as e:
                 last_error = e
                 logger.warning("docling-serve error (attempt %d): %s", attempt + 1, e)
+
+            # Backoff before the next attempt (skip on the last try). Matches
+            # the mistral/vision OCR retry pattern so a transient docling-serve
+            # failure isn't hammered immediately. The local-fallback branch
+            # above returns early, so we only reach here for retryable errors.
+            if attempt < self.max_retries:
+                import random
+                import time
+
+                delay = self.base_retry_delay * (self.retry_backoff**attempt)
+                jitter = random.uniform(0, delay * 0.1)  # 10% jitter
+                logger.warning(
+                    "docling-serve retrying in %.1fs (attempt %d/%d)",
+                    delay + jitter,
+                    attempt + 2,
+                    self.max_retries + 1,
+                )
+                time.sleep(delay + jitter)
 
         # All retries exhausted
         raise last_error or DoclingServeError(

@@ -196,6 +196,17 @@ async def lifespan(app):
     )
     init_db()
 
+    # Re-load DB-backed admin overrides now that the DB exists. ``settings``
+    # is lru-cached at import time (before init_db), so on a fresh startup the
+    # app_settings table didn't exist yet and overrides were skipped. Reload so
+    # admin-configured values (e.g. disabled OCR engines) apply immediately.
+    try:
+        from .core.dynamic_settings import reload_settings_cache
+
+        reload_settings_cache(broadcast=False)
+    except Exception as e:
+        logger.warning("Failed to reload DB settings overrides on startup: %s", e)
+
     workers: list[mp.Process] = []
     if celery_app is not None and settings.INITIALIZE_CELERY:
         # 1) general‑purpose tasks
@@ -324,12 +335,14 @@ async def activity_websocket(websocket: WebSocket):
             options={"require": ["exp", "sub"]},  # Require expiration and subject
         )
         user_id: str = payload.get("sub")
+        # Malformed "sub" (non-int) → treat as invalid token rather than a 500.
+        user_id_int = int(user_id)
 
         # Get user from database
         db = SessionLocal()
         try:
             user = (
-                db.execute(select(User).where(User.id == int(user_id)))
+                db.execute(select(User).where(User.id == user_id_int))
                 .scalars()
                 .one_or_none()
             )

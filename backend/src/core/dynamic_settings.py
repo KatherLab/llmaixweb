@@ -2,7 +2,7 @@
 import logging
 from functools import lru_cache
 
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 # Use absolute imports for reliability across different run contexts
@@ -37,8 +37,10 @@ def get_db_overrides(db: Session) -> dict:
             for row in rows
             if not SETTINGS_META.get(row.key, {}).get("readonly", False)
         }
-    except OperationalError:
-        # Table doesn't exist yet (e.g., during tests or first run)
+    except SQLAlchemyError:
+        # Table doesn't exist yet (e.g., during tests or first run). Postgres
+        # raises ProgrammingError (not OperationalError) for a missing table,
+        # so catch the broad SQLAlchemyError base class.
         return {}
 
 

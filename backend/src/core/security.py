@@ -67,7 +67,7 @@ def get_password_hash(password: str) -> str:
     return hashed.decode("utf-8")
 
 
-async def get_current_user(
+def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
 ) -> User:
     credentials_exception = HTTPException(
@@ -80,11 +80,14 @@ async def get_current_user(
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except PyJWTError:
+        # int() may raise ValueError on a malformed "sub" claim — treat like
+        # any other invalid token (401, not a 500).
+        user_id_int = int(user_id)
+    except (PyJWTError, ValueError, TypeError):
         raise credentials_exception
 
     user = (
-        db.execute(select(User).where(User.id == int(user_id))).scalars().one_or_none()
+        db.execute(select(User).where(User.id == user_id_int)).scalars().one_or_none()
     )
     if user is None:
         raise credentials_exception
@@ -105,7 +108,7 @@ async def get_current_user(
 
 
 # Add this function to protect admin-only endpoints
-async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
+def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
     """
     Dependency to check if the current user is an admin.
 
