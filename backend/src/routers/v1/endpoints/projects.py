@@ -1,5 +1,6 @@
 # backend/src/routers/v1/endpoints/projects.py
 import datetime
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_, select
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session, load_only, noload, selectinload
 
 from .... import models, schemas
 from ....core.security import get_current_user
-from ....dependencies import get_db
+from ....dependencies import get_db, remove_file
 from .documents import router as documents_router
 from .evaluations import router as evaluations_router
 from .files import router as files_router
@@ -17,6 +18,8 @@ from .preprocess import router as preprocess_router
 from .prompts import router as prompts_router
 from .schemas import router as schemas_router
 from .trials import router as trials_router
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -346,17 +349,14 @@ def create_project(
     project: schemas.ProjectCreate,
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.Project:
-    if not current_user.role == "user":
+    if current_user.role == "admin":
+        # Admins may create a project owned by another user; default to self.
         if not project.owner_id:
             project.owner_id = current_user.id
-        elif project.owner_id != current_user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="Not authorized to create project for another user",
-            )
     else:
-        if not project.owner_id:
-            project.owner_id = current_user.id
+        # Non-admins can only create projects they own — ignore any client-
+        # supplied owner_id to prevent creating projects under another user.
+        project.owner_id = current_user.id
 
     new_project = models.Project(**project.model_dump())
 
@@ -416,9 +416,41 @@ def delete_project(
             status_code=403, detail="Not authorized to delete this project"
         )
 
-    # TODO: Make sure to handle any related resources (e.g., files, documents) before deleting the project
+    # Collect stored-file UUIDs (uploaded files + ground truth) before the
+    # cascade-delete removes their DB rows, so we can still free the bytes in
+    # local/S3 storage afterwards. Mirrors delete_user (users.py).
+    file_uuids = [
+        row[0]
+        for row in db.execute(
+            select(models.File.file_uuid).where(models.File.project_id == project_id)
+        ).all()
+    ]
+    file_uuids.extend(
+        row[0]
+        for row in db.execute(
+            select(models.GroundTruth.file_uuid).where(
+                models.GroundTruth.project_id == project_id
+            )
+        ).all()
+    )
 
+    # Commit the DB deletion first; only then remove the stored bytes. If a
+    # storage removal fails we log and continue (the DB row is already gone,
+    # so leaving an orphaned blob is the lesser evil vs. failing the delete).
     db.delete(existing_project)
     db.commit()
+
+    for file_uuid in file_uuids:
+        try:
+            remove_file(file_uuid)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            logger.warning(
+                "Failed to remove stored file %s while deleting project %s",
+                file_uuid,
+                project_id,
+                exc_info=True,
+            )
 
     return schemas.Project.model_validate(existing_project)

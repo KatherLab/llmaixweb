@@ -338,14 +338,6 @@ import { ref, computed } from 'vue'
 import JsonViewer from '@/components/common/JsonViewer.vue'
 
 const props = defineProps({
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-  evaluation: {
-    type: Object,
-    required: true,
-  },
   documentEvaluations: {
     type: Array,
     required: true,

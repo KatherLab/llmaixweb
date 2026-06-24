@@ -87,9 +87,9 @@
 <script setup>
 import { ref } from 'vue'
 const props = defineProps({
-  mappings: Array,
-  schemaFieldTypes: Object,
-  groundTruthFieldTypes: Object,
+  mappings: { type: Array, default: () => [] },
+  schemaFieldTypes: { type: Object, default: () => ({}) },
+  groundTruthFieldTypes: { type: Object, default: () => ({}) },
 })
 const hoverIdx = ref(-1) // For schema
 const hoverIdx2 = ref(-1) // For GT

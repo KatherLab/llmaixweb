@@ -162,14 +162,6 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-  evaluation: {
-    type: Object,
-    required: true,
-  },
   fieldErrors: {
     type: Object,
     required: true,

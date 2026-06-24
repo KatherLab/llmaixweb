@@ -13,7 +13,7 @@ const floating = ref(null)
 const show = ref(false)
 
 // Use @floating-ui/vue for positioning
-const { x, y, strategy, placement } = useFloating(reference, floating, {
+const { x, y, strategy } = useFloating(reference, floating, {
   placement: 'top',
   middleware: [offset(8), flip(), shift()],
   whileElementsMounted: autoUpdate,

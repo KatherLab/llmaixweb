@@ -214,7 +214,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { api } from '@/services/api'
+import { documentsApi } from '@/services/documentsApi'
 import { formatDate } from '@/utils/formatters'
 import { useScrollLock } from '@/composables/useScrollLock'
 
@@ -277,13 +277,11 @@ const onSearchInput = () => {
 const fetchSearch = async () => {
   searchLoading.value = true
   try {
-    const { data } = await api.get(`/project/${props.projectId}/document`, {
-      params: {
-        search: searchTerm.value || undefined,
-        limit: searchPageSize.value,
-        offset: (searchPage.value - 1) * searchPageSize.value,
-        compute_stats: false,
-      },
+    const { data } = await documentsApi.list(props.projectId, {
+      search: searchTerm.value || undefined,
+      limit: searchPageSize.value,
+      offset: (searchPage.value - 1) * searchPageSize.value,
+      compute_stats: false,
     })
     searchResults.value = data.items || []
     searchTotal.value = data.total ?? searchResults.value.length
@@ -320,13 +318,11 @@ const loadExistingSelection = async () => {
     let offset = 0
     let hasMore = true
     while (hasMore) {
-      const { data } = await api.get(`/project/${props.projectId}/document`, {
-        params: {
-          document_set_id: props.group.id,
-          limit: PAGE,
-          offset,
-          compute_stats: false,
-        },
+      const { data } = await documentsApi.list(props.projectId, {
+        document_set_id: props.group.id,
+        limit: PAGE,
+        offset,
+        compute_stats: false,
       })
       const items = data.items || []
       const next = new Set(selectedIds.value)

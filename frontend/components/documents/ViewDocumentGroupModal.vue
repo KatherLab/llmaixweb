@@ -243,11 +243,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { api } from '@/services/api'
+import { documentsApi } from '@/services/documentsApi'
+import { documentSetsApi } from '@/services/documentSetsApi'
 import { useToast } from 'vue-toastification'
 import { formatDate, formatFileSize } from '@/utils/formatters'
 import FileIcon from '../common/FileIcon.vue'
 import { useScrollLock } from '@/composables/useScrollLock'
+import { useFileDownload } from '@/composables/useFileDownload'
 
 useScrollLock({ autoLock: true })
 
@@ -265,6 +267,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'edit', 'view-document'])
 
 const toast = useToast()
+const { downloadBlob, downloadFromApi } = useFileDownload()
 const usageStats = ref({
   trialsCount: 0,
   extractionsCount: 0,
@@ -286,13 +289,11 @@ const docTotalPages = computed(() =>
 const fetchDocuments = async () => {
   docLoading.value = true
   try {
-    const { data } = await api.get(`/project/${props.projectId}/document`, {
-      params: {
-        document_set_id: props.group.id,
-        limit: docPageSize.value,
-        offset: (docPage.value - 1) * docPageSize.value,
-        compute_stats: false,
-      },
+    const { data } = await documentsApi.list(props.projectId, {
+      document_set_id: props.group.id,
+      limit: docPageSize.value,
+      offset: (docPage.value - 1) * docPageSize.value,
+      compute_stats: false,
     })
     documents.value = data.items || []
     docTotal.value = data.total ?? documents.value.length
@@ -321,9 +322,7 @@ const nextDocPage = () => {
 // Load usage statistics + first page of documents
 onMounted(async () => {
   try {
-    const response = await api.get(
-      `/project/${props.projectId}/document-set/${props.group.id}/stats`,
-    )
+    const response = await documentSetsApi.getStats(props.projectId, props.group.id)
     usageStats.value = response.data
   } catch (error) {
     console.error('Failed to load usage stats:', error)
@@ -350,15 +349,7 @@ const exportDocumentList = () => {
     .map((row) => row.join(','))
     .join('\n')
 
-  const blob = new Blob([csv], { type: 'text/csv' })
-  const url = window.URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${props.group.name.replace(/[^a-z0-9]/gi, '_')}_documents.csv`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  window.URL.revokeObjectURL(url)
+  downloadBlob(csv, `${props.group.name.replace(/[^a-z0-9]/gi, '_')}_documents.csv`, 'text/csv')
 
   toast.success('Document list exported')
 }
@@ -369,20 +360,10 @@ const downloadAllDocuments = async () => {
   }
 
   try {
-    const response = await api.post(
-      `/project/${props.projectId}/document-set/${props.group.id}/download-all`,
-      {},
-      { responseType: 'blob' },
+    await downloadFromApi(
+      () => documentSetsApi.downloadAll(props.projectId, props.group.id),
+      `${props.group.name.replace(/[^a-z0-9]/gi, '_')}_documents.zip`,
     )
-
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${props.group.name.replace(/[^a-z0-9]/gi, '_')}_documents.zip`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
 
     toast.success('Download started')
   } catch (error) {

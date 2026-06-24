@@ -218,7 +218,7 @@
 
 <script setup>
 import { ref, watch, onUnmounted } from 'vue'
-import { api } from '@/services/api'
+import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
 import { useToast } from 'vue-toastification'
 import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue'
@@ -278,15 +278,7 @@ async function saveEdit() {
     const formData = new FormData()
     formData.append('name', editName.value)
 
-    await api.put(
-      `/project/${props.projectId}/groundtruth/${editingGroundTruth.value.id}`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      },
-    )
+    await groundtruthApi.update(props.projectId, editingGroundTruth.value.id, formData)
     toast.success('Ground truth updated successfully')
     emit('updated')
     cancelEdit()
@@ -312,7 +304,7 @@ async function deleteGroundTruth(gt) {
     return
   }
   try {
-    await api.delete(`/project/${props.projectId}/groundtruth/${gt.id}`)
+    await groundtruthApi.delete(props.projectId, gt.id)
     toast.success('Ground truth deleted successfully')
     emit('updated')
   } catch (err) {

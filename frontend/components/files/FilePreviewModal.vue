@@ -291,7 +291,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { api } from '@/services/api'
+import { filesApi } from '@/services/filesApi'
 import { useToast } from 'vue-toastification'
 import { useScrollLock } from '@/composables/useScrollLock'
 import FileIcon from '@/components/common/FileIcon.vue'
@@ -414,9 +414,7 @@ const loadPreview = async () => {
       if (isCSV.value && delimiter.value) params.append('delimiter', delimiter.value)
       if (isXLSX.value && sheetFromMeta.value) params.append('sheet', sheetFromMeta.value)
 
-      const { data } = await api.get(
-        `/project/${props.projectId}/file/${props.file.id}/preview-rows?${params}`,
-      )
+      const { data } = await filesApi.getPreviewRows(props.projectId, props.file.id, params)
 
       tabularData.value = {
         headers: data.headers || [],
@@ -430,22 +428,19 @@ const loadPreview = async () => {
       textColumns.value =
         data.textColumns || data.text_columns || props.file.file_metadata?.text_columns || []
     } else if (props.file.file_type === 'text/plain') {
-      const response = await api.get(
-        `/project/${props.projectId}/file/${props.file.id}/content?preview=true`,
-        { responseType: 'blob' },
-      )
+      const response = await filesApi.getContent(props.projectId, props.file.id, {
+        preview: true,
+      })
       previewContent.value = await response.data.text()
     } else if (props.file.file_type.startsWith('image/')) {
-      const response = await api.get(
-        `/project/${props.projectId}/file/${props.file.id}/content?preview=true`,
-        { responseType: 'blob' },
-      )
+      const response = await filesApi.getContent(props.projectId, props.file.id, {
+        preview: true,
+      })
       previewUrl.value = URL.createObjectURL(response.data)
     } else if (props.file.file_type === 'application/pdf') {
-      const response = await api.get(
-        `/project/${props.projectId}/file/${props.file.id}/content?preview=true`,
-        { responseType: 'blob' },
-      )
+      const response = await filesApi.getContent(props.projectId, props.file.id, {
+        preview: true,
+      })
       previewUrl.value = URL.createObjectURL(response.data)
     } else {
       error.value = 'Preview not available for this file type.'
@@ -460,9 +455,7 @@ const loadPreview = async () => {
 
 const downloadFile = async () => {
   try {
-    const response = await api.get(`/project/${props.projectId}/file/${props.file.id}/content`, {
-      responseType: 'blob',
-    })
+    const response = await filesApi.getContent(props.projectId, props.file.id)
     const url = window.URL.createObjectURL(new Blob([response.data]))
     const link = document.createElement('a')
     link.href = url

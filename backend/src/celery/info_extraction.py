@@ -72,7 +72,6 @@ if celery_app:
         trial_id: int,
         document_ids: List[int],
         llm_model: str,
-        api_key: str,
         base_url: str,
         schema_id: int,
         prompt_id: int,
@@ -106,6 +105,9 @@ if celery_app:
                         trial.status,
                     )
                     return
+                # The api_key is stored encrypted on the Trial row and decrypted
+                # here — it never traverses the Celery broker as plaintext.
+                api_key = trial.api_key
 
             # Create one client per task
             async with AsyncOpenAI(
@@ -143,20 +145,20 @@ if celery_app:
                                 if exists:
                                     return
 
-                            # Do the LLM call + store result with a fresh session
-                            with db_session() as db:
-                                await extract_info_single_doc_async(
-                                    client=client,
-                                    db_session=db,
-                                    trial_id=trial_id,
-                                    document_id=doc_id,
-                                    llm_model=llm_model,
-                                    schema_id=schema_id,
-                                    prompt_id=prompt_id,
-                                    project_id=project_id,
-                                    advanced_options=advanced_options,
-                                    base_url=base_url,
-                                )
+                            # LLM call + store result. extract_info_single_doc_async
+                            # opens its own short-lived sessions for load/store
+                            # so no DB connection is held during the LLM call.
+                            await extract_info_single_doc_async(
+                                client=client,
+                                trial_id=trial_id,
+                                document_id=doc_id,
+                                llm_model=llm_model,
+                                schema_id=schema_id,
+                                prompt_id=prompt_id,
+                                project_id=project_id,
+                                advanced_options=advanced_options,
+                                base_url=base_url,
+                            )
 
                         except asyncio.CancelledError:
                             log.warning(

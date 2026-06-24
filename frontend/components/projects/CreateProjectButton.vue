@@ -120,7 +120,7 @@
 <script setup>
 import { ref, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { api } from '@/services/api'
+import { projectsApi } from '@/services/projectsApi'
 
 const router = useRouter()
 const isModalOpen = ref(false)
@@ -144,7 +144,7 @@ const createProject = async () => {
   isLoading.value = true
   error.value = ''
   try {
-    const response = await api.post('/project', projectData.value)
+    const response = await projectsApi.create(projectData.value)
     isModalOpen.value = false
     router.push(`/projects/${response.data.id}`)
   } catch (err) {

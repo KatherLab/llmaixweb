@@ -114,11 +114,11 @@ import { ref, watch } from 'vue'
 const props = defineProps({
   isJson: Boolean,
   isTabular: Boolean,
-  idColumn: String,
-  jsonIdField: String,
-  availableColumns: Array,
-  idCandidates: Array,
-  currentIdColumn: String,
+  idColumn: { type: String, default: '' },
+  jsonIdField: { type: String, default: '' },
+  availableColumns: { type: Array, default: () => [] },
+  idCandidates: { type: Array, default: () => [] },
+  currentIdColumn: { type: String, default: '' },
 })
 const emit = defineEmits(['update:id-column', 'update:json-id-field'])
 const innerIdColumn = ref(props.idColumn || '')

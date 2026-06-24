@@ -1,7 +1,7 @@
 // src/stores/firstAdmin.js
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { api } from '@/services/api'
+import { usersApi } from '@/services/usersApi'
 
 export const useFirstAdminStore = defineStore('firstAdmin', () => {
   const needsFirstAdmin = ref(false)
@@ -9,7 +9,7 @@ export const useFirstAdminStore = defineStore('firstAdmin', () => {
 
   async function checkFirstAdmin() {
     try {
-      const res = await api.get('/user/first-admin-check')
+      const res = await usersApi.firstAdminCheck()
       needsFirstAdmin.value = !!res.data.allow_first_admin_setup
     } catch (e) {
       needsFirstAdmin.value = false

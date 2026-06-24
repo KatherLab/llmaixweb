@@ -28,11 +28,12 @@ llmaixweb/
 │   └── utils/                # Enums, helpers, evaluation logic
 ├── frontend/                 # Vue 3 frontend
 │   ├── views/                # Page-level components (routed)
-│   ├── components/           # Reusable UI components
+│   ├── components/           # Reusable UI components (common/, + per-domain folders)
+│   ├── composables/          # Reusable composition functions (download, pagination, WS updates, theme…)
 │   ├── stores/               # Pinia stores (auth, firstAdmin)
-│   ├── services/             # Axios API client
+│   ├── services/             # Axios client (`api.js`) + per-resource API modules (`*Api.js`)
 │   ├── router/               # Vue Router config
-│   └── utils/                # Formatters, file type helpers
+│   └── utils/                # Formatters, date/err/markdown/schema helpers
 ├── alembic/                  # Database migrations
 ├── pyproject.toml            # Python deps, Ruff config, project metadata
 ├── compose.yml               # Docker Compose (CPU)
@@ -160,10 +161,12 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 | `celery/celery_config.py` | Celery app with 2 queues (`default`, `preprocess`) |
 | `celery/preprocessing.py` | `process_files_async` Celery task |
 | `celery/info_extraction.py` | `extract_info_celery` Celery task |
+| `celery/task_signals.py` | Celery signal hooks + sweeper: real-time status updates, crash messages, orphaned-task cleanup, WebSocket broadcast of task updates |
 | `utils/preprocessing.py` | `PreprocessingPipeline` class — main preprocessing orchestrator |
 | `utils/info_extraction.py` | LLM extraction logic (called by trial executor) |
 | `utils/evaluation.py` | Evaluation metrics computation |
 | `utils/enums.py` | All shared enums (FileType, PreprocessingStrategy, etc.) |
+| `utils/url_safety.py` | SSRF guardrails for user-supplied custom API endpoints (blocks cloud-metadata, restricts schemes, disables redirect-following) |
 
 ### Configuration System
 - **`Settings` class** (`core/config.py`): Uses Pydantic `BaseSettings`. Reads from `.env` file (path in `ENV_PATH` env var, defaults to `backend/.env`) or environment variables. Validates OpenAI API connection and storage on init.
@@ -221,26 +224,37 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - Request interceptor: adds Bearer token from localStorage
 - Response interceptor: auto-logout on 401/403, toast notification
 
+### API Service Layer (`services/*Api.js`)
+Per-resource modules wrap the raw `api` instance — **components import functions from these, not the raw `api` instance**. One module per backend resource: `authApi`, `usersApi`, `projectsApi`, `llmApi`, `filesApi`, `preprocessingApi`, `documentsApi`, `documentSetsApi`, `schemasApi`, `promptsApi`, `trialsApi`, `groundtruthApi`, `evaluationsApi`, `adminApi`, `versionApi`. Each exports typed functions (e.g. `trialsApi.list(projectId, params)`, `documentsApi.delete(projectId, docId)`). The only legitimate direct `api` import outside `services/` is `stores/auth.js` (for the auth-header config).
+
+### Shared Primitives & Composables
+The frontend has a layer of reusable building blocks — prefer these over re-implementing:
+
+- **`components/common/`** — `BaseModal` (Teleport + ref-counted scroll lock + ESC/backdrop close; the keystone most `*Modal.vue` components build on), `BaseButton`, `ConfirmationDialog`, `StatusBadge` (+ `utils/statusStyles.js`), `FilterChip`, `SearchInput`, `PaginationControls`, `JsonViewer`, `LoadingSpinner`, `EmptyState`, `ErrorBanner`, `Tooltip`, `FileIcon`.
+- **`composables/`** — `useScrollLock` (ref-counted body scroll lock for stacked modals), `useFileDownload` (blob→objectURL→revoke), `usePagination` / `useDocumentPagination`, `useGridTheme` (shared ag-grid theme + dark-mode reactivity), `usePreprocessingUpdates` / `useTrialUpdates` (WebSocket subscribe + project-id filtering for live task progress), `useModelTesting`, `useSchemaKeyboard`.
+- **`utils/`** — `formatters.js` (dates, file sizes, durations), `dateRange.js`, `errors.js` (`extractErrorMessage`), `markdown.js`, `schemaTypeIcons.js` (shared type→icon/color maps for the schema editor), `schemaTemplates.js` + `promptTemplates.js`, `ocrLabels.js`.
+
 ### Key UI Components
 
+Large components are **orchestration shells** — they compose smaller sibling components (in the same folder) and move heavy logic into composables. When editing a feature, the shell is the entry point but the real UI/logic usually lives in its extracted children.
+
 **Views (page-level):**
-- **`Landing.vue`** — dashboard/landing page
+- **`Landing.vue`** — landing page; composes the 10 components in `components/landing/` (hero, pipeline visualization, interactive demo, feature grid)
 - **`ProjectOverview.vue`** — project list grid
-- **`ProjectDetail.vue`** — project detail with tabbed workflow interface
-- **`AdminUserManagement.vue`** — user and invitation management
+- **`ProjectDetail.vue`** — project detail with tabbed workflow interface (Files → Preprocessing → Documents → Schemas → Trials → Evaluation)
+- **`AdminUserManagement.vue`** — user and invitation management (composes `InviteUserModal`/`EditUserModal` + ag-grid `UserGrid`/`InvitationGrid`)
 - **`AdminSettings.vue`** — system settings configuration
 - **`AdminCelery.vue`** — Celery task monitoring
 
-**Components (reusable):**
-- **`VisualSchemaEditor.vue`** / **`SchemaTree.vue`** — tree-based JSON schema editor
-- **`SchemaManagement.vue`** — schema list and management interface
-- **`FilesAndProcessing.vue`** — file upload and preprocessing management
-- **`PreprocessingManagement.vue`** — preprocessing configuration and monitoring
-- **`DocumentDetailsModal.vue`** — document viewing and metadata
-- **`TrialsManagement.vue`** / **`CreateTrialModal.vue`** / **`TrialSelectorModal.vue`** — trial creation and management
-- **`EvaluationView.vue`** / **`EvaluationOverview.vue`** — metrics display with per-field accuracy
-- **`GroundTruthUploadModal.vue`** / **`GroundTruthManager.vue`** — ground truth file handling
-- **`ProjectGrid.vue`** / **`UserGrid.vue`** — data grids for projects and users
+**Components (reusable, by folder):**
+- **`files/`** — `FilesAndProcessing.vue` (upload + preprocessing shell) with `FilesFilterBar`, `FileDropzone`, `UploadFilesModal`, `FilesTable`, `PreprocessingHistoryPanel`, `PreprocessingConfigPanel`, `FilePreviewModal`, `DuplicatePreviewModal`, `FileImportConfigModal`
+- **`documents/`** — `DocumentsManagement.vue` (list/filter shell) with `DocumentsFilters`, `DocumentsTable`, `PaginationControls`, `BatchActionsModal` (mode-aware: `documents` or `trials`), `DocumentsGroups`, `DocumentViewer` (+ `DocumentViewerHeader`, `DocumentTextView`, `DocumentFilePreview`, `DocumentCompareView`, `VersionHistorySidebar`, `DocumentInfoSidebar`, `ExtractionMethodBadge`)
+- **`schemas/`** — `SchemaManagement.vue` (lists schemas + prompts) with `SchemaListSection`/`PromptListSection`, `SchemaFormModal`/`PromptFormModal`, `SchemaViewModal`/`PromptViewModal`, `SchemaTemplatesModal`; `VisualSchemaEditor.vue` (full tree editor) + `SimpleSchemaEditor.vue` (simpler variant) with `SchemaTree`/`TreeNode`/`SchemaBlock`/`PropertyDetailsEditor` and `AddPropertyModal`/`EditPropertyModal`/`DeletePropertyModal`/`SchemaEditorToolbar`/`SchemaEditorHelpModal`
+- **`trials/`** — `TrialsManagement.vue` (list/filter shell, batch select+delete) with `TrialCard`, `TrialFiltersPanel`, `CreateTrialModal` (+ `TrialMetadataCard`, `TrialSchemaSelect`/`TrialPromptSelect`/`TrialModelSelect`, `DocumentSelectionPanel` + pickers, `AdvancedSettingsPanel`, `CustomApiSettingsPanel`, `ModelTestCard`), `TrialResults` (+ `TrialResultCard`, `TrialMetaHeader`, `ResultReasoningPanel`, `ResultDocumentPreview`, `TrialDocumentErrors`), `RenameTrialModal`, `DownloadModal`, `TrialSelectorModal`, `TrialSchemaModal`, `TrialPromptModal`
+- **`evaluation/`** — `EvaluationView.vue` / `EvaluationOverview.vue` (metrics + per-field accuracy), `FieldErrorAnalysis`, `DocumentAnalysis`, `EvaluationAnalysisModal`, `MetricsExportModal`
+- **`groundtruth/`** — `GroundTruthManager.vue` / `GroundTruthUploadModal.vue` / `GroundTruthPreviewModal.vue`, `FieldTree`, `MappingList`, `IdFieldSelector`, `GroundTruthSample`, `ValidationBanner`
+- **`admin/`** — `UserGrid` / `InvitationGrid` (ag-grid, themed via `useGridTheme`), `ActivityBell`, `InviteUserModal`, `EditUserModal`
+- **`projects/`** — `ProjectGrid.vue` (ag-grid), `ProjectSettingsModal`, `CreateProjectButton`
 
 ---
 
@@ -250,6 +264,14 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - Backend: `snake_case` for files, functions, variables; `PascalCase` for models and schemas
 - Frontend: `PascalCase.vue` for components, `camelCase` for JS variables
 - API routes use plural nouns (`/files`, `/projects`, `/trials/`)
+
+### Frontend Patterns
+- **Build modals on `BaseModal`** (Teleport + ref-counted scroll lock + ESC/backdrop). Don't hand-roll Teleport/backdrop/scroll-lock — nested modals will break.
+- **Call the API through `services/*Api.js`**, not the raw `api` instance. Add a function to the relevant module if one is missing.
+- **Reuse `composables/` and `components/common/`** before duplicating: downloads (`useFileDownload`), pagination (`usePagination` + `PaginationControls`), live task progress (`usePreprocessingUpdates`/`useTrialUpdates`), grid theming (`useGridTheme`), status pills (`StatusBadge`), error messages (`utils/errors.js` `extractErrorMessage`), dates/sizes (`utils/formatters.js`).
+- **`defineProps` style**: use full `{ type, required, default }` validation. Object/Array defaults must be factory functions (`() => ({})` / `() => []`); use `default: undefined` for optional Object/Function props that are falsy-checked (`v-if="prop"`). Don't use `() => null` for Object/Array (triggers Vue dev-mode type warnings).
+- **Dark mode**: AppLayout owns the `darkMode` toggle (writes `localStorage['darkMode']` + toggles the `dark` class on `<html>`). Tailwind is `darkMode: 'class'`. ag-grids theme via `useGridTheme`, which re-themes on the class change.
+- **Verification gate**: `npm run check` (prettier + eslint, 0 errors required) and `npm run build` must pass before committing.
 
 ### Linting & Formatting
 
@@ -333,7 +355,7 @@ Frontend tests are currently not set up.
 1. **Backend model** → add to `models/project.py`, create Alembic migration
 2. **Pydantic schema** → add to `schemas/project.py` or new schema file
 3. **API endpoint** → add as new router file in `routers/v1/endpoints/`, register in `projects.py` sub-router or in `main.py` top-level router
-4. **Frontend component** → add to `components/` or `views/`, add route in `router/index.js`
+4. **Frontend component** → add to `components/<domain>/` or `views/`, add route in `router/index.js`. Add API calls to the matching `services/*Api.js` module; build modals on `BaseModal` and reuse `composables/` + `components/common/` per the Frontend Patterns above.
 5. **Celery task** → add to `celery/` directory, register in `celery_config.py` `include` list
 
 ### Async Task Lifecycle
@@ -341,4 +363,4 @@ Frontend tests are currently not set up.
 2. Celery task is dispatched with the DB record ID
 3. Worker sets status to `IN_PROGRESS`, processes data, updates progress
 4. On completion: `COMPLETED` or `FAILED` status
-5. Frontend polls status endpoint periodically for progress updates
+5. Frontend gets live updates via WebSocket (broadcast by `celery/task_signals.py`); components subscribe through the `usePreprocessingUpdates` / `useTrialUpdates` composables (which filter by project id and merge updates). Some views also poll the status endpoint as a fallback.

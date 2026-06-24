@@ -646,13 +646,26 @@ def update_document_set(
                     document_set_association.c.document_set_id == set_id
                 )
             )
-            # Add new associations
-            for doc_id in value:
-                db.execute(
-                    document_set_association.insert().values(
-                        document_id=doc_id, document_set_id=set_id
-                    )
-                )
+            # Add new associations — but only for documents that actually belong
+            # to this project. Without this check a caller could add another
+            # project's document IDs to their set (cross-project reference).
+            if value:
+                valid_ids = {
+                    row[0]
+                    for row in db.execute(
+                        select(models.Document.id).where(
+                            models.Document.id.in_(value),
+                            models.Document.project_id == project_id,
+                        )
+                    ).all()
+                }
+                for doc_id in value:
+                    if doc_id in valid_ids:
+                        db.execute(
+                            document_set_association.insert().values(
+                                document_id=doc_id, document_set_id=set_id
+                            )
+                        )
         else:
             setattr(doc_set, field, value)
 
@@ -1028,13 +1041,27 @@ def create_document_set_from_trial(
     db.add(db_set)
     db.flush()
 
-    # Add documents
-    for doc_id in trial.document_ids:
-        db.execute(
-            document_set_association.insert().values(
-                document_id=doc_id, document_set_id=db_set.id
-            )
-        )
+    # Add documents — verify membership in one batched query rather than
+    # trusting trial.document_ids (which could be stale or reference docs that
+    # were since moved/deleted). Avoids cross-project references.
+    doc_ids = list(trial.document_ids or [])
+    if doc_ids:
+        valid_ids = {
+            row[0]
+            for row in db.execute(
+                select(models.Document.id).where(
+                    models.Document.id.in_(doc_ids),
+                    models.Document.project_id == project_id,
+                )
+            ).all()
+        }
+        for doc_id in doc_ids:
+            if doc_id in valid_ids:
+                db.execute(
+                    document_set_association.insert().values(
+                        document_id=doc_id, document_set_id=db_set.id
+                    )
+                )
 
     db.commit()
     db.refresh(db_set)

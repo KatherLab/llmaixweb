@@ -21,5 +21,5 @@
   </div>
 </template>
 <script setup>
-const props = defineProps({ status: Object })
+const props = defineProps({ status: { type: Object, default: undefined } })
 </script>

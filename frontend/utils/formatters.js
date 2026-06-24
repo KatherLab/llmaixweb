@@ -61,3 +61,45 @@ export function truncateText(text, maxLength = 100) {
 
   return text.slice(0, maxLength) + '...'
 }
+
+/**
+ * Format a duration in seconds as HH:MM:SS.
+ * @param {number} seconds - Duration in seconds
+ * @returns {string} Formatted duration (e.g. "00:05:32")
+ */
+export function formatDuration(seconds) {
+  if (!seconds || isNaN(seconds)) return '00:00:00'
+  return new Date(seconds * 1000).toISOString().substring(11, 19)
+}
+
+/**
+ * Format a date string with both date and time.
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted date+time string
+ */
+export function formatDateTime(dateString) {
+  return formatDate(dateString, true)
+}
+
+/**
+ * Format a timestamp as a relative "time ago" string (e.g. "2m ago", "3h ago").
+ * @param {string|number|Date} timestamp - The timestamp to format
+ * @returns {string} Relative time string
+ */
+export function formatRelativeTime(timestamp) {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  if (isNaN(date)) return ''
+
+  const diff = Math.max(0, Date.now() - date.getTime())
+  const seconds = Math.floor(diff / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (seconds < 60) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days < 30) return `${days}d ago`
+  return formatDate(timestamp)
+}

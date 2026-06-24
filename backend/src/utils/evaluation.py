@@ -1,6 +1,7 @@
 # backend/src/utils/evaluation.py
 import io
 import json
+import logging
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -9,12 +10,15 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from pandas.errors import ParserError
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
 from thefuzz import fuzz
 
 from .. import models
 from .helpers import flatten_dict
 from .json_utils import make_jsonable
+
+logger = logging.getLogger(__name__)
 
 
 def _is_missing(value: Any) -> bool:
@@ -170,6 +174,35 @@ class EvaluationEngine:
 
         return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
 
+    def _load_documents_for_results(
+        self, results: List[models.TrialResult]
+    ) -> Dict[int, models.Document]:
+        """Batch-load all Documents referenced by ``results`` with their
+        ``original_file`` eager-loaded.
+
+        Replaces the per-result ``db.get(Document, id)`` + lazy
+        ``document.original_file`` pattern (2 queries × N results → 2 queries
+        total). Returns a ``{doc_id: Document}`` map; missing docs are absent.
+        """
+        doc_ids = []
+        for result in results:
+            try:
+                doc_ids.append(int(result.document_id))
+            except (ValueError, TypeError):
+                continue
+        if not doc_ids:
+            return {}
+        documents = (
+            self.db.execute(
+                select(models.Document)
+                .where(models.Document.id.in_(doc_ids))
+                .options(selectinload(models.Document.original_file))
+            )
+            .scalars()
+            .all()
+        )
+        return {doc.id: doc for doc in documents}
+
     def _validate_data_consistency(
         self, results: List[models.TrialResult], gt_data: Dict, field_mappings: Dict
     ) -> Dict:
@@ -181,13 +214,9 @@ class EvaluationEngine:
         matched_count = 0
         unmatched_documents = []
 
-        # Build document lookup for better error reporting
-        document_lookup = {}
-        for result in results:
-            doc_id = result.document_id
-            document = self.db.get(models.Document, doc_id)
-            if document:
-                document_lookup[doc_id] = document
+        # Build document lookup for better error reporting (batch-loaded with
+        # original_file eager-loaded to avoid N+1 queries).
+        document_lookup = self._load_documents_for_results(results)
 
         for result in results:
             doc_id = result.document_id
@@ -267,11 +296,15 @@ class EvaluationEngine:
         """Pre-load all document data to avoid session issues in parallel processing."""
         document_data = {}
 
+        # Batch-load documents (with original_file eager-loaded) instead of one
+        # db.get + lazy load per result.
+        document_lookup = self._load_documents_for_results(results)
+
         for result in results:
             doc_id = result.document_id
             try:
                 doc_id = int(doc_id)
-                document = self.db.get(models.Document, doc_id)
+                document = document_lookup.get(doc_id)
                 if document:
                     # Store relevant document data
                     document_data[doc_id] = {
@@ -286,17 +319,14 @@ class EvaluationEngine:
                     }
                 else:
                     document_data[doc_id] = {"exists": False}
-            except (ValueError, TypeError) as e:
-                print("Error converting document ID:", e)
+            except (ValueError, TypeError):
+                logger.warning("Error converting document ID: %s", doc_id)
                 document_data[doc_id] = {
                     "exists": False,
                     "error": "Invalid document ID",
                 }
-            except Exception as e:
-                print("Error loading documents: ", e)
-                import traceback
-
-                print(traceback.format_exc())
+            except Exception:
+                logger.exception("Error loading document %s", doc_id)
 
         return document_data
 
@@ -1148,15 +1178,29 @@ class MetricsCalculator:
     def _calculate_overall_metrics(
         self, doc_evals: List[Dict], detailed_metrics: List[Dict]
     ) -> Dict:
-        """Calculate overall metrics."""
+        """Calculate overall metrics.
+
+        Documents that failed to evaluate (no ground-truth match, DB lookup
+        error, etc.) carry an ``error`` key and ``total_fields=0``. They are
+        excluded from the accuracy denominator (there is nothing to score
+        them against), so we surface ``matched_document_count`` and
+        ``error_document_count`` separately — otherwise a trial where half
+        the documents failed to match ground truth would report an accuracy
+        computed only over the surviving half, with no indication that
+        documents were dropped.
+        """
         total_docs = len(doc_evals)
+        error_docs = sum(1 for d in doc_evals if d.get("error"))
+        matched_docs = total_docs - error_docs
         total_fields = sum(d.get("total_fields", 0) for d in doc_evals)
         correct_fields = sum(d.get("correct_fields", 0) for d in doc_evals)
-        # Basic metrics
+        # Accuracy is over matched documents only (error docs have no scoreable fields).
         accuracy = correct_fields / total_fields if total_fields > 0 else 0
         return {
             "accuracy": accuracy,
             "total_documents": total_docs,
+            "matched_document_count": matched_docs,
+            "error_document_count": error_docs,
             "total_fields": total_fields,
             "correct_fields": correct_fields,
         }

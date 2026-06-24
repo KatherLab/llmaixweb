@@ -404,7 +404,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { frontendVersion, frontendGitCommit } from '@/version.js'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { api } from '@/services/api.js'
+import { versionApi } from '@/services/versionApi'
+import { usersApi } from '@/services/usersApi'
 import { useToast } from 'vue-toastification'
 import ActivityBell from '@/components/admin/ActivityBell.vue'
 
@@ -469,7 +470,7 @@ if (typeof window !== 'undefined' && window.matchMedia) {
 onMounted(async () => {
   // Fetch backend version and git commit
   try {
-    const response = await api.get('/version')
+    const response = await versionApi.get()
     backendVersion.value = response.data.backend_version || response.data.version
     backendGitCommit.value = response.data.backend_git_commit || 'unknown'
     isBackendDown.value = false
@@ -559,7 +560,7 @@ async function handleChangePassword() {
   }
   isChangingPassword.value = true
   try {
-    await api.post('/user/change-password', {
+    await usersApi.changePassword({
       old_password: currentPassword.value,
       new_password: newPassword.value,
     })

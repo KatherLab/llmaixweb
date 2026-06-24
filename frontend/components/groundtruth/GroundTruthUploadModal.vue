@@ -208,8 +208,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { api } from '@/services/api'
+import { ref, computed } from 'vue'
+import { groundtruthApi } from '@/services/groundtruthApi'
 import { useToast } from 'vue-toastification'
 import { useScrollLock } from '@/composables/useScrollLock'
 
@@ -300,18 +300,14 @@ const uploadGroundTruth = async () => {
       formData.append('name', groundTruthName.value || 'JSON Ground Truth')
       formData.append('format', 'zip')
 
-      response = await api.post(`/project/${props.projectId}/groundtruth`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      response = await groundtruthApi.upload(props.projectId, formData)
     } else {
       const formData = new FormData()
       formData.append('file', selectedFiles.value[0])
       formData.append('name', groundTruthName.value || selectedFiles.value[0].name)
       formData.append('format', groundTruthFormat.value)
 
-      response = await api.post(`/project/${props.projectId}/groundtruth`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      response = await groundtruthApi.upload(props.projectId, formData)
     }
 
     emit('uploaded', response.data)

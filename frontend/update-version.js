@@ -5,9 +5,9 @@ import packageJson from '../package.json' with { type: 'json' }
 
 const versionJs = `// Frontend version - update this on each release
 // Note: Also bump version in pyproject.toml for backend
-export const frontendVersion = '${packageJson.version}';
+export const frontendVersion = '${packageJson.version}'
 // Git commit hash - injected at build time via VITE_GIT_COMMIT_HASH
-export const frontendGitCommit = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown';
+export const frontendGitCommit = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown'
 `
 const versionJsPath = path.join(process.cwd(), 'frontend', 'version.js')
 

@@ -12,6 +12,7 @@ except RuntimeError:
     pass
 
 import os
+import platform
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, WebSocket, WebSocketDisconnect
@@ -34,11 +35,34 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 
-def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
+def _resolve_celery_pool(pool: str) -> str:
+    """Resolve a Celery worker pool name, handling the ``auto`` sentinel.
+
+    ``auto`` → ``solo`` on macOS (native OCR libraries like Tesseract/Paddle
+    are not thread/fork-safe and crash under prefork on Darwin), ``prefork``
+    elsewhere. Explicit values (``solo``/``prefork``/``threads``/…) pass
+    through unchanged.
     """
-    Start ONE Celery worker process listening on <queue> using Celery’s
-    default prefork pool (so logs go straight to your terminal).
+    pool = (pool or "").strip().lower()
+    if pool == "auto":
+        return "solo" if platform.system() == "Darwin" else "prefork"
+    return pool or "threads"
+
+
+def _spawn_celery_worker(
+    queue: str, concurrency: int, pool: str | None = None
+) -> mp.Process:
     """
+    Start ONE Celery worker process listening on <queue>.
+
+    ``pool`` overrides the pool type for this queue; when omitted it falls back
+    to the ``CELERY_DEV_POOL`` env var (default ``threads``). The preprocess
+    queue should pass ``settings.CELERY_PREPROCESS_POOL`` so the heavy OCR
+    worker uses a native-library-safe pool (solo on macOS).
+    """
+    resolved_pool = _resolve_celery_pool(
+        pool if pool is not None else os.getenv("CELERY_DEV_POOL", "threads")
+    )
     argv = [
         "worker",
         "-Q",
@@ -48,7 +72,7 @@ def _spawn_celery_worker(queue: str, concurrency: int) -> mp.Process:
         "--max-tasks-per-child",
         "5",
         "--pool",
-        os.getenv("CELERY_DEV_POOL", "threads"),
+        resolved_pool,
         "--loglevel",
         "info",
         "-n",
@@ -141,8 +165,14 @@ async def lifespan(app):
         # 1) general‑purpose tasks
         workers.append(_spawn_celery_worker("default", concurrency=4))
 
-        # 2) heavy OCR / preprocessing tasks
-        workers.append(_spawn_celery_worker("preprocess", concurrency=1))
+        # 2) heavy OCR / preprocessing tasks — use the preprocess-specific pool
+        # (CELERY_PREPROCESS_POOL, defaults to "auto" → solo on macOS for
+        # native OCR library safety) rather than the generic CELERY_DEV_POOL.
+        workers.append(
+            _spawn_celery_worker(
+                "preprocess", concurrency=1, pool=settings.CELERY_PREPROCESS_POOL
+            )
+        )
 
     # Start Redis subscriber in background (non-blocking, optional)
     redis_task = None

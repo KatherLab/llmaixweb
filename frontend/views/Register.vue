@@ -75,34 +75,15 @@
           placeholder="Confirm your password"
         />
       </div>
-      <button
+      <BaseButton
         type="submit"
-        class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 disabled:opacity-70 disabled:cursor-not-allowed"
+        size="lg"
+        :loading="isLoading"
         :disabled="isLoading || !isFormValid"
+        class="w-full py-2.5"
       >
-        <svg
-          v-if="isLoading"
-          class="animate-spin h-5 w-5 mr-1"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          />
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          />
-        </svg>
-        <span>{{ isLoading ? 'Creating account...' : 'Create Account' }}</span>
-      </button>
+        {{ isLoading ? 'Creating account...' : 'Create Account' }}
+      </BaseButton>
       <transition name="fade">
         <div
           v-if="error"
@@ -124,10 +105,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { api } from '@/services/api'
+import { authApi } from '@/services/authApi'
+import { usersApi } from '@/services/usersApi'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -159,7 +142,7 @@ onMounted(async () => {
   }
   // Fetch require_invitation from backend
   try {
-    const res = await api.get('/auth/settings')
+    const res = await authApi.getSettings()
     requireInvitation.value = !!res.data.require_invitation
   } catch (e) {
     requireInvitation.value = true
@@ -172,7 +155,7 @@ onMounted(async () => {
   if (token) {
     invitationToken.value = token
     try {
-      const response = await api.get(`/user/validate-invitation/${token}`)
+      const response = await usersApi.validateInvitation(token)
       if (response.data && response.data.valid) {
         email.value = response.data.email
         isEmailFromInvitation.value = true
@@ -209,16 +192,14 @@ async function handleSubmit() {
     }
     if (invitationToken.value) payload.invitation_token = invitationToken.value
 
-    await api.post('/user', payload)
+    await usersApi.create(payload)
 
     // Auto-login (save token + fetch user, just like login page)
     const formData = new URLSearchParams()
     formData.append('username', email.value)
     formData.append('password', password.value)
 
-    const loginResponse = await api.post('/auth/login', formData.toString(), {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    })
+    const loginResponse = await authApi.login(formData.toString())
 
     await authStore.setToken(loginResponse.data.access_token)
     await authStore.fetchUser()

@@ -383,9 +383,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { api } from '@/services/api'
+import { projectsApi } from '@/services/projectsApi'
+import { preprocessingApi } from '@/services/preprocessingApi'
 import { useToast } from 'vue-toastification'
 import { websocketService } from '@/services/websocket.js'
 
@@ -398,7 +399,6 @@ const preprocessingTasks = ref([])
 const trialTasks = ref([])
 const isLoading = ref(false)
 const hasLoadedOnce = ref(false)
-const pollingInterval = ref(null)
 const dismissedTasks = ref({ preprocess: new Set(), trial: new Set() })
 const scrollContainer = ref(null)
 const wsUnsubscribe = ref(null)
@@ -559,7 +559,7 @@ const fetchAllTasks = async (isPolling = false) => {
   }
   try {
     // Fetch preprocessing tasks (active + last 24 hours)
-    const preprocessResponse = await api.get('/project/activity/preprocess?limit=10&hours=24')
+    const preprocessResponse = await projectsApi.activityPreprocess({ limit: 10, hours: 24 })
     const allPreprocessTasks = preprocessResponse.data || []
 
     // Filter out dismissed
@@ -568,7 +568,7 @@ const fetchAllTasks = async (isPolling = false) => {
     )
 
     // Fetch trial tasks (active + last 24 hours)
-    const trialResponse = await api.get('/project/activity/trials?limit=10&hours=24')
+    const trialResponse = await projectsApi.activityTrials({ limit: 10, hours: 24 })
     const allTrialTasks = trialResponse.data || []
 
     // Filter out dismissed
@@ -680,7 +680,7 @@ const cancelPreprocessing = async (task) => {
     return
   }
   try {
-    await api.post(`/project/${task.project_id}/preprocess/${task.id}/cancel`)
+    await preprocessingApi.cancel(task.project_id, task.id)
     toast.success('Preprocessing cancelled')
     // Update local state
     const idx = preprocessingTasks.value.findIndex((t) => t.id === task.id)

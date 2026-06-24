@@ -158,7 +158,7 @@
 <script setup>
 import { ref, computed, onMounted, provide, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api } from '@/services/api'
+import { projectsApi } from '@/services/projectsApi'
 import FilesAndProcessing from '@/components/files/FilesAndProcessing.vue'
 import DocumentsManagement from '@/components/documents/DocumentsManagement.vue'
 import TrialsManagement from '@/components/trials/TrialsManagement.vue'
@@ -261,7 +261,7 @@ function handleQueryParams() {
 const fetchProject = async () => {
   isLoading.value = true
   try {
-    const response = await api.get(`/project/${projectId.value}`)
+    const response = await projectsApi.get(projectId.value)
     project.value = response.data
   } catch (err) {
     error.value = 'Failed to load project details'
@@ -284,7 +284,7 @@ function handleStepChange(stepId) {
 const saveProjectEdits = async ({ name, description }) => {
   isSaving.value = true
   try {
-    const response = await api.put(`/project/${projectId.value}`, { name, description })
+    const response = await projectsApi.update(projectId.value, { name, description })
     project.value = response.data
     toast.success('Project updated successfully')
     showSettingsModal.value = false
@@ -299,7 +299,7 @@ const saveProjectEdits = async ({ name, description }) => {
 // --- DELETE LOGIC ---
 const deleteProject = async () => {
   try {
-    await api.delete(`/project/${projectId.value}`)
+    await projectsApi.delete(projectId.value)
     toast.success('Project deleted successfully')
     router.push('/projects')
   } catch {

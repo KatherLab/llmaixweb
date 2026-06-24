@@ -22,13 +22,23 @@ from ....utils.info_extraction import (
     test_llm_connection,
     test_model_with_schema,
 )
+from ....utils.url_safety import UnsafeEndpointError, validate_user_endpoint
 
 router = APIRouter()
 
 
-def _resolve_creds(api_key: str | None, base_url: str | None) -> tuple[str | None, str | None]:
+def _resolve_creds(
+    api_key: str | None, base_url: str | None
+) -> tuple[str | None, str | None]:
     """Fall back to the system-wide configured LLM credentials when not supplied."""
     return api_key or settings.OPENAI_API_KEY, base_url or settings.OPENAI_API_BASE
+
+
+def _invalid_url_response(
+    message: str = "The provided endpoint URL is not allowed.",
+) -> dict[str, Any]:
+    """Safe, category-only response for a blocked user-supplied endpoint (SSRF)."""
+    return {"success": False, "message": message, "error_type": "invalid_url"}
 
 
 @router.post("/models", response_model=dict[str, Any])
@@ -36,7 +46,12 @@ def get_available_llm_models(
     body: LLMConnectionRequest | None = None,
     current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    api_key, base_url = _resolve_creds(*(body.api_key, body.base_url) if body else (None, None))
+    user_base_url = (body.base_url if body else None) or settings.OPENAI_API_BASE
+    try:
+        user_base_url = validate_user_endpoint(user_base_url)
+    except UnsafeEndpointError:
+        return _invalid_url_response()
+    api_key, base_url = _resolve_creds((body.api_key if body else None), user_base_url)
     if api_key is None or base_url is None:
         return {
             "success": False,
@@ -52,7 +67,12 @@ def test_api_connection_endpoint(
     body: LLMConnectionRequest | None = None,
     current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    api_key, base_url = _resolve_creds(*(body.api_key, body.base_url) if body else (None, None))
+    user_base_url = (body.base_url if body else None) or settings.OPENAI_API_BASE
+    try:
+        user_base_url = validate_user_endpoint(user_base_url)
+    except UnsafeEndpointError:
+        return _invalid_url_response()
+    api_key, base_url = _resolve_creds((body.api_key if body else None), user_base_url)
     if api_key is None or base_url is None:
         return {
             "success": False,
@@ -67,9 +87,12 @@ def test_llm_model_endpoint(
     body: LLMModelTestRequest | None = None,
     current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    api_key, base_url = _resolve_creds(
-        *(body.api_key, body.base_url) if body else (None, None)
-    )
+    user_base_url = (body.base_url if body else None) or settings.OPENAI_API_BASE
+    try:
+        user_base_url = validate_user_endpoint(user_base_url)
+    except UnsafeEndpointError:
+        return _invalid_url_response()
+    api_key, base_url = _resolve_creds((body.api_key if body else None), user_base_url)
     llm_model = (body.llm_model if body else None) or settings.OPENAI_API_MODEL
     if api_key is None or base_url is None or llm_model is None:
         return {
@@ -87,7 +110,13 @@ def test_model_with_schema_endpoint(
     current_user: models.User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Test if a model supports structured output with a specific schema"""
-    api_key, base_url = _resolve_creds(body.api_key, body.base_url)
+    try:
+        user_base_url = validate_user_endpoint(
+            body.base_url or settings.OPENAI_API_BASE
+        )
+    except UnsafeEndpointError:
+        return _invalid_url_response()
+    api_key, base_url = _resolve_creds(body.api_key, user_base_url)
     llm_model = body.llm_model or settings.OPENAI_API_MODEL
     if api_key is None or base_url is None or llm_model is None:
         return {
@@ -151,9 +180,15 @@ def test_vlm_image_support(
     Test if a VLM model supports image input.
     All credential fields are optional and fall back to system defaults.
     """
-    api_key, base_url = _resolve_creds(
-        *(body.api_key, body.base_url) if body else (None, None)
-    )
+    user_base_url = (body.base_url if body else None) or settings.OPENAI_API_BASE
+    try:
+        user_base_url = validate_user_endpoint(user_base_url)
+    except UnsafeEndpointError:
+        return {
+            "supported": False,
+            "message": "The provided endpoint URL is not allowed.",
+        }
+    api_key, base_url = _resolve_creds((body.api_key if body else None), user_base_url)
     model = body.llm_model if body else None
 
     if not api_key or not base_url or not model:
@@ -177,5 +212,8 @@ def test_vlm_image_support(
             if supported
             else "Model does not support image input",
         }
-    except Exception as e:
-        return {"supported": False, "message": f"Test failed: {str(e)}"}
+    except Exception:
+        # Don't echo the upstream exception string — it can embed the response
+        # body/URL of an internal service the user pointed base_url at (SSRF
+        # exfiltration channel). Return a category-only message.
+        return {"supported": False, "message": "Image support test failed."}

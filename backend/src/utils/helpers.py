@@ -10,7 +10,8 @@ from typing import Any
 import requests
 from fastapi import HTTPException
 from PIL import Image
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
 
 from backend.src import models, schemas
 
@@ -331,11 +332,28 @@ def collect_trial_document_metadata(
     """
     # Fetch all TrialResults for the trial
     results = db.query(models.TrialResult).filter_by(trial_id=trial.id).all()
+
+    # Batch-load all referenced documents with original_file eager-loaded
+    # (avoids N+1: previously one db.get + lazy original_file per result).
+    doc_ids = [r.document_id for r in results if r.document_id is not None]
+    document_lookup: dict[int, models.Document] = {}
+    if doc_ids:
+        document_lookup = {
+            d.id: d
+            for d in db.execute(
+                select(models.Document)
+                .where(models.Document.id.in_(doc_ids))
+                .options(selectinload(models.Document.original_file))
+            )
+            .scalars()
+            .all()
+        }
+
     docs = []
     gt_cache = {}
     # For each result/document, gather metadata
     for result in results:
-        doc = db.get(models.Document, result.document_id)
+        doc = document_lookup.get(result.document_id)
         if not doc:
             continue
         entry = {
@@ -357,7 +375,7 @@ def collect_trial_document_metadata(
                 # Try to match the document by doc_name or file_name
                 key = (
                     str(doc.document_name)
-                    if doc.document_name in gt_data
+                    if doc.document_name is not None and doc.document_name in gt_data
                     else str(doc.id)
                 )
                 entry["Ground Truth"] = gt_data.get(key)
@@ -701,7 +719,11 @@ def test_remote_image_support(api_url: str, model: str, api_key: str) -> bool:
         "max_tokens": 3,
     }
     try:
-        response = requests.post(api_url, json=payload, headers=headers, timeout=10)
+        # allow_redirects=False: a user-controlled endpoint must not 3xx-bounce
+        # the request to a blocked internal address (SSRF redirect bypass).
+        response = requests.post(
+            api_url, json=payload, headers=headers, timeout=10, allow_redirects=False
+        )
         data = response.json()
         if not response.ok or "choices" not in data:
             return False

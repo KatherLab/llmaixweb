@@ -3,8 +3,6 @@
  * Manages connection, reconnection, and event broadcasting.
  */
 
-import { api } from './api.js'
-
 class WebSocketService {
   constructor() {
     this.ws = null
@@ -159,7 +157,6 @@ class WebSocketService {
    * Emit an event to all listeners
    */
   emit(eventType, data) {
-    // Emit for specific event type
     this.listeners.get(eventType)?.forEach((callback) => {
       try {
         callback(data)
@@ -167,24 +164,6 @@ class WebSocketService {
         console.error(`[WebSocket] Error in ${eventType} listener:`, error)
       }
     })
-
-    // Always emit 'all' events for debugging
-    if (this.listeners.has('all')) {
-      this.listeners.get('all').forEach((callback) => {
-        try {
-          callback({ type: eventType, data })
-        } catch (error) {
-          console.error('[WebSocket] Error in all listener:', error)
-        }
-      })
-    }
-  }
-
-  /**
-   * Subscribe to all events (useful for debugging)
-   */
-  subscribeAll(callback) {
-    return this.subscribe('all', callback)
   }
 
   /**
@@ -199,24 +178,6 @@ class WebSocketService {
    */
   onTrialUpdate(callback) {
     return this.subscribe('trial_update', callback)
-  }
-
-  /**
-   * Send a message to the server
-   */
-  send(data) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(data))
-    } else {
-      console.warn('[WebSocket] Cannot send - not connected')
-    }
-  }
-
-  /**
-   * Ping the server to keep connection alive
-   */
-  ping() {
-    this.send({ type: 'ping' })
   }
 }
 

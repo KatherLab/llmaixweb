@@ -330,13 +330,14 @@ import MappingList from '@/components/groundtruth/MappingList.vue'
 import ValidationBanner from '@/components/groundtruth/ValidationBanner.vue'
 import GroundTruthSample from '@/components/groundtruth/GroundTruthSample.vue'
 import IdFieldSelector from '@/components/groundtruth/IdFieldSelector.vue'
-import { api } from '@/services/api'
+import { schemasApi } from '@/services/schemasApi'
+import { groundtruthApi } from '@/services/groundtruthApi'
 
 useScrollLock({ autoLock: true })
 
 const props = defineProps({
-  projectId: [String, Number],
-  groundTruth: Object,
+  projectId: { type: [String, Number], default: undefined },
+  groundTruth: { type: Object, default: () => ({}) },
 })
 const emit = defineEmits(['close', 'configured'])
 const toast = useToast()
@@ -427,18 +428,12 @@ onMounted(async () => {
 })
 
 async function loadSchemas() {
-  const res = await api.get(`/project/${props.projectId}/schema`)
+  const res = await schemasApi.list(props.projectId)
   schemas.value = res.data
 }
 
-function normalizeCol(v) {
-  return (v ?? '').toString().trim()
-}
-
 async function loadGroundTruthPreview() {
-  const previewRes = await api.get(
-    `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/preview`,
-  )
+  const previewRes = await groundtruthApi.preview(props.projectId, props.groundTruth.id)
 
   groundTruthFieldPaths.value = previewRes.data.fields || []
   groundTruthFieldTypes.value = previewRes.data.field_types || {}
@@ -497,13 +492,11 @@ async function loadGroundTruthPreview() {
 async function onSchemaChange() {
   if (!selectedSchemaId.value) return
   loading.value = true
-  const schemaFieldRes = await api.get(
-    `/project/${props.projectId}/schema/${selectedSchemaId.value}/field_types`,
-  )
+  const schemaFieldRes = await schemasApi.getFieldTypes(props.projectId, selectedSchemaId.value)
   schemaFieldTypes.value = schemaFieldRes.data || {}
   schemaFieldPaths.value = Object.keys(schemaFieldTypes.value)
   schemaFieldTree.value = buildTree(schemaFieldPaths.value)
-  const schemaRes = await api.get(`/project/${props.projectId}/schema/${selectedSchemaId.value}`)
+  const schemaRes = await schemasApi.get(props.projectId, selectedSchemaId.value)
   requiredFields.value = extractRequiredFields(schemaRes.data.schema_definition)
   await loadExistingMappings()
   selectedSchemaField.value = ''
@@ -543,23 +536,6 @@ function extractRequiredFields(schema, prefix = '') {
     }
   }
   return req
-}
-
-function syncIdSelectionFromGT(previewRes) {
-  const idCol = previewRes.data.current_id_column || previewRes.data.id_column_name || ''
-  if (isTabularFormat.value) {
-    idColumn.value = idCol || ''
-    jsonIdField.value = ''
-  } else if (isJsonFormat.value) {
-    if (idCol && idCol !== '') {
-      idColumn.value = '__field__'
-      jsonIdField.value = idCol
-    } else {
-      idColumn.value = '' // radio: use filename
-      jsonIdField.value = ''
-    }
-  }
-  currentIdColumn.value = idCol || ''
 }
 
 const canAddMapping = computed(
@@ -643,8 +619,10 @@ async function saveMappings() {
     }
   }
   // Save mappings
-  await api.post(
-    `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/schema/${selectedSchemaId.value}/mapping`,
+  await groundtruthApi.setMappings(
+    props.projectId,
+    props.groundTruth.id,
+    selectedSchemaId.value,
     mappings.value,
   )
   toast.success('Mappings saved successfully!')
@@ -667,10 +645,7 @@ async function saveIdColumn() {
       payload.id_column = '' // use filename
     }
   }
-  await api.put(
-    `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/id-column`,
-    payload,
-  )
+  await groundtruthApi.setIdColumn(props.projectId, props.groundTruth.id, payload)
   currentIdColumn.value =
     isJsonFormat.value && idColumn.value === '__field__'
       ? jsonIdField.value
@@ -681,8 +656,10 @@ async function saveIdColumn() {
 
 async function loadExistingMappings() {
   try {
-    const res = await api.get(
-      `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/schema/${selectedSchemaId.value}/mapping`,
+    const res = await groundtruthApi.getMappings(
+      props.projectId,
+      props.groundTruth.id,
+      selectedSchemaId.value,
     )
     mappings.value = (res.data || []).map((m) => ({
       ...m,

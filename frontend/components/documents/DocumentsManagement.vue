@@ -50,223 +50,20 @@
     <!-- Tab Content -->
     <div v-if="activeTab === 'documents'">
       <!-- Filters and Search -->
-      <div
-        class="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700 mb-4"
-      >
-        <!-- Top row: Search + Filters -->
-        <div class="flex items-center gap-3">
-          <!-- Search -->
-          <div class="relative flex-1 max-w-sm">
-            <input
-              v-model="filters.search"
-              type="text"
-              placeholder="Search documents..."
-              class="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-              @input="debouncedFetchDocuments"
-            />
-            <svg
-              class="absolute left-3 top-2.5 h-4 w-4 text-gray-400 dark:text-gray-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </div>
-
-          <!-- OCR Engine Filter -->
-          <select
-            v-model="filters.ocrEngine"
-            class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-            @change="fetchDocuments"
-          >
-            <option value="">All OCR Engines</option>
-            <option value="pypdf">Embedded Text (pypdf)</option>
-            <option value="tesseract">Local OCR (Tesseract)</option>
-            <option value="mistral_ocr">Mistral OCR</option>
-            <option value="llm_vision">Vision LLM</option>
-          </select>
-
-          <!-- Date Range Filter -->
-          <select
-            v-model="filters.dateRange"
-            class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-            @change="handleDateRangeChange"
-          >
-            <option value="">All Time</option>
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="week">Last 7 Days</option>
-            <option value="month">Last 30 Days</option>
-            <option value="custom">Custom Range...</option>
-          </select>
-
-          <!-- Clear Filters -->
-          <button
-            v-if="hasActiveFilters"
-            class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-            title="Clear all filters"
-            @click="clearFilters"
-          >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-
-          <div class="ml-auto text-sm text-gray-500 dark:text-gray-400">
-            {{ totalCount }} documents
-          </div>
-        </div>
-
-        <!-- Custom Date Range Picker (shown when "Custom Range" is selected) -->
-        <div
-          v-if="filters.dateRange === 'custom'"
-          class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
-        >
-          <div class="flex items-center gap-2">
-            <label class="text-sm text-gray-600 dark:text-gray-300">From:</label>
-            <input
-              v-model="customDateFrom"
-              type="date"
-              class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-              @change="applyCustomDateRange"
-            />
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="text-sm text-gray-600 dark:text-gray-300">To:</label>
-            <input
-              v-model="customDateTo"
-              type="date"
-              class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-              @change="applyCustomDateRange"
-            />
-          </div>
-          <button
-            class="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-            @click="applyCustomDateRange"
-          >
-            Apply
-          </button>
-        </div>
-
-        <!-- Active Filters Summary -->
-        <div
-          v-if="hasActiveFilters"
-          class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
-        >
-          <span class="text-xs text-gray-500 dark:text-gray-400">Active filters:</span>
-          <span
-            v-if="filters.search"
-            class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full"
-          >
-            Search: "{{ filters.search }}"
-            <button class="hover:text-red-600" @click="clearSearchFilter()">
-              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </span>
-          <span
-            v-if="filters.ocrEngine"
-            class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full"
-          >
-            OCR: {{ getOcrEngineLabel(filters.ocrEngine) }}
-            <button class="hover:text-red-600" @click="clearOcrEngineFilter()">
-              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </span>
-          <span
-            v-if="filters.dateRange && filters.dateRange !== 'custom'"
-            class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full"
-          >
-            Date: {{ getDateRangeLabel(filters.dateRange) }}
-            <button class="hover:text-red-600" @click="clearDateRangeFilter()">
-              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </span>
-          <span
-            v-if="filters.dateRange === 'custom' && customDateFrom"
-            class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full"
-          >
-            Date: {{ customDateFrom }} → {{ customDateTo || 'present' }}
-            <button class="hover:text-red-600" @click="clearCustomDateRange()">
-              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </span>
-          <span
-            v-if="filters.includeArchived"
-            class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full"
-          >
-            Archived
-            <button class="hover:text-red-600" @click="clearArchivedFilter()">
-              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </span>
-        </div>
-
-        <!-- Archived Toggle (inline with other filters) -->
-        <div
-          class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
-        >
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input
-              v-model="filters.includeArchived"
-              type="checkbox"
-              class="rounded text-blue-600 focus:ring-blue-500"
-              @change="fetchDocuments"
-            />
-            <span class="text-sm text-gray-700 dark:text-gray-300">
-              Include archived versions
-              <span v-if="filters.includeArchived" class="text-xs text-gray-500 ml-1">
-                (showing document history)
-              </span>
-            </span>
-          </label>
-        </div>
-      </div>
+      <DocumentsFilters
+        v-model:search="filters.search"
+        v-model:ocr-engine="filters.ocrEngine"
+        v-model:date-range="filters.dateRange"
+        v-model:include-archived="filters.includeArchived"
+        v-model:custom-date-from="customDateFrom"
+        v-model:custom-date-to="customDateTo"
+        :total-count="totalCount"
+        @fetch="fetchDocuments"
+        @date-range-change="handleDateRangeChange"
+        @apply-custom-range="applyCustomDateRange"
+        @clear-filters="clearFilters"
+        @clear-filter="handleClearFilter"
+      />
 
       <!-- Batch Actions -->
       <div class="flex justify-between items-center mb-4">
@@ -385,256 +182,25 @@
       </div>
 
       <!-- Documents Table -->
-      <div
+      <DocumentsTable
         v-else
-        class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
-      >
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-slate-800">
-            <tr>
-              <th class="px-6 py-3 text-left">
-                <input
-                  type="checkbox"
-                  :checked="areAllDocumentsSelected"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-gray-600"
-                  @change="toggleSelectAll"
-                />
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
-                Document
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
-                Configuration
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
-                Model
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
-                Created
-              </th>
-              <th class="relative px-6 py-3">
-                <span class="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-700">
-            <tr
-              v-for="doc in serverItems"
-              :key="doc.id"
-              class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-            >
-              <td class="px-6 py-4 whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  :checked="selectedDocuments.includes(doc.id)"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-gray-600"
-                  @change="toggleDocumentSelection(doc.id)"
-                />
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex items-center">
-                  <FileIcon :file-type="doc.original_file?.file_type" :size="40" />
-                  <div class="ml-3">
-                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate max-w-xs">
-                      {{
-                        doc.document_name || doc.original_file?.file_name || `Document #${doc.id}`
-                      }}
-                    </p>
-                    <p
-                      v-if="
-                        doc.document_name &&
-                        doc.original_file?.file_name &&
-                        doc.document_name !== doc.original_file?.file_name
-                      "
-                      class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs"
-                    >
-                      {{ doc.original_file?.file_name }}
-                    </p>
-                    <p v-else class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ formatFileSize(doc.original_file?.file_size) }}
-                    </p>
-                  </div>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900 dark:text-white">
-                  {{ doc.preprocessing_config?.name || 'Custom Config' }}
-                </div>
-                <div v-if="getOcrDisplay(doc)" class="text-xs text-gray-500 dark:text-gray-400">
-                  {{ getOcrDisplay(doc) }}
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900 dark:text-white">
-                  {{ getModelName(doc) }}
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ formatDate(doc.created_at) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <div class="flex items-center justify-end space-x-2">
-                  <button
-                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                    title="View"
-                    @click="viewDocument(doc)"
-                  >
-                    <svg
-                      class="h-5 w-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
-                    title="Download"
-                    @click="downloadDocument(doc)"
-                  >
-                    <svg
-                      class="h-5 w-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        :documents="serverItems"
+        :selected-documents="selectedDocuments"
+        :are-all-selected="areAllDocumentsSelected"
+        @toggle-select-all="toggleSelectAll"
+        @toggle-selection="toggleDocumentSelection"
+        @view="viewDocument"
+        @download="downloadDocument"
+      />
 
       <!-- Pagination -->
-      <div
-        v-if="totalPages > 1"
-        class="bg-white dark:bg-slate-900 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6"
-      >
-        <div class="flex-1 flex justify-between sm:hidden">
-          <button
-            :disabled="currentPage === 1"
-            class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            @click="currentPage--"
-          >
-            Previous
-          </button>
-          <button
-            :disabled="currentPage === totalPages"
-            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            @click="currentPage++"
-          >
-            Next
-          </button>
-        </div>
-        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-          <div>
-            <!-- ✅ Server-side version -->
-            <p class="text-sm text-gray-700 dark:text-gray-300">
-              Showing
-              <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span>
-              to
-              <span class="font-medium">{{
-                Math.min(currentPage * itemsPerPage, totalCount)
-              }}</span>
-              of
-              <span class="font-medium">{{ totalCount }}</span>
-              results
-            </p>
-          </div>
-          <div>
-            <nav
-              class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-              aria-label="Pagination"
-            >
-              <button
-                :disabled="currentPage === 1"
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                @click="currentPage = 1"
-              >
-                <span class="sr-only">First</span>
-                <svg
-                  class="h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-              <button
-                v-for="page in visiblePages"
-                :key="page"
-                :class="[
-                  'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
-                  page === currentPage
-                    ? 'z-10 bg-blue-50 dark:bg-blue-900 border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                    : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800',
-                ]"
-                @click="currentPage = page"
-              >
-                {{ page }}
-              </button>
-              <button
-                :disabled="currentPage === totalPages"
-                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                @click="currentPage = totalPages"
-              >
-                <span class="sr-only">Last</span>
-                <svg
-                  class="h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </nav>
-          </div>
-        </div>
-      </div>
+      <PaginationControls
+        v-model="currentPage"
+        :total-pages="totalPages"
+        :visible-pages="visiblePages"
+        :total-items="totalCount"
+        :page-size="itemsPerPage"
+      />
 
       <!-- Batch Actions Modal -->
       <BatchActionsModal
@@ -680,16 +246,25 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api } from '@/services/api.js'
+import { documentsApi } from '@/services/documentsApi'
+import { documentSetsApi } from '@/services/documentSetsApi'
+import { filesApi } from '@/services/filesApi'
+import { preprocessingApi } from '@/services/preprocessingApi'
+import { authApi } from '@/services/authApi'
 import { useToast } from 'vue-toastification'
 import { debounce } from 'perfect-debounce'
 import { setEngineLabels } from '@/utils/ocrLabels'
-import FileIcon from '../common/FileIcon.vue'
+import { getDateRangeBounds } from '@/utils/dateRange'
 import LoadingSpinner from '../common/LoadingSpinner.vue'
+import PaginationControls from '../common/PaginationControls.vue'
+import { useFileDownload } from '@/composables/useFileDownload'
+import { usePagination } from '@/composables/usePagination'
 import DocumentViewer from './DocumentViewer.vue'
 import BatchActionsModal from './BatchActionsModal.vue'
 import DocumentGroups from './DocumentsGroups.vue'
 import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
+import DocumentsFilters from './DocumentsFilters.vue'
+import DocumentsTable from './DocumentsTable.vue'
 
 const props = defineProps({
   projectId: {
@@ -701,6 +276,7 @@ const props = defineProps({
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const { downloadFromApi } = useFileDownload()
 
 // State
 const documents = ref([]) // All documents for groups modal
@@ -710,13 +286,17 @@ const selectedDocuments = ref([])
 const viewingDocument = ref(null)
 const showBatchActions = ref(false)
 const batchAction = ref('')
-const currentPage = ref(1)
 const itemsPerPage = ref(50)
+const totalCount = ref(0) // total rows on the server (after filters) — must be declared before usePagination (its getTotal reads it eagerly during setup)
+const pagination = usePagination({
+  getTotal: () => totalCount.value,
+  pageSize: itemsPerPage.value,
+})
+const currentPage = pagination.currentPage
 const activeTab = ref('documents')
 const showCreateGroupModal = ref(false)
 const createGroupWithDocs = ref([]) // Documents to pre-select when creating group
 const serverItems = ref([]) // current page rows from the server
-const totalCount = ref(0) // total rows on the server (after filters)
 const documentGroupsCount = ref(0) // count of document groups
 
 // Filters
@@ -731,28 +311,8 @@ const filters = ref({
 const customDateFrom = ref('')
 const customDateTo = ref('')
 
-// Debounce timer for search
-let searchDebounceTimer = null
-
 // Track if we've ever loaded documents (for filter UX)
 const hasLoadedDocuments = ref(false)
-
-// OCR engine labels mapping
-const ocrEngineLabels = {
-  pypdf: 'Embedded Text',
-  tesseract: 'Local OCR',
-  mistral_ocr: 'Mistral OCR',
-  llm_vision: 'Vision LLM',
-}
-
-// Date range labels mapping
-const dateRangeLabels = {
-  today: 'Today',
-  yesterday: 'Yesterday',
-  week: 'Last 7 Days',
-  month: 'Last 30 Days',
-  custom: 'Custom Range',
-}
 
 // Check if any filters are active
 const hasActiveFilters = computed(() => {
@@ -765,44 +325,9 @@ const hasActiveFilters = computed(() => {
   )
 })
 
-// Get OCR engine label
-const getOcrEngineLabel = (engine) => {
-  return ocrEngineLabels[engine] || engine
-}
-
-// Get date range label
-const getDateRangeLabel = (range) => {
-  return dateRangeLabels[range] || range
-}
-
 // Compute date bounds for date range filter
 const computeDateBounds = (range) => {
-  const now = new Date()
-  const start = new Date(now)
-
-  if (range === 'today') {
-    start.setHours(0, 0, 0, 0)
-    return { date_from: start.toISOString(), date_to: now.toISOString() }
-  } else if (range === 'yesterday') {
-    const yesterday = new Date(now)
-    yesterday.setDate(yesterday.getDate() - 1)
-    yesterday.setHours(0, 0, 0, 0)
-    start.setHours(23, 59, 59, 999)
-    return { date_from: yesterday.toISOString(), date_to: start.toISOString() }
-  } else if (range === 'week') {
-    start.setDate(now.getDate() - 7)
-    return { date_from: start.toISOString(), date_to: now.toISOString() }
-  } else if (range === 'month') {
-    start.setDate(now.getDate() - 30)
-    return { date_from: start.toISOString(), date_to: now.toISOString() }
-  } else if (range === 'custom' && customDateFrom.value) {
-    const from = new Date(customDateFrom.value)
-    from.setHours(0, 0, 0, 0)
-    const to = customDateTo.value ? new Date(customDateTo.value) : now
-    to.setHours(23, 59, 59, 999)
-    return { date_from: from.toISOString(), date_to: to.toISOString() }
-  }
-  return {}
+  return getDateRangeBounds(range, customDateFrom.value, customDateTo.value)
 }
 
 // Handle date range change
@@ -821,66 +346,11 @@ const applyCustomDateRange = () => {
   fetchDocuments()
 }
 
-// Clear custom date range
-const clearCustomDateRange = () => {
-  customDateFrom.value = ''
-  customDateTo.value = ''
-  filters.value.dateRange = ''
-  fetchDocuments()
-}
-
-// Debounced fetch for search
-const debouncedFetchDocuments = () => {
-  if (searchDebounceTimer) {
-    clearTimeout(searchDebounceTimer)
-  }
-  searchDebounceTimer = setTimeout(() => {
-    currentPage.value = 1
-    fetchDocuments()
-  }, 300)
-}
-
 // Stats - using server-side totalCount
-const totalDocuments = computed(() => totalCount.value)
 
-// Server-side pagination - totalPages is already computed from totalCount
-const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / itemsPerPage.value)))
-
-const visiblePages = computed(() => {
-  const pages = []
-  const total = totalPages.value
-  const current = currentPage.value
-
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) {
-      pages.push(i)
-    }
-  } else {
-    if (current <= 3) {
-      for (let i = 1; i <= 5; i++) {
-        pages.push(i)
-      }
-      pages.push('...')
-      pages.push(total)
-    } else if (current >= total - 2) {
-      pages.push(1)
-      pages.push('...')
-      for (let i = total - 4; i <= total; i++) {
-        pages.push(i)
-      }
-    } else {
-      pages.push(1)
-      pages.push('...')
-      for (let i = current - 1; i <= current + 1; i++) {
-        pages.push(i)
-      }
-      pages.push('...')
-      pages.push(total)
-    }
-  }
-
-  return pages.filter((p) => p === '...' || (p >= 1 && p <= total))
-})
+// Server-side pagination - totalPages/visiblePages from usePagination composable
+const totalPages = pagination.totalPages
+const visiblePages = pagination.visiblePages
 
 // Handle highlight query parameter (from preprocessing history "Go to Document" navigation)
 const handleHighlight = async () => {
@@ -889,7 +359,7 @@ const handleHighlight = async () => {
 
   try {
     // Fetch the specific document by ID
-    const { data } = await api.get(`/project/${props.projectId}/document/${highlightId}`)
+    const { data } = await documentsApi.get(props.projectId, highlightId)
     if (data) {
       // Open the document viewer
       viewingDocument.value = data
@@ -931,7 +401,7 @@ const fetchDocuments = async () => {
       compute_stats: true, // Get server-side stats
     }
 
-    const { data } = await api.get(`/project/${props.projectId}/document`, { params })
+    const { data } = await documentsApi.list(props.projectId, params)
     serverItems.value = data.items
     totalCount.value = data.total
 
@@ -996,18 +466,10 @@ const downloadDocument = async (doc) => {
       return
     }
 
-    const response = await api.get(`/project/${props.projectId}/file/${fileId}/content`, {
-      responseType: 'blob',
-    })
-
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', doc.original_file?.file_name || `document_${doc.id}.pdf`)
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(url)
+    await downloadFromApi(
+      () => filesApi.getContent(props.projectId, fileId),
+      doc.original_file?.file_name || `document_${doc.id}.pdf`,
+    )
   } catch (error) {
     toast.error('Failed to download document')
     console.error(error)
@@ -1040,7 +502,7 @@ const handleCreateGroupModalClose = () => {
 
 const handleCreateGroupModalSave = async (groupData) => {
   try {
-    await api.post(`/project/${props.projectId}/document-set`, groupData)
+    await documentSetsApi.create(props.projectId, groupData)
     toast.success('Document group created successfully')
     showCreateGroupModal.value = false
     createGroupWithDocs.value = []
@@ -1063,9 +525,7 @@ const fetchAllDocuments = async () => {
     let hasMore = true
 
     while (hasMore) {
-      const { data } = await api.get(`/project/${props.projectId}/document`, {
-        params: { limit: PAGE_SIZE, offset },
-      })
+      const { data } = await documentsApi.list(props.projectId, { limit: PAGE_SIZE, offset })
       allDocs = allDocs.concat(data.items || [])
       hasMore = data.items && data.items.length === PAGE_SIZE
       offset += PAGE_SIZE
@@ -1114,7 +574,7 @@ const reprocessDocument = async (doc) => {
       },
       force_reprocess: true,
     }
-    await api.post(`/project/${props.projectId}/preprocess`, payload)
+    await preprocessingApi.create(props.projectId, payload)
     toast.success('Document reprocessing started!')
     fetchDocuments()
   } catch (error) {
@@ -1138,7 +598,8 @@ const clearFilters = () => {
 
 const clearSearchFilter = () => {
   filters.value.search = ''
-  debouncedFetchDocuments()
+  currentPage.value = 1
+  fetchDocuments()
 }
 
 const clearOcrEngineFilter = () => {
@@ -1156,121 +617,20 @@ const clearArchivedFilter = () => {
   fetchDocuments()
 }
 
-const getStatusClass = (status) => {
-  switch (status) {
-    case 'success':
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-    case 'partial':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-    case 'failed':
-      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-  }
+const clearCustomDateRange = () => {
+  customDateFrom.value = ''
+  customDateTo.value = ''
+  filters.value.dateRange = ''
+  fetchDocuments()
 }
 
-const formatFileSize = (bytes) => {
-  if (!bytes) return 'Unknown'
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
-}
-
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleDateString()
-}
-
-const getModelName = (doc) => {
-  const metaData = doc.meta_data || {}
-  // Check for specific model fields first
-  if (metaData.mistral_model) return metaData.mistral_model
-  if (metaData.vision_model) return metaData.vision_model
-  // Fallback to generic model field
-  if (metaData.model) return metaData.model
-  // No model for local OCR
-  return '—'
-}
-
-/**
- * Returns OCR display string only if OCR was actually used.
- * Checks meta_data.ocr_engine to determine if OCR was applied.
- * Returns null if no OCR was used (e.g., embedded text extraction, plain text files, CSV).
- */
-const getOcrDisplay = (doc) => {
-  const metaData = doc.meta_data || {}
-  const ocrEngine = metaData.ocr_engine
-  const extractionMethod = metaData.extraction_method
-  const file_type = metaData.file_type
-
-  // If ocr_engine is explicitly set, show the appropriate label
-  if (ocrEngine) {
-    // Map internal engine names to display names
-    const engineLabels = {
-      tesseract: 'Tesseract OCR',
-      docling_tesseract: 'Tesseract OCR',
-      mistral_ocr: 'Mistral OCR',
-      llm_vision: 'Vision LLM OCR',
-    }
-
-    // Special case: pypdf is not OCR, it's embedded text extraction
-    if (ocrEngine === 'pypdf') {
-      return null
-    }
-
-    const label = engineLabels[ocrEngine]
-    if (label) {
-      return label
-    }
-  }
-
-  // No ocr_engine set - check extraction_method as fallback
-  if (extractionMethod) {
-    // Known non-OCR methods - return null
-    const nonOcrMethods = [
-      'docling_serve_no_ocr',
-      'pypdf_embedded_text',
-      'text_file_extraction',
-      'csv_full_document',
-      'csv_row_by_row',
-      'xlsx_full_document',
-      'xlsx_row_by_row',
-    ]
-    if (nonOcrMethods.includes(extractionMethod)) {
-      return null
-    }
-
-    // OCR methods
-    const ocrMethods = [
-      'docling_serve_tesseract_ocr',
-      'docling_serve_tesseract_force_ocr',
-      'docling_serve_tesseract_image_ocr',
-      'mistral_ocr',
-      'llm_vision_ocr',
-    ]
-    if (ocrMethods.includes(extractionMethod)) {
-      const engineLabels = {
-        tesseract: 'Tesseract OCR',
-        mistral_ocr: 'Mistral OCR',
-        llm_vision: 'Vision LLM OCR',
-      }
-      // Extract engine from method name
-      for (const [engine, label] of Object.entries(engineLabels)) {
-        if (extractionMethod.includes(engine)) {
-          return label
-        }
-      }
-      return 'OCR Applied'
-    }
-  }
-
-  // Check file_type - table and text files never need OCR
-  if (file_type === 'table' || file_type === 'text') {
-    return null
-  }
-
-  // Default: show nothing if we can't determine OCR was used
-  return null
+// Dispatch individual filter-chip clears to the original handlers (preserves per-filter behavior)
+const handleClearFilter = (field) => {
+  if (field === 'search') clearSearchFilter()
+  else if (field === 'ocrEngine') clearOcrEngineFilter()
+  else if (field === 'dateRange') clearDateRangeFilter()
+  else if (field === 'includeArchived') clearArchivedFilter()
+  else if (field === 'customDate') clearCustomDateRange()
 }
 
 // Debounced search
@@ -1305,8 +665,8 @@ watch(
 // Fetch document groups count
 const fetchDocumentGroupsCount = async () => {
   try {
-    const { data } = await api.get(`/project/${props.projectId}/document-set`, {
-      params: { include_auto_generated: true },
+    const { data } = await documentSetsApi.list(props.projectId, {
+      include_auto_generated: true,
     })
     documentGroupsCount.value = data.total
   } catch (error) {
@@ -1319,8 +679,8 @@ onMounted(() => {
   fetchDocuments()
   fetchDocumentGroupsCount()
   // Load OCR display names from server
-  api
-    .get('/auth/settings')
+  authApi
+    .getSettings()
     .then((r) => setEngineLabels(r.data))
     .catch(() => {})
 })

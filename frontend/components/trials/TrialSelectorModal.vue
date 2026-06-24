@@ -363,7 +363,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { api } from '@/services/api'
+import { trialsApi } from '@/services/trialsApi'
+import { schemasApi } from '@/services/schemasApi'
+import { evaluationsApi } from '@/services/evaluationsApi'
+import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
 import { useToast } from 'vue-toastification'
 import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreviewModal.vue'
@@ -504,8 +507,10 @@ const fetchTrials = async ({ append = false } = {}) => {
   try {
     const { limit, offset } = trials.value
     // Filter to completed to avoid extra client-side filtering volume
-    const { data } = await api.get(`/project/${props.projectId}/trial`, {
-      params: { limit, offset, status: 'completed' },
+    const { data } = await trialsApi.list(props.projectId, {
+      limit,
+      offset,
+      status: 'completed',
     })
 
     if (append) {
@@ -535,8 +540,8 @@ const loadMore = async () => {
 // Fetch schemas and existing evaluations for this ground truth
 const fetchSchemasAndEvaluations = async () => {
   const [schemasResponse, evaluationsResponse] = await Promise.all([
-    api.get(`/project/${props.projectId}/schema`),
-    api.get(`/project/${props.projectId}/evaluation?groundtruth_id=${props.groundTruth.id}`),
+    schemasApi.list(props.projectId),
+    evaluationsApi.list(props.projectId, { groundtruth_id: props.groundTruth.id }),
   ])
   schemas.value = schemasResponse.data
   existingEvaluations.value = evaluationsResponse.data
@@ -562,8 +567,10 @@ const fetchData = async () => {
 // Mapping checks
 const checkMappingStatus = async (trial) => {
   try {
-    const response = await api.get(
-      `/project/${props.projectId}/groundtruth/${props.groundTruth.id}/schema/${trial.schema_id}/mapping/status`,
+    const response = await groundtruthApi.getMappingStatus(
+      props.projectId,
+      props.groundTruth.id,
+      trial.schema_id,
     )
     return response.data.has_mappings || false
   } catch (err) {
@@ -649,8 +656,10 @@ const evaluateTrialWithValidation = async () => {
       )
     }
 
-    const response = await api.post(
-      `/project/${props.projectId}/trial/${selectedTrial.value.id}/evaluate?groundtruth_id=${props.groundTruth.id}`,
+    const response = await trialsApi.evaluate(
+      props.projectId,
+      selectedTrial.value.id,
+      props.groundTruth.id,
     )
 
     emit('evaluate', response.data)

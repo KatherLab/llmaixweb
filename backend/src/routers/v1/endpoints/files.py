@@ -31,6 +31,7 @@ from ....dependencies import (
     remove_file,
     save_file,
 )
+from ....models.project import document_set_association
 from ....utils.enums import FileCreator
 from ....utils.helpers import detect_structured_mime
 
@@ -63,6 +64,37 @@ def check_project_access(
     raise HTTPException(
         status_code=403, detail=f"Not authorized to {permission} this project"
     )
+
+
+# Statuses matched exactly against the latest preprocessing task's status.
+# ("processing" is a synthetic bucket that also includes pending/in_progress.)
+_EXACT_FILE_STATUSES = frozenset({"pending", "in_progress", "completed", "failed"})
+# "processing" expands to these underlying statuses.
+_PROCESSING_STATUSES = ["pending", "processing", "in_progress"]
+# Files with no preprocessing task at all.
+_NO_TASK_STATUSES = frozenset({"not_preprocessed", "notstarted", "none"})
+
+
+def _apply_file_status_filter(query, status: str, latest_task_status_with_status):
+    """Apply the preprocessing-status filter to a file query.
+
+    Shared by the page query and the count query so they can't diverge (they
+    previously did: the count branch missed ``in_progress``, so filtering by
+    ``status=in_progress`` returned the right rows but the wrong total).
+    """
+    status_lower = status.lower()
+    if status_lower == "processing":
+        return query.where(
+            latest_task_status_with_status.c.latest_status.in_(_PROCESSING_STATUSES)
+        )
+    if status_lower in _EXACT_FILE_STATUSES:
+        return query.where(
+            latest_task_status_with_status.c.latest_status == status_lower
+        )
+    if status_lower in _NO_TASK_STATUSES:
+        return query.where(latest_task_status_with_status.c.latest_status.is_(None))
+    # Unknown status: no filter (matches prior behavior).
+    return query
 
 
 @router.get("", response_model=schemas.PaginatedFiles)
@@ -154,29 +186,7 @@ def get_project_files(
         query = query.where(models.File.file_type == file_type)
     if status:
         # Filter by preprocessing status based on latest task
-        status_lower = status.lower()
-        if status_lower == "processing":
-            # 'processing' includes pending, processing, and in_progress
-            query = query.where(
-                latest_task_status_with_status.c.latest_status.in_(
-                    ["pending", "processing", "in_progress"]
-                )
-            )
-        elif status_lower in [
-            "pending",
-            "processing",
-            "in_progress",
-            "completed",
-            "failed",
-        ]:
-            query = query.where(
-                latest_task_status_with_status.c.latest_status == status_lower
-            )
-        elif status_lower in ["not_preprocessed", "notstarted", "none"]:
-            # Files without any preprocessing tasks
-            query = query.where(
-                latest_task_status_with_status.c.latest_status.is_(None)
-            )
+        query = _apply_file_status_filter(query, status, latest_task_status_with_status)
 
     if file_creator is not None:
         query = query.where(models.File.file_creator == file_creator)
@@ -206,27 +216,9 @@ def get_project_files(
             latest_task_status_with_status,
             models.File.id == latest_task_status_with_status.c.file_id,
         )
-        status_lower = status.lower()
-        if status_lower == "processing":
-            # 'processing' includes pending, processing, and in_progress
-            count_query = count_query.where(
-                latest_task_status_with_status.c.latest_status.in_(
-                    ["pending", "processing", "in_progress"]
-                )
-            )
-        elif status_lower in [
-            "pending",
-            "completed",
-            "failed",
-        ]:
-            count_query = count_query.where(
-                latest_task_status_with_status.c.latest_status == status_lower
-            )
-        elif status_lower in ["not_preprocessed", "notstarted", "none"]:
-            # Files without any preprocessing tasks
-            count_query = count_query.where(
-                latest_task_status_with_status.c.latest_status.is_(None)
-            )
+        count_query = _apply_file_status_filter(
+            count_query, status, latest_task_status_with_status
+        )
     if file_creator is not None:
         count_query = count_query.where(models.File.file_creator == file_creator)
     if date_from:
@@ -849,17 +841,24 @@ def check_duplicates(
     """Check for duplicate files before uploading"""
     check_project_access(project_id, current_user, db)
 
+    # Batch-load all matching files in one query (previously one SELECT per
+    # file in the request body — N+1).
+    hashes = [f["hash"] for f in files if f.get("hash")]
+    existing_by_hash: dict[str, models.File] = {}
+    if hashes:
+        existing_by_hash = {
+            f.file_hash: f
+            for f in db.execute(
+                select(models.File).where(
+                    models.File.project_id == project_id,
+                    models.File.file_hash.in_(hashes),
+                )
+            ).scalars()
+        }
+
     results = []
     for file_info in files:
-        existing = db.execute(
-            select(models.File).where(
-                and_(
-                    models.File.project_id == project_id,
-                    models.File.file_hash == file_info["hash"],
-                )
-            )
-        ).scalar_one_or_none()
-
+        existing = existing_by_hash.get(file_info["hash"])
         results.append(
             {
                 "filename": file_info["filename"],
@@ -926,17 +925,25 @@ def delete_file(
             },
         )
 
-    # Delete the file content from storage
-    try:
-        remove_file(file.file_uuid)
-    except FileNotFoundError:
-        # Log the error but continue with database deletion
-        pass
-
+    # Build the response while the instance is still attached, then delete the
+    # DB row and commit BEFORE removing storage. If storage removal happened
+    # first (the old order) a commit failure would orphan the DB row pointing
+    # at deleted bytes; this order leaves at worst an orphaned file in storage
+    # on a remove_file failure, which is recoverable.
+    file_response = schemas.File.model_validate(file)
+    file_uuid = file.file_uuid
     db.delete(file)
     db.commit()
 
-    return schemas.File.model_validate(file)
+    try:
+        if file_uuid:
+            remove_file(file_uuid)
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        logger.warning("Failed to remove storage for file %s: %s", file_uuid, e)
+
+    return file_response
 
 
 @router.post("/batch-delete", response_model=dict)
@@ -1102,6 +1109,67 @@ def move_files(
         raise HTTPException(
             status_code=400, detail="Source and target projects cannot be the same"
         )
+
+    # Pre-flight: collect the IDs of all documents that would move, then block
+    # the move if any are still referenced by trials or document sets in the
+    # source project. Moving the documents to another project would otherwise
+    # leave those references pointing across projects, breaking project
+    # isolation (a trial in project A silently referencing documents in B).
+    moving_doc_ids = [
+        row[0]
+        for row in db.execute(
+            select(models.Document.id).where(
+                or_(
+                    models.Document.original_file_id.in_(file_ids),
+                    models.Document.preprocessed_file_id.in_(file_ids),
+                )
+            )
+        ).all()
+    ]
+
+    if moving_doc_ids:
+        # Trials referencing these documents via the document_ids JSON column.
+        source_trials = (
+            db.execute(
+                select(models.Trial.document_ids).where(
+                    models.Trial.project_id == project_id
+                )
+            )
+            .scalars()
+            .all()
+        )
+        moving_doc_id_set = set(moving_doc_ids)
+        referenced_by_trials = {
+            doc_id
+            for trial_doc_ids in source_trials
+            if trial_doc_ids
+            for doc_id in trial_doc_ids
+            if doc_id in moving_doc_id_set
+        }
+
+        # Document sets referencing these documents via the association table.
+        referenced_by_sets = set(
+            row[0]
+            for row in db.execute(
+                select(document_set_association.c.document_id).where(
+                    document_set_association.c.document_id.in_(moving_doc_ids)
+                )
+            ).all()
+        )
+
+        referenced = referenced_by_trials | referenced_by_sets
+        if referenced:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": (
+                        "Cannot move files: some documents are referenced by "
+                        "trials or document sets in this project. Remove the "
+                        "references first."
+                    ),
+                    "referenced_document_ids": sorted(referenced),
+                },
+            )
 
     moved_count = 0
     errors = []

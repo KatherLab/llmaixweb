@@ -1,53 +1,63 @@
 <template>
-  <Teleport to="body">
-    <transition name="fade">
-      <div
-        v-if="open"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
+  <BaseModal
+    :open="open"
+    size="sm"
+    panel-class="dark:bg-slate-900 dark:border-slate-700 rounded-xl"
+    header-class="dark:border-slate-700"
+    body-class="p-6"
+    footer-class="dark:border-slate-700 dark:bg-slate-800"
+    @close="emit('cancel')"
+  >
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ title }}</h3>
+    </div>
+    <p class="text-gray-600 dark:text-slate-400 mb-6">{{ message }}</p>
+    <template #footer>
+      <button
+        class="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        :disabled="loading"
         @click="emit('cancel')"
       >
-        <div
-          class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-200"
-          @click.stop
+        {{ cancelText }}
+      </button>
+      <button
+        :class="[
+          'px-4 py-2 rounded-lg inline-flex items-center disabled:opacity-50 disabled:cursor-not-allowed',
+          confirmButtonClass,
+        ]"
+        :disabled="loading"
+        @click="emit('confirm')"
+      >
+        <svg
+          v-if="loading"
+          class="animate-spin -ml-1 mr-2 h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
         >
-          <div class="flex justify-between items-center mb-2">
-            <h3 class="text-lg font-semibold text-gray-900">{{ title }}</h3>
-            <button
-              class="text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Close"
-              @click="emit('cancel')"
-            >
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <p class="text-gray-600 mb-6">{{ message }}</p>
-          <div class="flex justify-end gap-3">
-            <button
-              class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
-              @click="emit('cancel')"
-            >
-              {{ cancelText }}
-            </button>
-            <button :class="['px-4 py-2 rounded-lg', confirmButtonClass]" @click="emit('confirm')">
-              {{ confirmText }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
-  </Teleport>
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          />
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          />
+        </svg>
+        {{ confirmText }}
+      </button>
+    </template>
+  </BaseModal>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { useScrollLock } from '@/composables/useScrollLock'
+import BaseModal from '@/components/common/BaseModal.vue'
 
 const props = defineProps({
   open: {
@@ -74,11 +84,13 @@ const props = defineProps({
     type: String,
     default: 'danger', // 'danger', 'warning', 'primary'
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['confirm', 'cancel'])
-
-useScrollLock({ watch: () => props.open })
 
 const confirmButtonClass = computed(() => {
   const variants = {
@@ -89,14 +101,3 @@ const confirmButtonClass = computed(() => {
   return variants[props.confirmVariant] || variants.primary
 })
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

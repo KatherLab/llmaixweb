@@ -33,33 +33,20 @@
         >
           {{ error }}
         </div>
-        <button
+        <BaseButton
           type="submit"
-          class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 disabled:opacity-70 disabled:cursor-not-allowed"
+          size="lg"
+          :loading="isLoading"
           :disabled="isLoading"
+          class="w-full py-2.5"
         >
           <svg
-            v-if="isLoading"
-            class="animate-spin h-5 w-5"
-            xmlns="http://www.w3.org/2000/svg"
+            v-if="!isLoading"
+            class="h-5 w-5"
             fill="none"
             viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            />
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
-          <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -68,7 +55,7 @@
             />
           </svg>
           <span>{{ isLoading ? 'Sending...' : 'Send Reset Link' }}</span>
-        </button>
+        </BaseButton>
       </form>
       <router-link to="/login" class="block mt-5 text-center text-blue-600 hover:underline text-sm">
         Back to login
@@ -108,10 +95,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import { api } from '@/services/api.js'
-import { useToast } from 'vue-toastification'
-
-const toast = useToast()
+import { usersApi } from '@/services/usersApi'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const step = ref(1)
 const email = ref('')
@@ -125,7 +110,7 @@ async function handleForgotPassword() {
   error.value = null
 
   try {
-    const response = await api.post('/user/forgot-password', { email: email.value })
+    const response = await usersApi.forgotPassword(email.value)
     emailWarning.value = response.data.warning || null
     step.value = 2
   } catch (err) {

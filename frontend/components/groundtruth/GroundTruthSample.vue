@@ -16,8 +16,8 @@
 </template>
 <script setup>
 const props = defineProps({
-  doc: Object,
-  format: String,
+  doc: { type: Object, default: () => ({}) },
+  format: { type: String, default: '' },
 })
 function prettyJson(o) {
   try {

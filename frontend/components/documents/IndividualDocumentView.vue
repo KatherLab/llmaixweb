@@ -148,14 +148,6 @@
 
 <script setup>
 const props = defineProps({
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-  evaluation: {
-    type: Object,
-    required: true,
-  },
   document: {
     type: Object,
     required: true,

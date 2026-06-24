@@ -265,90 +265,13 @@
     </div>
 
     <!-- Pagination -->
-    <div
-      v-if="totalPages > 1"
-      class="bg-white dark:bg-slate-900 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6"
-    >
-      <div class="flex-1 flex justify-between sm:hidden">
-        <button
-          :disabled="currentPage === 1"
-          class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          @click="currentPage--"
-        >
-          Previous
-        </button>
-        <button
-          :disabled="currentPage === totalPages"
-          class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          @click="currentPage++"
-        >
-          Next
-        </button>
-      </div>
-      <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-        <div>
-          <p class="text-sm text-gray-700 dark:text-gray-300">
-            Showing
-            <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span>
-            to
-            <span class="font-medium">{{ Math.min(currentPage * itemsPerPage, totalCount) }}</span>
-            of
-            <span class="font-medium">{{ totalCount }}</span>
-            results
-          </p>
-        </div>
-        <div>
-          <nav
-            class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-            aria-label="Pagination"
-          >
-            <button
-              :disabled="currentPage === 1"
-              class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              @click="currentPage = 1"
-            >
-              <span class="sr-only">First</span>
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            <button
-              v-for="page in visiblePages"
-              :key="page"
-              :class="[
-                'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
-                page === currentPage
-                  ? 'z-10 bg-blue-50 dark:bg-blue-900 border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                  : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800',
-              ]"
-              @click="currentPage = page"
-            >
-              {{ page }}
-            </button>
-            <button
-              :disabled="currentPage === totalPages"
-              class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              @click="currentPage = totalPages"
-            >
-              <span class="sr-only">Last</span>
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </nav>
-        </div>
-      </div>
-    </div>
+    <PaginationControls
+      v-model="currentPage"
+      :total-pages="totalPages"
+      :visible-pages="visiblePages"
+      :total-items="totalCount"
+      :page-size="itemsPerPage"
+    />
 
     <!-- Create/Edit Group Modal -->
     <CreateDocumentGroupModal
@@ -481,12 +404,14 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { api } from '@/services/api'
+import { documentSetsApi } from '@/services/documentSetsApi'
 import { useToast } from 'vue-toastification'
 import { formatDate } from '@/utils/formatters'
 import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
 import ViewDocumentGroupModal from './ViewDocumentGroupModal.vue'
 import LoadingSpinner from '../common/LoadingSpinner.vue'
+import PaginationControls from '../common/PaginationControls.vue'
+import { usePagination } from '@/composables/usePagination'
 
 const props = defineProps({
   projectId: {
@@ -511,8 +436,12 @@ const viewingGroup = ref(null)
 const isLoading = ref(true)
 const serverItems = ref([])
 const totalCount = ref(0)
-const currentPage = ref(1)
 const itemsPerPage = ref(20)
+const pagination = usePagination({
+  getTotal: () => totalCount.value,
+  pageSize: itemsPerPage.value,
+})
+const currentPage = pagination.currentPage
 
 // Delete modal state
 const showDeleteModal = ref(false)
@@ -522,43 +451,8 @@ const confirmDeleteGroup = ref(false)
 const isDeleting = ref(false)
 
 // Server-side pagination
-const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / itemsPerPage.value)))
-
-const visiblePages = computed(() => {
-  const pages = []
-  const total = totalPages.value
-  const current = currentPage.value
-
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) {
-      pages.push(i)
-    }
-  } else {
-    if (current <= 3) {
-      for (let i = 1; i <= 5; i++) {
-        pages.push(i)
-      }
-      pages.push('...')
-      pages.push(total)
-    } else if (current >= total - 2) {
-      pages.push(1)
-      pages.push('...')
-      for (let i = total - 4; i <= total; i++) {
-        pages.push(i)
-      }
-    } else {
-      pages.push(1)
-      pages.push('...')
-      for (let i = current - 1; i <= current + 1; i++) {
-        pages.push(i)
-      }
-      pages.push('...')
-      pages.push(total)
-    }
-  }
-
-  return pages.filter((p) => p === '...' || (p >= 1 && p <= total))
-})
+const totalPages = pagination.totalPages
+const visiblePages = pagination.visiblePages
 
 const canDeleteGroup = computed(() => {
   return confirmDeleteGroup.value && !isDeleting.value
@@ -568,13 +462,11 @@ const canDeleteGroup = computed(() => {
 const fetchDocumentSets = async () => {
   isLoading.value = true
   try {
-    const { data } = await api.get(`/project/${props.projectId}/document-set`, {
-      params: {
-        include_auto_generated: true,
-        search: searchQuery.value || undefined,
-        limit: itemsPerPage.value,
-        offset: (currentPage.value - 1) * itemsPerPage.value,
-      },
+    const { data } = await documentSetsApi.list(props.projectId, {
+      include_auto_generated: true,
+      search: searchQuery.value || undefined,
+      limit: itemsPerPage.value,
+      offset: (currentPage.value - 1) * itemsPerPage.value,
     })
 
     serverItems.value = data.items || []
@@ -630,10 +522,10 @@ const confirmDeleteGroupAction = async () => {
 
   try {
     // Use backend cascade delete with query parameter
-    const params = deleteDocumentsToo.value ? { delete_documents: true } : undefined
-    const response = await api.delete(
-      `/project/${props.projectId}/document-set/${groupToDelete.value.id}`,
-      { params },
+    const response = await documentSetsApi.delete(
+      props.projectId,
+      groupToDelete.value.id,
+      deleteDocumentsToo.value,
     )
 
     // Parse response - handle both 200 OK with body and 204 No Content
@@ -673,13 +565,10 @@ const closeModal = () => {
 const handleSaveGroup = async (groupData) => {
   try {
     if (editingGroup.value) {
-      await api.patch(
-        `/project/${props.projectId}/document-set/${editingGroup.value.id}`,
-        groupData,
-      )
+      await documentSetsApi.update(props.projectId, editingGroup.value.id, groupData)
       toast.success('Document group updated successfully')
     } else {
-      await api.post(`/project/${props.projectId}/document-set`, groupData)
+      await documentSetsApi.create(props.projectId, groupData)
       toast.success('Document group created successfully')
     }
     closeModal()

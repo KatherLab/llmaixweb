@@ -547,6 +547,20 @@ async def preprocess_project_data(
                 db.delete(doc)
         files_to_process = list(files)
 
+    # Resolve bypass_celery (from the request body or an inline config) and
+    # enforce the admin guard BEFORE creating any DB rows. A non-admin submitting
+    # bypass_celery=True must get a 403 without leaving orphaned PENDING task/file
+    # rows behind. Mirrors trials.py (which checks before any DB writes).
+    bypass_celery = getattr(preprocessing_task, "bypass_celery", False)
+    inline_cfg = getattr(preprocessing_task, "inline_config", None)
+    if inline_cfg:
+        if hasattr(inline_cfg, "bypass_celery"):
+            bypass_celery = getattr(inline_cfg, "bypass_celery", False)
+        elif isinstance(inline_cfg, dict):
+            bypass_celery = inline_cfg.get("bypass_celery", False)
+    if bypass_celery and current_user.role != "admin":
+        raise HTTPException(403, "Only admins may set bypass_celery")
+
     # Create preprocessing task
     task = models.PreprocessingTask(
         project_id=project_id,
@@ -555,8 +569,13 @@ async def preprocess_project_data(
         rollback_on_cancel=preprocessing_task.rollback_on_cancel,
     )
 
-    # Store API credentials in task metadata if provided
+    # Store custom API credentials for the OCR backend. The api_key is stored
+    # encrypted on the row (api_key_encrypted) and decrypted inside the Celery
+    # task — it never traverses the broker as plaintext and never sits in the
+    # plaintext task_metadata JSON. base_url is not secret, so it stays in
+    # task_metadata.
     if preprocessing_task.api_key and preprocessing_task.base_url:
+        task.api_key = preprocessing_task.api_key
         task.task_metadata = {
             "custom_api_used": True,
             "api_base_url": preprocessing_task.base_url,
@@ -598,25 +617,16 @@ async def preprocess_project_data(
     if skipped_file_names:
         task.message = f"Processing {len(file_tasks_to_process)} files. {len(skipped_file_names)} files already processed and skipped."
 
-    bypass_celery = getattr(preprocessing_task, "bypass_celery", False)
-    inline_cfg = getattr(preprocessing_task, "inline_config", None)
-    if inline_cfg:
-        if hasattr(inline_cfg, "bypass_celery"):
-            bypass_celery = getattr(inline_cfg, "bypass_celery", False)
-        elif isinstance(inline_cfg, dict):
-            bypass_celery = inline_cfg.get("bypass_celery", False)
-
-    # 2. Only allow bypass_celery for admins
-    if bypass_celery and current_user.role != "admin":
-        raise HTTPException(403, "Only admins may set bypass_celery")
-
     # Start processing
     if bypass_celery:
         logger.info("Bypassing Celery for preprocessing task %s", task.id)
         from ....utils.preprocessing import PreprocessingPipeline
 
         try:
-            # Pass API credentials to pipeline
+            # Bypass path runs synchronously in-process (no Celery broker), so
+            # threading the in-memory credentials through the constructor is
+            # safe here. The Celery path below does NOT pass them — it reads
+            # them from the encrypted task row inside the worker.
             pipeline = PreprocessingPipeline(
                 db,
                 task.id,
@@ -632,12 +642,11 @@ async def preprocess_project_data(
     else:
         from ....celery.preprocessing import process_files_async
 
-        # Pass credentials through celery
-        result = process_files_async.delay(
-            task.id,
-            api_key=preprocessing_task.api_key,
-            base_url=preprocessing_task.base_url,
-        )
+        # Credentials are NOT passed through the broker: the api_key is stored
+        # encrypted on the task row and decrypted inside the worker; base_url
+        # is read from task_metadata. Passing either as a Celery arg would
+        # serialize the plaintext key into Redis.
+        result = process_files_async.delay(task.id)
         task.celery_task_id = result.id
         db.commit()
 
@@ -873,12 +882,18 @@ def retry_failed_files(
     if not failed_file_ids:
         raise HTTPException(status_code=400, detail="No failed files to retry")
 
-    # Create new task with same configuration
+    # Create new task with same configuration. Carry over custom OCR
+    # credentials (encrypted key + api_base_url metadata) so a retry of a
+    # custom-API run doesn't silently fall back to the default backend.
     new_task = models.PreprocessingTask(
         project_id=project_id,
         configuration_id=original_task.configuration_id,
         total_files=len(failed_file_ids),
         rollback_on_cancel=original_task.rollback_on_cancel,
+        api_key_encrypted=original_task.api_key_encrypted,
+        task_metadata=dict(original_task.task_metadata)
+        if original_task.task_metadata
+        else None,
     )
     db.add(new_task)
     db.commit()

@@ -449,6 +449,13 @@ class PreprocessingTask(Base):
         MutableDict.as_mutable(JSON), nullable=True
     )
 
+    # Stored encrypted (Fernet). Read/written via the `api_key` property below,
+    # which decrypts on read and encrypts on write — so the OCR API key for a
+    # custom preprocessing backend never persists in plaintext. Mirrors Trial.
+    api_key_encrypted: Mapped[str] = mapped_column(
+        "api_key_encrypted", String(512), nullable=True, default=""
+    )
+
     # Relationships
     project: Mapped["Project"] = relationship(back_populates="preprocessing_tasks")
     configuration: Mapped["PreprocessingConfiguration"] = relationship(
@@ -461,6 +468,16 @@ class PreprocessingTask(Base):
         secondary="preprocessing_task_file_association",
         back_populates="preprocessing_tasks",
     )
+
+    @property
+    def api_key(self) -> str:
+        """Plaintext OCR API key (decrypted on read)."""
+        return decrypt(self.api_key_encrypted)
+
+    @api_key.setter
+    def api_key(self, value: str) -> None:
+        """Encrypt the plaintext key before storing it."""
+        self.api_key_encrypted = encrypt(value) if value else ""
 
 
 class FilePreprocessingTask(Base):
@@ -499,6 +516,13 @@ class FilePreprocessingTask(Base):
     )
     started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Bumped periodically while the file is actively processing. The orphan
+    # sweeper treats a stale last_heartbeat_at (rather than started_at) as
+    # evidence of a dead worker, so a slow-but-legitimate file whose per-file
+    # timeout exceeds the sweeper cutoff is not wrongly marked FAILED.
+    last_heartbeat_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 

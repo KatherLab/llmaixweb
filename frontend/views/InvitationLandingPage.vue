@@ -70,7 +70,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api } from '@/services/api'
+import { usersApi } from '@/services/usersApi'
 import { useToast } from 'vue-toastification'
 
 const route = useRoute()
@@ -95,7 +95,7 @@ onMounted(async () => {
 
 async function validateInvitation() {
   try {
-    const response = await api.get(`/user/validate-invitation/${token.value}`)
+    const response = await usersApi.validateInvitation(token.value)
 
     if (!response.data || !response.data.valid) {
       error.value = 'This invitation is invalid or has already been used'

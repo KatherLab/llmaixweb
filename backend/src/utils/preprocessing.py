@@ -5,6 +5,7 @@ import io
 import logging
 from typing import List
 
+import httpx
 import pandas as pd
 from openai import OpenAI
 from sqlalchemy.orm import Session
@@ -14,8 +15,14 @@ from ..core.config import settings
 from ..db.session import db_session
 from ..dependencies import get_file
 from .helpers import _make_aware
+from .url_safety import validate_user_endpoint
 
 logger = logging.getLogger(__name__)
+
+# How often _process_with_timeout bumps file_task.last_heartbeat_at while
+# waiting for a file to finish. Must be comfortably shorter than the sweeper's
+# stale-heartbeat cutoff so an actively-processing file is never reaped.
+_HEARTBEAT_INTERVAL_SECONDS = 15
 
 
 class PreprocessingPipeline:
@@ -43,12 +50,26 @@ class PreprocessingPipeline:
 
         # Store API credentials in task metadata if custom ones provided
         if api_key and base_url:
-            self.client = OpenAI(api_key=api_key, base_url=base_url)
+            # Validate the user-supplied custom endpoint against the SSRF
+            # policy (block cloud-metadata + non-http(s) schemes). System
+            # defaults (the elif branch) are trusted and not validated here.
+            validated = validate_user_endpoint(base_url)
+            if validated is None:
+                raise ValueError(
+                    "A custom API base_url is required when api_key is set."
+                )
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=validated,
+                # follow_redirects=False: a user-controlled endpoint must not
+                # 3xx-bounce the request to a blocked internal address.
+                http_client=httpx.Client(follow_redirects=False),
+            )
             # Store in task metadata for audit
             if not self.task.task_metadata:
                 self.task.task_metadata = {}
             self.task.task_metadata["custom_api_used"] = True
-            self.task.task_metadata["api_base_url"] = base_url
+            self.task.task_metadata["api_base_url"] = validated
             self.db.commit()
         elif settings.OPENAI_API_KEY and settings.OPENAI_API_BASE:
             self.client = OpenAI(
@@ -64,49 +85,37 @@ class PreprocessingPipeline:
         return False
 
     def _broadcast_update(self, event: str = "progress"):
-        """Broadcast preprocessing update via WebSocket (for direct processing)."""
+        """Broadcast a preprocessing update for direct (bypass_celery) processing.
+
+        Publishes via Redis pub/sub — the same channel the Celery worker path
+        uses — so the FastAPI subscriber relays it to WebSocket clients on the
+        correct event loop. This avoids the previous approach of calling
+        ``manager.broadcast_to_user`` from a spawned thread/new event loop,
+        which (a) sent on a foreign loop (undefined asyncio behavior) and (b)
+        passed ``project_id`` as the ``user_id`` argument, so updates never
+        reached real users. If Redis is unavailable this is a no-op, matching
+        the Celery path's best-effort behavior.
+        """
         try:
-            import asyncio
-            import threading
+            from ..utils.redis_broadcast import publish_task_update
 
-            from ..websocket_manager import manager
-
-            task_id = self.task.id
-            project_id = self.task.project_id
-            status = self.task.status
-            processed = self.task.processed_files
-            total = self.task.total_files
-            failed = self.task.failed_files
-            config_name = (
-                self.task.configuration.name if self.task.configuration else None
-            )
-
-            def do_broadcast():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    message = {
-                        "type": "preprocessing_update",
-                        "task_id": task_id,
-                        "project_id": project_id,
-                        "status": status,
-                        "processed_files": processed,
-                        "total_files": total,
-                        "failed_files": failed,
-                        "configuration_name": config_name,
-                        "event": event,
-                    }
-                    loop.run_until_complete(
-                        manager.broadcast_to_user(project_id, message)
-                    )
-                    loop.run_until_complete(manager.broadcast_to_admin(message))
-                finally:
-                    loop.close()
-
-            thread = threading.Thread(target=do_broadcast, daemon=True)
-            thread.start()
+            message = {
+                "type": "preprocessing_update",
+                "task_id": self.task.id,
+                "project_id": self.task.project_id,
+                "status": self.task.status,
+                "processed_files": self.task.processed_files,
+                "total_files": self.task.total_files,
+                "failed_files": self.task.failed_files,
+                "cancelled_files": self.task.skipped_files,
+                "configuration_name": self.task.configuration.name
+                if self.task.configuration
+                else None,
+                "event": event,
+            }
+            publish_task_update(message)
         except ImportError:
-            pass  # WebSocket manager not available
+            pass  # Redis broadcast not available
         except Exception as e:
             logger.error(f"Error broadcasting preprocessing update: {e}")
 
@@ -137,17 +146,14 @@ class PreprocessingPipeline:
                     self._finalize_after_timeout(file_task.id)
                     return
 
-                # update overall counters for the UI
-                self.task.processed_files = sum(
-                    1
-                    for ft in self.task.file_tasks
-                    if ft.status == models.PreprocessingStatus.COMPLETED
-                )
-                self.task.failed_files = sum(
-                    1
-                    for ft in self.task.file_tasks
-                    if ft.status == models.PreprocessingStatus.FAILED
-                )
+                # Update overall counters in place from the just-finished file
+                # task's status. Recomputing by scanning the whole file_tasks
+                # collection here is O(n) per file → O(n²) for the batch and
+                # triggers lazy loads; incrementing is O(1).
+                if file_task.status == models.PreprocessingStatus.COMPLETED:
+                    self.task.processed_files = (self.task.processed_files or 0) + 1
+                elif file_task.status == models.PreprocessingStatus.FAILED:
+                    self.task.failed_files = (self.task.failed_files or 0) + 1
                 self.db.commit()
 
                 # Broadcast progress update after each file
@@ -175,6 +181,12 @@ class PreprocessingPipeline:
                 if ft.status == models.PreprocessingStatus.COMPLETED
             )
             failed = total - completed  # everything else is FAILED now
+
+            # Sync the persisted counters with the final tally (the per-file
+            # in-place increments don't cover the just-auto-failed unfinished
+            # tasks above).
+            self.task.processed_files = completed
+            self.task.failed_files = failed
 
             # ───── final status / message ───────────────────────────────────
             if self.cancelled:
@@ -442,7 +454,9 @@ class PreprocessingPipeline:
         """Process a single file task with timeout protection."""
         file_task_id = file_task.id  # local copy; safe to use after a timeout
         file_task.status = models.PreprocessingStatus.IN_PROGRESS
-        file_task.started_at = datetime.datetime.now(datetime.UTC)
+        now = datetime.datetime.now(datetime.UTC)
+        file_task.started_at = now
+        file_task.last_heartbeat_at = now
         file_task.file_name = file_task.file.file_name
         self.db.commit()
 
@@ -575,6 +589,12 @@ class PreprocessingPipeline:
         Uses threading-based timeout which works in all contexts (including
         threaded Celery workers and test environments).
 
+        While waiting, bumps ``file_task.last_heartbeat_at`` every
+        ``_HEARTBEAT_INTERVAL_SECONDS`` so the orphan sweeper can distinguish a
+        slow-but-alive file from a dead worker. The heartbeat uses a separate
+        session and a bulk UPDATE (not ``self.db``) to avoid contending with
+        the worker thread, which may be using ``self.db``.
+
         Args:
             func: The processing function to call.
             file: The file model to pass to func.
@@ -590,6 +610,8 @@ class PreprocessingPipeline:
         import queue
         import threading
 
+        from sqlalchemy import update
+
         result_queue = queue.Queue()
         exception_queue = queue.Queue()
 
@@ -600,27 +622,53 @@ class PreprocessingPipeline:
             except Exception as e:
                 exception_queue.put(e)
 
+        def _heartbeat():
+            now = datetime.datetime.now(datetime.UTC)
+            with db_session() as fresh_db:
+                fresh_db.execute(
+                    update(models.FilePreprocessingTask)
+                    .where(models.FilePreprocessingTask.id == file_task.id)
+                    .values(last_heartbeat_at=now)
+                )
+                fresh_db.commit()
+
         thread = threading.Thread(target=target, daemon=True)
         thread.start()
 
-        try:
-            # Wait for result with timeout
-            result = result_queue.get(timeout=timeout_seconds)
-            return result
-        except queue.Empty:
-            # The worker may have raised before producing a result. Surface the
-            # real exception instead of a misleading TimeoutError; only report a
-            # timeout if the worker is genuinely still running.
+        deadline = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+            seconds=timeout_seconds
+        )
+        while True:
+            # Poll with a short timeout so we can heartbeat regularly without
+            # delaying detection of completion/exception.
+            remaining = (deadline - datetime.datetime.now(datetime.UTC)).total_seconds()
+            if remaining <= 0:
+                # Timed out. Surface a worker exception if one arrived; only
+                # report a timeout if the worker is genuinely still running.
+                try:
+                    exc = exception_queue.get_nowait()
+                    raise exc
+                except queue.Empty:
+                    raise TimeoutError(
+                        f"Processing exceeded {timeout_seconds}s timeout for file {file.file_name}"
+                    )
             try:
-                exc = exception_queue.get_nowait()
-                raise exc
-            except queue.Empty:
-                raise TimeoutError(
-                    f"Processing exceeded {timeout_seconds}s timeout for file {file.file_name}"
+                result = result_queue.get(
+                    timeout=min(_HEARTBEAT_INTERVAL_SECONDS, remaining)
                 )
-        except Exception as e:
-            # Re-raise any exception from the worker thread
-            raise e
+                return result
+            except queue.Empty:
+                # Still running — bump the heartbeat and keep waiting.
+                try:
+                    _heartbeat()
+                except Exception as e:
+                    logger.debug(
+                        "Heartbeat update failed for file task %s: %s", file_task.id, e
+                    )
+                continue
+            except Exception as e:
+                # Re-raise any exception from the worker thread
+                raise e
 
     def _route_pdf_image(
         self, file: models.File, file_task: models.FilePreprocessingTask
@@ -1625,6 +1673,13 @@ class PreprocessingPipeline:
             api_key = self.client.api_key or ""
         if not base_url and self.client:
             base_url = str(self.client.base_url)
+
+        # Validate a user-supplied custom endpoint against the SSRF policy.
+        # System defaults (VISION_OCR_API_BASE) and self.client.base_url (already
+        # validated in __init__) are trusted; only the per-config vision_base_url
+        # from additional_settings is user-controlled.
+        if additional.get("vision_base_url"):
+            base_url = validate_user_endpoint(base_url)
 
         if not api_key or not base_url:
             raise ValueError(

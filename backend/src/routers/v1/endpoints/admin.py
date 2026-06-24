@@ -14,6 +14,13 @@ from ....models import AppSetting
 
 router = APIRouter()
 
+# Env-only defaults (no DB overrides), computed once. Constructed with
+# SKIP_RUNTIME_CHECKS=True so it never performs OpenAI/S3 network validation
+# or sys.exit() — those run once at app startup via the settings proxy. Doing
+# this per-request (Settings()) previously re-ran validation on every admin
+# settings read/update and could crash the worker on a transient API outage.
+_ENV_DEFAULTS: dict = Settings(SKIP_RUNTIME_CHECKS=True).model_dump()
+
 
 # --------------------------
 # Settings endpoints
@@ -24,7 +31,7 @@ router = APIRouter()
 def read_settings(current_user=Depends(get_admin_user), db: Session = Depends(get_db)):
     db_rows = db.query(AppSetting).all()
     db_overrides = {row.key: row.value for row in db_rows}
-    env_defaults = Settings().model_dump()
+    env_defaults = _ENV_DEFAULTS
     result = {}
 
     for key, meta in SETTINGS_META.items():
@@ -86,7 +93,7 @@ def update_settings(
         except Exception:
             raise HTTPException(422, f"Invalid value for {key}: {value}")
         # Only store if overridden
-        original = getattr(Settings(), key)
+        original = _ENV_DEFAULTS.get(key)
         if str(value) == str(original):
             row = db.get(AppSetting, key)
             if row:

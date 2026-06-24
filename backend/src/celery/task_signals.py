@@ -14,6 +14,7 @@ import logging
 
 from celery import signals
 from celery.exceptions import SoftTimeLimitExceeded, WorkerLostError
+from sqlalchemy import func
 
 from .. import models
 from ..dependencies import get_db
@@ -147,8 +148,26 @@ def _is_preprocess_task(sender_name: str) -> bool:
 # ────────────────── Celery signal handlers ──────────────────
 @signals.task_prerun.connect
 def mark_started(sender=None, task_id=None, args=None, **_):
-    if _is_preprocess_task(sender.name):
-        _update(args[0], models.PreprocessingStatus.IN_PROGRESS)
+    if not _is_preprocess_task(sender.name):
+        return
+    # Don't resurrect a task that's already terminal. With task_acks_late=True
+    # and a Redis visibility_timeout, a message can be re-delivered after the
+    # original run (or the sweeper below) already finalized this task as
+    # COMPLETED/FAILED/CANCELLED. Flipping it back to IN_PROGRESS here would
+    # let the task body's stale-check then mark a COMPLETED task FAILED. The
+    # task body still re-checks and bails on terminal status, but we avoid the
+    # transient wrong state (and a misleading progress broadcast) entirely.
+    with next(get_db()) as db:
+        task = db.get(models.PreprocessingTask, args[0])
+        if not task:
+            return
+        if task.status in (
+            models.PreprocessingStatus.COMPLETED,
+            models.PreprocessingStatus.FAILED,
+            models.PreprocessingStatus.CANCELLED,
+        ):
+            return
+    _update(args[0], models.PreprocessingStatus.IN_PROGRESS)
 
 
 # @signals.task_postrun.connect
@@ -182,7 +201,14 @@ def mark_failed(sender=None, task_id=None, exception=None, args=None, **_):
 
 # ────────────────── periodic sweeper ──────────────────
 def sweep_orphans():
-    cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=30)
+    # A file task whose last heartbeat (falling back to started_at for rows
+    # that never heartbeated — e.g. created before the heartbeat column
+    # existed, or crashed before the first bump) is older than this window is
+    # assumed to have a dead worker. The pipeline heartbeats every ~15s while
+    # actively processing, so 10 minutes is a generous margin that won't reap
+    # slow-but-legitimate files even when their per-file timeout (up to 2h)
+    # exceeds the window.
+    cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=10)
     with next(get_db()) as db:
         # 1) fail orphaned file tasks
         q = db.query(models.FilePreprocessingTask).filter(
@@ -192,7 +218,11 @@ def sweep_orphans():
                     models.PreprocessingStatus.IN_PROGRESS,
                 ]
             ),
-            models.FilePreprocessingTask.started_at < cutoff,
+            func.coalesce(
+                models.FilePreprocessingTask.last_heartbeat_at,
+                models.FilePreprocessingTask.started_at,
+            )
+            < cutoff,
         )
         affected = 0
         parent_ids: set[int] = set()

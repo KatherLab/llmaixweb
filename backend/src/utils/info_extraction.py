@@ -17,6 +17,7 @@ import unicodedata
 from types import SimpleNamespace
 from typing import Any, Literal
 
+import httpx
 import jsonschema
 import requests
 from openai import (
@@ -31,8 +32,26 @@ from sqlalchemy import func, select
 
 from .. import models
 from ..core.config import settings
+from ..db.session import db_session
 
 logger = logging.getLogger(__name__)
+
+
+def _test_client(api_key: str, base_url: str) -> OpenAI:
+    """OpenAI client for user-supplied endpoints.
+
+    Uses an httpx client with ``follow_redirects=False`` so a 3xx from a
+    user-controlled endpoint can't bounce the request to a blocked internal
+    address (SSRF redirect bypass).
+    """
+    return OpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        timeout=30.0,
+        max_retries=2,
+        http_client=httpx.Client(follow_redirects=False, timeout=30.0),
+    )
+
 
 # =============================================================================
 # Result status constants
@@ -115,12 +134,7 @@ def _detect_provider(base_url: str) -> str:
 def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str, Any]:
     """Test LLM connection with a specific model by making a test completion."""
     try:
-        client = OpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            timeout=30.0,
-            max_retries=2,
-        )
+        client = _test_client(api_key, base_url)
         client.chat.completions.create(
             model=llm_model,
             messages=[{"role": "user", "content": "Test"}],
@@ -133,10 +147,13 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
             "message": "Authentication failed. Please check your API key.",
             "error_type": "authentication",
         }
-    except APIConnectionError as e:
+    except APIConnectionError:
+        # Don't echo str(e): the connection-error text can embed the upstream
+        # URL/response of an internal service the user pointed base_url at
+        # (SSRF exfiltration channel).
         return {
             "success": False,
-            "message": f"Connection failed. Please check your base URL: {str(e)}",
+            "message": "Connection failed. Please check your base URL.",
             "error_type": "connection",
         }
     except RateLimitError:
@@ -156,7 +173,7 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
         else:
             return {
                 "success": False,
-                "message": f"API error: {error_message}",
+                "message": "The API returned an error.",
                 "error_type": "api_error",
             }
     except requests.exceptions.ConnectionError:
@@ -171,10 +188,10 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
             "message": "Connection timeout. The service might be slow or unavailable.",
             "error_type": "timeout",
         }
-    except Exception as e:
+    except Exception:
         return {
             "success": False,
-            "message": f"Unexpected error: {str(e)}",
+            "message": "Unexpected error.",
             "error_type": "unknown",
         }
 
@@ -182,12 +199,7 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
 def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
     """Get list of available models from the API."""
     try:
-        client = OpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            timeout=30.0,
-            max_retries=2,
-        )
+        client = _test_client(api_key, base_url)
         response = client.models.list()
         models_list = [model.id for model in response.data]
         return {
@@ -202,11 +214,11 @@ def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
             "message": "Authentication failed. Please check your API key.",
             "error_type": "authentication",
         }
-    except APIConnectionError as e:
+    except APIConnectionError:
         return {
             "success": False,
             "models": [],
-            "message": f"Connection failed. Please check your base URL: {str(e)}",
+            "message": "Connection failed. Please check your base URL.",
             "error_type": "connection",
         }
     except requests.exceptions.ConnectionError:
@@ -216,11 +228,11 @@ def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
             "message": "Connection refused. Please check if the base URL is correct and the service is running.",
             "error_type": "connection_refused",
         }
-    except Exception as e:
+    except Exception:
         return {
             "success": False,
             "models": [],
-            "message": f"Failed to load models: {str(e)}",
+            "message": "Failed to load models.",
             "error_type": "model_loading_failed",
         }
 
@@ -228,12 +240,7 @@ def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
 def test_api_connection(api_key: str, base_url: str) -> dict[str, Any]:
     """Test API connection by trying to list models."""
     try:
-        client = OpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            timeout=30.0,
-            max_retries=2,
-        )
+        client = _test_client(api_key, base_url)
         response = client.models.list()
         return {
             "success": True,
@@ -246,10 +253,10 @@ def test_api_connection(api_key: str, base_url: str) -> dict[str, Any]:
             "message": "Authentication failed. Please check your API key.",
             "error_type": "authentication",
         }
-    except APIConnectionError as e:
+    except APIConnectionError:
         return {
             "success": False,
-            "message": f"Connection failed. Please check your base URL: {str(e)}",
+            "message": "Connection failed. Please check your base URL.",
             "error_type": "connection",
         }
     except requests.exceptions.ConnectionError:
@@ -258,10 +265,10 @@ def test_api_connection(api_key: str, base_url: str) -> dict[str, Any]:
             "message": "Connection refused. Please check if the base URL is correct and the service is running.",
             "error_type": "connection_refused",
         }
-    except Exception as e:
+    except Exception:
         return {
             "success": False,
-            "message": f"Unexpected error: {str(e)}",
+            "message": "Unexpected error.",
             "error_type": "unknown",
         }
 
@@ -290,12 +297,7 @@ def test_model_with_schema(
         - error_type: str | None
     """
     try:
-        client = OpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            timeout=30.0,
-            max_retries=2,
-        )
+        client = _test_client(api_key, base_url)
 
         # Use a small but reasonable completion cap to avoid length errors
         # while still allowing a meaningful response
@@ -383,7 +385,7 @@ def test_model_with_schema(
         if "schema" in error_msg:
             return {
                 "success": False,
-                "message": f"Schema validation error: {str(e)}",
+                "message": "Schema validation error: the API rejected the provided schema.",
                 "request_accepted": False,
                 "supports_structured_output": False,
                 "error_type": "schema_validation_error",
@@ -412,7 +414,7 @@ def test_model_with_schema(
         # Other API errors
         return {
             "success": False,
-            "message": f"API error: {str(e)}",
+            "message": "The API returned an error.",
             "request_accepted": False,
             "supports_structured_output": False,
             "error_type": "api_error",
@@ -427,10 +429,10 @@ def test_model_with_schema(
             "error_type": "authentication",
         }
 
-    except APIConnectionError as e:
+    except APIConnectionError:
         return {
             "success": False,
-            "message": f"Connection failed: {str(e)}",
+            "message": "Connection failed. Check base URL and service status.",
             "request_accepted": False,
             "supports_structured_output": False,
             "error_type": "connection",
@@ -445,10 +447,10 @@ def test_model_with_schema(
             "error_type": "connection_refused",
         }
 
-    except Exception as e:
+    except Exception:
         return {
             "success": False,
-            "message": f"Unexpected error: {str(e)}",
+            "message": "Unexpected error.",
             "request_accepted": False,
             "supports_structured_output": False,
             "error_type": "unknown",
@@ -736,28 +738,26 @@ def _completion_kwargs(
 # =============================================================================
 
 
-async def extract_info_single_doc_async(
-    *,
-    client: AsyncOpenAI,
-    db_session,
+def _load_extraction_inputs(
+    session,
     trial_id: int,
     document_id: int,
-    llm_model: str,
     schema_id: int,
     prompt_id: int,
-    project_id: int,
-    advanced_options: dict | None = None,
-    base_url: str | None = None,
-) -> None:
-    """Async extraction for a single document."""
-    trial = db_session.get(models.Trial, trial_id)
-    document = db_session.get(models.Document, document_id)
+) -> tuple[str, dict, Any]:
+    """Load the inputs needed for an LLM extraction call from ``session``.
+
+    Returns ``(document_text, schema_def, prompt_obj)``. Uses the schema/prompt
+    snapshot frozen at trial creation so the stored result matches the record
+    shown to the user; falls back to the live rows for trials created before
+    snapshots existed. Intended to be called within a short-lived session that
+    is closed before the (slow) LLM call, so the DB connection is released.
+    """
+    trial = session.get(models.Trial, trial_id)
+    document = session.get(models.Document, document_id)
     if not (trial and document):
         raise ValueError("trial / document not found")
 
-    # Use the schema/prompt snapshot frozen at trial creation so the stored
-    # result matches the record shown to the user. Fall back to the live rows
-    # for trials created before snapshots existed.
     schema_def = (trial.schema_snapshot or {}).get("schema_definition")
     prompt_obj: Any = None
     if trial.prompt_snapshot:
@@ -767,17 +767,45 @@ async def extract_info_single_doc_async(
             user_prompt=ps.get("user_prompt"),
         )
     if schema_def is None:
-        schema = db_session.get(models.Schema, schema_id)
+        schema = session.get(models.Schema, schema_id)
         schema_def = schema.schema_definition if schema else None
     if prompt_obj is None:
-        prompt_obj = db_session.get(models.Prompt, prompt_id)
+        prompt_obj = session.get(models.Prompt, prompt_id)
     if schema_def is None or prompt_obj is None:
         raise ValueError("schema / prompt not found")
 
+    return document.text, schema_def, prompt_obj
+
+
+async def extract_info_single_doc_async(
+    *,
+    client: AsyncOpenAI,
+    trial_id: int,
+    document_id: int,
+    llm_model: str,
+    schema_id: int,
+    prompt_id: int,
+    project_id: int,
+    advanced_options: dict | None = None,
+    base_url: str | None = None,
+) -> None:
+    """Async extraction for a single document.
+
+    Loads inputs and stores the result with short-lived sessions, so no DB
+    connection is held open during the (potentially long) LLM call — under
+    concurrency that would idle a large share of the connection pool.
+    """
+    # Phase 1: load inputs with a short-lived session, then release it.
+    with db_session() as session:
+        document_text, schema_def, prompt_obj = _load_extraction_inputs(
+            session, trial_id, document_id, schema_id, prompt_id
+        )
+
+    # Phase 2: the LLM call — no DB session held.
     kwargs = _completion_kwargs(
         llm_model,
         schema_def,
-        _build_messages(prompt_obj, document.text, schema_def),
+        _build_messages(prompt_obj, document_text, schema_def),
         advanced_options,
         base_url,
     )
@@ -800,20 +828,22 @@ async def extract_info_single_doc_async(
         bumped_kwargs = _completion_kwargs(
             llm_model,
             schema_def,
-            _build_messages(prompt_obj, document.text),
+            _build_messages(prompt_obj, document_text, schema_def),
             bumped_adv,
             base_url,
         )
         response = await client.chat.completions.create(**bumped_kwargs)
 
-    _store_result(
-        db_session,
-        trial_id,
-        document_id,
-        response,
-        advanced_options,
-        schema_def,
-    )
+    # Phase 3: store the result with a fresh short-lived session.
+    with db_session() as session:
+        _store_result(
+            session,
+            trial_id,
+            document_id,
+            response,
+            advanced_options,
+            schema_def,
+        )
 
 
 def extract_info_single_doc(

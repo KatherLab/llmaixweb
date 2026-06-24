@@ -139,7 +139,6 @@ const iconType = computed(() => {
 })
 
 const defaultExt = computed(() => {
-  console.log('defaultExt ', props.fileType)
   const ext = props.fileType?.split('.').pop()?.toUpperCase() || ''
   return ext.slice(0, 3) // Show first 3 characters
 })

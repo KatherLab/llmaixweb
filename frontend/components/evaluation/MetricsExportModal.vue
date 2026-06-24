@@ -297,10 +297,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { api } from '@/services/api'
+import { evaluationsApi } from '@/services/evaluationsApi'
 import { formatDate } from '@/utils/formatters'
 import { useToast } from 'vue-toastification'
 import { useScrollLock } from '@/composables/useScrollLock'
+import { useFileDownload } from '@/composables/useFileDownload'
 
 useScrollLock({ autoLock: true })
 
@@ -317,6 +318,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 const toast = useToast()
+const { downloadFromApi } = useFileDownload()
 const isExporting = ref(false)
 
 const exportFormat = ref('csv')
@@ -386,22 +388,11 @@ const exportReport = async () => {
         includeGroundTruthContent.value ? 'true' : 'false',
       )
 
-    const response = await api.get(
-      `/project/${props.projectId}/evaluations/download?${params.toString()}`,
-      { responseType: 'blob' },
-    )
-
-    const url = window.URL.createObjectURL(new Blob([response.data]))
     const timestamp = new Date().toISOString().split('T')[0]
-    let extension = exportFormat.value === 'zip' ? 'zip' : exportFormat.value
+    const extension = exportFormat.value === 'zip' ? 'zip' : exportFormat.value
     const filename = `evaluation_report_${timestamp}.${extension}`
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(url)
+
+    await downloadFromApi(() => evaluationsApi.download(props.projectId, params), filename)
 
     toast.success('Report exported successfully')
     emit('close')

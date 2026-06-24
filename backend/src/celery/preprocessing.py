@@ -3,6 +3,8 @@ import asyncio
 import datetime as dt
 import logging
 
+from sqlalchemy import func, select
+
 from .. import models
 from ..core.config import settings
 from ..dependencies import get_db
@@ -10,6 +12,22 @@ from ..utils.preprocessing import PreprocessingPipeline
 from .celery_config import celery_app
 
 log = logging.getLogger(__name__)
+
+
+def _count_file_tasks_by_status(
+    db, task_id: int
+) -> dict[models.PreprocessingStatus, int]:
+    """Count a task's FilePreprocessingTasks grouped by status in one query.
+
+    Replaces iterating the full ``task.file_tasks`` collection (4+ passes) on
+    every heartbeat tick — O(rows) Python work every 3s → a single GROUP BY.
+    """
+    rows = db.execute(
+        select(models.FilePreprocessingTask.status, func.count())
+        .where(models.FilePreprocessingTask.preprocessing_task_id == task_id)
+        .group_by(models.FilePreprocessingTask.status)
+    ).all()
+    return {status: count for status, count in rows}
 
 
 def _broadcast_preprocessing_update(
@@ -79,8 +97,6 @@ if celery_app:
     def process_files_async(
         self,
         task_id: int,
-        api_key: str | None = None,
-        base_url: str | None = None,
     ):
         async def _run():
             failures = {}
@@ -94,13 +110,13 @@ if celery_app:
                 )
                 if not task:
                     raise ValueError(f"PreprocessingTask with id {task_id} not found")
-                if api_key or base_url:
-                    if not task.task_metadata:
-                        task.task_metadata = {}
-                    if api_key:
-                        task.task_metadata["api_key"] = api_key
-                    if base_url:
-                        task.task_metadata["api_base_url"] = base_url
+
+                # Read custom OCR credentials from the task row. The api_key is
+                # stored encrypted (api_key_encrypted) and decrypted here; it is
+                # never passed through the Celery broker as plaintext. base_url
+                # is not secret and lives in task_metadata.
+                api_key = task.api_key or None
+                base_url = (task.task_metadata or {}).get("api_base_url")
 
                 # ── Re-delivery after worker lost / stale job detection ──
                 # When a worker is killed by SIGKILL (OOM etc.) Celery
@@ -290,27 +306,23 @@ if celery_app:
                         await asyncio.sleep(3)
                         with next(get_db()) as db:
                             task = db.get(models.PreprocessingTask, task_id)
-                            total = len(task.file_tasks)
-                            completed = sum(
-                                1
-                                for f in task.file_tasks
-                                if f.status == models.PreprocessingStatus.COMPLETED
+                            if not task:
+                                break
+
+                            # Count file tasks by status in one GROUP BY query
+                            # instead of iterating task.file_tasks 4+ times.
+                            counts = _count_file_tasks_by_status(db, task_id)
+                            completed = counts.get(
+                                models.PreprocessingStatus.COMPLETED, 0
                             )
-                            failed = sum(
-                                1
-                                for f in task.file_tasks
-                                if f.status == models.PreprocessingStatus.FAILED
+                            failed = counts.get(models.PreprocessingStatus.FAILED, 0)
+                            cancelled = counts.get(
+                                models.PreprocessingStatus.CANCELLED, 0
                             )
-                            cancelled = sum(
-                                1
-                                for f in task.file_tasks
-                                if f.status == models.PreprocessingStatus.CANCELLED
+                            in_progress = counts.get(
+                                models.PreprocessingStatus.IN_PROGRESS, 0
                             )
-                            in_progress = sum(
-                                1
-                                for f in task.file_tasks
-                                if f.status == models.PreprocessingStatus.IN_PROGRESS
-                            )
+                            total = sum(counts.values())
 
                             now = dt.datetime.now(dt.UTC)
                             started = task.started_at or now
@@ -343,14 +355,9 @@ if celery_app:
                                 last_broadcast = current_state
                                 _broadcast_preprocessing_update(task, "progress")
 
-                            if all(
-                                f.status
-                                in [
-                                    models.PreprocessingStatus.COMPLETED,
-                                    models.PreprocessingStatus.FAILED,
-                                    models.PreprocessingStatus.CANCELLED,
-                                ]
-                                for f in task.file_tasks
+                            # Done once no file task is still pending/in-progress.
+                            if not in_progress and not counts.get(
+                                models.PreprocessingStatus.PENDING, 0
                             ):
                                 break
                 except asyncio.CancelledError:
@@ -397,22 +404,14 @@ if celery_app:
 
                 db.commit()
 
-                total = len(task.file_tasks)
-                completed = sum(
-                    1
-                    for f in task.file_tasks
-                    if f.status == models.PreprocessingStatus.COMPLETED
-                )
-                failed = sum(
-                    1
-                    for f in task.file_tasks
-                    if f.status == models.PreprocessingStatus.FAILED
-                )
-                cancelled = sum(
-                    1
-                    for f in task.file_tasks
-                    if f.status == models.PreprocessingStatus.CANCELLED
-                )
+                # Count by status in one GROUP BY query instead of 3 passes
+                # over task.file_tasks. total = actual file-task row count
+                # (matches the previous len(task.file_tasks)).
+                counts = _count_file_tasks_by_status(db, task_id)
+                total = sum(counts.values())
+                completed = counts.get(models.PreprocessingStatus.COMPLETED, 0)
+                failed = counts.get(models.PreprocessingStatus.FAILED, 0)
+                cancelled = counts.get(models.PreprocessingStatus.CANCELLED, 0)
 
                 task.completed_at = now
 
@@ -463,58 +462,9 @@ if celery_app:
 
         asyncio.run(_run())
 
-    # ────────────────────────────────────────────────────────────
-    # Signal handler: safety net when a task permanently fails
-    # after all autoretry_for attempts are exhausted.
-    # Updates the DB row so the frontend sees FAILED instead of
-    # an eternally-in_progress task.
-    # ────────────────────────────────────────────────────────────
-    from celery.signals import task_failure
-
-    @task_failure.connect(sender=process_files_async)
-    def handle_process_files_failure(sender=None, body=None, **kwargs):
-        """Mark the PreprocessingTask as FAILED in the DB after all retries
-        are exhausted and the task permanently fails."""
-        if body is None:
-            return
-        task_id = body[0] if body else None
-        if task_id is None:
-            return
-        try:
-            with next(get_db()) as db:
-                task = db.get(models.PreprocessingTask, task_id)
-                if task is None:
-                    return
-                # Only update if the task hasn't already reached a terminal state
-                if task.status in (
-                    models.PreprocessingStatus.PENDING,
-                    models.PreprocessingStatus.IN_PROGRESS,
-                ):
-                    task.status = models.PreprocessingStatus.FAILED
-                    task.completed_at = dt.datetime.now(dt.UTC)
-                    exc = kwargs.get("exception", None)
-                    reason = str(exc) if exc else "unknown error"
-                    task.message = f"Processing failed after all retries: {reason}"
-                    # Mark any pending/in-progress file tasks as failed too
-                    now = dt.datetime.now(dt.UTC)
-                    for ft in task.file_tasks:
-                        if ft.status in (
-                            models.PreprocessingStatus.PENDING,
-                            models.PreprocessingStatus.IN_PROGRESS,
-                        ):
-                            ft.status = models.PreprocessingStatus.FAILED
-                            ft.error_message = reason
-                            ft.completed_at = now
-                    db.commit()
-                    log.warning(
-                        "Marked PreprocessingTask %s as FAILED after all retries",
-                        task_id,
-                    )
-                    # Broadcast the failure via WebSocket
-                    _broadcast_preprocessing_update(task, "failed")
-        except Exception as exc:
-            log.error(
-                "Failed to update PreprocessingTask %s after task_failure: %s",
-                task_id,
-                exc,
-            )
+    # NOTE: a previous task_failure handler lived here to mark the
+    # PreprocessingTask FAILED after retries were exhausted, but Celery's
+    # task_failure signal sends ``args`` (not ``body``), so its ``body``
+    # guard caused it to return immediately and never run. The global
+    # ``mark_failed`` handler in celery/task_signals.py already covers this
+    # case correctly (it reads ``args[0]``), so the dead handler was removed.

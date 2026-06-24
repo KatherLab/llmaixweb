@@ -209,7 +209,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { api } from '@/services/api'
+import { adminApi } from '@/services/adminApi'
 
 const settings = reactive({})
 const draft = reactive({})
@@ -251,7 +251,7 @@ async function saveSecret(key) {
   saving.value = true
   error.value = ''
   try {
-    await api.put('/admin/settings', { [key]: secretDraft[key] })
+    await adminApi.setSecret(key, secretDraft[key])
     // Mark as set in local state (don't show value)
     settings[key].is_set = !!secretDraft[key]
     settings[key].override = null
@@ -273,7 +273,7 @@ async function clearSecret(key) {
   saving.value = true
   error.value = ''
   try {
-    await api.put('/admin/settings', { [key]: '' }) // Backend should treat empty string as unset
+    await adminApi.clearSecret(key) // Backend should treat empty string as unset
     settings[key].is_set = false
     settings[key].override = null
     settings[key].effective = null
@@ -314,7 +314,7 @@ function resetDraft() {
 async function fetchSettings() {
   loading.value = true
   try {
-    const res = await api.get('/admin/settings')
+    const res = await adminApi.getSettings()
     Object.assign(settings, res.data)
     resetDraft()
   } catch (e) {
@@ -332,7 +332,7 @@ async function save() {
     const payload = Object.fromEntries(
       Object.entries(draft).filter(([k]) => !settings[k].readonly && !settings[k].secret),
     )
-    await api.put('/admin/settings', payload)
+    await adminApi.updateSettings(payload)
     Object.entries(payload).forEach(([k, v]) => {
       settings[k].override = v
       settings[k].effective = v
@@ -351,7 +351,7 @@ async function save() {
 
 async function deleteOverride(key) {
   try {
-    await api.delete(`/admin/settings/${key}`)
+    await adminApi.deleteSetting(key)
     settings[key].override = undefined
     settings[key].effective = settings[key].original
     settings[key].overridden = false

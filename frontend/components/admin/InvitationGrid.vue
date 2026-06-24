@@ -14,68 +14,58 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import { AgGridVue } from 'ag-grid-vue3'
-import { themeMaterial } from 'ag-grid-community'
+import { useGridTheme } from '@/composables/useGridTheme'
 
-const props = defineProps({
+defineProps({
   rowData: { type: Array, default: () => [] },
-  columnDefs: { type: Array, default: () => [] },
-  defaultColDef: { type: Object, default: () => ({}) },
   search: { type: String, default: '' },
-  theme: { type: Object, default: null },
-  onGridReady: { type: Function, default: null },
 })
 
-// Theme with dark mode support
-const isDarkMode = () => {
-  if (typeof window !== 'undefined') {
-    return (
-      localStorage.getItem('darkMode') === '1' ||
-      (!localStorage.getItem('darkMode') &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches)
-    )
-  }
-  return false
-}
+const emit = defineEmits(['delete-requested'])
 
-const getGridTheme = () => {
-  const darkMode = isDarkMode()
-  return themeMaterial.withParams({
-    spacing: 12,
-    borderRadius: 8,
-    rowHeight: 40,
-    headerHeight: 48,
-    listItemHeight: 40,
-    accentColor: '#3b82f6',
-    rowHoverColor: darkMode ? '#1e293b' : '#f3f4f6',
-    headerBackgroundColor: darkMode ? '#1e293b' : '#f9fafb',
-    headerTextColor: darkMode ? '#e2e8f0' : '#111827',
-    headerCellHoverBackgroundColor: darkMode ? '#334155' : '#e0e7ff',
-    backgroundColor: darkMode ? '#0f172a' : '#ffffff',
-    foregroundColor: darkMode ? '#f1f5f9' : '#111827',
-    rowBackgroundColor: darkMode ? '#0f172a' : '#ffffff',
-    rowForegroundColor: darkMode ? '#e2e8f0' : '#111827',
-    borderColor: darkMode ? '#334155' : '#e5e7eb',
-    controlBorderRadius: 8,
-  })
-}
+// Column definitions (self-contained — previously passed from parent)
+const columnDefs = [
+  { field: 'email', headerName: 'Email', sortable: true, filter: true, flex: 1, minWidth: 140 },
+  {
+    field: 'is_used',
+    headerName: 'Used',
+    sortable: true,
+    filter: true,
+    flex: 1,
+    minWidth: 70,
+    valueFormatter: ({ value }) => (value ? 'Yes' : 'No'),
+    cellRenderer: ({ value }) =>
+      value
+        ? '<span class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs">Yes</span>'
+        : '<span class="bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-xs">No</span>',
+  },
+  {
+    headerName: 'Actions',
+    field: 'actions',
+    minWidth: 110,
+    maxWidth: 130,
+    sortable: false,
+    filter: false,
+    pinned: 'right',
+    cellRenderer: (params) => {
+      return `<button class="text-xs text-red-600 font-bold ag-action-btn" data-action="delete">Delete</button>`
+    },
+  },
+]
+const defaultColDef = { resizable: true, sortable: true, filter: true }
 
-const gridTheme = ref(getGridTheme())
-
-// Watch for dark mode changes
-if (typeof window !== 'undefined') {
-  const observer = new MutationObserver(() => {
-    gridTheme.value = getGridTheme()
-  })
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-  })
-}
+// Shared ag-grid theme with dark-mode support (re-themes on toggle)
+const { gridTheme } = useGridTheme({ rowHeight: 40, listItemHeight: 40, controlBorderRadius: 8 })
 
 function gridReady(params) {
-  props.onGridReady?.(params)
+  params.api.addEventListener('cellClicked', (event) => {
+    if (event.colDef.field !== 'actions') return
+    const invitation = event.data
+    if (event.event.target.dataset.action === 'delete') {
+      emit('delete-requested', invitation)
+    }
+  })
 }
 </script>
 

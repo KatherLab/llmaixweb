@@ -20,58 +20,13 @@
 <script setup>
 import { ref, watch, defineComponent, h } from 'vue'
 import { AgGridVue } from 'ag-grid-vue3'
-import { themeMaterial } from 'ag-grid-community'
+import { useGridTheme } from '@/composables/useGridTheme'
 
 // Emits to parent
 const emit = defineEmits(['edit-requested'])
 
-// Theme (v34 :theme API) - with dark mode support
-const isDarkMode = () => {
-  if (typeof window !== 'undefined') {
-    return (
-      localStorage.getItem('darkMode') === '1' ||
-      (!localStorage.getItem('darkMode') &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches)
-    )
-  }
-  return false
-}
-
-const getGridTheme = () => {
-  const darkMode = isDarkMode()
-  return themeMaterial.withParams({
-    spacing: 12,
-    borderRadius: 8,
-    rowHeight: 56,
-    headerHeight: 48,
-    listItemHeight: 40,
-    accentColor: '#3b82f6',
-    rowHoverColor: darkMode ? '#1e293b' : '#f3f4f6',
-    headerBackgroundColor: darkMode ? '#1e293b' : '#f9fafb',
-    headerTextColor: darkMode ? '#e2e8f0' : '#111827',
-    headerCellHoverBackgroundColor: darkMode ? '#334155' : '#e0e7ff',
-    // Dark mode colors
-    backgroundColor: darkMode ? '#0f172a' : '#ffffff',
-    foregroundColor: darkMode ? '#f1f5f9' : '#111827',
-    rowBackgroundColor: darkMode ? '#0f172a' : '#ffffff',
-    rowForegroundColor: darkMode ? '#e2e8f0' : '#111827',
-    borderColor: darkMode ? '#334155' : '#e5e7eb',
-    controlBorderRadius: 8,
-  })
-}
-
-const gridTheme = ref(getGridTheme())
-
-// Watch for dark mode changes
-if (typeof window !== 'undefined') {
-  const observer = new MutationObserver(() => {
-    gridTheme.value = getGridTheme()
-  })
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-  })
-}
+// Shared ag-grid theme with dark-mode support (re-themes on toggle)
+const { gridTheme } = useGridTheme({ rowHeight: 56, listItemHeight: 40, controlBorderRadius: 8 })
 
 // ----------------------------
 // Vue cell components (render)
@@ -229,7 +184,6 @@ function onGridSizeChanged() {
 const props = defineProps({
   rowData: { type: Array, default: () => [] },
   search: { type: String, default: '' },
-  theme: { type: Object, default: null },
 })
 
 watch(

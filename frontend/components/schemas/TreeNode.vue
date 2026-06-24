@@ -83,7 +83,8 @@
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
+import { ref, computed } from 'vue'
+import { getTypeIcon } from '@/utils/schemaTypeIcons'
 
 const props = defineProps({
   nodeKey: {
@@ -136,82 +137,8 @@ const typeColorClass = computed(() => {
   return colors[props.nodeSchema.type] || 'bg-gray-500'
 })
 
-// Type Icons (reusing from SchemaBlock)
-const StringIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-      }),
-    ])
-  },
-}
-
-const NumberIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M7 20l4-16m2 16l4-16M6 9h14M4 15h14',
-      }),
-    ])
-  },
-}
-
-const BooleanIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-      }),
-    ])
-  },
-}
-
-const ObjectIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
-      }),
-    ])
-  },
-}
-
-const ArrayIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M4 6h16M4 10h16M4 14h16M4 18h16',
-      }),
-    ])
-  },
-}
-
-const typeIcon = computed(() => {
-  const icons = {
-    string: StringIcon,
-    number: NumberIcon,
-    boolean: BooleanIcon,
-    object: ObjectIcon,
-    array: ArrayIcon,
-  }
-  return icons[props.nodeSchema.type] || StringIcon
-})
+// Type Icons: shared via @/utils/schemaTypeIcons
+const typeIcon = computed(() => getTypeIcon(props.nodeSchema.type))
 
 const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value

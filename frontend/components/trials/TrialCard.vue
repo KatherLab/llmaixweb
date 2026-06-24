@@ -38,9 +38,7 @@
             <span class="font-semibold text-lg text-gray-900 dark:text-white truncate block">{{
               trial.name || `Trial #${trial.id}`
             }}</span>
-            <span :class="['text-xs px-2 py-1 rounded-full font-medium', statusClass]">{{
-              trial.status
-            }}</span>
+            <StatusBadge :status="trial.status" class="px-2 py-1" />
           </div>
           <div v-if="trial.last_result_at" class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             Last result: {{ formatDate(trial.last_result_at) }}
@@ -83,9 +81,11 @@
           <span class="font-medium text-blue-600 dark:text-blue-400"
             >{{ docsDone }}/{{ totalDocs }} docs</span
           >
-          <span class="text-gray-500 dark:text-gray-400">{{ pretty(elapsedSeconds) }} elapsed</span>
+          <span class="text-gray-500 dark:text-gray-400"
+            >{{ formatDuration(elapsedSeconds) }} elapsed</span
+          >
           <span v-if="etaSeconds && etaSeconds > 0" class="text-gray-500 dark:text-gray-400"
-            >• ≈ {{ pretty(etaSeconds) }} left</span
+            >• ≈ {{ formatDuration(etaSeconds) }} left</span
           >
         </div>
         <div class="w-full h-1 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -195,6 +195,8 @@
 
 <script setup>
 import { computed } from 'vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import { formatDuration } from '@/utils/formatters'
 
 const props = defineProps({
   trial: { type: Object, required: true },
@@ -224,17 +226,6 @@ const schemaName = computed(
 )
 const promptName = computed(() => props.trial.prompt_snapshot?.name || prompt.value?.name)
 
-const statusClass = computed(
-  () =>
-    ({
-      pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400',
-      processing: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400',
-      completed: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400',
-      failed: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400',
-      cancelled: 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400',
-    })[props.trial.status] || 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-400',
-)
-
 const isActive = computed(() => !['completed', 'failed', 'cancelled'].includes(props.trial.status))
 
 const docsDone = computed(() => {
@@ -255,10 +246,6 @@ const elapsedSeconds = computed(() =>
 )
 const etaSeconds = computed(() => props.trial.meta?.eta_seconds ?? 0)
 
-function pretty(sec) {
-  if (!sec || isNaN(sec)) return '00:00:00'
-  return new Date(sec * 1000).toISOString().substring(11, 19)
-}
 function formatDate(dateString) {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleString()

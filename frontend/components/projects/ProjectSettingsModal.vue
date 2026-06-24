@@ -123,8 +123,8 @@ import { useScrollLock } from '@/composables/useScrollLock'
 
 const props = defineProps({
   open: Boolean,
-  initialName: String,
-  initialDescription: String,
+  initialName: { type: String, default: '' },
+  initialDescription: { type: String, default: '' },
   isSaving: Boolean,
 })
 const emit = defineEmits(['save', 'close', 'delete'])

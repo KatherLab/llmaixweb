@@ -521,7 +521,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, h } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { getTypeIcon, getTypeColor } from '@/utils/schemaTypeIcons'
 
 const props = defineProps({
   property: {
@@ -545,94 +546,12 @@ const showPatternHelp = ref(false)
 const enumValues = ref(props.property.enum ? [...props.property.enum] : [])
 const examplesText = ref(props.property.examples ? props.property.examples.join('\n') : '')
 
-// Type Icons
-const StringIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-      }),
-    ])
-  },
-}
-
-const NumberIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M7 20l4-16m2 16l4-16M6 9h14M4 15h14',
-      }),
-    ])
-  },
-}
-
-const BooleanIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-      }),
-    ])
-  },
-}
-
-const ObjectIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
-      }),
-    ])
-  },
-}
-
-const ArrayIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M4 6h16M4 10h16M4 14h16M4 18h16',
-      }),
-    ])
-  },
-}
+// Type Icons + colors: shared via @/utils/schemaTypeIcons
 
 // Computed properties
-const typeIcon = computed(() => {
-  const icons = {
-    string: StringIcon,
-    number: NumberIcon,
-    boolean: BooleanIcon,
-    object: ObjectIcon,
-    array: ArrayIcon,
-  }
-  return icons[localProperty.value.type] || StringIcon
-})
+const typeIcon = computed(() => getTypeIcon(localProperty.value.type))
 
-const typeColorClass = computed(() => {
-  const colors = {
-    string: 'bg-green-500',
-    number: 'bg-blue-500',
-    boolean: 'bg-purple-500',
-    object: 'bg-orange-500',
-    array: 'bg-pink-500',
-  }
-  return colors[localProperty.value.type] || 'bg-gray-500'
-})
+const typeColorClass = computed(() => getTypeColor(localProperty.value.type))
 
 const isInteger = computed({
   get: () => localProperty.value.type === 'integer',
@@ -787,16 +706,5 @@ const onTypeChange = () => {
 
   // Emit the clean property immediately
   emit('update', newProperty)
-}
-
-// Clear undefined values before emitting
-const cleanProperty = (prop) => {
-  const cleaned = {}
-  for (const [key, value] of Object.entries(prop)) {
-    if (value !== undefined && value !== '') {
-      cleaned[key] = value
-    }
-  }
-  return cleaned
 }
 </script>

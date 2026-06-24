@@ -68,7 +68,7 @@
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
-import { api } from '@/services/api'
+import { adminApi } from '@/services/adminApi'
 
 const loading = ref(true)
 const error = ref('')
@@ -83,11 +83,11 @@ function pretty(obj) {
 }
 
 async function fetchWorkers() {
-  const res = await api.get('/admin/celery/workers')
+  const res = await adminApi.celeryWorkers()
   workers.value = res.data
 }
 async function fetchQueues() {
-  const res = await api.get('/admin/celery/queues')
+  const res = await adminApi.celeryQueues()
   queues.value = res.data
 }
 async function fetchAll() {
@@ -106,7 +106,7 @@ async function inspectTask() {
   error.value = ''
   taskStatus.value = null
   try {
-    const res = await api.get(`/admin/celery/tasks/${taskId.value}`)
+    const res = await adminApi.celeryTask(taskId.value)
     taskStatus.value = res.data
   } catch (e) {
     error.value = e?.response?.data?.detail || 'Failed to inspect task'
@@ -116,7 +116,7 @@ async function revokeTask(id) {
   error.value = ''
   revokedId.value = ''
   try {
-    await api.post(`/admin/celery/revoke/${id}`)
+    await adminApi.revokeTask(id)
     revokedId.value = id
     setTimeout(() => {
       revokedId.value = ''

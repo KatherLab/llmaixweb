@@ -1,39 +1,64 @@
 # backend/src/dependencies.py
 import hashlib
 import os
+import threading
 import uuid
 from typing import Generator
 
 import boto3
 from botocore.client import BaseClient
-from openai import OpenAI
+from botocore.exceptions import ClientError
 
 from .core.dynamic_settings import get_settings
 from .db.session import SessionLocal
 
 settings = get_settings()
 
-if settings.OPENAI_NO_API_CHECK:
-    openai_client: OpenAI | None = None
-else:
-    openai_client: OpenAI | None = OpenAI(
-        api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_API_BASE
-    )
+# S3 client cache. The client is built once from the *current* settings and
+# rebuilt only when the relevant S3 settings change (e.g. after an admin
+# override applied via dynamic_settings). The cache key is the tuple of values
+# that define the client, so it self-invalidates without coupling to the
+# settings-reload machinery. Per-trial LLM clients are constructed elsewhere
+# from Trial.api_key/base_url, so no module-level OpenAI client is needed.
+_s3_client_lock = threading.Lock()
+_s3_client_cache: tuple[tuple, BaseClient] | None = None
 
-if not settings.LOCAL_DIRECTORY:
-    if settings.S3_ENDPOINT_URL:
-        s3_client: BaseClient = boto3.client(
-            "s3",
-            endpoint_url=settings.S3_ENDPOINT_URL,
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        )
-    else:
-        s3_client: BaseClient = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        )
+
+def get_s3_client() -> BaseClient:
+    """Return an S3 client reflecting the current settings.
+
+    Cached on the (endpoint, access key, secret key) tuple so that admin
+    changes to S3 config take effect on the next call without rebuilding the
+    client on every request.
+    """
+    global _s3_client_cache
+    key = (
+        settings.S3_ENDPOINT_URL,
+        settings.AWS_ACCESS_KEY_ID,
+        settings.AWS_SECRET_ACCESS_KEY,
+    )
+    cached = _s3_client_cache
+    if cached is not None and cached[0] == key:
+        return cached[1]
+    with _s3_client_lock:
+        cached = _s3_client_cache
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        if settings.S3_ENDPOINT_URL:
+            client = boto3.client(
+                "s3",
+                endpoint_url=settings.S3_ENDPOINT_URL,
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            )
+        else:
+            client = boto3.client(
+                "s3",
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            )
+        _s3_client_cache = (key, client)
+        return client
 
 
 def calculate_file_hash(content: bytes) -> str:
@@ -78,17 +103,17 @@ def get_file(file_name: str, force_streaming: bool = False) -> bytes:
             with open(file_path, "rb") as file:
                 return file.read()
     else:
-        assert s3_client is not None
+        s3 = get_s3_client()
         # For S3, check if we should use streaming
         try:
-            head = s3_client.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)  # type: ignore
+            head = s3.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
             file_size = head.get("ContentLength", 0)
-        except Exception:
+        except ClientError:
             file_size = 0  # Unknown size, proceed without streaming
 
         if force_streaming or file_size > settings.FILE_STREAMING_THRESHOLD_BYTES:
             # Stream large files from S3
-            response = s3_client.get_object(  # type: ignore
+            response = s3.get_object(
                 Bucket=settings.S3_BUCKET_NAME,
                 Key=file_name,
             )
@@ -103,9 +128,7 @@ def get_file(file_name: str, force_streaming: bool = False) -> bytes:
             return b"".join(chunks)
         else:
             # Read small files directly
-            response = s3_client.get_object(
-                Bucket=settings.S3_BUCKET_NAME, Key=file_name
-            )  # type: ignore
+            response = s3.get_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
             return response["Body"].read()
 
 
@@ -120,15 +143,14 @@ def save_file(file_content: bytes) -> str:
         str: The generated file name.
     """
     file_name = f"{uuid.uuid4()}"
-    file_path = f"{settings.LOCAL_DIRECTORY}/{file_name}"
 
     if settings.LOCAL_DIRECTORY:
+        file_path = f"{settings.LOCAL_DIRECTORY}/{file_name}"
         with open(file_path, "wb") as file:
             file.write(file_content)
     else:
-        s3_client.put_object(  # type: ignore
-            Bucket=settings.S3_BUCKET_NAME, Key=file_name, Body=file_content
-        )
+        s3 = get_s3_client()
+        s3.put_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name, Body=file_content)
 
     return file_name
 
@@ -149,21 +171,27 @@ def remove_file(file_name: str) -> None:
             raise FileNotFoundError(f"File {file_name} not found in local storage.")
         os.remove(file_path)
     else:
+        s3 = get_s3_client()
         try:
-            s3_client.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)  # type: ignore
-            s3_client.delete_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)  # type: ignore
-        except s3_client.exceptions.ClientError as e:
-            if e.response["Error"]["Code"] == "404":
+            s3.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
+            s3.delete_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code") in ("404", "NoSuchKey"):
                 raise FileNotFoundError(f"File {file_name} not found in S3.")
-            else:
-                raise e
+            raise
 
 
 def get_db() -> Generator:
+    """Yield a DB session for a request.
+
+    Handlers commit explicitly — there is no auto-commit on success, so
+    read-only endpoints never persist incidental flushes and a handler that
+    forgets to commit simply doesn't write (rather than silently persisting
+    unintended state). Exceptions still roll back.
+    """
     db = SessionLocal()
     try:
         yield db
-        db.commit()
     except Exception:
         db.rollback()
         raise

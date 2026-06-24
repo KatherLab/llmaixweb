@@ -2,6 +2,7 @@
 """Ground truth endpoints for projects."""
 
 import json
+import logging
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
@@ -13,6 +14,8 @@ from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db, remove_file, save_file
 from ....utils.helpers import extract_field_types_from_schema
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -175,12 +178,11 @@ def delete_groundtruth(
     if not groundtruth:
         raise HTTPException(status_code=404, detail="Ground truth not found")
 
-    # Delete the file content from storage
-    try:
-        remove_file(groundtruth.file_uuid)
-    except FileNotFoundError:
-        # Continue deletion even if file not found in storage
-        pass
+    # Capture the storage UUID before the row is deleted, then commit the DB
+    # deletion first and only remove the stored bytes afterwards. If we remove
+    # storage first and the commit then fails, the DB row survives pointing at
+    # deleted bytes. Matches files.py:delete_file (commit-then-remove).
+    file_uuid = groundtruth.file_uuid
 
     # Remove any evaluations using this ground truth
     evaluations = (
@@ -198,6 +200,16 @@ def delete_groundtruth(
 
     db.delete(groundtruth)
     db.commit()
+
+    # Best-effort storage cleanup now that the DB row is gone.
+    try:
+        remove_file(file_uuid)
+    except FileNotFoundError:
+        pass
+    except Exception:
+        logger.warning(
+            "Failed to remove ground truth file %s", file_uuid, exc_info=True
+        )
 
     return schemas.GroundTruth.model_validate(groundtruth)
 
@@ -240,7 +252,6 @@ def update_groundtruth(
     groundtruth_id: int,
     file: UploadFile = File(None),
     name: str = Form(None),
-    comparison_options: str = Form(None),
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.GroundTruth:
     project: models.Project | None = db.execute(
@@ -269,19 +280,12 @@ def update_groundtruth(
     if name:
         groundtruth.name = name
 
-    if comparison_options:
-        try:
-            groundtruth.comparison_options = json.loads(comparison_options)
-        except json.JSONDecodeError:
-            raise HTTPException(
-                status_code=400, detail="Invalid comparison options JSON"
-            )
-
+    old_file_uuid = None
     if file:
-        try:
-            remove_file(groundtruth.file_uuid)
-        except FileNotFoundError:
-            pass
+        # Save the new file and point the row at it, but defer removing the old
+        # bytes until after the commit succeeds — otherwise a commit failure
+        # leaves the DB row pointing at deleted storage.
+        old_file_uuid = groundtruth.file_uuid
 
         file_content = file.file.read()
         file_uuid = save_file(file_content)
@@ -299,10 +303,23 @@ def update_groundtruth(
         for evaluation in evaluations:
             db.delete(evaluation)
 
-    groundtruth.updated_at = func.now()
+    # updated_at is handled by the model's onupdate=func.now() — no need to set
+    # it manually (assigning func.now() to the instance is unreliable anyway).
     db.add(groundtruth)
     db.commit()
     db.refresh(groundtruth)
+
+    if old_file_uuid:
+        try:
+            remove_file(old_file_uuid)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            logger.warning(
+                "Failed to remove old ground truth file %s",
+                old_file_uuid,
+                exc_info=True,
+            )
 
     return schemas.GroundTruth.model_validate(groundtruth)
 
@@ -871,6 +888,9 @@ def validate_json_ground_truth(
     schema_def = schema.schema_definition
     required_fields = extract_required_fields_from_schema(schema_def)
 
+    if not gt_data:
+        return {"errors": [], "warnings": ["Ground truth file contains no data rows"]}
+
     # Check a sample of documents
     sample_size = min(10, len(gt_data))
     for i, (doc_id, doc_data) in enumerate(list(gt_data.items())[:sample_size]):
@@ -884,10 +904,15 @@ def validate_json_ground_truth(
         if type_errors:
             errors.extend([f"Document {doc_id}: {err}" for err in type_errors])
 
-    # Extra fields are warnings
-    extra = find_extra_fields(doc_data, schema_def)
-    if extra:
-        warnings.extend([f"Extra field '{field}' not in schema" for field in extra])
+        # Extra fields are warnings (checked per sampled document)
+        extra = find_extra_fields(doc_data, schema_def)
+        if extra:
+            warnings.extend(
+                [
+                    f"Document {doc_id}: Extra field '{field}' not in schema"
+                    for field in extra
+                ]
+            )
 
     return {"errors": errors[:10], "warnings": warnings[:10]}  # Limit to 10 each
 

@@ -155,9 +155,7 @@ def create_trial(
     # through Celery. Mirrors the preprocessing router's guard. Checked before
     # any DB writes so a 403 doesn't leave an orphaned PROCESSING row behind.
     if trial.bypass_celery and current_user.role != "admin":
-        raise HTTPException(
-            status_code=403, detail="Only admins may set bypass_celery"
-        )
+        raise HTTPException(status_code=403, detail="Only admins may set bypass_celery")
 
     # 4. Create trial object
     trial_db = models.Trial(
@@ -244,11 +242,14 @@ def create_trial(
     else:
         from ....celery.info_extraction import extract_info_celery
 
+        # The api_key is NOT passed through the broker: it is stored encrypted
+        # on the Trial row (api_key_encrypted) and decrypted inside the task.
+        # Passing it as a Celery arg would serialize the plaintext key into
+        # Redis, exposing it via `celery inspect` / Flower.
         extract_info_celery.delay(
             trial_id=trial_db.id,
             document_ids=document_ids,
             llm_model=llm_model,
-            api_key=api_key,
             base_url=base_url,
             schema_id=trial.schema_id,
             prompt_id=trial.prompt_id,
@@ -691,6 +692,25 @@ def download_trial_results(
                 )
         all_meta_keys.update(_extract_keys(doc.meta_data or {}))
 
+    # Batch-load any preprocessed files referenced by the documents (the
+    # preprocessed_file relationship isn't eager-loaded above). Without this,
+    # the include_content branches below issue one SELECT per result for the
+    # preprocessed file.
+    preprocessed_file_ids = [
+        doc.preprocessed_file_id
+        for doc in docs
+        if doc.preprocessed_file_id and doc.preprocessed_file_id not in file_cache
+    ]
+    if preprocessed_file_ids:
+        for pf in (
+            db.execute(
+                select(models.File).where(models.File.id.in_(preprocessed_file_ids))
+            )
+            .scalars()
+            .all()
+        ):
+            file_cache[pf.id] = pf
+
     for result in results:
         all_result_keys.update(_extract_keys(result.result or {}))
 
@@ -792,9 +812,9 @@ def download_trial_results(
                     result_data["content"] = document.text
                     file_id = document.preprocessed_file_id or document.original_file_id
                     if file_id:
-                        file_to_add = db.execute(
-                            select(models.File).where(models.File.id == file_id)
-                        ).scalar_one_or_none()
+                        # Both preprocessed_file and original_file are in
+                        # file_cache (batch-loaded above), so no per-result query.
+                        file_to_add = file_cache.get(file_id)
                         if file_to_add and file_id not in added_files:
                             added_files.add(file_id)
                             file_content = get_file(file_to_add.file_uuid)
@@ -903,9 +923,8 @@ def download_trial_results(
                             document.preprocessed_file_id or document.original_file_id
                         )
                         if file_id:
-                            file_to_add = db.execute(
-                                select(models.File).where(models.File.id == file_id)
-                            ).scalar_one_or_none()
+                            # Batch-loaded into file_cache above (no per-result query).
+                            file_to_add = file_cache.get(file_id)
                             if file_to_add and file_id not in added_files:
                                 added_files.add(file_id)
                                 file_content = get_file(file_to_add.file_uuid)
@@ -1106,22 +1125,50 @@ def evaluate_trial(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
 
+    # Batch-load all EvaluationMetric rows for this evaluation once and group
+    # them in Python, instead of one query per field (sample errors) and one
+    # per document (field details) — that was 2 queries × (fields + docs).
+    all_metrics = (
+        db.execute(
+            select(models.EvaluationMetric).where(
+                models.EvaluationMetric.evaluation_id == evaluation.id
+            )
+        )
+        .scalars()
+        .all()
+    )
+    metrics_by_field: dict[str, list[models.EvaluationMetric]] = {}
+    metrics_by_doc: dict[int, list[models.EvaluationMetric]] = {}
+    for m in all_metrics:
+        metrics_by_field.setdefault(m.field_name, []).append(m)
+        metrics_by_doc.setdefault(m.document_id, []).append(m)
+
+    # Batch-load all referenced documents with original_file eager-loaded
+    # (avoids db.get(Document) + lazy original_file per document).
+    doc_ids = [dm["document_id"] for dm in evaluation.document_metrics]
+    document_lookup: dict[int, models.Document] = {}
+    if doc_ids:
+        document_lookup = {
+            d.id: d
+            for d in db.execute(
+                select(models.Document)
+                .where(models.Document.id.in_(doc_ids))
+                .options(selectinload(models.Document.original_file))
+            )
+            .scalars()
+            .all()
+        }
+
     field_summaries = []
     for field_name, metrics in evaluation.field_metrics.items():
         error_count = sum(metrics.get("error_distribution", {}).values())
 
         sample_errors = []
-        error_details = (
-            db.query(models.EvaluationMetric)
-            .filter(
-                models.EvaluationMetric.evaluation_id == evaluation.id,
-                models.EvaluationMetric.field_name == field_name,
-                ~models.EvaluationMetric.is_correct,
-            )
-            .limit(5)
-            .all()
-        )
-        for detail in error_details:
+        # First 5 incorrect metrics for this field (already batch-loaded).
+        incorrect = [
+            m for m in metrics_by_field.get(field_name, []) if not m.is_correct
+        ]
+        for detail in incorrect[:5]:
             sample_errors.append(
                 {
                     "document_id": detail.document_id,
@@ -1155,21 +1202,13 @@ def evaluate_trial(
             total_errors += 1
             error_documents.append(doc_id)
 
-        document = db.get(models.Document, doc_id)
+        document = document_lookup.get(doc_id)
         document_name = None
         if document and document.original_file:
             document_name = document.original_file.file_name
 
         field_details = {}
-        details = (
-            db.query(models.EvaluationMetric)
-            .filter(
-                models.EvaluationMetric.evaluation_id == evaluation.id,
-                models.EvaluationMetric.document_id == doc_id,
-            )
-            .all()
-        )
-        for detail in details:
+        for detail in metrics_by_doc.get(doc_id, []):
             field_details[detail.field_name] = schemas.EvaluationMetricDetail(
                 document_id=doc_id,
                 field_name=detail.field_name,

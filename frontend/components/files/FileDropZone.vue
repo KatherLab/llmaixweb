@@ -1,172 +1,74 @@
 <template>
   <div
+    class="border-2 border-dashed rounded-xl text-center hover:border-blue-400 transition-colors"
     :class="[
-      'relative border-2 border-dashed rounded-lg transition-all duration-200',
-      isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400',
-      disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+      compact
+        ? 'border-gray-300 p-10 bg-gray-50'
+        : 'border-gray-300 dark:border-slate-600 p-12 bg-gray-50 dark:bg-slate-800/50',
+      { 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-slate-800': dragging },
     ]"
-    @drop="handleDrop"
-    @dragover.prevent="isDragging = true"
-    @dragleave.prevent="isDragging = false"
-    @click="!disabled && $refs.fileInput.click()"
+    @dragover.prevent="dragging = true"
+    @dragleave="dragging = false"
+    @drop.prevent="onDrop"
   >
-    <input
-      ref="fileInput"
-      type="file"
-      :accept="accept"
-      :multiple="multiple"
-      class="hidden"
-      :disabled="disabled"
-      @change="handleFileSelect"
-    />
-
-    <div class="p-8 text-center">
-      <svg
-        :class="[
-          'mx-auto h-12 w-12 transition-colors',
-          isDragging ? 'text-blue-500' : 'text-gray-400',
-        ]"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-        />
-      </svg>
-
-      <p class="mt-2 text-sm font-medium text-gray-900">
-        {{ isDragging ? 'Drop files here' : 'Drop files or click to upload' }}
-      </p>
-
-      <p class="mt-1 text-xs text-gray-500">
-        {{ acceptLabel }}
-      </p>
-
-      <div v-if="maxSize" class="mt-2 text-xs text-gray-500">
-        Maximum file size: {{ formatFileSize(maxSize) }}
-      </div>
-    </div>
-
-    <!-- Upload overlay when dragging -->
-    <div
-      v-if="isDragging"
-      class="absolute inset-0 bg-blue-500 bg-opacity-10 rounded-lg pointer-events-none"
+    <svg
+      class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
     >
-      <div class="flex items-center justify-center h-full">
-        <div class="bg-white rounded-lg shadow-lg p-4">
-          <svg
-            class="h-8 w-8 text-blue-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
-        </div>
-      </div>
-    </div>
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m0-3v12"
+      />
+    </svg>
+    <p :class="['mt-4 font-medium text-gray-900 dark:text-white', compact ? 'text-sm' : 'text-lg']">
+      Drop files here or click to upload
+    </p>
+    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">PDF, PNG, JPG, DOCX, CSV, XLSX, TXT</p>
+    <button
+      :class="[
+        'mt-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium',
+        compact ? 'px-6 py-2.5 text-sm' : 'px-6 py-2',
+      ]"
+      @click="inputRef?.click()"
+    >
+      Browse Files
+    </button>
+    <input
+      ref="inputRef"
+      type="file"
+      multiple
+      accept=".pdf,.png,.jpg,.jpeg,.docx,.csv,.xlsx,.txt"
+      class="hidden"
+      @change="onSelect"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { getAcceptedFileTypes } from '@/utils/fileTypes'
+import { ref } from 'vue'
 
-const props = defineProps({
-  accept: {
-    type: String,
-    default: () => getAcceptedFileTypes(),
-  },
-  multiple: {
-    type: Boolean,
-    default: true,
-  },
-  maxSize: {
-    type: Number,
-    default: 100 * 1024 * 1024, // 100MB
-  },
-  disabled: {
-    type: Boolean,
-    default: false,
-  },
+defineProps({
+  compact: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['files-selected'])
+const emit = defineEmits(['drop', 'select'])
 
-const isDragging = ref(false)
-const fileInput = ref(null)
+// Synced with the parent so empty-state visibility guards keep working.
+const dragging = defineModel('dragging', { type: Boolean, default: false })
 
-const acceptLabel = computed(() => {
-  const types = props.accept.split(',').map((t) => {
-    const parts = t.split('/')
-    return parts[1] || parts[0]
-  })
+const inputRef = ref(null)
 
-  if (types.length > 5) {
-    return `${types.slice(0, 5).join(', ')} and more`
-  }
-  return types.join(', ')
-})
-
-const formatFileSize = (bytes) => {
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
+const onDrop = (e) => {
+  dragging.value = false
+  emit('drop', Array.from(e.dataTransfer.files))
 }
 
-const validateFiles = (files) => {
-  const validFiles = []
-  const errors = []
-
-  for (const file of files) {
-    if (props.maxSize && file.size > props.maxSize) {
-      errors.push({
-        file: file.name,
-        error: `File size exceeds ${formatFileSize(props.maxSize)}`,
-      })
-      continue
-    }
-
-    validFiles.push(file)
-  }
-
-  return { validFiles, errors }
-}
-
-const handleDrop = (event) => {
-  event.preventDefault()
-  isDragging.value = false
-
-  if (props.disabled) return
-
-  const files = Array.from(event.dataTransfer.files)
-  const { validFiles, errors } = validateFiles(files)
-
-  if (validFiles.length > 0) {
-    emit('files-selected', validFiles, errors)
-  }
-}
-
-const handleFileSelect = (event) => {
-  const files = Array.from(event.target.files)
-  const { validFiles, errors } = validateFiles(files)
-
-  if (validFiles.length > 0) {
-    emit('files-selected', validFiles, errors)
-  }
-
-  // Reset input
-  event.target.value = null
+const onSelect = (e) => {
+  emit('select', Array.from(e.target.files))
+  e.target.value = null
 }
 </script>

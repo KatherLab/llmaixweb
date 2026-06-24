@@ -50,9 +50,3 @@ api.interceptors.response.use(
     return Promise.reject(error)
   },
 )
-
-// Version API endpoint
-export const getVersion = async () => {
-  const response = await api.get('/version')
-  return response.data
-}

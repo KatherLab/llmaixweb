@@ -89,11 +89,11 @@
 
 <script setup>
 const props = defineProps({
-  fields: Object,
-  types: Object,
-  required: Array,
-  selected: String,
-  highlight: Function,
+  fields: { type: Object, default: () => ({}) },
+  types: { type: Object, default: () => ({}) },
+  required: { type: Array, default: () => [] },
+  selected: { type: String, default: '' },
+  highlight: { type: Function, default: undefined },
   nodeColor: { type: String, default: 'text-blue-700' },
   disabled: Boolean,
   prefix: { type: String, default: '' },

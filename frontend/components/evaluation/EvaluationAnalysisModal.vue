@@ -119,8 +119,6 @@
 
             <div v-else-if="activeTab === 'documents'" class="p-8">
               <DocumentAnalysis
-                :project-id="projectId"
-                :evaluation="evaluation"
                 :document-evaluations="documentEvaluations"
                 :document-contents="documentContents"
                 :document-names="documentNames"
@@ -132,8 +130,6 @@
 
             <div v-else-if="activeTab === 'field-errors'" class="p-8">
               <FieldErrorAnalysis
-                :project-id="projectId"
-                :evaluation="evaluation"
                 :field-errors="fieldErrors"
                 :selected-field="selectedFieldName"
                 @select-field="selectFieldForErrors"
@@ -142,8 +138,6 @@
 
             <div v-else-if="activeTab === 'document-detail' && selectedDocument" class="p-8">
               <IndividualDocumentView
-                :project-id="projectId"
-                :evaluation="evaluation"
                 :document="selectedDocument"
                 :document-content="documentContents[selectedDocument?.document_id]"
                 :loading-content="loadingDocuments[selectedDocument?.document_id]"
@@ -182,9 +176,9 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { api } from '@/services/api.js'
+import { evaluationsApi } from '@/services/evaluationsApi'
+import { documentsApi } from '@/services/documentsApi'
 import { formatDate } from '@/utils/formatters.js'
-import { useToast } from 'vue-toastification'
 import { useScrollLock } from '@/composables/useScrollLock'
 
 useScrollLock({ autoLock: true })
@@ -206,8 +200,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['close'])
-const toast = useToast()
+defineEmits(['close'])
 
 // State
 const activeTab = ref('overview')
@@ -335,17 +328,17 @@ const fetchAllData = async () => {
 
   try {
     // Fetch evaluation details
-    const evaluationResponse = await api.get(
-      `/project/${props.projectId}/evaluation/${props.evaluation.id}`,
-    )
+    const evaluationResponse = await evaluationsApi.get(props.projectId, props.evaluation.id)
     evaluationDetail.value = evaluationResponse.data
 
     // Fetch document evaluations
     if (props.evaluation.document_metrics?.length) {
       const documentPromises = props.evaluation.document_metrics.map(async (docMetric) => {
         try {
-          const response = await api.get(
-            `/project/${props.projectId}/evaluation/${props.evaluation.id}/document/${docMetric.document_id}`,
+          const response = await evaluationsApi.getDocument(
+            props.projectId,
+            props.evaluation.id,
+            docMetric.document_id,
           )
           return response.data
         } catch (err) {
@@ -388,7 +381,7 @@ const fetchAllData = async () => {
 const loadDocumentNames = async () => {
   const promises = documentEvaluations.value.map(async (docEval) => {
     try {
-      const response = await api.get(`/project/${props.projectId}/document/${docEval.document_id}`)
+      const response = await documentsApi.get(props.projectId, docEval.document_id)
       const doc = response.data
 
       documentNames.value[docEval.document_id] = {
@@ -411,9 +404,10 @@ const loadFieldErrors = async () => {
 
   const promises = fieldNames.map(async (fieldName) => {
     try {
-      const response = await api.get(
-        `/project/${props.projectId}/evaluation/${props.evaluation.id}/errors?field_name=${fieldName}&limit=50`,
-      )
+      const response = await evaluationsApi.getErrors(props.projectId, props.evaluation.id, {
+        field_name: fieldName,
+        limit: 50,
+      })
       fieldErrors.value[fieldName] = response.data
     } catch (err) {
       console.error(`Failed to load errors for field ${fieldName}:`, err)
@@ -430,7 +424,7 @@ const loadDocumentContent = async (documentId) => {
   loadingDocuments.value[documentId] = true
 
   try {
-    const response = await api.get(`/project/${props.projectId}/document/${documentId}`)
+    const response = await documentsApi.get(props.projectId, documentId)
     documentContents.value[documentId] = response.data.text || 'No text content available'
   } catch (err) {
     console.error(`Failed to load document content for ${documentId}:`, err)

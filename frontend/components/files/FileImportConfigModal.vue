@@ -217,8 +217,8 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, nextTick, computed, onUnmounted } from 'vue'
-import { api } from '@/services/api'
+import { ref, watch, onMounted, nextTick, computed } from 'vue'
+import { filesApi } from '@/services/filesApi'
 import { useToast } from 'vue-toastification'
 import { useScrollLock } from '@/composables/useScrollLock'
 
@@ -338,9 +338,7 @@ const loadPreview = async () => {
     params.append('has_header', hasHeader.value)
     params.append('max_rows', 10)
 
-    const { data } = await api.get(
-      `/project/${props.projectId}/file/${props.file.id}/preview-rows?${params}`,
-    )
+    const { data } = await filesApi.getPreviewRows(props.projectId, props.file.id, params)
 
     preview.value = data
     if (data.sheets) sheets.value = data.sheets
@@ -424,7 +422,7 @@ const saveConfig = async () => {
       },
     }
 
-    await api.post(`/project/${props.projectId}/file/${props.file.id}/configure`, payload)
+    await filesApi.configure(props.projectId, props.file.id, payload)
     toast.success('Import configuration saved!')
     emit('saved')
     doClose()

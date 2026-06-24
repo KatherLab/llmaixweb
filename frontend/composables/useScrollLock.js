@@ -1,6 +1,10 @@
 /**
  * Composable for locking/unlocking body scroll when modals are open.
  *
+ * Uses a module-level counter so that nested/stacked modals don't prematurely
+ * unlock the body scroll: each lock() increments, each unlock() decrements,
+ * and the overflow is only restored when the count returns to zero.
+ *
  * Usage:
  *   const { lockScroll, unlockScroll } = useScrollLock();
  *
@@ -17,15 +21,25 @@
  */
 import { watch, onMounted, onUnmounted } from 'vue'
 
+// Module-level lock counter shared across all useScrollLock consumers.
+let lockCount = 0
+
 export function useScrollLock(options = {}) {
   const { autoLock = false, watch: watchRef = null } = options
 
   function lockScroll() {
-    document.body.style.overflow = 'hidden'
+    lockCount++
+    if (lockCount === 1) {
+      document.body.style.overflow = 'hidden'
+    }
   }
 
   function unlockScroll() {
-    document.body.style.overflow = ''
+    if (lockCount === 0) return
+    lockCount--
+    if (lockCount === 0) {
+      document.body.style.overflow = ''
+    }
   }
 
   // Auto-lock based on a reactive ref
@@ -40,6 +54,7 @@ export function useScrollLock(options = {}) {
     // Also check initial value
     if (typeof watchRef === 'function' ? watchRef() : watchRef.value) {
       onMounted(lockScroll)
+      onUnmounted(unlockScroll)
     }
   }
 

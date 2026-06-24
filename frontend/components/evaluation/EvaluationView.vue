@@ -388,7 +388,9 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { api } from '@/services/api'
+import { trialsApi } from '@/services/trialsApi'
+import { groundtruthApi } from '@/services/groundtruthApi'
+import { evaluationsApi } from '@/services/evaluationsApi'
 import { formatDate } from '@/utils/formatters'
 import { useToast } from 'vue-toastification'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -523,7 +525,7 @@ const fetchGroundTruthFiles = async () => {
   error.value = null
 
   try {
-    const response = await api.get(`/project/${props.projectId}/groundtruth`)
+    const response = await groundtruthApi.list(props.projectId)
     groundTruthFiles.value = response.data
 
     if (groundTruthFiles.value.length > 0 && !selectedGroundTruth.value) {
@@ -550,9 +552,7 @@ const fetchTrials = async (opts = {}) => {
 
   try {
     const { limit = trials.value.limit, offset = trials.value.offset, ...filters } = opts
-    const { data } = await api.get(`/project/${props.projectId}/trial`, {
-      params: { limit, offset, ...filters },
-    })
+    const { data } = await trialsApi.list(props.projectId, { limit, offset, ...filters })
 
     trials.value.items = data.items || []
     trials.value.total = data.total || 0
@@ -585,7 +585,7 @@ const fetchTrialIfMissing = async (id) => {
   if (trialCache.value[id]?.results || pendingTrialFetches.has(id)) return
   pendingTrialFetches.add(id)
   try {
-    const { data } = await api.get(`/project/${props.projectId}/trial/${id}`)
+    const { data } = await trialsApi.get(props.projectId, id)
     trialCache.value[id] = data
   } catch {
     /* no-op */
@@ -688,9 +688,9 @@ const fetchEvaluations = async () => {
   error.value = null
 
   try {
-    const { data } = await api.get(
-      `/project/${props.projectId}/evaluation?groundtruth_id=${selectedGroundTruth.value.id}`,
-    )
+    const { data } = await evaluationsApi.list(props.projectId, {
+      groundtruth_id: selectedGroundTruth.value.id,
+    })
 
     // 1) store the evaluations
     evaluations.value = Array.isArray(data) ? data : (data?.items ?? [])

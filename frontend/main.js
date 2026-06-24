@@ -10,9 +10,12 @@ import 'vue-toastification/dist/index.css'
 const app = createApp(App)
 app.use(createPinia())
 app.use(router)
+app.use(Toast, {
+  position: 'top-right',
+  timeout: 4000,
+})
 ModuleRegistry.registerModules([AllCommunityModule])
 app.mount('#app')
-app.use(Toast)
 
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled Promise Rejection:', event.reason)

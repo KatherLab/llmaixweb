@@ -59,10 +59,10 @@ import {
   h,
 } from 'vue'
 import { AgGridVue } from 'ag-grid-vue3'
-import { api as http } from '@/services/api'
+import { projectsApi } from '@/services/projectsApi'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
-import { themeMaterial } from 'ag-grid-community'
+import { useGridTheme } from '@/composables/useGridTheme'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 // ---- auth / router ----
@@ -70,52 +70,8 @@ const authStore = useAuthStore()
 const router = useRouter()
 
 // ---- theme (v34 :theme) ----
-// Check for dark mode
-const isDarkMode = () => {
-  if (typeof window !== 'undefined') {
-    return (
-      localStorage.getItem('darkMode') === '1' ||
-      (!localStorage.getItem('darkMode') &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches)
-    )
-  }
-  return false
-}
-
-const getGridTheme = () => {
-  const darkMode = isDarkMode()
-  return themeMaterial.withParams({
-    spacing: 12,
-    borderRadius: 8,
-    rowHeight: 56,
-    headerHeight: 48,
-    accentColor: '#3b82f6',
-    rowHoverColor: darkMode ? '#1e293b' : '#f3f4f6',
-    headerBackgroundColor: darkMode ? '#1e293b' : '#f9fafb',
-    headerTextColor: darkMode ? '#e2e8f0' : '#111827',
-    headerCellHoverBackgroundColor: darkMode ? '#334155' : '#e0e7ff',
-    // Dark mode colors
-    backgroundColor: darkMode ? '#0f172a' : '#ffffff',
-    foregroundColor: darkMode ? '#f1f5f9' : '#111827',
-    rowBackgroundColor: darkMode ? '#0f172a' : '#ffffff',
-    rowForegroundColor: darkMode ? '#e2e8f0' : '#111827',
-    borderColor: darkMode ? '#334155' : '#e5e7eb',
-    controlBorderRadius: 8,
-  })
-}
-
-const gridTheme = ref(getGridTheme())
-
-// Watch for dark mode changes
-if (typeof window !== 'undefined') {
-  const observer = new MutationObserver(() => {
-    gridTheme.value = getGridTheme()
-  })
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-  })
-}
+// Shared ag-grid theme with dark-mode support (re-themes on toggle)
+const { gridTheme } = useGridTheme({ rowHeight: 56, controlBorderRadius: 8 })
 
 // ---- state ----
 const rowData = ref([])
@@ -322,7 +278,7 @@ const loadProjects = async () => {
   isLoading.value = true
   try {
     const params = isAdmin.value && showAllProjects.value ? { all: true } : {}
-    const response = await http.get('/project', { params })
+    const response = await projectsApi.list(params)
     rowData.value = response.data.map((project) => ({
       ...project,
       document_count: project.document_count ?? 0,
