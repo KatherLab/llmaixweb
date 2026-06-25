@@ -1,8 +1,20 @@
 <script setup>
+/**
+ * Shared error banner: icon + message + optional retry/dismiss actions.
+ *
+ * Props:
+ *  - message      : the error text (also used as fallback if a default slot is given)
+ *  - dismissable  : show a dismiss (×) button
+ *  - retryText    : show a retry button with this label (empty = hidden)
+ *  - retryLoading : disables the retry button and shows "Retrying..."
+ *
+ * Slots:
+ *  - default : rich message content (overrides the `message` prop text)
+ */
 defineProps({
   message: {
     type: String,
-    required: true,
+    default: '',
   },
   dismissable: {
     type: Boolean,
@@ -22,14 +34,18 @@ const emit = defineEmits(['dismiss', 'retry'])
 </script>
 
 <template>
-  <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+  <div
+    role="alert"
+    class="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 dark:border-red-400 p-4 mb-6"
+  >
     <div class="flex items-start">
       <div class="flex-shrink-0">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5 text-red-400"
+          class="h-5 w-5 text-red-400 dark:text-red-300"
           viewBox="0 0 20 20"
           fill="currentColor"
+          aria-hidden="true"
         >
           <path
             fill-rule="evenodd"
@@ -39,13 +55,15 @@ const emit = defineEmits(['dismiss', 'retry'])
         </svg>
       </div>
       <div class="ml-3 flex-1">
-        <p class="text-sm text-red-700">{{ message }}</p>
+        <p class="text-sm text-red-700 dark:text-red-200">
+          <slot>{{ message }}</slot>
+        </p>
       </div>
       <div v-if="dismissable || retryText" class="ml-auto pl-3 flex items-center gap-3">
         <button
           v-if="retryText"
           type="button"
-          class="text-sm font-medium text-red-700 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="text-sm font-medium text-red-700 hover:text-red-800 dark:text-red-300 dark:hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
           :disabled="retryLoading"
           @click="emit('retry')"
         >
@@ -53,7 +71,9 @@ const emit = defineEmits(['dismiss', 'retry'])
         </button>
         <button
           v-if="dismissable"
-          class="inline-flex text-red-400 hover:text-red-500"
+          type="button"
+          class="inline-flex text-red-400 hover:text-red-500 dark:text-red-300 dark:hover:text-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
+          aria-label="Dismiss error"
           @click="emit('dismiss')"
         >
           <svg
@@ -62,6 +82,7 @@ const emit = defineEmits(['dismiss', 'retry'])
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path
               stroke-linecap="round"

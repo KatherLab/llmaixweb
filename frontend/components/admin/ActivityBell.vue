@@ -377,6 +377,7 @@ import { useToast } from 'vue-toastification'
 import { websocketService } from '@/services/websocket.js'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { formatRelativeTime } from '@/utils/formatters'
+import { mergeWsEntity } from '@/composables/useWsEntityUpdates'
 
 const router = useRouter()
 const toast = useToast()
@@ -600,21 +601,9 @@ const handlePreprocessingUpdate = (data) => {
   const existingIndex = preprocessingTasks.value.findIndex((t) => t.id === taskId)
 
   if (existingIndex >= 0) {
-    // Update existing task - merge incoming data carefully
+    // Merge incoming data into the existing task (shared WS merge helper).
     const task = preprocessingTasks.value[existingIndex]
-    const updatedTask = {
-      ...task,
-      ...data,
-      id: taskId, // Ensure id is set correctly
-      task_id: undefined, // Remove task_id to avoid confusion
-    }
-
-    // Preserve nested configuration object
-    if (data.configuration) {
-      updatedTask.configuration = data.configuration
-    }
-
-    preprocessingTasks.value[existingIndex] = updatedTask
+    preprocessingTasks.value[existingIndex] = mergeWsEntity(task, data, taskId, 'task_id')
   } else {
     // New task - fetch full data from server
     fetchAllTasks(true)
@@ -627,19 +616,7 @@ const handleTrialUpdate = (data) => {
 
   if (existingIndex >= 0) {
     const task = trialTasks.value[existingIndex]
-    const updatedTask = {
-      ...task,
-      ...data,
-      id: trialId,
-      trial_id: undefined,
-    }
-
-    // Preserve and merge meta object
-    if (data.meta) {
-      updatedTask.meta = { ...(task.meta || {}), ...data.meta }
-    }
-
-    trialTasks.value[existingIndex] = updatedTask
+    trialTasks.value[existingIndex] = mergeWsEntity(task, data, trialId, 'trial_id')
   } else {
     // New trial - fetch full data from server
     fetchAllTasks(true)

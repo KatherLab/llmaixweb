@@ -4,6 +4,7 @@
  * TreeNode, and PropertyDetailsEditor.
  */
 import { h } from 'vue'
+import { getPillClass } from '@/utils/statusStyles'
 
 export const StringIcon = {
   render() {
@@ -79,13 +80,22 @@ export const TYPE_ICONS = {
   array: ArrayIcon,
 }
 
-/** Map of schema type -> Tailwind background color class. */
+/** Map of schema type -> Tailwind background color class (solid, for icon badges). */
 export const TYPE_COLORS = {
   string: 'bg-green-500',
   number: 'bg-blue-500',
   boolean: 'bg-purple-500',
   object: 'bg-orange-500',
   array: 'bg-pink-500',
+}
+
+/** Map of schema type -> pill color name (resolves via getPillClass, with dark mode). */
+export const TYPE_PILL_COLORS = {
+  string: 'green',
+  number: 'blue',
+  boolean: 'purple',
+  object: 'orange',
+  array: 'pink',
 }
 
 /**
@@ -98,10 +108,20 @@ export function getTypeIcon(type) {
 }
 
 /**
- * Get the color class for a schema type.
+ * Get the solid background color class for a schema type.
  * @param {string} type - JSON schema type
  * @returns {string} Tailwind class
  */
 export function getTypeColor(type) {
   return TYPE_COLORS[type] || 'bg-gray-500'
+}
+
+/**
+ * Get the pill (bg-*-100 text-*-700, dark-mode-aware) class for a schema type.
+ * Replaces the per-component type→badge-class maps in SchemaBlock / FieldTree.
+ * @param {string} type - JSON schema type
+ * @returns {string} Tailwind class
+ */
+export function getTypePillClass(type) {
+  return getPillClass(TYPE_PILL_COLORS[type] || 'gray')
 }

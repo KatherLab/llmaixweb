@@ -3,9 +3,7 @@
     <div v-if="loadingGroups" class="text-center py-8">
       <LoadingSpinner />
     </div>
-    <div v-else-if="documentGroups.length === 0" class="text-center py-8 bg-gray-50 rounded-lg">
-      <p class="text-gray-500">No document groups available</p>
-    </div>
+    <EmptyState v-else-if="documentGroups.length === 0" title="No document groups available" />
     <div v-else class="space-y-2">
       <div
         v-for="group in documentGroups"
@@ -57,6 +55,7 @@
 <script setup>
 import { formatDate } from '@/utils/formatters.js'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 
 defineProps({
   documentGroups: {

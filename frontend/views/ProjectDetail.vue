@@ -73,30 +73,10 @@
         <span class="mt-4 text-gray-400 dark:text-gray-500 text-lg">Loading project...</span>
       </div>
 
-      <div
-        v-else-if="error"
-        class="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 dark:border-red-400 p-4 mb-4 rounded-xl"
-      >
-        <div class="flex">
-          <svg class="h-6 w-6 text-red-400 dark:text-red-300 mr-2" fill="none" viewBox="0 0 24 24">
-            <path
-              d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <div class="text-red-700 dark:text-red-300">{{ error }}</div>
-        </div>
-      </div>
+      <ErrorBanner v-else-if="error" :message="error" class="mb-4 rounded-xl" />
 
       <!-- Workspace with glassmorphism -->
-      <div
-        v-else
-        class="relative bg-white/70 dark:bg-slate-900/70 rounded-3xl shadow-2xl p-6 sm:p-8 mb-20 transition-all"
-        style="backdrop-filter: blur(12px)"
-      >
+      <GlassCard v-else padding="lg" rounded="3xl" :blur="12" class="mb-20">
         <transition name="fade" mode="out-in">
           <!-- Show each tab as content, but only if it's currentStep -->
           <FilesAndProcessing
@@ -126,7 +106,7 @@
             :project-id="projectId"
           />
         </transition>
-      </div>
+      </GlassCard>
     </main>
 
     <!-- Settings Modal -->
@@ -168,6 +148,8 @@ import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import ProjectSettingsModal from '@/components/projects/ProjectSettingsModal.vue'
 import { useToast } from 'vue-toastification'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import GlassCard from '@/components/common/GlassCard.vue'
 
 // --- DATA ---
 const route = useRoute()

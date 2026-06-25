@@ -119,13 +119,15 @@
                 {{ ((fieldData.f1_score || 0) * 100).toFixed(1) }}%
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-sm">
-                <button
-                  class="text-red-600 hover:text-red-800 text-sm underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed"
+                <BaseButton
+                  variant="link"
+                  tone="red"
+                  class="text-sm underline"
                   :disabled="!fieldData.error_count || fieldData.error_count === 0"
                   @click="$emit('view-field-errors', fieldName)"
                 >
                   {{ fieldData.error_count || 0 }} errors
-                </button>
+                </BaseButton>
               </td>
             </tr>
           </tbody>
@@ -137,12 +139,14 @@
     <div class="bg-white rounded-lg border p-6 shadow-sm">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-semibold text-gray-800">Document Performance Summary</h3>
-        <button
-          class="text-blue-600 hover:text-blue-800 text-sm underline"
+        <BaseButton
+          variant="link"
+          tone="blue"
+          class="text-sm underline"
           @click="$emit('view-document-details')"
         >
           View All Documents →
-        </button>
+        </BaseButton>
       </div>
 
       <!-- Document performance distribution -->
@@ -195,6 +199,7 @@
 
 <script setup>
 import { formatDate } from '@/utils/formatters'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 defineProps({
   evaluationDetail: {

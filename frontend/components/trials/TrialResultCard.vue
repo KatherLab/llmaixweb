@@ -17,12 +17,18 @@
           <!-- Status pills -->
           <span
             v-if="res.result"
-            class="text-[10px] uppercase tracking-wide bg-green-100 text-green-700 px-2 py-0.5 rounded"
+            :class="[
+              'text-[10px] uppercase tracking-wide px-2 py-0.5 rounded',
+              getPillClass('green'),
+            ]"
             >OK</span
           >
           <span
             v-else
-            class="text-[10px] uppercase tracking-wide bg-red-100 text-red-700 px-2 py-0.5 rounded"
+            :class="[
+              'text-[10px] uppercase tracking-wide px-2 py-0.5 rounded',
+              getPillClass('red'),
+            ]"
             >Error</span
           >
 
@@ -31,13 +37,19 @@
               res.additional_content?.finish_reason &&
               res.additional_content.finish_reason !== 'stop'
             "
-            class="text-[10px] uppercase tracking-wide bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded"
+            :class="[
+              'text-[10px] uppercase tracking-wide px-2 py-0.5 rounded',
+              getPillClass('yellow'),
+            ]"
           >
             {{ res.additional_content.finish_reason }}
           </span>
           <span
             v-if="res.additional_content?.truncation_analysis?.likely_truncated"
-            class="text-[10px] uppercase tracking-wide bg-orange-100 text-orange-800 px-2 py-0.5 rounded"
+            :class="[
+              'text-[10px] uppercase tracking-wide px-2 py-0.5 rounded',
+              getPillClass('orange'),
+            ]"
           >
             Truncated
           </span>
@@ -65,9 +77,9 @@
     <!-- Row body -->
     <div v-if="expanded" class="p-6 bg-gradient-to-b from-white to-blue-50/20">
       <!-- Inline error panel -->
-      <div
+      <ErrorBanner
         v-if="!res.result || res.additional_content?.json_error"
-        class="mb-4 bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg p-4"
+        class="mb-4 rounded-lg text-sm"
       >
         <div class="font-semibold mb-1">This document has no structured result.</div>
         <div v-if="res.additional_content?.user_guidance?.user_message" class="mb-1">
@@ -88,7 +100,7 @@
             </li>
           </ul>
         </details>
-      </div>
+      </ErrorBanner>
 
       <div
         class="flex gap-6"
@@ -196,7 +208,9 @@
 <script setup>
 import JsonViewer from '@/components/common/JsonViewer.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import { getPillClass } from '@/utils/statusStyles'
 import BaseButton from '@/components/common/BaseButton.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import ResultDocumentPreview from './ResultDocumentPreview.vue'
 import ResultReasoningPanel from './ResultReasoningPanel.vue'
 import { renderMarkdown, isMarkdown } from '@/utils/markdown.js'

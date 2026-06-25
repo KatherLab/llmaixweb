@@ -16,6 +16,39 @@
  */
 import { ref, computed, watch } from 'vue'
 
+/**
+ * Pure ellipsis-window pagination algorithm: returns the page numbers (and
+ * '...' gaps) to display for a given current page / total. Shared by
+ * usePagination's `visiblePages` and any component that owns its own page
+ * state (e.g. server-side offset/limit pagination in EvaluationView,
+ * ViewDocumentGroupModal) so the algorithm isn't copy-pasted.
+ *
+ * @param {number} current - 1-indexed current page
+ * @param {number} total   - total number of pages (>= 1)
+ * @returns {Array<number|string>} pages to render
+ */
+export function computeVisiblePages(current, total) {
+  const pages = []
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else if (current <= 3) {
+    for (let i = 1; i <= 5; i++) pages.push(i)
+    pages.push('...')
+    pages.push(total)
+  } else if (current >= total - 2) {
+    pages.push(1)
+    pages.push('...')
+    for (let i = total - 4; i <= total; i++) pages.push(i)
+  } else {
+    pages.push(1)
+    pages.push('...')
+    for (let i = current - 1; i <= current + 1; i++) pages.push(i)
+    pages.push('...')
+    pages.push(total)
+  }
+  return pages.filter((p) => p === '...' || (p >= 1 && p <= total))
+}
+
 export function usePagination(options = {}) {
   const { getTotal = () => 0, pageSize = 10 } = options
 
@@ -23,31 +56,7 @@ export function usePagination(options = {}) {
   const totalPages = computed(() => Math.max(1, Math.ceil(getTotal() / pageSize)))
   const offset = computed(() => (currentPage.value - 1) * pageSize)
 
-  const visiblePages = computed(() => {
-    const pages = []
-    const total = totalPages.value
-    const current = currentPage.value
-
-    if (total <= 7) {
-      for (let i = 1; i <= total; i++) pages.push(i)
-    } else if (current <= 3) {
-      for (let i = 1; i <= 5; i++) pages.push(i)
-      pages.push('...')
-      pages.push(total)
-    } else if (current >= total - 2) {
-      pages.push(1)
-      pages.push('...')
-      for (let i = total - 4; i <= total; i++) pages.push(i)
-    } else {
-      pages.push(1)
-      pages.push('...')
-      for (let i = current - 1; i <= current + 1; i++) pages.push(i)
-      pages.push('...')
-      pages.push(total)
-    }
-
-    return pages.filter((p) => p === '...' || (p >= 1 && p <= total))
-  })
+  const visiblePages = computed(() => computeVisiblePages(currentPage.value, totalPages.value))
 
   function next() {
     if (currentPage.value < totalPages.value) currentPage.value++

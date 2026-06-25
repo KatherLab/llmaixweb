@@ -2,15 +2,14 @@
   <BaseModal
     :open="open"
     size="sm"
+    role="alertdialog"
+    :title="title"
     panel-class="dark:bg-slate-900 dark:border-slate-700 rounded-xl"
     header-class="dark:border-slate-700"
     body-class="p-6"
     footer-class="dark:border-slate-700 dark:bg-slate-800"
     @close="emit('cancel')"
   >
-    <div class="flex justify-between items-center mb-2">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ title }}</h3>
-    </div>
     <p class="text-gray-600 dark:text-slate-400 mb-6">{{ message }}</p>
     <slot />
     <template #footer>

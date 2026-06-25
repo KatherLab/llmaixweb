@@ -20,6 +20,7 @@
 import { ref } from 'vue'
 import { useToast } from 'vue-toastification'
 import { documentsApi } from '@/services/documentsApi'
+import { extractErrorMessage } from '@/utils/errors'
 
 export function useDocumentPagination(options = {}) {
   const { getProjectId, getMode = () => 'individual', getSearchTerm = () => '' } = options
@@ -75,7 +76,7 @@ export function useDocumentPagination(options = {}) {
       }
     } catch (e) {
       console.error('Failed to fetch documents page:', e)
-      docsError.value = e?.response?.data?.detail || e?.message || 'Failed to load documents'
+      docsError.value = extractErrorMessage(e, 'Failed to load documents')
       docsPage.value = []
       totalDocs.value = 0
     } finally {

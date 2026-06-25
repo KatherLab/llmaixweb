@@ -144,12 +144,14 @@
                 :style="{ width: `${docEval.accuracy * 100}%` }"
               ></div>
             </div>
-            <button
-              class="text-blue-600 hover:text-blue-800 text-sm underline"
+            <BaseButton
+              variant="link"
+              tone="blue"
+              class="text-sm underline"
               @click.stop="$emit('view-document-details', docEval.document_id)"
             >
               Details
-            </button>
+            </BaseButton>
             <span
               class="text-lg transition-transform duration-200 text-gray-500 cursor-pointer"
               :class="{ 'transform rotate-180': expandedDocuments[docEval.document_id] }"
@@ -279,16 +281,18 @@
                 <h4 class="text-sm font-medium mb-3 text-gray-700 flex items-center">
                   <span class="mr-2">📄</span>
                   Document Text
-                  <button
+                  <BaseButton
                     v-if="
                       !documentContents[docEval.document_id] &&
                       !loadingDocuments[docEval.document_id]
                     "
-                    class="ml-auto text-xs text-blue-600 hover:text-blue-800"
+                    variant="link"
+                    tone="blue"
+                    class="ml-auto text-xs"
                     @click="$emit('load-document-content', docEval.document_id)"
                   >
                     Load
-                  </button>
+                  </BaseButton>
                 </h4>
                 <div
                   v-if="documentContents[docEval.document_id]"
@@ -335,6 +339,7 @@
 import { ref, computed } from 'vue'
 import JsonViewer from '@/components/common/JsonViewer.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const props = defineProps({
   documentEvaluations: {

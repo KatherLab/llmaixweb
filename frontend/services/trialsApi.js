@@ -26,9 +26,6 @@ export const trialsApi = {
       { params: { keep_processed: keepProcessed } },
     )
   },
-  retry(projectId, trialId) {
-    return api.post(`/project/${projectId}/trial/${trialId}/retry`)
-  },
   download(projectId, trialId, params) {
     return api.get(`/project/${projectId}/trial/${trialId}/download`, {
       params,

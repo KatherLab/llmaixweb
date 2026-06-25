@@ -2,7 +2,13 @@
   <div class="w-full max-w-md mx-auto py-10">
     <div class="mb-8 text-center">
       <div class="flex justify-center mb-2">
-        <svg class="w-14 h-14 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+        <svg
+          class="w-14 h-14 text-blue-700 dark:text-blue-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 48 48"
+          aria-hidden="true"
+        >
           <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="4" fill="#e6f0ff" />
           <path
             d="M18 30c0-3.3137 2.6863-6 6-6s6 2.6863 6 6"
@@ -13,54 +19,46 @@
           <circle cx="24" cy="19" r="4" fill="currentColor" />
         </svg>
       </div>
-      <h1 class="text-3xl font-extrabold text-blue-700 mb-1">Welcome to LLMAIx-v2</h1>
-      <p class="text-base text-gray-500">First-time setup: Create your admin account</p>
+      <h1 class="text-3xl font-extrabold text-blue-700 dark:text-blue-400 mb-1">
+        Welcome to LLMAIx-v2
+      </h1>
+      <p class="text-base text-gray-500 dark:text-slate-400">
+        First-time setup: Create your admin account
+      </p>
     </div>
     <form
-      class="bg-white border border-gray-100 rounded-xl p-8 shadow-lg flex flex-col gap-5"
+      class="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl p-8 shadow-lg flex flex-col gap-5"
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-        <input
-          v-model="fullName"
-          type="text"
-          required
-          class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-          placeholder="Full name"
-        />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Email address</label>
-        <input
-          v-model="email"
-          type="email"
-          required
-          class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-          placeholder="admin@yourcompany.com"
-        />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-        <input
-          v-model="password"
-          type="password"
-          required
-          class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-          placeholder="Password"
-        />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
-        <input
-          v-model="confirmPassword"
-          type="password"
-          required
-          class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-          placeholder="Confirm password"
-        />
-      </div>
+      <FormField
+        v-model="fullName"
+        label="Full Name"
+        type="text"
+        required
+        placeholder="Full name"
+      />
+      <FormField
+        v-model="email"
+        label="Email address"
+        type="email"
+        required
+        placeholder="admin@yourcompany.com"
+      />
+      <FormField
+        v-model="password"
+        label="Password"
+        type="password"
+        required
+        placeholder="Password"
+      />
+      <FormField
+        v-model="confirmPassword"
+        label="Confirm Password"
+        type="password"
+        required
+        placeholder="Confirm password"
+      />
       <BaseButton
         type="submit"
         size="lg"
@@ -71,15 +69,12 @@
         {{ isLoading ? 'Creating admin...' : 'Create Admin Account' }}
       </BaseButton>
       <transition name="fade">
-        <div
-          v-if="error"
-          class="mt-2 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md text-center"
-        >
-          {{ error }}
-        </div>
+        <ErrorBanner v-if="error" :message="error" class="text-center" />
       </transition>
     </form>
-    <div class="text-center text-gray-400 text-xs mt-8">Powered by LLMAIx (v2)</div>
+    <div class="text-center text-gray-400 dark:text-slate-500 text-xs mt-8">
+      Powered by LLMAIx (v2)
+    </div>
   </div>
 </template>
 
@@ -92,6 +87,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
+import FormField from '@/components/common/FormField.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
 const router = useRouter()
@@ -147,14 +144,3 @@ async function handleSubmit() {
   }
 }
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

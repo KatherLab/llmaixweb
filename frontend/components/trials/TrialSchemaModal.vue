@@ -4,7 +4,7 @@
       <h4 class="font-semibold">{{ schema?.schema_name }}</h4>
       <span
         v-if="isSnapshot"
-        class="text-[10px] uppercase tracking-wide bg-blue-100 text-blue-700 px-2 py-0.5 rounded"
+        :class="['text-[10px] uppercase tracking-wide px-2 py-0.5 rounded', getPillClass('blue')]"
         title="Frozen copy of the schema as it was when the trial ran"
         >Snapshot</span
       >
@@ -21,6 +21,7 @@
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { getPillClass } from '@/utils/statusStyles'
 
 const props = defineProps({
   open: Boolean,

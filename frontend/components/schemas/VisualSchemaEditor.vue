@@ -87,7 +87,14 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { StringIcon, NumberIcon, BooleanIcon, ObjectIcon, ArrayIcon } from '@/utils/schemaTypeIcons'
+import {
+  StringIcon,
+  NumberIcon,
+  BooleanIcon,
+  ObjectIcon,
+  ArrayIcon,
+  getTypeColor,
+} from '@/utils/schemaTypeIcons'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SchemaBlock from './SchemaBlock.vue'
 import SchemaTree from './SchemaTree.vue'
@@ -146,35 +153,35 @@ const availableTypes = computed(() => [
   {
     value: 'string',
     label: props.advancedMode ? 'String' : 'Text',
-    color: 'bg-green-500',
+    color: getTypeColor('string'),
     icon: StringIcon,
     description: 'Single line or multi-line text',
   },
   {
     value: 'number',
     label: props.advancedMode ? 'Number' : 'Number',
-    color: 'bg-blue-500',
+    color: getTypeColor('number'),
     icon: NumberIcon,
     description: 'Numeric values, decimals allowed',
   },
   {
     value: 'boolean',
     label: props.advancedMode ? 'Boolean' : 'Yes/No',
-    color: 'bg-purple-500',
+    color: getTypeColor('boolean'),
     icon: BooleanIcon,
     description: 'True or false values',
   },
   {
     value: 'object',
     label: props.advancedMode ? 'Object' : 'Group',
-    color: 'bg-orange-500',
+    color: getTypeColor('object'),
     icon: ObjectIcon,
     description: 'Group of related fields',
   },
   {
     value: 'array',
     label: props.advancedMode ? 'Array' : 'List',
-    color: 'bg-pink-500',
+    color: getTypeColor('array'),
     icon: ArrayIcon,
     description: 'List of items',
   },

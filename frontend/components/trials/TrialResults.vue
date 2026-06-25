@@ -42,19 +42,7 @@
               <span class="mt-2 text-gray-500">Loading trial results…</span>
             </div>
             <!-- Error -->
-            <div
-              v-else-if="error"
-              class="bg-red-50 border-l-4 border-red-400 p-5 mb-5 rounded-lg flex items-start gap-2"
-            >
-              <svg class="h-6 w-6 mt-1 text-red-400" fill="none" viewBox="0 0 20 20">
-                <path
-                  fill-rule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.7 7.3a1 1 0 00-1.4 1.4L8.6 10l-1.3 1.3a1 1 0 101.4 1.4L10 11.4l1.3 1.3a1 1 0 001.4-1.4L11.4 10l1.3-1.3a1 1 0 00-1.4-1.4L10 8.6 8.7 7.3z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              <span class="text-sm text-red-700">{{ error }}</span>
-            </div>
+            <ErrorBanner v-else-if="error" :message="error" class="mb-5 rounded-lg" />
 
             <!-- Content -->
             <template v-else-if="trial">
@@ -68,30 +56,17 @@
               <TrialDocumentErrors :failures="trial?.meta?.failures" />
 
               <!-- Results list -->
-              <div
+              <EmptyState
                 v-if="!trial.results || trial.results.length === 0"
-                class="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-lg border border-gray-200"
+                title="No results available for this trial."
               >
-                <svg
-                  class="h-14 w-14 text-gray-300"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.5"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <span class="text-gray-500 mt-3">No results available for this trial.</span>
-                <span
+                <p
                   v-if="trial.status === 'processing' || trial.status === 'pending'"
-                  class="text-sm mt-2 text-gray-400"
-                  >Please wait for the trial to complete.</span
+                  class="mt-1 text-sm text-gray-400 dark:text-slate-500"
                 >
-              </div>
+                  Please wait for the trial to complete.
+                </p>
+              </EmptyState>
 
               <div v-else class="grid grid-cols-1 gap-5">
                 <TrialResultCard
@@ -162,7 +137,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { trialsApi } from '@/services/trialsApi'
 import { schemasApi } from '@/services/schemasApi'
@@ -175,6 +150,9 @@ import TrialResultCard from './TrialResultCard.vue'
 import TrialSchemaModal from './TrialSchemaModal.vue'
 import TrialPromptModal from './TrialPromptModal.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import { useScrollLock } from '@/composables/useScrollLock'
 import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
@@ -377,15 +355,12 @@ const toggleReasoning = (i) => {
   showReasoningPanel.value[i] = !showReasoningPanel.value[i]
 }
 
-watch(
-  () => props.isModal,
-  (v) => {
-    document.body.style.overflow = v ? 'hidden' : ''
-  },
-)
+// Lock body scroll while the results modal is open. Uses the shared
+// ref-counted lock so stacked modals don't prematurely unlock the body.
+useScrollLock({ watch: () => props.isModal })
+
 onMounted(() => {
   fetchData()
-  if (props.isModal) document.body.style.overflow = 'hidden'
 })
 onUnmounted(() => {
   try {
@@ -395,6 +370,5 @@ onUnmounted(() => {
   } catch {
     // ignore cleanup errors
   }
-  document.body.style.overflow = ''
 })
 </script>

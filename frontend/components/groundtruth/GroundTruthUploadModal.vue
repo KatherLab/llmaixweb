@@ -110,13 +110,20 @@
                 class="flex items-center justify-between"
               >
                 <span>{{ file.name }}</span>
-                <button
+                <BaseButton
                   v-if="groundTruthFormat === 'json' && selectedFiles.length > 1"
-                  type="button"
-                  class="text-red-600 hover:text-red-800"
+                  variant="link"
+                  tone="red"
+                  aria-label="Remove file"
                   @click="removeFile(index)"
                 >
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    class="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
                     <path
                       stroke-linecap="round"
                       stroke-linejoin="round"
@@ -124,7 +131,7 @@
                       d="M6 18L18 6M6 6l12 12"
                     />
                   </svg>
-                </button>
+                </BaseButton>
               </li>
             </ul>
           </div>

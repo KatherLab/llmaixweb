@@ -61,12 +61,12 @@
         <div class="flex justify-between items-center mb-4">
           <h4 class="font-medium text-gray-900">Documents ({{ docTotal }})</h4>
           <div class="flex items-center gap-2">
-            <button class="text-sm text-blue-600 hover:text-blue-800" @click="exportDocumentList">
+            <BaseButton variant="link" tone="blue" class="text-sm" @click="exportDocumentList">
               Export List
-            </button>
-            <button class="text-sm text-blue-600 hover:text-blue-800" @click="downloadAllDocuments">
+            </BaseButton>
+            <BaseButton variant="link" tone="blue" class="text-sm" @click="downloadAllDocuments">
               Download All
-            </button>
+            </BaseButton>
           </div>
         </div>
 
@@ -188,6 +188,7 @@ import { documentsApi } from '@/services/documentsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { useToast } from 'vue-toastification'
 import { formatDate, formatFileSize } from '@/utils/formatters'
+import { computeVisiblePages } from '@/composables/usePagination'
 import FileIcon from '../common/FileIcon.vue'
 import PaginationControls from '../common/PaginationControls.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -228,29 +229,7 @@ const docTotalPages = computed(() =>
   docPageSize.value ? Math.ceil(docTotal.value / docPageSize.value) : 1,
 )
 
-const docVisiblePages = computed(() => {
-  const pages = []
-  const total = docTotalPages.value
-  const current = docPage.value
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) pages.push(i)
-  } else if (current <= 3) {
-    for (let i = 1; i <= 5; i++) pages.push(i)
-    pages.push('...')
-    pages.push(total)
-  } else if (current >= total - 2) {
-    pages.push(1)
-    pages.push('...')
-    for (let i = total - 4; i <= total; i++) pages.push(i)
-  } else {
-    pages.push(1)
-    pages.push('...')
-    for (let i = current - 1; i <= current + 1; i++) pages.push(i)
-    pages.push('...')
-    pages.push(total)
-  }
-  return pages.filter((p) => p === '...' || (p >= 1 && p <= total))
-})
+const docVisiblePages = computed(() => computeVisiblePages(docPage.value, docTotalPages.value))
 
 const fetchDocuments = async () => {
   docLoading.value = true

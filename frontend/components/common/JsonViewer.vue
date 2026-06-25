@@ -6,7 +6,15 @@
     </div>
     <div v-else class="json-object">
       <div v-for="(value, key) in data" :key="key" class="json-item">
-        <div class="json-key" @click="toggleExpanded(key)">
+        <div
+          class="json-key"
+          :tabindex="isExpandable(value) ? 0 : undefined"
+          :role="isExpandable(value) ? 'button' : undefined"
+          :aria-expanded="isExpandable(value) ? !!expanded[key] : undefined"
+          @click="toggleExpanded(key)"
+          @keydown.enter.prevent="toggleExpanded(key)"
+          @keydown.space.prevent="toggleExpanded(key)"
+        >
           <span class="toggle-icon">
             <span
               v-if="isExpandable(value)"

@@ -84,7 +84,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { getTypeIcon } from '@/utils/schemaTypeIcons'
+import { getTypeIcon, getTypeColor } from '@/utils/schemaTypeIcons'
 
 const props = defineProps({
   nodeKey: {
@@ -126,16 +126,7 @@ const isActive = computed(() => {
   return JSON.stringify(props.path) === JSON.stringify(props.currentPath)
 })
 
-const typeColorClass = computed(() => {
-  const colors = {
-    string: 'bg-green-500',
-    number: 'bg-blue-500',
-    boolean: 'bg-purple-500',
-    object: 'bg-orange-500',
-    array: 'bg-pink-500',
-  }
-  return colors[props.nodeSchema.type] || 'bg-gray-500'
-})
+const typeColorClass = computed(() => getTypeColor(props.nodeSchema.type))
 
 // Type Icons: shared via @/utils/schemaTypeIcons
 const typeIcon = computed(() => getTypeIcon(props.nodeSchema.type))

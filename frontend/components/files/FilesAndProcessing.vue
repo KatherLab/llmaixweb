@@ -125,31 +125,30 @@
     />
 
     <!-- Empty State: filters active but returned nothing -->
-    <div
+    <EmptyState
       v-if="!files.length && !isDragging && hasLoadedFiles && hasActiveFilters"
-      class="text-center py-12"
+      title="No files match your filters"
+      description="Try adjusting or clearing your filters to see more results"
+      action-text="Clear All Filters"
+      @action="clearFilters"
     >
-      <svg
-        class="mx-auto h-16 w-16 text-gray-300"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-        />
-      </svg>
-      <p class="mt-4 text-lg font-medium text-gray-900 dark:text-white">
-        No files match your filters
-      </p>
-      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        Try adjusting or clearing your filters to see more results
-      </p>
-      <BaseButton class="mt-4" @click="clearFilters">Clear All Filters</BaseButton>
-    </div>
+      <template #icon>
+        <svg
+          class="h-16 w-16 mx-auto text-gray-300 dark:text-slate-600"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+      </template>
+    </EmptyState>
 
     <!-- Floating Batch Toolbar -->
     <div
@@ -309,6 +308,7 @@ import UploadFilesModal from '@/components/files/UploadFilesModal.vue'
 import DuplicatePreviewModal from '@/components/files/DuplicatePreviewModal.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import { setEngineLabels } from '@/utils/ocrLabels'
 import { getDateRangeBounds } from '@/utils/dateRange'
 import { useFileDownload } from '@/composables/useFileDownload'
@@ -1026,7 +1026,5 @@ onMounted(async () => {
 onUnmounted(() => {
   stopWebSocket()
   document.removeEventListener('expand-preprocessing-task', handleExpandTask)
-  // Ensure scroll lock is released when component unmounts
-  document.body.style.overflow = ''
 })
 </script>

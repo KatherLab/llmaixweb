@@ -25,6 +25,7 @@
 import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import { llmApi } from '@/services/llmApi'
+import { extractErrorMessage } from '@/utils/errors'
 
 export function useModelTesting({
   trialData,
@@ -296,8 +297,7 @@ export function useModelTesting({
     } catch (error) {
       modelTested.value = true
       modelValid.value = false
-      const errorMsg =
-        error?.response?.data?.message || error?.response?.data?.detail || error?.message
+      const errorMsg = extractErrorMessage(error, 'Model test failed')
       modelTestError.value = errorMsg
       toast.error(`Model test failed: ${errorMsg}`)
     } finally {

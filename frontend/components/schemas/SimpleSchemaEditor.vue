@@ -21,40 +21,31 @@
 
     <!-- Fields List -->
     <div class="flex-1 overflow-y-auto p-6">
-      <div v-if="fields.length === 0" class="text-center py-16">
-        <div
-          class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50 mb-4"
-        >
-          <svg
-            class="h-8 w-8 text-indigo-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-        </div>
-        <h4 class="text-lg font-medium text-gray-900 mb-1">No fields yet</h4>
-        <p class="text-sm text-gray-500 mb-6">
-          Add fields to define what information to extract from your documents
-        </p>
-        <BaseButton class="shadow-sm" @click="addField">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Add Your First Field
-        </BaseButton>
-      </div>
+      <EmptyState
+        v-if="fields.length === 0"
+        title="No fields yet"
+        description="Add fields to define what information to extract from your documents"
+      >
+        <template #action>
+          <BaseButton class="shadow-sm" @click="addField">
+            <svg
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add Your First Field
+          </BaseButton>
+        </template>
+      </EmptyState>
 
       <div v-else class="space-y-2">
         <!-- Read-only fields notice -->
@@ -216,13 +207,21 @@
             </div>
 
             <!-- Remove Button -->
-            <button
-              type="button"
-              class="flex-shrink-0 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+            <BaseButton
+              variant="icon"
+              tone="red"
+              class="flex-shrink-0 p-2 opacity-0 group-hover:opacity-100"
               title="Remove field"
+              aria-label="Remove field"
               @click="removeField(field.id)"
             >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                class="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -230,7 +229,7 @@
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                 />
               </svg>
-            </button>
+            </BaseButton>
           </div>
         </div>
       </div>
@@ -281,6 +280,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 
 const props = defineProps({
   schema: {

@@ -1,38 +1,36 @@
 <template>
   <div class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">LLMAIx-v2</h1>
-      <p class="text-base text-gray-500 mt-2">Reset your password</p>
+      <h1 class="text-4xl font-extrabold text-gray-900 dark:text-slate-100 tracking-tight">
+        LLMAIx-v2
+      </h1>
+      <p class="text-base text-gray-500 dark:text-slate-400 mt-2">Reset your password</p>
     </div>
 
     <!-- Step 1: Email input -->
-    <div v-if="step === 1" class="bg-white border border-gray-200 rounded-xl p-8 shadow-sm">
-      <h2 class="text-lg font-bold text-gray-900 mb-2">Forgot your password?</h2>
-      <p class="text-sm text-gray-500 mb-6">
+    <div
+      v-if="step === 1"
+      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm"
+    >
+      <h2 class="text-lg font-bold text-gray-900 dark:text-slate-100 mb-2">
+        Forgot your password?
+      </h2>
+      <p class="text-sm text-gray-500 dark:text-slate-400 mb-6">
         Enter your email address and we'll send you a link to reset your password.
       </p>
       <form @submit.prevent="handleForgotPassword">
         <div class="mb-5">
-          <label for="email" class="block text-sm font-semibold text-gray-700 mb-2"
-            >Email address</label
-          >
-          <input
-            id="email"
+          <FormField
             v-model="email"
+            label="Email address"
             type="email"
             required
-            class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
             placeholder="e.g. your@email.com"
             autocomplete="email"
-            spellcheck="false"
+            :spellcheck="false"
           />
         </div>
-        <div
-          v-if="error"
-          class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md"
-        >
-          {{ error }}
-        </div>
+        <ErrorBanner v-if="error" :message="error" class="mb-4" />
         <BaseButton
           type="submit"
           size="lg"
@@ -46,6 +44,7 @@
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path
               stroke-linecap="round"
@@ -57,17 +56,29 @@
           <span>{{ isLoading ? 'Sending...' : 'Send Reset Link' }}</span>
         </BaseButton>
       </form>
-      <router-link to="/login" class="block mt-5 text-center text-blue-600 hover:underline text-sm">
+      <router-link
+        to="/login"
+        class="block mt-5 text-center text-blue-600 hover:underline dark:text-blue-400 text-sm"
+      >
         Back to login
       </router-link>
     </div>
 
     <!-- Step 2: Success message -->
-    <div v-else class="bg-white border border-gray-200 rounded-xl p-8 shadow-sm text-center">
+    <div
+      v-else
+      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm text-center"
+    >
       <div
-        class="mx-auto mb-4 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center"
+        class="mx-auto mb-4 w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center"
       >
-        <svg class="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg
+          class="w-6 h-6 text-green-600 dark:text-green-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -76,17 +87,17 @@
           />
         </svg>
       </div>
-      <h2 class="text-lg font-bold text-gray-900 mb-2">Check your email</h2>
-      <p class="text-sm text-gray-500 mb-6">
+      <h2 class="text-lg font-bold text-gray-900 dark:text-slate-100 mb-2">Check your email</h2>
+      <p class="text-sm text-gray-500 dark:text-slate-400 mb-6">
         If an account with that email exists, we've sent a password reset link to it.
       </p>
-      <div
-        v-if="emailWarning"
-        class="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-md"
-      >
+      <div v-if="emailWarning" :class="['mb-4 p-3 text-sm rounded-md', getBannerClass('yellow')]">
         {{ emailWarning }}
       </div>
-      <router-link to="/login" class="text-blue-600 hover:underline text-sm font-medium">
+      <router-link
+        to="/login"
+        class="text-blue-600 hover:underline dark:text-blue-400 text-sm font-medium"
+      >
         Back to login
       </router-link>
     </div>
@@ -97,6 +108,9 @@
 import { ref } from 'vue'
 import { usersApi } from '@/services/usersApi'
 import BaseButton from '@/components/common/BaseButton.vue'
+import FormField from '@/components/common/FormField.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { getBannerClass } from '@/utils/statusStyles'
 import { extractErrorMessage } from '@/utils/errors'
 
 const step = ref(1)

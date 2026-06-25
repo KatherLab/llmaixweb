@@ -40,15 +40,8 @@
               <span
                 :class="[
                   'w-2.5 h-2.5 rounded-full flex-shrink-0',
-                  isTaskStatus(task, 'completed')
-                    ? 'bg-green-500'
-                    : isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress')
-                      ? 'bg-blue-500 animate-pulse'
-                      : isTaskStatus(task, 'failed')
-                        ? 'bg-red-500'
-                        : isTaskStatus(task, 'cancelled')
-                          ? 'bg-yellow-500'
-                          : 'bg-gray-400',
+                  getStatusDotClass(task.status),
+                  isTaskActive(task) ? 'animate-pulse' : '',
                 ]"
               />
               <!-- Task info -->
@@ -87,28 +80,10 @@
             <span
               :class="[
                 'inline-flex items-center px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2',
-                isTaskStatus(task, 'completed')
-                  ? 'bg-green-100 text-green-700'
-                  : isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress')
-                    ? 'bg-blue-100 text-blue-700'
-                    : isTaskStatus(task, 'failed')
-                      ? 'bg-red-100 text-red-700'
-                      : isTaskStatus(task, 'cancelled')
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-gray-100 text-gray-700',
+                getStatusBadgeClass(task.status),
               ]"
             >
-              {{
-                isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress')
-                  ? `${Math.round(task.meta?.progress || 0)}%`
-                  : isTaskStatus(task, 'completed')
-                    ? 'Done'
-                    : isTaskStatus(task, 'failed')
-                      ? 'Failed'
-                      : isTaskStatus(task, 'cancelled')
-                        ? 'Cancelled'
-                        : 'Pending'
-              }}
+              {{ taskStatusLabel(task) }}
             </span>
           </div>
 
@@ -150,16 +125,7 @@
                 <div
                   v-for="fileTask in task.file_tasks"
                   :key="fileTask.id"
-                  :class="[
-                    'rounded-md border p-2 text-sm',
-                    fileTask.status === 'completed'
-                      ? 'bg-green-50 border-green-200'
-                      : fileTask.status === 'failed'
-                        ? 'bg-red-50 border-red-200'
-                        : fileTask.status === 'cancelled'
-                          ? 'bg-yellow-50 border-yellow-200'
-                          : 'bg-gray-50 border-gray-200',
-                  ]"
+                  :class="['rounded-md border p-2 text-sm', getStatusBannerClass(fileTask.status)]"
                 >
                   <!-- File task header -->
                   <div class="flex items-start justify-between gap-2">
@@ -431,25 +397,29 @@
       </div>
 
       <!-- No Runs Yet -->
-      <div v-else class="text-center py-12">
-        <svg
-          class="mx-auto h-12 w-12 text-gray-300"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-        <p class="mt-4 text-sm text-gray-500">No preprocessing runs yet</p>
-        <BaseButton v-if="historyFile" class="mt-3" @click="emit('process', historyFile)">
-          🚀 Process this file
-        </BaseButton>
-      </div>
+      <EmptyState v-else title="No preprocessing runs yet">
+        <template #icon>
+          <svg
+            class="h-12 w-12 mx-auto text-gray-300 dark:text-slate-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+        </template>
+        <template v-if="historyFile" #action>
+          <BaseButton class="shadow-sm" @click="emit('process', historyFile)">
+            🚀 Process this file
+          </BaseButton>
+        </template>
+      </EmptyState>
     </div>
 
     <!-- Panel Footer -->
@@ -475,8 +445,10 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { formatDuration, formatRelativeTime as sharedFormatRelativeTime } from '@/utils/formatters'
+import { getStatusDotClass, getStatusBadgeClass, getStatusBannerClass } from '@/utils/statusStyles'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 
 const props = defineProps({
   open: { type: Boolean, required: true },
@@ -524,6 +496,20 @@ const getEngineName = (task) => {
 const isTaskStatus = (task, expectedStatus) => {
   if (!task || !task.status) return false
   return String(task.status).toLowerCase() === String(expectedStatus).toLowerCase()
+}
+
+// Whether a task is actively running (processing / in_progress). Used to pulse
+// the status dot and show the progress % in the mini badge.
+const isTaskActive = (task) => isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress')
+
+// Mini badge label for a task's current status.
+const taskStatusLabel = (task) => {
+  if (isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress'))
+    return `${Math.round(task.meta?.progress || 0)}%`
+  if (isTaskStatus(task, 'completed')) return 'Done'
+  if (isTaskStatus(task, 'failed')) return 'Failed'
+  if (isTaskStatus(task, 'cancelled')) return 'Cancelled'
+  return 'Pending'
 }
 
 // Format relative time. Delegates the just-now/m/h tiers to the shared

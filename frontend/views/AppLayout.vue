@@ -282,100 +282,57 @@
       </div>
     </footer>
     <!-- Change Password Modal -->
-    <transition name="fade-slide">
-      <div
-        v-if="showChangePasswordModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/60 backdrop-blur-sm"
-        @keydown.esc="closeChangePasswordModal"
-      >
-        <div
-          class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md mx-auto p-8 border border-gray-100 dark:border-slate-800 relative animate-dropdown"
-          @click.stop
-        >
-          <button
-            aria-label="Close"
-            class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-100 transition-colors focus:outline-none"
-            @click="closeChangePasswordModal"
-          >
-            <svg
-              class="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-            >
-              <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-          <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">Change Password</h2>
-          <form class="flex flex-col gap-5" @submit.prevent="handleChangePassword">
-            <div>
-              <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-slate-200"
-                >Current Password</label
-              >
-              <input
-                v-model="currentPassword"
-                autocomplete="current-password"
-                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-                placeholder="Enter current password"
-                required
-                type="password"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-slate-200"
-                >New Password</label
-              >
-              <input
-                v-model="newPassword"
-                autocomplete="new-password"
-                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-                maxlength="128"
-                minlength="8"
-                placeholder="New password (8–128 chars)"
-                required
-                type="password"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-slate-200"
-                >Confirm New Password</label
-              >
-              <input
-                v-model="confirmPassword"
-                autocomplete="new-password"
-                class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-                maxlength="128"
-                minlength="8"
-                placeholder="Repeat new password"
-                required
-                type="password"
-              />
-            </div>
-            <div
-              v-if="passwordError"
-              class="text-red-600 dark:text-red-400 text-sm rounded bg-red-50 dark:bg-red-900/30 px-3 py-2"
-            >
-              {{ passwordError }}
-            </div>
-            <div
-              v-if="passwordSuccess"
-              class="text-green-600 dark:text-green-400 text-sm rounded bg-green-50 dark:bg-green-900/30 px-3 py-2"
-            >
-              {{ passwordSuccess }}
-            </div>
-            <BaseButton
-              type="submit"
-              :loading="isChangingPassword"
-              :disabled="isChangingPassword"
-              class="mt-2 w-full"
-            >
-              {{ isChangingPassword ? 'Updating...' : 'Update Password' }}
-            </BaseButton>
-          </form>
+    <BaseModal
+      :open="showChangePasswordModal"
+      title="Change Password"
+      size="sm"
+      panel-class="dark:bg-slate-900 dark:border-slate-800"
+      header-class="dark:bg-slate-900"
+      @close="closeChangePasswordModal"
+    >
+      <form class="flex flex-col gap-5" @submit.prevent="handleChangePassword">
+        <FormField
+          v-model="currentPassword"
+          label="Current Password"
+          type="password"
+          required
+          placeholder="Enter current password"
+          autocomplete="current-password"
+        />
+        <FormField
+          v-model="newPassword"
+          label="New Password"
+          type="password"
+          required
+          :minlength="8"
+          :maxlength="128"
+          placeholder="New password (8–128 chars)"
+          autocomplete="new-password"
+        />
+        <FormField
+          v-model="confirmPassword"
+          label="Confirm New Password"
+          type="password"
+          required
+          :minlength="8"
+          :maxlength="128"
+          placeholder="Repeat new password"
+          autocomplete="new-password"
+        />
+        <ErrorBanner v-if="passwordError" :message="passwordError" />
+        <div v-if="passwordSuccess" :class="['text-sm rounded px-3 py-2', getBannerClass('green')]">
+          {{ passwordSuccess }}
         </div>
-      </div>
-    </transition>
+        <BaseButton
+          type="submit"
+          :loading="isChangingPassword"
+          :disabled="isChangingPassword"
+          class="mt-2 w-full"
+        >
+          {{ isChangingPassword ? 'Updating...' : 'Update Password' }}
+        </BaseButton>
+      </form>
+    </BaseModal>
   </div>
 </template>
 
@@ -389,6 +346,10 @@ import { usersApi } from '@/services/usersApi'
 import { useToast } from 'vue-toastification'
 import ActivityBell from '@/components/admin/ActivityBell.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
+import FormField from '@/components/common/FormField.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { getBannerClass } from '@/utils/statusStyles'
 import { extractErrorMessage } from '@/utils/errors'
 
 const router = useRouter()

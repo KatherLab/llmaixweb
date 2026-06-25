@@ -6,8 +6,8 @@
  *   - merges the update directly into the trials array (existing trial), or
  *   - triggers a full refetch (new trial not yet in the list).
  *
- * Preserves the original merge fixup ({ ...existing, ...data, id: data.trial_id }),
- * project-id filtering, and meta-object merge from the inline WebSocket code.
+ * Preserves the original merge fixup, project-id filtering, and meta-object
+ * merge (now shared via useWsEntityUpdates helpers).
  *
  * @param {Object} opts
  * @param {import('vue').Ref<string|number>} opts.projectId
@@ -16,33 +16,19 @@
  * @returns {{ start: () => void, stop: () => void }}
  */
 import { websocketService } from '@/services/websocket.js'
+import { isForProject, mergeWsEntity } from '@/composables/useWsEntityUpdates'
 
 export function useTrialUpdates({ projectId, trials, resetAndFetch }) {
   let wsTrialUnsubscribe = null
 
   const start = () => {
     wsTrialUnsubscribe = websocketService.onTrialUpdate((data) => {
-      // Only update if the trial belongs to this project (handle string/number comparison)
-      if (String(data.project_id) !== String(projectId.value)) return
+      if (!isForProject(data, projectId.value)) return
 
-      // Update the trial in the list
       const idx = trials.value.findIndex((t) => t.id === data.trial_id)
       if (idx !== -1) {
-        const existingTrial = trials.value[idx]
-        const updatedTrial = {
-          ...existingTrial,
-          ...data,
-          id: data.trial_id,
-          trial_id: undefined,
-        }
-
-        // Preserve and merge meta object
-        if (data.meta) {
-          updatedTrial.meta = { ...(existingTrial.meta || {}), ...data.meta }
-        }
-
+        trials.value[idx] = mergeWsEntity(trials.value[idx], data, data.trial_id, 'trial_id')
         // Trigger reactivity
-        trials.value[idx] = updatedTrial
         trials.value = [...trials.value]
       } else {
         // New trial - fetch full list

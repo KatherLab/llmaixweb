@@ -21,6 +21,7 @@
  */
 import { watch } from 'vue'
 import { websocketService } from '@/services/websocket.js'
+import { isForProject, mergeWsEntity } from '@/composables/useWsEntityUpdates'
 
 export function usePreprocessingUpdates({
   projectId,
@@ -38,8 +39,8 @@ export function usePreprocessingUpdates({
 
   const start = () => {
     wsPreprocessingUnsubscribe = websocketService.onPreprocessingUpdate((data) => {
-      // Only update if the task belongs to this project (handle string/number comparison)
-      if (String(data.project_id) !== String(projectId.value)) return
+      // Only update if the task belongs to this project
+      if (!isForProject(data, projectId.value)) return
 
       // Check if this is a new task we haven't seen before
       const taskId = data.task_id
@@ -86,19 +87,11 @@ export function usePreprocessingUpdates({
       const taskIndex = file.preprocessing_tasks.findIndex((t) => t.id === taskId)
 
       if (taskIndex >= 0) {
-        // Merge the update into the existing task
+        // Merge the update into the existing task (shared id-fixup + meta-merge)
         const existingTask = file.preprocessing_tasks[taskIndex]
-        const updatedTask = {
-          ...existingTask,
-          ...data,
-          id: taskId,
-          task_id: undefined, // Clean up the field
-        }
+        const updatedTask = mergeWsEntity(existingTask, data, taskId, 'task_id')
 
-        // Preserve and merge meta and configuration
-        if (data.meta) {
-          updatedTask.meta = { ...(existingTask.meta || {}), ...data.meta }
-        }
+        // Preserve and merge configuration
         if (data.configuration) {
           updatedTask.configuration = data.configuration
         }

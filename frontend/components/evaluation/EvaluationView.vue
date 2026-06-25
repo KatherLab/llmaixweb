@@ -155,15 +155,14 @@
           </div>
 
           <!-- Evaluation results table -->
-          <div
+          <EmptyState
             v-else-if="evaluations.length === 0"
-            class="text-center py-8 text-gray-500 dark:text-gray-400"
+            title="No evaluations yet. Select a trial to evaluate."
           >
-            <span class="text-4xl text-gray-400 mb-2 block">📊</span>
-            <p class="text-gray-700 dark:text-gray-300">
-              No evaluations yet. Select a trial to evaluate.
-            </p>
-          </div>
+            <template #icon>
+              <span class="text-4xl text-gray-400 block">📊</span>
+            </template>
+          </EmptyState>
           <div v-else class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
               <thead>
@@ -330,6 +329,7 @@ import { trialsApi } from '@/services/trialsApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { evaluationsApi } from '@/services/evaluationsApi'
 import { formatDate } from '@/utils/formatters'
+import { computeVisiblePages } from '@/composables/usePagination'
 import { useToast } from 'vue-toastification'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
@@ -525,29 +525,9 @@ const trialsCurrentPage = computed({
     fetchTrials({ offset: newOffset, limit: trials.value.limit })
   },
 })
-const trialsVisiblePages = computed(() => {
-  const pages = []
-  const total = trialsTotalPages.value
-  const current = trialsCurrentPage.value
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) pages.push(i)
-  } else if (current <= 3) {
-    for (let i = 1; i <= 5; i++) pages.push(i)
-    pages.push('...')
-    pages.push(total)
-  } else if (current >= total - 2) {
-    pages.push(1)
-    pages.push('...')
-    for (let i = total - 4; i <= total; i++) pages.push(i)
-  } else {
-    pages.push(1)
-    pages.push('...')
-    for (let i = current - 1; i <= current + 1; i++) pages.push(i)
-    pages.push('...')
-    pages.push(total)
-  }
-  return pages.filter((p) => p === '...' || (p >= 1 && p <= total))
-})
+const trialsVisiblePages = computed(() =>
+  computeVisiblePages(trialsCurrentPage.value, trialsTotalPages.value),
+)
 
 // Lazy fetch full trial (only if a view ever needs more than the summary)
 const fetchTrialIfMissing = async (id) => {

@@ -48,6 +48,7 @@
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 stroke-linecap="round"
@@ -60,11 +61,15 @@
           <button
             v-for="page in visiblePages"
             :key="page"
+            :disabled="page === '...'"
+            :aria-current="page === modelValue ? 'page' : undefined"
+            :aria-label="page === '...' ? 'ellipsis' : 'Page ' + page"
             :class="[
               'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
               page === modelValue
                 ? 'z-10 bg-blue-50 dark:bg-blue-900 border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
                 : 'bg-white dark:bg-slate-900 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800',
+              page === '...' ? 'cursor-default disabled:opacity-100' : '',
             ]"
             @click="$emit('update:modelValue', page)"
           >
@@ -82,6 +87,7 @@
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 stroke-linecap="round"

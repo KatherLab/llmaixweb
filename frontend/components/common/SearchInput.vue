@@ -4,6 +4,7 @@
       :value="modelValue"
       type="text"
       :placeholder="placeholder"
+      :aria-label="placeholder"
       class="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
       @input="onInput"
     />
@@ -12,6 +13,7 @@
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
+      aria-hidden="true"
     >
       <path
         stroke-linecap="round"

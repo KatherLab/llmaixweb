@@ -1,48 +1,41 @@
 <template>
   <div class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">LLMAIx-v2</h1>
-      <p class="text-base text-gray-500 mt-2">Extract information from documents using LLMs.</p>
+      <h1 class="text-4xl font-extrabold text-gray-900 dark:text-slate-100 tracking-tight">
+        LLMAIx-v2
+      </h1>
+      <p class="text-base text-gray-500 dark:text-slate-400 mt-2">
+        Extract information from documents using LLMs.
+      </p>
     </div>
     <form
-      class="bg-white border border-gray-200 rounded-xl p-8 shadow-sm flex flex-col gap-5"
+      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm flex flex-col gap-5"
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >
-      <div>
-        <label for="email" class="block text-sm font-semibold text-gray-700 mb-2"
-          >Email address</label
-        >
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-          placeholder="e.g. your@email.com"
-          autocomplete="email"
-          spellcheck="false"
-        />
-      </div>
-      <div>
-        <label for="password" class="block text-sm font-semibold text-gray-700 mb-2"
-          >Password</label
-        >
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          required
-          class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-          placeholder="Password"
-          autocomplete="current-password"
-        />
-        <div class="mt-1 text-right">
+      <FormField
+        v-model="email"
+        label="Email address"
+        type="email"
+        required
+        placeholder="e.g. your@email.com"
+        autocomplete="email"
+        :spellcheck="false"
+      />
+      <FormField
+        v-model="password"
+        label="Password"
+        type="password"
+        required
+        placeholder="Password"
+        autocomplete="current-password"
+      >
+        <template #trailing>
           <router-link to="/forgot-password" class="text-xs text-blue-600 hover:underline">
             Forgot your password?
           </router-link>
-        </div>
-      </div>
+        </template>
+      </FormField>
       <BaseButton
         type="submit"
         size="lg"
@@ -57,6 +50,7 @@
           fill="none"
           viewBox="0 0 20 20"
           stroke="currentColor"
+          aria-hidden="true"
         >
           <path
             stroke-linecap="round"
@@ -68,12 +62,7 @@
         <span>{{ isLoading ? 'Signing in...' : 'Sign in' }}</span>
       </BaseButton>
       <transition name="fade">
-        <div
-          v-if="error"
-          class="mt-2 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md text-center"
-        >
-          {{ error }}
-        </div>
+        <ErrorBanner v-if="error" :message="error" class="text-center" />
       </transition>
       <router-link
         to="/register"
@@ -93,6 +82,8 @@ import { authApi } from '@/services/authApi'
 import { useToast } from 'vue-toastification'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
+import FormField from '@/components/common/FormField.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -145,14 +136,3 @@ async function handleSubmit() {
   }
 }
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

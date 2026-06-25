@@ -71,8 +71,20 @@
                   class="px-3 py-1 text-sm"
                 >
                   {{ tag }}
-                  <button class="ml-2 text-blue-600 hover:text-blue-800" @click="removeTag(index)">
-                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <BaseButton
+                    variant="link"
+                    tone="blue"
+                    class="ml-2"
+                    aria-label="Remove tag"
+                    @click="removeTag(index)"
+                  >
+                    <svg
+                      class="h-3 w-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
@@ -80,7 +92,7 @@
                         d="M6 18L18 6M6 6l12 12"
                       />
                     </svg>
-                  </button>
+                  </BaseButton>
                 </StatusBadge>
               </div>
               <div class="flex gap-2">
@@ -157,13 +169,13 @@
               <!-- Pagination + bulk actions -->
               <div class="flex items-center justify-between gap-2 mt-2">
                 <div class="flex gap-2">
-                  <button class="text-sm text-blue-600 hover:text-blue-800" @click="selectAll">
+                  <BaseButton variant="link" tone="blue" class="text-sm" @click="selectAll">
                     Select All Visible
-                  </button>
+                  </BaseButton>
                   <span class="text-gray-300">|</span>
-                  <button class="text-sm text-blue-600 hover:text-blue-800" @click="clearSelection">
+                  <BaseButton variant="link" tone="blue" class="text-sm" @click="clearSelection">
                     Clear Selection
-                  </button>
+                  </BaseButton>
                 </div>
                 <div v-if="searchTotalPages > 1" class="flex items-center gap-2">
                   <span class="text-xs text-gray-500">

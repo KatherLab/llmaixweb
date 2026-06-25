@@ -1,13 +1,17 @@
 <template>
   <div class="w-full max-w-md mx-auto">
     <div class="mb-8 text-center">
-      <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">LLMAIx-v2</h1>
-      <p class="text-base text-gray-500 mt-2">Extract information from documents using LLMs.</p>
+      <h1 class="text-4xl font-extrabold text-gray-900 dark:text-slate-100 tracking-tight">
+        LLMAIx-v2
+      </h1>
+      <p class="text-base text-gray-500 dark:text-slate-400 mt-2">
+        Extract information from documents using LLMs.
+      </p>
     </div>
     <!-- Registration Closed Message -->
     <div
       v-if="!allowRegister && !isLoadingSettings"
-      class="p-8 bg-white border border-gray-100 rounded-xl text-center text-gray-500"
+      class="p-8 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-center text-gray-500 dark:text-slate-400"
     >
       Registration is currently closed. Please use an invitation link.
     </div>
@@ -15,66 +19,43 @@
     <!-- Registration Form -->
     <form
       v-else
-      class="bg-white border border-gray-200 rounded-xl p-8 shadow-sm flex flex-col gap-5"
+      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm flex flex-col gap-5"
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >
-      <div>
-        <label for="fullName" class="block text-sm font-semibold text-gray-700 mb-2"
-          >Full Name</label
-        >
-        <input
-          id="fullName"
-          v-model="fullName"
-          type="text"
-          required
-          class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-          placeholder="Your full name"
-        />
-      </div>
-      <div>
-        <label for="email" class="block text-sm font-semibold text-gray-700 mb-2"
-          >Email address</label
-        >
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          :disabled="isEmailFromInvitation"
-          class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition disabled:bg-gray-100"
-          placeholder="Your email"
-        />
-        <p v-if="isEmailFromInvitation" class="mt-1 text-sm text-gray-500">
+      <FormField
+        v-model="fullName"
+        label="Full Name"
+        type="text"
+        required
+        placeholder="Your full name"
+      />
+      <FormField
+        v-model="email"
+        label="Email address"
+        type="email"
+        required
+        :disabled="isEmailFromInvitation"
+        placeholder="Your email"
+      >
+        <template v-if="isEmailFromInvitation" #hint>
           This email is linked to your invitation
-        </p>
-      </div>
-      <div>
-        <label for="password" class="block text-sm font-semibold text-gray-700 mb-2"
-          >Password</label
-        >
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          required
-          class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-          placeholder="Create a password"
-        />
-      </div>
-      <div>
-        <label for="confirmPassword" class="block text-sm font-semibold text-gray-700 mb-2"
-          >Confirm Password</label
-        >
-        <input
-          id="confirmPassword"
-          v-model="confirmPassword"
-          type="password"
-          required
-          class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-          placeholder="Confirm your password"
-        />
-      </div>
+        </template>
+      </FormField>
+      <FormField
+        v-model="password"
+        label="Password"
+        type="password"
+        required
+        placeholder="Create a password"
+      />
+      <FormField
+        v-model="confirmPassword"
+        label="Confirm Password"
+        type="password"
+        required
+        placeholder="Confirm your password"
+      />
       <BaseButton
         type="submit"
         size="lg"
@@ -85,12 +66,7 @@
         {{ isLoading ? 'Creating account...' : 'Create Account' }}
       </BaseButton>
       <transition name="fade">
-        <div
-          v-if="error"
-          class="mt-2 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md text-center"
-        >
-          {{ error }}
-        </div>
+        <ErrorBanner v-if="error" :message="error" class="text-center" />
       </transition>
       <router-link
         to="/login"
@@ -111,6 +87,8 @@ import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
+import FormField from '@/components/common/FormField.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
 const router = useRouter()
@@ -215,14 +193,3 @@ async function handleSubmit() {
   }
 }
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

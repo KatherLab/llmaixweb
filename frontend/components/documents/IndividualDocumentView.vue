@@ -6,13 +6,15 @@
         <div>
           <h2 class="text-xl font-semibold text-gray-800">Document #{{ document.document_id }}</h2>
           <p class="text-gray-600">Individual field-by-field analysis</p>
-          <button
-            class="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center"
+          <BaseButton
+            variant="link"
+            tone="blue"
+            class="mt-2 text-sm flex items-center"
             @click="$emit('back-to-documents')"
           >
             <span class="mr-1">←</span>
             Back to Documents
-          </button>
+          </BaseButton>
         </div>
         <div class="text-right">
           <div class="text-2xl font-bold text-blue-600">
@@ -117,13 +119,15 @@
     <div class="bg-white rounded-lg border p-6 shadow-sm">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-semibold text-gray-800">Document Content</h3>
-        <button
+        <BaseButton
           v-if="!documentContent && !loadingContent"
-          class="text-blue-600 hover:text-blue-800 text-sm underline"
+          variant="link"
+          tone="blue"
+          class="text-sm underline"
           @click="$emit('load-content', document.document_id)"
         >
           Load Content
-        </button>
+        </BaseButton>
       </div>
 
       <div
@@ -146,6 +150,7 @@
 
 <script setup>
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const props = defineProps({
   document: {

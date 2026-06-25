@@ -211,8 +211,20 @@
               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
               placeholder="Option value"
             />
-            <button class="text-red-600 hover:text-red-800 p-1" @click="removeEnumValue(index)">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <BaseButton
+              variant="link"
+              tone="red"
+              class="p-1"
+              aria-label="Remove enum value"
+              @click="removeEnumValue(index)"
+            >
+              <svg
+                class="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -220,7 +232,7 @@
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                 />
               </svg>
-            </button>
+            </BaseButton>
           </div>
           <button
             class="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
@@ -523,6 +535,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { getTypeIcon, getTypeColor } from '@/utils/schemaTypeIcons'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const props = defineProps({
   property: {

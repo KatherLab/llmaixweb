@@ -88,6 +88,9 @@
 </template>
 
 <script setup>
+import { getTypePillClass } from '@/utils/schemaTypeIcons'
+import { getPillClass } from '@/utils/statusStyles'
+
 const props = defineProps({
   fields: { type: Object, default: () => ({}) },
   types: { type: Object, default: () => ({}) },
@@ -133,21 +136,20 @@ function badgeLabel(type) {
   }
 }
 function typeBadgeClass(type) {
+  // Schema types use the shared type→pill mapping (consistent with
+  // SchemaBlock / TreeNode / VisualSchemaEditor). `category` and unknowns
+  // fall back to a gray pill.
   switch (type) {
     case 'string':
-      return 'bg-blue-100 text-blue-700 border border-blue-200'
-    case 'boolean':
-      return 'bg-purple-100 text-purple-700 border border-purple-200'
     case 'number':
-      return 'bg-pink-100 text-pink-700 border border-pink-200'
-    case 'array':
-      return 'bg-green-100 text-green-700 border border-green-200'
+    case 'boolean':
     case 'object':
-      return 'bg-orange-100 text-orange-700 border border-orange-200'
+    case 'array':
+      return getTypePillClass(type)
     case 'category':
-      return 'bg-gray-100 text-gray-600 border border-gray-300'
+      return getPillClass('gray')
     default:
-      return 'bg-gray-100 text-gray-500 border border-gray-200'
+      return getPillClass('gray')
   }
 }
 </script>

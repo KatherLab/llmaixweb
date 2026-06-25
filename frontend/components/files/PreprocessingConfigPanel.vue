@@ -245,67 +245,47 @@
 
           <!-- Mistral Settings -->
           <div v-if="selectedEngine === 'mistral_ocr'" class="space-y-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-              <input
-                v-model="mistralApiKey"
-                type="text"
-                placeholder="Leave empty to use server default"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
-              <input
-                v-model="mistralModel"
-                type="text"
-                placeholder="mistral-ocr-latest"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <FormField
+              v-model="mistralApiKey"
+              label="API Key"
+              type="text"
+              placeholder="Leave empty to use server default"
+            />
+            <FormField
+              v-model="mistralModel"
+              label="Model"
+              type="text"
+              placeholder="mistral-ocr-latest"
+            />
           </div>
 
           <!-- Vision LLM Advanced Settings -->
           <div v-if="selectedEngine === 'llm_vision'" class="space-y-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-              <input
-                v-model="visionApiKey"
-                type="text"
-                placeholder="Leave empty to use server default"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
-              <input
-                v-model="visionBaseUrl"
-                type="text"
-                placeholder="https://api.openai.com/v1"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
-              <input
-                v-model="visionModel"
-                type="text"
-                placeholder="Leave empty to use server default"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                Max Image Dimension (px)
-              </label>
-              <input
-                v-model.number="visionMaxImageDim"
-                type="number"
-                min="400"
-                max="4096"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <FormField
+              v-model="visionApiKey"
+              label="API Key"
+              type="text"
+              placeholder="Leave empty to use server default"
+            />
+            <FormField
+              v-model="visionBaseUrl"
+              label="Base URL"
+              type="text"
+              placeholder="https://api.openai.com/v1"
+            />
+            <FormField
+              v-model="visionModel"
+              label="Model"
+              type="text"
+              placeholder="Leave empty to use server default"
+            />
+            <FormField
+              v-model.number="visionMaxImageDim"
+              label="Max Image Dimension (px)"
+              type="number"
+              :min="400"
+              :max="4096"
+            />
           </div>
         </div>
       </div>
@@ -372,6 +352,7 @@ import { ref, computed, watch } from 'vue'
 import { getEngineLabel, getEngineSubtitle } from '@/utils/ocrLabels'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import FormField from '@/components/common/FormField.vue'
 
 const props = defineProps({
   open: { type: Boolean, required: true },

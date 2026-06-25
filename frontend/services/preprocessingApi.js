@@ -22,9 +22,7 @@ export const preprocessingApi = {
     return api.post(
       `/project/${projectId}/preprocess/${taskId}/cancel`,
       {},
-      {
-        params: keepProcessed ? { keep_processed: true } : {},
-      },
+      { params: { keep_processed: keepProcessed } },
     )
   },
   // GET-triggered action (not a pure read) — requeues failed subtasks.

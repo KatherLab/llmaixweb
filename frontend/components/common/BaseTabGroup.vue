@@ -15,17 +15,19 @@
 <template>
   <div class="border-b border-gray-200 dark:border-gray-700">
     <nav class="-mb-px flex space-x-8" role="tablist">
-      <button
+      <component
+        :is="tab.to ? 'router-link' : 'button'"
         v-for="tab in tabs"
         :key="tab.value"
-        type="button"
+        :type="tab.to ? undefined : 'button'"
+        :to="tab.to"
         role="tab"
         :aria-selected="modelValue === tab.value"
         :class="[
           'py-2 px-1 border-b-2 font-medium text-sm transition-colors',
           modelValue === tab.value ? activeClass : inactiveClass,
         ]"
-        @click="emit('update:modelValue', tab.value)"
+        @click="!tab.to && emit('update:modelValue', tab.value)"
       >
         <slot name="tab" :tab="tab">
           <span class="flex items-center gap-2">
@@ -39,7 +41,7 @@
             </span>
           </span>
         </slot>
-      </button>
+      </component>
     </nav>
   </div>
 </template>
@@ -54,8 +56,9 @@ const props = defineProps({
   },
   tabs: {
     type: Array,
-    required: true,
-    // each: { label?: String, value: String|Number, icon?: String, badge?: String|Number }
+    default: () => [],
+    // each: { label?: String, value: String|Number, icon?: String, badge?: String|Number, to?: String }
+    // When `to` is set, the tab renders as a <router-link> (URL-driven tabs).
   },
   tone: {
     type: String,

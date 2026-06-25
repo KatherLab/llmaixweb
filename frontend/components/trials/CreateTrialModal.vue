@@ -48,9 +48,10 @@
         <!-- Advanced toggles + sections -->
         <div>
           <div class="flex items-center gap-4 mb-2">
-            <button
-              class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
-              type="button"
+            <BaseButton
+              variant="link"
+              tone="blue"
+              class="text-sm flex items-center"
               @click="advancedSettingsVisible = !advancedSettingsVisible"
             >
               <span>{{ advancedSettingsVisible ? 'Hide' : 'Show' }} Advanced Settings</span>
@@ -60,6 +61,7 @@
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   d="M19 9l-7 7-7-7"
@@ -68,10 +70,11 @@
                   stroke-width="2"
                 />
               </svg>
-            </button>
-            <button
-              class="text-blue-600 hover:text-blue-800 text-sm flex items-center"
-              type="button"
+            </BaseButton>
+            <BaseButton
+              variant="link"
+              tone="blue"
+              class="text-sm flex items-center"
               @click="advancedOptionsVisible = !advancedOptionsVisible"
             >
               <span>{{ advancedOptionsVisible ? 'Hide' : 'Use' }} Custom API Settings</span>
@@ -81,6 +84,7 @@
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   d="M19 9l-7 7-7-7"
@@ -89,7 +93,7 @@
                   stroke-width="2"
                 />
               </svg>
-            </button>
+            </BaseButton>
           </div>
 
           <!-- Advanced Settings -->

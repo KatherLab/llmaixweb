@@ -7,8 +7,13 @@
     ]"
   >
     {{ label }}<slot />
-    <button type="button" class="hover:text-red-600" @click="$emit('remove')">
-      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <button
+      type="button"
+      class="hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
+      :aria-label="'Remove ' + label"
+      @click="$emit('remove')"
+    >
+      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path
           stroke-linecap="round"
           stroke-linejoin="round"

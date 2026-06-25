@@ -46,31 +46,39 @@
             <span class="text-sm text-gray-700 dark:text-gray-300">
               {{ selectedDocuments.length }} selected
             </span>
-            <button
-              class="text-sm text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 font-medium"
+            <BaseButton
+              variant="link"
+              tone="green"
+              class="text-sm font-medium"
               @click="createGroupFromSelection"
             >
               Create Group
-            </button>
+            </BaseButton>
             <span class="text-gray-300 dark:text-gray-600">|</span>
-            <button
-              class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+            <BaseButton
+              variant="link"
+              tone="blue"
+              class="text-sm font-medium"
               @click="performBatchAction('reprocess')"
             >
               Reprocess
-            </button>
-            <button
-              class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+            </BaseButton>
+            <BaseButton
+              variant="link"
+              tone="blue"
+              class="text-sm font-medium"
               @click="performBatchAction('export')"
             >
               Export
-            </button>
-            <button
-              class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
+            </BaseButton>
+            <BaseButton
+              variant="link"
+              tone="red"
+              class="text-sm font-medium"
               @click="performBatchAction('delete')"
             >
               Delete
-            </button>
+            </BaseButton>
             <button
               class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
               @click="selectedDocuments = []"
@@ -87,65 +95,62 @@
       </div>
 
       <!-- Empty State: No documents (either no documents exist or filters returned no results) -->
-      <div
+      <EmptyState
         v-else-if="hasLoadedDocuments && serverItems.length === 0"
-        class="bg-gray-50 dark:bg-slate-800 rounded-lg p-12 text-center"
+        :title="hasActiveFilters ? 'No documents match your filters' : 'No documents found'"
+        :description="
+          hasActiveFilters
+            ? 'Try adjusting or clearing your filters to see more results'
+            : filters.search
+              ? 'Try adjusting your search or filters'
+              : 'Process some files to see documents here'
+        "
+        :action-text="hasActiveFilters ? 'Clear All Filters' : ''"
+        @action="clearFilters"
       >
-        <svg
-          class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-        <h3 class="mt-2 text-lg font-medium text-gray-900 dark:text-white">
-          {{ hasActiveFilters ? 'No documents match your filters' : 'No documents found' }}
-        </h3>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {{
-            hasActiveFilters
-              ? 'Try adjusting or clearing your filters to see more results'
-              : filters.search
-                ? 'Try adjusting your search or filters'
-                : 'Process some files to see documents here'
-          }}
-        </p>
-        <BaseButton v-if="hasActiveFilters" variant="primary" class="mt-4" @click="clearFilters">
-          Clear All Filters
-        </BaseButton>
-      </div>
+        <template #icon>
+          <svg
+            class="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </template>
+      </EmptyState>
 
       <!-- True Empty State: No documents processed yet -->
-      <div
+      <EmptyState
         v-else-if="!hasLoadedDocuments && serverItems.length === 0"
-        class="bg-gray-50 dark:bg-slate-800 rounded-lg p-12 text-center"
+        title="No documents yet"
+        description="Process some files in the Files & Preprocessing tab to see documents here"
       >
-        <svg
-          class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No documents yet</h3>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Process some files in the Files & Preprocessing tab to see documents here
-        </p>
-      </div>
+        <template #icon>
+          <svg
+            class="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+        </template>
+      </EmptyState>
 
       <!-- Documents Table -->
       <DocumentsTable
@@ -224,6 +229,7 @@ import { getDateRangeBounds } from '@/utils/dateRange'
 import LoadingSpinner from '../common/LoadingSpinner.vue'
 import PaginationControls from '../common/PaginationControls.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useFileDownload } from '@/composables/useFileDownload'

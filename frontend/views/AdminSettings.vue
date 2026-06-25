@@ -9,21 +9,7 @@
     </h2>
 
     <!-- Category Tabs -->
-    <nav class="flex gap-2 mb-6 border-b border-gray-100 dark:border-slate-800">
-      <button
-        v-for="cat in categories"
-        :key="cat"
-        class="px-4 py-2 text-base rounded-t-lg font-medium border border-b-0 transition-all"
-        :class="
-          activeTab === cat
-            ? 'bg-white dark:bg-slate-900 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300'
-            : 'bg-gray-50 dark:bg-slate-900 border-gray-100 dark:border-slate-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-950'
-        "
-        @click="activeTab = cat"
-      >
-        {{ cat }}
-      </button>
-    </nav>
+    <BaseTabGroup v-model="activeTab" :tabs="categoryTabs" class="mb-6" />
 
     <!-- Settings Form -->
     <form v-if="!loading" class="max-w-3xl mx-auto" @submit.prevent="save">
@@ -198,6 +184,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { adminApi } from '@/services/adminApi'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
 const settings = reactive({})
@@ -218,6 +205,7 @@ const categories = [
   'Celery',
   'Email',
 ]
+const categoryTabs = computed(() => categories.map((cat) => ({ label: cat, value: cat })))
 const activeTab = ref('All')
 
 const filteredSettings = computed(() => {

@@ -11,6 +11,10 @@
       >
         <div
           ref="panelRef"
+          :role="role"
+          aria-modal="true"
+          :aria-labelledby="title && !$slots.header ? titleId : undefined"
+          tabindex="-1"
           :class="[
             placement === 'right'
               ? 'relative h-full w-full flex flex-col bg-white shadow-xl border-l border-gray-200 overflow-hidden'
@@ -27,7 +31,7 @@
             :class="headerClass"
           >
             <slot name="header">
-              <h3 class="text-lg font-semibold text-gray-900">{{ title }}</h3>
+              <h3 :id="titleId" class="text-lg font-semibold text-gray-900">{{ title }}</h3>
             </slot>
             <button
               v-if="closeable"
@@ -67,7 +71,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, nextTick, useId } from 'vue'
 import { useScrollLock } from '@/composables/useScrollLock'
 
 const props = defineProps({
@@ -78,6 +82,12 @@ const props = defineProps({
   title: {
     type: String,
     default: '',
+  },
+  // Accessible role: 'dialog' (default) or 'alertdialog' (for confirmations).
+  role: {
+    type: String,
+    default: 'dialog',
+    validator: (v) => ['dialog', 'alertdialog'].includes(v),
   },
   size: {
     type: String,
@@ -122,6 +132,7 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const panelRef = ref(null)
+const titleId = useId()
 
 const transitionName = computed(() =>
   props.placement === 'right' ? 'base-drawer-slide' : 'base-modal-fade',

@@ -349,7 +349,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getTypeIcon, getTypeColor } from '@/utils/schemaTypeIcons'
+import { getTypeIcon, getTypeColor, getTypePillClass } from '@/utils/schemaTypeIcons'
 
 const props = defineProps({
   schema: {
@@ -415,16 +415,7 @@ const getTypeLabel = (type) => {
   return labels[type] || type
 }
 
-const getTypeBadgeClass = (type) => {
-  const classes = {
-    string: 'bg-green-100 text-green-700',
-    number: 'bg-blue-100 text-blue-700',
-    boolean: 'bg-purple-100 text-purple-700',
-    object: 'bg-orange-100 text-orange-700',
-    array: 'bg-pink-100 text-pink-700',
-  }
-  return classes[type] || 'bg-gray-100 text-gray-700'
-}
+const getTypeBadgeClass = (type) => getTypePillClass(type)
 
 const formatTitle = (key) => {
   if (!key) return ''

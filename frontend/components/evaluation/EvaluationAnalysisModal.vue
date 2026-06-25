@@ -65,27 +65,19 @@
           </div>
 
           <!-- Error Display -->
-          <div v-if="error" class="mx-8 mt-5 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div class="flex items-start">
-              <span class="text-red-400 text-lg mr-3">⚠️</span>
-              <div class="flex-1">
-                <h4 class="text-sm font-semibold text-red-800">Loading Error</h4>
-                <p class="mt-1 text-sm text-red-700">{{ error }}</p>
-                <div class="mt-3 flex gap-2">
-                  <button
-                    class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
-                    :disabled="isRetrying"
-                    @click="retryLoad"
-                  >
-                    {{ isRetrying ? 'Retrying...' : 'Retry' }}
-                  </button>
-                  <button class="text-sm text-red-600 hover:text-red-800" @click="clearError">
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <ErrorBanner
+            v-if="error"
+            :message="error"
+            dismissable
+            retry-text="Retry"
+            :retry-loading="isRetrying"
+            class="mx-8 mt-5"
+            @dismiss="clearError"
+            @retry="retryLoad"
+          >
+            <h4 class="text-sm font-semibold text-red-800 dark:text-red-300">Loading Error</h4>
+            <p class="mt-1 text-sm text-red-700 dark:text-red-200">{{ error }}</p>
+          </ErrorBanner>
 
           <!-- Tab Content -->
           <div class="flex-1 overflow-y-auto bg-white/60">
@@ -134,10 +126,11 @@
               />
             </div>
 
-            <div v-else class="text-center py-16 text-gray-500">
-              <span class="text-4xl text-gray-300 mb-2 block">📊</span>
-              <p>No data available for this view</p>
-            </div>
+            <EmptyState v-else title="No data available for this view">
+              <template #icon>
+                <span class="text-4xl text-gray-300 block">📊</span>
+              </template>
+            </EmptyState>
           </div>
 
           <!-- Footer -->
@@ -175,6 +168,8 @@ useScrollLock({ autoLock: true })
 // Import sub-components
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import EvaluationOverview from '@/components/evaluation/EvaluationOverview.vue'
 import DocumentAnalysis from '@/components/evaluation/DocumentAnalysis.vue'
 import FieldErrorAnalysis from '@/components/evaluation/FieldErrorAnalysis.vue'

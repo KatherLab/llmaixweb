@@ -94,18 +94,22 @@
             <span class="text-sm text-gray-700 dark:text-gray-300">
               {{ selectedTrials.length }} selected
             </span>
-            <button
-              class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
+            <BaseButton
+              variant="link"
+              tone="red"
+              class="text-sm font-medium"
               @click="performBatchAction('delete')"
             >
               Delete
-            </button>
-            <button
-              class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+            </BaseButton>
+            <BaseButton
+              variant="link"
+              tone="gray"
+              class="text-sm font-medium"
               @click="selectedTrials = []"
             >
               Clear
-            </button>
+            </BaseButton>
           </div>
         </div>
       </div>

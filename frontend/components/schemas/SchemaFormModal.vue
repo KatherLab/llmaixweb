@@ -68,11 +68,7 @@
             <div
               v-if="schemaForm.schema_definition"
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
-              :class="
-                isSchemaValid
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-              "
+              :class="isSchemaValid ? getPillClass('green') : getPillClass('red')"
             >
               <svg
                 v-if="isSchemaValid"
@@ -278,6 +274,7 @@ import SimpleSchemaEditor from './SimpleSchemaEditor.vue'
 import SchemaTemplatesModal from './SchemaTemplatesModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { formatJSON, STARTER_SCHEMA, schemaTemplates } from '@/utils/schemaTemplates'
+import { getPillClass } from '@/utils/statusStyles'
 import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({

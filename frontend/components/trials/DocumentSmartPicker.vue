@@ -56,9 +56,10 @@
           {{ selectedIds.length }} document{{ selectedIds.length > 1 ? 's' : '' }} selected
         </span>
         <div class="flex items-center gap-2">
-          <button
-            class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-            type="button"
+          <BaseButton
+            variant="link"
+            tone="blue"
+            class="text-sm flex items-center gap-1"
             @click="showSelectedDocs = !showSelectedDocs"
           >
             <span v-if="!showSelectedDocs">Show</span>
@@ -69,6 +70,7 @@
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 d="M19 9l-7 7-7-7"
@@ -77,10 +79,10 @@
                 stroke-width="2"
               />
             </svg>
-          </button>
-          <button class="text-sm text-blue-600 hover:text-blue-800" @click="emit('clear')">
+          </BaseButton>
+          <BaseButton variant="link" tone="blue" class="text-sm" @click="emit('clear')">
             Clear
-          </button>
+          </BaseButton>
         </div>
       </div>
       <transition name="fade">

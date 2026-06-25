@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api } from '@/services/api'
 import { usersApi } from '@/services/usersApi'
+import { websocketService } from '@/services/websocket'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -67,6 +68,8 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     localStorage.removeItem('token')
     delete api.defaults.headers.common['Authorization']
+    // Tear down the WebSocket so it doesn't linger with a now-revoked token.
+    websocketService.disconnect()
     isInitialized.value = false
   }
 

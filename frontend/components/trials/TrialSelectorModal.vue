@@ -8,46 +8,19 @@
     @close="handleClose"
   >
     <!-- Error Display -->
-    <div v-if="error" class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-      <div class="flex items-start">
-        <svg
-          class="w-5 h-5 text-red-400 mt-0.5 mr-3"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <div class="flex-1">
-          <h4 class="text-sm font-medium text-red-800">Evaluation Error</h4>
-          <p class="mt-1 text-sm text-red-700">{{ error }}</p>
-          <div class="mt-3 flex gap-2">
-            <button
-              v-if="lastFailedOperation"
-              class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
-              :disabled="isRetrying"
-              @click="retryLastOperation"
-            >
-              <span v-if="isRetrying" class="flex items-center">
-                <span class="-ml-1 mr-1">
-                  <LoadingSpinner size="small" color="current" inline />
-                </span>
-                Retrying...
-              </span>
-              <span v-else>Retry</span>
-            </button>
-            <button class="text-sm text-red-600 hover:text-red-800" @click="clearError">
-              Dismiss
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ErrorBanner
+      v-if="error"
+      :message="error"
+      dismissable
+      :retry-text="lastFailedOperation ? 'Retry' : ''"
+      :retry-loading="isRetrying"
+      class="mx-6 mt-4"
+      @dismiss="clearError"
+      @retry="retryLastOperation"
+    >
+      <h4 class="text-sm font-medium text-red-800 dark:text-red-300">Evaluation Error</h4>
+      <p class="mt-1 text-sm text-red-700 dark:text-red-200">{{ error }}</p>
+    </ErrorBanner>
 
     <div class="flex-1 overflow-y-auto p-6">
       <!-- Prerequisites Warning -->
@@ -82,26 +55,11 @@
       </div>
 
       <!-- No Trials State -->
-      <div v-else-if="trials.items.length === 0" class="text-center py-8 text-gray-500">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-12 w-12 mx-auto text-gray-400 mb-3"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-          />
-        </svg>
-        <p>No completed trials available for evaluation</p>
-        <p class="text-sm text-gray-400 mt-1">
-          Run some trials first to evaluate them against ground truth
-        </p>
-      </div>
+      <EmptyState
+        v-else-if="trials.items.length === 0"
+        title="No completed trials available for evaluation"
+        description="Run some trials first to evaluate them against ground truth"
+      />
 
       <!-- Trials List -->
       <div v-else>
@@ -275,6 +233,8 @@ import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreview
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import { describeHttpError, extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({

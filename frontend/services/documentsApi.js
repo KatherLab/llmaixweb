@@ -14,7 +14,4 @@ export const documentsApi = {
   delete(projectId, documentId) {
     return api.delete(`/project/${projectId}/document/${documentId}`)
   },
-  reprocess(projectId, data) {
-    return api.post(`/project/${projectId}/preprocess`, data)
-  },
 }

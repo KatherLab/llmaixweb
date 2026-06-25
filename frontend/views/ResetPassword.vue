@@ -1,28 +1,38 @@
 <template>
   <div class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">LLMAIx-v2</h1>
-      <p class="text-base text-gray-500 mt-2">Set a new password</p>
+      <h1 class="text-4xl font-extrabold text-gray-900 dark:text-slate-100 tracking-tight">
+        LLMAIx-v2
+      </h1>
+      <p class="text-base text-gray-500 dark:text-slate-400 mt-2">Set a new password</p>
     </div>
 
     <!-- Loading: validating token -->
     <div
       v-if="state === 'loading'"
-      class="bg-white border border-gray-200 rounded-xl p-8 shadow-sm text-center"
+      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm text-center"
     >
       <div class="mx-auto mb-4 w-12 h-12">
         <LoadingSpinner size="medium" />
       </div>
-      <p class="text-sm text-gray-500">Validating your reset link...</p>
+      <p class="text-sm text-gray-500 dark:text-slate-400">Validating your reset link...</p>
     </div>
 
     <!-- Invalid / Expired token -->
     <div
       v-else-if="state === 'invalid'"
-      class="bg-white border border-gray-200 rounded-xl p-8 shadow-sm text-center"
+      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm text-center"
     >
-      <div class="mx-auto mb-4 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-        <svg class="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div
+        class="mx-auto mb-4 w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center"
+      >
+        <svg
+          class="w-6 h-6 text-red-600 dark:text-red-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -31,8 +41,10 @@
           />
         </svg>
       </div>
-      <h2 class="text-lg font-bold text-gray-900 mb-2">Invalid or Expired Link</h2>
-      <p class="text-sm text-gray-500 mb-6">
+      <h2 class="text-lg font-bold text-gray-900 dark:text-slate-100 mb-2">
+        Invalid or Expired Link
+      </h2>
+      <p class="text-sm text-gray-500 dark:text-slate-400 mb-6">
         This password reset link is no longer valid. It may have expired (links are valid for 24
         hours) or already been used.
       </p>
@@ -43,55 +55,50 @@
         Request New Reset Link
       </router-link>
       <br />
-      <router-link to="/login" class="inline-block mt-3 text-blue-600 hover:underline text-sm">
+      <router-link
+        to="/login"
+        class="inline-block mt-3 text-blue-600 hover:underline dark:text-blue-400 text-sm"
+      >
         Back to login
       </router-link>
     </div>
 
     <!-- Password form -->
-    <div v-else class="bg-white border border-gray-200 rounded-xl p-8 shadow-sm">
-      <h2 class="text-lg font-bold text-gray-900 mb-2">Set new password</h2>
-      <p class="text-sm text-gray-500 mb-6">Enter your new password below.</p>
+    <div
+      v-else
+      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm"
+    >
+      <h2 class="text-lg font-bold text-gray-900 dark:text-slate-100 mb-2">Set new password</h2>
+      <p class="text-sm text-gray-500 dark:text-slate-400 mb-6">Enter your new password below.</p>
       <form @submit.prevent="handleResetPassword">
         <div class="mb-4">
-          <label for="new-password" class="block text-sm font-semibold text-gray-700 mb-2"
-            >New Password</label
-          >
-          <input
-            id="new-password"
+          <FormField
             v-model="newPassword"
+            label="New Password"
             type="password"
             required
-            minlength="8"
-            class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
+            :minlength="8"
             placeholder="At least 8 characters"
             autocomplete="new-password"
-          />
-          <p v-if="passwordHint" class="mt-1 text-xs text-gray-400">{{ passwordHint }}</p>
+          >
+            <template v-if="passwordHint" #hint>{{ passwordHint }}</template>
+          </FormField>
         </div>
         <div class="mb-5">
-          <label for="confirm-password" class="block text-sm font-semibold text-gray-700 mb-2"
-            >Confirm Password</label
-          >
-          <input
-            id="confirm-password"
+          <FormField
             v-model="confirmPassword"
+            label="Confirm Password"
             type="password"
             required
-            minlength="8"
-            class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-            :class="{ 'border-red-300 bg-red-50': passwordsMismatch }"
+            :minlength="8"
+            :invalid="passwordsMismatch"
             placeholder="Repeat your password"
             autocomplete="new-password"
-          />
-          <p v-if="passwordsMismatch" class="mt-1 text-xs text-red-500">Passwords do not match.</p>
+          >
+            <template v-if="passwordsMismatch" #error>Passwords do not match.</template>
+          </FormField>
         </div>
-        <div
-          v-if="error"
-          class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md"
-        >
-          {{ error }}
-        </div>
+        <ErrorBanner v-if="error" :message="error" class="mb-4" />
         <BaseButton
           type="submit"
           size="lg"
@@ -105,6 +112,7 @@
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path
               stroke-linecap="round"
@@ -116,7 +124,10 @@
           <span>{{ isLoading ? 'Resetting...' : 'Reset Password' }}</span>
         </BaseButton>
       </form>
-      <router-link to="/login" class="block mt-5 text-center text-blue-600 hover:underline text-sm">
+      <router-link
+        to="/login"
+        class="block mt-5 text-center text-blue-600 hover:underline dark:text-blue-400 text-sm"
+      >
         Back to login
       </router-link>
     </div>
@@ -129,6 +140,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { usersApi } from '@/services/usersApi'
 import { useToast } from 'vue-toastification'
 import BaseButton from '@/components/common/BaseButton.vue'
+import FormField from '@/components/common/FormField.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { extractErrorMessage } from '@/utils/errors'
 

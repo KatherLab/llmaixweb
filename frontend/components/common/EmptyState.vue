@@ -3,10 +3,20 @@
 import Tooltip from '@/components/common/Tooltip.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
-defineProps({
+/**
+ * Shared empty-state block: icon + title + description + optional action.
+ *
+ * Slots:
+ *  - icon    : custom icon (defaults to a "+" icon)
+ *  - default : rich description/body content (overrides the `description` prop)
+ *
+ * The action button only renders when `actionText` is set, so the component
+ * also covers no-action empty states (icon + text only).
+ */
+const props = defineProps({
   title: { type: String, required: true },
   description: { type: String, default: '' },
-  actionText: { type: String, default: 'Get Started' },
+  actionText: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   disabledReason: { type: String, default: '' },
 })
@@ -15,15 +25,18 @@ const emit = defineEmits(['action'])
 </script>
 
 <template>
-  <div class="text-center p-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+  <div
+    class="text-center p-12 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-gray-300 dark:border-slate-600"
+  >
     <slot name="icon">
       <!-- Default icon if no custom icon is provided -->
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        class="h-12 w-12 mx-auto text-gray-400"
+        class="h-12 w-12 mx-auto text-gray-400 dark:text-slate-500"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
+        aria-hidden="true"
       >
         <path
           stroke-linecap="round"
@@ -33,17 +46,22 @@ const emit = defineEmits(['action'])
         />
       </svg>
     </slot>
-    <h3 class="mt-4 text-lg font-medium text-gray-900">{{ title }}</h3>
-    <p class="mt-1 text-sm text-gray-500">{{ description }}</p>
-    <div class="mt-6 flex flex-col items-center">
-      <Tooltip v-if="disabled && disabledReason" :text="disabledReason">
-        <BaseButton variant="primary" :disabled="disabled" @click="emit('action')">
+    <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-slate-100">{{ title }}</h3>
+    <p v-if="description" class="mt-1 text-sm text-gray-500 dark:text-slate-400">
+      {{ description }}
+    </p>
+    <slot />
+    <div v-if="actionText || $slots.action" class="mt-6 flex flex-col items-center">
+      <slot name="action">
+        <Tooltip v-if="disabled && disabledReason" :text="disabledReason">
+          <BaseButton variant="primary" :disabled="disabled" @click="emit('action')">
+            {{ actionText }}
+          </BaseButton>
+        </Tooltip>
+        <BaseButton v-else variant="primary" :disabled="disabled" @click="emit('action')">
           {{ actionText }}
         </BaseButton>
-      </Tooltip>
-      <BaseButton v-else variant="primary" :disabled="disabled" @click="emit('action')">
-        {{ actionText }}
-      </BaseButton>
+      </slot>
     </div>
   </div>
 </template>

@@ -229,12 +229,14 @@
           class="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 rounded p-4 max-h-[60vh] overflow-auto"
           >{{ modalContent }}</pre
         >
-        <button
-          class="mt-4 text-xs text-blue-600 hover:text-blue-800 underline"
+        <BaseButton
+          variant="link"
+          tone="blue"
+          class="mt-4 text-xs underline"
           @click="copyToClipboard"
         >
           Copy
-        </button>
+        </BaseButton>
         <span v-if="copied" class="ml-2 text-green-700 text-xs">Copied!</span>
       </div>
     </div>
