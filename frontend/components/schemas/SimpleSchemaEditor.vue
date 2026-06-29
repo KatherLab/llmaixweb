@@ -81,7 +81,7 @@
             v-else
             :data-index="index"
             :class="[
-              'group flex items-center gap-3 p-3 rounded-xl border transition-all duration-200',
+              'group flex flex-wrap items-center gap-3 p-3 rounded-xl border transition-all duration-200',
               draggingIndex === index
                 ? 'border-blue-400 bg-blue-50 shadow-md scale-[1.02]'
                 : 'border-slate-200 hover:border-blue-300 hover:shadow-sm bg-slate-50/50 hover:bg-white',
@@ -166,6 +166,37 @@
             >
               <Trash2 class="h-4 w-4" aria-hidden="true" />
             </BaseButton>
+
+            <!-- Pre-defined options (string enum). Only for plain Text fields. -->
+            <div
+              v-if="field.type === 'String'"
+              class="basis-full w-full flex flex-wrap items-center gap-1.5 pt-1.5 mt-0.5 border-t border-slate-200/70"
+            >
+              <span class="text-xs font-medium text-slate-500 mr-0.5">Options</span>
+              <span
+                v-for="(opt, i) in field.options"
+                :key="i"
+                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md bg-blue-100 text-blue-800 text-xs font-medium"
+              >
+                {{ opt }}
+                <button
+                  type="button"
+                  class="text-blue-500 hover:text-blue-700 transition-colors"
+                  aria-label="Remove option"
+                  @click="removeOption(field, i)"
+                >
+                  <X class="h-3 w-3" aria-hidden="true" />
+                </button>
+              </span>
+              <input
+                :value="pendingOptions[field.id] || ''"
+                class="flex-1 min-w-[120px] bg-transparent border-0 border-b border-dashed border-slate-300 focus:border-blue-500 focus:ring-0 text-xs text-slate-700 placeholder-slate-400 transition-colors py-0.5"
+                placeholder="add option — press Enter"
+                @input="setPendingOption(field.id, $event.target.value)"
+                @keydown="onOptionKeydown(field, $event)"
+                @blur="commitOption(field)"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -209,7 +240,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { ChevronDown, GripVertical, Info, Lock, Plus, ShieldAlert, Trash2 } from '@lucide/vue'
+import { ChevronDown, GripVertical, Info, Lock, Plus, ShieldAlert, Trash2, X } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
@@ -260,10 +291,22 @@ const KNOWN_FORMATS = ['date', 'time', 'date-time', 'email']
 
 const isSimpleEditable = (propSchema) => {
   if (!propSchema || !SIMPLE_TYPES.includes(propSchema.type)) return false
-  const allowedKeys = new Set(['type', 'title', 'description', 'format'])
+  // `enum` is allowed only on string fields — it represents the
+  // pre-defined options feature (e.g. side: left/right/center).
+  const isStringWithEnum = propSchema.type === 'string' && Array.isArray(propSchema.enum)
+  const allowedKeys = new Set([
+    'type',
+    'title',
+    'description',
+    'format',
+    ...(isStringWithEnum ? ['enum'] : []),
+  ])
   for (const key of Object.keys(propSchema)) {
     if (!allowedKeys.has(key)) return false
   }
+  // A string field with a format (date, email, …) and an enum is ambiguous —
+  // treat it as advanced so we don't silently drop the format.
+  if (isStringWithEnum && propSchema.format) return false
   if (propSchema.format && !KNOWN_FORMATS.includes(propSchema.format)) return false
   return true
 }
@@ -312,6 +355,8 @@ const parseSchema = (schema) => {
         name,
         type: matchedType,
         description: propSchema.description || '',
+        // Pre-defined options (string enum). Stored as a list of strings.
+        options: Array.isArray(propSchema.enum) ? [...propSchema.enum] : [],
       })
     } else {
       // Nested objects/arrays and anything the simple editor can't represent
@@ -366,6 +411,16 @@ const buildSchema = () => {
       propSchema.description = field.description.trim()
     }
 
+    // Pre-defined options: emit as a string enum. Only applies to Text fields;
+    // a format (date/email/…) and enum are mutually exclusive — the simple
+    // editor never produces both at once.
+    if (mapping.type === 'string' && !propSchema.format && Array.isArray(field.options)) {
+      const options = field.options.map((o) => (o ?? '').toString().trim()).filter(Boolean)
+      if (options.length > 0) {
+        propSchema.enum = options
+      }
+    }
+
     properties[field.name.trim()] = propSchema
   }
 
@@ -399,6 +454,7 @@ const addField = () => {
     name: '',
     type: 'String',
     description: '',
+    options: [],
   })
   emitChange()
 }
@@ -407,6 +463,48 @@ const addField = () => {
 const removeField = (id) => {
   fields.value = fields.value.filter((f) => f.id !== id)
   emitChange()
+}
+
+// --- Pre-defined options (string enum) ---
+// In-flight text for the "add option" input, keyed by field id so each
+// field tracks its own draft independently.
+const pendingOptions = ref({})
+
+const setPendingOption = (fieldId, value) => {
+  pendingOptions.value[fieldId] = value
+}
+
+const commitOption = (field) => {
+  const raw = (pendingOptions.value[field.id] || '').trim()
+  pendingOptions.value[field.id] = ''
+  if (!raw) return
+  if (!Array.isArray(field.options)) field.options = []
+  if (!field.options.includes(raw)) {
+    field.options.push(raw)
+    emitChange()
+  }
+}
+
+const removeOption = (field, index) => {
+  if (!Array.isArray(field.options)) return
+  field.options.splice(index, 1)
+  emitChange()
+}
+
+const onOptionKeydown = (field, e) => {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault()
+    commitOption(field)
+  } else if (
+    e.key === 'Backspace' &&
+    !(pendingOptions.value[field.id] || '') &&
+    Array.isArray(field.options) &&
+    field.options.length > 0
+  ) {
+    e.preventDefault()
+    field.options.pop()
+    emitChange()
+  }
 }
 
 // Drag and Drop handlers
