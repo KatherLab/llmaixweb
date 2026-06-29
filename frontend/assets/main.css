@@ -98,3 +98,13 @@ body {
 .fade-leave-to {
   opacity: 0;
 }
+
+/* Toast auto-dismiss progress bar (used by components/common/ToastItem.vue). */
+@keyframes toast-shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

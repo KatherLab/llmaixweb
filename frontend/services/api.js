@@ -1,7 +1,7 @@
 import axios from 'axios'
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 
 // In dev mode (Vite dev server), use absolute URL to backend.
 // In production (nginx serves SPA), use relative path — nginx proxies /api/ to backend.
@@ -41,7 +41,6 @@ api.interceptors.response.use(
         const toast = useToast()
         toast.error('Session expired. Please sign in again.', {
           timeout: 4000,
-          position: 'top-right',
         })
         router.push('/login')
       }

@@ -191,7 +191,7 @@
 import { ref, computed, watch } from 'vue'
 import { documentsApi } from '@/services/documentsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { formatDate, formatFileSize } from '@/utils/formatters'
 import { computeVisiblePages } from '@/composables/usePagination'
 import FileIcon from '../common/FileIcon.vue'

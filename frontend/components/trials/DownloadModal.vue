@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { Info } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useFileDownload } from '@/composables/useFileDownload'

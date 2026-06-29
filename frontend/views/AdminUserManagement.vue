@@ -134,7 +134,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { Users } from '@lucide/vue'
 import UserGrid from '@/components/admin/UserGrid.vue'
 import InvitationGrid from '@/components/admin/InvitationGrid.vue'

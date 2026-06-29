@@ -136,7 +136,7 @@
 <script setup>
 import { computed, ref, toRef, watch } from 'vue'
 import { ChevronDown } from '@lucide/vue'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'

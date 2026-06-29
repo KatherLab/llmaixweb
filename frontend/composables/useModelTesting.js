@@ -23,7 +23,7 @@
  *   } = useModelTesting({ trialData, projectId, maxCompletionTokens, temperature, reasoningEffort })
  */
 import { ref, computed } from 'vue'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { llmApi } from '@/services/llmApi'
 import { extractErrorMessage } from '@/utils/errors'
 

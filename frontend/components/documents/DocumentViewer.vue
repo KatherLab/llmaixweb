@@ -88,7 +88,7 @@
 import { ref, computed, onUnmounted, watch } from 'vue'
 import { documentsApi } from '@/services/documentsApi'
 import { filesApi } from '@/services/filesApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useFileDownload } from '@/composables/useFileDownload'

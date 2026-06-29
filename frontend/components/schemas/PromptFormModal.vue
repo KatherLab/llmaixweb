@@ -287,7 +287,7 @@
 import { ref, watch, nextTick, computed } from 'vue'
 import { Check, FileText, Info } from '@lucide/vue'
 import { promptsApi } from '@/services/promptsApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'

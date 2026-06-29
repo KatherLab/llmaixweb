@@ -117,7 +117,7 @@
 import { ref, computed, watch } from 'vue'
 import { ImageIcon, X } from '@lucide/vue'
 import { groundtruthApi } from '@/services/groundtruthApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'

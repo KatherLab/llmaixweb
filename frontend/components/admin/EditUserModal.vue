@@ -184,7 +184,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { AlertTriangle } from '@lucide/vue'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { usersApi } from '@/services/usersApi'

@@ -191,7 +191,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { filesApi } from '@/services/filesApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'

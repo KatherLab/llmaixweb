@@ -112,7 +112,7 @@ import { ref, computed, onMounted } from 'vue'
 import { TriangleAlert, Lock } from '@lucide/vue'
 import { useRouter, useRoute } from 'vue-router'
 import { usersApi } from '@/services/usersApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FormField from '@/components/common/FormField.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
@@ -169,8 +169,6 @@ async function handleResetPassword() {
     })
     toast.success('Password reset successfully!', {
       timeout: 3000,
-      position: 'top-right',
-      closeButton: true,
     })
     setTimeout(() => {
       router.push('/login')

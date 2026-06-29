@@ -66,7 +66,7 @@ import { useRouter } from 'vue-router'
 import { Lock } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/authApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FormField from '@/components/common/FormField.vue'
@@ -111,11 +111,6 @@ async function handleSubmit() {
     error.value = 'Invalid email or password'
     toast.error('Invalid email or password', {
       timeout: 3500,
-      position: 'top-right',
-      closeButton: true,
-      hideProgressBar: false,
-      icon: true,
-      draggable: true,
     })
     console.error('Login error:', err)
   } finally {

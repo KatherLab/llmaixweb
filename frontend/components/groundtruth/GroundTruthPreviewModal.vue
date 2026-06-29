@@ -246,7 +246,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/vue'
 import { ArrowUpRight, Check, CircleAlert, Sun } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'

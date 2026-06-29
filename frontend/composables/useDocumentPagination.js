@@ -18,7 +18,7 @@
  *   } = useDocumentPagination({ getProjectId, getMode, getSearchTerm })
  */
 import { ref } from 'vue'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { documentsApi } from '@/services/documentsApi'
 import { extractErrorMessage } from '@/utils/errors'
 

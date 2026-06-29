@@ -18,7 +18,7 @@
   </BaseModal>
 </template>
 <script setup>
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { getPillClass } from '@/utils/statusStyles'

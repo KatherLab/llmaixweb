@@ -48,7 +48,7 @@ import { ref, onMounted } from 'vue'
 import { TriangleAlert, Check } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usersApi } from '@/services/usersApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 

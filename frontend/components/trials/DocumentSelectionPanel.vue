@@ -56,7 +56,7 @@
 
 <script setup>
 import { onMounted, ref, watch } from 'vue'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { trialsApi } from '@/services/trialsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { useDocumentPagination } from '@/composables/useDocumentPagination'

@@ -227,7 +227,7 @@
 import { ref, onUnmounted, watch, nextTick, computed } from 'vue'
 import { ArrowUpDown, BookOpen, CircleAlert, CircleCheckBig, Layers } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import VisualSchemaEditor from './VisualSchemaEditor.vue'

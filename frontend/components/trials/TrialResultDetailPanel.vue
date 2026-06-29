@@ -107,7 +107,7 @@ import ResultDocumentPreview from './ResultDocumentPreview.vue'
 import ResultReasoningPanel from './ResultReasoningPanel.vue'
 import { documentsApi } from '@/services/documentsApi'
 import { filesApi } from '@/services/filesApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { renderMarkdown, isMarkdown } from '@/utils/markdown.js'
 
 const props = defineProps({

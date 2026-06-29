@@ -199,7 +199,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { Eye, Layers, Plus, SquarePen, Trash2 } from '@lucide/vue'
 import { documentSetsApi } from '@/services/documentSetsApi'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { formatDate } from '@/utils/formatters'
 import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
 import ViewDocumentGroupModal from './ViewDocumentGroupModal.vue'

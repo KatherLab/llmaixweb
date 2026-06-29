@@ -193,7 +193,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { debounce } from 'perfect-debounce'
-import { useToast } from 'vue-toastification'
+import { useToast } from '@/composables/useToast'
 import { ClipboardList } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { documentsApi } from '@/services/documentsApi'
