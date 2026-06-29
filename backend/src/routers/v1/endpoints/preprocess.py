@@ -816,7 +816,6 @@ def cancel_preprocessing_task(
 
     # Refresh to ensure we get the latest data including updated file_tasks
     db.refresh(task)
-    db.refresh(task.file_tasks)
 
     return schemas.PreprocessingTask.model_validate(task)
 
