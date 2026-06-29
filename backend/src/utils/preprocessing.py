@@ -1060,22 +1060,48 @@ class PreprocessingPipeline:
                             file, file_task, file_content
                         )
 
-            # Use remote OCR - respect the original ocr_engine setting
-            if ocr_engine == "mistral_ocr" and settings.MISTRAL_OCR_ENABLED:
+            # Use remote OCR - respect the original ocr_engine setting. Check
+            # actual usability (per-task credentials or global config), not just
+            # the *_ENABLED flag — a run configured per-task shouldn't be blocked
+            # at routing.
+            mistral_usable = self._mistral_ocr_usable()
+            vision_usable = self._llm_vision_ocr_usable()
+            if ocr_engine == "mistral_ocr" and mistral_usable:
                 return self._process_with_mistral_ocr(file, file_task)
-            elif ocr_engine == "llm_vision" and settings.VISION_OCR_ENABLED:
+            elif ocr_engine == "llm_vision" and vision_usable:
                 return self._process_with_llm_vision_ocr(file, file_task)
-            elif settings.MISTRAL_OCR_ENABLED:
+            elif mistral_usable:
                 # Fallback to Mistral if no specific engine requested
                 return self._process_with_mistral_ocr(file, file_task)
-            elif settings.VISION_OCR_ENABLED:
+            elif vision_usable:
                 # Fallback to Vision if no specific engine requested
                 return self._process_with_llm_vision_ocr(file, file_task)
             else:
-                # Remote fallback requested but not configured - fail clearly
+                # Remote fallback requested but not configured - fail clearly.
+                # Name the actually-requested engine so the message isn't
+                # misleading (e.g. "docling-serve is disabled" when vision was
+                # requested).
+                if ocr_engine == "llm_vision":
+                    raise ValueError(
+                        "Vision LLM OCR was requested but is not usable: "
+                        "VISION_OCR_ENABLED is false, or no api_key/base_url is "
+                        "configured (set vision_api_key/vision_base_url in the "
+                        "preprocessing config, or VISION_OCR_API_KEY/"
+                        "VISION_OCR_API_BASE in server settings)."
+                    )
+                elif ocr_engine == "mistral_ocr":
+                    raise ValueError(
+                        "Mistral OCR was requested but is not usable: "
+                        "MISTRAL_OCR_ENABLED is false, or no api_key is "
+                        "configured (set mistral_api_key in the preprocessing "
+                        "config, or MISTRAL_API_KEY in server settings)."
+                    )
                 raise ValueError(
-                    "High accuracy remote OCR requested but neither Mistral OCR nor Vision LLM is enabled. "
-                    "Set MISTRAL_OCR_ENABLED=true or VISION_OCR_ENABLED=true, or use a different extraction mode."
+                    "High accuracy remote OCR requested but neither Mistral OCR "
+                    "nor Vision LLM is usable. Enable and configure Mistral OCR "
+                    "(MISTRAL_OCR_ENABLED + MISTRAL_API_KEY) or Vision LLM "
+                    "(VISION_OCR_ENABLED + VISION_OCR_API_KEY/API_BASE), or use "
+                    "a different extraction mode."
                 )
 
         # Unknown extraction mode - fail clearly
@@ -1108,18 +1134,36 @@ class PreprocessingPipeline:
         """
         # High accuracy remote mode - use remote OCR if enabled
         if extraction_mode == "high_accuracy_remote" and remote_fallback:
-            # Respect the original ocr_engine setting
-            if ocr_engine == "mistral_ocr" and settings.MISTRAL_OCR_ENABLED:
+            # Respect the original ocr_engine setting. Check actual usability
+            # (per-task credentials or global config), not just the *_ENABLED
+            # flag — a run configured per-task shouldn't be blocked at routing.
+            mistral_usable = self._mistral_ocr_usable()
+            vision_usable = self._llm_vision_ocr_usable()
+            if ocr_engine == "mistral_ocr" and mistral_usable:
                 return self._process_with_mistral_ocr(file, file_task)
-            elif ocr_engine == "llm_vision" and settings.VISION_OCR_ENABLED:
+            elif ocr_engine == "llm_vision" and vision_usable:
                 return self._process_with_llm_vision_ocr(file, file_task)
-            elif settings.MISTRAL_OCR_ENABLED:
+            elif mistral_usable:
                 # Fallback to Mistral if no specific engine requested
                 return self._process_with_mistral_ocr(file, file_task)
-            elif settings.VISION_OCR_ENABLED:
+            elif vision_usable:
                 # Fallback to Vision if no specific engine requested
                 return self._process_with_llm_vision_ocr(file, file_task)
-            # Remote fallback requested but not configured - fall through to local
+            # Remote fallback requested but not usable - fall through to local
+            if ocr_engine == "llm_vision":
+                logger.warning(
+                    "Vision LLM OCR requested for %s but it is not usable "
+                    "(VISION_OCR_ENABLED=false or missing api_key/base_url); "
+                    "falling back to local OCR.",
+                    file.file_name,
+                )
+            elif ocr_engine == "mistral_ocr":
+                logger.warning(
+                    "Mistral OCR requested for %s but it is not usable "
+                    "(MISTRAL_OCR_ENABLED=false or missing api_key); "
+                    "falling back to local OCR.",
+                    file.file_name,
+                )
 
         # Check if docling-serve is available for local OCR
         if not settings.DOCLING_SERVE_ENABLED:
@@ -1659,6 +1703,54 @@ class PreprocessingPipeline:
         )
         self.db.add(doc)
         return doc
+
+    def _mistral_ocr_usable(self) -> bool:
+        """Whether Mistral OCR can actually run for this task.
+
+        Mirrors the credential resolution in :meth:`_process_with_mistral_ocr`:
+        the engine is usable when the global toggle is on *and* an API key is
+        available (per-task additional_settings / task_metadata take priority,
+        then the server-level ``MISTRAL_API_KEY``). This exists separately from
+        the ``MISTRAL_OCR_ENABLED`` flag because a run can be fully configured
+        per-task while the global toggle is off — the old gate blocked such runs
+        at routing time with a misleading "disabled" error before the processing
+        method (which would have found the key) was ever reached.
+        """
+        if not settings.MISTRAL_OCR_ENABLED:
+            return False
+        additional = self.config.additional_settings or {}
+        api_key = None
+        if self.task.task_metadata:
+            api_key = self.task.task_metadata.get("mistral_api_key")
+        if not api_key:
+            api_key = additional.get("mistral_api_key")
+        if not api_key:
+            api_key = settings.MISTRAL_API_KEY
+        return bool(api_key)
+
+    def _llm_vision_ocr_usable(self) -> bool:
+        """Whether the Vision LLM OCR engine can actually run for this task.
+
+        Mirrors the credential resolution in :meth:`_process_with_llm_vision_ocr`:
+        per-task ``vision_api_key`` / ``vision_base_url`` take priority, then the
+        server-level ``VISION_OCR_*`` config, then the pipeline-level OpenAI
+        client (``self.client``). Returns True only when both an API key and a
+        base URL can be resolved — the same condition the processing method
+        enforces before it will run. See :meth:`_mistral_ocr_usable` for why
+        this is checked separately from ``VISION_OCR_ENABLED``.
+        """
+        if not settings.VISION_OCR_ENABLED:
+            return False
+        additional = self.config.additional_settings or {}
+        api_key = additional.get("vision_api_key") or settings.VISION_OCR_API_KEY or ""
+        base_url = (
+            additional.get("vision_base_url") or settings.VISION_OCR_API_BASE or ""
+        )
+        if not api_key and self.client:
+            api_key = self.client.api_key or ""
+        if not base_url and self.client:
+            base_url = str(self.client.base_url)
+        return bool(api_key and base_url)
 
     def _process_with_mistral_ocr(
         self, file: models.File, file_task: models.FilePreprocessingTask
