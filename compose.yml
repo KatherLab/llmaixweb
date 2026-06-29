@@ -39,7 +39,10 @@ services:
       - REQUIRE_INVITATION=${REQUIRE_INVITATION:-false}
       - APP_URL=${APP_URL:-http://localhost:5173}
       - DOCLING_SERVE_URL=http://docling-serve:5001
-      - DOCLING_SERVE_ENABLED=true
+      # Defaults to true for the stock deployment; .env can override (e.g.
+      # DOCLING_SERVE_ENABLED=false). Interpolated here rather than relying on
+      # env_file, because a literal value in `environment:` would override .env.
+      - DOCLING_SERVE_ENABLED=${DOCLING_SERVE_ENABLED:-true}
     # ports: ["8000:8000"] # uncomment for local debugging / testing the backend
     depends_on:
       docling-serve:
