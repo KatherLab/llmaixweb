@@ -9,14 +9,7 @@
         class="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl shadow-lg transition-all duration-300"
         :class="[step.gradient, step.shadow, active ? 'scale-110 shadow-xl' : '']"
       >
-        <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            :d="step.icon"
-          ></path>
-        </svg>
+        <component :is="step.icon" class="h-10 w-10 text-white" />
       </div>
       <h3 class="font-bold text-white mb-2">{{ step.title }}</h3>
       <p class="text-sm text-slate-400">{{ step.subtitle }}</p>

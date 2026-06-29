@@ -3,26 +3,14 @@
     <!-- Header -->
     <div class="flex justify-between items-center">
       <div>
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Files & Preprocessing</h2>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Files & Preprocessing</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Upload files and run OCR preprocessing
         </p>
       </div>
       <div class="flex items-center space-x-3">
         <BaseButton variant="secondary" @click="showUploadModal = true">
-          <svg
-            class="w-5 h-5 mr-2 text-gray-500 dark:text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m4-3L4 16m0 0l8-8m0 0l8 8"
-            />
-          </svg>
+          <Upload class="w-5 h-5 mr-2 text-slate-500 dark:text-slate-400" />
           Upload Files
         </BaseButton>
       </div>
@@ -56,19 +44,7 @@
       v-if="files.length > 0 && selectedFiles.length === 0 && !hasActivePreprocessingTasks"
       class="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg"
     >
-      <svg
-        class="w-5 h-5 text-blue-600 flex-shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
+      <Info class="w-5 h-5 text-blue-600 flex-shrink-0" />
       <p class="text-sm text-blue-800">
         <strong>Next step:</strong> Select files from the table below, then click
         <span class="font-semibold">Configure Preprocessing</span> to extract text from your
@@ -133,20 +109,7 @@
       @action="clearFilters"
     >
       <template #icon>
-        <svg
-          class="h-16 w-16 mx-auto text-gray-300 dark:text-slate-600"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
+        <Search class="h-16 w-16 mx-auto text-slate-300 dark:text-slate-600" aria-hidden="true" />
       </template>
     </EmptyState>
 
@@ -156,7 +119,7 @@
       class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50"
     >
       <div
-        class="bg-gray-900 text-white rounded-xl shadow-2xl px-6 py-3 flex items-center space-x-4"
+        class="bg-slate-900 text-white rounded-xl shadow-2xl px-6 py-3 flex items-center space-x-4"
       >
         <span class="font-medium"
           >{{ selectedFiles.length }} file{{ selectedFiles.length !== 1 ? 's' : '' }} selected</span
@@ -170,54 +133,21 @@
             ' need(s) import configuration'
           "
         >
-          <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
+          <AlertTriangle class="w-3 h-3 mr-1" />
           {{ unconfiguredCsvXlsxFiles.length }} needs config
         </span>
         <BaseButton
           variant="ghost"
           size="sm"
-          class="text-gray-300 underline"
+          class="text-slate-300 underline"
           @click="selectedFiles = []"
         >
           Clear
         </BaseButton>
-        <div class="w-px h-5 bg-gray-700" />
+        <div class="w-px h-5 bg-slate-700" />
         <BaseButton :disabled="unconfiguredCsvXlsxFiles.length > 0" @click="openProcessingPanel">
-          <svg
-            v-if="unconfiguredCsvXlsxFiles.length === 0"
-            class="w-4 h-4 mr-2"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-            />
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-          <svg v-else class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
+          <Settings v-if="unconfiguredCsvXlsxFiles.length === 0" class="w-4 h-4 mr-2" />
+          <AlertTriangle v-else class="w-4 h-4 mr-2" />
           {{
             unconfiguredCsvXlsxFiles.length > 0
               ? 'Configure Files First'
@@ -253,27 +183,21 @@
 
     <!-- File Preview Modal -->
     <FilePreviewModal
-      v-if="previewingFile"
+      :open="showFilePreview"
       :file="previewingFile"
       :project-id="projectId"
-      @close="previewingFile = null"
+      @close="showFilePreview = false"
     />
 
     <!-- File Import Config Modal -->
     <FileImportConfigModal
-      v-if="showImportConfigModal && configuringFile"
+      :open="showImportConfigModal && !!configuringFile"
       :file="configuringFile"
       :project-id="projectId"
-      @close="
-        () => {
-          showImportConfigModal = false
-          configuringFile = null
-        }
-      "
+      @close="showImportConfigModal = false"
       @saved="
         () => {
           showImportConfigModal = false
-          configuringFile = null
           fetchFiles()
           emit('files-changed')
         }
@@ -287,12 +211,37 @@
       @confirm="onDuplicateConfirm"
       @cancel="cancelDuplicatePreview"
     />
+
+    <!-- Delete file confirmation -->
+    <ConfirmationDialog
+      :open="showDeleteFileConfirm"
+      title="Delete file?"
+      :message="`Delete “${fileToDelete?.file_name}”? This action cannot be undone.`"
+      confirm-text="Delete"
+      cancel-text="Cancel"
+      confirm-variant="danger"
+      @confirm="executeDeleteFile"
+      @cancel="showDeleteFileConfirm = false"
+    />
+
+    <!-- Cancel preprocessing task confirmation -->
+    <ConfirmationDialog
+      :open="showCancelTaskConfirm"
+      title="Cancel preprocessing task?"
+      message="Any files still being processed will be marked as failed."
+      confirm-text="Cancel task"
+      cancel-text="Keep running"
+      confirm-variant="danger"
+      @confirm="executeCancelTask"
+      @cancel="showCancelTaskConfirm = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, toRef, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { AlertTriangle, Info, Search, Settings, Upload } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { authApi } from '@/services/authApi'
@@ -308,6 +257,7 @@ import UploadFilesModal from '@/components/files/UploadFilesModal.vue'
 import DuplicatePreviewModal from '@/components/files/DuplicatePreviewModal.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { setEngineLabels } from '@/utils/ocrLabels'
 import { getDateRangeBounds } from '@/utils/dateRange'
@@ -338,6 +288,7 @@ const showHistoryPanel = ref(false)
 const historyFile = ref(null)
 const highlightTaskId = ref(null)
 const previewingFile = ref(null)
+const showFilePreview = ref(false)
 const fileToDelete = ref(null)
 const showImportConfigModal = ref(false)
 const configuringFile = ref(null)
@@ -660,13 +611,17 @@ const navigateToDocument = (documentId) => {
   })
 }
 
-// Confirm delete file
+// Confirm delete file (confirmed via ConfirmationDialog)
+const showDeleteFileConfirm = ref(false)
 const confirmDeleteFile = (file) => {
   fileToDelete.value = file
-  // Could open a confirmation modal here - for now we'll use browser confirm
-  if (confirm(`Delete "${file.file_name}"? This action cannot be undone.`)) {
-    deleteFile(file)
-  }
+  showDeleteFileConfirm.value = true
+}
+const executeDeleteFile = async () => {
+  const file = fileToDelete.value
+  showDeleteFileConfirm.value = false
+  if (!file) return
+  await deleteFile(file)
   fileToDelete.value = null
 }
 
@@ -727,15 +682,18 @@ const retryFailedFiles = async (taskId) => {
   }
 }
 
-// Cancel preprocessing task
-const cancelPreprocessingTask = async (task) => {
-  if (
-    !confirm(
-      'Cancel this preprocessing task? Any files still being processed will be marked as failed.',
-    )
-  ) {
-    return
-  }
+// Cancel preprocessing task (confirmed via ConfirmationDialog)
+const showCancelTaskConfirm = ref(false)
+const pendingCancelTask = ref(null)
+const cancelPreprocessingTask = (task) => {
+  pendingCancelTask.value = task
+  showCancelTaskConfirm.value = true
+}
+const executeCancelTask = async () => {
+  const task = pendingCancelTask.value
+  showCancelTaskConfirm.value = false
+  pendingCancelTask.value = null
+  if (!task) return
   try {
     await preprocessingApi.cancel(props.projectId, task.id, true)
     toast.success('Preprocessing cancelled')
@@ -753,6 +711,7 @@ const cancelPreprocessingTask = async (task) => {
 // Preview file
 const previewFile = (file) => {
   previewingFile.value = file
+  showFilePreview.value = true
 }
 
 // Download file

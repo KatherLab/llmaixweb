@@ -1,11 +1,11 @@
 <template>
   <div class="mb-4">
-    <label class="block text-sm font-semibold text-gray-700 mb-1"
+    <label class="block text-sm font-semibold text-slate-700 mb-1"
       >Schema <span class="text-red-500">*</span></label
     >
     <select
       v-model="model"
-      class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+      class="w-full border border-slate-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
       @change="emit('change')"
     >
       <option disabled value="">Select a schema</option>
@@ -17,7 +17,7 @@
       <summary class="text-blue-700 cursor-pointer">Preview Schema</summary>
       <pre
         v-if="selectedSchema"
-        class="bg-gray-50 border rounded p-2 mt-1 max-h-32 overflow-auto font-mono text-xs"
+        class="bg-slate-50 border rounded p-2 mt-1 max-h-32 overflow-auto font-mono text-xs"
         >{{ JSON.stringify(selectedSchema.schema_definition, null, 2) }}</pre
       >
     </details>

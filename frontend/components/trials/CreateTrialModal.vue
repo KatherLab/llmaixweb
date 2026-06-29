@@ -1,16 +1,7 @@
 <template>
-  <BaseModal
-    :open="open"
-    :close-on-esc="false"
-    size="2xl"
-    panel-class="max-h-[95vh]"
-    header-class="px-8 py-6 bg-gray-50"
-    body-class="p-0 md:p-8 bg-white"
-    footer-class="px-8 py-6 bg-gray-50"
-    @close="tryClose"
-  >
+  <BaseModal :open="open" size="2xl" panel-class="max-h-[95vh]" @close="tryClose">
     <template #header>
-      <h3 class="text-2xl font-bold tracking-tight text-gray-900">Start New Trial</h3>
+      <h3 class="text-lg font-semibold text-slate-900">Start New Trial</h3>
     </template>
 
     <div class="grid md:grid-cols-2 gap-8">
@@ -55,21 +46,11 @@
               @click="advancedSettingsVisible = !advancedSettingsVisible"
             >
               <span>{{ advancedSettingsVisible ? 'Hide' : 'Show' }} Advanced Settings</span>
-              <svg
+              <ChevronDown
                 :class="{ 'rotate-180': advancedSettingsVisible }"
                 class="h-4 w-4 ml-1 transition-transform"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
                 aria-hidden="true"
-              >
-                <path
-                  d="M19 9l-7 7-7-7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                />
-              </svg>
+              />
             </BaseButton>
             <BaseButton
               variant="link"
@@ -78,21 +59,11 @@
               @click="advancedOptionsVisible = !advancedOptionsVisible"
             >
               <span>{{ advancedOptionsVisible ? 'Hide' : 'Use' }} Custom API Settings</span>
-              <svg
+              <ChevronDown
                 :class="{ 'rotate-180': advancedOptionsVisible }"
                 class="h-4 w-4 ml-1 transition-transform"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
                 aria-hidden="true"
-              >
-                <path
-                  d="M19 9l-7 7-7-7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                />
-              </svg>
+              />
             </BaseButton>
           </div>
 
@@ -147,14 +118,28 @@
         >Start Trial</BaseButton
       >
     </template>
+
+    <!-- Discard unsaved changes confirmation -->
+    <ConfirmationDialog
+      :open="showConfirm"
+      title="Discard unsaved changes?"
+      message="Your trial configuration will be lost."
+      confirm-text="Discard"
+      cancel-text="Keep editing"
+      confirm-variant="danger"
+      @confirm="confirmDiscard"
+      @cancel="showConfirm = false"
+    />
   </BaseModal>
 </template>
 
 <script setup>
 import { computed, ref, toRef, watch } from 'vue'
+import { ChevronDown } from '@lucide/vue'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import TrialMetadataCard from './TrialMetadataCard.vue'
 import TrialPromptSelect from './TrialPromptSelect.vue'
 import TrialSchemaSelect from './TrialSchemaSelect.vue'
@@ -335,14 +320,17 @@ const isDirty = computed(() => {
   )
 })
 
+const showConfirm = ref(false)
 const tryClose = () => {
   if (isDirty.value) {
-    if (window.confirm('You have unsaved changes. Are you sure you want to close?')) {
-      emit('close')
-    }
+    showConfirm.value = true
   } else {
     emit('close')
   }
+}
+const confirmDiscard = () => {
+  showConfirm.value = false
+  emit('close')
 }
 
 /* -------------------------------------------------------

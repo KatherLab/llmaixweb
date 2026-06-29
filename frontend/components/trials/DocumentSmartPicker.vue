@@ -1,10 +1,10 @@
 <template>
   <div class="mt-4 flex-1 flex flex-col gap-4">
     <div>
-      <h4 class="text-sm font-medium text-gray-700 mb-2">Load from Previous Trial</h4>
+      <h4 class="text-sm font-medium text-slate-700 mb-2">Load from Previous Trial</h4>
       <select
         v-model="selectedTrialId"
-        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
         @change="emit('load-from-trial', selectedTrialId)"
       >
         <option value="">Select a previous trial...</option>
@@ -18,16 +18,16 @@
     </div>
 
     <div>
-      <h4 class="text-sm font-medium text-gray-700 mb-2">Filter by Date Range</h4>
+      <h4 class="text-sm font-medium text-slate-700 mb-2">Filter by Date Range</h4>
       <div class="grid grid-cols-2 gap-2">
         <input
           v-model="dateRange.start"
-          class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          class="border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           type="date"
         />
         <input
           v-model="dateRange.end"
-          class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          class="border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           type="date"
         />
       </div>
@@ -64,21 +64,11 @@
           >
             <span v-if="!showSelectedDocs">Show</span>
             <span v-else>Hide</span>
-            <svg
+            <ChevronDown
               :class="{ 'rotate-180': showSelectedDocs }"
               class="w-4 h-4 transition-transform"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
               aria-hidden="true"
-            >
-              <path
-                d="M19 9l-7 7-7-7"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-              />
-            </svg>
+            />
           </BaseButton>
           <BaseButton variant="link" tone="blue" class="text-sm" @click="emit('clear')">
             Clear
@@ -90,7 +80,7 @@
           v-show="showSelectedDocs"
           class="mt-2 bg-white rounded shadow p-2 max-h-40 overflow-y-auto border border-blue-100"
         >
-          <ul class="text-xs text-gray-800 space-y-1">
+          <ul class="text-xs text-slate-800 space-y-1">
             <li v-for="docId in selectedIds" :key="docId">
               {{ getDocLabel(docId) }}
             </li>
@@ -103,6 +93,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { ChevronDown } from '@lucide/vue'
 import { formatDate } from '@/utils/formatters.js'
 import BaseButton from '@/components/common/BaseButton.vue'
 

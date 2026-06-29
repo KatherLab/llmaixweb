@@ -2,23 +2,16 @@
   <div class="absolute right-80 top-0 bottom-0 w-64 bg-white border-l shadow-lg z-10 overflow-auto">
     <div class="p-4">
       <div class="flex items-center justify-between mb-4">
-        <h4 class="font-semibold text-gray-900">Version History</h4>
-        <button class="text-gray-400 hover:text-gray-600" @click="$emit('close')">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+        <h4 class="font-semibold text-slate-900">Version History</h4>
+        <button class="text-slate-400 hover:text-slate-600" @click="$emit('close')">
+          <X class="w-5 h-5" />
         </button>
       </div>
 
       <!-- Loading State -->
       <div v-if="loadingVersions" class="text-center py-8">
         <LoadingSpinner size="small" />
-        <p class="text-xs text-gray-500 mt-2">Loading versions...</p>
+        <p class="text-xs text-slate-500 mt-2">Loading versions...</p>
       </div>
 
       <!-- Versions List -->
@@ -30,7 +23,7 @@
             'p-3 rounded-lg border cursor-pointer transition-all',
             selectedVersion?.id === version.id
               ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
+              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50',
           ]"
           @click="$emit('select-version', version)"
         >
@@ -38,21 +31,21 @@
             <span
               :class="[
                 'text-xs font-medium px-1.5 py-0.5 rounded',
-                version.is_latest ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600',
+                version.is_latest ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600',
               ]"
             >
               {{ version.is_latest ? 'Current' : 'Archived' }}
             </span>
-            <span class="text-xs text-gray-500"
+            <span class="text-xs text-slate-500"
               >v{{ versionCount - versions.indexOf(version) }}</span
             >
           </div>
-          <p class="text-xs text-gray-600">
+          <p class="text-xs text-slate-600">
             {{ formatRelativeTime(version.created_at) }}
           </p>
           <p
             v-if="version.meta_data?.extraction_method"
-            class="text-xs text-gray-400 truncate mt-1"
+            class="text-xs text-slate-400 truncate mt-1"
           >
             {{ getShortExtractionMethod(version.meta_data.extraction_method) }}
           </p>
@@ -61,26 +54,15 @@
 
       <!-- No Versions -->
       <div v-else class="text-center py-8">
-        <svg
-          class="w-10 h-10 text-gray-300 mx-auto"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-        <p class="text-sm text-gray-500 mt-2">Only one version exists</p>
+        <FileText class="w-10 h-10 text-slate-300 mx-auto" />
+        <p class="text-sm text-slate-500 mt-2">Only one version exists</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { FileText, X } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { formatRelativeTime as sharedFormatRelativeTime } from '@/utils/formatters'
 

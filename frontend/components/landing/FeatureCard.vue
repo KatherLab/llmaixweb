@@ -13,14 +13,7 @@
         class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg transition-colors"
         :class="[feature.iconBg, feature.iconText, feature.iconHoverBg]"
       >
-        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            :d="feature.icon"
-          ></path>
-        </svg>
+        <component :is="feature.icon" class="h-6 w-6" />
       </div>
       <h3 class="mb-2 text-lg font-bold text-white">{{ feature.title }}</h3>
       <p class="text-sm text-slate-300">{{ feature.description }}</p>

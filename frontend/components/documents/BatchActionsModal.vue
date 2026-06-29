@@ -1,18 +1,11 @@
 <template>
-  <BaseModal
-    :open="true"
-    size="lg"
-    header-class="bg-gray-50 rounded-t-2xl"
-    footer-class="bg-gray-50"
-    body-class="p-6"
-    @close="$emit('close')"
-  >
+  <BaseModal :open="open" size="lg" @close="$emit('close')">
     <template #header>
       <div>
-        <h3 class="text-lg font-semibold text-gray-900">
+        <h3 class="text-lg font-semibold text-slate-900">
           {{ actionTitle }}
         </h3>
-        <p class="mt-1 text-sm text-gray-500">
+        <p class="mt-1 text-sm text-slate-500">
           {{ documents.length }} {{ entityLabel }}{{ documents.length !== 1 ? 's' : '' }} selected
         </p>
       </div>
@@ -24,9 +17,9 @@
         <input
           v-model="forceReprocess"
           type="checkbox"
-          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
         />
-        <label class="ml-2 text-sm text-gray-700">
+        <label class="ml-2 text-sm text-slate-700">
           Force reprocess (ignore existing results)
         </label>
       </div>
@@ -34,12 +27,12 @@
 
     <!-- Export Action -->
     <div v-else-if="action === 'export'" class="space-y-4">
-      <p class="text-sm text-gray-600">Choose export format and options:</p>
+      <p class="text-sm text-slate-600">Choose export format and options:</p>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2"> Export Format </label>
+        <label class="block text-sm font-medium text-slate-700 mb-2"> Export Format </label>
         <select
           v-model="exportFormat"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="json">JSON</option>
           <option value="csv">CSV</option>
@@ -52,17 +45,17 @@
           <input
             v-model="includeMetadata"
             type="checkbox"
-            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
           />
-          <span class="ml-2 text-sm text-gray-700">Include metadata</span>
+          <span class="ml-2 text-sm text-slate-700">Include metadata</span>
         </label>
         <label class="flex items-center">
           <input
             v-model="includePreprocessingInfo"
             type="checkbox"
-            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
           />
-          <span class="ml-2 text-sm text-gray-700">Include preprocessing information</span>
+          <span class="ml-2 text-sm text-slate-700">Include preprocessing information</span>
         </label>
       </div>
     </div>
@@ -71,20 +64,7 @@
     <div v-else-if="action === 'delete'" class="space-y-4">
       <div class="bg-red-50 border border-red-200 rounded-lg p-4">
         <div class="flex">
-          <svg
-            class="h-5 w-5 text-red-400"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
+          <AlertTriangle class="h-5 w-5 text-red-400 flex-shrink-0" />
           <div class="ml-3">
             <h3 class="text-sm font-medium text-red-800">Warning: This action cannot be undone</h3>
             <p class="mt-1 text-sm text-red-700">
@@ -97,9 +77,9 @@
         <input
           v-model="confirmDelete"
           type="checkbox"
-          class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+          class="h-4 w-4 text-red-600 focus:ring-red-500 border-slate-300 rounded"
         />
-        <label class="ml-2 text-sm text-gray-700">
+        <label class="ml-2 text-sm text-slate-700">
           I understand that this action is permanent
         </label>
       </div>
@@ -121,6 +101,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { AlertTriangle } from '@lucide/vue'
 import { documentsApi } from '@/services/documentsApi'
 import { trialsApi } from '@/services/trialsApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
@@ -130,6 +111,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
+  open: { type: Boolean, required: true },
   action: { type: String, required: true },
   documents: { type: Array, required: true },
   projectId: { type: [String, Number], required: true },

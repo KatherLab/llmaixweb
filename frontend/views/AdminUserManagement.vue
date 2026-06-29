@@ -1,27 +1,10 @@
 <template>
   <div
-    class="h-screen bg-gradient-to-br from-gray-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex flex-col"
+    class="h-screen bg-gradient-to-br from-slate-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex flex-col"
   >
     <PageHeader title="User Management">
       <template #icon>
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-          <circle
-            cx="12"
-            cy="8"
-            r="4"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M6 20v-2a6 6 0 016-6 6 6 0 016 6v2"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <Users class="w-5 h-5" aria-hidden="true" />
       </template>
       <template #actions>
         <BaseButton
@@ -41,9 +24,9 @@
         <GlassCard>
           <div class="h-full flex flex-col min-h-0">
             <div
-              class="flex items-center justify-between mb-3 pb-3 border-b border-gray-200 dark:border-slate-700"
+              class="flex items-center justify-between mb-3 pb-3 border-b border-slate-200 dark:border-slate-700"
             >
-              <h2 class="text-base font-semibold text-gray-900 dark:text-white">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-white">
                 Users
                 <span
                   class="ml-2 text-xs bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-100 dark:border-slate-600"
@@ -70,15 +53,15 @@
         <GlassCard>
           <div class="h-full flex flex-col min-h-0">
             <div
-              class="flex items-center justify-between mb-3 pb-3 border-b border-gray-200 dark:border-slate-700"
+              class="flex items-center justify-between mb-3 pb-3 border-b border-slate-200 dark:border-slate-700"
             >
-              <h2 class="text-base font-semibold text-gray-900 dark:text-white">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-white">
                 Invitations
-                <label class="ml-4 text-xs font-medium text-gray-600 dark:text-slate-400">
+                <label class="ml-4 text-xs font-medium text-slate-600 dark:text-slate-400">
                   <input
                     v-model="showUsedInvitations"
                     type="checkbox"
-                    class="mr-2 rounded border-gray-300 dark:border-slate-600 text-blue-600 dark:text-blue-400"
+                    class="mr-2 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400"
                   />Show used
                 </label>
               </h2>
@@ -152,6 +135,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
+import { Users } from '@lucide/vue'
 import UserGrid from '@/components/admin/UserGrid.vue'
 import InvitationGrid from '@/components/admin/InvitationGrid.vue'
 import InviteUserModal from '@/components/admin/InviteUserModal.vue'

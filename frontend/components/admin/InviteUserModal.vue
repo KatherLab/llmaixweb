@@ -7,11 +7,11 @@
     @close="emit('close')"
   >
     <template #header>
-      <h3 class="text-lg font-bold text-gray-900 dark:text-white">Invite New User</h3>
+      <h3 class="text-lg font-bold text-slate-900 dark:text-white">Invite New User</h3>
     </template>
     <form @submit.prevent="sendInvitation">
       <div class="mb-5">
-        <label for="email" class="block text-xs font-bold text-gray-600 dark:text-slate-300 mb-1"
+        <label for="email" class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
           >Email address</label
         >
         <input
@@ -19,7 +19,7 @@
           v-model="inviteEmail"
           type="email"
           required
-          class="block w-full px-4 py-2 text-sm border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
+          class="block w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
           placeholder="Enter email address"
         />
       </div>
@@ -28,9 +28,9 @@
           <input
             v-model="sendInviteEmail"
             type="checkbox"
-            class="rounded border-gray-300 dark:border-slate-600 text-blue-600 dark:text-blue-400"
+            class="rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400"
           />
-          <span class="text-sm text-gray-700 dark:text-slate-300">Send invitation via email</span>
+          <span class="text-sm text-slate-700 dark:text-slate-300">Send invitation via email</span>
         </label>
       </div>
       <div
@@ -58,27 +58,20 @@
             type="text"
             readonly
             :value="invitationLink"
-            class="block w-full px-4 py-2 text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg pr-10"
+            class="block w-full px-4 py-2 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg pr-10"
           />
           <button
             type="button"
-            class="p-1.5 rounded-lg border border-gray-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all relative"
+            class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all relative"
             @click="copyGeneratedLink"
           >
             <span
               v-if="copySuccess"
-              class="absolute bg-gray-800 dark:bg-slate-700 text-white text-xs px-2 py-1 rounded -top-8 left-1/2 -translate-x-1/2 z-10"
+              class="absolute bg-slate-800 dark:bg-slate-700 text-white text-xs px-2 py-1 rounded -top-8 left-1/2 -translate-x-1/2 z-10"
             >
               Copied!
             </span>
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-2M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
-              />
-            </svg>
+            <ClipboardCopy class="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -105,6 +98,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { ClipboardCopy } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { usersApi } from '@/services/usersApi'

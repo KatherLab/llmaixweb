@@ -13,8 +13,8 @@
 
     <div class="header flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Evaluation</h1>
-        <p class="text-gray-600 dark:text-gray-400">
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Evaluation</h1>
+        <p class="text-slate-600 dark:text-slate-400">
           Compare trial results against ground truth data
         </p>
       </div>
@@ -33,7 +33,7 @@
           @click="showExportModal = true"
         >
           <span class="flex items-center">
-            <span class="mr-1">⬇</span>
+            <Download class="mr-1 h-4 w-4" />
             Export Results
           </span>
         </button>
@@ -43,7 +43,7 @@
     <!-- Loading States -->
     <div v-if="loadingStates.groundTruthFiles" class="text-center py-8">
       <LoadingSpinner size="medium" />
-      <p class="mt-2 text-gray-500 dark:text-gray-400">Loading ground truth files...</p>
+      <p class="mt-2 text-slate-500 dark:text-slate-400">Loading ground truth files...</p>
     </div>
 
     <!-- No ground truth files yet -->
@@ -55,7 +55,7 @@
       @action="showUploadModal = true"
     >
       <template #icon>
-        <span class="text-6xl text-gray-400">📋</span>
+        <ClipboardList class="h-16 w-16 mx-auto text-slate-400" />
       </template>
     </EmptyState>
 
@@ -64,7 +64,7 @@
       <!-- Ground truth files panel -->
       <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="font-medium text-gray-900 dark:text-white">Ground Truth Files</h2>
+          <h2 class="font-medium text-slate-900 dark:text-white">Ground Truth Files</h2>
           <button
             class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm"
             @click="showGroundTruthManager = true"
@@ -76,16 +76,16 @@
           <div
             v-for="(gt, index) in groundTruthFiles"
             :key="gt.id"
-            class="border dark:border-slate-700 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+            class="border dark:border-slate-700 rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
             :class="{
               'border-blue-500 bg-blue-50 dark:bg-blue-900/20': selectedGroundTruth?.id === gt.id,
             }"
             @click="selectGroundTruthWithValidation(gt)"
           >
-            <div class="font-medium text-sm text-gray-900 dark:text-white">
+            <div class="font-medium text-sm text-slate-900 dark:text-white">
               {{ gt.name || `Ground Truth #${index + 1}` }}
             </div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">
+            <div class="text-xs text-slate-500 dark:text-slate-400">
               {{ gt.format?.toUpperCase() }} • {{ formatDate(gt.created_at) }}
             </div>
             <div
@@ -103,18 +103,21 @@
 
       <!-- Trial selection and evaluation panel -->
       <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4 xl:col-span-3">
-        <div v-if="!selectedGroundTruth" class="text-center py-12 text-gray-500 dark:text-gray-400">
-          <span class="text-6xl text-gray-400 mb-3 block">📋</span>
-          <p class="text-gray-700 dark:text-gray-300">
+        <div
+          v-if="!selectedGroundTruth"
+          class="text-center py-12 text-slate-500 dark:text-slate-400"
+        >
+          <ClipboardList class="h-16 w-16 mx-auto text-slate-400 mb-3 block" />
+          <p class="text-slate-700 dark:text-slate-300">
             Select a ground truth file to start evaluation
           </p>
         </div>
         <div v-else>
           <div class="flex justify-between items-center mb-4">
-            <h2 class="font-medium text-gray-900 dark:text-white">Evaluation Dashboard</h2>
+            <h2 class="font-medium text-slate-900 dark:text-white">Evaluation Dashboard</h2>
             <div class="flex gap-2">
               <button
-                class="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:text-gray-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed"
+                class="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed"
                 :disabled="!canStartEvaluation"
                 @click="showTrialSelectorWithValidation"
               >
@@ -136,7 +139,7 @@
             class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md"
           >
             <div class="flex">
-              <span class="h-5 w-5 text-yellow-400">⚠️</span>
+              <AlertTriangle class="h-5 w-5 text-yellow-400 flex-shrink-0" />
               <div class="ml-3">
                 <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-300">
                   Setup Required
@@ -151,7 +154,7 @@
           <!-- Loading evaluations -->
           <div v-if="loadingStates.evaluations" class="text-center py-8">
             <LoadingSpinner size="medium" />
-            <p class="mt-2 text-gray-500 dark:text-gray-400">Loading evaluations...</p>
+            <p class="mt-2 text-slate-500 dark:text-slate-400">Loading evaluations...</p>
           </div>
 
           <!-- Evaluation results table -->
@@ -160,74 +163,44 @@
             title="No evaluations yet. Select a trial to evaluate."
           >
             <template #icon>
-              <span class="text-4xl text-gray-400 block">📊</span>
+              <BarChart3 class="h-12 w-12 mx-auto text-slate-400" />
             </template>
           </EmptyState>
           <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-              <thead>
+            <table :class="t.table">
+              <thead :class="t.thead">
                 <tr>
-                  <th
-                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                  >
-                    Trial
-                  </th>
-                  <th
-                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                  >
-                    Model
-                  </th>
-                  <th
-                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                  >
-                    Overall Accuracy
-                  </th>
-                  <th
-                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                  >
-                    Documents
-                  </th>
-                  <th
-                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                  >
-                    Status
-                  </th>
-                  <th
-                    class="px-4 py-3 bg-gray-50 dark:bg-slate-800 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                  >
-                    Actions
-                  </th>
+                  <th :class="t.th">Trial</th>
+                  <th :class="t.th">Model</th>
+                  <th :class="t.th">Overall Accuracy</th>
+                  <th :class="t.th">Documents</th>
+                  <th :class="t.th">Status</th>
+                  <th :class="t.th">Actions</th>
                 </tr>
               </thead>
-              <tbody
-                class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700"
-              >
-                <tr
-                  v-for="evaluation in evaluations"
-                  :key="evaluation.id"
-                  class="hover:bg-gray-50 dark:hover:bg-slate-800"
-                >
+              <tbody :class="t.tbody">
+                <tr v-for="evaluation in evaluations" :key="evaluation.id" :class="t.tr">
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div
-                      class="font-medium text-gray-900 dark:text-white truncate"
+                      class="font-medium text-slate-900 dark:text-white truncate"
                       :title="getTrialName(evaluation.trial_id)"
                     >
                       {{ getTrialName(evaluation.trial_id) }}
                     </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                    <div class="text-xs text-slate-500 dark:text-slate-400">
                       ID: {{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}
                     </div>
                   </td>
 
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900 dark:text-white">
                     {{ getTrialModel(evaluation.trial_id) }}
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
                     <div class="flex items-center">
-                      <div class="mr-2 text-gray-900 dark:text-white">
+                      <div class="mr-2 text-slate-900 dark:text-white">
                         {{ getAccuracyPercentage(evaluation) }}%
                       </div>
-                      <div class="w-16 bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                      <div class="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                         <div
                           class="bg-blue-600 h-2 rounded-full"
                           :style="{ width: `${getAccuracyPercentage(evaluation)}%` }"
@@ -235,7 +208,7 @@
                       </div>
                     </div>
                   </td>
-                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900 dark:text-white">
                     {{ getDocumentCount(evaluation) }}
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm">
@@ -280,7 +253,7 @@
 
     <!-- Modals -->
     <GroundTruthUploadModal
-      v-if="showUploadModal"
+      :open="showUploadModal"
       :project-id="projectId"
       @close="showUploadModal = false"
       @uploaded="onGroundTruthUploaded"
@@ -293,7 +266,7 @@
       @updated="fetchGroundTruthFilesWithRetry"
     />
     <TrialSelectorModal
-      v-if="showTrialSelector"
+      :open="showTrialSelector"
       :project-id="projectId"
       :ground-truth="selectedGroundTruth"
       @close="showTrialSelector = false"
@@ -301,21 +274,21 @@
     />
 
     <EvaluationAnalysisModal
-      v-if="showEvaluationAnalysis"
+      :open="showEvaluationAnalysis"
       :project-id="projectId"
       :evaluation="selectedEvaluation"
       @close="showEvaluationAnalysis = false"
     />
 
     <GroundTruthPreviewModal
-      v-if="showGroundTruthPreview"
+      :open="showGroundTruthPreview"
       :project-id="projectId"
       :ground-truth="selectedGroundTruth"
       @close="showGroundTruthPreview = false"
       @configured="onMappingConfigured"
     />
     <MetricsExportModal
-      v-if="showExportModal"
+      :open="showExportModal"
       :project-id="projectId"
       :evaluations="evaluations"
       @close="showExportModal = false"
@@ -325,6 +298,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { AlertTriangle, BarChart3, ClipboardList, Download } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { evaluationsApi } from '@/services/evaluationsApi'
@@ -343,6 +317,9 @@ import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreview
 import MetricsExportModal from '@/components/evaluation/MetricsExportModal.vue'
 import EvaluationAnalysisModal from '@/components/evaluation/EvaluationAnalysisModal.vue'
 import { describeHttpError } from '@/utils/errors'
+import { useTableClasses } from '@/composables/useTableClasses'
+
+const t = useTableClasses()
 
 const props = defineProps({
   projectId: {

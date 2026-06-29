@@ -42,20 +42,39 @@ export function useScrollLock(options = {}) {
     }
   }
 
-  // Auto-lock based on a reactive ref
+  // Auto-lock based on a reactive ref.
+  // Tracks whether THIS instance currently holds a lock, so the unmount hook
+  // only releases what it acquired (the counter is shared/module-level).
   if (watchRef !== null) {
+    let holdsLock = false
+
+    // If already open at mount, acquire the lock immediately.
+    if (typeof watchRef === 'function' ? watchRef() : watchRef.value) {
+      onMounted(() => {
+        lockScroll()
+        holdsLock = true
+      })
+    }
+
     watch(watchRef, (val) => {
       if (val) {
         lockScroll()
+        holdsLock = true
       } else {
         unlockScroll()
+        holdsLock = false
       }
     })
-    // Also check initial value
-    if (typeof watchRef === 'function' ? watchRef() : watchRef.value) {
-      onMounted(lockScroll)
-      onUnmounted(unlockScroll)
-    }
+
+    // Safety net: if the component unmounts while still open (e.g. a tab/route
+    // switch tears down a component whose modal is open, or a leave-transition
+    // is interrupted), release the lock so body scroll isn't stuck forever.
+    onUnmounted(() => {
+      if (holdsLock) {
+        unlockScroll()
+        holdsLock = false
+      }
+    })
   }
 
   // Auto-lock as soon as the component mounts

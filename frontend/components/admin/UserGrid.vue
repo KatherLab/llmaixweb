@@ -56,8 +56,8 @@ const UserCell = defineComponent({
           [h('span', { class: 'text-blue-800 dark:text-blue-300 font-medium' }, initials)],
         ),
         h('div', { class: 'ml-3' }, [
-          h('div', { class: 'text-sm font-medium text-gray-900 dark:text-white' }, name || 'N/A'),
-          h('div', { class: 'text-sm text-gray-500 dark:text-slate-400' }, email),
+          h('div', { class: 'text-sm font-medium text-slate-900 dark:text-white' }, name || 'N/A'),
+          h('div', { class: 'text-sm text-slate-500 dark:text-slate-400' }, email),
         ]),
       ])
     }
@@ -93,7 +93,7 @@ const RoleCell = defineComponent({
     const onEdit = () => props.params.context?.emitEdit?.(props.params.data)
     return () =>
       h('div', { class: 'flex items-center h-full cursor-pointer capitalize', onClick: onEdit }, [
-        h('span', { class: 'text-gray-900 dark:text-white' }, String(props.params.value ?? '')),
+        h('span', { class: 'text-slate-900 dark:text-white' }, String(props.params.value ?? '')),
       ])
   },
 })
@@ -198,90 +198,3 @@ watch(
   { immediate: true },
 )
 </script>
-
-<style>
-:deep(.ag-center-cols-container) {
-  display: flex;
-  align-items: center;
-}
-
-/* Header text and icon styling for both light and dark mode */
-:deep(.ag-header-cell-text) {
-  color: #111827 !important;
-}
-:deep(.ag-cell-label-container) {
-  color: #111827 !important;
-}
-:deep(.ag-filter-icon) {
-  color: #6b7280 !important;
-}
-:deep(.ag-sort-icon) {
-  color: #6b7280 !important;
-}
-:deep(.ag-header-cell-label-container) {
-  color: #111827 !important;
-}
-
-/* Dark mode overrides for AG-Grid */
-html.dark :deep(.ag-header-cell-text) {
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-header-cell) {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-}
-html.dark :deep(.ag-cell-label-container) {
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-filter-icon) {
-  color: #94a3b8 !important;
-}
-html.dark :deep(.ag-sort-icon) {
-  color: #94a3b8 !important;
-}
-html.dark :deep(.ag-column-select-header) {
-  background-color: #1e293b !important;
-}
-html.dark :deep(.ag-body-container) {
-  background-color: #0f172a !important;
-}
-html.dark :deep(.ag-header) {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-}
-html.dark :deep(.ag-row) {
-  background-color: #0f172a !important;
-  border-color: #334155 !important;
-}
-html.dark :deep(.ag-cell) {
-  border-color: #334155 !important;
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-paging-panel) {
-  background-color: #0f172a !important;
-  border-color: #334155 !important;
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-paging-button) {
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-paging-button:disabled) {
-  color: #64748b !important;
-}
-html.dark :deep(.ag-input-field-input) {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-filter-body) {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-}
-html.dark :deep(.ag-list-item) {
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-popup) {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-}
-</style>

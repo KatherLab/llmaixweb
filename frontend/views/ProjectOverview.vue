@@ -1,19 +1,10 @@
 <template>
   <div
-    class="h-screen bg-gradient-to-br from-gray-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex flex-col"
+    class="h-screen bg-gradient-to-br from-slate-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex flex-col"
   >
     <PageHeader title="Project Overview">
       <template #icon>
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="2" fill="white" />
-          <path
-            d="M9 12l2 2 4-4"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <CircleCheckBig class="w-5 h-5" aria-hidden="true" />
       </template>
       <template #actions>
         <CreateProjectButton />
@@ -32,6 +23,7 @@
 </template>
 
 <script setup>
+import { CircleCheckBig } from '@lucide/vue'
 import ProjectGrid from '@/components/projects/ProjectGrid.vue'
 import CreateProjectButton from '@/components/projects/CreateProjectButton.vue'
 import PageHeader from '@/components/common/PageHeader.vue'

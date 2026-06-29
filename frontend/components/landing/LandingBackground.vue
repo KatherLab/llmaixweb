@@ -5,7 +5,7 @@
       class="absolute top-0 left-0 h-96 w-96 rounded-full bg-blue-500 opacity-10 blur-3xl animate-pulse"
     ></div>
     <div
-      class="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-indigo-500 opacity-10 blur-3xl animate-pulse"
+      class="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-blue-500 opacity-10 blur-3xl animate-pulse"
       style="animation-delay: 2s"
     ></div>
     <div
@@ -37,7 +37,7 @@
       [extraction_complete]
     </div>
     <div
-      class="floating-element absolute bottom-40 left-40 font-mono text-xs text-indigo-300 opacity-20"
+      class="floating-element absolute bottom-40 left-40 font-mono text-xs text-blue-300 opacity-20"
     >
       schema.json
     </div>

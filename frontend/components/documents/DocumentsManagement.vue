@@ -3,14 +3,14 @@
     <!-- Header -->
     <div class="flex justify-between items-start">
       <div>
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Documents</h2>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Documents</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
           View and manage processed documents and document groups
         </p>
       </div>
     </div>
 
-    <BaseTabGroup v-model="activeTab" :tabs="tabs" tone="blue">
+    <BaseTabGroup v-model="activeTab" :tabs="tabs">
       <template #tab="{ tab }">
         {{ tab.label }}
         <StatusBadge color="gray" class="ml-2">{{ tab.badge }}</StatusBadge>
@@ -38,12 +38,12 @@
       <!-- Batch Actions -->
       <div class="flex justify-between items-center mb-4">
         <div class="flex items-center space-x-3">
-          <span class="text-sm text-gray-500 dark:text-gray-400">
+          <span class="text-sm text-slate-500 dark:text-slate-400">
             {{ totalCount }} document{{ totalCount !== 1 ? 's' : '' }}
           </span>
 
           <div v-if="selectedDocuments.length > 0" class="flex items-center space-x-2">
-            <span class="text-sm text-gray-700 dark:text-gray-300">
+            <span class="text-sm text-slate-700 dark:text-slate-300">
               {{ selectedDocuments.length }} selected
             </span>
             <BaseButton
@@ -54,7 +54,7 @@
             >
               Create Group
             </BaseButton>
-            <span class="text-gray-300 dark:text-gray-600">|</span>
+            <span class="text-slate-300 dark:text-slate-600">|</span>
             <BaseButton
               variant="link"
               tone="blue"
@@ -80,7 +80,7 @@
               Delete
             </BaseButton>
             <button
-              class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+              class="text-sm text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-300"
               @click="selectedDocuments = []"
             >
               Clear
@@ -109,21 +109,7 @@
         @action="clearFilters"
       >
         <template #icon>
-          <svg
-            class="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+          <Search class="h-12 w-12 mx-auto text-slate-400 dark:text-slate-500" aria-hidden="true" />
         </template>
       </EmptyState>
 
@@ -134,21 +120,10 @@
         description="Process some files in the Files & Preprocessing tab to see documents here"
       >
         <template #icon>
-          <svg
-            class="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <FileText
+            class="h-12 w-12 mx-auto text-slate-400 dark:text-slate-500"
             aria-hidden="true"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+          />
         </template>
       </EmptyState>
 
@@ -175,7 +150,7 @@
 
       <!-- Batch Actions Modal -->
       <BatchActionsModal
-        v-if="showBatchActions"
+        :open="showBatchActions"
         :action="batchAction"
         :documents="selectedDocuments"
         :project-id="projectId"
@@ -205,10 +180,10 @@
 
     <!-- Document Viewer Modal (moved outside tabs to be always available) -->
     <DocumentViewer
-      v-if="viewingDocument"
+      :open="showDocumentViewer"
       :document="viewingDocument"
       :project-id="projectId"
-      @close="viewingDocument = null"
+      @close="showDocumentViewer = false"
       @reprocess="reprocessDocument"
     />
   </div>
@@ -217,6 +192,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { FileText, Search } from '@lucide/vue'
 import { documentsApi } from '@/services/documentsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { filesApi } from '@/services/filesApi'
@@ -260,6 +236,7 @@ const allDocumentsLoaded = ref(false) // Track if we've fetched all documents
 const isLoading = ref(true)
 const selectedDocuments = ref([])
 const viewingDocument = ref(null)
+const showDocumentViewer = ref(false)
 const showBatchActions = ref(false)
 const batchAction = ref('')
 const itemsPerPage = ref(50)
@@ -345,6 +322,7 @@ const handleHighlight = async () => {
     if (data) {
       // Open the document viewer
       viewingDocument.value = data
+      showDocumentViewer.value = true
       // Clear the highlight parameter without reloading
       router.replace({ query: { ...route.query, highlight: undefined } })
     }
@@ -438,6 +416,7 @@ const areAllDocumentsSelected = computed(() => {
 
 const viewDocument = (doc) => {
   viewingDocument.value = doc
+  showDocumentViewer.value = true
 }
 
 const downloadDocument = async (doc) => {

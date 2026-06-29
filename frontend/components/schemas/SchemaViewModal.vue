@@ -9,13 +9,13 @@
     @close="emit('close')"
   >
     <template #header>
-      <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+      <h3 class="text-lg font-medium text-slate-900 dark:text-white">
         {{ schema?.schema_name }}
       </h3>
     </template>
 
-    <div class="bg-gray-50 dark:bg-slate-800 p-4 rounded-md overflow-auto max-h-96">
-      <pre class="text-sm text-gray-700 dark:text-slate-300">{{
+    <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-md overflow-auto max-h-96">
+      <pre class="text-sm text-slate-700 dark:text-slate-300">{{
         formatJSON(schema?.schema_definition)
       }}</pre>
     </div>

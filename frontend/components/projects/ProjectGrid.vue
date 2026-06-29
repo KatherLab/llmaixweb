@@ -2,17 +2,17 @@
   <div class="h-full flex flex-col min-h-0">
     <!-- Header with title and admin toggle -->
     <div
-      class="flex items-center justify-between mb-3 pb-3 border-b border-gray-200 dark:border-slate-700"
+      class="flex items-center justify-between mb-3 pb-3 border-b border-slate-200 dark:border-slate-700"
     >
-      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Your Projects</h2>
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Your Projects</h2>
       <div v-if="isAdmin" class="flex items-center">
         <label class="inline-flex items-center gap-2 cursor-pointer select-none">
           <input
             v-model="showAllProjects"
             type="checkbox"
-            class="rounded border-gray-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 shadow-sm focus:ring-blue-500"
+            class="rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 shadow-sm focus:ring-blue-500"
           />
-          <span class="text-sm text-gray-700 dark:text-slate-300">Show all users' projects</span>
+          <span class="text-sm text-slate-700 dark:text-slate-300">Show all users' projects</span>
         </label>
       </div>
     </div>
@@ -175,10 +175,10 @@ const UserCell = defineComponent({
           h('div', { class: 'ml-2' }, [
             h(
               'div',
-              { class: 'text-sm font-medium text-gray-900 dark:text-white' },
+              { class: 'text-sm font-medium text-slate-900 dark:text-white' },
               user.full_name || 'N/A',
             ),
-            h('div', { class: 'text-xs text-gray-500 dark:text-slate-400' }, user.email || 'N/A'),
+            h('div', { class: 'text-xs text-slate-500 dark:text-slate-400' }, user.email || 'N/A'),
           ]),
         ]),
       ])
@@ -318,109 +318,3 @@ onMounted(async () => {
   await loadProjects()
 })
 </script>
-
-<style lang="postcss">
-:deep(.ag-center-cols-container) {
-  width: 100%;
-}
-:deep(.ag-row) {
-  display: flex;
-  align-items: center;
-}
-:deep(.ag-cell) {
-  display: flex;
-  align-items: center;
-  height: 100% !important;
-  line-height: normal;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
-/* Header text and icon styling for both light and dark mode */
-:deep(.ag-header-cell-text) {
-  color: #111827 !important;
-}
-:deep(.ag-cell-label-container) {
-  color: #111827 !important;
-}
-:deep(.ag-filter-icon) {
-  color: #6b7280 !important;
-}
-:deep(.ag-sort-icon) {
-  color: #6b7280 !important;
-}
-:deep(.ag-header-cell-label-container) {
-  color: #111827 !important;
-}
-
-/* Dark mode overrides for AG-Grid */
-html.dark :deep(.ag-header-cell-text) {
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-header-cell) {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-}
-html.dark :deep(.ag-cell-label-container) {
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-filter-icon) {
-  color: #94a3b8 !important;
-}
-html.dark :deep(.ag-sort-icon) {
-  color: #94a3b8 !important;
-}
-html.dark :deep(.ag-header-cell-label-container) {
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-header-filter-input) {
-  background-color: #334155 !important;
-  border-color: #475569 !important;
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-column-select-header) {
-  background-color: #1e293b !important;
-}
-html.dark :deep(.ag-body-container) {
-  background-color: #0f172a !important;
-}
-html.dark :deep(.ag-header) {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-}
-html.dark :deep(.ag-row) {
-  background-color: #0f172a !important;
-  border-color: #334155 !important;
-}
-html.dark :deep(.ag-cell) {
-  border-color: #334155 !important;
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-paging-panel) {
-  background-color: #0f172a !important;
-  border-color: #334155 !important;
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-paging-button) {
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-paging-button:disabled) {
-  color: #64748b !important;
-}
-html.dark :deep(.ag-input-field-input) {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-filter-body) {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-}
-html.dark :deep(.ag-list-item) {
-  color: #e2e8f0 !important;
-}
-html.dark :deep(.ag-popup) {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-}
-</style>

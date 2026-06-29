@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 border border-gray-200 dark:border-slate-700"
+    class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700"
   >
     <!-- Top row: Search + Status + File Type -->
     <div class="flex items-center gap-3">
@@ -10,7 +10,7 @@
       <!-- Status Filter -->
       <select
         v-model="status"
-        class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
         @change="emit('fetch')"
       >
         <option value="">All Status</option>
@@ -23,7 +23,7 @@
       <!-- File Type Filter -->
       <select
         v-model="fileType"
-        class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
         @change="emit('fetch')"
       >
         <option value="">All Types</option>
@@ -45,7 +45,7 @@
       <!-- Date Range Filter -->
       <select
         v-model="dateRange"
-        class="px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
         @change="onDateRangeChange"
       >
         <option value="">All Time</option>
@@ -59,43 +59,36 @@
       <!-- Clear Filters -->
       <button
         v-if="hasActiveFilters"
-        class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+        class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
         title="Clear all filters"
         @click="emit('clear-filters')"
       >
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
+        <X class="w-4 h-4" />
       </button>
 
-      <div class="ml-auto text-sm text-gray-500 dark:text-gray-400">{{ totalCount }} files</div>
+      <div class="ml-auto text-sm text-slate-500 dark:text-slate-400">{{ totalCount }} files</div>
     </div>
 
     <!-- Custom Date Range Picker (shown when "Custom Range" is selected) -->
     <div
       v-if="dateRange === 'custom'"
-      class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
+      class="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
     >
       <div class="flex items-center gap-2">
-        <label class="text-sm text-gray-600 dark:text-gray-300">From:</label>
+        <label class="text-sm text-slate-600 dark:text-slate-300">From:</label>
         <input
           v-model="customFrom"
           type="date"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          class="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
           @change="emit('fetch')"
         />
       </div>
       <div class="flex items-center gap-2">
-        <label class="text-sm text-gray-600 dark:text-gray-300">To:</label>
+        <label class="text-sm text-slate-600 dark:text-slate-300">To:</label>
         <input
           v-model="customTo"
           type="date"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          class="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
           @change="emit('fetch')"
         />
       </div>
@@ -105,9 +98,9 @@
     <!-- Active Filters Summary -->
     <div
       v-if="hasActiveFilters"
-      class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-slate-600"
+      class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
     >
-      <span class="text-xs text-gray-500 dark:text-gray-400">Active filters:</span>
+      <span class="text-xs text-slate-500 dark:text-slate-400">Active filters:</span>
       <FilterChip
         v-if="search"
         :label="`Search: &quot;${search}&quot;`"
@@ -144,6 +137,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { X } from '@lucide/vue'
 import { getDateRangeLabel } from '@/utils/dateRange'
 import SearchInput from '@/components/common/SearchInput.vue'
 import FilterChip from '@/components/common/FilterChip.vue'

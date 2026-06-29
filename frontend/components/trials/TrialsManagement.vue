@@ -3,8 +3,8 @@
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Trials</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Trials</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">
           Run and manage information extraction trials
         </p>
       </div>
@@ -64,20 +64,7 @@
       @action="openCreateTrialModal"
     >
       <template #icon>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-12 w-12 text-gray-400 dark:text-gray-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-          />
-        </svg>
+        <ClipboardList class="h-12 w-12 text-slate-400 dark:text-slate-500" />
       </template>
     </EmptyState>
 
@@ -86,12 +73,12 @@
       <!-- Batch Actions -->
       <div class="flex justify-between items-center">
         <div class="flex items-center space-x-3">
-          <span class="text-sm text-gray-500 dark:text-gray-400">
+          <span class="text-sm text-slate-500 dark:text-slate-400">
             {{ totalTrials }} trial{{ totalTrials !== 1 ? 's' : '' }}
           </span>
 
           <div v-if="selectedTrials.length > 0" class="flex items-center space-x-2">
-            <span class="text-sm text-gray-700 dark:text-gray-300">
+            <span class="text-sm text-slate-700 dark:text-slate-300">
               {{ selectedTrials.length }} selected
             </span>
             <BaseButton
@@ -139,7 +126,7 @@
       <div v-if="trials.length < totalTrials" class="flex justify-center">
         <BaseButton
           variant="secondary"
-          class="font-semibold border-gray-200 dark:text-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700"
+          class="font-semibold border-slate-200 dark:text-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700"
           @click="loadMore"
           >Load more ({{ trials.length }}/{{ totalTrials }})</BaseButton
         >
@@ -180,7 +167,7 @@
       @rename="submitRename"
     />
     <BatchActionsModal
-      v-if="showBatchModal"
+      :open="showBatchModal"
       mode="trials"
       :action="batchAction"
       :documents="selectedTrials"
@@ -217,6 +204,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { debounce } from 'perfect-debounce'
 import { useToast } from 'vue-toastification'
+import { ClipboardList } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { documentsApi } from '@/services/documentsApi'
 import { schemasApi } from '@/services/schemasApi'

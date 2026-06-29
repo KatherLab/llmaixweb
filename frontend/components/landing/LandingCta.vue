@@ -10,48 +10,27 @@
     <div v-if="authStore.isAuthenticated" class="mb-8">
       <router-link
         to="/projects"
-        class="inline-flex items-center gap-2 transform rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-4 text-lg font-medium text-white shadow-lg transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:from-blue-600 hover:to-indigo-700"
+        class="inline-flex items-center gap-2 transform rounded-full bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-4 text-lg font-medium text-white shadow-lg transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:from-blue-600 hover:to-blue-700"
       >
         Go to Projects
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M13 7l5 5m0 0l-5 5m5-5H6"
-          ></path>
-        </svg>
+        <ArrowRight class="h-5 w-5" />
       </router-link>
     </div>
 
     <div v-else class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center mb-8">
       <router-link
         to="/register"
-        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-4 text-lg font-medium text-white shadow-lg transition hover:from-blue-600 hover:to-indigo-700 hover:shadow-xl"
+        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-4 text-lg font-medium text-white shadow-lg transition hover:from-blue-600 hover:to-blue-700 hover:shadow-xl"
       >
         Get Started
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M13 7l5 5m0 0l-5 5m5-5H6"
-          ></path>
-        </svg>
+        <ArrowRight class="h-5 w-5" />
       </router-link>
       <router-link
         to="/login"
         class="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm text-white px-8 py-4 text-lg font-medium border border-white/20 transition hover:bg-white/20 hover:border-white/30"
       >
         Login
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-          ></path>
-        </svg>
+        <LogIn class="h-5 w-5" />
       </router-link>
     </div>
 
@@ -75,6 +54,7 @@
 </template>
 
 <script setup>
+import { ArrowRight, LogIn } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()

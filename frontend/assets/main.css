@@ -1,7 +1,92 @@
-@import './base.css';
 @import 'tailwindcss';
+@import './ag-grid.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens (Tailwind v4 @theme).
+ *
+ * The app standardizes on ONE neutral (slate) and ONE accent (blue). These
+ * semantic tokens alias that palette so components can reference a name
+ * (`bg-surface`, `text-content`, `border-default`, `bg-primary`, `rounded-card`)
+ * instead of hardcoding a shade. `@theme inline` makes utilities reference the
+ * CSS variable, so the `.dark` overrides below switch them at runtime.
+ *
+ * Light values mirror the slate-50/100/200/700/900 + blue-600 palette already
+ * used across the app; dark values mirror slate-800/700/600 + blue-500.
+ */
+@theme inline {
+  /* Radius scale — collapses the md/lg/xl/2xl/3xl drift to two intent-based radii. */
+  --radius-card: 0.5rem; /* surfaces, tables, inputs (was rounded-lg) */
+  --radius-modal: 0.75rem; /* modals, dialogs, large containers (was rounded-xl) */
+
+  /* Semantic surfaces */
+  --color-surface: #ffffff; /* page/card background */
+  --color-surface-muted: #f8fafc; /* slate-50 — hover/zebra/subtle panels */
+  --color-surface-sunken: #f1f5f9; /* slate-100 — headers, wells */
+
+  /* Borders / dividers */
+  --color-default-border: #e2e8f0; /* slate-200 */
+  --color-strong-border: #cbd5e1; /* slate-300 */
+
+  /* Text */
+  --color-content: #0f172a; /* slate-900 — headings */
+  --color-content-muted: #475569; /* slate-600 — body */
+  --color-content-subtle: #94a3b8; /* slate-400 — placeholders, captions */
+
+  /* Accent (blue) */
+  --color-primary: #2563eb; /* blue-600 */
+  --color-primary-hover: #1d4ed8; /* blue-700 */
+  --color-primary-soft: #dbeafe; /* blue-100 — tinted backgrounds */
+  --color-ring: #3b82f6; /* blue-500 — focus rings */
+}
+
+/* Dark-mode overrides — AppLayout toggles `.dark` on <html>. */
+.dark {
+  --color-surface: #0f172a; /* slate-900 */
+  --color-surface-muted: #1e293b; /* slate-800 */
+  --color-surface-sunken: #1e293b; /* slate-800 */
+
+  --color-default-border: #334155; /* slate-700 */
+  --color-strong-border: #475569; /* slate-600 */
+
+  --color-content: #f1f5f9; /* slate-100 */
+  --color-content-muted: #cbd5e1; /* slate-300 */
+  --color-content-subtle: #64748b; /* slate-500 */
+
+  --color-primary: #3b82f6; /* blue-500 */
+  --color-primary-hover: #60a5fa; /* blue-400 */
+  --color-primary-soft: rgba(59, 130, 246, 0.15); /* blue-500 @ 15% */
+  --color-ring: #60a5fa; /* blue-400 */
+}
+
+/* Base element styles (moved here from the deleted Vue-scaffold base.css).
+   The app uses Tailwind utilities for all color; this only sets the global
+   typography baseline and the dark-mode color transition. */
+body {
+  min-height: 100vh;
+  transition:
+    color 0.5s,
+    background-color 0.5s;
+  line-height: 1.6;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-size: 15px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 /* Shared fade transition. Previously duplicated as <style scoped> in
    Login, Register, FirstAdminSetup, ProjectDetail and AppLayout. */

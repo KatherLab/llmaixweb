@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { Info } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -67,16 +68,9 @@ async function download() {
     @close="$emit('close')"
   >
     <div
-      class="mb-4 flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded px-3 py-2 border border-gray-100"
+      class="mb-4 flex items-center gap-2 text-xs text-slate-600 bg-slate-50 rounded px-3 py-2 border border-slate-100"
     >
-      <svg class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M13 16h-1v-4h-1m1 4v1m6-5a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
+      <Info class="w-4 h-4 text-blue-400" />
       <span v-if="isJsonZip">
         <strong>JSON (per-document):</strong> Downloads a <b>ZIP archive</b> with one JSON file per
         document.
@@ -101,10 +95,10 @@ async function download() {
     </div>
 
     <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Format</label>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Format</label>
       <select
         v-model="format"
-        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
       >
         <option value="json">JSON (per-document, ZIP)</option>
         <option value="csv">CSV (table, with optional files)</option>
@@ -112,17 +106,17 @@ async function download() {
     </div>
 
     <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Options</label>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Options</label>
       <label class="flex items-center text-sm">
         <input
           v-model="includeContent"
           type="checkbox"
-          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
         />
         <span class="ml-2"
           >Include document content
           <span
-            class="text-gray-400"
+            class="text-slate-400"
             title="If checked: you will also receive the original document text and files inside the ZIP."
           >
             (adds document text and source files)
@@ -131,7 +125,7 @@ async function download() {
       </label>
     </div>
 
-    <div v-if="format === 'csv'" class="mb-3 text-xs text-gray-500">
+    <div v-if="format === 'csv'" class="mb-3 text-xs text-slate-500">
       <span v-if="includeContent">
         Will include original files and full document text inside a ZIP.<br />
         <b>Note:</b> Download may be large if your trial contains many files.

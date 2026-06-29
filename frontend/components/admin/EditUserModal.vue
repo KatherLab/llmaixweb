@@ -9,8 +9,8 @@
   >
     <template #header>
       <div>
-        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit User</h3>
-        <p class="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Edit User</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           #{{ user?.id }} &middot; {{ user?.email }}
         </p>
       </div>
@@ -40,39 +40,39 @@
       <!-- === General Settings === -->
       <div>
         <h4
-          class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3"
+          class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3"
         >
           General
         </h4>
         <div class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-gray-600 dark:text-slate-300 mb-1"
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
               >Full Name</label
             >
             <input
               v-model="editForm.full_name"
               type="text"
-              class="block w-full px-4 py-2 text-sm border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
+              class="block w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
             />
           </div>
           <div>
-            <label class="block text-xs font-bold text-gray-600 dark:text-slate-300 mb-1"
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
               >Email</label
             >
             <input
               v-model="editForm.email"
               type="email"
-              class="block w-full px-4 py-2 text-sm border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
+              class="block w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
             />
           </div>
           <div class="flex gap-4">
             <div class="flex-1">
-              <label class="block text-xs font-bold text-gray-600 dark:text-slate-300 mb-1"
+              <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
                 >Role</label
               >
               <select
                 v-model="editForm.role"
-                class="block w-full px-4 py-2 text-sm border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
+                class="block w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
                 :disabled="user?.id === currentUserId"
               >
                 <option value="user">User</option>
@@ -86,7 +86,7 @@
               </p>
             </div>
             <div class="flex-1">
-              <label class="block text-xs font-bold text-gray-600 dark:text-slate-300 mb-1"
+              <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
                 >Status</label
               >
               <div class="flex items-center gap-3 mt-2">
@@ -94,7 +94,7 @@
                   type="button"
                   class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
                   :class="[
-                    editForm.is_active ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600',
+                    editForm.is_active ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600',
                     user?.id === currentUserId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
                   ]"
                   @click="toggleEditUserActive"
@@ -121,12 +121,12 @@
       </div>
 
       <!-- Divider -->
-      <hr class="border-gray-100 dark:border-slate-800" />
+      <hr class="border-slate-100 dark:border-slate-800" />
 
       <!-- === Set Password === -->
       <div>
         <h4
-          class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3"
+          class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3"
         >
           Set Password
         </h4>
@@ -135,14 +135,14 @@
             <input
               v-model="editPassword"
               type="password"
-              class="block w-full px-4 py-2 text-sm border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
+              class="block w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
               placeholder="Enter new password (optional)"
             />
           </div>
           <button
             type="button"
             :disabled="!editPassword || isSettingPassword"
-            class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 dark:bg-indigo-500 rounded-lg shadow-sm hover:bg-indigo-700 dark:hover:bg-indigo-600 transition disabled:opacity-50"
+            class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 dark:bg-blue-500 rounded-lg shadow-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition disabled:opacity-50"
             @click="setPasswordForEditUser"
           >
             {{ isSettingPassword ? '...' : 'Set' }}
@@ -151,26 +151,14 @@
       </div>
 
       <!-- Divider -->
-      <hr class="border-gray-100 dark:border-slate-800" />
+      <hr class="border-slate-100 dark:border-slate-800" />
 
       <!-- === Danger Zone === -->
       <div
         class="p-4 border border-red-200 dark:border-red-900 rounded-xl bg-red-50/50 dark:bg-red-900/20"
       >
         <div class="flex items-start gap-3">
-          <svg
-            class="w-5 h-5 text-red-500 dark:text-red-400 shrink-0 mt-0.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
+          <AlertTriangle class="w-5 h-5 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
           <div class="flex-1">
             <h4 class="text-sm font-bold text-red-800 dark:text-red-300">Danger Zone</h4>
             <p class="text-xs text-red-600 dark:text-red-400 mt-1">
@@ -211,6 +199,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { AlertTriangle } from '@lucide/vue'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'

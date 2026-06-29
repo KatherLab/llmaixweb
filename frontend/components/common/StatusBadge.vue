@@ -27,7 +27,7 @@ const props = defineProps({
   },
   // When set, uses the generic color pill map (dark-mode aware) instead of the
   // status map. Use for semantic non-status pills (counts, "active", match/
-  // mismatch, …). Values: blue|green|yellow|red|purple|indigo|teal|cyan|orange|gray
+  // mismatch, …). Values: blue|green|yellow|red|purple|teal|cyan|orange|gray
   color: {
     type: String,
     default: '',

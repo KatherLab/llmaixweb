@@ -1,17 +1,17 @@
 <template>
   <div class="w-full max-w-md mx-auto">
     <div class="mb-8 text-center">
-      <h1 class="text-4xl font-extrabold text-gray-900 dark:text-slate-100 tracking-tight">
+      <h1 class="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
         LLMAIx-v2
       </h1>
-      <p class="text-base text-gray-500 dark:text-slate-400 mt-2">
+      <p class="text-base text-slate-500 dark:text-slate-400 mt-2">
         Extract information from documents using LLMs.
       </p>
     </div>
     <!-- Registration Closed Message -->
     <div
       v-if="!allowRegister && !isLoadingSettings"
-      class="p-8 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-center text-gray-500 dark:text-slate-400"
+      class="p-8 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-center text-slate-500 dark:text-slate-400"
     >
       Registration is currently closed. Please use an invitation link.
     </div>
@@ -19,7 +19,7 @@
     <!-- Registration Form -->
     <form
       v-else
-      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm flex flex-col gap-5"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm flex flex-col gap-5"
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >

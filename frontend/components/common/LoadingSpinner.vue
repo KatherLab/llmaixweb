@@ -70,7 +70,7 @@ const colorClass = computed(() => {
     case 'white':
       return 'border-white'
     case 'gray':
-      return 'border-gray-400'
+      return 'border-slate-400'
     case 'current':
       return 'border-current'
     default:

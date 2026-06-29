@@ -2,32 +2,17 @@
   <div class="w-full max-w-md mx-auto py-10">
     <div class="mb-8 text-center">
       <div class="flex justify-center mb-2">
-        <svg
-          class="w-14 h-14 text-blue-700 dark:text-blue-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 48 48"
-          aria-hidden="true"
-        >
-          <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="4" fill="#e6f0ff" />
-          <path
-            d="M18 30c0-3.3137 2.6863-6 6-6s6 2.6863 6 6"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-          />
-          <circle cx="24" cy="19" r="4" fill="currentColor" />
-        </svg>
+        <CircleUser class="w-14 h-14 text-blue-700 dark:text-blue-400" aria-hidden="true" />
       </div>
       <h1 class="text-3xl font-extrabold text-blue-700 dark:text-blue-400 mb-1">
         Welcome to LLMAIx-v2
       </h1>
-      <p class="text-base text-gray-500 dark:text-slate-400">
+      <p class="text-base text-slate-500 dark:text-slate-400">
         First-time setup: Create your admin account
       </p>
     </div>
     <form
-      class="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl p-8 shadow-lg flex flex-col gap-5"
+      class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl p-8 shadow-lg flex flex-col gap-5"
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >
@@ -72,7 +57,7 @@
         <ErrorBanner v-if="error" :message="error" class="text-center" />
       </transition>
     </form>
-    <div class="text-center text-gray-400 dark:text-slate-500 text-xs mt-8">
+    <div class="text-center text-slate-400 dark:text-slate-500 text-xs mt-8">
       Powered by LLMAIx (v2)
     </div>
   </div>
@@ -81,6 +66,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { CircleUser } from '@lucide/vue'
 import { authApi } from '@/services/authApi'
 import { usersApi } from '@/services/usersApi'
 import { useAuthStore } from '@/stores/auth'

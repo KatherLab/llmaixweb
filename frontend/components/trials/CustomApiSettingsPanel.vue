@@ -1,5 +1,5 @@
 <template>
-  <div class="mt-2 bg-gray-50 border rounded-lg p-4 grid gap-6">
+  <div class="mt-2 bg-slate-50 border rounded-lg p-4 grid gap-6">
     <FormField
       v-model="apiKey"
       label="API Key"

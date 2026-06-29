@@ -14,8 +14,8 @@
               <span class="text-slate-300">PDF documents with text or scanned images</span>
             </div>
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                <span class="text-xs font-bold text-indigo-400">DOC</span>
+              <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <span class="text-xs font-bold text-blue-400">DOC</span>
               </div>
               <span class="text-slate-300">Word documents (DOCX, DOC)</span>
             </div>
@@ -50,7 +50,7 @@
       <h3 class="text-2xl font-bold text-white mb-4">Advanced Text Extraction</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
-          <h4 class="text-lg font-semibold text-indigo-400 mb-3">OCR Methods</h4>
+          <h4 class="text-lg font-semibold text-blue-400 mb-3">OCR Methods</h4>
           <div class="space-y-3">
             <div
               v-for="method in ocrMethods"
@@ -63,7 +63,7 @@
           </div>
         </div>
         <div>
-          <h4 class="text-lg font-semibold text-indigo-400 mb-3">Document Parsers</h4>
+          <h4 class="text-lg font-semibold text-blue-400 mb-3">Document Parsers</h4>
           <div class="space-y-3">
             <div
               v-for="parser in documentParsers"
@@ -162,35 +162,19 @@
                   class="w-16 h-16 mx-auto mb-2 rounded-lg flex items-center justify-center"
                   :class="item.bg"
                 >
-                  <svg
+                  <component
+                    :is="item.icon"
                     v-if="item.icon"
                     class="w-8 h-8"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
                     :class="item.iconClass"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      :d="item.icon"
-                    ></path>
-                  </svg>
+                  />
                   <span v-else class="text-2xl font-mono" :class="item.iconClass">{}</span>
                 </div>
                 <p class="text-sm text-slate-400">{{ item.label }}</p>
               </div>
               <div v-if="index < extractionFlow.length - 1" class="flex-1 flex items-center">
                 <div class="w-full h-0.5" :class="flowArrows[index].line"></div>
-                <svg
-                  class="w-6 h-6 -ml-1"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                  :class="flowArrows[index].arrowClass"
-                >
-                  <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
-                </svg>
+                <ChevronRight class="w-6 h-6 -ml-1" :class="flowArrows[index].arrowClass" />
               </div>
             </template>
           </div>
@@ -278,19 +262,13 @@
       class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
       @click="$emit('close')"
     >
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M6 18L18 6M6 6l12 12"
-        ></path>
-      </svg>
+      <X class="w-6 h-6" />
     </button>
   </div>
 </template>
 
 <script setup>
+import { FileText, MessageSquare, Database, Zap, ChevronRight, X } from '@lucide/vue'
 import CheckIcon from '@/components/landing/CheckIcon.vue'
 
 defineProps({
@@ -350,25 +328,25 @@ const extractionFlow = [
   {
     label: 'Document',
     bg: 'bg-blue-500/20',
-    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+    icon: FileText,
     iconClass: 'text-blue-400',
   },
   {
     label: 'Prompt',
-    bg: 'bg-indigo-500/20',
-    icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4z',
-    iconClass: 'text-indigo-400',
+    bg: 'bg-blue-500/20',
+    icon: MessageSquare,
+    iconClass: 'text-blue-400',
   },
   {
     label: 'Schema',
     bg: 'bg-purple-500/20',
-    icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4',
+    icon: Database,
     iconClass: 'text-purple-400',
   },
   {
     label: 'LLM API',
     bg: 'bg-emerald-500/20',
-    icon: 'M13 10V3L4 14h7v7l9-11h-7z',
+    icon: Zap,
     iconClass: 'text-emerald-400',
   },
   {
@@ -380,8 +358,8 @@ const extractionFlow = [
 ]
 
 const flowArrows = [
-  { line: 'bg-gradient-to-r from-blue-500 to-indigo-500', arrowClass: 'text-indigo-500' },
-  { line: 'bg-gradient-to-r from-indigo-500 to-purple-500', arrowClass: 'text-purple-500' },
+  { line: 'bg-gradient-to-r from-blue-500 to-blue-500', arrowClass: 'text-blue-500' },
+  { line: 'bg-gradient-to-r from-blue-500 to-purple-500', arrowClass: 'text-purple-500' },
   { line: 'bg-gradient-to-r from-purple-500 to-emerald-500', arrowClass: 'text-emerald-500' },
   { line: 'bg-gradient-to-r from-emerald-500 to-teal-500', arrowClass: 'text-teal-500' },
 ]

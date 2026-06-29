@@ -7,27 +7,27 @@
     body-class="p-6"
     @close="$emit('close')"
   >
-    <h3 class="text-lg font-medium text-gray-900 mb-4">
+    <h3 class="text-lg font-medium text-slate-900 mb-4">
       Add {{ advancedMode ? 'Property' : 'Field' }}
     </h3>
 
     <form @submit.prevent="submit">
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700">
+          <label class="block text-sm font-medium text-slate-700">
             {{ advancedMode ? 'Property Name' : 'Field Name' }}
           </label>
           <input
             ref="propertyNameInput"
             v-model="form.name"
-            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="e.g., patient_name"
             required
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700">
+          <label class="block text-sm font-medium text-slate-700">
             {{ advancedMode ? 'Type' : 'Field Type' }}
           </label>
           <div class="mt-2 grid grid-cols-2 gap-2">
@@ -39,7 +39,7 @@
                 'relative rounded-lg border p-4 flex flex-col items-center cursor-pointer focus:outline-none transition-all',
                 form.type === type.value
                   ? 'border-blue-500 ring-2 ring-blue-500 bg-blue-50'
-                  : 'border-gray-300 hover:border-gray-400',
+                  : 'border-slate-300 hover:border-slate-400',
               ]"
               @click="form.type = type.value"
             >
@@ -52,20 +52,20 @@
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700"> Display Name </label>
+          <label class="block text-sm font-medium text-slate-700"> Display Name </label>
           <input
             v-model="form.title"
-            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="e.g., Patient Name"
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700"> Description </label>
+          <label class="block text-sm font-medium text-slate-700"> Description </label>
           <textarea
             v-model="form.description"
             rows="2"
-            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="Brief description of this field"
           />
         </div>

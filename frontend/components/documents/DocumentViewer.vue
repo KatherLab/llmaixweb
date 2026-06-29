@@ -1,92 +1,99 @@
 <template>
-  <Teleport to="body">
-    <div class="fixed inset-0 z-50 overflow-hidden">
-      <div
-        class="absolute inset-0 bg-black/30 backdrop-blur-md transition-all"
-        @click="$emit('close')"
-      ></div>
+  <BaseModal
+    :open="open"
+    placement="fullscreen"
+    body-class="!p-0 flex flex-col h-full"
+    @close="$emit('close')"
+  >
+    <!-- Header -->
+    <DocumentViewerHeader
+      :document="document"
+      :has-version-history="hasVersionHistory"
+      :show-version-history="showVersionHistory"
+      :version-count="versionCount"
+      :has-displayable-original-file="hasDisplayableOriginalFile"
+      :has-text="hasText"
+      :view-mode-label="viewModeLabel"
+      @close="$emit('close')"
+      @toggle-version-history="showVersionHistory = !showVersionHistory"
+      @toggle-view="toggleView"
+      @download="downloadDocument"
+    />
 
-      <div
-        class="absolute inset-4 md:inset-8 bg-white rounded-lg shadow-2xl flex flex-col overflow-hidden"
-      >
-        <!-- Header -->
-        <DocumentViewerHeader
-          :document="document"
-          :has-version-history="hasVersionHistory"
-          :show-version-history="showVersionHistory"
-          :version-count="versionCount"
-          :has-displayable-original-file="hasDisplayableOriginalFile"
-          :has-text="hasText"
-          :view-mode-label="viewModeLabel"
-          @close="$emit('close')"
-          @toggle-version-history="showVersionHistory = !showVersionHistory"
-          @toggle-view="toggleView"
-          @download="downloadDocument"
+    <!-- Main Content -->
+    <div class="flex-1 flex overflow-hidden relative">
+      <div class="flex-1 overflow-auto">
+        <!-- Text View -->
+        <DocumentTextView
+          v-if="viewMode === 'text'"
+          :text-loading="textLoading"
+          :safe-markdown="safeMarkdown"
         />
-
-        <!-- Main Content -->
-        <div class="flex-1 flex overflow-hidden relative">
-          <div class="flex-1 overflow-auto">
-            <!-- Text View -->
-            <DocumentTextView
-              v-if="viewMode === 'text'"
-              :text-loading="textLoading"
-              :safe-markdown="safeMarkdown"
-            />
-            <!-- PDF / Image View -->
-            <DocumentFilePreview
-              v-else-if="
-                (viewMode === 'pdf' && originalPdfUrl) || (viewMode === 'image' && originalImageUrl)
-              "
-              :view-mode="viewMode"
-              :original-pdf-url="originalPdfUrl"
-              :original-image-url="originalImageUrl"
-            />
-            <!-- Side-by-side Compare View -->
-            <DocumentCompareView
-              v-else-if="viewMode === 'compare'"
-              :has-displayable-original-file="hasDisplayableOriginalFile"
-              :original-pdf-url="originalPdfUrl"
-              :original-image-url="originalImageUrl"
-              :original-file-type="originalFileType"
-              :safe-markdown="safeMarkdown"
-            />
-          </div>
-
-          <!-- Version History Sidebar (overlays on top of Document Info when shown) -->
-          <VersionHistorySidebar
-            v-if="showVersionHistory"
-            :loading-versions="loadingVersions"
-            :versions="versions"
-            :selected-version="selectedVersion"
-            :version-count="versionCount"
-            @close="showVersionHistory = false"
-            @select-version="selectVersion"
-          />
-
-          <!-- Sidebar -->
-          <DocumentInfoSidebar
-            :document="document"
-            :selected-version="selectedVersion"
-            :full-text="fullText"
-            @restore-version="restoreVersion"
-            @reprocess="(payload) => emit('reprocess', payload)"
-          />
-        </div>
+        <!-- PDF / Image View -->
+        <DocumentFilePreview
+          v-else-if="
+            (viewMode === 'pdf' && originalPdfUrl) || (viewMode === 'image' && originalImageUrl)
+          "
+          :view-mode="viewMode"
+          :original-pdf-url="originalPdfUrl"
+          :original-image-url="originalImageUrl"
+        />
+        <!-- Side-by-side Compare View -->
+        <DocumentCompareView
+          v-else-if="viewMode === 'compare'"
+          :has-displayable-original-file="hasDisplayableOriginalFile"
+          :original-pdf-url="originalPdfUrl"
+          :original-image-url="originalImageUrl"
+          :original-file-type="originalFileType"
+          :safe-markdown="safeMarkdown"
+        />
       </div>
+
+      <!-- Version History Sidebar (overlays on top of Document Info when shown) -->
+      <VersionHistorySidebar
+        v-if="showVersionHistory"
+        :loading-versions="loadingVersions"
+        :versions="versions"
+        :selected-version="selectedVersion"
+        :version-count="versionCount"
+        @close="showVersionHistory = false"
+        @select-version="selectVersion"
+      />
+
+      <!-- Sidebar -->
+      <DocumentInfoSidebar
+        :document="document"
+        :selected-version="selectedVersion"
+        :full-text="fullText"
+        @restore-version="restoreVersion"
+        @reprocess="(payload) => emit('reprocess', payload)"
+      />
     </div>
-  </Teleport>
+
+    <!-- Restore archived version confirmation -->
+    <ConfirmationDialog
+      :open="showRestoreConfirm"
+      title="Restore archived version?"
+      message="This will create a new latest version with the same content as the selected archived version."
+      confirm-text="Restore"
+      cancel-text="Cancel"
+      confirm-variant="primary"
+      @confirm="confirmRestore"
+      @cancel="showRestoreConfirm = false"
+    />
+  </BaseModal>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { documentsApi } from '@/services/documentsApi'
 import { filesApi } from '@/services/filesApi'
 import { useToast } from 'vue-toastification'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useFileDownload } from '@/composables/useFileDownload'
-import { useScrollLock } from '@/composables/useScrollLock'
+import BaseModal from '@/components/common/BaseModal.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import DocumentViewerHeader from './DocumentViewerHeader.vue'
 import DocumentTextView from './DocumentTextView.vue'
 import DocumentFilePreview from './DocumentFilePreview.vue'
@@ -95,6 +102,7 @@ import VersionHistorySidebar from './VersionHistorySidebar.vue'
 import DocumentInfoSidebar from './DocumentInfoSidebar.vue'
 
 const props = defineProps({
+  open: { type: Boolean, required: true },
   document: { type: Object, required: true },
   projectId: { type: [String, Number], required: true },
 })
@@ -102,8 +110,6 @@ const props = defineProps({
 const emit = defineEmits(['close', 'reprocess', 'update-document'])
 const toast = useToast()
 const { downloadBlob } = useFileDownload()
-// Ref-counted scroll lock — unlocks only when no viewer/modal holds the lock.
-useScrollLock({ autoLock: true })
 const viewMode = ref('text')
 const originalPdfUrl = ref('')
 const originalImageUrl = ref('')
@@ -293,15 +299,19 @@ const selectVersion = (version) => {
   emit('update-document', version)
 }
 
-// Restore an archived version (creates a new latest version with same content)
-const restoreVersion = async (version) => {
-  if (
-    !confirm(
-      'Restore this archived version? This will create a new latest version with the same content.',
-    )
-  ) {
-    return
-  }
+// Restore an archived version (creates a new latest version with same content).
+// Confirms via the shared ConfirmationDialog instead of a browser confirm().
+const showRestoreConfirm = ref(false)
+const pendingRestoreVersion = ref(null)
+const restoreVersion = (version) => {
+  pendingRestoreVersion.value = version
+  showRestoreConfirm.value = true
+}
+const confirmRestore = () => {
+  const version = pendingRestoreVersion.value
+  showRestoreConfirm.value = false
+  pendingRestoreVersion.value = null
+  if (!version) return
 
   try {
     // We need to reprocess the original file with the same config to create a new version
@@ -314,7 +324,15 @@ const restoreVersion = async (version) => {
   }
 }
 
-onMounted(async () => {
+// Load the full document (text + original-file preview + versions). Called on
+// each open since the component stays mounted to enable the close transition.
+async function loadDocument() {
+  // Reset preview URLs from any previously viewed document.
+  if (originalPdfUrl.value) window.URL.revokeObjectURL(originalPdfUrl.value)
+  if (originalImageUrl.value) window.URL.revokeObjectURL(originalImageUrl.value)
+  originalPdfUrl.value = ''
+  originalImageUrl.value = ''
+
   try {
     // Fetch the full document text (list items no longer carry `text`).
     await fetchFullText(props.document.id)
@@ -339,12 +357,30 @@ onMounted(async () => {
     toast.error('Failed to load document preview.')
     console.error(error)
   }
-})
+}
 
-// Watch for document changes and refetch versions + text
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      showVersionHistory.value = false
+      selectedVersion.value = null
+      loadDocument()
+    } else if (originalPdfUrl.value || originalImageUrl.value) {
+      if (originalPdfUrl.value) window.URL.revokeObjectURL(originalPdfUrl.value)
+      if (originalImageUrl.value) window.URL.revokeObjectURL(originalImageUrl.value)
+      originalPdfUrl.value = ''
+      originalImageUrl.value = ''
+    }
+  },
+  { immediate: true },
+)
+
+// Watch for document changes while open and refetch versions + text
 watch(
   () => props.document?.id,
   async (newId) => {
+    if (!props.open) return
     fetchFullText(newId)
     await fetchVersions()
   },

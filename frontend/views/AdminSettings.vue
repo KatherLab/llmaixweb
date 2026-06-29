@@ -1,10 +1,7 @@
 <template>
   <div>
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
-      <svg class="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" />
-        <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" />
-      </svg>
+      <CircleDot class="w-7 h-7 text-blue-600" />
       App Settings
     </h2>
 
@@ -16,16 +13,16 @@
       <div
         v-for="(val, key) in filteredSettings"
         :key="key"
-        class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center py-2 border-b border-gray-100 dark:border-slate-800"
+        class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center py-2 border-b border-slate-100 dark:border-slate-800"
       >
         <!-- Label & Description -->
         <div class="font-semibold flex flex-col">
           <span>{{ val.label }}</span>
-          <span class="text-xs text-gray-400">{{ val.description }}</span>
+          <span class="text-xs text-slate-400">{{ val.description }}</span>
         </div>
 
         <!-- Value Display -->
-        <div class="text-xs text-gray-500 break-all">
+        <div class="text-xs text-slate-500 break-all">
           <template v-if="val.secret">
             <span v-if="val.is_set" class="text-green-700 dark:text-green-400">Set</span>
             <span v-else class="text-red-500">Not Set</span>
@@ -43,19 +40,9 @@
         <div>
           <!-- Read-only: .env only -->
           <template v-if="val.readonly">
-            <div class="text-gray-400 flex flex-col gap-1">
+            <div class="text-slate-400 flex flex-col gap-1">
               <span class="flex items-center gap-1">
-                <svg
-                  class="w-4 h-4 mr-1 text-gray-400 inline-block"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke="currentColor"
-                    stroke-width="2"
-                    d="M6.5 11V7a5.5 5.5 0 0 1 11 0v4m-13 7.3V15a2.5 2.5 0 0 1 2.5-2.5h11A2.5 2.5 0 0 1 20.5 15v3.3c0 .71-.58 1.29-1.29 1.29H7.79c-.71 0-1.29-.58-1.29-1.29z"
-                  />
-                </svg>
+                <Lock class="w-4 h-4 mr-1 text-slate-400 inline-block" />
                 Set in <code>.env</code>
               </span>
               <span class="text-xs"
@@ -89,7 +76,7 @@
                   v-model="secretDraft[key]"
                   type="password"
                   autocomplete="off"
-                  class="rounded-lg px-3 py-2 border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-white flex-1"
+                  class="rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white flex-1"
                   placeholder="Enter new value"
                 />
                 <BaseButton type="button" variant="primary" size="sm" @click="saveSecret(key)">
@@ -127,7 +114,7 @@
               <input
                 v-model.number="draft[key]"
                 type="number"
-                class="rounded-lg px-3 py-2 border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-300 flex-1"
+                class="rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-300 flex-1"
               />
               <button
                 v-if="val.overridden"
@@ -145,7 +132,7 @@
               <input
                 v-model="draft[key]"
                 type="text"
-                class="rounded-lg px-3 py-2 border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-300 flex-1"
+                class="rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-300 flex-1"
               />
               <button
                 v-if="val.overridden"
@@ -165,7 +152,7 @@
         </BaseButton>
         <BaseButton
           variant="secondary"
-          class="dark:bg-slate-800 dark:text-gray-200 dark:border-slate-700 dark:hover:bg-slate-700"
+          class="dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700"
           @click="resetDraft"
         >
           Reset
@@ -182,6 +169,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { CircleDot, Lock } from '@lucide/vue'
 import { adminApi } from '@/services/adminApi'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'

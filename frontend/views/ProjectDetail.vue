@@ -1,10 +1,10 @@
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-gray-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800"
+    class="min-h-screen bg-gradient-to-br from-slate-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800"
   >
     <!-- Ultra-Compact Single-Row Header -->
     <header
-      class="sticky top-0 z-30 bg-white/70 dark:bg-slate-900/70 shadow-md backdrop-blur-lg border-b border-gray-200/50 dark:border-slate-800/50 transition-all"
+      class="sticky top-0 z-30 bg-white/70 dark:bg-slate-900/70 shadow-md backdrop-blur-lg border-b border-slate-200/50 dark:border-slate-800/50 transition-all"
     >
       <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="flex items-center justify-between h-12">
@@ -12,20 +12,13 @@
           <div class="flex items-center gap-2.5 min-w-0 flex-shrink-0">
             <RouterLink
               to="/projects"
-              class="flex-shrink-0 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              class="flex-shrink-0 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
               aria-label="Back to projects"
             >
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
+              <ChevronLeft class="w-5 h-5" />
             </RouterLink>
             <h1
-              class="text-lg font-semibold text-gray-900 dark:text-white truncate max-w-[180px] sm:max-w-[220px] md:max-w-[300px]"
+              class="text-lg font-semibold text-slate-900 dark:text-white truncate max-w-[180px] sm:max-w-[220px] md:max-w-[300px]"
             >
               {{ project.name }}
             </h1>
@@ -40,7 +33,7 @@
               :class="[
                 currentStep === step.id
                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-slate-800 dark:hover:text-gray-200',
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200',
               ]"
               @click="handleStepChange(step.id)"
             >
@@ -50,17 +43,11 @@
 
           <!-- Right: Settings button -->
           <button
-            class="flex-shrink-0 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-slate-800 rounded-lg transition-all"
+            class="flex-shrink-0 p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 rounded-lg transition-all"
             aria-label="Project Settings"
             @click="showSettingsModal = true"
           >
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                clip-rule="evenodd"
-              />
-            </svg>
+            <Settings class="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -70,7 +57,7 @@
       <!-- Loading, Error, Main Content -->
       <div v-if="isLoading" class="flex flex-col items-center py-24">
         <LoadingSpinner size="large" />
-        <span class="mt-4 text-gray-400 dark:text-gray-500 text-lg">Loading project...</span>
+        <span class="mt-4 text-slate-400 dark:text-slate-500 text-lg">Loading project...</span>
       </div>
 
       <ErrorBanner v-else-if="error" :message="error" class="mb-4 rounded-xl" />
@@ -137,6 +124,7 @@
 
 <script setup>
 import { ref, computed, onMounted, provide, watch } from 'vue'
+import { ChevronLeft, Settings } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { projectsApi } from '@/services/projectsApi'
 import FilesAndProcessing from '@/components/files/FilesAndProcessing.vue'

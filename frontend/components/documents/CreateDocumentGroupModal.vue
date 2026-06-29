@@ -1,223 +1,187 @@
 <template>
-  <teleport to="body">
-    <transition name="fade">
-      <div
-        v-if="visible"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md"
-        @click="handleBackgroundClick"
-      >
-        <!-- Modal Content -->
-        <div
-          class="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-200"
-          @click.stop
+  <BaseModal :open="visible" size="lg" @close="tryClose">
+    <template #header>
+      <h3 class="text-lg font-semibold text-slate-900">
+        {{ group ? 'Edit Document Group' : 'Create Document Group' }}
+      </h3>
+    </template>
+
+    <!-- Body -->
+    <!-- Group Name -->
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-slate-700 mb-1">
+        Group Name <span class="text-red-500">*</span>
+      </label>
+      <input
+        v-model="formData.name"
+        type="text"
+        class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        placeholder="e.g., Q4 Financial Reports"
+      />
+    </div>
+
+    <!-- Description -->
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
+      <textarea
+        v-model="formData.description"
+        rows="3"
+        class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        placeholder="Describe the purpose of this document group..."
+      />
+    </div>
+
+    <!-- Tags -->
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-slate-700 mb-1">Tags</label>
+      <div class="flex flex-wrap gap-2 mb-2">
+        <StatusBadge
+          v-for="(tag, index) in formData.tags"
+          :key="index"
+          color="blue"
+          class="px-3 py-1 text-sm"
         >
-          <!-- Header -->
-          <div
-            class="px-6 py-4 border-b bg-gray-50 rounded-t-2xl flex justify-between items-center"
+          {{ tag }}
+          <BaseButton
+            variant="link"
+            tone="blue"
+            class="ml-2"
+            aria-label="Remove tag"
+            @click="removeTag(index)"
           >
-            <h3 class="text-xl font-semibold text-gray-900">
-              {{ group ? 'Edit Document Group' : 'Create Document Group' }}
-            </h3>
-            <button
-              class="text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Close"
-              @click="tryClose"
-            >
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
+            <X class="h-3 w-3" aria-hidden="true" />
+          </BaseButton>
+        </StatusBadge>
+      </div>
+      <div class="flex gap-2">
+        <input
+          v-model="newTag"
+          type="text"
+          class="flex-1 border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Add a tag..."
+          @keyup.enter="addTag"
+        />
+        <BaseButton :disabled="!newTag.trim()" variant="primary" @click="addTag"> Add </BaseButton>
+      </div>
+    </div>
 
-          <!-- Body -->
-          <div class="p-6 overflow-y-auto flex-1">
-            <!-- Group Name -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                Group Name <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="formData.name"
-                type="text"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="e.g., Q4 Financial Reports"
-              />
-            </div>
+    <!-- Document Selection -->
+    <div class="mb-4">
+      <div class="flex justify-between items-center mb-2">
+        <label class="block text-sm font-medium text-slate-700">
+          Select Documents <span class="text-red-500">*</span>
+        </label>
+        <span class="text-sm text-slate-500">
+          {{ selectedCount }} selected
+          <span v-if="loadingExisting" class="text-slate-400">(loading existing…)</span>
+        </span>
+      </div>
 
-            <!-- Description -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                v-model="formData.description"
-                rows="3"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Describe the purpose of this document group..."
-              />
-            </div>
+      <!-- Search (server-side) -->
+      <div class="flex gap-2 mb-2">
+        <SearchInput
+          v-model="searchTerm"
+          placeholder="Search documents..."
+          @input="onSearchInput"
+        />
+      </div>
 
-            <!-- Tags -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-              <div class="flex flex-wrap gap-2 mb-2">
-                <StatusBadge
-                  v-for="(tag, index) in formData.tags"
-                  :key="index"
-                  color="blue"
-                  class="px-3 py-1 text-sm"
-                >
-                  {{ tag }}
-                  <BaseButton
-                    variant="link"
-                    tone="blue"
-                    class="ml-2"
-                    aria-label="Remove tag"
-                    @click="removeTag(index)"
-                  >
-                    <svg
-                      class="h-3 w-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </BaseButton>
-                </StatusBadge>
+      <!-- Document List -->
+      <div class="border rounded-md overflow-hidden max-h-64 overflow-y-auto">
+        <div v-if="searchLoading" class="p-4 text-center text-slate-500">Searching…</div>
+        <div v-else-if="searchResults.length === 0" class="p-4 text-center text-slate-500">
+          No documents found
+        </div>
+        <div v-else>
+          <div
+            v-for="doc in searchResults"
+            :key="doc.id"
+            :class="[
+              'p-3 border-b last:border-b-0 cursor-pointer hover:bg-slate-50 flex items-center',
+              { 'bg-blue-50': isSelected(doc.id) },
+            ]"
+            @click="toggleDocument(doc.id)"
+          >
+            <input
+              type="checkbox"
+              :checked="isSelected(doc.id)"
+              class="mr-3"
+              readonly
+              @click.stop
+            />
+            <div class="flex-1">
+              <div class="font-medium text-sm">
+                {{ doc.original_file?.file_name || `Document #${doc.id}` }}
               </div>
-              <div class="flex gap-2">
-                <input
-                  v-model="newTag"
-                  type="text"
-                  class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add a tag..."
-                  @keyup.enter="addTag"
-                />
-                <BaseButton :disabled="!newTag.trim()" variant="primary" @click="addTag">
-                  Add
-                </BaseButton>
+              <div class="text-xs text-slate-500">
+                Config: {{ doc.preprocessing_config?.name || 'N/A' }} • Created:
+                {{ formatDate(doc.created_at) }}
               </div>
             </div>
-
-            <!-- Document Selection -->
-            <div class="mb-4">
-              <div class="flex justify-between items-center mb-2">
-                <label class="block text-sm font-medium text-gray-700">
-                  Select Documents <span class="text-red-500">*</span>
-                </label>
-                <span class="text-sm text-gray-500">
-                  {{ selectedCount }} selected
-                  <span v-if="loadingExisting" class="text-gray-400">(loading existing…)</span>
-                </span>
-              </div>
-
-              <!-- Search (server-side) -->
-              <div class="flex gap-2 mb-2">
-                <SearchInput
-                  v-model="searchTerm"
-                  placeholder="Search documents..."
-                  @input="onSearchInput"
-                />
-              </div>
-
-              <!-- Document List -->
-              <div class="border rounded-md overflow-hidden max-h-64 overflow-y-auto">
-                <div v-if="searchLoading" class="p-4 text-center text-gray-500">Searching…</div>
-                <div v-else-if="searchResults.length === 0" class="p-4 text-center text-gray-500">
-                  No documents found
-                </div>
-                <div v-else>
-                  <div
-                    v-for="doc in searchResults"
-                    :key="doc.id"
-                    :class="[
-                      'p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 flex items-center',
-                      { 'bg-blue-50': isSelected(doc.id) },
-                    ]"
-                    @click="toggleDocument(doc.id)"
-                  >
-                    <input
-                      type="checkbox"
-                      :checked="isSelected(doc.id)"
-                      class="mr-3"
-                      readonly
-                      @click.stop
-                    />
-                    <div class="flex-1">
-                      <div class="font-medium text-sm">
-                        {{ doc.original_file?.file_name || `Document #${doc.id}` }}
-                      </div>
-                      <div class="text-xs text-gray-500">
-                        Config: {{ doc.preprocessing_config?.name || 'N/A' }} • Created:
-                        {{ formatDate(doc.created_at) }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Pagination + bulk actions -->
-              <div class="flex items-center justify-between gap-2 mt-2">
-                <div class="flex gap-2">
-                  <BaseButton variant="link" tone="blue" class="text-sm" @click="selectAll">
-                    Select All Visible
-                  </BaseButton>
-                  <span class="text-gray-300">|</span>
-                  <BaseButton variant="link" tone="blue" class="text-sm" @click="clearSelection">
-                    Clear Selection
-                  </BaseButton>
-                </div>
-                <div v-if="searchTotalPages > 1" class="flex items-center gap-2">
-                  <span class="text-xs text-gray-500">
-                    {{ searchPage }}/{{ searchTotalPages }}
-                  </span>
-                  <button
-                    class="px-2 py-1 text-sm border rounded disabled:opacity-50"
-                    :disabled="searchPage <= 1"
-                    @click="prevSearchPage"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    class="px-2 py-1 text-sm border rounded disabled:opacity-50"
-                    :disabled="searchPage >= searchTotalPages"
-                    @click="nextSearchPage"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Footer -->
-          <div class="px-6 py-4 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-2">
-            <BaseButton variant="secondary" @click="tryClose">Cancel</BaseButton>
-            <BaseButton :disabled="!isFormValid" variant="primary" @click="handleSave">
-              {{ group ? 'Update' : 'Create' }} Group
-            </BaseButton>
           </div>
         </div>
       </div>
-    </transition>
-  </teleport>
+
+      <!-- Pagination + bulk actions -->
+      <div class="flex items-center justify-between gap-2 mt-2">
+        <div class="flex gap-2">
+          <BaseButton variant="link" tone="blue" class="text-sm" @click="selectAll">
+            Select All Visible
+          </BaseButton>
+          <span class="text-slate-300">|</span>
+          <BaseButton variant="link" tone="blue" class="text-sm" @click="clearSelection">
+            Clear Selection
+          </BaseButton>
+        </div>
+        <div v-if="searchTotalPages > 1" class="flex items-center gap-2">
+          <span class="text-xs text-slate-500"> {{ searchPage }}/{{ searchTotalPages }} </span>
+          <button
+            class="px-2 py-1 text-sm border rounded disabled:opacity-50"
+            :disabled="searchPage <= 1"
+            @click="prevSearchPage"
+          >
+            Prev
+          </button>
+          <button
+            class="px-2 py-1 text-sm border rounded disabled:opacity-50"
+            :disabled="searchPage >= searchTotalPages"
+            @click="nextSearchPage"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <template #footer>
+      <BaseButton variant="secondary" @click="tryClose">Cancel</BaseButton>
+      <BaseButton :disabled="!isFormValid" variant="primary" @click="handleSave">
+        {{ group ? 'Update' : 'Create' }} Group
+      </BaseButton>
+    </template>
+
+    <!-- Discard unsaved changes confirmation -->
+    <ConfirmationDialog
+      :open="showConfirm"
+      title="Discard unsaved changes?"
+      message="Your changes to this document group will be lost."
+      confirm-text="Discard"
+      cancel-text="Keep editing"
+      confirm-variant="danger"
+      @confirm="confirmDiscard"
+      @cancel="showConfirm = false"
+    />
+  </BaseModal>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { X } from '@lucide/vue'
 import { documentsApi } from '@/services/documentsApi'
 import { formatDate } from '@/utils/formatters'
-import { useScrollLock } from '@/composables/useScrollLock'
+import BaseModal from '@/components/common/BaseModal.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
@@ -230,8 +194,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'save'])
-
-useScrollLock({ autoLock: true })
 
 const formData = ref({
   name: '',
@@ -401,19 +363,17 @@ const clearSelection = () => {
 }
 
 // Close handlers with confirmation if dirty
+const showConfirm = ref(false)
 const tryClose = () => {
   if (isDirty.value) {
-    if (window.confirm('You have unsaved changes. Are you sure you want to close?')) {
-      emit('close')
-    }
+    showConfirm.value = true
   } else {
     emit('close')
   }
 }
-const handleBackgroundClick = (e) => {
-  if (e.target === e.currentTarget) {
-    tryClose()
-  }
+const confirmDiscard = () => {
+  showConfirm.value = false
+  emit('close')
 }
 const handleSave = () => {
   emit('save', {
@@ -424,14 +384,3 @@ const handleSave = () => {
   })
 }
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

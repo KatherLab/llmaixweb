@@ -1,6 +1,6 @@
 <template>
   <div class="json-viewer">
-    <div v-if="!data" class="text-gray-500 italic text-xs">null</div>
+    <div v-if="!data" class="text-slate-500 italic text-xs">null</div>
     <div v-else-if="typeof data !== 'object'" class="json-value text-xs">
       {{ formatValue(data) }}
     </div>
@@ -18,7 +18,7 @@
           <span class="toggle-icon">
             <span
               v-if="isExpandable(value)"
-              class="w-3 h-3 transition-transform text-gray-400 cursor-pointer inline-block"
+              class="w-3 h-3 transition-transform text-slate-400 cursor-pointer inline-block"
               :class="{ 'transform rotate-90': expanded[key] }"
             >
               ▶
@@ -32,7 +32,7 @@
         </div>
         <div
           v-if="isExpandable(value) && expanded[key]"
-          class="json-children ml-3 pl-2 border-l border-gray-200"
+          class="json-children ml-3 pl-2 border-l border-slate-200"
         >
           <JsonViewer :data="value" :max-depth="maxDepth - 1" />
         </div>

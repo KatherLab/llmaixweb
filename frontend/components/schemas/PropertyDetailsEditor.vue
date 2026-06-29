@@ -2,61 +2,49 @@
   <div class="space-y-6">
     <!-- Basic Information -->
     <div class="space-y-4">
-      <h4 class="text-sm font-medium text-gray-900 flex items-center">
-        <svg
-          class="h-4 w-4 mr-2 text-gray-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+      <h4 class="text-sm font-medium text-slate-900 flex items-center">
+        <Info class="h-4 w-4 mr-2 text-slate-500" />
         Basic Information
       </h4>
 
       <!-- Add this if not editing root -->
       <div v-if="propertyKey !== '__root__' && propertyKey !== 'items'">
-        <label class="block text-sm font-medium text-gray-700 mb-1">
+        <label class="block text-sm font-medium text-slate-700 mb-1">
           {{ advancedMode ? 'Property Key' : 'Field Name' }}
         </label>
         <input
           :value="propertyKey"
-          class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
           placeholder="property_name"
           pattern="^[a-zA-Z_][a-zA-Z0-9_]*$"
           @input="$emit('update-key', $event.target.value)"
         />
-        <p class="mt-1 text-xs text-gray-500">
+        <p class="mt-1 text-xs text-slate-500">
           Use lowercase with underscores (e.g., patient_name)
         </p>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label class="block text-sm font-medium text-slate-700 mb-1">
             {{ advancedMode ? 'Title' : 'Display Name' }}
           </label>
           <input
             v-model="localProperty.title"
-            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
             :placeholder="`${propertyKey} display name`"
           />
         </div>
 
         <!-- Update the type select dropdown (around line 35) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label class="block text-sm font-medium text-slate-700 mb-1">
             {{ advancedMode ? 'Type' : 'Field Type' }}
           </label>
           <div class="relative group">
             <select
               v-model="localProperty.type"
-              class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm pl-10"
+              class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm pl-10"
               @change="onTypeChange"
             >
               <option value="string">{{ advancedMode ? 'String' : 'Text' }}</option>
@@ -70,7 +58,7 @@
             </div>
             <!-- Type description tooltip -->
             <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-10 w-full">
-              <div class="bg-gray-900 text-white text-xs rounded-lg p-2 shadow-lg">
+              <div class="bg-slate-900 text-white text-xs rounded-lg p-2 shadow-lg">
                 <p v-if="localProperty.type === 'string'">
                   Text field for names, descriptions, etc.
                 </p>
@@ -87,11 +75,11 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1"> Description </label>
+        <label class="block text-sm font-medium text-slate-700 mb-1"> Description </label>
         <textarea
           v-model="localProperty.description"
           rows="2"
-          class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
           placeholder="Describe what this field captures..."
         />
       </div>
@@ -99,42 +87,30 @@
 
     <!-- Type-specific Settings -->
     <div v-if="localProperty.type === 'string'" class="space-y-4">
-      <h4 class="text-sm font-medium text-gray-900 flex items-center">
-        <svg
-          class="h-4 w-4 mr-2 text-green-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-          />
-        </svg>
+      <h4 class="text-sm font-medium text-slate-900 flex items-center">
+        <SquarePen class="h-4 w-4 mr-2 text-green-500" />
         Text Settings
       </h4>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"> Minimum Length </label>
+          <label class="block text-sm font-medium text-slate-700 mb-1"> Minimum Length </label>
           <input
             v-model.number="localProperty.minLength"
             type="number"
             min="0"
-            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
             placeholder="No minimum"
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"> Maximum Length </label>
+          <label class="block text-sm font-medium text-slate-700 mb-1"> Maximum Length </label>
           <input
             v-model.number="localProperty.maxLength"
             type="number"
             min="0"
-            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
             placeholder="No maximum"
           />
         </div>
@@ -142,10 +118,10 @@
 
       <!-- Format Selection -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1"> Format </label>
+        <label class="block text-sm font-medium text-slate-700 mb-1"> Format </label>
         <select
           v-model="localProperty.format"
-          class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
         >
           <option value="">No specific format</option>
           <option value="email">Email</option>
@@ -161,28 +137,21 @@
 
       <!-- Pattern -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">
+        <label class="block text-sm font-medium text-slate-700 mb-1">
           Pattern (Regular Expression)
           <button
-            class="ml-1 text-gray-400 hover:text-gray-600"
+            class="ml-1 text-slate-400 hover:text-slate-600"
             @click="showPatternHelp = !showPatternHelp"
           >
-            <svg class="h-4 w-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+            <CircleHelp class="h-4 w-4 inline" />
           </button>
         </label>
         <input
           v-model="localProperty.pattern"
-          class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
           placeholder="e.g., ^[A-Z]{2}[0-9]{4}$"
         />
-        <div v-if="showPatternHelp" class="mt-2 p-3 bg-blue-50 rounded-md text-xs text-gray-700">
+        <div v-if="showPatternHelp" class="mt-2 p-3 bg-blue-50 rounded-md text-xs text-slate-700">
           <p class="font-medium mb-1">Common patterns:</p>
           <ul class="space-y-1">
             <li><code class="bg-white px-1 rounded">^[0-9]+$</code> - Numbers only</li>
@@ -197,7 +166,7 @@
 
       <!-- Enum Values -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">
+        <label class="block text-sm font-medium text-slate-700 mb-1">
           Allowed Values (Options)
         </label>
         <div class="space-y-2">
@@ -208,7 +177,7 @@
           >
             <input
               v-model="enumValues[index]"
-              class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+              class="flex-1 border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
               placeholder="Option value"
             />
             <BaseButton
@@ -218,24 +187,11 @@
               aria-label="Remove enum value"
               @click="removeEnumValue(index)"
             >
-              <svg
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
+              <Trash2 class="h-4 w-4" aria-hidden="true" />
             </BaseButton>
           </div>
           <button
-            class="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
+            class="w-full py-2 border-2 border-dashed border-slate-300 rounded-md text-sm text-slate-600 hover:border-slate-400 hover:text-slate-700"
             @click="addEnumValue"
           >
             + Add Option
@@ -246,40 +202,28 @@
 
     <!-- Number Settings -->
     <div v-else-if="localProperty.type === 'number'" class="space-y-4">
-      <h4 class="text-sm font-medium text-gray-900 flex items-center">
-        <svg
-          class="h-4 w-4 mr-2 text-blue-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
-          />
-        </svg>
+      <h4 class="text-sm font-medium text-slate-900 flex items-center">
+        <Hash class="h-4 w-4 mr-2 text-blue-500" />
         Number Settings
       </h4>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"> Minimum Value </label>
+          <label class="block text-sm font-medium text-slate-700 mb-1"> Minimum Value </label>
           <input
             v-model.number="localProperty.minimum"
             type="number"
-            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
             placeholder="No minimum"
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"> Maximum Value </label>
+          <label class="block text-sm font-medium text-slate-700 mb-1"> Maximum Value </label>
           <input
             v-model.number="localProperty.maximum"
             type="number"
-            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
             placeholder="No maximum"
           />
         </div>
@@ -287,12 +231,12 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"> Multiple Of </label>
+          <label class="block text-sm font-medium text-slate-700 mb-1"> Multiple Of </label>
           <input
             v-model.number="localProperty.multipleOf"
             type="number"
             step="any"
-            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
             placeholder="e.g., 0.01 for cents"
           />
         </div>
@@ -302,9 +246,9 @@
             <input
               v-model="isInteger"
               type="checkbox"
-              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
-            <span class="text-sm font-medium text-gray-700">Integer only</span>
+            <span class="text-sm font-medium text-slate-700">Integer only</span>
           </label>
         </div>
       </div>
@@ -312,24 +256,12 @@
 
     <!-- Boolean Settings -->
     <div v-else-if="localProperty.type === 'boolean'" class="space-y-4">
-      <h4 class="text-sm font-medium text-gray-900 flex items-center">
-        <svg
-          class="h-4 w-4 mr-2 text-purple-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+      <h4 class="text-sm font-medium text-slate-900 flex items-center">
+        <CircleCheckBig class="h-4 w-4 mr-2 text-purple-500" />
         Yes/No Settings
       </h4>
 
-      <p class="text-sm text-gray-600">
+      <p class="text-sm text-slate-600">
         This field will capture true/false values. The user interface will show this as a checkbox
         or toggle switch.
       </p>
@@ -337,42 +269,30 @@
 
     <!-- Array Settings -->
     <div v-else-if="localProperty.type === 'array'" class="space-y-4">
-      <h4 class="text-sm font-medium text-gray-900 flex items-center">
-        <svg
-          class="h-4 w-4 mr-2 text-pink-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 6h16M4 10h16M4 14h16M4 18h16"
-          />
-        </svg>
+      <h4 class="text-sm font-medium text-slate-900 flex items-center">
+        <List class="h-4 w-4 mr-2 text-pink-500" />
         List Settings
       </h4>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"> Minimum Items </label>
+          <label class="block text-sm font-medium text-slate-700 mb-1"> Minimum Items </label>
           <input
             v-model.number="localProperty.minItems"
             type="number"
             min="0"
-            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
             placeholder="No minimum"
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"> Maximum Items </label>
+          <label class="block text-sm font-medium text-slate-700 mb-1"> Maximum Items </label>
           <input
             v-model.number="localProperty.maxItems"
             type="number"
             min="0"
-            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
             placeholder="No maximum"
           />
         </div>
@@ -383,35 +303,23 @@
           <input
             v-model="localProperty.uniqueItems"
             type="checkbox"
-            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
           />
-          <span class="text-sm font-medium text-gray-700">Items must be unique</span>
+          <span class="text-sm font-medium text-slate-700">Items must be unique</span>
         </label>
       </div>
     </div>
 
     <!-- Object Settings -->
     <div v-else-if="localProperty.type === 'object'" class="space-y-4">
-      <h4 class="text-sm font-medium text-gray-900 flex items-center">
-        <svg
-          class="h-4 w-4 mr-2 text-orange-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-          />
-        </svg>
+      <h4 class="text-sm font-medium text-slate-900 flex items-center">
+        <Layers class="h-4 w-4 mr-2 text-orange-500" />
         Group Settings
       </h4>
 
       <!-- Required Properties -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1"> Required Fields </label>
+        <label class="block text-sm font-medium text-slate-700 mb-1"> Required Fields </label>
         <div class="space-y-2">
           <label
             v-for="(propSchema, propKey) in localProperty.properties"
@@ -421,16 +329,16 @@
             <input
               type="checkbox"
               :checked="isRequired(propKey)"
-              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
               @change="toggleRequired(propKey)"
             />
-            <span class="text-sm text-gray-700">{{ propKey }}</span>
-            <span class="text-xs text-gray-500">({{ propSchema.type }})</span>
+            <span class="text-sm text-slate-700">{{ propKey }}</span>
+            <span class="text-xs text-slate-500">({{ propSchema.type }})</span>
           </label>
         </div>
         <p
           v-if="!localProperty.properties || Object.keys(localProperty.properties).length === 0"
-          class="text-sm text-gray-500"
+          class="text-sm text-slate-500"
         >
           Add properties to this group first
         </p>
@@ -441,26 +349,26 @@
           <input
             v-model="localProperty.additionalProperties"
             type="checkbox"
-            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
           />
-          <span class="text-sm font-medium text-gray-700">Allow additional properties</span>
+          <span class="text-sm font-medium text-slate-700">Allow additional properties</span>
         </label>
       </div>
     </div>
 
     <!-- Common Settings -->
     <div class="space-y-4 pt-4 border-t">
-      <h4 class="text-sm font-medium text-gray-900">Additional Settings</h4>
+      <h4 class="text-sm font-medium text-slate-900">Additional Settings</h4>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1"> Default Value </label>
+        <label class="block text-sm font-medium text-slate-700 mb-1"> Default Value </label>
         <div v-if="localProperty.type === 'boolean'" class="flex items-center space-x-4">
           <label class="flex items-center space-x-2">
             <input
               type="radio"
               :value="undefined"
               :checked="localProperty.default === undefined"
-              class="border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="border-slate-300 text-blue-600 focus:ring-blue-500"
               @change="localProperty.default = undefined"
             />
             <span class="text-sm">No default</span>
@@ -470,7 +378,7 @@
               v-model="localProperty.default"
               type="radio"
               :value="true"
-              class="border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="border-slate-300 text-blue-600 focus:ring-blue-500"
             />
             <span class="text-sm">True</span>
           </label>
@@ -479,7 +387,7 @@
               v-model="localProperty.default"
               type="radio"
               :value="false"
-              class="border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="border-slate-300 text-blue-600 focus:ring-blue-500"
             />
             <span class="text-sm">False</span>
           </label>
@@ -488,42 +396,42 @@
           v-else-if="localProperty.type === 'string'"
           v-model="localProperty.default"
           type="text"
-          class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
           placeholder="No default value"
         />
         <input
           v-else-if="localProperty.type === 'number'"
           v-model.number="localProperty.default"
           type="number"
-          class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
           placeholder="No default value"
         />
-        <p v-else class="text-sm text-gray-500">
+        <p v-else class="text-sm text-slate-500">
           Default values for {{ localProperty.type }} must be set in raw JSON mode
         </p>
       </div>
 
       <!-- Advanced Features -->
       <div v-if="advancedMode" class="space-y-4 pt-4 border-t">
-        <h4 class="text-sm font-medium text-gray-900">Advanced Features</h4>
+        <h4 class="text-sm font-medium text-slate-900">Advanced Features</h4>
 
         <!-- Read Only -->
         <label class="flex items-center space-x-2">
           <input
             v-model="localProperty.readOnly"
             type="checkbox"
-            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
           />
-          <span class="text-sm font-medium text-gray-700">Read-only field</span>
+          <span class="text-sm font-medium text-slate-700">Read-only field</span>
         </label>
 
         <!-- Examples -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"> Examples </label>
+          <label class="block text-sm font-medium text-slate-700 mb-1"> Examples </label>
           <textarea
             v-model="examplesText"
             rows="2"
-            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
             placeholder="Enter examples, one per line"
           />
         </div>
@@ -534,6 +442,16 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import {
+  CircleCheckBig,
+  CircleHelp,
+  Hash,
+  Info,
+  Layers,
+  List,
+  SquarePen,
+  Trash2,
+} from '@lucide/vue'
 import { getTypeIcon, getTypeColor } from '@/utils/schemaTypeIcons'
 import BaseButton from '@/components/common/BaseButton.vue'
 

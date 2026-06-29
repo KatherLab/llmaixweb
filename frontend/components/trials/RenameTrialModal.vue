@@ -1,16 +1,16 @@
 <template>
   <BaseModal :open="open" title="Rename Trial" size="sm" body-class="p-6" @close="$emit('close')">
-    <label class="block text-xs font-semibold text-gray-700 mb-1">Name</label>
+    <label class="block text-xs font-semibold text-slate-700 mb-1">Name</label>
     <input
       v-model="name"
       maxlength="100"
-      class="w-full border border-gray-300 rounded px-2 py-1 mb-3"
+      class="w-full border border-slate-300 rounded px-2 py-1 mb-3"
     />
-    <label class="block text-xs font-semibold text-gray-700 mb-1">Description</label>
+    <label class="block text-xs font-semibold text-slate-700 mb-1">Description</label>
     <textarea
       v-model="description"
       maxlength="512"
-      class="w-full border border-gray-300 rounded px-2 py-1 mb-3"
+      class="w-full border border-slate-300 rounded px-2 py-1 mb-3"
       rows="2"
     />
     <template #footer>

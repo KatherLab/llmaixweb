@@ -2,15 +2,15 @@
   <li>
     <div class="relative">
       <!-- Connection lines -->
-      <div class="absolute left-0 top-0 -ml-3 mt-2.5 h-full w-0.5 bg-gray-200"></div>
-      <div class="absolute left-0 top-2.5 -ml-3 w-3 h-0.5 bg-gray-200"></div>
+      <div class="absolute left-0 top-0 -ml-3 mt-2.5 h-full w-0.5 bg-slate-200"></div>
+      <div class="absolute left-0 top-2.5 -ml-3 w-3 h-0.5 bg-slate-200"></div>
 
       <!-- Node button -->
       <button
         type="button"
         :class="[
           'w-full text-left px-3 py-1.5 rounded-md text-sm transition-colors flex items-center justify-between group',
-          isActive ? 'bg-blue-50 text-blue-700 font-medium' : 'hover:bg-gray-100 text-gray-700',
+          isActive ? 'bg-blue-50 text-blue-700 font-medium' : 'hover:bg-slate-100 text-slate-700',
         ]"
         @click="navigate"
       >
@@ -19,18 +19,11 @@
           <button
             v-if="hasChildren"
             type="button"
-            class="h-3 w-3 text-gray-400 transition-transform cursor-pointer p-0 hover:text-gray-600"
+            class="h-3 w-3 text-slate-400 transition-transform cursor-pointer p-0 hover:text-slate-600"
             :class="{ 'rotate-90': isExpanded }"
             @click.stop="toggleExpanded"
           >
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+            <ChevronRight />
           </button>
           <div v-else class="w-3"></div>
 
@@ -46,7 +39,7 @@
         </div>
 
         <!-- Type label -->
-        <span class="text-xs text-gray-500 ml-2">
+        <span class="text-xs text-slate-500 ml-2">
           {{ nodeSchema.type }}
         </span>
       </button>
@@ -84,6 +77,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { ChevronRight } from '@lucide/vue'
 import { getTypeIcon, getTypeColor } from '@/utils/schemaTypeIcons'
 
 const props = defineProps({

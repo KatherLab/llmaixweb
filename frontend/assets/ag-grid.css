@@ -1,0 +1,98 @@
+/*
+ * Shared ag-grid styling for the custom `themeMaterial` theme built by
+ * `useGridTheme`. Previously copy-pasted as non-scoped <style> blocks in
+ * ProjectGrid, InvitationGrid and UserGrid — but `:deep()` in a non-scoped
+ * style compiles to an invalid selector that browsers drop, so those rules
+ * never actually applied (the grids relied solely on useGridTheme). Re-expressed
+ * here as plain selectors so they finally take effect.
+ *
+ * IMPORTANT: keep this to COLOR only. The old blocks also carried layout rules
+ * (`.ag-cell { height:100%; padding:0 }`, `.ag-center-cols-container { display:flex }`,
+ * `.ag-row { display:flex }`) that were dead before; re-applying them now breaks
+ * row layout (a gap appears between the header and the first row). useGridTheme
+ * already handles row/cell geometry — do not re-add layout overrides here.
+ *
+ * The theme params in useGridTheme cover most surfaces; these rules cover the
+ * elements the theme params don't reach (filter popups, column-select header,
+ * paging panel, inputs, list items) and keep header text/icons legible.
+ */
+
+/* Header text and icon styling */
+.ag-header-cell-text {
+  color: #111827;
+}
+.ag-cell-label-container,
+.ag-header-cell-label-container {
+  color: #111827;
+}
+.ag-filter-icon,
+.ag-sort-icon {
+  color: #6b7280;
+}
+
+/* Dark mode overrides */
+html.dark .ag-header-cell-text {
+  color: #e2e8f0;
+}
+html.dark .ag-header-cell {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+html.dark .ag-cell-label-container,
+html.dark .ag-header-cell-label-container {
+  color: #e2e8f0;
+}
+html.dark .ag-filter-icon,
+html.dark .ag-sort-icon {
+  color: #94a3b8;
+}
+html.dark .ag-header-filter-input {
+  background-color: #334155;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+html.dark .ag-column-select-header {
+  background-color: #1e293b;
+}
+html.dark .ag-body-container {
+  background-color: #0f172a;
+}
+html.dark .ag-header {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+html.dark .ag-row {
+  background-color: #0f172a;
+  border-color: #334155;
+}
+html.dark .ag-cell {
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html.dark .ag-paging-panel {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html.dark .ag-paging-button {
+  color: #e2e8f0;
+}
+html.dark .ag-paging-button:disabled {
+  color: #64748b;
+}
+html.dark .ag-input-field-input {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html.dark .ag-filter-body {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+html.dark .ag-list-item {
+  color: #e2e8f0;
+}
+html.dark .ag-popup {
+  background-color: #1e293b;
+  border-color: #334155;
+}

@@ -1,10 +1,7 @@
 <template>
   <div>
     <h2 class="text-xl font-bold mb-5 flex items-center gap-2">
-      <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" />
-        <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" />
-      </svg>
+      <CircleDot class="w-6 h-6 text-blue-500" />
       Celery Workers & Queues
     </h2>
     <div v-if="loading" class="py-8 flex justify-center">
@@ -17,14 +14,14 @@
       <div>
         <h3 class="font-semibold text-lg mb-2">Workers</h3>
         <pre
-          class="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-100 dark:border-slate-800 overflow-x-auto text-sm"
+          class="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-800 overflow-x-auto text-sm"
           >{{ pretty(workers) }}</pre
         >
       </div>
       <div class="mt-8">
         <h3 class="font-semibold text-lg mb-2">Queues & Tasks</h3>
         <pre
-          class="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-100 dark:border-slate-800 overflow-x-auto text-sm"
+          class="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-800 overflow-x-auto text-sm"
           >{{ pretty(queues) }}</pre
         >
       </div>
@@ -33,14 +30,14 @@
         <form class="flex gap-2 mb-4" @submit.prevent="inspectTask">
           <input
             v-model="taskId"
-            class="rounded-lg px-3 py-2 border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-300"
+            class="rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-300"
             placeholder="Paste task ID here"
           />
           <BaseButton type="submit" variant="primary">Inspect</BaseButton>
         </form>
         <div v-if="taskStatus">
           <pre
-            class="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-100 dark:border-slate-800 overflow-x-auto text-sm"
+            class="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-800 overflow-x-auto text-sm"
             >{{ pretty(taskStatus) }}</pre
           >
           <BaseButton
@@ -62,6 +59,7 @@
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
+import { CircleDot } from '@lucide/vue'
 import { adminApi } from '@/services/adminApi'
 import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'

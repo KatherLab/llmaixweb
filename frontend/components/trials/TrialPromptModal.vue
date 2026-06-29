@@ -10,17 +10,17 @@
           >Snapshot</span
         >
       </div>
-      <p v-if="prompt?.description" class="text-sm text-gray-600">{{ prompt.description }}</p>
+      <p v-if="prompt?.description" class="text-sm text-slate-600">{{ prompt.description }}</p>
     </div>
     <div class="mb-3">
-      <label class="block font-medium text-gray-700 mb-1">System Prompt</label>
-      <pre class="bg-gray-50 border rounded-md p-3 overflow-x-auto text-xs font-mono max-h-32">{{
+      <label class="block font-medium text-slate-700 mb-1">System Prompt</label>
+      <pre class="bg-slate-50 border rounded-md p-3 overflow-x-auto text-xs font-mono max-h-32">{{
         prompt?.system_prompt || '-'
       }}</pre>
     </div>
     <div class="mb-3">
-      <label class="block font-medium text-gray-700 mb-1">User Prompt</label>
-      <pre class="bg-gray-50 border rounded-md p-3 overflow-x-auto text-xs font-mono max-h-32">{{
+      <label class="block font-medium text-slate-700 mb-1">User Prompt</label>
+      <pre class="bg-slate-50 border rounded-md p-3 overflow-x-auto text-xs font-mono max-h-32">{{
         prompt?.user_prompt || '-'
       }}</pre>
     </div>

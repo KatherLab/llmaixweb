@@ -12,25 +12,18 @@
     <div class="space-y-6">
       <!-- Selected Files -->
       <div>
-        <h4 class="text-sm font-medium text-gray-700 mb-3">
+        <h4 class="text-sm font-medium text-slate-700 mb-3">
           Files to Process ({{ selectedFiles.length }})
         </h4>
-        <div class="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
+        <div class="space-y-2 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-3">
           <div
             v-for="fileId in selectedFiles"
             :key="fileId"
             class="flex items-center justify-between text-sm"
           >
             <span class="truncate">{{ getFileById(fileId)?.file_name || 'Unknown' }}</span>
-            <button class="text-gray-400 hover:text-red-500" @click="emit('remove-file', fileId)">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+            <button class="text-slate-400 hover:text-red-500" @click="emit('remove-file', fileId)">
+              <X class="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -46,7 +39,7 @@
 
       <!-- OCR Engine Selection -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-3"> OCR Engine </label>
+        <label class="block text-sm font-medium text-slate-700 mb-3"> OCR Engine </label>
         <div class="space-y-3">
           <!-- Local OCR -->
           <button
@@ -55,29 +48,17 @@
               'w-full rounded-lg border-2 p-4 text-left transition-all',
               selectedEngine === 'docling_tesseract'
                 ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300',
+                : 'border-slate-200 hover:border-slate-300',
             ]"
             @click="selectedEngine = 'docling_tesseract'"
           >
             <div class="flex items-center">
-              <svg
-                class="w-6 h-6 text-blue-600 mr-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
+              <Zap class="w-6 h-6 text-blue-600 mr-3" />
               <div>
-                <p class="font-medium text-gray-900">
+                <p class="font-medium text-slate-900">
                   {{ getEngineLabel('docling_tesseract') }}
                 </p>
-                <p class="text-xs text-gray-500">
+                <p class="text-xs text-slate-500">
                   {{ getEngineSubtitle('docling_tesseract') }}
                 </p>
               </div>
@@ -91,29 +72,17 @@
               'w-full rounded-lg border-2 p-4 text-left transition-all',
               selectedEngine === 'mistral_ocr'
                 ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300',
+                : 'border-slate-200 hover:border-slate-300',
             ]"
             @click="selectedEngine = 'mistral_ocr'"
           >
             <div class="flex items-center">
-              <svg
-                class="w-6 h-6 text-blue-600 mr-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <CircleCheckBig class="w-6 h-6 text-blue-600 mr-3" />
               <div>
-                <p class="font-medium text-gray-900">
+                <p class="font-medium text-slate-900">
                   {{ getEngineLabel('mistral_ocr') }}
                 </p>
-                <p class="text-xs text-gray-500">
+                <p class="text-xs text-slate-500">
                   {{ getEngineSubtitle('mistral_ocr') }}
                 </p>
               </div>
@@ -127,43 +96,26 @@
               'w-full rounded-lg border-2 p-4 text-left transition-all',
               selectedEngine === 'llm_vision'
                 ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300',
+                : 'border-slate-200 hover:border-slate-300',
             ]"
             @click="selectedEngine = 'llm_vision'"
           >
             <div class="flex items-center">
-              <svg
-                class="w-6 h-6 text-blue-600 mr-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
-              </svg>
+              <Eye class="w-6 h-6 text-blue-600 mr-3" />
               <div>
-                <p class="font-medium text-gray-900">
+                <p class="font-medium text-slate-900">
                   {{ getEngineLabel('llm_vision') }}
                 </p>
-                <p class="text-xs text-gray-500">{{ getEngineSubtitle('llm_vision') }}</p>
+                <p class="text-xs text-slate-500">{{ getEngineSubtitle('llm_vision') }}</p>
               </div>
             </div>
           </button>
         </div>
         <!-- Warning: No OCR engines enabled -->
         <div v-if="noOcrEnabled" class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <p class="text-sm font-medium text-amber-900">
-            ⚠️ All OCR engines are disabled. Only PDFs with embedded text can be processed.
+          <p class="text-sm font-medium text-amber-900 inline-flex items-center gap-1.5">
+            <AlertTriangle class="w-4 h-4" />
+            All OCR engines are disabled. Only PDFs with embedded text can be processed.
           </p>
           <p class="text-xs text-amber-700 mt-1">
             Image files (PNG/JPEG) require OCR. Enable Local OCR, Mistral OCR, or Vision LLM in
@@ -173,7 +125,7 @@
       </div>
 
       <!-- Force OCR (always visible) -->
-      <div class="border-t border-gray-200 pt-4">
+      <div class="border-t border-slate-200 pt-4">
         <label
           class="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg border border-amber-200"
         >
@@ -189,44 +141,36 @@
 
       <!-- Vision LLM Prompt (always visible when using Vision LLM) -->
       <div v-if="selectedEngine === 'llm_vision'" class="pt-4">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Prompt</label>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Prompt</label>
         <textarea
           v-model="visionPrompt"
           rows="2"
           placeholder="Extract all text as markdown..."
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
         ></textarea>
       </div>
 
       <!-- Advanced Options -->
-      <div class="border-t border-gray-200 pt-4">
+      <div class="border-t border-slate-200 pt-4">
         <button
-          class="text-sm font-medium text-gray-700 flex items-center"
+          class="text-sm font-medium text-slate-700 flex items-center"
           @click="showAdvanced = !showAdvanced"
         >
-          <svg
+          <ChevronRight
             :class="['w-4 h-4 mr-2 transition-transform', showAdvanced ? 'rotate-90' : '']"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
+          />
           Advanced Options
         </button>
 
         <div v-show="showAdvanced" class="mt-4 space-y-4">
           <!-- Tesseract Language -->
           <div v-if="selectedEngine === 'docling_tesseract'">
-            <label class="block text-sm font-medium text-gray-700 mb-1"> Tesseract Language </label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">
+              Tesseract Language
+            </label>
             <select
               v-model="tesseractLang"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
             >
               <option value="auto">Auto-detect</option>
               <option value="eng">English</option>
@@ -292,26 +236,14 @@
     </div>
 
     <!-- Panel Footer -->
-    <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+    <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
       <!-- Warning for unconfigured CSV/XLSX files -->
       <div
         v-if="unconfiguredCsvXlsxFiles.length > 0"
         class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg"
       >
         <div class="flex items-start gap-2">
-          <svg
-            class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
+          <AlertTriangle class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div class="flex-1">
             <p class="text-sm font-medium text-amber-900">
               {{ unconfiguredCsvXlsxFiles.length }} file(s) need import configuration
@@ -329,7 +261,7 @@
         </div>
       </div>
 
-      <p class="text-xs text-gray-500 mb-4">
+      <p class="text-xs text-slate-500 mb-4">
         This will create a new preprocessing run. Existing runs and documents are preserved.
       </p>
     </div>
@@ -349,6 +281,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { AlertTriangle, ChevronRight, CircleCheckBig, Eye, X, Zap } from '@lucide/vue'
 import { getEngineLabel, getEngineSubtitle } from '@/utils/ocrLabels'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'

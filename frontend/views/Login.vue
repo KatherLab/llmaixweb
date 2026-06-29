@@ -1,15 +1,15 @@
 <template>
   <div class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <h1 class="text-4xl font-extrabold text-gray-900 dark:text-slate-100 tracking-tight">
+      <h1 class="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
         LLMAIx-v2
       </h1>
-      <p class="text-base text-gray-500 dark:text-slate-400 mt-2">
+      <p class="text-base text-slate-500 dark:text-slate-400 mt-2">
         Extract information from documents using LLMs.
       </p>
     </div>
     <form
-      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm flex flex-col gap-5"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm flex flex-col gap-5"
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >
@@ -43,22 +43,7 @@
         :disabled="isLoading"
         class="w-full py-2.5"
       >
-        <svg
-          v-if="!isLoading"
-          class="h-5 w-5"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 20 20"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="1.5"
-            d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-          />
-        </svg>
+        <Lock v-if="!isLoading" class="h-5 w-5" aria-hidden="true" />
         <span>{{ isLoading ? 'Signing in...' : 'Sign in' }}</span>
       </BaseButton>
       <transition name="fade">
@@ -77,6 +62,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Lock } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/authApi'
 import { useToast } from 'vue-toastification'

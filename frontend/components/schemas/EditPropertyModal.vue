@@ -5,11 +5,11 @@
     :closeable="false"
     :close-on-esc="false"
     body-class="p-6"
-    footer-class="bg-gray-50"
+    footer-class="bg-slate-50"
     @close="handleBackdropClose"
   >
     <template #header>
-      <h3 class="text-lg font-medium text-gray-900">
+      <h3 class="text-lg font-medium text-slate-900">
         Edit
         {{
           localEditingProperty?.key === '__root__'
@@ -32,15 +32,28 @@
     />
 
     <template #footer>
-      <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
+      <BaseButton variant="secondary" @click="handleBackdropClose">Cancel</BaseButton>
       <BaseButton @click="save">Save Changes</BaseButton>
     </template>
+
+    <!-- Discard unsaved changes confirmation -->
+    <ConfirmationDialog
+      :open="showConfirm"
+      title="Discard unsaved changes?"
+      message="Your edits to this property will be lost."
+      confirm-text="Discard"
+      cancel-text="Keep editing"
+      confirm-variant="danger"
+      @confirm="confirmDiscard"
+      @cancel="showConfirm = false"
+    />
   </BaseModal>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import PropertyDetailsEditor from './PropertyDetailsEditor.vue'
 
@@ -118,15 +131,18 @@ const hasUnsavedPropertyChanges = () => {
   return currentJSON !== editedJSON
 }
 
-// Backdrop close — confirms unsaved changes (original behavior)
+// Close — confirms unsaved changes via ConfirmationDialog
+const showConfirm = ref(false)
 const handleBackdropClose = () => {
   if (localEditingProperty.value && hasUnsavedPropertyChanges()) {
-    if (confirm('You have unsaved changes. Are you sure you want to close?')) {
-      emit('close')
-    }
+    showConfirm.value = true
   } else {
     emit('close')
   }
+}
+const confirmDiscard = () => {
+  showConfirm.value = false
+  emit('close')
 }
 
 // Save — emits payload to parent, parent applies mutation

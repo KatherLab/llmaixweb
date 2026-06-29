@@ -13,20 +13,14 @@
       :aria-label="'Remove ' + label"
       @click="$emit('remove')"
     >
-      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M6 18L18 6M6 6l12 12"
-        />
-      </svg>
+      <X class="w-3 h-3" aria-hidden="true" />
     </button>
   </span>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { X } from '@lucide/vue'
 import { getPillClass } from '@/utils/statusStyles'
 
 defineOptions({ inheritAttrs: false })
@@ -39,7 +33,7 @@ const props = defineProps({
   color: {
     type: String,
     default: 'blue',
-    // 'blue' | 'green' | 'yellow' | 'red' | 'gray' | 'purple' | 'indigo' | 'teal' | 'cyan' | 'orange'
+    // 'blue' | 'green' | 'yellow' | 'red' | 'gray' | 'purple' | 'teal' | 'cyan' | 'orange'
   },
 })
 

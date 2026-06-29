@@ -1,144 +1,103 @@
 <template>
-  <teleport to="body">
-    <transition name="fade">
-      <div
-        v-if="isModal"
-        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-        @click="$emit('close')"
+  <BaseModal
+    v-if="isModal"
+    :open="isModal"
+    size="3xl"
+    panel-class="max-w-[90rem]"
+    body-class="!p-6"
+    @close="$emit('close')"
+  >
+    <template #header>
+      <h3 class="text-lg font-semibold text-slate-900">Trial Results</h3>
+    </template>
+
+    <!-- Loading -->
+    <div v-if="isLoading" class="flex flex-col items-center justify-center py-16">
+      <span class="mb-3">
+        <LoadingSpinner size="medium" inline label="" />
+      </span>
+      <span class="mt-2 text-slate-500">Loading trial results…</span>
+    </div>
+    <!-- Error -->
+    <ErrorBanner v-else-if="error" :message="error" class="mb-5 rounded-lg" />
+
+    <!-- Content -->
+    <template v-else-if="trial">
+      <TrialMetaHeader
+        :trial="trial"
+        :total-usage="totalUsage"
+        @open-schema="openSchemaModal"
+        @open-prompt="openPromptModal"
+      />
+
+      <TrialDocumentErrors :failures="trial?.meta?.failures" />
+
+      <!-- Results list -->
+      <EmptyState
+        v-if="!trial.results || trial.results.length === 0"
+        title="No results available for this trial."
       >
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <div
-          class="relative bg-white rounded-3xl shadow-2xl max-w-8xl w-full max-h-[95vh] flex flex-col ring-1 ring-blue-100 overflow-hidden"
-          @click.stop
+        <p
+          v-if="trial.status === 'processing' || trial.status === 'pending'"
+          class="mt-1 text-sm text-slate-400 dark:text-slate-500"
         >
-          <!-- Header -->
-          <div
-            class="flex items-center justify-between gap-4 px-8 py-6 border-b rounded-t-3xl bg-white/90"
-          >
-            <h3 class="text-2xl font-bold tracking-tight text-gray-800">Trial Results</h3>
-            <button
-              class="text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-full p-2 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Close"
-              autofocus
-              @click="$emit('close')"
-            >
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
+          Please wait for the trial to complete.
+        </p>
+      </EmptyState>
 
-          <div class="flex-1 overflow-y-auto p-8 bg-white/70">
-            <!-- Loading -->
-            <div v-if="isLoading" class="flex flex-col items-center justify-center py-16">
-              <span class="mb-3">
-                <LoadingSpinner size="medium" inline label="" />
-              </span>
-              <span class="mt-2 text-gray-500">Loading trial results…</span>
-            </div>
-            <!-- Error -->
-            <ErrorBanner v-else-if="error" :message="error" class="mb-5 rounded-lg" />
-
-            <!-- Content -->
-            <template v-else-if="trial">
-              <TrialMetaHeader
-                :trial="trial"
-                :total-usage="totalUsage"
-                @open-schema="openSchemaModal"
-                @open-prompt="openPromptModal"
-              />
-
-              <TrialDocumentErrors :failures="trial?.meta?.failures" />
-
-              <!-- Results list -->
-              <EmptyState
-                v-if="!trial.results || trial.results.length === 0"
-                title="No results available for this trial."
-              >
-                <p
-                  v-if="trial.status === 'processing' || trial.status === 'pending'"
-                  class="mt-1 text-sm text-gray-400 dark:text-slate-500"
-                >
-                  Please wait for the trial to complete.
-                </p>
-              </EmptyState>
-
-              <div v-else class="grid grid-cols-1 gap-5">
-                <TrialResultCard
-                  v-for="(res, index) in trial.results"
-                  :key="index"
-                  :res="res"
-                  :index="index"
-                  :label="documentLabels[index]"
-                  :expanded="!!expandedResults[index]"
-                  :document-content="documentContents[index] || ''"
-                  :view-mode="viewMode[index] || 'horizontal'"
-                  :document-pdf-url="documentPdfUrls[index] || ''"
-                  :document-pdf-loading="!!documentPdfLoading[index]"
-                  :show-document-panel="!!showDocumentPanel[index]"
-                  :document-meta="documentMeta[index]"
-                  :show-reasoning-panel="!!showReasoningPanel[index]"
-                  :reasoning-content="getReasoningContent(index) || ''"
-                  :additional-content="getAdditionalContent(index)"
-                  @toggle-expansion="toggleResultExpansion(index)"
-                  @toggle-view-mode="toggleViewMode(index)"
-                  @toggle-document-panel="toggleDocumentPanel(index)"
-                  @toggle-reasoning="toggleReasoning(index)"
-                />
-              </div>
-            </template>
-
-            <div v-else class="flex flex-col items-center justify-center py-16">
-              <svg
-                class="h-14 w-14 text-gray-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.5"
-                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span class="text-gray-500 mt-3">Trial not found</span>
-              <button
-                class="mt-6 inline-block px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors duration-150 shadow"
-                @click="$emit('close')"
-              >
-                Return to trials
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Schema / Prompt snapshots (frozen at trial run) -->
-        <TrialSchemaModal
-          :open="showSchemaModal"
-          :schema="schemaForModal"
-          :is-snapshot="schemaIsSnapshot"
-          @close="showSchemaModal = false"
-        />
-        <TrialPromptModal
-          :open="showPromptModal"
-          :prompt="promptForModal"
-          :is-snapshot="promptIsSnapshot"
-          @close="showPromptModal = false"
+      <div v-else class="grid grid-cols-1 gap-5">
+        <TrialResultCard
+          v-for="(res, index) in trial.results"
+          :key="index"
+          :res="res"
+          :index="index"
+          :label="documentLabels[index]"
+          :expanded="!!expandedResults[index]"
+          :document-content="documentContents[index] || ''"
+          :view-mode="viewMode[index] || 'horizontal'"
+          :document-pdf-url="documentPdfUrls[index] || ''"
+          :document-pdf-loading="!!documentPdfLoading[index]"
+          :show-document-panel="!!showDocumentPanel[index]"
+          :document-meta="documentMeta[index]"
+          :show-reasoning-panel="!!showReasoningPanel[index]"
+          :reasoning-content="getReasoningContent(index) || ''"
+          :additional-content="getAdditionalContent(index)"
+          @toggle-expansion="toggleResultExpansion(index)"
+          @toggle-view-mode="toggleViewMode(index)"
+          @toggle-document-panel="toggleDocumentPanel(index)"
+          @toggle-reasoning="toggleReasoning(index)"
         />
       </div>
-    </transition>
-  </teleport>
+    </template>
+
+    <div v-else class="flex flex-col items-center justify-center py-16">
+      <Frown class="h-14 w-14 text-slate-300" />
+      <span class="text-slate-500 mt-3">Trial not found</span>
+      <BaseButton variant="secondary" class="mt-6" @click="$emit('close')">
+        Return to trials
+      </BaseButton>
+    </div>
+
+    <!-- Schema / Prompt snapshots (frozen at trial run) -->
+    <TrialSchemaModal
+      :open="showSchemaModal"
+      :schema="schemaForModal"
+      :is-snapshot="schemaIsSnapshot"
+      @close="showSchemaModal = false"
+    />
+    <TrialPromptModal
+      :open="showPromptModal"
+      :prompt="promptForModal"
+      :is-snapshot="promptIsSnapshot"
+      @close="showPromptModal = false"
+    />
+  </BaseModal>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { Frown } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { schemasApi } from '@/services/schemasApi'
 import { documentsApi } from '@/services/documentsApi'
@@ -149,10 +108,11 @@ import TrialDocumentErrors from './TrialDocumentErrors.vue'
 import TrialResultCard from './TrialResultCard.vue'
 import TrialSchemaModal from './TrialSchemaModal.vue'
 import TrialPromptModal from './TrialPromptModal.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import { useScrollLock } from '@/composables/useScrollLock'
 import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
@@ -354,10 +314,6 @@ const toggleDocumentPanel = async (i) => {
 const toggleReasoning = (i) => {
   showReasoningPanel.value[i] = !showReasoningPanel.value[i]
 }
-
-// Lock body scroll while the results modal is open. Uses the shared
-// ref-counted lock so stacked modals don't prematurely unlock the body.
-useScrollLock({ watch: () => props.isModal })
 
 onMounted(() => {
   fetchData()

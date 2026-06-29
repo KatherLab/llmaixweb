@@ -2,28 +2,21 @@
   <div class="p-6">
     <!-- Modern Tab Navigation -->
     <div
-      class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-6"
+      class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6"
     >
-      <div class="border-b border-gray-200 dark:border-slate-700">
+      <div class="border-b border-slate-200 dark:border-slate-700">
         <nav class="-mb-px flex" aria-label="Tabs">
           <button
             :class="[
               activeSection === 'schemas'
-                ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20 dark:text-indigo-400'
-                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-600',
-              'group relative min-w-0 flex-1 overflow-hidden py-4 px-6 text-sm font-medium text-center border-b-2 hover:bg-gray-50 dark:hover:bg-slate-800 focus:z-10 transition-all duration-200',
+                ? 'border-blue-500 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20 dark:text-blue-400'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600',
+              'group relative min-w-0 flex-1 overflow-hidden py-4 px-6 text-sm font-medium text-center border-b-2 hover:bg-slate-50 dark:hover:bg-slate-800 focus:z-10 transition-all duration-200',
             ]"
             @click="activeSection = 'schemas'"
           >
             <div class="flex items-center justify-center space-x-2">
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-                />
-              </svg>
+              <Database class="h-5 w-5" />
               <span>JSON Schemas</span>
               <StatusBadge v-if="schemas.length > 0" color="gray" class="ml-2">{{
                 schemas.length
@@ -34,21 +27,14 @@
           <button
             :class="[
               activeSection === 'prompts'
-                ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20 dark:text-indigo-400'
-                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-600',
-              'group relative min-w-0 flex-1 overflow-hidden py-4 px-6 text-sm font-medium text-center border-b-2 hover:bg-gray-50 dark:hover:bg-slate-800 focus:z-10 transition-all duration-200',
+                ? 'border-blue-500 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20 dark:text-blue-400'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600',
+              'group relative min-w-0 flex-1 overflow-hidden py-4 px-6 text-sm font-medium text-center border-b-2 hover:bg-slate-50 dark:hover:bg-slate-800 focus:z-10 transition-all duration-200',
             ]"
             @click="activeSection = 'prompts'"
           >
             <div class="flex items-center justify-center space-x-2">
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                />
-              </svg>
+              <MessageSquare class="h-5 w-5" />
               <span>Extraction Prompts</span>
               <StatusBadge v-if="prompts.length > 0" color="gray" class="ml-2">{{
                 prompts.length
@@ -137,6 +123,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { Database, MessageSquare } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
 import { promptsApi } from '@/services/promptsApi'
 import { useToast } from 'vue-toastification'

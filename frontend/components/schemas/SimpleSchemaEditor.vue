@@ -3,18 +3,11 @@
     <!-- Header -->
     <div class="border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
       <div>
-        <h3 class="text-base font-semibold text-gray-900">Extract Fields</h3>
-        <p class="text-sm text-gray-500 mt-0.5">Drag to reorder • Click field to edit</p>
+        <h3 class="text-base font-semibold text-slate-900">Extract Fields</h3>
+        <p class="text-sm text-slate-500 mt-0.5">Drag to reorder • Click field to edit</p>
       </div>
       <BaseButton class="shadow-sm hover:shadow" @click="addField">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4v16m8-8H4"
-          />
-        </svg>
+        <Plus class="h-4 w-4" />
         Add Field
       </BaseButton>
     </div>
@@ -28,20 +21,7 @@
       >
         <template #action>
           <BaseButton class="shadow-sm" @click="addField">
-            <svg
-              class="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
+            <Plus class="h-4 w-4" aria-hidden="true" />
             Add Your First Field
           </BaseButton>
         </template>
@@ -53,14 +33,7 @@
           v-if="hasReadonlyFields"
           class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800"
         >
-          <svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 9v2m0 4h.01M5 13l-1.5 7h15L17 13M5 13l1.5-7h11L19 13M5 13h14"
-            />
-          </svg>
+          <ShieldAlert class="h-4 w-4 flex-shrink-0" />
           <span>
             Fields with nested groups, lists, or advanced settings are read-only here — edit them in
             <strong>Advanced mode</strong>.
@@ -76,14 +49,7 @@
           >
             <!-- Lock icon (in place of the drag handle) -->
             <div class="flex-shrink-0 p-2 text-amber-500 rounded-lg">
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
+              <Lock class="h-5 w-5" />
             </div>
 
             <!-- Type badge -->
@@ -95,8 +61,8 @@
 
             <!-- Field name (read-only) -->
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-gray-700 truncate">{{ field.name }}</p>
-              <p v-if="field.description" class="text-xs text-gray-500 truncate">
+              <p class="text-sm font-medium text-slate-700 truncate">{{ field.name }}</p>
+              <p v-if="field.description" class="text-xs text-slate-500 truncate">
                 {{ field.description }}
               </p>
             </div>
@@ -117,8 +83,8 @@
             :class="[
               'group flex items-center gap-3 p-3 rounded-xl border transition-all duration-200',
               draggingIndex === index
-                ? 'border-indigo-400 bg-indigo-50 shadow-md scale-[1.02]'
-                : 'border-gray-200 hover:border-indigo-300 hover:shadow-sm bg-gray-50/50 hover:bg-white',
+                ? 'border-blue-400 bg-blue-50 shadow-md scale-[1.02]'
+                : 'border-slate-200 hover:border-blue-300 hover:shadow-sm bg-slate-50/50 hover:bg-white',
             ]"
             draggable
             @dragstart="handleDragStart"
@@ -129,17 +95,10 @@
           >
             <!-- Drag Handle -->
             <div
-              class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200/50 transition-all"
+              class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/50 transition-all"
               title="Drag to reorder"
             >
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 8h16M4 16h16"
-                />
-              </svg>
+              <GripVertical class="h-5 w-5" />
             </div>
 
             <!-- Field Number Badge -->
@@ -147,8 +106,8 @@
               :class="[
                 'flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-all',
                 draggingIndex === index
-                  ? 'bg-indigo-200 text-indigo-800'
-                  : 'bg-gray-200 text-gray-600',
+                  ? 'bg-blue-200 text-blue-800'
+                  : 'bg-slate-200 text-slate-600',
               ]"
             >
               {{ index + 1 }}
@@ -158,7 +117,7 @@
             <div class="flex-1 min-w-0">
               <input
                 v-model="field.name"
-                class="w-full bg-transparent border-0 border-b border-gray-300 focus:border-indigo-500 focus:ring-0 text-sm font-medium text-gray-900 placeholder-gray-400 transition-colors py-1.5"
+                class="w-full bg-transparent border-0 border-b border-slate-300 focus:border-blue-500 focus:ring-0 text-sm font-medium text-slate-900 placeholder-slate-400 transition-colors py-1.5"
                 placeholder="field_name (e.g., patient_name)"
                 @input="emitChange"
               />
@@ -169,7 +128,7 @@
               <div class="relative">
                 <select
                   v-model="field.type"
-                  class="appearance-none bg-white border border-gray-300 hover:border-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg text-sm font-medium py-2 pl-3 pr-8 cursor-pointer transition-all"
+                  class="appearance-none bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-lg text-sm font-medium py-2 pl-3 pr-8 cursor-pointer transition-all"
                   @change="emitChange"
                 >
                   <option value="String">Text</option>
@@ -180,19 +139,9 @@
                   <option value="DateTime">Date & Time</option>
                   <option value="Email">Email</option>
                 </select>
-                <svg
-                  class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                <ChevronDown
+                  class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+                />
               </div>
             </div>
 
@@ -200,7 +149,7 @@
             <div class="flex-1 min-w-0 hidden lg:block">
               <input
                 v-model="field.description"
-                class="w-full bg-transparent border-0 border-b border-gray-300 focus:border-indigo-500 focus:ring-0 text-xs text-gray-600 placeholder-gray-400 transition-colors py-1.5"
+                class="w-full bg-transparent border-0 border-b border-slate-300 focus:border-blue-500 focus:ring-0 text-xs text-slate-600 placeholder-slate-400 transition-colors py-1.5"
                 placeholder="What is this field? (optional)"
                 @input="emitChange"
               />
@@ -215,20 +164,7 @@
               aria-label="Remove field"
               @click="removeField(field.id)"
             >
-              <svg
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
+              <Trash2 class="h-4 w-4" aria-hidden="true" />
             </BaseButton>
           </div>
         </div>
@@ -238,36 +174,30 @@
     <!-- Help Footer -->
     <div
       v-if="fields.length > 0"
-      class="border-t px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50"
+      class="border-t px-6 py-4 bg-gradient-to-r from-blue-50 to-purple-50"
     >
       <div class="flex items-start gap-3">
         <div
-          class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center mt-0.5"
+          class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mt-0.5"
         >
-          <svg class="h-3 w-3 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-              clip-rule="evenodd"
-            />
-          </svg>
+          <Info class="h-3 w-3 text-blue-600" />
         </div>
-        <div class="text-sm text-indigo-900">
+        <div class="text-sm text-blue-900">
           <p class="font-medium mb-1.5">Quick Tips</p>
-          <ul class="space-y-1 text-indigo-700">
+          <ul class="space-y-1 text-blue-700">
             <li class="flex items-center gap-2">
-              <span class="w-1 h-1 rounded-full bg-indigo-400"></span>
+              <span class="w-1 h-1 rounded-full bg-blue-400"></span>
               Use clear names like
               <code class="px-1.5 py-0.5 bg-white/60 rounded text-xs font-mono">patient_name</code>
               or
               <code class="px-1.5 py-0.5 bg-white/60 rounded text-xs font-mono">date_of_birth</code>
             </li>
             <li class="flex items-center gap-2">
-              <span class="w-1 h-1 rounded-full bg-indigo-400"></span>
+              <span class="w-1 h-1 rounded-full bg-blue-400"></span>
               The schema is automatically included in the prompt sent to the LLM
             </li>
             <li class="flex items-center gap-2">
-              <span class="w-1 h-1 rounded-full bg-indigo-400"></span>
+              <span class="w-1 h-1 rounded-full bg-blue-400"></span>
               Need nested objects or arrays? Switch to <strong>Advanced Mode</strong>
             </li>
           </ul>
@@ -279,6 +209,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
+import { ChevronDown, GripVertical, Info, Lock, Plus, ShieldAlert, Trash2 } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 

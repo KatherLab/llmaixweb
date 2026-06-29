@@ -1,11 +1,9 @@
 <template>
   <BaseModal
-    :open="true"
+    :open="open"
     size="2xl"
     panel-class="h-[85vh]"
-    header-class="bg-gray-50 rounded-t-2xl"
-    body-class="!p-0 overflow-hidden bg-gray-50"
-    footer-class="bg-gray-50 rounded-b-2xl"
+    body-class="!p-0 overflow-hidden"
     @close="$emit('close')"
   >
     <template #header>
@@ -13,31 +11,18 @@
         <div class="flex items-center gap-4">
           <FileIcon :file-type="file.file_type" :size="32" />
           <div>
-            <h3 class="text-xl font-bold text-gray-900">{{ file.file_name }}</h3>
-            <p class="text-xs text-gray-500">
+            <h3 class="text-xl font-bold text-slate-900">{{ file.file_name }}</h3>
+            <p class="text-xs text-slate-500">
               {{ formatFileSize(file.file_size, 'Unknown') }} &middot; {{ file.file_type }}
             </p>
           </div>
         </div>
         <button
-          class="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition"
+          class="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition"
           title="Download"
           @click="downloadFile"
         >
-          <svg
-            class="h-5 w-5"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-            />
-          </svg>
+          <CloudDownload class="h-5 w-5" />
         </button>
       </div>
     </template>
@@ -51,21 +36,8 @@
     <!-- Error State -->
     <div v-else-if="error" class="flex items-center justify-center h-full">
       <div class="text-center max-w-sm mx-auto">
-        <svg
-          class="mx-auto h-12 w-12 text-gray-300"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-        <p class="mt-3 text-base text-gray-500">{{ error }}</p>
+        <AlertTriangle class="mx-auto h-12 w-12 text-slate-300" />
+        <p class="mt-3 text-base text-slate-500">{{ error }}</p>
         <BaseButton variant="ghost" size="sm" class="mt-5" @click="loadPreview">
           Try Again
         </BaseButton>
@@ -94,42 +66,52 @@
 
     <!-- CSV/XLSX Table Preview -->
     <div v-else-if="tabularData && headerLabels.length" class="h-full overflow-auto p-6">
-      <div class="bg-white rounded-2xl shadow border border-gray-100 overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-100 rounded-xl text-sm table-auto">
-          <thead class="bg-gray-50 sticky top-0 z-10">
+      <div
+        class="bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-100 dark:border-slate-700 overflow-x-auto"
+      >
+        <table
+          class="min-w-full divide-y divide-slate-100 dark:divide-slate-700 rounded-xl text-sm table-auto"
+        >
+          <thead class="bg-slate-50 dark:bg-slate-800 sticky top-0 z-10">
             <tr>
               <th
                 v-for="(header, idx) in normalizedHeaders"
                 :key="header || idx"
-                class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider border-b border-gray-100 whitespace-nowrap sticky top-0 bg-gray-50"
+                class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 whitespace-nowrap sticky top-0 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
                 :class="cellClasses(header)"
               >
                 {{ headerLabel(header) }}
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-50">
+          <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
             <tr
               v-for="(row, ridx) in tabularData.rows"
               :key="ridx"
-              class="hover:bg-blue-50 transition"
+              class="hover:bg-blue-50 dark:hover:bg-slate-800 transition"
             >
               <td
                 v-for="(cell, cidx) in row"
                 :key="cidx"
-                class="px-4 py-2 border-b border-gray-50 max-w-[260px] align-top"
+                class="px-4 py-2 border-b border-slate-50 dark:border-slate-800 max-w-[260px] align-top text-slate-700 dark:text-slate-300"
                 :class="cellClasses(normalizedHeaders[cidx])"
               >
-                <span v-if="cell === '' || cell == null" class="text-gray-300 italic">empty</span>
+                <span
+                  v-if="cell === '' || cell == null"
+                  class="text-slate-300 dark:text-slate-600 italic"
+                  >empty</span
+                >
                 <template
                   v-else-if="isTextColumn(normalizedHeaders[cidx]) && String(cell).length > 80"
                 >
                   <span
-                    class="truncate cursor-pointer text-green-900"
+                    class="truncate cursor-pointer text-green-900 dark:text-green-300"
                     :title="String(cell)"
                     @click="showFullCell(String(cell), headerLabels[cidx])"
                     >{{ String(cell).slice(0, 80)
-                    }}<span class="font-semibold text-blue-600 ml-1">…more</span></span
+                    }}<span class="font-semibold text-blue-600 dark:text-blue-400 ml-1"
+                      >…more</span
+                    ></span
                   >
                 </template>
                 <template v-else>
@@ -141,7 +123,7 @@
         </table>
         <div
           v-if="truncated"
-          class="px-4 py-2 bg-gray-50 text-xs text-gray-500 rounded-b-2xl text-center"
+          class="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 dark:text-slate-400 rounded-b-2xl text-center"
         >
           Showing first {{ tabularData.rows.length }} of {{ totalRows }} rows
         </div>
@@ -168,7 +150,7 @@
       class="h-full overflow-auto p-8"
     >
       <pre
-        class="text-sm font-mono whitespace-pre-wrap bg-white rounded-lg shadow p-6 border border-gray-100"
+        class="text-sm font-mono whitespace-pre-wrap bg-white rounded-lg shadow p-6 border border-slate-100"
         >{{ previewContent }}</pre
       >
     </div>
@@ -177,22 +159,9 @@
     <div v-else class="flex items-center justify-center h-full">
       <div class="text-center">
         <FileIcon :file-type="file.file_type" :size="64" />
-        <p class="mt-4 text-sm text-gray-500">Preview not available for this file type.</p>
+        <p class="mt-4 text-sm text-slate-500">Preview not available for this file type.</p>
         <BaseButton class="mt-4" @click="downloadFile">
-          <svg
-            class="mr-2 h-4 w-4"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-            />
-          </svg>
+          <CloudDownload class="mr-2 h-4 w-4" />
           Download File
         </BaseButton>
       </div>
@@ -205,28 +174,21 @@
       @click="closeModal"
     >
       <div
-        class="bg-white rounded-xl shadow-xl max-w-xl w-full mx-4 p-6 border border-gray-100 relative"
+        class="bg-white rounded-xl shadow-xl max-w-xl w-full mx-4 p-6 border border-slate-100 relative"
         @click.stop
       >
         <button
-          class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 p-1 rounded transition"
+          class="absolute top-2 right-2 text-slate-400 hover:text-slate-700 p-1 rounded transition"
           title="Close"
           @click="closeModal"
         >
-          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+          <X class="h-5 w-5" />
         </button>
-        <div v-if="modalHeader" class="mb-2 font-semibold text-gray-700">
+        <div v-if="modalHeader" class="mb-2 font-semibold text-slate-700">
           {{ modalHeader }}
         </div>
         <pre
-          class="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 rounded p-4 max-h-[60vh] overflow-auto"
+          class="whitespace-pre-wrap text-sm text-slate-900 bg-slate-50 rounded p-4 max-h-[60vh] overflow-auto"
           >{{ modalContent }}</pre
         >
         <BaseButton
@@ -243,13 +205,13 @@
 
     <template #footer>
       <div class="flex items-center justify-between text-xs w-full">
-        <div class="flex items-center gap-6 text-gray-500">
+        <div class="flex items-center gap-6 text-slate-500">
           <span>Created: {{ formatDateFull(file.created_at) }}</span>
           <span v-if="file.file_hash" class="font-mono text-xs">
             Hash: {{ file.file_hash.substring(0, 8) }}...
           </span>
         </div>
-        <div v-if="file.description" class="text-gray-600 truncate">
+        <div v-if="file.description" class="text-slate-600 truncate">
           {{ file.description }}
         </div>
       </div>
@@ -258,7 +220,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
+import { AlertTriangle, CloudDownload, X } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
 import { useToast } from 'vue-toastification'
 import FileIcon from '@/components/common/FileIcon.vue'
@@ -268,6 +231,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import { formatFileSize, formatDateFull } from '@/utils/formatters'
 
 const props = defineProps({
+  open: { type: Boolean, required: true },
   file: { type: Object, required: true },
   projectId: { type: [String, Number], required: true },
 })
@@ -287,14 +251,21 @@ const idColumn = ref('')
 const textColumns = ref([])
 
 // ⬇️ ADD: use settings saved by FileImportConfigModal (from file.file_metadata)
-const delimiter = ref(props.file?.file_metadata?.delimiter || ',')
-const encoding = ref(props.file?.file_metadata?.encoding || 'utf-8')
-const hasHeader = ref(
-  props.file?.file_metadata?.has_header !== undefined
-    ? !!props.file.file_metadata.has_header
-    : true,
-)
-const sheetFromMeta = ref(props.file?.file_metadata?.sheet || '')
+const delimiter = ref(',')
+const encoding = ref('utf-8')
+const hasHeader = ref(true)
+const sheetFromMeta = ref('')
+
+// (Re)initialize CSV/XLSX parse settings from the current file's saved metadata.
+// Called on each open since the component stays mounted to enable the close transition.
+function syncConfigFromMeta() {
+  const meta = props.file?.file_metadata || {}
+  delimiter.value = meta.delimiter || ','
+  encoding.value = meta.encoding || 'utf-8'
+  hasHeader.value = meta.has_header !== undefined ? !!meta.has_header : true
+  sheetFromMeta.value = meta.sheet || ''
+}
+syncConfigFromMeta()
 
 // Robust format checks (extension + MIME)
 const isCSV = computed(() => {
@@ -439,9 +410,21 @@ const downloadFile = async () => {
   }
 }
 
-onMounted(() => {
-  loadPreview()
-})
+// Load preview whenever the modal opens (component stays mounted to enable the
+// close transition). Immediate so the first open also loads.
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      syncConfigFromMeta()
+      loadPreview()
+    } else if (previewUrl.value) {
+      URL.revokeObjectURL(previewUrl.value)
+      previewUrl.value = ''
+    }
+  },
+  { immediate: true },
+)
 onUnmounted(() => {
   if (previewUrl.value) {
     URL.revokeObjectURL(previewUrl.value)

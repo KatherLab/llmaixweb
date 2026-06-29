@@ -2,74 +2,27 @@
  * Shared JSON-schema property type icons + metadata.
  * Previously duplicated byte-for-byte across VisualSchemaEditor, SchemaBlock,
  * TreeNode, and PropertyDetailsEditor.
+ *
+ * Icons are sourced from `@lucide/vue` (the single icon set used app-wide).
+ * The exported names are kept stable so callers don't change.
  */
-import { h } from 'vue'
+import { Hash, List, SquarePen, ToggleLeft, Braces } from '@lucide/vue'
 import { getPillClass } from '@/utils/statusStyles'
 
-export const StringIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-      }),
-    ])
-  },
-}
+/** Icon component for the `string` schema type (pencil — "editable text"). */
+export const StringIcon = SquarePen
 
-export const NumberIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M7 20l4-16m2 16l4-16M6 9h14M4 15h14',
-      }),
-    ])
-  },
-}
+/** Icon component for the `number` schema type (hash — `#`). */
+export const NumberIcon = Hash
 
-export const BooleanIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-      }),
-    ])
-  },
-}
+/** Icon component for the `boolean` schema type (toggle). */
+export const BooleanIcon = ToggleLeft
 
-export const ObjectIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
-      }),
-    ])
-  },
-}
+/** Icon component for the `object` schema type (braces — `{}`). */
+export const ObjectIcon = Braces
 
-export const ArrayIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M4 6h16M4 10h16M4 14h16M4 18h16',
-      }),
-    ])
-  },
-}
+/** Icon component for the `array` schema type (list rows). */
+export const ArrayIcon = List
 
 /** Map of schema type -> icon component. */
 export const TYPE_ICONS = {
@@ -113,7 +66,7 @@ export function getTypeIcon(type) {
  * @returns {string} Tailwind class
  */
 export function getTypeColor(type) {
-  return TYPE_COLORS[type] || 'bg-gray-500'
+  return TYPE_COLORS[type] || 'bg-slate-500'
 }
 
 /**

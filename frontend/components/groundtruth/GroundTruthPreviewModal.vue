@@ -1,6 +1,6 @@
 <template>
   <BaseModal
-    :open="true"
+    :open="open"
     size="full"
     panel-class="bg-white/90 max-w-none min-h-[420px]"
     header-class="bg-gradient-to-r from-white/80 to-blue-50/70 sticky top-0 z-10 rounded-t-2xl"
@@ -11,7 +11,7 @@
     <template #header>
       <div>
         <h2 class="text-xl font-bold tracking-tight mb-0.5">Configure Ground Truth Mapping</h2>
-        <div class="flex items-center gap-2 text-[11px] text-gray-500">
+        <div class="flex items-center gap-2 text-[11px] text-slate-500">
           <span class="font-mono text-blue-700">Project {{ projectId }}</span>
           <span
             v-if="selectedSchemaId"
@@ -39,7 +39,7 @@
           </option>
         </select>
       </div>
-      <div v-if="schemaFieldPaths.length" class="text-xs text-gray-400">
+      <div v-if="schemaFieldPaths.length" class="text-xs text-slate-400">
         <span class="font-mono text-blue-600">{{ schemaFieldPaths.length }}</span> fields
       </div>
       <div class="flex-1"></div>
@@ -101,19 +101,7 @@
             @click="addMapping"
           >
             <span class="flex items-center justify-center gap-2">
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M10 14L21 3M21 3v7.5M21 3h-7.5"
-                />
-              </svg>
+              <ArrowUpRight class="w-5 h-5" />
               Map
             </span>
           </BaseButton>
@@ -124,19 +112,7 @@
             @click="autoMap"
           >
             <span class="flex items-center justify-center gap-2">
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364-6.364l-2.121 2.121M7.757 16.243l-2.121 2.121M16.243 16.243l2.121 2.121M7.757 7.757L5.636 5.636"
-                />
-              </svg>
+              <Sun class="w-5 h-5" />
               Auto-map all fields
             </span>
           </BaseButton>
@@ -165,7 +141,7 @@
       <section class="w-full md:w-1/3 flex flex-col bg-white/90 p-4 min-w-0">
         <div class="mb-2 text-base font-semibold text-purple-900 flex items-center gap-2">
           Ground Truth Fields
-          <span v-if="groundTruthFieldPaths.length" class="ml-2 text-gray-400 text-xs"
+          <span v-if="groundTruthFieldPaths.length" class="ml-2 text-slate-400 text-xs"
             >{{ groundTruthFieldPaths.length }} fields</span
           >
         </div>
@@ -202,35 +178,21 @@
 
     <template #footer>
       <div>
-        <span v-if="!selectedSchemaId" class="text-gray-500">
+        <span v-if="!selectedSchemaId" class="text-slate-500">
           Please select a schema to start mapping fields.
         </span>
         <span
           v-else-if="mappings.length && !mappingComplete"
           class="text-yellow-700 font-medium flex items-center gap-2"
         >
-          <svg
-            class="w-5 h-5 text-yellow-500"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" x2="12" y1="8" y2="12" />
-            <circle cx="12" cy="16" r="1" />
-          </svg>
+          <CircleAlert class="w-5 h-5 text-yellow-500" />
           Warning: not all required fields are mapped!
         </span>
         <span
           v-if="isTabularFormat && !idColumn"
           class="block mt-1 text-xs text-red-600 font-semibold flex items-center gap-2"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" />
-            <circle cx="12" cy="16" r="1" fill="currentColor" />
-          </svg>
+          <CircleAlert class="w-4 h-4" />
           Please select the ID column before saving.
         </span>
       </div>
@@ -251,7 +213,7 @@
             :class="[
               'ml-2 px-7 py-2 rounded-full font-bold text-base transition shadow-xl',
               saveDisabled
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
                 : 'bg-gradient-to-r from-blue-600 via-purple-500 to-pink-400 text-white hover:scale-105 hover:shadow-2xl',
             ]"
             style="pointer-events: auto !important"
@@ -263,19 +225,7 @@
           >
             <span v-if="!justSaved">Save Mappings</span>
             <span v-else class="flex items-center gap-2">
-              <svg
-                class="w-5 h-5 text-green-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+              <Check class="w-5 h-5 text-green-300" />
               Saved!
             </span>
           </button>
@@ -284,7 +234,7 @@
             v-if="saveDisabled && showTooltip"
             ref="tooltipRef"
             :style="floatingStyles"
-            class="z-50 bg-gray-800 text-white text-xs rounded px-3 py-2 absolute shadow-lg"
+            class="z-50 bg-slate-800 text-white text-xs rounded px-3 py-2 absolute shadow-lg"
           >
             {{ saveDisabledReason }}
           </div>
@@ -295,9 +245,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/vue'
+import { ArrowUpRight, Check, CircleAlert, Sun } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FieldTree from '@/components/groundtruth/FieldTree.vue'
 import MappingList from '@/components/groundtruth/MappingList.vue'
@@ -310,6 +261,7 @@ import { schemasApi } from '@/services/schemasApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
 
 const props = defineProps({
+  open: { type: Boolean, required: true },
   projectId: { type: [String, Number], default: undefined },
   groundTruth: { type: Object, default: () => ({}) },
 })
@@ -395,11 +347,31 @@ const showIdSelector = computed(
     (isJsonFormat.value && (groundTruthFieldPaths.value.length > 0 || sampleDoc.value)),
 )
 
-onMounted(async () => {
-  loading.value = true
-  await Promise.all([loadSchemas(), loadGroundTruthPreview()])
-  loading.value = false
-})
+// Load data whenever the modal opens (component stays mounted to enable the
+// close transition). Immediate so the first open also loads.
+watch(
+  () => props.open,
+  async (isOpen) => {
+    if (isOpen) {
+      loading.value = true
+      await Promise.all([loadSchemas(), loadGroundTruthPreview()])
+      loading.value = false
+    } else {
+      // Reset user-editable mapping state so a reopen starts fresh.
+      selectedSchemaId.value = ''
+      schemaFieldTypes.value = {}
+      schemaFieldPaths.value = []
+      schemaFieldTree.value = {}
+      requiredFields.value = []
+      selectedSchemaField.value = ''
+      selectedGroundTruthField.value = ''
+      mappings.value = []
+      validationStatus.value = null
+      justSaved.value = false
+    }
+  },
+  { immediate: true },
+)
 
 async function loadSchemas() {
   const res = await schemasApi.list(props.projectId)
@@ -684,7 +656,7 @@ function close() {
 </script>
 
 <style scoped>
-.bg-gray-800 {
+.bg-slate-800 {
   background-color: #262626;
 }
 </style>

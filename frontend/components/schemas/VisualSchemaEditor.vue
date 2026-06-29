@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col bg-gray-50">
+  <div class="h-full flex flex-col bg-slate-50">
     <!-- Toolbar -->
     <SchemaEditorToolbar
       :navigation-path="navigationPath"
@@ -13,7 +13,7 @@
       <!-- Tree Navigation (Collapsible) -->
       <div v-if="showTreeNav" class="w-64 bg-white border-r overflow-y-auto">
         <div class="p-4">
-          <h3 class="text-sm font-medium text-gray-900 mb-3">Schema Structure</h3>
+          <h3 class="text-sm font-medium text-slate-900 mb-3">Schema Structure</h3>
           <SchemaTree :schema="schema" :current-path="currentPath" @navigate="navigateToPath" />
         </div>
       </div>

@@ -3,31 +3,23 @@
     class="border-2 border-dashed rounded-xl text-center hover:border-blue-400 transition-colors"
     :class="[
       compact
-        ? 'border-gray-300 p-10 bg-gray-50'
-        : 'border-gray-300 dark:border-slate-600 p-12 bg-gray-50 dark:bg-slate-800/50',
+        ? 'border-slate-300 p-10 bg-slate-50'
+        : 'border-slate-300 dark:border-slate-600 p-12 bg-slate-50 dark:bg-slate-800/50',
       { 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-slate-800': dragging },
     ]"
     @dragover.prevent="dragging = true"
     @dragleave="dragging = false"
     @drop.prevent="onDrop"
   >
-    <svg
-      class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
+    <UploadCloud class="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500" />
+    <p
+      :class="['mt-4 font-medium text-slate-900 dark:text-white', compact ? 'text-sm' : 'text-lg']"
     >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m0-3v12"
-      />
-    </svg>
-    <p :class="['mt-4 font-medium text-gray-900 dark:text-white', compact ? 'text-sm' : 'text-lg']">
       Drop files here or click to upload
     </p>
-    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">PDF, PNG, JPG, DOCX, CSV, XLSX, TXT</p>
+    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+      PDF, PNG, JPG, DOCX, CSV, XLSX, TXT
+    </p>
     <BaseButton
       :class="['mt-6', compact ? 'px-6 py-2.5 text-sm' : 'px-6 py-2']"
       @click="inputRef?.click()"
@@ -47,6 +39,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { UploadCloud } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
 defineProps({

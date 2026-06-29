@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-gradient-to-br from-white via-blue-50 to-white shadow-inner rounded-xl p-6 mb-7 border border-gray-100"
+    class="bg-gradient-to-br from-white via-blue-50 to-white shadow-inner rounded-xl p-6 mb-7 border border-slate-100"
   >
     <div class="flex flex-col md:flex-row md:justify-between gap-6">
       <div class="flex-1 min-w-0">
@@ -10,10 +10,10 @@
           </h2>
           <StatusBadge v-if="trial.status" :status="trial.status" class="ml-2 shadow" />
         </div>
-        <div v-if="trial.description" class="text-gray-700 text-sm mb-1">
+        <div v-if="trial.description" class="text-slate-700 text-sm mb-1">
           {{ trial.description }}
         </div>
-        <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600 mt-1">
+        <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600 mt-1">
           <span
             ><span class="font-semibold">Started:</span>
             {{ formatDate(trial.created_at, true) }}</span
@@ -21,11 +21,11 @@
           <span><span class="font-semibold">Model:</span> {{ trial.llm_model }}</span>
           <span v-if="trial.prompt"
             ><span class="font-semibold">Prompt:</span>
-            <span class="text-gray-800">{{ trial.prompt.name || '[unnamed prompt]' }}</span></span
+            <span class="text-slate-800">{{ trial.prompt.name || '[unnamed prompt]' }}</span></span
           >
           <span v-if="trial.document_set"
             ><span class="font-semibold">Document Set:</span>
-            <span class="text-gray-800">{{
+            <span class="text-slate-800">{{
               trial.document_set.name || 'Set #' + trial.document_set.id
             }}</span></span
           >
@@ -38,25 +38,11 @@
       <div class="flex flex-col items-start md:items-end gap-2 min-w-[200px]">
         <div class="flex gap-2">
           <BaseButton variant="secondary" size="sm" class="shadow-sm" @click="$emit('open-schema')">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
+            <FileText class="h-4 w-4" />
             View Schema
           </BaseButton>
           <BaseButton variant="secondary" size="sm" class="shadow-sm" @click="$emit('open-prompt')">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 9h8m-8 4h8m-8 4h5M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5z"
-              />
-            </svg>
+            <FileText class="h-4 w-4" />
             View Prompt
           </BaseButton>
         </div>
@@ -94,6 +80,7 @@
 </template>
 
 <script setup>
+import { FileText } from '@lucide/vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { formatDate } from '@/utils/formatters.js'

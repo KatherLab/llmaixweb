@@ -9,18 +9,18 @@
   >
     <template #header>
       <div class="flex items-center gap-4">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+        <h3 class="text-lg font-medium text-slate-900 dark:text-white">
           {{ isEdit ? 'Edit Schema' : 'Create New Schema' }}
         </h3>
         <!-- Simple/Advanced Mode Toggle -->
-        <div class="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
+        <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
           <button
             type="button"
             :class="[
               'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
               !simpleMode
-                ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-slate-400 hover:text-gray-900',
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900',
             ]"
             @click="simpleMode = false"
           >
@@ -31,8 +31,8 @@
             :class="[
               'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
               simpleMode
-                ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-slate-400 hover:text-gray-900',
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900',
             ]"
             @click="simpleMode = true"
           >
@@ -53,13 +53,13 @@
             <div class="flex-1 max-w-lg">
               <label
                 for="schema-name"
-                class="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-1.5"
+                class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1.5"
                 >Schema Name</label
               >
               <input
                 id="schema-name"
                 v-model="schemaForm.schema_name"
-                class="block w-full border-0 border-b-2 border-gray-200 dark:border-slate-700 bg-transparent dark:bg-slate-800 dark:text-white px-3 py-2 text-lg font-semibold text-gray-900 dark:text-white focus:ring-0 focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors placeholder-gray-400"
+                class="block w-full border-0 border-b-2 border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-800 dark:text-white px-3 py-2 text-lg font-semibold text-slate-900 dark:text-white focus:ring-0 focus:border-blue-500 dark:focus:border-blue-400 transition-colors placeholder-slate-400"
                 placeholder="e.g., Patient Information"
                 required
               />
@@ -70,28 +70,8 @@
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
               :class="isSchemaValid ? getPillClass('green') : getPillClass('red')"
             >
-              <svg
-                v-if="isSchemaValid"
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <CircleCheckBig v-if="isSchemaValid" class="h-4 w-4" />
+              <CircleAlert v-else class="h-4 w-4" />
               <span>{{ isSchemaValid ? 'Valid' : 'Invalid' }}</span>
             </div>
           </div>
@@ -99,36 +79,10 @@
 
         <!-- Tab Navigation (only show in Advanced mode) -->
         <div v-if="!simpleMode" class="px-6 flex-shrink-0 flex items-end justify-between gap-4">
-          <BaseTabGroup v-model="activeTab" :tabs="tabs" tone="indigo">
+          <BaseTabGroup v-model="activeTab" :tabs="tabs">
             <template #tab="{ tab }">
-              <svg
-                v-if="tab.value === 'visual'"
-                class="h-4 w-4 inline mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"
-                />
-              </svg>
-              <svg
-                v-else
-                class="h-4 w-4 inline mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                />
-              </svg>
+              <BookOpen v-if="tab.value === 'visual'" class="h-4 w-4 inline mr-1" />
+              <ArrowUpDown v-else class="h-4 w-4 inline mr-1" />
               {{ tab.label }}
             </template>
           </BaseTabGroup>
@@ -139,9 +93,9 @@
               <input
                 v-model="advancedMode"
                 type="checkbox"
-                class="rounded border-gray-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
+                class="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
               />
-              <span class="text-gray-700 dark:text-slate-300">Enable advanced features</span>
+              <span class="text-slate-700 dark:text-slate-300">Enable advanced features</span>
             </label>
 
             <!-- Split View Toggle -->
@@ -149,25 +103,18 @@
               <input
                 v-model="splitView"
                 type="checkbox"
-                class="rounded border-gray-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
+                class="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
               />
-              <span class="text-gray-700 dark:text-slate-300">Split view</span>
+              <span class="text-slate-700 dark:text-slate-300">Split view</span>
             </label>
 
             <!-- Templates Button -->
             <button
               type="button"
-              class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center"
+              class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center"
               @click="showTemplates = true"
             >
-              <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                />
-              </svg>
+              <Layers class="h-4 w-4 mr-1" />
               Templates
             </button>
           </div>
@@ -190,7 +137,7 @@
             <div
               v-if="activeTab === 'visual' || (splitView && activeTab === 'visual')"
               :class="[
-                'bg-gray-50 dark:bg-slate-800',
+                'bg-slate-50 dark:bg-slate-800',
                 splitView && activeTab === 'visual'
                   ? 'w-1/2 border-r dark:border-slate-700'
                   : 'h-full',
@@ -215,7 +162,7 @@
                 <textarea
                   ref="rawJsonTextarea"
                   v-model="schemaForm.schema_definition"
-                  class="block w-full h-full border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono resize-none"
+                  class="block w-full h-full border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono resize-none"
                   placeholder='{"type": "object", "properties": {...}}'
                   required
                   @input="onRawSchemaChange"
@@ -223,7 +170,7 @@
                 ></textarea>
                 <button
                   type="button"
-                  class="absolute top-8 right-8 px-2 py-1 text-xs bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded text-gray-700 dark:text-slate-300"
+                  class="absolute top-8 right-8 px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-700 dark:text-slate-300"
                   title="Format JSON"
                   @click="formatJsonInput"
                 >
@@ -244,7 +191,7 @@
 
       <!-- Modal Footer -->
       <div
-        class="px-6 py-4 bg-gray-50 dark:bg-slate-800 border-t dark:border-slate-700 flex justify-end space-x-3 flex-shrink-0"
+        class="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-t dark:border-slate-700 flex justify-end space-x-3 flex-shrink-0"
       >
         <BaseButton variant="secondary" @click="cancelSchemaModal">Cancel</BaseButton>
         <BaseButton type="submit" :loading="isSubmitting" :disabled="!isSchemaValid">
@@ -261,10 +208,23 @@
     @close="showTemplates = false"
     @apply="applyTemplate"
   />
+
+  <!-- Discard unsaved changes confirmation -->
+  <ConfirmationDialog
+    :open="showConfirm"
+    title="Discard unsaved changes?"
+    message="Your schema edits will be lost."
+    confirm-text="Discard"
+    cancel-text="Keep editing"
+    confirm-variant="danger"
+    @confirm="confirmDiscard"
+    @cancel="showConfirm = false"
+  />
 </template>
 
 <script setup>
 import { ref, onUnmounted, watch, nextTick, computed } from 'vue'
+import { ArrowUpDown, BookOpen, CircleAlert, CircleCheckBig, Layers } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -273,6 +233,7 @@ import VisualSchemaEditor from './VisualSchemaEditor.vue'
 import SimpleSchemaEditor from './SimpleSchemaEditor.vue'
 import SchemaTemplatesModal from './SchemaTemplatesModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import { formatJSON, STARTER_SCHEMA, schemaTemplates } from '@/utils/schemaTemplates'
 import { getPillClass } from '@/utils/statusStyles'
 import { extractErrorMessage } from '@/utils/errors'
@@ -314,7 +275,7 @@ let isUpdatingFromWatch = false
 let updateTimeout = null
 
 const activeTab = ref('visual')
-// Tab config for BaseTabGroup (SVG icons rendered via #tab scoped slot)
+// Tab config for BaseTabGroup (lucide icons rendered via #tab scoped slot)
 const tabs = [
   { label: 'Visual Editor', value: 'visual' },
   { label: 'Raw JSON', value: 'raw' },
@@ -344,13 +305,16 @@ const formatJsonInput = () => {
   }
 }
 
+const showConfirm = ref(false)
 const cancelSchemaModal = () => {
   if (hasUnsavedChanges.value) {
-    if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
-      return
-    }
+    showConfirm.value = true
+    return
   }
-
+  emit('close')
+}
+const confirmDiscard = () => {
+  showConfirm.value = false
   emit('close')
 }
 

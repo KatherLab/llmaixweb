@@ -13,12 +13,12 @@
       <div
         v-for="(gt, index) in groundTruthFiles"
         :key="gt.id"
-        class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+        class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow"
       >
         <div class="flex justify-between items-start">
           <div class="flex-1">
             <div class="flex items-center gap-3 mb-2">
-              <h4 class="font-medium text-gray-900">
+              <h4 class="font-medium text-slate-900">
                 {{ gt.name || `Ground Truth #${index + 1}` }}
               </h4>
               <StatusBadge color="blue" class="px-2 py-1 font-medium">{{
@@ -31,7 +31,7 @@
                 >{{ gt.field_mappings.length }} mappings</StatusBadge
               >
             </div>
-            <div class="text-xs text-gray-600 flex flex-wrap gap-4">
+            <div class="text-xs text-slate-600 flex flex-wrap gap-4">
               <span>Created: {{ formatDate(gt.created_at) }}</span>
               <span v-if="gt.updated_at !== gt.created_at">
                 Updated: {{ formatDate(gt.updated_at) }}
@@ -45,30 +45,15 @@
               title="Configure mappings"
               @click="previewGroundTruth(gt)"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="2" />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M11 5.055V3a1 1 0 012 0v2.055A7.002 7.002 0 0118.945 11H21a1 1 0 010 2h-2.055A7.002 7.002 0 0113 18.945V21a1 1 0 01-2 0v-2.055A7.002 7.002 0 015.055 13H3a1 1 0 010-2h2.055A7.002 7.002 0 0111 5.055z"
-                />
-              </svg>
+              <Settings class="w-5 h-5" />
             </button>
             <!-- Rename (pencil) -->
             <button
-              class="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors"
+              class="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-md transition-colors"
               title="Rename"
               @click="editGroundTruth(gt)"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M16.862 5.487a2.25 2.25 0 013.181 3.181l-9.192 9.193a2 2 0 01-.812.504l-4.054 1.351a.25.25 0 01-.316-.316l1.351-4.054a2 2 0 01.504-.812l9.193-9.192z"
-                />
-              </svg>
+              <Pencil class="w-5 h-5" />
             </button>
             <!-- Delete (trash) -->
             <button
@@ -76,32 +61,25 @@
               title="Delete"
               @click="deleteGroundTruth(gt)"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
+              <Trash2 class="w-5 h-5" />
             </button>
           </div>
         </div>
         <!-- Field mappings preview -->
-        <div v-if="gt.field_mappings?.length" class="mt-3 pt-3 border-t border-gray-100">
-          <h5 class="text-xs font-medium text-gray-700 mb-1">Configured Field Mappings</h5>
+        <div v-if="gt.field_mappings?.length" class="mt-3 pt-3 border-t border-slate-100">
+          <h5 class="text-xs font-medium text-slate-700 mb-1">Configured Field Mappings</h5>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
             <div
               v-for="mapping in gt.field_mappings.slice(0, 6)"
               :key="mapping.id"
-              class="bg-gray-50 px-2 py-1 rounded flex justify-between"
+              class="bg-slate-50 px-2 py-1 rounded flex justify-between"
             >
               <span class="font-mono text-blue-800">{{ mapping.schema_field }}</span>
-              <span class="text-gray-500">→ {{ mapping.ground_truth_field }}</span>
+              <span class="text-slate-500">→ {{ mapping.ground_truth_field }}</span>
             </div>
             <div
               v-if="gt.field_mappings.length > 6"
-              class="bg-gray-50 px-2 py-1 rounded text-center text-gray-500"
+              class="bg-slate-50 px-2 py-1 rounded text-center text-slate-500"
             >
               +{{ gt.field_mappings.length - 6 }} more...
             </div>
@@ -117,12 +95,12 @@
 
   <!-- Edit Modal -->
   <BaseModal :open="!!editingGroundTruth" title="Rename Ground Truth" size="sm" @close="cancelEdit">
-    <label for="edit-name" class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+    <label for="edit-name" class="block text-sm font-medium text-slate-700 mb-2">Name</label>
     <input
       id="edit-name"
       v-model="editName"
       type="text"
-      class="block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+      class="block w-full rounded-md border border-slate-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
       placeholder="Ground truth file name"
     />
     <template #footer>
@@ -136,20 +114,34 @@
 
   <!-- Preview Modal (GroundTruthPreviewModal) -->
   <GroundTruthPreviewModal
-    v-if="previewingGroundTruth"
+    :open="showPreview"
     :project-id="projectId"
     :ground-truth="previewingGroundTruth"
     @close="closePreview"
     @configured="onMappingConfigured"
   />
+
+  <!-- Delete ground truth confirmation -->
+  <ConfirmationDialog
+    :open="showDeleteConfirm"
+    title="Delete ground truth?"
+    :message="`Are you sure you want to delete “${pendingDelete?.name || 'this ground truth file'}”? This action cannot be undone.`"
+    confirm-text="Delete"
+    cancel-text="Cancel"
+    confirm-variant="danger"
+    @confirm="confirmDelete"
+    @cancel="showDeleteConfirm = false"
+  />
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { Pencil, Settings, Trash2 } from '@lucide/vue'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
@@ -174,6 +166,7 @@ const emit = defineEmits(['close', 'updated'])
 const toast = useToast()
 const editingGroundTruth = ref(null)
 const previewingGroundTruth = ref(null)
+const showPreview = ref(false)
 const editName = ref('')
 const isSaving = ref(false)
 
@@ -213,16 +206,24 @@ async function saveEdit() {
 // Preview ground truth
 function previewGroundTruth(gt) {
   previewingGroundTruth.value = gt
+  showPreview.value = true
 }
 function closePreview() {
-  previewingGroundTruth.value = null
+  showPreview.value = false
 }
 
-// Delete ground truth
-async function deleteGroundTruth(gt) {
-  if (!confirm(`Are you sure you want to delete "${gt.name || 'this ground truth file'}"?`)) {
-    return
-  }
+// Delete ground truth (confirmed via ConfirmationDialog)
+const showDeleteConfirm = ref(false)
+const pendingDelete = ref(null)
+function deleteGroundTruth(gt) {
+  pendingDelete.value = gt
+  showDeleteConfirm.value = true
+}
+async function confirmDelete() {
+  const gt = pendingDelete.value
+  showDeleteConfirm.value = false
+  pendingDelete.value = null
+  if (!gt) return
   try {
     await groundtruthApi.delete(props.projectId, gt.id)
     toast.success('Ground truth deleted successfully')
@@ -235,7 +236,7 @@ async function deleteGroundTruth(gt) {
 
 // Handle mapping configuration
 function onMappingConfigured() {
-  previewingGroundTruth.value = null
+  showPreview.value = false
   emit('updated')
   toast.success('Field mappings configured successfully')
 }

@@ -7,15 +7,10 @@
       class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm flex items-center gap-1.5 transition-colors duration-150 shadow-sm"
       @click="$emit('toggle')"
     >
-      <svg
+      <ChevronRight
         :class="show ? 'rotate-90' : ''"
         class="h-4 w-4 transition-transform duration-200"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-      </svg>
+      />
       <span>{{ show ? 'Hide' : 'Show' }} LLM Reasoning & Metadata</span>
     </button>
     <div v-if="show" class="bg-blue-50/60 border border-blue-100 rounded-lg mt-3 p-5">
@@ -40,6 +35,7 @@
 </template>
 
 <script setup>
+import { ChevronRight } from '@lucide/vue'
 import { renderMarkdown } from '@/utils/markdown.js'
 
 defineProps({

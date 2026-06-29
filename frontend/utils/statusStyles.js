@@ -15,12 +15,12 @@ const STATUS_STYLES = {
   success: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400',
   failed: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400',
   error: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400',
-  cancelled: 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400',
-  canceled: 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400',
+  cancelled: 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400',
+  canceled: 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400',
   partial: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400',
 }
 
-const DEFAULT_STATUS_STYLE = 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-400'
+const DEFAULT_STATUS_STYLE = 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-400'
 
 /**
  * Normalize a raw task status string to the canonical key used in STATUS_STYLES.
@@ -54,12 +54,12 @@ const STATUS_DOT_COLORS = {
   success: 'bg-green-500',
   failed: 'bg-red-500',
   error: 'bg-red-500',
-  cancelled: 'bg-gray-400',
-  canceled: 'bg-gray-400',
+  cancelled: 'bg-slate-400',
+  canceled: 'bg-slate-400',
   partial: 'bg-yellow-500',
 }
 
-const DEFAULT_DOT_COLOR = 'bg-gray-400'
+const DEFAULT_DOT_COLOR = 'bg-slate-400'
 
 export function getStatusDotClass(status) {
   const key = normalizeTaskStatus(status)
@@ -97,7 +97,7 @@ export function getStatusBannerClass(status) {
  * StatusBadge, ExtractionMethodBadge and any hand-rolled pill so colors and
  * dark-mode variants stay consistent.
  *
- * @param {string} color - One of: blue|green|yellow|amber|red|pink|purple|indigo|teal|cyan|orange|gray
+ * @param {string} color - One of: blue|green|yellow|amber|red|pink|purple|teal|cyan|orange|gray
  * @returns {string} Tailwind class string
  */
 const PILL_COLORS = {
@@ -108,11 +108,10 @@ const PILL_COLORS = {
   red: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
   pink: 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300',
   purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-  indigo: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300',
   teal: 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300',
   cyan: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300',
   orange: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
-  gray: 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300',
+  gray: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
 }
 
 const DEFAULT_PILL_COLOR = PILL_COLORS.gray
@@ -141,13 +140,11 @@ const BANNER_COLORS = {
   pink: 'bg-pink-50 border border-pink-200 text-pink-700 dark:bg-pink-900/20 dark:border-pink-800 dark:text-pink-300',
   purple:
     'bg-purple-50 border border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-300',
-  indigo:
-    'bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-300',
   teal: 'bg-teal-50 border border-teal-200 text-teal-700 dark:bg-teal-900/20 dark:border-teal-800 dark:text-teal-300',
   cyan: 'bg-cyan-50 border border-cyan-200 text-cyan-700 dark:bg-cyan-900/20 dark:border-cyan-800 dark:text-cyan-300',
   orange:
     'bg-orange-50 border border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-300',
-  gray: 'bg-gray-50 border border-gray-200 text-gray-700 dark:bg-slate-700/40 dark:border-slate-600 dark:text-gray-300',
+  gray: 'bg-slate-50 border border-slate-200 text-slate-700 dark:bg-slate-700/40 dark:border-slate-600 dark:text-slate-300',
 }
 
 const DEFAULT_BANNER_COLOR = BANNER_COLORS.gray

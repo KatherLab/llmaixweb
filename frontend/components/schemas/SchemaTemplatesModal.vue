@@ -8,8 +8,8 @@
   >
     <template #header>
       <div>
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Schema Templates</h3>
-        <p class="text-sm text-gray-600 dark:text-slate-400 mt-1">
+        <h3 class="text-lg font-medium text-slate-900 dark:text-white">Schema Templates</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
           Select a template for common medical document structures
         </p>
       </div>
@@ -19,11 +19,11 @@
       <button
         v-for="template in templates"
         :key="template.name"
-        class="p-4 border rounded-lg hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-left transition-colors"
+        class="p-4 border rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors"
         @click="emit('apply', template)"
       >
-        <h4 class="font-medium text-gray-900 dark:text-white">{{ template.name }}</h4>
-        <p class="text-sm text-gray-600 dark:text-slate-400 mt-1">{{ template.description }}</p>
+        <h4 class="font-medium text-slate-900 dark:text-white">{{ template.name }}</h4>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">{{ template.description }}</p>
       </button>
     </div>
 

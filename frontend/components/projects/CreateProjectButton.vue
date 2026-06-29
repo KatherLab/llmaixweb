@@ -16,28 +16,22 @@
     body-class="p-6 flex flex-col gap-6"
     @close="closeModal"
   >
-    <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-2">
-      <svg
-        class="w-5 h-5 text-blue-600 dark:text-blue-400"
-        fill="none"
-        viewBox="0 0 20 20"
-        stroke="currentColor"
-      >
-        <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.5" />
-        <path d="M10 6v8M6 10h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-      </svg>
+    <h3 class="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
+      <CirclePlus class="w-5 h-5 text-blue-600 dark:text-blue-400" />
       Create New Project
     </h3>
     <form class="flex flex-col gap-4" @submit.prevent="createProject">
       <div>
-        <label for="projectName" class="block text-sm font-medium text-gray-700 dark:text-slate-300"
+        <label
+          for="projectName"
+          class="block text-sm font-medium text-slate-700 dark:text-slate-300"
           >Project Name</label
         >
         <input
           id="projectName"
           v-model="projectData.name"
           type="text"
-          class="mt-1 block w-full rounded-md border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white shadow-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
+          class="mt-1 block w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white shadow-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
           required
           autocomplete="off"
           placeholder="e.g. Medical Document IE"
@@ -46,15 +40,15 @@
       <div>
         <label
           for="projectDescription"
-          class="block text-sm font-medium text-gray-700 dark:text-slate-300"
+          class="block text-sm font-medium text-slate-700 dark:text-slate-300"
           >Description
-          <span class="text-gray-400 dark:text-slate-500 text-xs">(optional)</span></label
+          <span class="text-slate-400 dark:text-slate-500 text-xs">(optional)</span></label
         >
         <textarea
           id="projectDescription"
           v-model="projectData.description"
           rows="3"
-          class="mt-1 block w-full rounded-md border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white shadow-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition resize-none"
+          class="mt-1 block w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white shadow-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition resize-none"
           placeholder="Briefly describe your project"
         ></textarea>
       </div>
@@ -74,6 +68,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { CirclePlus } from '@lucide/vue'
 import { projectsApi } from '@/services/projectsApi'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'

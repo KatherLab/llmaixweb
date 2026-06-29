@@ -3,14 +3,14 @@
     :open="open"
     placement="right"
     panel-class="w-screen max-w-md"
-    header-class="bg-gray-50"
+    header-class="bg-slate-50"
     body-class="p-6"
     @close="emit('close')"
   >
     <template #header>
       <div class="min-w-0">
-        <h3 class="text-lg font-semibold text-gray-900">Preprocessing History</h3>
-        <p v-if="historyFile" class="text-sm text-gray-500 truncate mt-0.5">
+        <h3 class="text-lg font-semibold text-slate-900">Preprocessing History</h3>
+        <p v-if="historyFile" class="text-sm text-slate-500 truncate mt-0.5">
           {{ historyFile.file_name }}
         </p>
       </div>
@@ -27,12 +27,12 @@
             'bg-white rounded-lg border transition-all overflow-hidden',
             expandedTasks.has(task.id)
               ? 'border-blue-300 shadow-md'
-              : 'border-gray-200 hover:border-blue-300',
+              : 'border-slate-200 hover:border-blue-300',
           ]"
         >
           <!-- Accordion Header (clickable) -->
           <div
-            class="px-4 py-3 cursor-pointer flex items-center justify-between bg-gradient-to-r from-gray-50 to-white"
+            class="px-4 py-3 cursor-pointer flex items-center justify-between bg-gradient-to-r from-slate-50 to-white"
             @click="toggleTaskAccordion(task.id)"
           >
             <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -47,28 +47,18 @@
               <!-- Task info -->
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
-                  <p class="text-sm font-medium text-gray-900 truncate">
+                  <p class="text-sm font-medium text-slate-900 truncate">
                     Run #{{ task.id }} • {{ getEngineName(task) }}
                   </p>
                   <!-- Expand/collapse chevron -->
-                  <svg
+                  <ChevronRight
                     :class="[
-                      'w-4 h-4 text-gray-400 transition-transform flex-shrink-0',
+                      'w-4 h-4 text-slate-400 transition-transform flex-shrink-0',
                       expandedTasks.has(task.id) ? 'rotate-90' : '',
                     ]"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  />
                 </div>
-                <p class="text-xs text-gray-500 mt-0.5 truncate">
+                <p class="text-xs text-slate-500 mt-0.5 truncate">
                   {{ formatRelativeTime(task.created_at) }}
                   <span v-if="task.completed_at">
                     • {{ formatRelativeTime(task.completed_at) }}
@@ -90,20 +80,20 @@
           <!-- Accordion Content (expanded) -->
           <div
             v-show="expandedTasks.has(task.id)"
-            class="border-t border-gray-200 bg-gray-50 px-4 py-3 space-y-3"
+            class="border-t border-slate-200 bg-slate-50 px-4 py-3 space-y-3"
           >
             <!-- Progress bar for active tasks -->
             <div
               v-if="isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress')"
               class="space-y-1"
             >
-              <div class="flex items-center justify-between text-xs text-gray-600">
+              <div class="flex items-center justify-between text-xs text-slate-600">
                 <span>Processing...</span>
-                <span v-if="task.meta?.eta_seconds > 0" class="text-gray-500">
+                <span v-if="task.meta?.eta_seconds > 0" class="text-slate-500">
                   ≈ {{ formatDuration(task.meta.eta_seconds) }} left
                 </span>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                 <div
                   :style="{
                     width: `${Math.min((task.processed_files / task.total_files) * 100, 100)}%`,
@@ -111,7 +101,7 @@
                   class="bg-blue-600 h-2 rounded-full transition-all duration-300"
                 />
               </div>
-              <p class="text-xs text-gray-500">
+              <p class="text-xs text-slate-500">
                 {{ task.processed_files }} of {{ task.total_files }} files processed
                 <span v-if="task.failed_files > 0" class="text-red-600">
                   • {{ task.failed_files }} failed
@@ -131,71 +121,27 @@
                   <div class="flex items-start justify-between gap-2">
                     <div class="flex items-center gap-2 flex-1 min-w-0">
                       <!-- Status icon -->
-                      <svg
+                      <Check
                         v-if="fileTask.status === 'completed'"
                         class="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <svg
+                      />
+                      <X
                         v-else-if="fileTask.status === 'failed'"
                         class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                      <svg
+                      />
+                      <Ban
                         v-else-if="fileTask.status === 'cancelled'"
                         class="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 9v2m0 4h.01"
-                        />
-                      </svg>
-                      <svg
-                        v-else
-                        class="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span class="font-medium text-gray-900 truncate">
+                      />
+                      <Clock v-else class="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                      <span class="font-medium text-slate-900 truncate">
                         {{ fileTask.file_name || 'Unknown file' }}
                       </span>
                     </div>
                     <!-- Processing time -->
                     <span
                       v-if="fileTask.processing_time"
-                      class="text-xs text-gray-500 whitespace-nowrap"
+                      class="text-xs text-slate-500 whitespace-nowrap"
                     >
                       {{ formatProcessingTime(fileTask.processing_time) }}
                     </span>
@@ -207,19 +153,7 @@
                       <summary
                         class="text-xs text-red-700 cursor-pointer hover:text-red-900 flex items-center gap-1"
                       >
-                        <svg
-                          class="w-3 h-3 transition-transform group-open:rotate-90"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
+                        <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
                         View error
                       </summary>
                       <p class="mt-1 text-xs text-red-600 bg-red-100 rounded p-2">
@@ -240,20 +174,9 @@
                       <summary
                         class="text-xs text-amber-700 cursor-pointer hover:text-amber-900 flex items-center gap-1"
                       >
-                        <svg
-                          class="w-3 h-3 transition-transform group-open:rotate-90"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                        ⚠ {{ fileTask.warnings.skipped_rows?.count || 0 }} skipped rows
+                        <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
+                        <AlertTriangle class="w-3 h-3 inline" />
+                        {{ fileTask.warnings.skipped_rows?.count || 0 }} skipped rows
                       </summary>
                       <div
                         class="mt-1 text-xs text-amber-600 bg-amber-100 rounded p-2 max-h-32 overflow-y-auto"
@@ -296,8 +219,9 @@
                     "
                     class="mt-2 flex items-center justify-between"
                   >
-                    <span class="text-xs text-green-700">
-                      ✓ {{ fileTask.document_ids.length }} document{{
+                    <span class="text-xs text-green-700 inline-flex items-center gap-1">
+                      <Check class="w-3 h-3" />
+                      {{ fileTask.document_ids.length }} document{{
                         fileTask.document_ids.length !== 1 ? 's' : ''
                       }}
                     </span>
@@ -308,14 +232,7 @@
                       class="text-xs font-medium underline"
                       @click.stop="emit('navigate', fileTask.document_ids[0])"
                     >
-                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
+                      <ExternalLink class="w-3 h-3" />
                       Go to Document
                     </BaseButton>
                     <BaseButton
@@ -325,20 +242,13 @@
                       class="text-xs font-medium underline"
                       @click.stop="emit('navigate', fileTask.document_ids[0])"
                     >
-                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
+                      <ExternalLink class="w-3 h-3" />
                       Go to Documents ({{ fileTask.document_ids.length }})
                     </BaseButton>
                   </div>
                 </div>
               </template>
-              <div v-else class="text-center text-gray-400 py-4 text-sm">
+              <div v-else class="text-center text-slate-400 py-4 text-sm">
                 No file tasks recorded
               </div>
             </div>
@@ -352,7 +262,7 @@
             </div>
 
             <!-- Actions -->
-            <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
               <BaseButton
                 v-if="isTaskStatus(task, 'failed')"
                 variant="ghost"
@@ -373,14 +283,7 @@
                 class="text-xs text-red-600 hover:text-red-800 font-medium"
                 @click.stop="emit('cancel', task)"
               >
-                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <X class="w-3 h-3" />
                 Cancel
               </BaseButton>
               <BaseButton
@@ -399,31 +302,22 @@
       <!-- No Runs Yet -->
       <EmptyState v-else title="No preprocessing runs yet">
         <template #icon>
-          <svg
-            class="h-12 w-12 mx-auto text-gray-300 dark:text-slate-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <FilePlus
+            class="h-12 w-12 mx-auto text-slate-300 dark:text-slate-600"
             aria-hidden="true"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+          />
         </template>
         <template v-if="historyFile" #action>
           <BaseButton class="shadow-sm" @click="emit('process', historyFile)">
-            🚀 Process this file
+            <Rocket class="w-4 h-4" />
+            Process this file
           </BaseButton>
         </template>
       </EmptyState>
     </div>
 
     <!-- Panel Footer -->
-    <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+    <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
       <div class="flex items-center justify-between">
         <BaseButton
           v-if="historyFile"
@@ -444,6 +338,17 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import {
+  AlertTriangle,
+  Ban,
+  Check,
+  ChevronRight,
+  Clock,
+  ExternalLink,
+  FilePlus,
+  Rocket,
+  X,
+} from '@lucide/vue'
 import { formatDuration, formatRelativeTime as sharedFormatRelativeTime } from '@/utils/formatters'
 import { getStatusDotClass, getStatusBadgeClass, getStatusBannerClass } from '@/utils/statusStyles'
 import BaseButton from '@/components/common/BaseButton.vue'

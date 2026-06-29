@@ -43,7 +43,7 @@ watchEffect(() => {
       :id="tooltipId"
       ref="floating"
       :style="{ position: strategy, top: `${y ?? 0}px`, left: `${x ?? 0}px`, zIndex: 50 }"
-      class="pointer-events-none px-3 py-1 rounded bg-gray-800 text-white text-xs shadow transition-opacity duration-150 opacity-95"
+      class="pointer-events-none px-3 py-1 rounded bg-slate-800 text-white text-xs shadow transition-opacity duration-150 opacity-95"
       role="tooltip"
     >
       {{ text }}

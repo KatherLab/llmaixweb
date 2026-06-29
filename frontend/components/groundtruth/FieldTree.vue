@@ -24,18 +24,16 @@
       >
         <!-- Expand/collapse indicator for objects -->
         <span v-if="isObject(child)" class="inline-flex items-center mr-0.5">
-          <svg class="w-3 h-3 text-gray-300" fill="none" viewBox="0 0 16 16">
-            <rect x="2" y="6" width="12" height="4" rx="1.5" fill="currentColor" />
-          </svg>
+          <Folder class="w-3 h-3 text-slate-300" />
         </span>
 
         <!-- Key label -->
         <span
-          class="font-mono font-medium text-gray-900"
+          class="font-mono font-medium text-slate-900"
           :class="[
             nodeColor === 'text-purple-700' ? 'text-purple-700' : 'text-blue-700',
             dimMapped && isLeaf(key) && isMapped(path(key)) && selected !== path(key)
-              ? 'text-gray-400'
+              ? 'text-slate-400'
               : '',
           ]"
         >
@@ -56,7 +54,7 @@
           v-if="isLeaf(key) && isMapped(path(key))"
           class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border border-green-200 bg-green-50 text-green-700"
         >
-          ✓
+          <Check class="w-2.5 h-2.5" />
           <span class="sr-only">Mapped</span>
         </span>
 
@@ -88,6 +86,7 @@
 </template>
 
 <script setup>
+import { Check, Folder } from '@lucide/vue'
 import { getTypePillClass } from '@/utils/schemaTypeIcons'
 import { getPillClass } from '@/utils/statusStyles'
 

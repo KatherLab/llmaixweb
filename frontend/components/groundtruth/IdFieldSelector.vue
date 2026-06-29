@@ -3,16 +3,7 @@
     <div class="font-semibold text-blue-900 mb-0.5 text-base flex items-center gap-2">
       <span class="text-xs text-blue-500">
         <!-- File SVG -->
-        <svg
-          class="w-4 h-4 inline-block"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-        >
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <path d="M9 7h6M9 12h6M9 17h2" />
-        </svg>
+        <FileText class="w-4 h-4 inline-block" />
       </span>
       Document ID
       <span v-if="isTabular" class="text-red-500 text-lg leading-none ml-1">*</span>
@@ -32,11 +23,7 @@
         <option v-for="c in availableColumns" :key="c" :value="c">{{ c }}</option>
       </select>
       <div v-if="!innerIdColumn" class="text-xs text-red-500 mt-1 flex items-center gap-1">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="8" x2="12" y2="12" />
-          <circle cx="12" cy="16" r="1" />
-        </svg>
+        <CircleAlert class="w-4 h-4" />
         Please select an ID column to enable evaluation.
       </div>
     </template>
@@ -87,21 +74,12 @@
       >
         <StatusBadge color="purple" class="gap-1 font-bold border border-purple-200">
           <!-- Key SVG -->
-          <svg
-            class="w-4 h-4 inline-block"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-          >
-            <circle cx="12" cy="12" r="5" />
-            <path d="M12 17v4M12 3v4" />
-          </svg>
+          <Key class="w-4 h-4 inline-block" />
           {{ innerJsonIdField }}
         </StatusBadge>
       </div>
     </template>
-    <div class="text-xs text-gray-500 mt-1">
+    <div class="text-xs text-slate-500 mt-1">
       Controls how documents are matched to trial results for evaluation.
     </div>
   </div>
@@ -109,6 +87,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { CircleAlert, FileText, Key } from '@lucide/vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 const props = defineProps({
   isJson: Boolean,

@@ -24,7 +24,7 @@ defineProps({
         >
           <slot name="icon" />
         </div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{{ title }}</h1>
+        <h1 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">{{ title }}</h1>
       </div>
       <div class="flex items-center gap-2">
         <slot name="actions" />

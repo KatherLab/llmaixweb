@@ -1,53 +1,79 @@
 <template>
   <div class="space-y-6">
     <!-- Header with summary -->
-    <div class="bg-gradient-to-r from-blue-50 to-white rounded-lg p-6 border">
+    <div
+      class="bg-gradient-to-r from-blue-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-lg p-6 border border-slate-200 dark:border-slate-700"
+    >
       <div class="flex justify-between items-start mb-4">
         <div>
-          <h2 class="text-xl font-semibold text-gray-800">Document Analysis</h2>
-          <p class="text-gray-600">Detailed comparison of extracted data vs ground truth</p>
+          <h2 class="text-xl font-semibold text-slate-800 dark:text-white">Document Analysis</h2>
+          <p class="text-slate-600 dark:text-slate-300">
+            Detailed comparison of extracted data vs ground truth
+          </p>
         </div>
         <div class="text-right">
-          <div class="text-2xl font-bold text-blue-600">{{ documentEvaluations.length }}</div>
-          <div class="text-sm text-gray-500">Documents</div>
+          <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {{ documentEvaluations.length }}
+          </div>
+          <div class="text-sm text-slate-500 dark:text-slate-400">Documents</div>
         </div>
       </div>
 
       <!-- Quick stats -->
       <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div class="bg-white rounded-lg p-4 text-center border">
-          <div class="text-lg font-semibold text-green-600">{{ perfectDocuments }}</div>
-          <div class="text-sm text-gray-500">Perfect Match</div>
+        <div
+          class="bg-white dark:bg-slate-900 rounded-lg p-4 text-center border border-slate-200 dark:border-slate-700"
+        >
+          <div class="text-lg font-semibold text-green-600 dark:text-green-400">
+            {{ perfectDocuments }}
+          </div>
+          <div class="text-sm text-slate-500 dark:text-slate-400">Perfect Match</div>
         </div>
-        <div class="bg-white rounded-lg p-4 text-center border">
-          <div class="text-lg font-semibold text-yellow-600">{{ goodDocuments }}</div>
-          <div class="text-sm text-gray-500">Good (≥70%)</div>
+        <div
+          class="bg-white dark:bg-slate-900 rounded-lg p-4 text-center border border-slate-200 dark:border-slate-700"
+        >
+          <div class="text-lg font-semibold text-yellow-600 dark:text-yellow-400">
+            {{ goodDocuments }}
+          </div>
+          <div class="text-sm text-slate-500 dark:text-slate-400">Good (≥70%)</div>
         </div>
-        <div class="bg-white rounded-lg p-4 text-center border">
-          <div class="text-lg font-semibold text-red-600">{{ poorDocuments }}</div>
-          <div class="text-sm text-gray-500">Needs Review</div>
+        <div
+          class="bg-white dark:bg-slate-900 rounded-lg p-4 text-center border border-slate-200 dark:border-slate-700"
+        >
+          <div class="text-lg font-semibold text-red-600 dark:text-red-400">
+            {{ poorDocuments }}
+          </div>
+          <div class="text-sm text-slate-500 dark:text-slate-400">Needs Review</div>
         </div>
-        <div class="bg-white rounded-lg p-4 text-center border">
-          <div class="text-lg font-semibold text-pink-600">{{ errorDocuments }}</div>
-          <div class="text-sm text-gray-500">No Ground Truth</div>
+        <div
+          class="bg-white dark:bg-slate-900 rounded-lg p-4 text-center border border-slate-200 dark:border-slate-700"
+        >
+          <div class="text-lg font-semibold text-pink-600 dark:text-pink-400">
+            {{ errorDocuments }}
+          </div>
+          <div class="text-sm text-slate-500 dark:text-slate-400">No Ground Truth</div>
         </div>
-        <div class="bg-white rounded-lg p-4 text-center border">
-          <div class="text-lg font-semibold text-gray-600">
+        <div
+          class="bg-white dark:bg-slate-900 rounded-lg p-4 text-center border border-slate-200 dark:border-slate-700"
+        >
+          <div class="text-lg font-semibold text-slate-600 dark:text-slate-300">
             {{ (averageAccuracy * 100).toFixed(1) }}%
           </div>
-          <div class="text-sm text-gray-500">Avg Accuracy</div>
+          <div class="text-sm text-slate-500 dark:text-slate-400">Avg Accuracy</div>
         </div>
       </div>
     </div>
 
     <!-- Filter and sort controls -->
-    <div class="bg-white rounded-lg border p-4">
+    <div
+      class="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 p-4"
+    >
       <div class="flex flex-wrap gap-4 items-center">
         <div class="flex items-center gap-2">
-          <label class="text-sm font-medium text-gray-700">Filter:</label>
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Filter:</label>
           <select
             v-model="accuracyFilter"
-            class="rounded-md border border-gray-300 text-sm py-1 px-2 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+            class="rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm py-1 px-2 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
           >
             <option value="all">All Documents</option>
             <option value="perfect">Perfect (100%)</option>
@@ -57,10 +83,10 @@
           </select>
         </div>
         <div class="flex items-center gap-2">
-          <label class="text-sm font-medium text-gray-700">Sort:</label>
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Sort:</label>
           <select
             v-model="sortBy"
-            class="rounded-md border border-gray-300 text-sm py-1 px-2 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+            class="rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm py-1 px-2 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
           >
             <option value="error_first">No Ground Truth First</option>
             <option value="accuracy_desc">Accuracy (High to Low)</option>
@@ -70,7 +96,9 @@
           </select>
         </div>
         <div class="flex items-center gap-2 ml-auto">
-          <span class="text-sm text-gray-600">{{ filteredDocuments.length }} documents</span>
+          <span class="text-sm text-slate-600 dark:text-slate-400">
+            {{ filteredDocuments.length }} documents
+          </span>
         </div>
       </div>
     </div>
@@ -80,37 +108,43 @@
       <div
         v-for="(docEval, index) in filteredDocuments"
         :key="docEval.document_id"
-        class="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-100 hover:shadow-md transition-shadow duration-200"
+        class="bg-white dark:bg-slate-900 shadow-sm rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow duration-200"
       >
         <div
-          class="p-4 cursor-pointer border-b flex justify-between items-center hover:bg-gray-50 transition-colors duration-150"
+          class="p-4 cursor-pointer border-b border-slate-100 dark:border-slate-700 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-150"
           @click="toggleDocumentExpansion(docEval.document_id)"
         >
           <div class="flex items-center gap-4">
             <div
               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
               :class="{
-                'bg-green-100 text-green-800': docEval.accuracy >= 1.0 && !docEval.error,
-                'bg-yellow-100 text-yellow-800':
+                'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300':
+                  docEval.accuracy >= 1.0 && !docEval.error,
+                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300':
                   docEval.accuracy >= 0.7 && docEval.accuracy < 1.0 && !docEval.error,
-                'bg-red-100 text-red-800': docEval.accuracy < 0.7 && !docEval.error,
-                'bg-pink-100 text-pink-800': docEval.error,
+                'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300':
+                  docEval.accuracy < 0.7 && !docEval.error,
+                'bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300': docEval.error,
               }"
             >
               {{ index + 1 }}
             </div>
             <div>
-              <h3 class="font-medium text-gray-800 flex items-center gap-2">
+              <h3 class="font-medium text-slate-800 dark:text-white flex items-center gap-2">
                 {{ documentNames[docEval.document_id]?.name || `Document ${docEval.document_id}` }}
                 <span
                   v-if="docEval.error"
-                  class="inline-flex items-center bg-pink-100 text-pink-800 px-2 py-0.5 rounded-full font-semibold select-none"
+                  class="inline-flex items-center bg-pink-100 dark:bg-pink-900/40 text-pink-800 dark:text-pink-300 px-2 py-0.5 rounded-full font-semibold select-none"
                   title="Evaluation error: {{ docEval.error }}"
                   style="border: 1px solid #f87171"
                 >
-                  ⚠️ No Ground Truth
+                  <AlertTriangle class="h-3 w-3" />
+                  No Ground Truth
                 </span>
-                <span v-else-if="getErrorCount(docEval) > 0" class="text-red-600 font-semibold">
+                <span
+                  v-else-if="getErrorCount(docEval) > 0"
+                  class="text-red-600 dark:text-red-400 font-semibold"
+                >
                   {{ getErrorCount(docEval) }} error<span v-if="getErrorCount(docEval) > 1">s</span>
                 </span>
               </h3>
@@ -120,18 +154,18 @@
                   documentNames[docEval.document_id]?.original !==
                     documentNames[docEval.document_id]?.name
                 "
-                class="text-xs text-gray-400 italic mt-0.5 truncate max-w-xs"
+                class="text-xs text-slate-400 dark:text-slate-500 italic mt-0.5 truncate max-w-xs"
               >
                 (Original: {{ documentNames[docEval.document_id].original }})
               </div>
-              <div class="flex items-center gap-4 mt-1 text-sm text-gray-500">
+              <div class="flex items-center gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
                 <span>{{ docEval.correct_fields }}/{{ docEval.total_fields }} fields correct</span>
                 <span>{{ (docEval.accuracy * 100).toFixed(1) }}% accuracy</span>
               </div>
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <div class="w-20 bg-gray-200 rounded-full h-2">
+            <div class="w-20 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
               <div
                 class="h-2 rounded-full"
                 :class="{
@@ -152,73 +186,57 @@
             >
               Details
             </BaseButton>
-            <span
-              class="text-lg transition-transform duration-200 text-gray-500 cursor-pointer"
-              :class="{ 'transform rotate-180': expandedDocuments[docEval.document_id] }"
-            >
-              ⌄
-            </span>
+            <ChevronDown
+              class="h-5 w-5 transition-transform duration-200 text-slate-500 dark:text-slate-400 cursor-pointer"
+              :class="{ 'rotate-180': expandedDocuments[docEval.document_id] }"
+            />
           </div>
         </div>
 
         <div v-if="expandedDocuments[docEval.document_id]" class="p-6">
           <div
             v-if="docEval.error"
-            class="mb-6 p-5 bg-pink-100 border-2 border-pink-400 rounded text-pink-900 font-semibold flex items-center gap-3 select-text"
+            class="mb-6 p-5 bg-pink-100 dark:bg-pink-900/30 border-2 border-pink-400 dark:border-pink-700 rounded text-pink-900 dark:text-pink-200 font-semibold flex items-center gap-3 select-text"
           >
-            <span class="text-2xl">⚠️</span>
+            <AlertTriangle class="h-6 w-6" />
             <span>{{ docEval.error }}</span>
           </div>
 
           <div v-else>
             <!-- Field comparison table -->
             <div class="mb-6">
-              <h4 class="font-medium text-gray-800 mb-3">Field-by-Field Comparison</h4>
+              <h4 class="font-medium text-slate-800 dark:text-white mb-3">
+                Field-by-Field Comparison
+              </h4>
               <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                  <thead class="bg-gray-50">
+                <table :class="t.table">
+                  <thead :class="t.thead">
                     <tr>
-                      <th
-                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Field
-                      </th>
-                      <th
-                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Ground Truth
-                      </th>
-                      <th
-                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Extracted
-                      </th>
-                      <th
-                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Status
-                      </th>
-                      <th
-                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Confidence
-                      </th>
+                      <th :class="t.th">Field</th>
+                      <th :class="t.th">Ground Truth</th>
+                      <th :class="t.th">Extracted</th>
+                      <th :class="t.th">Status</th>
+                      <th :class="t.th">Confidence</th>
                     </tr>
                   </thead>
-                  <tbody class="bg-white divide-y divide-gray-200">
+                  <tbody :class="t.tbody">
                     <tr
                       v-for="(fieldDetail, fieldName) in docEval.field_details"
                       :key="fieldName"
-                      class="hover:bg-gray-50"
-                      :class="{
-                        'bg-green-50': fieldDetail.is_correct,
-                        'bg-red-50': !fieldDetail.is_correct,
-                      }"
+                      :class="[
+                        t.tr,
+                        {
+                          'bg-green-50 dark:bg-green-900/20': fieldDetail.is_correct,
+                          'bg-red-50 dark:bg-red-900/20': !fieldDetail.is_correct,
+                        },
+                      ]"
                     >
-                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td
+                        class="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-white"
+                      >
                         {{ fieldName }}
                       </td>
-                      <td class="px-4 py-3 text-sm text-gray-600 max-w-xs">
+                      <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 max-w-xs">
                         <div
                           class="truncate"
                           :title="formatFieldValue(fieldDetail.ground_truth_value)"
@@ -226,7 +244,7 @@
                           {{ formatFieldValue(fieldDetail.ground_truth_value) }}
                         </div>
                       </td>
-                      <td class="px-4 py-3 text-sm text-gray-600 max-w-xs">
+                      <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 max-w-xs">
                         <div
                           class="truncate"
                           :title="formatFieldValue(fieldDetail.predicted_value)"
@@ -238,8 +256,10 @@
                         <span
                           class="px-2 py-1 rounded-full text-xs font-medium"
                           :class="{
-                            'bg-green-100 text-green-800': fieldDetail.is_correct,
-                            'bg-red-100 text-red-800': !fieldDetail.is_correct,
+                            'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300':
+                              fieldDetail.is_correct,
+                            'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300':
+                              !fieldDetail.is_correct,
                           }"
                         >
                           {{
@@ -254,7 +274,7 @@
                           <div class="mr-2">
                             {{ (fieldDetail.confidence_score * 100).toFixed(1) }}%
                           </div>
-                          <div class="w-12 bg-gray-200 rounded-full h-1.5">
+                          <div class="w-12 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
                             <div
                               class="h-1.5 rounded-full"
                               :class="{
@@ -266,7 +286,7 @@
                             ></div>
                           </div>
                         </div>
-                        <span v-else class="text-gray-400">-</span>
+                        <span v-else class="text-slate-400">-</span>
                       </td>
                     </tr>
                   </tbody>
@@ -277,9 +297,13 @@
             <!-- Document content panels -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <!-- Document text -->
-              <div class="bg-gray-50 p-4 rounded-md overflow-auto max-h-96 border border-gray-200">
-                <h4 class="text-sm font-medium mb-3 text-gray-700 flex items-center">
-                  <span class="mr-2">📄</span>
+              <div
+                class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-md overflow-auto max-h-96 border border-slate-200 dark:border-slate-700"
+              >
+                <h4
+                  class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200 flex items-center"
+                >
+                  <FileText class="mr-2 h-4 w-4" />
                   Document Text
                   <BaseButton
                     v-if="
@@ -296,33 +320,43 @@
                 </h4>
                 <div
                   v-if="documentContents[docEval.document_id]"
-                  class="text-xs text-gray-800 whitespace-pre-wrap"
+                  class="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap"
                 >
                   {{ documentContents[docEval.document_id] }}
                 </div>
                 <div v-else-if="loadingDocuments[docEval.document_id]" class="text-center py-8">
                   <LoadingSpinner size="small" />
-                  <p class="mt-2 text-gray-500 text-sm">Loading...</p>
+                  <p class="mt-2 text-slate-500 dark:text-slate-400 text-sm">Loading...</p>
                 </div>
                 <div v-else class="text-center py-8">
-                  <span class="text-4xl text-gray-400 mb-2 block">📄</span>
-                  <p class="text-sm text-gray-500">Click "Load" to view document text</p>
+                  <FileText class="h-10 w-10 mx-auto text-slate-400 dark:text-slate-600 mb-2" />
+                  <p class="text-sm text-slate-500 dark:text-slate-400">
+                    Click "Load" to view document text
+                  </p>
                 </div>
               </div>
 
               <!-- Ground truth data -->
-              <div class="bg-gray-50 p-4 rounded-md overflow-auto max-h-96 border border-gray-200">
-                <h4 class="text-sm font-medium mb-3 text-gray-700 flex items-center">
-                  <span class="mr-2">✅</span>
+              <div
+                class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-md overflow-auto max-h-96 border border-slate-200 dark:border-slate-700"
+              >
+                <h4
+                  class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200 flex items-center"
+                >
+                  <CircleCheckBig class="mr-2 h-4 w-4" />
                   Ground Truth
                 </h4>
                 <JsonViewer :data="getGroundTruthData(docEval)" />
               </div>
 
               <!-- Extracted data -->
-              <div class="bg-gray-50 p-4 rounded-md overflow-auto max-h-96 border border-gray-200">
-                <h4 class="text-sm font-medium mb-3 text-gray-700 flex items-center">
-                  <span class="mr-2">🤖</span>
+              <div
+                class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-md overflow-auto max-h-96 border border-slate-200 dark:border-slate-700"
+              >
+                <h4
+                  class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200 flex items-center"
+                >
+                  <Bot class="mr-2 h-4 w-4" />
                   Extracted Data
                 </h4>
                 <JsonViewer :data="getExtractedData(docEval)" />
@@ -337,9 +371,13 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { AlertTriangle, Bot, ChevronDown, CircleCheckBig, FileText } from '@lucide/vue'
 import JsonViewer from '@/components/common/JsonViewer.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { useTableClasses } from '@/composables/useTableClasses'
+
+const t = useTableClasses()
 
 const props = defineProps({
   documentEvaluations: {

@@ -77,7 +77,7 @@ const linkToneClass = computed(() => {
     case 'green':
       return 'text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300'
     case 'gray':
-      return 'text-gray-600 hover:text-gray-900 dark:text-slate-300 dark:hover:text-slate-100'
+      return 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100'
     default:
       return 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300'
   }
@@ -93,7 +93,7 @@ const iconToneClass = computed(() => {
     case 'purple':
       return 'hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
     case 'gray':
-      return 'hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'
+      return 'hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
     default:
       return 'hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
   }
@@ -102,7 +102,7 @@ const iconToneClass = computed(() => {
 const variantClass = computed(() => {
   switch (props.variant) {
     case 'secondary':
-      return 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-700 focus:ring-blue-500'
+      return 'text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-700 focus:ring-blue-500'
     case 'danger':
       return 'text-white bg-red-600 hover:bg-red-700 focus:ring-red-500'
     case 'warning':
@@ -110,11 +110,11 @@ const variantClass = computed(() => {
     case 'success':
       return 'text-white bg-green-600 hover:bg-green-700 focus:ring-green-500'
     case 'ghost':
-      return 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800 focus:ring-blue-500'
+      return 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800 focus:ring-blue-500'
     case 'link':
       return linkToneClass.value
     case 'icon':
-      return ['text-gray-400 dark:text-gray-500 transition-colors', iconToneClass.value].join(' ')
+      return ['text-slate-400 dark:text-slate-500 transition-colors', iconToneClass.value].join(' ')
     default:
       return 'text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
   }

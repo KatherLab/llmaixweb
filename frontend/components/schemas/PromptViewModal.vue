@@ -9,25 +9,25 @@
   >
     <template #header>
       <div>
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+        <h3 class="text-lg font-medium text-slate-900 dark:text-white">
           {{ prompt?.name }}
         </h3>
-        <p v-if="prompt?.description" class="mt-1 text-sm text-gray-500 dark:text-slate-400">
+        <p v-if="prompt?.description" class="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {{ prompt.description }}
         </p>
       </div>
     </template>
 
     <div class="space-y-4">
-      <div v-if="prompt?.system_prompt" class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-        <h4 class="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">System Prompt</h4>
-        <pre class="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{{
+      <div v-if="prompt?.system_prompt" class="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">System Prompt</h4>
+        <pre class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{
           prompt.system_prompt
         }}</pre>
       </div>
       <div v-if="prompt?.user_prompt" class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
         <h4 class="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">User Prompt</h4>
-        <pre class="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{{
+        <pre class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{
           prompt.user_prompt
         }}</pre>
       </div>

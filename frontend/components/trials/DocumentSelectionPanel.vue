@@ -1,14 +1,14 @@
 <template>
   <div class="bg-white border rounded-xl p-6 shadow flex flex-col h-full">
     <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-      <span class="block text-sm font-semibold text-gray-700"
+      <span class="block text-sm font-semibold text-slate-700"
         >Select Documents <span class="text-red-500">*</span></span
       >
-      <span class="text-xs text-gray-500">{{ selectedIds.length }} selected</span>
+      <span class="text-xs text-slate-500">{{ selectedIds.length }} selected</span>
     </div>
 
     <div class="mb-4">
-      <BaseTabGroup v-model="mode" :tabs="tabs" tone="blue" />
+      <BaseTabGroup v-model="mode" :tabs="tabs" />
     </div>
 
     <!-- INDIVIDUAL (server-side pagination) -->

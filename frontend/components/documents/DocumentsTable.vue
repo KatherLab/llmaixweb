@@ -1,62 +1,40 @@
 <template>
-  <div
-    class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
-  >
-    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-      <thead class="bg-gray-50 dark:bg-slate-800">
+  <div :class="t.wrapper">
+    <table :class="t.table">
+      <thead :class="t.thead">
         <tr>
-          <th class="px-6 py-3 text-left">
+          <th :class="[t.th, 'text-left']">
             <input
               type="checkbox"
               :checked="areAllSelected"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-gray-600"
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 rounded"
               @change="emit('toggle-select-all')"
             />
           </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-          >
-            Document
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-          >
-            Configuration
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-          >
-            Model
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-          >
-            Created
-          </th>
-          <th class="relative px-6 py-3">
+          <th :class="t.th">Document</th>
+          <th :class="t.th">Configuration</th>
+          <th :class="t.th">Model</th>
+          <th :class="t.th">Created</th>
+          <th :class="[t.th, 'relative']">
             <span class="sr-only">Actions</span>
           </th>
         </tr>
       </thead>
-      <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-700">
-        <tr
-          v-for="doc in documents"
-          :key="doc.id"
-          class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-        >
-          <td class="px-6 py-4 whitespace-nowrap">
+      <tbody :class="t.tbody">
+        <tr v-for="doc in documents" :key="doc.id" :class="t.tr">
+          <td class="px-4 py-3 whitespace-nowrap">
             <input
               type="checkbox"
               :checked="selectedDocuments.includes(doc.id)"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-gray-600"
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 rounded"
               @change="emit('toggle-selection', doc.id)"
             />
           </td>
-          <td class="px-6 py-4">
+          <td :class="t.td">
             <div class="flex items-center">
               <FileIcon :file-type="doc.original_file?.file_type" :size="40" />
               <div class="ml-3">
-                <p class="text-sm font-medium text-gray-900 dark:text-white truncate max-w-xs">
+                <p class="text-sm font-medium text-slate-900 dark:text-white truncate max-w-xs">
                   {{ doc.document_name || doc.original_file?.file_name || `Document #${doc.id}` }}
                 </p>
                 <p
@@ -65,79 +43,47 @@
                     doc.original_file?.file_name &&
                     doc.document_name !== doc.original_file?.file_name
                   "
-                  class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs"
+                  class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs"
                 >
                   {{ doc.original_file?.file_name }}
                 </p>
-                <p v-else class="text-xs text-gray-500 dark:text-gray-400">
+                <p v-else class="text-xs text-slate-500 dark:text-slate-400">
                   {{ formatFileSize(doc.original_file?.file_size) }}
                 </p>
               </div>
             </div>
           </td>
-          <td class="px-6 py-4 whitespace-nowrap">
-            <div class="text-sm text-gray-900 dark:text-white">
+          <td class="px-4 py-3 whitespace-nowrap">
+            <div class="text-sm text-slate-900 dark:text-white">
               {{ doc.preprocessing_config?.name || 'Custom Config' }}
             </div>
-            <div v-if="getOcrDisplay(doc)" class="text-xs text-gray-500 dark:text-gray-400">
+            <div v-if="getOcrDisplay(doc)" class="text-xs text-slate-500 dark:text-slate-400">
               {{ getOcrDisplay(doc) }}
             </div>
           </td>
-          <td class="px-6 py-4 whitespace-nowrap">
-            <div class="text-sm text-gray-900 dark:text-white">
+          <td class="px-4 py-3 whitespace-nowrap">
+            <div class="text-sm text-slate-900 dark:text-white">
               {{ getModelName(doc) }}
             </div>
           </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+          <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
             {{ formatDate(doc.created_at) }}
           </td>
-          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+          <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
             <div class="flex items-center justify-end space-x-2">
               <button
                 class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                 title="View"
                 @click="emit('view', doc)"
               >
-                <svg
-                  class="h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
+                <Eye class="h-5 w-5" />
               </button>
               <button
-                class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
+                class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-300"
                 title="Download"
                 @click="emit('download', doc)"
               >
-                <svg
-                  class="h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-                  />
-                </svg>
+                <CloudDownload class="h-5 w-5" />
               </button>
             </div>
           </td>
@@ -148,8 +94,12 @@
 </template>
 
 <script setup>
+import { CloudDownload, Eye } from '@lucide/vue'
 import FileIcon from '@/components/common/FileIcon.vue'
 import { formatFileSize, formatDate } from '@/utils/formatters'
+import { useTableClasses } from '@/composables/useTableClasses'
+
+const t = useTableClasses()
 
 defineProps({
   documents: {

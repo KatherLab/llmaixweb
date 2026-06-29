@@ -1,46 +1,34 @@
 <template>
   <div
     :id="`trial-card-${trial.id}`"
-    class="group border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl shadow hover:shadow-lg dark:hover:shadow-xl transition relative flex flex-col min-h-[220px]"
+    class="group border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl shadow hover:shadow-lg dark:hover:shadow-xl transition relative flex flex-col min-h-[220px]"
     :class="{
       'ring-2 ring-blue-500': selected,
       'ring-2 ring-emerald-500 bg-emerald-50 dark:bg-emerald-900/20': highlighted,
     }"
   >
     <button
-      class="absolute top-4 right-4 z-10 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-full p-2 shadow-sm hover:ring-2 ring-blue-500 transition"
+      class="absolute top-4 right-4 z-10 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-full p-2 shadow-sm hover:ring-2 ring-blue-500 transition"
       :aria-label="selected ? 'Deselect' : 'Select'"
       @click.stop="toggleSelect"
     >
-      <svg v-if="selected" class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-        <path
-          fill-rule="evenodd"
-          d="M16.707 5.293a1 1 0 010 1.414l-7.364 7.364a1 1 0 01-1.415 0L3.293 10.707a1 1 0 011.414-1.414l3.222 3.221 6.657-6.657a1 1 0 011.414 0z"
-          clip-rule="evenodd"
-        />
-      </svg>
-      <svg
-        v-else
-        class="w-5 h-5 text-gray-400 dark:text-gray-500"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <circle cx="12" cy="12" r="10" stroke-width="2" />
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-      </svg>
+      <Check v-if="selected" class="w-5 h-5 text-blue-600" />
+      <CircleCheckBig v-else class="w-5 h-5 text-slate-400 dark:text-slate-500" />
     </button>
 
     <div class="flex-1 p-6 flex flex-col">
       <div class="flex items-start justify-between gap-3 mb-2">
         <div class="min-w-0">
           <div class="flex items-center gap-2">
-            <span class="font-semibold text-lg text-gray-900 dark:text-white truncate block">{{
+            <span class="font-semibold text-lg text-slate-900 dark:text-white truncate block">{{
               trial.name || `Trial #${trial.id}`
             }}</span>
             <StatusBadge :status="trial.status" class="px-2 py-1" />
           </div>
-          <div v-if="trial.last_result_at" class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+          <div
+            v-if="trial.last_result_at"
+            class="text-xs text-slate-400 dark:text-slate-500 mt-0.5"
+          >
             Last result: {{ formatDateFull(trial.last_result_at) }}
           </div>
         </div>
@@ -58,11 +46,14 @@
         </div>
       </div>
 
-      <div v-if="trial.description" class="text-sm text-gray-600 dark:text-gray-400 truncate mb-1">
+      <div
+        v-if="trial.description"
+        class="text-sm text-slate-600 dark:text-slate-400 truncate mb-1"
+      >
         {{ trial.description }}
       </div>
 
-      <div class="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
+      <div class="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400 mb-2">
         <span><strong>Schema:</strong> {{ schemaName }}</span>
         <span v-if="promptName"><strong>Prompt:</strong> {{ promptName }}</span>
         <span><strong>LLM:</strong> {{ trial.llm_model }}</span>
@@ -78,14 +69,14 @@
           <span class="font-medium text-blue-600 dark:text-blue-400"
             >{{ docsDone }}/{{ totalDocs }} docs</span
           >
-          <span class="text-gray-500 dark:text-gray-400"
+          <span class="text-slate-500 dark:text-slate-400"
             >{{ formatDuration(elapsedSeconds) }} elapsed</span
           >
-          <span v-if="etaSeconds && etaSeconds > 0" class="text-gray-500 dark:text-gray-400"
+          <span v-if="etaSeconds && etaSeconds > 0" class="text-slate-500 dark:text-slate-400"
             >• ≈ {{ formatDuration(etaSeconds) }} left</span
           >
         </div>
-        <div class="w-full h-1 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+        <div class="w-full h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
           <div
             class="h-full bg-blue-500 transition-all duration-500"
             :style="{ width: progressPercent + '%' }"
@@ -98,35 +89,21 @@
         v-else-if="trial.status === 'completed'"
         class="mt-2 flex items-center gap-2 text-green-600 dark:text-green-400 font-medium text-xs"
       >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+        <CircleCheckBig class="w-4 h-4" />
         Results ready
       </div>
       <div
         v-else-if="trial.status === 'failed'"
         class="mt-2 flex items-center gap-2 text-red-600 dark:text-red-400 text-xs font-medium"
       >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+        <AlertCircle class="w-4 h-4" />
         Failed — see details in Results
       </div>
     </div>
 
     <!-- Footer -->
     <div
-      class="border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-4 py-3 flex items-center justify-between rounded-b-xl gap-2"
+      class="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 flex items-center justify-between rounded-b-xl gap-2"
     >
       <div class="flex gap-2 flex-wrap">
         <button
@@ -148,14 +125,14 @@
         <BaseButton
           variant="secondary"
           size="sm"
-          class="dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"
+          class="dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
           @click.stop="emit('view-schema', trial)"
           >Schema</BaseButton
         >
         <BaseButton
           variant="secondary"
           size="sm"
-          class="dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"
+          class="dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
           @click.stop="emit('view-prompt', trial)"
           >Prompt</BaseButton
         >
@@ -174,7 +151,7 @@
         <BaseButton
           variant="secondary"
           size="sm"
-          class="dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
+          class="dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           @click.stop="emit('retry', trial)"
           >Retry</BaseButton
         >
@@ -197,6 +174,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { AlertCircle, Check, CircleCheckBig } from '@lucide/vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { formatDuration, formatDateFull } from '@/utils/formatters'

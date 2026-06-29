@@ -9,7 +9,7 @@
         >Snapshot</span
       >
     </div>
-    <pre class="bg-gray-50 border rounded-md p-4 overflow-x-auto text-xs font-mono max-h-96">{{
+    <pre class="bg-slate-50 border rounded-md p-4 overflow-x-auto text-xs font-mono max-h-96">{{
       JSON.stringify(schema?.schema_definition, null, 2)
     }}</pre>
     <template #footer>

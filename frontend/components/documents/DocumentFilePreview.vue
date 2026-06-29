@@ -9,7 +9,7 @@
     ></iframe>
   </div>
   <!-- Image View (for original image files) -->
-  <div v-else-if="viewMode === 'image' && originalImageUrl" class="h-full p-4 bg-gray-100">
+  <div v-else-if="viewMode === 'image' && originalImageUrl" class="h-full p-4 bg-slate-100">
     <div class="flex items-center justify-center h-full">
       <img
         :src="originalImageUrl"

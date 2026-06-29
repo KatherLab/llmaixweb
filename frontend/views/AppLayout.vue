@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-900">
+  <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
     <!-- Navigation -->
     <nav
-      class="w-full bg-white dark:bg-slate-900 shadow-sm border-b border-gray-100 dark:border-slate-800"
+      class="w-full bg-white dark:bg-slate-900 shadow-sm border-b border-slate-100 dark:border-slate-800"
     >
       <div
         v-if="isBackendDown"
@@ -15,7 +15,7 @@
           <div class="flex items-center">
             <div class="flex-shrink-0 flex items-center mr-8">
               <router-link to="/">
-                <span class="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white"
+                <span class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white"
                   >LLMAIx-v2</span
                 >
               </router-link>
@@ -25,7 +25,7 @@
                 :class="[
                   $route.path.startsWith('/projects')
                     ? 'text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400'
-                    : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300 dark:text-slate-400 dark:hover:text-white',
+                    : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-white',
                 ]"
                 class="inline-flex items-center px-4 h-14 text-sm font-medium border-b-2 transition-all"
                 to="/projects"
@@ -38,7 +38,7 @@
                 :class="[
                   $route.path.includes('/admin/user-management')
                     ? 'text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400'
-                    : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300 dark:text-slate-400 dark:hover:text-white',
+                    : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-white',
                 ]"
                 class="inline-flex items-center px-4 h-14 text-sm font-medium border-b-2 transition-all"
                 to="/admin/user-management"
@@ -61,26 +61,7 @@
                 class="rounded-full p-2 hover:bg-blue-50 dark:hover:bg-slate-800 transition"
                 @click="showAdminMenu = !showAdminMenu"
               >
-                <svg
-                  class="w-5 h-5 text-blue-600 dark:text-blue-300"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
+                <Settings class="w-5 h-5 text-blue-600 dark:text-blue-300" />
               </button>
               <transition name="fade-slide">
                 <div
@@ -90,12 +71,12 @@
                 >
                   <router-link
                     to="/admin/settings"
-                    class="block px-5 py-3 text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950"
+                    class="block px-5 py-3 text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950"
                     >Settings</router-link
                   >
                   <router-link
                     to="/admin/celery"
-                    class="block px-5 py-3 text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950"
+                    class="block px-5 py-3 text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950"
                     >Celery & Queues</router-link
                   >
                   <!-- Add more as needed -->
@@ -111,32 +92,11 @@
             <!-- Dark mode toggle -->
             <button
               :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-              class="mr-3 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors focus:outline-none"
+              class="mr-3 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors focus:outline-none"
               @click="toggleDarkMode"
             >
-              <svg
-                v-if="!isDark"
-                class="w-5 h-5 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-              >
-                <circle cx="12" cy="12" r="5" />
-                <path
-                  d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
-                />
-              </svg>
-              <svg
-                v-else
-                class="w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-              >
-                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-              </svg>
+              <Sun v-if="!isDark" class="w-5 h-5 text-slate-500" />
+              <Moon v-else class="w-5 h-5 text-slate-400" />
             </button>
             <div v-if="authReady && isAuthenticated" class="relative">
               <button
@@ -152,30 +112,13 @@
                     >{{ userInitials }}</span
                   >
                   <span v-if="isAdmin" class="absolute -bottom-1 -right-1" title="Admin">
-                    <svg
-                      class="w-4 h-4 text-amber-400 drop-shadow"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        d="M10 2a1 1 0 01.894.553l7 14A1 1 0 0117 18H3a1 1 0 01-.894-1.447l7-14A1 1 0 0110 2zm0 4.618L5.618 16h8.764L10 6.618z"
-                      />
-                    </svg>
+                    <ShieldCheck class="w-4 h-4 text-amber-400 drop-shadow" />
                   </span>
                 </div>
-                <svg
+                <ChevronDown
                   :class="{ 'rotate-180': showUserMenu }"
                   class="ml-2 w-4 h-4 text-blue-400 group-hover:text-blue-600 transition-transform duration-200"
-                  fill="none"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    d="M7 8l3 3 3-3"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-width="2"
-                  />
-                </svg>
+                />
               </button>
               <transition name="fade-slide">
                 <div
@@ -183,19 +126,10 @@
                   class="absolute right-0 mt-3 w-64 rounded-xl shadow-xl bg-white dark:bg-slate-900 ring-1 ring-blue-100 dark:ring-blue-900 z-50 animate-dropdown"
                   @click.outside="showUserMenu = false"
                 >
-                  <div class="px-5 py-3 border-b border-gray-100 dark:border-slate-800">
+                  <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-800">
                     <div class="flex items-center gap-2">
-                      <svg
-                        v-if="isAdmin"
-                        class="w-5 h-5 text-amber-400"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          d="M10 2a1 1 0 01.894.553l7 14A1 1 0 0117 18H3a1 1 0 01-.894-1.447l7-14A1 1 0 0110 2zm0 4.618L5.618 16h8.764L10 6.618z"
-                        />
-                      </svg>
-                      <span class="font-semibold text-gray-900 dark:text-white">{{
+                      <ShieldCheck v-if="isAdmin" class="w-5 h-5 text-amber-400" />
+                      <span class="font-semibold text-slate-900 dark:text-white">{{
                         userName
                       }}</span>
                       <span
@@ -205,30 +139,20 @@
                         Admin
                       </span>
                     </div>
-                    <div class="text-xs text-gray-500 dark:text-slate-400 mt-1 truncate">
+                    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
                       {{ userEmail }}
                     </div>
                   </div>
                   <a
-                    class="block px-5 py-3 text-base text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+                    class="block px-5 py-3 text-base text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
                     href="#"
                     @click.prevent="openChangePasswordModal"
                   >
-                    <svg
-                      class="inline-block w-5 h-5 mr-2 text-blue-500"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M12 17v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9 9h6a2 2 0 012 2v3a2 2 0 01-2 2H9a2 2 0 01-2-2v-3a2 2 0 012-2v-1a3 3 0 116 0v1"
-                      ></path>
-                    </svg>
+                    <Lock class="inline-block w-5 h-5 mr-2 text-blue-500" />
                     Change Password
                   </a>
                   <a
-                    class="block px-5 py-3 text-base text-gray-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-700 dark:hover:text-blue-300 font-medium rounded-b-xl transition-colors"
+                    class="block px-5 py-3 text-base text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-700 dark:hover:text-blue-300 font-medium rounded-b-xl transition-colors"
                     href="#"
                     @click.prevent="logout"
                   >
@@ -259,7 +183,7 @@
       </main>
     </div>
     <footer
-      class="w-full bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 py-4 text-center text-sm text-gray-500 dark:text-slate-400"
+      class="w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-4 text-center text-sm text-slate-500 dark:text-slate-400"
     >
       <div>
         &copy; {{ currentYear }} KatherLab. Licensed under
@@ -338,6 +262,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { Settings, Sun, Moon, ShieldCheck, ChevronDown, Lock } from '@lucide/vue'
 import { frontendVersion, frontendGitCommit } from '@/version.js'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'

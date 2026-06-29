@@ -4,12 +4,12 @@
     <div class="bg-gradient-to-r from-red-50 to-white rounded-lg p-6 border border-red-200">
       <div class="flex justify-between items-start mb-4">
         <div>
-          <h2 class="text-xl font-semibold text-gray-800">Field Error Analysis</h2>
-          <p class="text-gray-600">Detailed breakdown of field-level extraction errors</p>
+          <h2 class="text-xl font-semibold text-slate-800">Field Error Analysis</h2>
+          <p class="text-slate-600">Detailed breakdown of field-level extraction errors</p>
         </div>
         <div class="text-right">
           <div class="text-2xl font-bold text-red-600">{{ totalErrors }}</div>
-          <div class="text-sm text-gray-500">Total Errors</div>
+          <div class="text-sm text-slate-500">Total Errors</div>
         </div>
       </div>
 
@@ -17,23 +17,23 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white rounded-lg p-4 text-center border">
           <div class="text-lg font-semibold text-red-600">{{ errorsByType.missing || 0 }}</div>
-          <div class="text-sm text-gray-500">Missing Fields</div>
+          <div class="text-sm text-slate-500">Missing Fields</div>
         </div>
         <div class="bg-white rounded-lg p-4 text-center border">
           <div class="text-lg font-semibold text-orange-600">{{ errorsByType.mismatch || 0 }}</div>
-          <div class="text-sm text-gray-500">Value Mismatches</div>
+          <div class="text-sm text-slate-500">Value Mismatches</div>
         </div>
         <div class="bg-white rounded-lg p-4 text-center border">
           <div class="text-lg font-semibold text-yellow-600">
             {{ errorsByType.type_error || 0 }}
           </div>
-          <div class="text-sm text-gray-500">Type Errors</div>
+          <div class="text-sm text-slate-500">Type Errors</div>
         </div>
         <div class="bg-white rounded-lg p-4 text-center border">
           <div class="text-lg font-semibold text-purple-600">
             {{ Object.keys(fieldErrors).length }}
           </div>
-          <div class="text-sm text-gray-500">Fields Affected</div>
+          <div class="text-sm text-slate-500">Fields Affected</div>
         </div>
       </div>
     </div>
@@ -42,10 +42,10 @@
     <div class="bg-white rounded-lg border p-4">
       <div class="flex flex-wrap gap-4 items-center">
         <div class="flex items-center gap-2">
-          <label class="text-sm font-medium text-gray-700">Field:</label>
+          <label class="text-sm font-medium text-slate-700">Field:</label>
           <select
             :value="selectedField"
-            class="rounded-md border border-gray-300 text-sm py-1 px-2 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+            class="rounded-md border border-slate-300 text-sm py-1 px-2 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
             @change="$emit('select-field', $event.target.value)"
           >
             <option value="">All Fields</option>
@@ -55,7 +55,7 @@
           </select>
         </div>
         <div class="flex items-center gap-2 ml-auto">
-          <span class="text-sm text-gray-600">
+          <span class="text-sm text-slate-600">
             {{ selectedField ? fieldErrors[selectedField]?.length || 0 : totalErrors }} errors
           </span>
         </div>
@@ -65,7 +65,7 @@
     <!-- Error details -->
     <div v-if="selectedField && fieldErrors[selectedField]" class="space-y-4">
       <div class="bg-white rounded-lg border p-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Errors for "{{ selectedField }}"</h3>
+        <h3 class="text-lg font-semibold text-slate-800 mb-4">Errors for "{{ selectedField }}"</h3>
 
         <div class="space-y-4">
           <div
@@ -80,7 +80,7 @@
                   {{ error.document_name || 'Unknown file' }}
                 </p>
               </div>
-              <div class="text-xs text-gray-500">
+              <div class="text-xs text-slate-500">
                 <span class="px-2 py-1 bg-red-100 text-red-800 rounded">
                   {{ error.error_type }}
                 </span>
@@ -91,22 +91,22 @@
             <div class="grid grid-cols-2 gap-4 mb-3">
               <div class="bg-white border border-green-200 rounded p-3">
                 <h5 class="text-xs font-medium text-green-700 mb-1">Ground Truth</h5>
-                <p class="text-sm text-gray-800">
+                <p class="text-sm text-slate-800">
                   {{ formatFieldValue(error.ground_truth_value) }}
                 </p>
               </div>
               <div class="bg-white border border-red-200 rounded p-3">
                 <h5 class="text-xs font-medium text-red-700 mb-1">Predicted</h5>
-                <p class="text-sm text-gray-800">
+                <p class="text-sm text-slate-800">
                   {{ formatFieldValue(error.predicted_value) }}
                 </p>
               </div>
             </div>
 
             <!-- Error analysis -->
-            <div class="mt-3 bg-white border border-gray-200 rounded p-3">
-              <h5 class="text-xs font-medium text-gray-700 mb-2">Error Analysis:</h5>
-              <div class="text-xs text-gray-600 space-y-1">
+            <div class="mt-3 bg-white border border-slate-200 rounded p-3">
+              <h5 class="text-xs font-medium text-slate-700 mb-2">Error Analysis:</h5>
+              <div class="text-xs text-slate-600 space-y-1">
                 <div><strong>Type:</strong> {{ getErrorTypeDescription(error.error_type) }}</div>
                 <div v-if="error.confidence_score !== null">
                   <strong>Confidence:</strong> {{ (error.confidence_score * 100).toFixed(1) }}%
@@ -116,8 +116,8 @@
 
               <!-- Context if available -->
               <div v-if="error.context" class="mt-2">
-                <h6 class="text-xs font-medium text-gray-700 mb-1">Document Context:</h6>
-                <p class="text-xs text-gray-600 bg-gray-50 p-2 rounded">{{ error.context }}</p>
+                <h6 class="text-xs font-medium text-slate-700 mb-1">Document Context:</h6>
+                <p class="text-xs text-slate-600 bg-slate-50 p-2 rounded">{{ error.context }}</p>
               </div>
             </div>
           </div>
@@ -127,20 +127,20 @@
 
     <!-- All fields overview -->
     <div v-else class="bg-white rounded-lg border p-6">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">Error Summary by Field</h3>
+      <h3 class="text-lg font-semibold text-slate-800 mb-4">Error Summary by Field</h3>
 
       <div class="space-y-3">
         <div
           v-for="fieldName in fieldNames"
           :key="fieldName"
-          class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+          class="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 cursor-pointer"
           @click="$emit('select-field', fieldName)"
         >
           <div class="flex items-center gap-3">
             <div class="w-3 h-3 rounded-full bg-red-500"></div>
             <div>
-              <div class="font-medium text-gray-800">{{ fieldName }}</div>
-              <div class="text-sm text-gray-500">
+              <div class="font-medium text-slate-800">{{ fieldName }}</div>
+              <div class="text-sm text-slate-500">
                 {{ fieldErrors[fieldName]?.length || 0 }} errors across
                 {{ getDocumentCount(fieldName) }} documents
               </div>
@@ -150,7 +150,7 @@
             <div class="text-sm text-red-600 font-medium">
               {{ fieldErrors[fieldName]?.length || 0 }} errors
             </div>
-            <span class="text-gray-400">→</span>
+            <span class="text-slate-400">→</span>
           </div>
         </div>
       </div>

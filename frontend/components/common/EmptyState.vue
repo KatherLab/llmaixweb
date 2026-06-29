@@ -1,5 +1,6 @@
 <!-- src/components/EmptyState.vue -->
 <script setup>
+import { Plus } from '@lucide/vue'
 import Tooltip from '@/components/common/Tooltip.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
@@ -26,28 +27,14 @@ const emit = defineEmits(['action'])
 
 <template>
   <div
-    class="text-center p-12 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-gray-300 dark:border-slate-600"
+    class="text-center p-12 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-600"
   >
     <slot name="icon">
       <!-- Default icon if no custom icon is provided -->
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-12 w-12 mx-auto text-gray-400 dark:text-slate-500"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        aria-hidden="true"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-        />
-      </svg>
+      <Plus class="h-12 w-12 mx-auto text-slate-400 dark:text-slate-500" aria-hidden="true" />
     </slot>
-    <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-slate-100">{{ title }}</h3>
-    <p v-if="description" class="mt-1 text-sm text-gray-500 dark:text-slate-400">
+    <h3 class="mt-4 text-lg font-medium text-slate-900 dark:text-slate-100">{{ title }}</h3>
+    <p v-if="description" class="mt-1 text-sm text-slate-500 dark:text-slate-400">
       {{ description }}
     </p>
     <slot />

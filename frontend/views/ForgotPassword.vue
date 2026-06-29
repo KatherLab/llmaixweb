@@ -1,21 +1,21 @@
 <template>
   <div class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <h1 class="text-4xl font-extrabold text-gray-900 dark:text-slate-100 tracking-tight">
+      <h1 class="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
         LLMAIx-v2
       </h1>
-      <p class="text-base text-gray-500 dark:text-slate-400 mt-2">Reset your password</p>
+      <p class="text-base text-slate-500 dark:text-slate-400 mt-2">Reset your password</p>
     </div>
 
     <!-- Step 1: Email input -->
     <div
       v-if="step === 1"
-      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm"
     >
-      <h2 class="text-lg font-bold text-gray-900 dark:text-slate-100 mb-2">
+      <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
         Forgot your password?
       </h2>
-      <p class="text-sm text-gray-500 dark:text-slate-400 mb-6">
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">
         Enter your email address and we'll send you a link to reset your password.
       </p>
       <form @submit.prevent="handleForgotPassword">
@@ -38,21 +38,7 @@
           :disabled="isLoading"
           class="w-full py-2.5"
         >
-          <svg
-            v-if="!isLoading"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="1.5"
-              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-            />
-          </svg>
+          <Mail v-if="!isLoading" class="h-5 w-5" aria-hidden="true" />
           <span>{{ isLoading ? 'Sending...' : 'Send Reset Link' }}</span>
         </BaseButton>
       </form>
@@ -67,28 +53,15 @@
     <!-- Step 2: Success message -->
     <div
       v-else
-      class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 shadow-sm text-center"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm text-center"
     >
       <div
         class="mx-auto mb-4 w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center"
       >
-        <svg
-          class="w-6 h-6 text-green-600 dark:text-green-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M5 13l4 4L19 7"
-          />
-        </svg>
+        <Check class="w-6 h-6 text-green-600 dark:text-green-400" aria-hidden="true" />
       </div>
-      <h2 class="text-lg font-bold text-gray-900 dark:text-slate-100 mb-2">Check your email</h2>
-      <p class="text-sm text-gray-500 dark:text-slate-400 mb-6">
+      <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Check your email</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">
         If an account with that email exists, we've sent a password reset link to it.
       </p>
       <div v-if="emailWarning" :class="['mb-4 p-3 text-sm rounded-md', getBannerClass('yellow')]">
@@ -106,6 +79,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { Mail, Check } from '@lucide/vue'
 import { usersApi } from '@/services/usersApi'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FormField from '@/components/common/FormField.vue'

@@ -1,34 +1,27 @@
 <template>
-  <BaseModal
-    :open="true"
-    title="Upload Ground Truth"
-    size="md"
-    header-class="bg-gray-50 rounded-t-2xl"
-    body-class="px-6 py-4"
-    @close="$emit('close')"
-  >
+  <BaseModal :open="open" title="Upload Ground Truth" size="md" @close="$emit('close')">
     <form @submit.prevent="uploadGroundTruth">
       <div class="space-y-4">
         <div>
-          <label for="ground-truth-name" class="block text-sm font-medium text-gray-700"
+          <label for="ground-truth-name" class="block text-sm font-medium text-slate-700"
             >Name (optional)</label
           >
           <input
             id="ground-truth-name"
             v-model="groundTruthName"
             type="text"
-            class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+            class="mt-1 block w-full rounded-md border border-slate-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
             placeholder="Ground truth file name"
           />
         </div>
         <div>
-          <label for="ground-truth-format" class="block text-sm font-medium text-gray-700"
+          <label for="ground-truth-format" class="block text-sm font-medium text-slate-700"
             >Format</label
           >
           <select
             id="ground-truth-format"
             v-model="groundTruthFormat"
-            class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+            class="mt-1 block w-full rounded-md border border-slate-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
           >
             <option value="csv">CSV (flattened fields with dots)</option>
             <option value="json">JSON (single file with document map or multiple files)</option>
@@ -50,27 +43,15 @@
         </div>
 
         <div>
-          <label for="file-upload" class="block text-sm font-medium text-gray-700">File(s)</label>
+          <label for="file-upload" class="block text-sm font-medium text-slate-700">File(s)</label>
           <div
-            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
+            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md"
             @dragover.prevent
             @drop.prevent="handleFileDrop"
           >
             <div class="space-y-1 text-center">
-              <svg
-                class="mx-auto h-12 w-12 text-gray-400"
-                stroke="currentColor"
-                fill="none"
-                viewBox="0 0 48 48"
-              >
-                <path
-                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <div class="flex text-sm text-gray-600 justify-center">
+              <ImageIcon class="mx-auto h-12 w-12 text-slate-400" />
+              <div class="flex text-sm text-slate-600 justify-center">
                 <label
                   for="file-upload"
                   class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
@@ -88,7 +69,7 @@
                 </label>
                 <p class="pl-1">or drag and drop</p>
               </div>
-              <p class="text-xs text-gray-500">
+              <p class="text-xs text-slate-500">
                 <template v-if="groundTruthFormat === 'csv'"
                   >CSV file with flattened fields (dots for nesting)</template
                 >
@@ -102,8 +83,8 @@
             </div>
           </div>
           <div v-if="selectedFiles.length > 0" class="mt-2">
-            <p class="text-sm font-medium text-gray-700 mb-1">Selected files:</p>
-            <ul class="text-sm text-gray-600 space-y-1">
+            <p class="text-sm font-medium text-slate-700 mb-1">Selected files:</p>
+            <ul class="text-sm text-slate-600 space-y-1">
               <li
                 v-for="(file, index) in selectedFiles"
                 :key="index"
@@ -117,20 +98,7 @@
                   aria-label="Remove file"
                   @click="removeFile(index)"
                 >
-                  <svg
-                    class="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <X class="h-4 w-4" aria-hidden="true" />
                 </BaseButton>
               </li>
             </ul>
@@ -153,7 +121,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { ImageIcon, X } from '@lucide/vue'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -161,6 +130,10 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
+  open: {
+    type: Boolean,
+    required: true,
+  },
   projectId: {
     type: [String, Number],
     required: true,
@@ -174,6 +147,20 @@ const groundTruthName = ref('')
 const groundTruthFormat = ref('csv')
 const selectedFiles = ref([])
 const isUploading = ref(false)
+
+// Reset transient form state whenever the modal is closed so a reopen starts fresh
+// (component stays mounted to enable the close transition).
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (!isOpen) {
+      groundTruthName.value = ''
+      groundTruthFormat.value = 'csv'
+      selectedFiles.value = []
+      isUploading.value = false
+    }
+  },
+)
 
 const acceptedFileTypes = computed(() => {
   switch (groundTruthFormat.value) {

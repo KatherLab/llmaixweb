@@ -5,7 +5,11 @@
         v-if="open"
         :class="[
           'fixed inset-0 z-[10000] bg-black/30 backdrop-blur-md',
-          placement === 'right' ? 'flex justify-end' : 'flex items-center justify-center p-4',
+          placement === 'right'
+            ? 'flex justify-end'
+            : placement === 'fullscreen'
+              ? 'flex items-center justify-center p-4 md:p-8'
+              : 'flex items-center justify-center p-4',
         ]"
         @click="onBackdropClick"
       >
@@ -17,8 +21,10 @@
           tabindex="-1"
           :class="[
             placement === 'right'
-              ? 'relative h-full w-full flex flex-col bg-white shadow-xl border-l border-gray-200 overflow-hidden'
-              : 'relative bg-white rounded-2xl shadow-2xl w-full flex flex-col max-h-[90vh] border border-gray-200 overflow-hidden',
+              ? 'relative h-full w-full flex flex-col bg-white shadow-xl border-l border-slate-200 overflow-hidden'
+              : placement === 'fullscreen'
+                ? 'relative bg-white rounded-lg shadow-2xl w-full h-full flex flex-col overflow-hidden'
+                : 'relative bg-white rounded-2xl shadow-2xl w-full flex flex-col max-h-[90vh] border border-slate-200 overflow-hidden',
             sizeClass,
             panelClass,
           ]"
@@ -27,27 +33,20 @@
           <!-- Header -->
           <div
             v-if="$slots.header || title || closeable"
-            class="flex items-center justify-between gap-4 px-6 py-4 border-b border-gray-200"
+            class="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-200"
             :class="headerClass"
           >
             <slot name="header">
-              <h3 :id="titleId" class="text-lg font-semibold text-gray-900">{{ title }}</h3>
+              <h3 :id="titleId" class="text-lg font-semibold text-slate-900">{{ title }}</h3>
             </slot>
             <button
               v-if="closeable"
               type="button"
-              class="text-gray-400 hover:text-gray-600 transition-colors"
+              class="text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Close"
               @click="emit('close')"
             >
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X class="h-6 w-6" />
             </button>
           </div>
 
@@ -59,7 +58,7 @@
           <!-- Footer -->
           <div
             v-if="$slots.footer"
-            class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3"
+            class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3"
             :class="footerClass"
           >
             <slot name="footer" />
@@ -72,6 +71,7 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted, nextTick, useId } from 'vue'
+import { X } from '@lucide/vue'
 import { useScrollLock } from '@/composables/useScrollLock'
 
 const props = defineProps({
@@ -97,7 +97,7 @@ const props = defineProps({
   placement: {
     type: String,
     default: 'center',
-    // 'center' (modal dialog) | 'right' (slide-in drawer)
+    // 'center' (modal dialog) | 'right' (slide-in drawer) | 'fullscreen' (near-fullscreen panel)
   },
   closeable: {
     type: Boolean,
@@ -135,12 +135,16 @@ const panelRef = ref(null)
 const titleId = useId()
 
 const transitionName = computed(() =>
-  props.placement === 'right' ? 'base-drawer-slide' : 'base-modal-fade',
+  props.placement === 'right'
+    ? 'base-drawer-slide'
+    : props.placement === 'fullscreen'
+      ? 'base-modal-fade'
+      : 'base-modal-fade',
 )
 
 const sizeClass = computed(() => {
-  // Drawers ignore the centered-dialog max-width map; width comes from panelClass.
-  if (props.placement === 'right') return ''
+  // Drawers and fullscreen ignore the centered-dialog max-width map.
+  if (props.placement === 'right' || props.placement === 'fullscreen') return ''
   const sizes = {
     sm: 'max-w-md',
     md: 'max-w-lg',
