@@ -35,6 +35,7 @@
         label="Email address"
         type="email"
         required
+        maxlength="254"
         :disabled="isEmailFromInvitation"
         placeholder="Your email"
       >

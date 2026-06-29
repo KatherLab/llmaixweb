@@ -58,6 +58,7 @@
               v-model="promptForm.name"
               :class="[inputClass, { 'border-red-300': !promptForm.name && isSubmitting }]"
               placeholder="e.g., Medical Document Extraction"
+              maxlength="100"
               required
             />
             <p
@@ -74,6 +75,7 @@
               v-model="promptForm.description"
               rows="2"
               :class="textareaClass"
+              maxlength="500"
               placeholder="Describe what this prompt is designed to extract..."
             />
           </div>

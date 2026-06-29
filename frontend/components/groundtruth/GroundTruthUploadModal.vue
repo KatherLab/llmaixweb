@@ -9,6 +9,7 @@
             v-model="groundTruthName"
             type="text"
             :class="inputClass"
+            maxlength="100"
             placeholder="Ground truth file name"
           />
         </div>

@@ -14,6 +14,7 @@
         v-model="formData.name"
         type="text"
         :class="inputClass"
+        maxlength="100"
         placeholder="e.g., Q4 Financial Reports"
       />
     </div>
@@ -25,6 +26,7 @@
         v-model="formData.description"
         rows="3"
         :class="textareaClass"
+        maxlength="500"
         placeholder="Describe the purpose of this document group..."
       />
     </div>

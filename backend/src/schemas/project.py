@@ -390,9 +390,9 @@ class TrialBase(UTCModel):
     # configured API key / base URL / model in /openapi.json and Swagger UI.
     # The router resolves the settings fallback at request time instead
     # (trials.py: `trial.api_key or settings.OPENAI_API_KEY`).
-    llm_model: str | None = None
-    api_key: str | None = None
-    base_url: str | None = None
+    llm_model: str | None = Field(None, max_length=255)
+    api_key: str | None = Field(None, max_length=512)
+    base_url: str | None = Field(None, max_length=512)
     bypass_celery: bool = False
     advanced_options: dict | None = None
 
@@ -599,8 +599,8 @@ class PreprocessingTaskCreate(PreprocessingTaskBase):
     bypass_celery: bool = False
 
     # Optional API credentials for LLM preprocessing
-    api_key: str | None = None
-    base_url: str | None = None
+    api_key: str | None = Field(None, max_length=512)
+    base_url: str | None = Field(None, max_length=512)
 
     @field_validator("file_ids")
     def file_ids_must_not_be_empty(cls, v):

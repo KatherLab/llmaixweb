@@ -51,7 +51,7 @@
           </div>
           <div>
             <label :class="labelClass">Email</label>
-            <input v-model="editForm.email" type="email" :class="inputClass" />
+            <input v-model="editForm.email" type="email" :class="inputClass" maxlength="254" />
           </div>
           <div class="flex gap-4">
             <div class="flex-1">

@@ -28,6 +28,7 @@
         label="Email address"
         type="email"
         required
+        maxlength="254"
         placeholder="admin@yourcompany.com"
       />
       <FormField

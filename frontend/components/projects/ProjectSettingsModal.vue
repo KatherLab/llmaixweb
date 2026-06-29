@@ -8,12 +8,14 @@
         v-model="name"
         :class="[inputClass, 'text-lg font-semibold mb-3']"
         placeholder="Project Name"
+        maxlength="100"
         autofocus
       />
       <textarea
         v-model="description"
         :class="textareaClass"
         rows="3"
+        maxlength="500"
         placeholder="Description (optional)"
       ></textarea>
     </div>

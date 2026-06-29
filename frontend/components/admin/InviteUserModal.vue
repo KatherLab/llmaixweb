@@ -18,6 +18,7 @@
           type="email"
           required
           :class="inputClass"
+          maxlength="254"
           placeholder="Enter email address"
         />
       </div>

@@ -61,6 +61,7 @@
                 v-model="schemaForm.schema_name"
                 class="block w-full border-0 border-b-2 border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-800 dark:text-white px-3 py-2 text-lg font-semibold text-slate-900 dark:text-white focus:ring-0 focus:border-blue-500 dark:focus:border-blue-400 transition-colors placeholder-slate-400"
                 placeholder="e.g., Patient Information"
+                maxlength="100"
                 required
               />
             </div>

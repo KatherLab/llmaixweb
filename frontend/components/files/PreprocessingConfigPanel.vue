@@ -188,6 +188,7 @@
               v-model="mistralApiKey"
               label="API Key"
               type="text"
+              maxlength="512"
               placeholder="Leave empty to use server default"
             />
             <FormField
@@ -204,12 +205,14 @@
               v-model="visionApiKey"
               label="API Key"
               type="text"
+              maxlength="512"
               placeholder="Leave empty to use server default"
             />
             <FormField
               v-model="visionBaseUrl"
               label="Base URL"
               type="text"
+              maxlength="512"
               placeholder="https://api.openai.com/v1"
             />
             <FormField

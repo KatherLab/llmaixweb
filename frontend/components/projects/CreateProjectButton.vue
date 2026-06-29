@@ -30,6 +30,7 @@
           :class="inputClass"
           required
           autocomplete="off"
+          maxlength="100"
           placeholder="e.g. Medical Document IE"
         />
       </div>
@@ -42,6 +43,7 @@
           v-model="projectData.description"
           rows="3"
           :class="textareaClass"
+          maxlength="500"
           placeholder="Briefly describe your project"
         ></textarea>
       </div>

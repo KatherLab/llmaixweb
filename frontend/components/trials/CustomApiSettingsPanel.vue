@@ -4,6 +4,7 @@
       v-model="apiKey"
       label="API Key"
       type="password"
+      maxlength="512"
       placeholder="e.g., sk-1234567890abcdef..."
       autocomplete="off"
     />
@@ -11,6 +12,7 @@
       v-model="baseUrl"
       label="Base URL"
       type="text"
+      maxlength="512"
       placeholder="e.g., https://api.openai.com/v1"
       autocomplete="off"
     />

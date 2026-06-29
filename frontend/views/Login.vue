@@ -18,6 +18,7 @@
         label="Email address"
         type="email"
         required
+        maxlength="254"
         placeholder="e.g. your@email.com"
         autocomplete="email"
         :spellcheck="false"

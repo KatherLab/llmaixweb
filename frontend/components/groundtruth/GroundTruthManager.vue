@@ -101,6 +101,7 @@
       v-model="editName"
       type="text"
       :class="inputClass"
+      maxlength="100"
       placeholder="Ground truth file name"
     />
     <template #footer>
