@@ -8,11 +8,7 @@
       <SearchInput v-model="search" placeholder="Search documents..." class="flex-1 max-w-sm" />
 
       <!-- OCR Engine Filter -->
-      <select
-        v-model="ocrEngine"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="emit('fetch')"
-      >
+      <select v-model="ocrEngine" :class="selectClass" @change="emit('fetch')">
         <option value="">All OCR Engines</option>
         <option value="pypdf">Embedded Text (pypdf)</option>
         <option value="tesseract">Local OCR (Tesseract)</option>
@@ -21,11 +17,7 @@
       </select>
 
       <!-- Date Range Filter -->
-      <select
-        v-model="dateRange"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="emit('date-range-change')"
-      >
+      <select v-model="dateRange" :class="selectClass" @change="emit('date-range-change')">
         <option value="">All Time</option>
         <option value="today">Today</option>
         <option value="yesterday">Yesterday</option>
@@ -55,20 +47,20 @@
       class="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
     >
       <div class="flex items-center gap-2">
-        <label class="text-sm text-slate-600 dark:text-slate-300">From:</label>
+        <label :class="labelClass">From:</label>
         <input
           v-model="customDateFrom"
           type="date"
-          class="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+          :class="[inputClass, 'px-3 py-1.5']"
           @change="emit('apply-custom-range')"
         />
       </div>
       <div class="flex items-center gap-2">
-        <label class="text-sm text-slate-600 dark:text-slate-300">To:</label>
+        <label :class="labelClass">To:</label>
         <input
           v-model="customDateTo"
           type="date"
-          class="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+          :class="[inputClass, 'px-3 py-1.5']"
           @change="emit('apply-custom-range')"
         />
       </div>
@@ -144,6 +136,7 @@ import { X } from '@lucide/vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import FilterChip from '@/components/common/FilterChip.vue'
 import { getDateRangeLabel } from '@/utils/dateRange'
+import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 
 defineProps({
   totalCount: {

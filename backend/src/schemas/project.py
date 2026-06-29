@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING, List
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..core.config import settings
-from ..utils.enums import FileCreator, PreprocessingStrategy
+from ..models import ProjectStatus
+from ..utils.enums import (
+    ComparisonMethod,
+    FieldType,
+    FileCreator,
+    PreprocessingStrategy,
+)
 from .other import UTCModel
 
 if TYPE_CHECKING:
@@ -15,18 +21,18 @@ if TYPE_CHECKING:
 
 
 class ProjectBase(UTCModel):
-    name: str | None = None
-    description: str | None = None
-    status: str | None = None
+    name: str | None = Field(None, max_length=100)
+    description: str | None = Field(None, max_length=500)
+    status: ProjectStatus | None = None
     owner_id: int | None = None
 
 
 class ProjectCreate(ProjectBase):
-    name: str
+    name: str = Field(..., max_length=100)
 
 
 class ProjectUpdate(ProjectBase):
-    name: str
+    name: str = Field(..., max_length=100)
 
 
 class Project(ProjectBase):
@@ -188,10 +194,10 @@ class DocumentSetUpdate(UTCModel):
 
 
 class DocumentSetCreate(DocumentSetBase):
-    name: str
-    description: str | None = None
+    name: str = Field(..., max_length=100)
+    description: str | None = Field(None, max_length=500)
     trial_id: int | None = None  # Optional - for creating from trial
-    document_ids: list[int] = []  # Optional - for creating from documents
+    document_ids: list[int] = Field(default_factory=list, max_length=1000)
 
     @model_validator(mode="after")
     def validate_documents_or_trial(self):
@@ -322,12 +328,12 @@ class SchemaBase(UTCModel):
 
 
 class SchemaCreate(SchemaBase):
-    schema_name: str
+    schema_name: str = Field(..., max_length=100)
     schema_definition: dict
 
 
 class SchemaUpdate(SchemaBase):
-    schema_name: str | None = None
+    schema_name: str | None = Field(None, max_length=100)
     schema_definition: dict | None = None
 
 
@@ -348,16 +354,16 @@ class PromptBase(UTCModel):
 
 
 class PromptCreate(PromptBase):
-    name: str
+    name: str = Field(..., max_length=100)
     project_id: int
-    description: str | None = None
+    description: str | None = Field(None, max_length=500)
     system_prompt: str | None = None
     user_prompt: str | None = None
 
 
 class PromptUpdate(PromptBase):
-    name: str | None = None
-    description: str | None = None
+    name: str | None = Field(None, max_length=100)
+    description: str | None = Field(None, max_length=500)
     system_prompt: str | None = None
     user_prompt: str | None = None
 
@@ -403,8 +409,8 @@ class TrialCreate(TrialBase):
 
 
 class TrialUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
+    name: str | None = Field(None, max_length=100)
+    description: str | None = Field(None, max_length=512)
 
 
 class Trial(TrialBase):
@@ -488,6 +494,7 @@ class PaginatedTrials(UTCModel):
 
 class TrialResultBase(UTCModel):
     result: dict | None = None
+    status: str | None = None
 
 
 class TrialResultCreate(TrialResultBase):
@@ -505,9 +512,22 @@ class TrialResult(TrialResultBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TrialResultItem(TrialResult):
+    """TrialResult enriched with the joined document name for list views."""
+
+    document_name: str | None = None
+    original_file_name: str | None = None
+
+
+class PaginatedTrialResults(UTCModel):
+    items: List[TrialResultItem]
+    total: int
+    total_usage: dict | None = None
+
+
 class PreprocessingConfigurationBase(UTCModel):
-    name: str
-    description: str | None = None
+    name: str = Field(..., max_length=100)
+    description: str | None = Field(None, max_length=500)
     additional_settings: dict | None = None
 
 
@@ -671,11 +691,11 @@ class EvaluationDetail(UTCModel):
 
 
 class FieldMappingBase(UTCModel):
-    schema_field: str
-    ground_truth_field: str
+    schema_field: str = Field(..., max_length=200)
+    ground_truth_field: str = Field(..., max_length=200)
     schema_id: int
-    field_type: str = "string"
-    comparison_method: str = "exact"
+    field_type: FieldType = FieldType.STRING
+    comparison_method: ComparisonMethod = ComparisonMethod.EXACT
     comparison_options: dict | None = None
 
 
@@ -696,8 +716,8 @@ class GroundTruthBase(UTCModel):
 
 
 class GroundTruthCreate(GroundTruthBase):
-    name: str
-    format: str
+    name: str = Field(..., max_length=100)
+    format: str = Field(..., max_length=10)
 
 
 class GroundTruthUpdate(UTCModel):
@@ -837,6 +857,7 @@ for _m in [
     DocumentSetSummary,
     PaginatedDocumentSets,
     TrialResult,
+    TrialResultItem,
     Trial,
     Evaluation,
     EvaluationDetail,
@@ -844,6 +865,7 @@ for _m in [
     PaginatedDocuments,
     TrialSummary,
     PaginatedTrials,
+    PaginatedTrialResults,
     Project,  # you already call this below, but keeping it here is fine
 ]:
     _m.model_rebuild()

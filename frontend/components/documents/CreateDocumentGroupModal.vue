@@ -9,31 +9,29 @@
     <!-- Body -->
     <!-- Group Name -->
     <div class="mb-4">
-      <label class="block text-sm font-medium text-slate-700 mb-1">
-        Group Name <span class="text-red-500">*</span>
-      </label>
+      <label :class="labelClass"> Group Name <span class="text-red-500">*</span> </label>
       <input
         v-model="formData.name"
         type="text"
-        class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        :class="inputClass"
         placeholder="e.g., Q4 Financial Reports"
       />
     </div>
 
     <!-- Description -->
     <div class="mb-4">
-      <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
+      <label :class="labelClass">Description</label>
       <textarea
         v-model="formData.description"
         rows="3"
-        class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        :class="textareaClass"
         placeholder="Describe the purpose of this document group..."
       />
     </div>
 
     <!-- Tags -->
     <div class="mb-4">
-      <label class="block text-sm font-medium text-slate-700 mb-1">Tags</label>
+      <label :class="labelClass">Tags</label>
       <div class="flex flex-wrap gap-2 mb-2">
         <StatusBadge
           v-for="(tag, index) in formData.tags"
@@ -57,7 +55,7 @@
         <input
           v-model="newTag"
           type="text"
-          class="flex-1 border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          :class="[inputClass, 'flex-1']"
           placeholder="Add a tag..."
           @keyup.enter="addTag"
         />
@@ -68,9 +66,7 @@
     <!-- Document Selection -->
     <div class="mb-4">
       <div class="flex justify-between items-center mb-2">
-        <label class="block text-sm font-medium text-slate-700">
-          Select Documents <span class="text-red-500">*</span>
-        </label>
+        <label :class="labelClass"> Select Documents <span class="text-red-500">*</span> </label>
         <span class="text-sm text-slate-500">
           {{ selectedCount }} selected
           <span v-if="loadingExisting" class="text-slate-400">(loading existing…)</span>
@@ -185,6 +181,7 @@ import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 
 const props = defineProps({
   group: { type: Object, default: null },

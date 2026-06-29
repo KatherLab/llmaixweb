@@ -76,7 +76,7 @@
                   v-model="secretDraft[key]"
                   type="password"
                   autocomplete="off"
-                  class="rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white flex-1"
+                  :class="[inputClass, 'flex-1']"
                   placeholder="Enter new value"
                 />
                 <BaseButton type="button" variant="primary" size="sm" @click="saveSecret(key)">
@@ -111,11 +111,7 @@
           <!-- Integer -->
           <template v-else-if="val.type === 'int'">
             <div class="flex items-center gap-2">
-              <input
-                v-model.number="draft[key]"
-                type="number"
-                class="rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-300 flex-1"
-              />
+              <input v-model.number="draft[key]" type="number" :class="[inputClass, 'flex-1']" />
               <button
                 v-if="val.overridden"
                 type="button"
@@ -129,11 +125,7 @@
           <!-- String (default) -->
           <template v-else>
             <div class="flex items-center gap-2">
-              <input
-                v-model="draft[key]"
-                type="text"
-                class="rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-300 flex-1"
-              />
+              <input v-model="draft[key]" type="text" :class="[inputClass, 'flex-1']" />
               <button
                 v-if="val.overridden"
                 type="button"
@@ -174,6 +166,7 @@ import { adminApi } from '@/services/adminApi'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import { extractErrorMessage } from '@/utils/errors'
+import { inputClass } from '@/utils/formStyles'
 
 const settings = reactive({})
 const draft = reactive({})

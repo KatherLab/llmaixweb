@@ -24,11 +24,17 @@ def _derive_fernet_key() -> bytes:
 
     Cached because SECRET_KEY is constant for the process lifetime; deriving it
     (HKDF) on every encrypt/decrypt call was wasted CPU.
+
+    A fixed application salt is used (rather than ``salt=None``) per RFC 5869:
+    the input key material (SECRET_KEY) is not guaranteed to be uniformly
+    random, and a non-empty salt strengthens the HKDF-Extract step. NOTE: this
+    salt is part of the key derivation — changing it (or the ``info`` version
+    tag) rotates the derived key and invalidates existing ciphertexts.
     """
     hkdf = HKDF(
         algorithm=hashes.SHA256(),
         length=32,
-        salt=None,
+        salt=b"llmaixweb-fernet-salt-v1",
         info=b"llmaixweb-fernet-key-v1",
     )
     raw_key = hkdf.derive(settings.SECRET_KEY.encode("utf-8"))

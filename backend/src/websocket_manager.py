@@ -8,6 +8,13 @@ from fastapi import WebSocket
 
 logger = logging.getLogger(__name__)
 
+# Per-user cap on simultaneous WebSocket connections. Without it an
+# authenticated user could open thousands of sockets and exhaust server
+# file descriptors / memory. 10 is comfortably more than a single user with
+# a few browser tabs would ever open. Excess connections are rejected with
+# code 1013 ("Try Again Later") so the client can back off.
+MAX_CONNECTIONS_PER_USER = 10
+
 
 class ConnectionManager:
     """Manages WebSocket connections for broadcasting task updates."""
@@ -19,7 +26,22 @@ class ConnectionManager:
         self._admin_connections: Set[WebSocket] = set()
 
     async def connect(self, websocket: WebSocket, user_id: int, is_admin: bool = False):
-        """Accept a new WebSocket connection."""
+        """Accept a new WebSocket connection.
+
+        Rejects the connection with code 1013 if the user already holds
+        ``MAX_CONNECTIONS_PER_USER`` open sockets, so one user can't exhaust
+        server FDs/memory by opening unlimited connections.
+        """
+        existing = self._active_connections.get(user_id, set())
+        if len(existing) >= MAX_CONNECTIONS_PER_USER:
+            logger.warning(
+                f"WebSocket rejected for user {user_id}: "
+                f"{len(existing)} connections already open (cap "
+                f"{MAX_CONNECTIONS_PER_USER})"
+            )
+            await websocket.close(code=1013, reason="Too many connections")
+            return False
+
         await websocket.accept()
 
         if user_id not in self._active_connections:
@@ -31,6 +53,7 @@ class ConnectionManager:
             self._admin_connections.add(websocket)
 
         logger.info(f"WebSocket connected for user {user_id}")
+        return True
 
     def disconnect(self, websocket: WebSocket, user_id: int):
         """Remove a WebSocket connection."""

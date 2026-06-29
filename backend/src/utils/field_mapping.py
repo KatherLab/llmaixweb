@@ -223,6 +223,12 @@ class FieldMapper:
     def _get_comparison_method(self, field_type: str, sample_values: List[Any]) -> str:
         """Determine best comparison method."""
 
+        # Guard against empty samples (e.g. a ground-truth column that is all
+        # null but still name-matched a schema field): the category/string
+        # branches below divide by len(sample_values).
+        if not sample_values:
+            return "exact"
+
         if field_type == "boolean":
             return "boolean"
         elif field_type == "number":

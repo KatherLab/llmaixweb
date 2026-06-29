@@ -26,13 +26,9 @@
         >
       </div>
       <div class="mt-8">
-        <label class="block font-semibold mb-2">Inspect Task by ID:</label>
+        <label :class="labelClass">Inspect Task by ID:</label>
         <form class="flex gap-2 mb-4" @submit.prevent="inspectTask">
-          <input
-            v-model="taskId"
-            class="rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-300"
-            placeholder="Paste task ID here"
-          />
+          <input v-model="taskId" :class="inputClass" placeholder="Paste task ID here" />
           <BaseButton type="submit" variant="primary">Inspect</BaseButton>
         </form>
         <div v-if="taskStatus">
@@ -64,6 +60,7 @@ import { adminApi } from '@/services/adminApi'
 import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { extractErrorMessage } from '@/utils/errors'
+import { inputClass, labelClass } from '@/utils/formStyles'
 
 const loading = ref(true)
 const error = ref('')

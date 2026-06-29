@@ -11,15 +11,13 @@
     </template>
     <form @submit.prevent="sendInvitation">
       <div class="mb-5">
-        <label for="email" class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
-          >Email address</label
-        >
+        <label for="email" :class="labelClass">Email address</label>
         <input
           id="email"
           v-model="inviteEmail"
           type="email"
           required
-          class="block w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
+          :class="inputClass"
           placeholder="Enter email address"
         />
       </div>
@@ -58,7 +56,7 @@
             type="text"
             readonly
             :value="invitationLink"
-            class="block w-full px-4 py-2 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg pr-10"
+            :class="[inputClass, 'text-xs pr-10']"
           />
           <button
             type="button"
@@ -103,6 +101,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
+import { inputClass, labelClass } from '@/utils/formStyles'
 
 const props = defineProps({
   open: { type: Boolean, required: true },

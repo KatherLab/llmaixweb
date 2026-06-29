@@ -104,13 +104,15 @@ def new_dedicated_redis_client() -> redis.Redis | None:
     return _new_redis_client()
 
 
-def _publish(message: dict[str, Any], label: str) -> bool:
+def _publish(
+    message: dict[str, Any], label: str, channel: str = TASK_UPDATE_CHANNEL
+) -> bool:
     client = get_redis_client()
     if not client:
         logger.debug(f"Redis client not available for {label} pub/sub")
         return False
     try:
-        client.publish(TASK_UPDATE_CHANNEL, json.dumps(message))
+        client.publish(channel, json.dumps(message))
         return True
     except Exception as e:
         logger.error(f"Failed to publish {label} update: {e}")
@@ -193,7 +195,11 @@ def publish_settings_invalidate() -> bool:
     locally. Best-effort: if Redis is down, workers simply stay stale until
     their next restart — same as before this mechanism existed.
     """
-    return _publish({"type": "settings_invalidate"}, "settings_invalidate")
+    return _publish(
+        {"type": "settings_invalidate"},
+        "settings_invalidate",
+        channel=SETTINGS_INVALIDATE_CHANNEL,
+    )
 
 
 def subscribe_settings_invalidate():

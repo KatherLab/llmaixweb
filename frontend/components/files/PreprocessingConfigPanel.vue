@@ -39,7 +39,7 @@
 
       <!-- OCR Engine Selection -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-3"> OCR Engine </label>
+        <label :class="[labelClass, 'mb-3']"> OCR Engine </label>
         <div class="space-y-3">
           <!-- Local OCR -->
           <button
@@ -141,12 +141,12 @@
 
       <!-- Vision LLM Prompt (always visible when using Vision LLM) -->
       <div v-if="selectedEngine === 'llm_vision'" class="pt-4">
-        <label class="block text-sm font-medium text-slate-700 mb-1">Prompt</label>
+        <label :class="labelClass">Prompt</label>
         <textarea
           v-model="visionPrompt"
           rows="2"
           placeholder="Extract all text as markdown..."
-          class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+          :class="textareaClass"
         ></textarea>
       </div>
 
@@ -165,13 +165,8 @@
         <div v-show="showAdvanced" class="mt-4 space-y-4">
           <!-- Tesseract Language -->
           <div v-if="selectedEngine === 'docling_tesseract'">
-            <label class="block text-sm font-medium text-slate-700 mb-1">
-              Tesseract Language
-            </label>
-            <select
-              v-model="tesseractLang"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            >
+            <label :class="labelClass"> Tesseract Language </label>
+            <select v-model="tesseractLang" :class="selectClass">
               <option value="auto">Auto-detect</option>
               <option value="eng">English</option>
               <option value="deu">German</option>
@@ -286,6 +281,7 @@ import { getEngineLabel, getEngineSubtitle } from '@/utils/ocrLabels'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FormField from '@/components/common/FormField.vue'
+import { textareaClass, selectClass, labelClass } from '@/utils/formStyles'
 
 const props = defineProps({
   open: { type: Boolean, required: true },

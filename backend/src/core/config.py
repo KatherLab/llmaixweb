@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     REQUIRE_INVITATION: bool = True
     ALLOW_FIRST_ADMIN_SETUP: bool = True
+    # How long an invitation token remains valid after creation (hours).
+    # 0 = never expire (not recommended — leaked invitation links never revoke).
+    INVITATION_EXPIRE_HOURS: int = 24 * 7
 
     # Skip runtime validation checks (useful for Alembic migrations)
     SKIP_RUNTIME_CHECKS: bool = False
@@ -544,6 +547,13 @@ SETTINGS_META = {
         "readonly": False,
         "category": "Security",
         "label": "Require Invitation",
+    },
+    "INVITATION_EXPIRE_HOURS": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Invitation Expiry (hours)",
     },
     "POSTGRES_SERVER": {
         "type": "str",

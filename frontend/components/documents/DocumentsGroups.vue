@@ -39,136 +39,118 @@
       </p>
     </div>
 
-    <div v-else :class="t.wrapper">
-      <div class="overflow-x-auto">
-        <table :class="t.table">
-          <thead :class="t.thead">
-            <tr>
-              <th :class="t.th">Group Name</th>
-              <th :class="t.th">Documents</th>
-              <th :class="t.th">Configuration</th>
-              <th :class="t.th">Tags</th>
-              <th :class="t.th">Type</th>
-              <th :class="t.th">Created</th>
-              <th :class="[t.th, 'relative']">
-                <span class="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody :class="t.tbody">
-            <tr v-for="group in serverItems" :key="group.id" :class="t.tr">
-              <td :class="t.td">
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-slate-900 dark:text-white">{{
-                      group.name
-                    }}</span>
-                    <span
-                      v-if="group.is_auto_generated"
-                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                      title="Auto-generated during preprocessing"
-                    >
-                      Auto
-                    </span>
-                  </div>
-                  <div
-                    v-if="group.description"
-                    class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-md"
-                  >
-                    {{ group.description }}
-                  </div>
-                </div>
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                <span class="text-sm text-slate-900 dark:text-white">{{
-                  group.document_count ?? 0
-                }}</span>
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                <span
-                  v-if="group.preprocessing_config"
-                  class="text-sm text-slate-900 dark:text-white"
-                >
-                  {{ group.preprocessing_config.name }}
-                </span>
-                <span v-else class="text-sm text-slate-500 dark:text-slate-400">Mixed</span>
-              </td>
-              <td :class="t.td">
-                <div class="flex flex-wrap gap-1">
-                  <span
-                    v-for="tag in (group.tags || []).slice(0, 5)"
-                    :key="tag"
-                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                  >
-                    {{ tag }}
-                  </span>
-                  <span
-                    v-if="(group.tags || []).length > 5"
-                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
-                  >
-                    +{{ group.tags.length - 5 }}
-                  </span>
-                </div>
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                <span
-                  :class="[
-                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                    group.is_auto_generated
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-                      : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300',
-                  ]"
-                >
-                  {{ group.is_auto_generated ? 'Auto-generated' : 'Manual' }}
-                </span>
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                {{ formatDate(group.created_at) }}
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                <div class="flex items-center justify-end space-x-2">
-                  <button
-                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                    title="View"
-                    @click="viewGroup(group)"
-                  >
-                    <Eye class="h-5 w-5" />
-                  </button>
-                  <button
-                    v-if="!group.is_auto_generated"
-                    class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-300"
-                    title="Edit"
-                    @click="editGroup(group)"
-                  >
-                    <SquarePen class="h-5 w-5" />
-                  </button>
-                  <button
-                    class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                    :title="group.trials_count > 0 ? 'Cannot delete - used by trial' : 'Delete'"
-                    :disabled="group.trials_count > 0"
-                    @click="deleteGroup(group)"
-                  >
-                    <Trash2
-                      class="h-5 w-5"
-                      :class="group.trials_count > 0 ? 'opacity-50 cursor-not-allowed' : ''"
-                    />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <DataTable
+      v-else
+      :columns="columns"
+      :items="serverItems"
+      row-key="id"
+      :pagination="tablePagination"
+      :show-page-size-selector="false"
+      item-label="groups"
+      empty-title="No document groups"
+      @page-change="handlePageChange"
+    >
+      <template #cell-name="{ row: group }">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-slate-900 dark:text-white">{{ group.name }}</span>
+            <span
+              v-if="group.is_auto_generated"
+              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+              title="Auto-generated during preprocessing"
+            >
+              Auto
+            </span>
+          </div>
+          <div
+            v-if="group.description"
+            class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-md"
+          >
+            {{ group.description }}
+          </div>
+        </div>
+      </template>
 
-    <!-- Pagination -->
-    <PaginationControls
-      v-model="currentPage"
-      :total-pages="totalPages"
-      :visible-pages="visiblePages"
-      :total-items="totalCount"
-      :page-size="itemsPerPage"
-    />
+      <template #cell-document_count="{ row: group }">
+        <span class="text-sm text-slate-900 dark:text-white">{{ group.document_count ?? 0 }}</span>
+      </template>
+
+      <template #cell-configuration="{ row: group }">
+        <span v-if="group.preprocessing_config" class="text-sm text-slate-900 dark:text-white">
+          {{ group.preprocessing_config.name }}
+        </span>
+        <span v-else class="text-sm text-slate-500 dark:text-slate-400">Mixed</span>
+      </template>
+
+      <template #cell-tags="{ row: group }">
+        <div class="flex flex-wrap gap-1">
+          <span
+            v-for="tag in (group.tags || []).slice(0, 5)"
+            :key="tag"
+            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+          >
+            {{ tag }}
+          </span>
+          <span
+            v-if="(group.tags || []).length > 5"
+            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
+          >
+            +{{ group.tags.length - 5 }}
+          </span>
+        </div>
+      </template>
+
+      <template #cell-type="{ row: group }">
+        <span
+          :class="[
+            'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+            group.is_auto_generated
+              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+              : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300',
+          ]"
+        >
+          {{ group.is_auto_generated ? 'Auto-generated' : 'Manual' }}
+        </span>
+      </template>
+
+      <template #cell-created_at="{ row: group }">
+        <span class="text-sm text-slate-500 dark:text-slate-400">
+          {{ formatDate(group.created_at) }}
+        </span>
+      </template>
+
+      <template #row-actions="{ row: group }">
+        <BaseButton
+          variant="icon"
+          tone="blue"
+          title="View"
+          aria-label="View"
+          @click.stop="viewGroup(group)"
+        >
+          <Eye class="w-5 h-5" aria-hidden="true" />
+        </BaseButton>
+        <BaseButton
+          v-if="!group.is_auto_generated"
+          variant="icon"
+          tone="gray"
+          title="Edit"
+          aria-label="Edit"
+          @click.stop="editGroup(group)"
+        >
+          <SquarePen class="w-5 h-5" aria-hidden="true" />
+        </BaseButton>
+        <BaseButton
+          variant="icon"
+          tone="red"
+          :title="group.trials_count > 0 ? 'Cannot delete - used by trial' : 'Delete'"
+          :aria-label="group.trials_count > 0 ? 'Cannot delete - used by trial' : 'Delete'"
+          :disabled="group.trials_count > 0"
+          @click.stop="deleteGroup(group)"
+        >
+          <Trash2 class="w-5 h-5" aria-hidden="true" />
+        </BaseButton>
+      </template>
+    </DataTable>
 
     <!-- Create/Edit Group Modal -->
     <CreateDocumentGroupModal
@@ -222,15 +204,12 @@ import { formatDate } from '@/utils/formatters'
 import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
 import ViewDocumentGroupModal from './ViewDocumentGroupModal.vue'
 import LoadingSpinner from '../common/LoadingSpinner.vue'
-import PaginationControls from '../common/PaginationControls.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import { usePagination } from '@/composables/usePagination'
 import { extractErrorMessage } from '@/utils/errors'
-import { useTableClasses } from '@/composables/useTableClasses'
-
-const t = useTableClasses()
 
 const props = defineProps({
   projectId: {
@@ -271,7 +250,27 @@ const isDeleting = ref(false)
 
 // Server-side pagination
 const totalPages = pagination.totalPages
-const visiblePages = pagination.visiblePages
+
+// Pagination object for the DataTable (shape: { page, page_size, total, total_pages })
+const tablePagination = computed(() => ({
+  page: currentPage.value,
+  page_size: itemsPerPage.value,
+  total: totalCount.value,
+  total_pages: totalPages.value,
+}))
+
+const handlePageChange = (page) => {
+  currentPage.value = page
+}
+
+const columns = [
+  { key: 'name', label: 'Group Name' },
+  { key: 'document_count', label: 'Documents' },
+  { key: 'configuration', label: 'Configuration' },
+  { key: 'tags', label: 'Tags' },
+  { key: 'type', label: 'Type' },
+  { key: 'created_at', label: 'Created' },
+]
 
 const canDeleteGroup = computed(() => !isDeleting.value)
 

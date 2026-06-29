@@ -20,12 +20,15 @@ router = APIRouter()
 
 @router.get("/settings")
 def get_settings():
+    # NOTE: this endpoint is unauthenticated (the login/landing page reads it to
+    # decide which OCR backends to advertise). Never return internal topology
+    # here — the *_api_base values are internal service URLs (e.g.
+    # http://deepseek-ocr:8000) in self-hosted deployments. The frontend only
+    # needs the enabled flags + display strings.
     return {
         "require_invitation": settings.REQUIRE_INVITATION,
         "mistral_ocr_enabled": settings.MISTRAL_OCR_ENABLED,
-        "mistral_api_base": settings.MISTRAL_API_BASE,
         "vision_ocr_enabled": settings.VISION_OCR_ENABLED,
-        "vision_ocr_api_base": settings.VISION_OCR_API_BASE,
         "vision_ocr_model": settings.VISION_OCR_MODEL,
         "vision_ocr_prompt": settings.VISION_OCR_PROMPT,
         "mistral_ocr_display_name": settings.MISTRAL_OCR_DISPLAY_NAME,

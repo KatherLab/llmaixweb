@@ -95,12 +95,12 @@
 
   <!-- Edit Modal -->
   <BaseModal :open="!!editingGroundTruth" title="Rename Ground Truth" size="sm" @close="cancelEdit">
-    <label for="edit-name" class="block text-sm font-medium text-slate-700 mb-2">Name</label>
+    <label for="edit-name" :class="labelClass">Name</label>
     <input
       id="edit-name"
       v-model="editName"
       type="text"
-      class="block w-full rounded-md border border-slate-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+      :class="inputClass"
       placeholder="Ground truth file name"
     />
     <template #footer>
@@ -139,6 +139,7 @@ import { ref } from 'vue'
 import { Pencil, Settings, Trash2 } from '@lucide/vue'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
+import { inputClass, labelClass } from '@/utils/formStyles'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'

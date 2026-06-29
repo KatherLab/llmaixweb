@@ -1,6 +1,7 @@
 # backend/src/schemas/user.py
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -102,6 +103,8 @@ class InvitationCreate(InvitationBase):
 class InvitationResponse(InvitationBase):
     id: int
     email_sent: bool = False
+    created_at: datetime | None = None
+    expires_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

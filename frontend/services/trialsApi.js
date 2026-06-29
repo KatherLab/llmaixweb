@@ -7,8 +7,11 @@ export const trialsApi = {
   list(projectId, params = {}) {
     return api.get(`/project/${projectId}/trial`, { params })
   },
-  get(projectId, trialId) {
-    return api.get(`/project/${projectId}/trial/${trialId}`)
+  get(projectId, trialId, params = {}) {
+    return api.get(`/project/${projectId}/trial/${trialId}`, { params })
+  },
+  listResults(projectId, trialId, params = {}) {
+    return api.get(`/project/${projectId}/trial/${trialId}/results`, { params })
   },
   create(projectId, data) {
     return api.post(`/project/${projectId}/trial`, data)

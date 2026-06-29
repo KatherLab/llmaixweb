@@ -25,64 +25,91 @@
       @action="emit('create')"
     />
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div
-        v-for="schema in schemas"
-        :key="schema.id"
-        class="bg-white dark:bg-slate-900 border rounded-xl shadow-sm overflow-hidden hover:shadow-md dark:hover:bg-slate-800 transition-shadow duration-200"
+    <template v-else>
+      <FilterBar
+        v-model:search="searchQuery"
+        :total-count="schemas.length"
+        item-label="schemas"
+        search-placeholder="Search schemas..."
+        :active-filters="activeFilters"
+        @clear-filter="clearSearch"
+      />
+
+      <DataTable
+        :columns="columns"
+        :items="filteredSchemas"
+        row-key="id"
+        expandable
+        :expanded-keys="expandedKeys"
+        empty-title="No schemas match your search"
+        @expand="toggleExpand"
       >
-        <div class="p-4 border-b dark:border-slate-700">
-          <div class="flex justify-between items-start">
-            <h3 class="text-lg font-medium text-slate-900 dark:text-white">
-              {{ schema.schema_name }}
-            </h3>
-            <div class="flex space-x-2">
-              <button
-                class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200"
-                title="View Schema"
-                @click="emit('view', schema)"
-              >
-                <Eye class="h-5 w-5" />
-              </button>
-              <button
-                class="text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors duration-200"
-                title="Edit Schema"
-                @click="emit('edit', schema)"
-              >
-                <Pencil class="h-5 w-5" />
-              </button>
-              <button
-                class="text-slate-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors duration-200"
-                title="Delete Schema"
-                @click="emit('delete', schema)"
-              >
-                <Trash2 class="h-5 w-5" />
-              </button>
-            </div>
+        <template #cell-schema_name="{ row: schema }">
+          <span class="text-sm font-medium text-slate-900 dark:text-white">{{
+            schema.schema_name
+          }}</span>
+        </template>
+
+        <template #cell-created_at="{ row: schema }">
+          <span class="text-sm text-slate-500 dark:text-slate-400">
+            {{ formatDate(schema.created_at) }}
+          </span>
+        </template>
+
+        <template #row-actions="{ row: schema }">
+          <BaseButton
+            variant="icon"
+            tone="blue"
+            title="View Schema"
+            aria-label="View Schema"
+            @click.stop="emit('view', schema)"
+          >
+            <Eye class="w-5 h-5" aria-hidden="true" />
+          </BaseButton>
+          <BaseButton
+            variant="icon"
+            tone="gray"
+            title="Edit Schema"
+            aria-label="Edit Schema"
+            @click.stop="emit('edit', schema)"
+          >
+            <Pencil class="w-5 h-5" aria-hidden="true" />
+          </BaseButton>
+          <BaseButton
+            variant="icon"
+            tone="red"
+            title="Delete Schema"
+            aria-label="Delete Schema"
+            @click.stop="emit('delete', schema)"
+          >
+            <Trash2 class="w-5 h-5" aria-hidden="true" />
+          </BaseButton>
+        </template>
+
+        <template #expanded="{ row: schema }">
+          <div class="p-4 max-h-64 overflow-auto">
+            <pre class="text-xs text-slate-700 dark:text-slate-300">{{
+              formatJSON(schema.schema_definition)
+            }}</pre>
           </div>
-          <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Created: {{ formatDate(schema.created_at) }}
-          </p>
-        </div>
-        <div class="bg-slate-50 dark:bg-slate-800 p-4 max-h-64 overflow-auto">
-          <pre class="text-xs text-slate-700 dark:text-slate-300">{{
-            formatJSON(schema.schema_definition)
-          }}</pre>
-        </div>
-      </div>
-    </div>
+        </template>
+      </DataTable>
+    </template>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { formatDate } from '@/utils/formatters'
 import { formatJSON } from '@/utils/schemaTemplates'
 import { Eye, Pencil, Plus, Trash2 } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import DataTable from '@/components/common/DataTable.vue'
+import FilterBar from '@/components/common/FilterBar.vue'
 
-defineProps({
+const props = defineProps({
   schemas: {
     type: Array,
     required: true,
@@ -94,4 +121,37 @@ defineProps({
 })
 
 const emit = defineEmits(['create', 'view', 'edit', 'delete'])
+
+const expandedKeys = ref([])
+const searchQuery = ref('')
+
+const filteredSchemas = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return props.schemas
+  return props.schemas.filter((s) => (s.schema_name || '').toLowerCase().includes(q))
+})
+
+const activeFilters = computed(() =>
+  searchQuery.value
+    ? [{ key: 'search', label: `Search: "${searchQuery.value}"`, color: 'blue' }]
+    : [],
+)
+
+const clearSearch = () => {
+  searchQuery.value = ''
+}
+
+const toggleExpand = (id) => {
+  const idx = expandedKeys.value.indexOf(id)
+  if (idx > -1) {
+    expandedKeys.value.splice(idx, 1)
+  } else {
+    expandedKeys.value.push(id)
+  }
+}
+
+const columns = [
+  { key: 'schema_name', label: 'Name' },
+  { key: 'created_at', label: 'Created' },
+]
 </script>

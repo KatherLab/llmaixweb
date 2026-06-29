@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Optional
 
+import httpx
 from openai import OpenAI
 
 from ..core.config import settings
@@ -67,6 +68,15 @@ class LLMVisionOCRService:
             api_key=api_key,
             base_url=base_url,
             timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+            # follow_redirects=False: a user-controlled endpoint can't 3xx the
+            # request to a blocked internal/metadata address (SSRF). The base_url
+            # is validated upstream (validate_user_endpoint), but that check only
+            # blocks metadata IPs at validation time — this closes the
+            # redirect/DNS-rebinding bypass at request time.
+            http_client=httpx.Client(
+                follow_redirects=False,
+                timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+            ),
         )
         self.model = model
         self.prompt = prompt or self.DEFAULT_PROMPT
@@ -105,11 +115,14 @@ class LLMVisionOCRService:
 
     def _is_retryable_exception(self, exc: Exception) -> bool:
         """Check if an exception is retryable."""
+        # Prefer the structured status code carried by the SDK exception
+        # (OpenAI APIStatusError exposes `.status_code`). Matching status codes
+        # as substrings of the error message is unsound: a message containing
+        # "500" for any reason would match code 500.
+        status_code = getattr(exc, "status_code", None)
+        if isinstance(status_code, int) and status_code in self.RETRYABLE_STATUS_CODES:
+            return True
         exc_str = str(exc).lower()
-        # Check for retryable HTTP status codes in error message
-        for status in self.RETRYABLE_STATUS_CODES:
-            if str(status) in exc_str:
-                return True
         # Check for common retryable error patterns
         retryable_patterns = [
             "timeout",
@@ -311,21 +324,26 @@ class LLMVisionOCRService:
 
         images: list[bytes] = []
         doc = fitz.open(stream=file_content, filetype="pdf")
-        for page_num in range(len(doc)):
-            page = doc.load_page(page_num)
-            # Compute zoom to respect max_image_dim
-            rect = page.rect
-            max_side = max(rect.width, rect.height)
-            zoom = min(self.max_image_dim / max_side, 4.0) if max_side > 0 else 1.0
-            mat = fitz.Matrix(zoom, zoom)
-            pix = page.get_pixmap(matrix=mat)
-            img_bytes = pix.tobytes("png")
+        try:
+            for page_num in range(len(doc)):
+                page = doc.load_page(page_num)
+                # Compute zoom to respect max_image_dim
+                rect = page.rect
+                max_side = max(rect.width, rect.height)
+                zoom = min(self.max_image_dim / max_side, 4.0) if max_side > 0 else 1.0
+                mat = fitz.Matrix(zoom, zoom)
+                pix = page.get_pixmap(matrix=mat)
+                img_bytes = pix.tobytes("png")
 
-            # Apply EXIF rotation and resizing (for PDFs this mainly applies the max dimension)
-            img_bytes = self._apply_exif_rotation(img_bytes)
+                # Apply EXIF rotation and resizing (for PDFs this mainly applies the max dimension)
+                img_bytes = self._apply_exif_rotation(img_bytes)
 
-            images.append(img_bytes)
-        doc.close()
+                images.append(img_bytes)
+        finally:
+            # Always close the document — without this, a corrupt page or a
+            # get_pixmap / _apply_exif_rotation failure leaks the fitz.Document
+            # (memory + underlying handles) for the lifetime of the process.
+            doc.close()
         return images
 
     def _process_single_image(self, image_bytes: bytes, page_idx: int) -> str:

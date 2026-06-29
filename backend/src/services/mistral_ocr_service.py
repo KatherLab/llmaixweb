@@ -51,11 +51,14 @@ class MistralOCRService:
 
     def _is_retryable_exception(self, exc: Exception) -> bool:
         """Check if an exception is retryable."""
+        # Prefer the structured status code carried by the SDK exception
+        # (Mistral SDKError/MistralError expose `.status_code`). Matching status
+        # codes as substrings of the error message is unsound: a message
+        # containing "500" for any reason would match code 500.
+        status_code = getattr(exc, "status_code", None)
+        if isinstance(status_code, int) and status_code in self.RETRYABLE_STATUS_CODES:
+            return True
         exc_str = str(exc).lower()
-        # Check for retryable HTTP status codes in error message
-        for status in self.RETRYABLE_STATUS_CODES:
-            if str(status) in exc_str or f"{status}".lower() in exc_str:
-                return True
         # Check for common retryable error patterns
         retryable_patterns = [
             "timeout",

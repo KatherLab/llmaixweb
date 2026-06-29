@@ -42,9 +42,10 @@ def make_jsonable(obj: Any) -> Any:
 
     # fall back to string for exotic objects (rare)
     try:
-        # primitive (str/int/float/bool) pass through
+        # primitive (int/float/bool) pass through; str raises here and is
+        # handled by the fallback below.
         _ = obj + 0  # quick path for numbers, will raise for non-numbers
         return obj
     except Exception:
         pass
-    return obj
+    return str(obj)

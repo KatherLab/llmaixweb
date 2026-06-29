@@ -1,7 +1,7 @@
 # backend/src/routers/v1/endpoints/schemas.py
 """Schema endpoints for projects."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -67,6 +67,8 @@ def get_schemas(
     project_id: int,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    limit: int = Query(1000, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
 ) -> list[schemas.Schema]:
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -79,7 +81,13 @@ def get_schemas(
         )
 
     schemas_list = list(
-        db.execute(select(models.Schema).where(models.Schema.project_id == project_id))
+        db.execute(
+            select(models.Schema)
+            .where(models.Schema.project_id == project_id)
+            .order_by(models.Schema.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
         .scalars()
         .all()
     )

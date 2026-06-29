@@ -1,4 +1,5 @@
 # backend/src/routers/v1/endpoints/users.py
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -29,7 +30,27 @@ from ....schemas import PasswordSet
 from ....utils.email_service import send_invitation_email, send_password_reset_email
 from ....utils.enums import UserRole
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+def _invitation_expiry() -> datetime | None:
+    """Compute an invitation's ``expires_at`` (naive UTC, matching the
+    password-reset token pattern). Returns ``None`` if expiry is disabled
+    (``INVITATION_EXPIRE_HOURS <= 0``)."""
+    hours = settings.INVITATION_EXPIRE_HOURS
+    if hours <= 0:
+        return None
+    return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=hours)
+
+
+def _invitation_expired(invitation: models.Invitation) -> bool:
+    """True if the invitation has passed its ``expires_at``. ``None`` means
+    "no expiry" (only legacy rows predating the column)."""
+    if invitation.expires_at is None:
+        return False
+    return invitation.expires_at < datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @router.get("/first-admin-check")
@@ -170,6 +191,12 @@ def create_user(
                 detail="Unable to create account. Please check your invitation and try again.",
             )
 
+        if _invitation_expired(invitation):
+            raise HTTPException(
+                status_code=400,
+                detail="Unable to create account. Please check your invitation and try again.",
+            )
+
         # Check if the email matches the invitation
         if invitation.email and invitation.email != user_in.email:
             raise HTTPException(
@@ -266,8 +293,15 @@ def delete_user(
     for file_uuid in file_uuids:
         try:
             remove_file(file_uuid)
-        except (FileNotFoundError, Exception):
+        except FileNotFoundError:
             pass  # File may not exist on disk — that's okay
+        except Exception:
+            logger.warning(
+                "Failed to remove stored file %s while deleting user %s",
+                file_uuid,
+                user_id,
+                exc_info=True,
+            )
 
     db.delete(user)
     db.commit()
@@ -383,6 +417,11 @@ def invite(
         .first()
     )
     if existing_invitation:
+        # Refresh the expiry so re-inviting a pending invite extends its window
+        # (mirrors the password-reset flow, which always mints a fresh window).
+        existing_invitation.expires_at = _invitation_expiry()
+        db.commit()
+        db.refresh(existing_invitation)
         resp = schemas.InvitationResponse.model_validate(existing_invitation)
         if send_email:
             base_url = settings.APP_URL
@@ -403,7 +442,12 @@ def invite(
 
     # Generate a unique token
     token = secrets.token_urlsafe(32)
-    invitation = models.Invitation(email=email, token=token, is_used=False)
+    invitation = models.Invitation(
+        email=email,
+        token=token,
+        is_used=False,
+        expires_at=_invitation_expiry(),
+    )
     db.add(invitation)
     db.commit()
     db.refresh(invitation)
@@ -473,7 +517,7 @@ def validate_invitation(
         .filter(models.Invitation.token == token, models.Invitation.is_used.is_(False))
         .first()
     )
-    if not invitation:
+    if not invitation or _invitation_expired(invitation):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Invalid or expired invitation token",

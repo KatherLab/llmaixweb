@@ -538,7 +538,7 @@ class EvaluationEngine:
                     doc_evaluations.append(doc_eval)
                     detailed_metrics.extend(doc_eval["detailed_metrics"])
                 except Exception as exc:  # noqa: BLE001
-                    print(f"[EvaluationEngine] error on doc {doc_id}: {exc}")
+                    logger.exception("EvaluationEngine error on doc %s", doc_id)
                     doc_evaluations.append(
                         self._create_error_result(doc_id, f"Evaluation failed: {exc}")
                     )

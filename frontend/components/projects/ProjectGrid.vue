@@ -24,271 +24,160 @@
         <LoadingSpinner size="large" />
       </div>
 
-      <!-- Grid -->
-      <div v-else class="h-full">
-        <AgGridVue
-          :row-data="rowData"
-          :column-defs="columnDefs"
-          :default-col-def="defaultColDef"
-          :grid-options="gridOptions"
-          :pagination="true"
-          :pagination-page-size="20"
-          :pagination-auto-page-size="false"
-          :theme="gridTheme"
-          :components="components"
-          class="h-full w-full"
-          @grid-ready="onGridReady"
-          @first-data-rendered="onFirstDataRendered"
-          @grid-size-changed="onGridSizeChanged"
-        />
-      </div>
+      <DataTable
+        v-else
+        :columns="columns"
+        :items="pagedProjects"
+        row-key="id"
+        row-clickable
+        :pagination="tablePagination"
+        :page-size-options="[20, 50, 100]"
+        item-label="projects"
+        empty-title="No projects found"
+        @row-click="goToProject"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageSizeChange"
+      >
+        <template #cell-name="{ row: project }">
+          <span
+            class="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 cursor-pointer"
+          >
+            {{ project.name }}
+          </span>
+        </template>
+
+        <template #cell-document_count="{ row: project }">
+          <span
+            class="px-2.5 py-1 inline-flex text-xs leading-4 font-medium rounded-full bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-slate-600"
+          >
+            {{ project.document_count }} document{{ project.document_count !== 1 ? 's' : '' }}
+          </span>
+        </template>
+
+        <template #cell-user="{ row: project }">
+          <div class="flex items-center">
+            <div
+              class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-slate-700 flex items-center justify-center"
+            >
+              <span class="text-blue-800 dark:text-blue-300 font-medium text-xs">{{
+                project.user.initials
+              }}</span>
+            </div>
+            <div class="ml-2">
+              <div class="text-sm font-medium text-slate-900 dark:text-white">
+                {{ project.user.full_name }}
+              </div>
+              <div class="text-xs text-slate-500 dark:text-slate-400">{{ project.user.email }}</div>
+            </div>
+          </div>
+        </template>
+
+        <template #cell-created_at="{ row: project }">
+          <span class="text-sm text-slate-500 dark:text-slate-400">
+            {{ project.created_at ? formatDate(project.created_at) : '' }}
+          </span>
+        </template>
+
+        <template #row-actions="{ row: project }">
+          <BaseButton variant="primary" size="sm" @click.stop="goToProject(project)">
+            View
+          </BaseButton>
+        </template>
+      </DataTable>
     </div>
   </div>
 </template>
 
 <script setup>
-import {
-  ref,
-  computed,
-  watch,
-  onMounted,
-  onBeforeUnmount,
-  onActivated,
-  nextTick,
-  defineComponent,
-  h,
-} from 'vue'
-import { AgGridVue } from 'ag-grid-vue3'
+import { ref, computed, watch, onMounted } from 'vue'
 import { projectsApi } from '@/services/projectsApi'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
-import { useGridTheme } from '@/composables/useGridTheme'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import DataTable from '@/components/common/DataTable.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { formatDate } from '@/utils/formatters'
+import { usePagination } from '@/composables/usePagination'
 
-// ---- auth / router ----
 const authStore = useAuthStore()
 const router = useRouter()
 
-// ---- theme (v34 :theme) ----
-// Shared ag-grid theme with dark-mode support (re-themes on toggle)
-const { gridTheme } = useGridTheme({ rowHeight: 56, controlBorderRadius: 8 })
-
-// ---- state ----
-const rowData = ref([])
-const gridApi = ref(null)
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 const showAllProjects = ref(false)
 const isLoading = ref(true)
 
-// ---- Vue cell components (render functions; no runtime compiler needed) ----
-const ProjectCell = defineComponent({
-  name: 'ProjectCell',
-  props: { params: { type: Object, required: true } },
-  setup(props) {
-    const router = useRouter()
-    const go = () => router.push(`/projects/${props.params.data.id}`)
-    return () =>
-      h(
-        'div',
-        {
-          class:
-            'flex items-center h-full cursor-pointer text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300',
-          onClick: go,
-        },
-        [h('span', { class: 'font-medium' }, String(props.params.value ?? ''))],
-      )
-  },
+const projects = ref([])
+const currentPage = ref(1)
+const pageSize = ref(20)
+
+const totalCount = computed(() => projects.value.length)
+
+const pagination = usePagination({ getTotal: () => totalCount.value, pageSize: pageSize.value })
+
+watch(totalCount, () => {
+  if (currentPage.value > pagination.totalPages.value) {
+    currentPage.value = pagination.totalPages.value
+  }
 })
 
-const DocumentCountCell = defineComponent({
-  name: 'DocumentCountCell',
-  props: { params: { type: Object, required: true } },
-  setup(props) {
-    return () => {
-      const count = props.params.value ?? 0
-      return h('div', { class: 'flex items-center h-full' }, [
-        h(
-          'span',
-          {
-            class:
-              'px-2.5 py-1 inline-flex text-xs leading-4 font-medium rounded-full bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-slate-600',
-          },
-          `${count} document${count !== 1 ? 's' : ''}`,
-        ),
-      ])
-    }
-  },
+const pagedProjects = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return projects.value.slice(start, start + pageSize.value)
 })
 
-const ActionsCell = defineComponent({
-  name: 'ActionsCell',
-  props: { params: { type: Object, required: true } },
-  setup(props) {
-    const router = useRouter()
-    const view = () => router.push(`/projects/${props.params.data.id}`)
-    return () =>
-      h('div', { class: 'flex items-center h-full justify-end' }, [
-        h(
-          'button',
-          {
-            class:
-              'inline-flex items-center px-2.5 py-1 text-xs font-medium rounded text-white bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500',
-            onClick: (e) => {
-              e.stopPropagation()
-              view()
-            },
-          },
-          'View',
-        ),
-      ])
-  },
-})
+const tablePagination = computed(() => ({
+  page: currentPage.value,
+  page_size: pageSize.value,
+  total: totalCount.value,
+  total_pages: pagination.totalPages.value,
+}))
 
-const UserCell = defineComponent({
-  name: 'UserCell',
-  props: { params: { type: Object, required: true } },
-  setup(props) {
-    return () => {
-      const user = props.params.value || {}
-      const initials =
-        (user.full_name || '')
-          .split(' ')
-          .map((n) => n[0])
-          .join('') || '?'
-      return h('div', { class: 'flex items-center h-full' }, [
-        h('div', { class: 'flex items-center' }, [
-          h(
-            'div',
-            {
-              class:
-                'flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-slate-700 flex items-center justify-center',
-            },
-            [
-              h(
-                'span',
-                { class: 'text-blue-800 dark:text-blue-300 font-medium text-xs' },
-                initials,
-              ),
-            ],
-          ),
-          h('div', { class: 'ml-2' }, [
-            h(
-              'div',
-              { class: 'text-sm font-medium text-slate-900 dark:text-white' },
-              user.full_name || 'N/A',
-            ),
-            h('div', { class: 'text-xs text-slate-500 dark:text-slate-400' }, user.email || 'N/A'),
-          ]),
-        ]),
-      ])
-    }
-  },
-})
+function handlePageChange(page) {
+  currentPage.value = page
+}
+function handlePageSizeChange(size) {
+  pageSize.value = size
+  currentPage.value = 1
+}
 
-const components = { ProjectCell, DocumentCountCell, ActionsCell, UserCell } // ag-grid-vue3 will use these by name. :contentReference[oaicite:2]{index=2}
-
-// ---- column defs ----
-const baseColumnsComputed = computed(() => {
+const columns = computed(() => {
   const cols = [
-    { field: 'name', headerName: 'Project', flex: 2, minWidth: 250, cellRenderer: 'ProjectCell' },
-    {
-      field: 'document_count',
-      headerName: 'Documents',
-      width: 140,
-      cellRenderer: 'DocumentCountCell',
-    },
-    {
-      field: 'created_at',
-      headerName: 'Created',
-      width: 160,
-      valueFormatter: (p) => (p.value ? formatDate(p.value) : ''),
-    },
-    { field: 'actions', headerName: 'Actions', width: 120, cellRenderer: 'ActionsCell' },
+    { key: 'name', label: 'Project', sortable: true },
+    { key: 'document_count', label: 'Documents', sortable: true },
   ]
   if (isAdmin.value) {
-    cols.splice(1, 0, {
-      field: 'user',
-      headerName: 'User',
-      width: 260,
-      cellRenderer: 'UserCell',
-      // IMPORTANT for v34: when the underlying value is an object, provide a valueFormatter
-      // so the grid can coerce to string for filters/sorts/fallbacks (avoids warning #48).
-      valueFormatter: (p) => {
-        const u = p.value
-        return u ? `${u.full_name ?? 'N/A'} <${u.email ?? 'N/A'}>` : ''
-      },
-    })
+    cols.push({ key: 'user', label: 'User', sortable: true })
   }
+  cols.push({ key: 'created_at', label: 'Created', sortable: true })
   return cols
 })
 
-// materialize to a ref so we can preserve/restore column state on updates
-const columnDefs = ref(baseColumnsComputed.value)
-watch(baseColumnsComputed, (defs) => {
-  columnDefs.value = defs
-})
-
-// ---- default col def ----
-const defaultColDef = ref({
-  sortable: true,
-  filter: true,
-  resizable: true,
-  cellClass: 'align-middle',
-})
-
-// ---- grid options ----
-const gridOptions = {
-  getRowId: (p) => String(p.data.id), // stabilize updates
-} // :contentReference[oaicite:3]{index=3}
-
-// ---- helpers ----
-const sizeToFitIfVisible = () => {
-  const el = gridApi.value?.getGui?.()
-  const visible = el && el.offsetParent !== null && el.clientWidth > 0
-  if (visible && gridApi.value && !gridApi.value.isDestroyed()) {
-    gridApi.value.sizeColumnsToFit()
-  }
+function goToProject(project) {
+  router.push(`/projects/${project.id}`)
 }
 
-// ---- lifecycle ----
-const onGridReady = (params) => {
-  gridApi.value = params.api
-  params.api.addEventListener('gridPreDestroy', () => {
-    gridApi.value = null
-  })
-}
-
-const onFirstDataRendered = () => {
-  sizeToFitIfVisible()
-}
-const onGridSizeChanged = () => {
-  sizeToFitIfVisible()
-}
-
-onActivated(async () => {
-  await nextTick()
-  sizeToFitIfVisible()
-})
-onBeforeUnmount(() => {
-  gridApi.value = null
-})
-
-// ---- data ----
 const loadProjects = async () => {
   isLoading.value = true
   try {
     const params = isAdmin.value && showAllProjects.value ? { all: true } : {}
     const response = await projectsApi.list(params)
-    rowData.value = response.data.map((project) => ({
-      ...project,
-      document_count: project.document_count ?? 0,
-      user: {
-        full_name: project.owner?.full_name || 'N/A',
-        email: project.owner?.email || 'N/A',
-      },
-    }))
-    sizeToFitIfVisible()
+    projects.value = response.data.map((project) => {
+      const fullName = project.owner?.full_name || 'N/A'
+      return {
+        ...project,
+        document_count: project.document_count ?? 0,
+        user: {
+          full_name: fullName,
+          email: project.owner?.email || 'N/A',
+          initials:
+            fullName
+              .split(' ')
+              .map((n) => n[0])
+              .join('') || '?',
+        },
+      }
+    })
+    currentPage.value = 1
   } catch (err) {
     console.error('Error loading projects:', err)
   } finally {
@@ -296,24 +185,17 @@ const loadProjects = async () => {
   }
 }
 
-// toggle admin view -> update defs with v31+ API and preserve user state
-watch(isAdmin, async () => {
-  const api = gridApi.value
-  const savedState = api?.getColumnState?.() ?? null
-  if (api && !api.isDestroyed()) {
-    api.updateGridOptions({ columnDefs: baseColumnsComputed.value }) // v31+ options API
-    if (savedState) api.applyColumnState({ state: savedState, applyOrder: true })
-  }
+// reset to page 1 + reload when admin toggle changes
+watch(isAdmin, () => {
   showAllProjects.value = false
-  await loadProjects()
+  loadProjects()
 })
 
-// reload when show all projects toggle changes
-watch(showAllProjects, async () => {
-  await loadProjects()
+// reload when "show all projects" toggle changes
+watch(showAllProjects, () => {
+  loadProjects()
 })
 
-// initial load
 onMounted(async () => {
   await loadProjects()
 })

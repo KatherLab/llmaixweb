@@ -19,11 +19,21 @@ from .... import models, schemas
 from ....core.config import settings
 from ....core.security import get_current_user
 from ....dependencies import get_db, get_file
+from ....utils.enums import TrialResultStatus
 from ....utils.helpers import flatten_dict
+from ....utils.url_safety import UnsafeEndpointError, validate_user_endpoint
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _to_int(value) -> int:
+    """Coerce a JSON-decoded numeric value to int, tolerating None/strings."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def check_project_access(
@@ -150,6 +160,17 @@ def create_trial(
 
     if llm_model is None or api_key is None or base_url is None:
         raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
+
+    # Validate the user-supplied endpoint against the SSRF policy (blocks cloud
+    # metadata hosts / non-http schemes). The extraction clients also disable
+    # redirect-following, but rejecting at submission time gives a clean 400
+    # instead of a per-document failure and prevents storing a blocked URL.
+    try:
+        validate_user_endpoint(base_url)
+    except UnsafeEndpointError:
+        raise HTTPException(
+            status_code=400, detail="The provided LLM endpoint URL is not allowed."
+        )
 
     # Only admins may run extraction synchronously in the request thread
     # (bypass_celery). It blocks a FastAPI worker for the whole trial and,
@@ -444,6 +465,12 @@ def get_trials(
 def get_trial(
     project_id: int,
     trial_id: int,
+    include_results: Annotated[
+        bool,
+        Query(
+            description="Embed all results (default true). Set false to fetch via /results."
+        ),
+    ] = True,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.Trial:
@@ -463,7 +490,7 @@ def get_trial(
         )
     ).scalar_one_or_none()
 
-    if trial:
+    if trial and include_results:
         trial.results = cast(
             list[models.TrialResult],
             (
@@ -480,6 +507,113 @@ def get_trial(
     if not trial:
         raise HTTPException(status_code=404, detail="Trial not found")
     return schemas.Trial.model_validate(trial)
+
+
+@router.get("/{trial_id}/results", response_model=schemas.PaginatedTrialResults)
+def list_trial_results(
+    project_id: Annotated[int, Path()],
+    trial_id: Annotated[int, Path()],
+    search: Annotated[
+        str | None, Query(description="Search document name / original file name")
+    ] = None,
+    status: Annotated[
+        str | None,
+        Query(
+            description="success|failed|incomplete|invalid_json|schema_invalid|refused|provider_error"
+        ),
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.PaginatedTrialResults:
+    """Paginated list of a trial's results, with document names joined server-side.
+
+    Replaces the load-all + N+1 pattern of embedding every result in `GET /{trial_id}`.
+    """
+    check_project_access(project_id, current_user, db, "read")
+
+    # Verify the trial exists in this project (404 otherwise).
+    trial = db.execute(
+        select(models.Trial.id).where(
+            models.Trial.project_id == project_id, models.Trial.id == trial_id
+        )
+    ).scalar_one_or_none()
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+
+    TR = models.TrialResult
+    Doc = models.Document
+
+    base = select(TR).where(TR.trial_id == trial_id)
+
+    # --- status filter ---
+    if status:
+        try:
+            status_enum = TrialResultStatus(status)
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid status filter: {status}"
+            )
+        base = base.where(TR.status == status_enum)
+
+    # --- search filter (document name or original file name) ---
+    if search:
+        pattern = f"%{search}%"
+        base = base.join(Doc, Doc.id == TR.document_id).outerjoin(
+            models.File, models.File.id == Doc.original_file_id
+        )
+        base = base.where(
+            or_(
+                Doc.document_name.ilike(pattern),
+                models.File.file_name.ilike(pattern),
+            )
+        )
+
+    total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
+
+    page_q = (
+        base.order_by(TR.created_at.asc())
+        .limit(limit)
+        .offset(offset)
+        .options(
+            selectinload(TR.document).joinedload(Doc.original_file),
+        )
+    )
+    page_results: list[models.TrialResult] = db.execute(page_q).scalars().all()
+
+    items: list[schemas.TrialResultItem] = []
+    for r in page_results:
+        item = schemas.TrialResultItem.model_validate(r)
+        doc = r.document
+        item.document_name = doc.document_name if doc is not None else None
+        item.original_file_name = (
+            doc.original_file.file_name
+            if doc is not None and doc.original_file is not None
+            else None
+        )
+        items.append(item)
+
+    # Aggregate token usage across ALL results for this trial (for the meta
+    # header). Lightweight: selects only the additional_content column, no joins
+    # or heavy `result`/`text` hydration. Dialect-agnostic (summed in Python).
+    usage_rows = db.execute(
+        select(TR.additional_content).where(TR.trial_id == trial_id)
+    ).all()
+    total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    for (ac,) in usage_rows:
+        if not isinstance(ac, dict):
+            continue
+        usage = ac.get("usage")
+        if not isinstance(usage, dict):
+            continue
+        total_usage["prompt_tokens"] += _to_int(usage.get("prompt_tokens"))
+        total_usage["completion_tokens"] += _to_int(usage.get("completion_tokens"))
+        total_usage["total_tokens"] += _to_int(usage.get("total_tokens"))
+
+    return schemas.PaginatedTrialResults(
+        items=items, total=total, total_usage=total_usage
+    )
 
 
 @router.patch("/{trial_id}", response_model=schemas.Trial)
@@ -844,7 +978,7 @@ def download_trial_results(
             content=zip_buffer.getvalue(),
             media_type="application/zip",
             headers={
-                "Content-Disposition": f"attachment; filename=trial_{trial_id}_results.zip"
+                "Content-Disposition": f'attachment; filename="trial_{trial_id}_results.zip"'
             },
         )
 
@@ -962,7 +1096,7 @@ def download_trial_results(
                 content=output.getvalue(),
                 media_type="application/zip",
                 headers={
-                    "Content-Disposition": f"attachment; filename=trial_{trial_id}_results.zip"
+                    "Content-Disposition": f'attachment; filename="trial_{trial_id}_results.zip"'
                 },
             )
         else:
@@ -1038,7 +1172,7 @@ def download_trial_results(
                 content=output.getvalue(),
                 media_type="text/csv",
                 headers={
-                    "Content-Disposition": f"attachment; filename=trial_{trial_id}_results.csv"
+                    "Content-Disposition": f'attachment; filename="trial_{trial_id}_results.csv"'
                 },
             )
 
@@ -1117,7 +1251,12 @@ def evaluate_trial(
         # so it reaches the client instead of being flattened by the handler below.
         raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Validation failed: {str(e)}")
+        # Don't echo the internal exception string to the client — it can
+        # contain DB error messages, file paths, or library internals.
+        logger.warning("Evaluation validation failed for trial %s: %s", trial_id, e)
+        raise HTTPException(
+            status_code=400, detail="Validation failed. See server logs for details."
+        )
 
     try:
         evaluation = engine.evaluate_trial(

@@ -162,7 +162,7 @@
                 <textarea
                   ref="rawJsonTextarea"
                   v-model="schemaForm.schema_definition"
-                  class="block w-full h-full border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono resize-none"
+                  :class="[inputClass, 'h-full font-mono resize-none']"
                   placeholder='{"type": "object", "properties": {...}}'
                   required
                   @input="onRawSchemaChange"
@@ -236,6 +236,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import { formatJSON, STARTER_SCHEMA, schemaTemplates } from '@/utils/schemaTemplates'
 import { getPillClass } from '@/utils/statusStyles'
+import { inputClass } from '@/utils/formStyles'
 import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({

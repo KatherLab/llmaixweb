@@ -9,12 +9,12 @@
 
       <!-- Add this if not editing root -->
       <div v-if="propertyKey !== '__root__' && propertyKey !== 'items'">
-        <label class="block text-sm font-medium text-slate-700 mb-1">
+        <label :class="labelClass">
           {{ advancedMode ? 'Property Key' : 'Field Name' }}
         </label>
         <input
           :value="propertyKey"
-          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+          :class="[inputClass, 'font-mono']"
           placeholder="property_name"
           pattern="^[a-zA-Z_][a-zA-Z0-9_]*$"
           @input="$emit('update-key', $event.target.value)"
@@ -26,25 +26,25 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">
+          <label :class="labelClass">
             {{ advancedMode ? 'Title' : 'Display Name' }}
           </label>
           <input
             v-model="localProperty.title"
-            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            :class="inputClass"
             :placeholder="`${propertyKey} display name`"
           />
         </div>
 
         <!-- Update the type select dropdown (around line 35) -->
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">
+          <label :class="labelClass">
             {{ advancedMode ? 'Type' : 'Field Type' }}
           </label>
           <div class="relative group">
             <select
               v-model="localProperty.type"
-              class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm pl-10"
+              :class="[selectClass, 'pl-10']"
               @change="onTypeChange"
             >
               <option value="string">{{ advancedMode ? 'String' : 'Text' }}</option>
@@ -75,11 +75,11 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1"> Description </label>
+        <label :class="labelClass"> Description </label>
         <textarea
           v-model="localProperty.description"
           rows="2"
-          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+          :class="textareaClass"
           placeholder="Describe what this field captures..."
         />
       </div>
@@ -94,23 +94,23 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1"> Minimum Length </label>
+          <label :class="labelClass"> Minimum Length </label>
           <input
             v-model.number="localProperty.minLength"
             type="number"
             min="0"
-            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            :class="inputClass"
             placeholder="No minimum"
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1"> Maximum Length </label>
+          <label :class="labelClass"> Maximum Length </label>
           <input
             v-model.number="localProperty.maxLength"
             type="number"
             min="0"
-            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            :class="inputClass"
             placeholder="No maximum"
           />
         </div>
@@ -118,11 +118,8 @@
 
       <!-- Format Selection -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1"> Format </label>
-        <select
-          v-model="localProperty.format"
-          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
-        >
+        <label :class="labelClass"> Format </label>
+        <select v-model="localProperty.format" :class="selectClass">
           <option value="">No specific format</option>
           <option value="email">Email</option>
           <option value="uri">URL</option>
@@ -137,7 +134,7 @@
 
       <!-- Pattern -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1">
+        <label :class="labelClass">
           Pattern (Regular Expression)
           <button
             class="ml-1 text-slate-400 hover:text-slate-600"
@@ -148,7 +145,7 @@
         </label>
         <input
           v-model="localProperty.pattern"
-          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+          :class="[inputClass, 'font-mono']"
           placeholder="e.g., ^[A-Z]{2}[0-9]{4}$"
         />
         <div v-if="showPatternHelp" class="mt-2 p-3 bg-blue-50 rounded-md text-xs text-slate-700">
@@ -166,9 +163,7 @@
 
       <!-- Enum Values -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1">
-          Allowed Values (Options)
-        </label>
+        <label :class="labelClass"> Allowed Values (Options) </label>
         <div class="space-y-2">
           <div
             v-for="(value, index) in enumValues"
@@ -177,7 +172,7 @@
           >
             <input
               v-model="enumValues[index]"
-              class="flex-1 border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+              :class="[inputClass, 'flex-1']"
               placeholder="Option value"
             />
             <BaseButton
@@ -209,21 +204,21 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1"> Minimum Value </label>
+          <label :class="labelClass"> Minimum Value </label>
           <input
             v-model.number="localProperty.minimum"
             type="number"
-            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            :class="inputClass"
             placeholder="No minimum"
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1"> Maximum Value </label>
+          <label :class="labelClass"> Maximum Value </label>
           <input
             v-model.number="localProperty.maximum"
             type="number"
-            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            :class="inputClass"
             placeholder="No maximum"
           />
         </div>
@@ -231,12 +226,12 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1"> Multiple Of </label>
+          <label :class="labelClass"> Multiple Of </label>
           <input
             v-model.number="localProperty.multipleOf"
             type="number"
             step="any"
-            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            :class="inputClass"
             placeholder="e.g., 0.01 for cents"
           />
         </div>
@@ -276,23 +271,23 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1"> Minimum Items </label>
+          <label :class="labelClass"> Minimum Items </label>
           <input
             v-model.number="localProperty.minItems"
             type="number"
             min="0"
-            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            :class="inputClass"
             placeholder="No minimum"
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1"> Maximum Items </label>
+          <label :class="labelClass"> Maximum Items </label>
           <input
             v-model.number="localProperty.maxItems"
             type="number"
             min="0"
-            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            :class="inputClass"
             placeholder="No maximum"
           />
         </div>
@@ -319,7 +314,7 @@
 
       <!-- Required Properties -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1"> Required Fields </label>
+        <label :class="labelClass"> Required Fields </label>
         <div class="space-y-2">
           <label
             v-for="(propSchema, propKey) in localProperty.properties"
@@ -361,7 +356,7 @@
       <h4 class="text-sm font-medium text-slate-900">Additional Settings</h4>
 
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1"> Default Value </label>
+        <label :class="labelClass"> Default Value </label>
         <div v-if="localProperty.type === 'boolean'" class="flex items-center space-x-4">
           <label class="flex items-center space-x-2">
             <input
@@ -396,14 +391,14 @@
           v-else-if="localProperty.type === 'string'"
           v-model="localProperty.default"
           type="text"
-          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+          :class="inputClass"
           placeholder="No default value"
         />
         <input
           v-else-if="localProperty.type === 'number'"
           v-model.number="localProperty.default"
           type="number"
-          class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+          :class="inputClass"
           placeholder="No default value"
         />
         <p v-else class="text-sm text-slate-500">
@@ -427,11 +422,11 @@
 
         <!-- Examples -->
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1"> Examples </label>
+          <label :class="labelClass"> Examples </label>
           <textarea
             v-model="examplesText"
             rows="2"
-            class="w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+            :class="[textareaClass, 'font-mono']"
             placeholder="Enter examples, one per line"
           />
         </div>
@@ -453,6 +448,7 @@ import {
   Trash2,
 } from '@lucide/vue'
 import { getTypeIcon, getTypeColor } from '@/utils/schemaTypeIcons'
+import { inputClass, textareaClass, selectClass, labelClass } from '@/utils/formStyles'
 import BaseButton from '@/components/common/BaseButton.vue'
 
 const props = defineProps({

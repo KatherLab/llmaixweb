@@ -4,7 +4,7 @@
       <h4 class="text-sm font-medium text-slate-700 mb-2">Load from Previous Trial</h4>
       <select
         v-model="selectedTrialId"
-        class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        :class="selectClass"
         @change="emit('load-from-trial', selectedTrialId)"
       >
         <option value="">Select a previous trial...</option>
@@ -20,16 +20,8 @@
     <div>
       <h4 class="text-sm font-medium text-slate-700 mb-2">Filter by Date Range</h4>
       <div class="grid grid-cols-2 gap-2">
-        <input
-          v-model="dateRange.start"
-          class="border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          type="date"
-        />
-        <input
-          v-model="dateRange.end"
-          class="border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          type="date"
-        />
+        <input v-model="dateRange.start" :class="inputClass" type="date" />
+        <input v-model="dateRange.end" :class="inputClass" type="date" />
       </div>
     </div>
 
@@ -96,6 +88,7 @@ import { ref } from 'vue'
 import { ChevronDown } from '@lucide/vue'
 import { formatDate } from '@/utils/formatters.js'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { inputClass, selectClass } from '@/utils/formStyles'
 
 defineProps({
   previousTrials: {

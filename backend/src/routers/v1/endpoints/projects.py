@@ -269,6 +269,8 @@ def get_projects(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
     all: bool = False,
+    limit: int = Query(1000, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
 ) -> list[schemas.Project]:
     from sqlalchemy import func
 
@@ -299,6 +301,8 @@ def get_projects(
         # absolutely no documents on the list route
         noload(models.Project.documents),
     )
+
+    stmt = stmt.order_by(models.Project.created_at.desc()).limit(limit).offset(offset)
 
     results = list(db.execute(stmt).all())
 

@@ -139,7 +139,7 @@ def build_evaluation_zipfiles(
             ]
         )
         for eval_obj, trial in evaluations:
-            gt = db.query(models.GroundTruth).get(eval_obj.groundtruth_id)
+            gt = db.get(models.GroundTruth, eval_obj.groundtruth_id)
             writer.writerow(
                 [
                     eval_obj.id,
@@ -161,7 +161,7 @@ def build_evaluation_zipfiles(
         output = io.BytesIO()
         summary_data = []
         for eval_obj, trial in evaluations:
-            gt = db.query(models.GroundTruth).get(eval_obj.groundtruth_id)
+            gt = db.get(models.GroundTruth, eval_obj.groundtruth_id)
             summary_data.append(
                 {
                     "Evaluation ID": eval_obj.id,

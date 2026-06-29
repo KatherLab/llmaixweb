@@ -68,8 +68,8 @@
       </template>
     </EmptyState>
 
-    <!-- Trials Grid -->
-    <div v-else class="space-y-6">
+    <!-- Trials Table -->
+    <div v-else class="space-y-4">
       <!-- Batch Actions -->
       <div class="flex justify-between items-center">
         <div class="flex items-center space-x-3">
@@ -101,36 +101,26 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <TrialCard
-          v-for="trial in trials"
-          :key="trial.id"
-          :trial="trial"
-          :schemas="schemas"
-          :prompts="prompts"
-          :selected="selectedTrials.includes(trial.id)"
-          :highlighted="highlightedTrialId === trial.id"
-          @select="toggleTrialSelection(trial.id)"
-          @rename="openRenameModal(trial)"
-          @delete="confirmDeleteTrial(trial)"
-          @retry="retryTrial(trial)"
-          @download="openDownloadModal(trial)"
-          @cancel="cancelTrial"
-          @view-results="viewTrialResults(trial)"
-          @view-schema="viewTrialSchema(trial)"
-          @view-prompt="viewTrialPrompt(trial)"
-        />
-      </div>
-
-      <!-- Pagination -->
-      <div v-if="trials.length < totalTrials" class="flex justify-center">
-        <BaseButton
-          variant="secondary"
-          class="font-semibold border-slate-200 dark:text-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700"
-          @click="loadMore"
-          >Load more ({{ trials.length }}/{{ totalTrials }})</BaseButton
-        >
-      </div>
+      <TrialsTable
+        :trials="trials"
+        :schemas="schemas"
+        :prompts="prompts"
+        :selected-trials="selectedTrials"
+        :highlighted-trial-id="highlightedTrialId"
+        :pagination="tablePagination"
+        @toggle-selection="toggleTrialSelection"
+        @toggle-all="toggleSelectAll"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageSizeChange"
+        @rename="openRenameModal"
+        @delete="confirmDeleteTrial"
+        @retry="retryTrial"
+        @download="openDownloadModal"
+        @cancel="cancelTrial"
+        @view-results="viewTrialResults"
+        @view-schema="viewTrialSchema"
+        @view-prompt="viewTrialPrompt"
+      />
     </div>
 
     <!-- Modals -->
@@ -213,7 +203,7 @@ import { documentSetsApi } from '@/services/documentSetsApi'
 import { getDateRangeBounds } from '@/utils/dateRange'
 import { useTrialUpdates } from '@/composables/useTrialUpdates'
 import CreateTrialModal from '@/components/trials/CreateTrialModal.vue'
-import TrialCard from '@/components/trials/TrialCard.vue'
+import TrialsTable from '@/components/trials/TrialsTable.vue'
 import TrialFiltersPanel from '@/components/trials/TrialFiltersPanel.vue'
 import BatchActionsModal from '@/components/documents/BatchActionsModal.vue'
 import RenameTrialModal from '@/components/trials/RenameTrialModal.vue'
@@ -242,7 +232,7 @@ const documentGroups = ref([])
 const trials = ref([])
 const totalTrials = ref(0)
 const limit = ref(20)
-const offset = ref(0)
+const currentPage = ref(1)
 const isLoading = ref(true)
 const error = ref(null)
 const isModalOpen = ref(false)
@@ -381,13 +371,13 @@ async function fetchTrialsPage({ limitParam, offsetParam }) {
   return res.data
 }
 
-async function fetchTrials({ reset = false } = {}) {
+async function fetchTrials() {
   try {
-    if (reset) isLoading.value = true
-    const data = await fetchTrialsPage({ limitParam: limit.value, offsetParam: offset.value })
+    isLoading.value = true
+    const offsetParam = (currentPage.value - 1) * limit.value
+    const data = await fetchTrialsPage({ limitParam: limit.value, offsetParam })
     totalTrials.value = data.total || 0
-    const items = data.items || []
-    trials.value = reset ? items : [...trials.value, ...items]
+    trials.value = data.items || []
   } catch (err) {
     error.value = extractErrorMessage(err, 'Failed to load trials')
   } finally {
@@ -395,18 +385,45 @@ async function fetchTrials({ reset = false } = {}) {
   }
 }
 
-function loadMore() {
-  offset.value += limit.value
-  fetchTrials({ reset: false })
+// Pagination object for the DataTable (shape: { page, page_size, total, total_pages })
+const tablePagination = computed(() => ({
+  page: currentPage.value,
+  page_size: limit.value,
+  total: totalTrials.value,
+  total_pages: Math.max(1, Math.ceil(totalTrials.value / limit.value)),
+}))
+
+function handlePageChange(page) {
+  currentPage.value = page
+  fetchTrials()
+}
+
+function handlePageSizeChange(size) {
+  limit.value = size
+  currentPage.value = 1
+  fetchTrials()
 }
 
 function resetAndFetch() {
-  offset.value = 0
-  fetchTrials({ reset: true })
+  currentPage.value = 1
+  fetchTrials()
 }
 
 function applyFilters() {
   resetAndFetch()
+}
+
+function toggleSelectAll() {
+  if (selectedTrials.value.length > 0 && selectedTrials.value.length >= trials.value.length) {
+    // Deselect all on current page
+    const pageIds = trials.value.map((t) => t.id)
+    selectedTrials.value = selectedTrials.value.filter((id) => !pageIds.includes(id))
+  } else {
+    // Select all on current page
+    const pageIds = trials.value.map((t) => t.id)
+    const newIds = pageIds.filter((id) => !selectedTrials.value.includes(id))
+    selectedTrials.value = [...selectedTrials.value, ...newIds]
+  }
 }
 
 // Debounced fetch for search input
@@ -570,7 +587,12 @@ onMounted(async () => {
       : documentsResponse.data?.items || []
     schemas.value = schemasResponse.data
     prompts.value = promptsResponse.data
-    documentGroups.value = groupsResponse.data
+    // Document-set listing is paginated ({ items, total, page, page_size });
+    // extract `.items` so the filter dropdown iterates real sets, not the
+    // wrapper object (which renders as empty/white <option>s).
+    documentGroups.value = Array.isArray(groupsResponse.data)
+      ? groupsResponse.data
+      : groupsResponse.data?.items || []
     await resetAndFetch()
   } catch (err) {
     error.value = extractErrorMessage(err, 'Failed to load')

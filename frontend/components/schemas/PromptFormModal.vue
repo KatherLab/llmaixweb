@@ -50,16 +50,13 @@
         <!-- Name & Description -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label
-              for="prompt-name"
-              class="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1"
+            <label for="prompt-name" :class="labelClass"
               >Prompt Name <span class="text-red-500">*</span></label
             >
             <input
               id="prompt-name"
               v-model="promptForm.name"
-              class="block w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-lg shadow focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base px-3 py-2"
-              :class="{ 'border-red-300': !promptForm.name && isSubmitting }"
+              :class="[inputClass, { 'border-red-300': !promptForm.name && isSubmitting }]"
               placeholder="e.g., Medical Document Extraction"
               required
             />
@@ -71,16 +68,12 @@
             </p>
           </div>
           <div>
-            <label
-              for="prompt-description"
-              class="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1"
-              >Description</label
-            >
+            <label for="prompt-description" :class="labelClass">Description</label>
             <textarea
               id="prompt-description"
               v-model="promptForm.description"
               rows="2"
-              class="block w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-lg shadow focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base px-3 py-2"
+              :class="textareaClass"
               placeholder="Describe what this prompt is designed to extract..."
             />
           </div>
@@ -89,17 +82,12 @@
         <!-- Simple Mode Prompt Editor -->
         <div v-if="simplePromptMode" class="space-y-4">
           <div>
-            <label
-              for="simple-prompt"
-              class="block text-sm font-medium text-slate-800 dark:text-slate-200 mb-2"
-            >
-              Extraction Instruction
-            </label>
+            <label for="simple-prompt" :class="labelClass"> Extraction Instruction </label>
             <textarea
               id="simple-prompt"
               v-model="promptForm.user_prompt"
               rows="6"
-              class="block w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-lg shadow focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base px-4 py-3"
+              :class="textareaClass"
               placeholder="Based on the document content, extract these fields:"
               @input="validatePromptPlaceholder"
             />
@@ -138,11 +126,7 @@
           <!-- System Prompt -->
           <div>
             <div class="mb-2 flex items-center gap-2">
-              <label
-                for="system-prompt"
-                class="block text-sm font-medium text-slate-800 dark:text-slate-200 flex-1"
-                >System Prompt</label
-              >
+              <label for="system-prompt" :class="[labelClass, 'flex-1']">System Prompt</label>
               <StatusBadge
                 v-if="promptForm.system_prompt?.includes('{document_content}')"
                 color="green"
@@ -165,13 +149,16 @@
               ref="systemPromptRef"
               v-model="promptForm.system_prompt"
               rows="7"
-              class="block w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-lg shadow focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono px-3 py-2 transition"
-              :class="{
-                'border-amber-300':
-                  promptError &&
-                  !promptForm.system_prompt?.includes('{document_content}') &&
-                  !promptForm.user_prompt?.includes('{document_content}'),
-              }"
+              :class="[
+                textareaClass,
+                'font-mono',
+                {
+                  'border-amber-300':
+                    promptError &&
+                    !promptForm.system_prompt?.includes('{document_content}') &&
+                    !promptForm.user_prompt?.includes('{document_content}'),
+                },
+              ]"
               placeholder="You are an AI assistant specialized in extracting structured information from documents..."
               @input="validatePromptPlaceholder"
             />
@@ -190,11 +177,7 @@
           <!-- User Prompt -->
           <div>
             <div class="mb-2 flex items-center gap-2">
-              <label
-                for="user-prompt"
-                class="block text-sm font-medium text-slate-800 dark:text-slate-200 flex-1"
-                >User Prompt</label
-              >
+              <label for="user-prompt" :class="[labelClass, 'flex-1']">User Prompt</label>
               <StatusBadge
                 v-if="promptForm.user_prompt?.includes('{document_content}')"
                 color="green"
@@ -217,7 +200,7 @@
               ref="userPromptRef"
               v-model="promptForm.user_prompt"
               rows="7"
-              class="block w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-lg shadow focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono px-3 py-2 transition"
+              :class="[textareaClass, 'font-mono']"
               placeholder="Extract the following information from this document:\n\n{document_content}"
               @input="validatePromptPlaceholder"
             />
@@ -307,6 +290,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 import { promptTemplates, sampleDocument } from '@/utils/promptTemplates'
 import { extractErrorMessage } from '@/utils/errors'
 

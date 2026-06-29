@@ -384,13 +384,25 @@ async def preprocess_project_data(
         db.commit()
         db.refresh(config)
 
-    # Validate files exist and belong to project
+    # Validate files exist and belong to project.
+    #
+    # with_for_update() takes row-level locks on the file rows (PostgreSQL),
+    # held until the request commits. This serializes concurrent preprocess
+    # submissions touching the same files: the HARD CHECK below is a
+    # check-then-act, so without the lock two concurrent requests could both
+    # pass it and each create PreprocessingTask + FilePreprocessingTask rows
+    # for the same files — duplicating the (expensive) OCR work. With the lock,
+    # the second request blocks until the first commits, then sees the
+    # in-flight tasks and returns 409. On SQLite (dev) FOR UPDATE is a no-op,
+    # so the race is not serialized there — acceptable for the test stack.
     files = (
         db.execute(
-            select(models.File).where(
+            select(models.File)
+            .where(
                 models.File.id.in_(preprocessing_task.file_ids),
                 models.File.project_id == project_id,
             )
+            .with_for_update()
         )
         .scalars()
         .all()

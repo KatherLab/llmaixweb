@@ -1,12 +1,12 @@
 <template>
   <div class="mt-2 bg-slate-50 border rounded-lg p-4 grid gap-6">
     <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">
+      <label :class="labelClass">
         Max Completion Tokens <span class="text-slate-400 font-normal">(optional)</span>
       </label>
       <input
         v-model="maxCompletionTokens"
-        class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        :class="inputClass"
         min="1"
         placeholder="e.g., 4096"
         type="number"
@@ -16,12 +16,12 @@
       </p>
     </div>
     <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">
+      <label :class="labelClass">
         Temperature <span class="text-slate-400 font-normal">(optional)</span>
       </label>
       <input
         v-model="temperature"
-        class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        :class="inputClass"
         min="0"
         max="2"
         step="0.01"
@@ -34,13 +34,10 @@
       </p>
     </div>
     <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">
+      <label :class="labelClass">
         Reasoning Effort <span class="text-slate-400 font-normal">(optional)</span>
       </label>
-      <select
-        v-model="reasoningEffort"
-        class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-      >
+      <select v-model="reasoningEffort" :class="selectClass">
         <option value="">Use model default</option>
         <option value="low">Low</option>
         <option value="medium">Medium</option>
@@ -55,6 +52,8 @@
 </template>
 
 <script setup>
+import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
+
 const maxCompletionTokens = defineModel('maxCompletionTokens', { type: String, default: '' })
 const temperature = defineModel('temperature', { type: String, default: '' })
 const reasoningEffort = defineModel('reasoningEffort', { type: String, default: '' })

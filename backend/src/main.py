@@ -369,8 +369,14 @@ async def activity_websocket(websocket: WebSocket):
         await websocket.close(code=4401, reason="Authentication failed")
         return
 
-    # Connect the WebSocket
-    await manager.connect(websocket, user_id=user.id, is_admin=(user.role == "admin"))
+    # Connect the WebSocket. connect() returns False if the per-user
+    # connection cap was hit (it already closed the socket with 1013), in
+    # which case there's nothing to loop on.
+    connected = await manager.connect(
+        websocket, user_id=user.id, is_admin=(user.role == "admin")
+    )
+    if not connected:
+        return
 
     try:
         # Keep connection alive and handle ping/pong

@@ -3,26 +3,18 @@
     <form @submit.prevent="uploadGroundTruth">
       <div class="space-y-4">
         <div>
-          <label for="ground-truth-name" class="block text-sm font-medium text-slate-700"
-            >Name (optional)</label
-          >
+          <label for="ground-truth-name" :class="labelClass">Name (optional)</label>
           <input
             id="ground-truth-name"
             v-model="groundTruthName"
             type="text"
-            class="mt-1 block w-full rounded-md border border-slate-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+            :class="inputClass"
             placeholder="Ground truth file name"
           />
         </div>
         <div>
-          <label for="ground-truth-format" class="block text-sm font-medium text-slate-700"
-            >Format</label
-          >
-          <select
-            id="ground-truth-format"
-            v-model="groundTruthFormat"
-            class="mt-1 block w-full rounded-md border border-slate-300 shadow-sm py-2 px-3 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-          >
+          <label for="ground-truth-format" :class="labelClass">Format</label>
+          <select id="ground-truth-format" v-model="groundTruthFormat" :class="selectClass">
             <option value="csv">CSV (flattened fields with dots)</option>
             <option value="json">JSON (single file with document map or multiple files)</option>
             <option value="zip">ZIP (multiple JSON files)</option>
@@ -43,7 +35,7 @@
         </div>
 
         <div>
-          <label for="file-upload" class="block text-sm font-medium text-slate-700">File(s)</label>
+          <label for="file-upload" :class="labelClass">File(s)</label>
           <div
             class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md"
             @dragover.prevent
@@ -127,6 +119,7 @@ import { groundtruthApi } from '@/services/groundtruthApi'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({

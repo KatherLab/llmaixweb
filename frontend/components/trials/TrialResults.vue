@@ -32,9 +32,9 @@
 
       <TrialDocumentErrors :failures="trial?.meta?.failures" />
 
-      <!-- Results list -->
+      <!-- Results table -->
       <EmptyState
-        v-if="!trial.results || trial.results.length === 0"
+        v-if="results.length === 0 && !resultsLoading"
         title="No results available for this trial."
       >
         <p
@@ -45,29 +45,110 @@
         </p>
       </EmptyState>
 
-      <div v-else class="grid grid-cols-1 gap-5">
-        <TrialResultCard
-          v-for="(res, index) in trial.results"
-          :key="index"
-          :res="res"
-          :index="index"
-          :label="documentLabels[index]"
-          :expanded="!!expandedResults[index]"
-          :document-content="documentContents[index] || ''"
-          :view-mode="viewMode[index] || 'horizontal'"
-          :document-pdf-url="documentPdfUrls[index] || ''"
-          :document-pdf-loading="!!documentPdfLoading[index]"
-          :show-document-panel="!!showDocumentPanel[index]"
-          :document-meta="documentMeta[index]"
-          :show-reasoning-panel="!!showReasoningPanel[index]"
-          :reasoning-content="getReasoningContent(index) || ''"
-          :additional-content="getAdditionalContent(index)"
-          @toggle-expansion="toggleResultExpansion(index)"
-          @toggle-view-mode="toggleViewMode(index)"
-          @toggle-document-panel="toggleDocumentPanel(index)"
-          @toggle-reasoning="toggleReasoning(index)"
-        />
-      </div>
+      <template v-else>
+        <FilterBar
+          v-model:search="search"
+          :total-count="totalCount"
+          item-label="results"
+          search-placeholder="Search document name..."
+          :active-filters="activeFilters"
+          @search-input="debouncedFetchResults"
+          @clear-all="clearFilters"
+          @clear-filter="clearFilter"
+        >
+          <template #filters>
+            <select
+              v-model="statusFilter"
+              class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+              @change="handleFilterChange"
+            >
+              <option value="">All Status</option>
+              <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </template>
+        </FilterBar>
+
+        <DataTable
+          :columns="columns"
+          :items="results"
+          row-key="id"
+          expandable
+          :expanded-keys="expandedKeys"
+          :pagination="tablePagination"
+          :page-size-options="[25, 50, 100]"
+          item-label="results"
+          :loading="resultsLoading"
+          empty-title="No results match your filters"
+          @expand="toggleExpand"
+          @page-change="handlePageChange"
+          @page-size-change="handlePageSizeChange"
+        >
+          <template #cell-index="{ row }">
+            <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{{
+              resultIndex(row)
+            }}</span>
+          </template>
+
+          <template #cell-document="{ row }">
+            <div class="min-w-0">
+              <span class="text-sm font-medium text-slate-900 dark:text-white truncate">{{
+                row.document_name || row.original_file_name || `Document #${row.document_id}`
+              }}</span>
+              <p
+                v-if="row.original_file_name && row.original_file_name !== row.document_name"
+                class="text-xs text-slate-400 dark:text-slate-500 italic truncate"
+              >
+                {{ row.original_file_name }}
+              </p>
+            </div>
+          </template>
+
+          <template #cell-status="{ row }">
+            <span
+              :class="[
+                'text-[10px] uppercase tracking-wide px-2 py-0.5 rounded',
+                statusPillClass(row.status),
+              ]"
+            >
+              {{ statusLabel(row.status) }}
+            </span>
+          </template>
+
+          <template #cell-finish_reason="{ row }">
+            <span
+              v-if="
+                row.additional_content?.finish_reason &&
+                row.additional_content.finish_reason !== 'stop'
+              "
+              :class="[
+                'text-[10px] uppercase tracking-wide px-2 py-0.5 rounded',
+                getPillClass('yellow'),
+              ]"
+            >
+              {{ row.additional_content.finish_reason }}
+            </span>
+            <span v-else class="text-xs text-slate-400 dark:text-slate-500">—</span>
+          </template>
+
+          <template #cell-tokens="{ row }">
+            <span class="text-sm text-slate-600 dark:text-slate-400">
+              {{ row.additional_content?.usage?.total_tokens ?? '—' }}
+            </span>
+          </template>
+
+          <template #cell-created_at="{ row }">
+            <span class="text-sm text-slate-500 dark:text-slate-400">
+              {{ formatDateSmart(row.created_at) }}
+            </span>
+          </template>
+
+          <template #expanded="{ row }">
+            <TrialResultDetailPanel :result="row" :project-id="props.projectId" />
+          </template>
+        </DataTable>
+      </template>
     </template>
 
     <div v-else class="flex flex-col items-center justify-center py-16">
@@ -95,17 +176,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { debounce } from 'perfect-debounce'
 import { Frown } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { schemasApi } from '@/services/schemasApi'
-import { documentsApi } from '@/services/documentsApi'
-import { filesApi } from '@/services/filesApi'
-import { useToast } from 'vue-toastification'
 import TrialMetaHeader from './TrialMetaHeader.vue'
 import TrialDocumentErrors from './TrialDocumentErrors.vue'
-import TrialResultCard from './TrialResultCard.vue'
+import TrialResultDetailPanel from './TrialResultDetailPanel.vue'
 import TrialSchemaModal from './TrialSchemaModal.vue'
 import TrialPromptModal from './TrialPromptModal.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -113,6 +192,10 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import DataTable from '@/components/common/DataTable.vue'
+import FilterBar from '@/components/common/FilterBar.vue'
+import { getPillClass } from '@/utils/statusStyles'
+import { formatDateSmart } from '@/utils/formatters'
 import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({
@@ -123,37 +206,194 @@ const props = defineProps({
 defineEmits(['close'])
 
 const route = useRoute()
-const toast = useToast()
-
 const trialId = computed(() => props.trialId || parseInt(route.params.trialId))
+
+// Trial-level state (for the meta header + failures map)
 const isLoading = ref(true)
 const error = ref(null)
 const trial = ref(null)
 
-const expandedResults = ref({})
-const documentContents = ref({})
-const documentLabels = ref({})
-const viewMode = ref({})
-const documentPdfUrls = ref({})
-const documentPdfLoading = ref({})
-const showDocumentPanel = ref({})
-// per-result: { previewable, fileId } — drives whether the "View Original
-// Document" button is shown at all (hidden when there's nothing to render)
-const documentMeta = ref({})
-const showReasoningPanel = ref({}) // reasoning accordion
+// Results pagination state
+const results = ref([])
+const totalCount = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(50)
+const resultsLoading = ref(false)
+const expandedKeys = ref([])
+const totalUsage = ref({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 })
 
-// Schema / Prompt snapshot display (frozen at trial run; fallback to live for
-// trials created before snapshots existed)
+// Filters
+const search = ref('')
+const statusFilter = ref('')
+
+// Schema / Prompt snapshot display
 const showSchemaModal = ref(false)
 const showPromptModal = ref(false)
-const schemaFallback = ref(null) // live schema fetched for legacy trials
+const schemaFallback = ref(null)
 const schemaForModal = computed(() => trial.value?.schema_snapshot || schemaFallback.value || null)
 const promptForModal = computed(() => trial.value?.prompt_snapshot || trial.value?.prompt || null)
 const schemaIsSnapshot = computed(() => !!trial.value?.schema_snapshot)
 const promptIsSnapshot = computed(() => !!trial.value?.prompt_snapshot)
 
+const columns = [
+  { key: 'index', label: '#', width: '60px' },
+  { key: 'document', label: 'Document' },
+  { key: 'status', label: 'Status' },
+  { key: 'finish_reason', label: 'Finish' },
+  { key: 'tokens', label: 'Tokens' },
+  { key: 'created_at', label: 'Created' },
+]
+
+// Status → label / pill color
+const statusOptions = [
+  { value: 'success', label: 'Success' },
+  { value: 'failed', label: 'Failed' },
+  { value: 'incomplete', label: 'Incomplete' },
+  { value: 'invalid_json', label: 'Invalid JSON' },
+  { value: 'schema_invalid', label: 'Schema invalid' },
+  { value: 'refused', label: 'Refused' },
+  { value: 'provider_error', label: 'Provider error' },
+]
+
+const STATUS_LABELS = {
+  success: 'OK',
+  failed: 'Error',
+  incomplete: 'Incomplete',
+  invalid_json: 'Invalid JSON',
+  schema_invalid: 'Schema invalid',
+  refused: 'Refused',
+  provider_error: 'Provider error',
+}
+
+const statusLabel = (status) => STATUS_LABELS[status] || (status ? status : '—')
+
+const statusPillClass = (status) => {
+  if (status === 'success') return getPillClass('green')
+  if (status === 'incomplete') return getPillClass('yellow')
+  if (status === 'refused') return getPillClass('orange')
+  // all other failure statuses → red
+  return getPillClass('red')
+}
+
+const activeFilters = computed(() => {
+  const chips = []
+  if (search.value) chips.push({ key: 'search', label: `Search: "${search.value}"`, color: 'blue' })
+  if (statusFilter.value)
+    chips.push({
+      key: 'status',
+      label: `Status: ${STATUS_LABELS[statusFilter.value] || statusFilter.value}`,
+      color: statusFilter.value === 'success' ? 'green' : 'red',
+    })
+  return chips
+})
+
+const tablePagination = computed(() => ({
+  page: currentPage.value,
+  page_size: pageSize.value,
+  total: totalCount.value,
+  total_pages: Math.max(1, Math.ceil(totalCount.value / pageSize.value)),
+}))
+
+// Global result index (stable across pages) for the "#" column
+const resultIndex = (row) => {
+  const idxInPage = results.value.findIndex((r) => r.id === row.id)
+  if (idxInPage === -1) return ''
+  return (currentPage.value - 1) * pageSize.value + idxInPage + 1
+}
+
+// --- Fetch ---
+
+const fetchTrial = async () => {
+  isLoading.value = true
+  error.value = null
+  try {
+    const res = await trialsApi.get(props.projectId, trialId.value, {
+      include_results: false,
+    })
+    trial.value = res.data
+  } catch (err) {
+    console.error('Error loading trial:', err)
+    error.value = extractErrorMessage(err, 'Failed to load trial data')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const fetchResults = async () => {
+  resultsLoading.value = true
+  try {
+    const params = {
+      limit: pageSize.value,
+      offset: (currentPage.value - 1) * pageSize.value,
+    }
+    if (search.value) params.search = search.value
+    if (statusFilter.value) params.status = statusFilter.value
+    const res = await trialsApi.listResults(props.projectId, trialId.value, params)
+    results.value = res.data.items || []
+    totalCount.value = res.data.total || 0
+    if (res.data.total_usage) totalUsage.value = res.data.total_usage
+    // Clamp page if we paginated past the end
+    const totalPages = Math.max(1, Math.ceil(totalCount.value / pageSize.value))
+    if (currentPage.value > totalPages) {
+      currentPage.value = totalPages
+      await fetchResults()
+    }
+  } catch (err) {
+    console.error('Error loading results:', err)
+    results.value = []
+    totalCount.value = 0
+  } finally {
+    resultsLoading.value = false
+  }
+}
+
+const debouncedFetchResults = debounce(() => {
+  currentPage.value = 1
+  fetchResults()
+}, 300)
+
+function handleFilterChange() {
+  currentPage.value = 1
+  fetchResults()
+}
+
+function handlePageChange(page) {
+  currentPage.value = page
+  expandedKeys.value = []
+  fetchResults()
+}
+
+function handlePageSizeChange(size) {
+  pageSize.value = size
+  currentPage.value = 1
+  expandedKeys.value = []
+  fetchResults()
+}
+
+function toggleExpand(id) {
+  const idx = expandedKeys.value.indexOf(id)
+  if (idx > -1) {
+    expandedKeys.value.splice(idx, 1)
+  } else {
+    expandedKeys.value.push(id)
+  }
+}
+
+function clearFilters() {
+  search.value = ''
+  statusFilter.value = ''
+  currentPage.value = 1
+  fetchResults()
+}
+
+function clearFilter(key) {
+  if (key === 'search') search.value = ''
+  else if (key === 'status') statusFilter.value = ''
+  currentPage.value = 1
+  fetchResults()
+}
+
 async function openSchemaModal() {
-  // Legacy trials have no snapshot — fetch the live schema as a best-effort fallback.
   if (!trial.value?.schema_snapshot && trial.value?.schema_id && !schemaFallback.value) {
     try {
       const res = await schemasApi.get(props.projectId, trial.value.schema_id)
@@ -164,167 +404,13 @@ async function openSchemaModal() {
   }
   showSchemaModal.value = true
 }
+
 function openPromptModal() {
   showPromptModal.value = true
 }
 
-// Helpers to parse/inspect additional_content
-const parseAdditional = (ac) => {
-  if (!ac) return null
-  if (typeof ac === 'string') {
-    try {
-      return JSON.parse(ac)
-    } catch {
-      return null
-    }
-  }
-  return ac
-}
-const getAdditionalContent = (i) => {
-  const r = trial.value?.results?.[i]
-  return r ? parseAdditional(r.additional_content) : null
-}
-const getReasoningContent = (i) => getAdditionalContent(i)?.reasoning_content || null
-
-const docIdForIndex = (i) => {
-  const r = trial.value?.results?.[i]
-  // Prefer the document_id embedded in the result; fall back to legacy array if present
-  return r?.document_id ?? trial.value?.document_ids?.[i] ?? null
-}
-
-const totalUsage = computed(() => {
-  const totals = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-  if (!trial.value?.results?.length) return totals
-  for (const r of trial.value.results) {
-    const ac = parseAdditional(r?.additional_content)
-    if (!ac?.usage) continue
-    totals.prompt_tokens += Number(ac.usage.prompt_tokens ?? 0) || 0
-    totals.completion_tokens += Number(ac.usage.completion_tokens ?? 0) || 0
-    totals.total_tokens += Number(ac.usage.total_tokens ?? 0) || 0
-  }
-  return totals
-})
-
-// Fetch the full trial (with results)
-const fetchData = async () => {
-  isLoading.value = true
-  error.value = null
-  try {
-    const res = await trialsApi.get(props.projectId, trialId.value)
-    trial.value = res.data
-    if (trial.value?.results?.length) loadDocumentNames()
-  } catch (err) {
-    console.error('Error loading trial:', err)
-    error.value = extractErrorMessage(err, 'Failed to load trial data')
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// Load per-document display labels + original-file previewability
-const loadDocumentNames = async () => {
-  if (!trial.value?.results?.length) return
-  for (let i = 0; i < trial.value.results.length; i++) {
-    try {
-      const docId = docIdForIndex(i)
-      if (!docId) {
-        documentMeta.value[i] = { previewable: false, fileId: null }
-        continue
-      }
-      const r = await documentsApi.get(props.projectId, docId)
-      const d = r.data
-      documentLabels.value[i] = {
-        name: d.document_name || d.original_file?.file_name || `Document ${docId}`,
-        original: d.original_file?.file_name || '',
-      }
-      // Only PDFs/images can be shown inline; the "View Original Document"
-      // button is hidden for everything else (txt, csv, xlsx, …) so no split
-      // screen is offered when there's nothing to render.
-      const { previewable } = analyzeOriginalFile(d)
-      const fileId =
-        d.preprocessed_file_id && d.preprocessed_file?.file_type === 'application/pdf'
-          ? d.preprocessed_file_id
-          : d.original_file_id
-      documentMeta.value[i] = { previewable, fileId: previewable ? fileId : null }
-    } catch (err) {
-      console.error(`Label load failed index ${i}:`, err)
-      const fallbackId = docIdForIndex(i)
-      documentLabels.value[i] = { name: `Document (ID: ${fallbackId ?? 'unknown'})`, original: '' }
-      documentMeta.value[i] = { previewable: false, fileId: null }
-    }
-  }
-}
-
-// Toggles
-const toggleResultExpansion = async (i) => {
-  expandedResults.value[i] = !expandedResults.value[i]
-  if (viewMode.value[i] === undefined) viewMode.value[i] = 'horizontal'
-  if (expandedResults.value[i] && !documentContents.value[i]) {
-    try {
-      const docId = docIdForIndex(i)
-      if (!docId) throw new Error('Missing document_id for this result')
-      const r = await documentsApi.get(props.projectId, docId)
-      documentContents.value[i] = r.data.text || 'No text content available'
-    } catch (err) {
-      documentContents.value[i] = 'Error loading document content'
-      console.error(err)
-    }
-  }
-}
-
-const toggleViewMode = (i) => {
-  viewMode.value[i] = viewMode.value[i] === 'vertical' ? 'horizontal' : 'vertical'
-}
-// Decide whether the original file can be rendered as an inline preview.
-// Mirrors DocumentViewer.vue's detection (hasDisplayableOriginalFile +
-// originalFileType): only PDFs and images are previewable. TXT files and
-// row-by-row CSV/XLSX have no separate original (the extracted text IS the
-// content); other types (CSV/XLSX full-document, DOCX, …) can't be shown
-// inline. The caller hides the "View Original Document" button for these.
-const analyzeOriginalFile = (d) => {
-  const fileType = d?.original_file?.file_type
-  if (!fileType) return { previewable: false }
-  if (fileType === 'application/pdf' || fileType.startsWith('image/')) return { previewable: true }
-  return { previewable: false }
-}
-
-const toggleDocumentPanel = async (i) => {
-  showDocumentPanel.value[i] = !showDocumentPanel.value[i]
-  if (!showDocumentPanel.value[i]) return
-  // Already resolved — just show the existing preview
-  if (documentPdfUrls.value[i] || documentPdfLoading.value[i]) return
-  const meta = documentMeta.value[i]
-  // No inline-previewable original (txt/csv/xlsx/…) → button is hidden, so this
-  // should not be reachable; bail out defensively.
-  if (!meta?.previewable || !meta?.fileId) return
-  documentPdfLoading.value[i] = true
-  try {
-    const fr = await filesApi.getContent(props.projectId, meta.fileId, { preview: true })
-    const blob = new Blob([fr.data], { type: fr.headers['content-type'] })
-    documentPdfUrls.value[i] = URL.createObjectURL(blob)
-  } catch (err) {
-    console.error(err)
-    toast.error('Failed to load document')
-  } finally {
-    documentPdfLoading.value[i] = false
-  }
-}
-
-// Reasoning accordion toggle (pure UI state, no side effects)
-const toggleReasoning = (i) => {
-  showReasoningPanel.value[i] = !showReasoningPanel.value[i]
-}
-
-onMounted(() => {
-  fetchData()
-})
-onUnmounted(() => {
-  try {
-    Object.values(documentPdfUrls.value || {}).forEach((url) => {
-      if (url) URL.revokeObjectURL(url)
-    })
-  } catch {
-    // ignore cleanup errors
-  }
+onMounted(async () => {
+  await fetchTrial()
+  if (trial.value) fetchResults()
 })
 </script>

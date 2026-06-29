@@ -30,6 +30,7 @@ from .project import (
     PaginatedDocuments,
     PaginatedDocumentSets,
     PaginatedFiles,
+    PaginatedTrialResults,
     PaginatedTrials,
     PdfEmbeddedTextInfo,
     PreprocessingConfiguration,
@@ -53,6 +54,7 @@ from .project import (
     Trial,
     TrialCreate,
     TrialResult,
+    TrialResultItem,
     TrialSummary,
     TrialUpdate,
 )
@@ -119,6 +121,7 @@ __all__ = [
     "TrialResult",
     "TrialCreate",
     "TrialUpdate",
+    "TrialResultItem",
     "Schema",
     "SchemaCreate",
     "SchemaUpdate",
@@ -141,4 +144,5 @@ __all__ = [
     "PaginatedFiles",
     "TrialSummary",
     "PaginatedTrials",
+    "PaginatedTrialResults",
 ]

@@ -3,6 +3,7 @@
 
 import datetime
 import io
+import logging
 import urllib.parse
 import zipfile
 from typing import Annotated
@@ -16,6 +17,8 @@ from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db, get_file, remove_file
 from ....models.project import document_set_association
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -436,8 +439,8 @@ def delete_document(
                 try:
                     remove_file(preprocessed_file.file_uuid)
                     db.delete(preprocessed_file)
-                except Exception as e:
-                    print(f"Error deleting preprocessed file: {e}")
+                except Exception:
+                    logger.exception("Error deleting preprocessed file")
 
     db.delete(document)
     db.commit()
@@ -804,9 +807,9 @@ def delete_document_set(
                             if preprocessed_file:
                                 remove_file(preprocessed_file.file_uuid)
                                 db.delete(preprocessed_file)
-                        except Exception as e:
-                            print(
-                                f"Error deleting preprocessed file for doc {doc.id}: {e}"
+                        except Exception:
+                            logger.exception(
+                                "Error deleting preprocessed file for doc %s", doc.id
                             )
 
                 deleted_doc_ids.append(doc.id)
@@ -881,9 +884,9 @@ def _stream_set_zip(file_rows: list[tuple[str, str]]):
             try:
                 content = get_file(file_uuid)
                 zf.writestr(file_name, content)
-            except Exception as e:
+            except Exception:
                 # Log and continue with the other files.
-                print(f"Error adding file {file_name}: {e}")
+                logger.exception("Error adding file %s", file_name)
             yield sink.drain()
         zf.close()  # writes the central directory
         yield sink.drain()

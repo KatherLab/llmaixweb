@@ -14,20 +14,20 @@
     <form @submit.prevent="submit">
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700">
+          <label :class="labelClass">
             {{ advancedMode ? 'Property Name' : 'Field Name' }}
           </label>
           <input
             ref="propertyNameInput"
             v-model="form.name"
-            class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            :class="inputClass"
             placeholder="e.g., patient_name"
             required
           />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700">
+          <label :class="labelClass">
             {{ advancedMode ? 'Type' : 'Field Type' }}
           </label>
           <div class="mt-2 grid grid-cols-2 gap-2">
@@ -52,20 +52,16 @@
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700"> Display Name </label>
-          <input
-            v-model="form.title"
-            class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            placeholder="e.g., Patient Name"
-          />
+          <label :class="labelClass"> Display Name </label>
+          <input v-model="form.title" :class="inputClass" placeholder="e.g., Patient Name" />
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700"> Description </label>
+          <label :class="labelClass"> Description </label>
           <textarea
             v-model="form.description"
             rows="2"
-            class="mt-1 block w-full border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            :class="textareaClass"
             placeholder="Brief description of this field"
           />
         </div>
@@ -81,6 +77,7 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue'
+import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 

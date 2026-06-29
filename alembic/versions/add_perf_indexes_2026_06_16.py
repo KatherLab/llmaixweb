@@ -16,6 +16,9 @@ depends_on = None
 
 
 def upgrade():
+    bind = op.get_bind()
+    is_postgresql = bind.dialect.name == "postgresql"
+
     # Document indexes for common query patterns (optimized for 50k+ documents)
     # Note: Some indexes may already exist from model changes - use IF NOT EXISTS
     op.create_index(
@@ -72,29 +75,36 @@ def upgrade():
     # Trigram indexes for fast ILIKE pattern matching (optimized for document search)
     # Requires pg_trgm extension - enables GIN/GiST indexes for text similarity searches
     # Performance: Reduces ILIKE '%...%' queries from minutes to milliseconds on 100k+ rows
-    op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
-    op.create_index(
-        "ix_documents_text_trgm",
-        "documents",
-        ["text"],
-        if_not_exists=True,
-        postgresql_using="gin",
-        postgresql_ops={"text": "gin_trgm_ops"},
-    )
-    op.create_index(
-        "ix_files_file_name_trgm",
-        "files",
-        ["file_name"],
-        if_not_exists=True,
-        postgresql_using="gin",
-        postgresql_ops={"file_name": "gin_trgm_ops"},
-    )
+    # PostgreSQL-only: pg_trgm is a PG extension and GIN trigram indexes don't
+    # exist on SQLite (the dev/test DB), where `CREATE EXTENSION` would fail.
+    if is_postgresql:
+        op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+        op.create_index(
+            "ix_documents_text_trgm",
+            "documents",
+            ["text"],
+            if_not_exists=True,
+            postgresql_using="gin",
+            postgresql_ops={"text": "gin_trgm_ops"},
+        )
+        op.create_index(
+            "ix_files_file_name_trgm",
+            "files",
+            ["file_name"],
+            if_not_exists=True,
+            postgresql_using="gin",
+            postgresql_ops={"file_name": "gin_trgm_ops"},
+        )
 
 
 def downgrade():
-    # Drop trigram indexes first
-    op.drop_index("ix_files_file_name_trgm", "files")
-    op.drop_index("ix_documents_text_trgm", "documents")
+    bind = op.get_bind()
+    is_postgresql = bind.dialect.name == "postgresql"
+
+    # Drop trigram indexes first (PostgreSQL-only)
+    if is_postgresql:
+        op.drop_index("ix_files_file_name_trgm", "files")
+        op.drop_index("ix_documents_text_trgm", "documents")
 
     # Drop regular indexes in reverse order
     op.drop_index("ix_files_project_creator", "files")

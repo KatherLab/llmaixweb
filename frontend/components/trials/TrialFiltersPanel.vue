@@ -1,18 +1,18 @@
 <template>
-  <div
-    class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700"
+  <FilterBar
+    :search="filters.search"
+    search-placeholder="Search trials..."
+    :total-count="totalTrials"
+    item-label="trials"
+    :active-filters="activeFilters"
+    @update:search="(v) => (filters.search = v)"
+    @search-input="emit('input')"
+    @clear-all="emit('clear-all')"
+    @clear-filter="clearFilter"
   >
-    <!-- Top row: Search + Filters -->
-    <div class="flex flex-wrap items-center gap-3">
-      <!-- Search -->
-      <SearchInput v-model="filters.search" placeholder="Search trials..." @input="emit('input')" />
-
+    <template #filters>
       <!-- Status -->
-      <select
-        v-model="filters.status"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="emit('apply')"
-      >
+      <select v-model="filters.status" :class="inlineSelectClass" @change="emit('apply')">
         <option value="">All Status</option>
         <option value="pending">Pending</option>
         <option value="processing">Processing</option>
@@ -22,11 +22,7 @@
       </select>
 
       <!-- Schema -->
-      <select
-        v-model="filters.schema_id"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="emit('apply')"
-      >
+      <select v-model="filters.schema_id" :class="inlineSelectClass" @change="emit('apply')">
         <option value="">All Schemas</option>
         <option v-for="schema in schemas" :key="schema.id" :value="schema.id">
           {{ schema.schema_name }}
@@ -34,11 +30,7 @@
       </select>
 
       <!-- Prompt -->
-      <select
-        v-model="filters.prompt_id"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="emit('apply')"
-      >
+      <select v-model="filters.prompt_id" :class="inlineSelectClass" @change="emit('apply')">
         <option value="">All Prompts</option>
         <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id">
           {{ prompt.name }}
@@ -46,11 +38,7 @@
       </select>
 
       <!-- Document Group -->
-      <select
-        v-model="filters.document_set_id"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="emit('apply')"
-      >
+      <select v-model="filters.document_set_id" :class="inlineSelectClass" @change="emit('apply')">
         <option value="">All Groups</option>
         <option v-for="group in documentGroups" :key="group.id" :value="group.id">
           {{ group.name }}
@@ -58,11 +46,7 @@
       </select>
 
       <!-- LLM Model -->
-      <select
-        v-model="filters.llm_model"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="emit('apply')"
-      >
+      <select v-model="filters.llm_model" :class="inlineSelectClass" @change="emit('apply')">
         <option value="">All Models</option>
         <option v-for="model in availableTrialModels" :key="model" :value="model">
           {{ model }}
@@ -70,11 +54,7 @@
       </select>
 
       <!-- Errors -->
-      <select
-        v-model="filters.has_failures"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="emit('apply')"
-      >
+      <select v-model="filters.has_failures" :class="inlineSelectClass" @change="emit('apply')">
         <option value="">All</option>
         <option :value="true">Has errors</option>
         <option :value="false">No errors</option>
@@ -83,7 +63,7 @@
       <!-- Date Range -->
       <select
         v-model="filters.dateRange"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+        :class="inlineSelectClass"
         @change="handleDateRangeChange"
       >
         <option value="">All Time</option>
@@ -93,41 +73,24 @@
         <option value="month">Last 30 Days</option>
         <option value="custom">Custom Range...</option>
       </select>
+    </template>
 
-      <!-- Clear Filters -->
-      <button
-        v-if="hasActiveFilters"
-        class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-        title="Clear all filters"
-        type="button"
-        @click="emit('clear-all')"
-      >
-        <X class="w-4 h-4" />
-      </button>
-
-      <div class="ml-auto text-sm text-slate-500 dark:text-slate-400">{{ totalTrials }} trials</div>
-    </div>
-
-    <!-- Custom Date Range Picker (shown when "Custom Range" is selected) -->
-    <div
-      v-if="filters.dateRange === 'custom'"
-      class="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
-    >
+    <template v-if="filters.dateRange === 'custom'" #custom-range>
       <div class="flex items-center gap-2">
-        <label class="text-sm text-slate-600 dark:text-slate-300">From:</label>
+        <label :class="labelClass">From:</label>
         <input
           v-model="customDateFrom"
           type="date"
-          class="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+          :class="[inputClass, 'px-3 py-1.5']"
           @change="emit('apply')"
         />
       </div>
       <div class="flex items-center gap-2">
-        <label class="text-sm text-slate-600 dark:text-slate-300">To:</label>
+        <label :class="labelClass">To:</label>
         <input
           v-model="customDateTo"
           type="date"
-          class="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+          :class="[inputClass, 'px-3 py-1.5']"
           @change="emit('apply')"
         />
       </div>
@@ -138,78 +101,20 @@
       >
         Apply
       </button>
-    </div>
-
-    <!-- Active Filters Summary -->
-    <div
-      v-if="hasActiveFilters"
-      class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
-    >
-      <span class="text-xs text-slate-500 dark:text-slate-400">Active filters:</span>
-      <FilterChip
-        v-if="filters.search"
-        :label="`Search: &quot;${filters.search}&quot;`"
-        color="blue"
-        @remove="clearFilter('search')"
-      />
-      <FilterChip
-        v-if="filters.status"
-        :label="`Status: ${statusLabel(filters.status)}`"
-        color="green"
-        @remove="clearFilter('status')"
-      />
-      <FilterChip
-        v-if="filters.schema_id"
-        :label="`Schema: ${schemaName(filters.schema_id)}`"
-        color="blue"
-        @remove="clearFilter('schema_id')"
-      />
-      <FilterChip
-        v-if="filters.prompt_id"
-        :label="`Prompt: ${promptName(filters.prompt_id)}`"
-        color="teal"
-        @remove="clearFilter('prompt_id')"
-      />
-      <FilterChip
-        v-if="filters.document_set_id"
-        :label="`Group: ${groupName(filters.document_set_id)}`"
-        color="cyan"
-        @remove="clearFilter('document_set_id')"
-      />
-      <FilterChip
-        v-if="filters.llm_model"
-        :label="`Model: ${filters.llm_model}`"
-        color="purple"
-        @remove="clearFilter('llm_model')"
-      />
-      <FilterChip
-        v-if="filters.has_failures !== '' && filters.has_failures !== null"
-        :label="`Errors: ${filters.has_failures ? 'Has errors' : 'No errors'}`"
-        color="red"
-        @remove="clearFilter('has_failures')"
-      />
-      <FilterChip
-        v-if="filters.dateRange && filters.dateRange !== 'custom'"
-        :label="`Date: ${dateRangeLabel(filters.dateRange)}`"
-        color="orange"
-        @remove="clearFilter('dateRange')"
-      />
-      <FilterChip
-        v-if="filters.dateRange === 'custom' && customDateFrom"
-        :label="`Date: ${customDateFrom} → ${customDateTo || 'present'}`"
-        color="orange"
-        @remove="clearFilter('customDateRange')"
-      />
-    </div>
-  </div>
+    </template>
+  </FilterBar>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { X } from '@lucide/vue'
 import { getDateRangeLabel } from '@/utils/dateRange'
-import FilterChip from '@/components/common/FilterChip.vue'
-import SearchInput from '@/components/common/SearchInput.vue'
+import FilterBar from '@/components/common/FilterBar.vue'
+import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
+
+// `selectClass` carries `w-full`, which inside FilterBar's `flex flex-wrap` row
+// forces every dropdown onto its own line at 100% width. Drop `w-full` (and
+// pin a sensible auto width) so the selects sit inline and wrap naturally.
+const inlineSelectClass = selectClass.replace('w-full', 'w-auto min-w-[9rem]')
 
 const props = defineProps({
   schemas: { type: Array, default: () => [] },
@@ -241,18 +146,56 @@ const schemaName = (id) => props.schemas.find((s) => s.id === id)?.schema_name |
 const promptName = (id) => props.prompts.find((p) => p.id === id)?.name || `#${id}`
 const groupName = (id) => props.documentGroups.find((g) => g.id === id)?.name || `#${id}`
 
-// Check if any filters are active
-const hasActiveFilters = computed(() => {
-  return (
-    filters.value.search ||
-    filters.value.status ||
-    filters.value.schema_id ||
-    filters.value.prompt_id ||
-    filters.value.document_set_id ||
-    filters.value.llm_model ||
-    (filters.value.has_failures !== '' && filters.value.has_failures !== null) ||
-    filters.value.dateRange
-  )
+// Active filter chips (unified rendering via FilterBar's activeFilters prop)
+const activeFilters = computed(() => {
+  const chips = []
+  if (filters.value.search)
+    chips.push({ key: 'search', label: `Search: "${filters.value.search}"`, color: 'blue' })
+  if (filters.value.status)
+    chips.push({
+      key: 'status',
+      label: `Status: ${statusLabel(filters.value.status)}`,
+      color: 'green',
+    })
+  if (filters.value.schema_id)
+    chips.push({
+      key: 'schema_id',
+      label: `Schema: ${schemaName(filters.value.schema_id)}`,
+      color: 'blue',
+    })
+  if (filters.value.prompt_id)
+    chips.push({
+      key: 'prompt_id',
+      label: `Prompt: ${promptName(filters.value.prompt_id)}`,
+      color: 'teal',
+    })
+  if (filters.value.document_set_id)
+    chips.push({
+      key: 'document_set_id',
+      label: `Group: ${groupName(filters.value.document_set_id)}`,
+      color: 'cyan',
+    })
+  if (filters.value.llm_model)
+    chips.push({ key: 'llm_model', label: `Model: ${filters.value.llm_model}`, color: 'purple' })
+  if (filters.value.has_failures !== '' && filters.value.has_failures !== null)
+    chips.push({
+      key: 'has_failures',
+      label: `Errors: ${filters.value.has_failures ? 'Has errors' : 'No errors'}`,
+      color: 'red',
+    })
+  if (filters.value.dateRange && filters.value.dateRange !== 'custom')
+    chips.push({
+      key: 'dateRange',
+      label: `Date: ${dateRangeLabel(filters.value.dateRange)}`,
+      color: 'orange',
+    })
+  if (filters.value.dateRange === 'custom' && customDateFrom.value)
+    chips.push({
+      key: 'customDateRange',
+      label: `Date: ${customDateFrom.value} → ${customDateTo.value || 'present'}`,
+      color: 'orange',
+    })
+  return chips
 })
 
 // Don't fetch yet when "Custom Range" is selected — wait for date inputs
@@ -262,9 +205,6 @@ const handleDateRangeChange = () => {
 }
 
 // Consolidated clear: a single entry point for removing one filter.
-// `key` matches the original per-filter clear behavior:
-//   - reset the filter field to its default (and custom dates for the custom range)
-//   - then refetch via the parent's apply handler.
 const clearFilter = (key) => {
   if (key === 'customDateRange') {
     customDateFrom.value = ''

@@ -46,33 +46,19 @@
         </h4>
         <div class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
-              >Full Name</label
-            >
-            <input
-              v-model="editForm.full_name"
-              type="text"
-              class="block w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
-            />
+            <label :class="labelClass">Full Name</label>
+            <input v-model="editForm.full_name" type="text" :class="inputClass" />
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
-              >Email</label
-            >
-            <input
-              v-model="editForm.email"
-              type="email"
-              class="block w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
-            />
+            <label :class="labelClass">Email</label>
+            <input v-model="editForm.email" type="email" :class="inputClass" />
           </div>
           <div class="flex gap-4">
             <div class="flex-1">
-              <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
-                >Role</label
-              >
+              <label :class="labelClass">Role</label>
               <select
                 v-model="editForm.role"
-                class="block w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
+                :class="selectClass"
                 :disabled="user?.id === currentUserId"
               >
                 <option value="user">User</option>
@@ -86,9 +72,7 @@
               </p>
             </div>
             <div class="flex-1">
-              <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
-                >Status</label
-              >
+              <label :class="labelClass">Status</label>
               <div class="flex items-center gap-3 mt-2">
                 <button
                   type="button"
@@ -135,7 +119,7 @@
             <input
               v-model="editPassword"
               type="password"
-              class="block w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-400"
+              :class="inputClass"
               placeholder="Enter new password (optional)"
             />
           </div>
@@ -205,6 +189,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
+import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 
 const props = defineProps({
   open: { type: Boolean, required: true },

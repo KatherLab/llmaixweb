@@ -8,6 +8,7 @@ from typing import List
 import httpx
 import pandas as pd
 from openai import OpenAI
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from .. import models
@@ -1443,7 +1444,7 @@ class PreprocessingPipeline:
                     .all()
                 )
                 break  # Lock acquired successfully
-            except Exception as e:
+            except OperationalError as e:
                 # Lock conflict - another transaction is modifying these documents
                 logger.warning(
                     "Document versioning lock conflict for file %s (attempt %d/%d): %s",
@@ -1578,7 +1579,7 @@ class PreprocessingPipeline:
                     .all()
                 )
                 break  # Lock acquired successfully
-            except Exception as e:
+            except OperationalError as e:
                 # Lock conflict - another transaction is modifying these documents
                 logger.warning(
                     "Document versioning lock conflict for file %s (attempt %d/%d): %s",

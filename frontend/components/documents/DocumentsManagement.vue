@@ -133,19 +133,13 @@
         :documents="serverItems"
         :selected-documents="selectedDocuments"
         :are-all-selected="areAllDocumentsSelected"
+        :pagination="tablePagination"
         @toggle-select-all="toggleSelectAll"
         @toggle-selection="toggleDocumentSelection"
         @view="viewDocument"
         @download="downloadDocument"
-      />
-
-      <!-- Pagination -->
-      <PaginationControls
-        v-model="currentPage"
-        :total-pages="totalPages"
-        :visible-pages="visiblePages"
-        :total-items="totalCount"
-        :page-size="itemsPerPage"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageSizeChange"
       />
 
       <!-- Batch Actions Modal -->
@@ -203,7 +197,6 @@ import { debounce } from 'perfect-debounce'
 import { setEngineLabels } from '@/utils/ocrLabels'
 import { getDateRangeBounds } from '@/utils/dateRange'
 import LoadingSpinner from '../common/LoadingSpinner.vue'
-import PaginationControls from '../common/PaginationControls.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
@@ -307,9 +300,25 @@ const applyCustomDateRange = () => {
 
 // Stats - using server-side totalCount
 
-// Server-side pagination - totalPages/visiblePages from usePagination composable
+// Server-side pagination - totalPages from usePagination composable
 const totalPages = pagination.totalPages
-const visiblePages = pagination.visiblePages
+
+// Pagination object for the DataTable (shape: { page, page_size, total, total_pages })
+const tablePagination = computed(() => ({
+  page: currentPage.value,
+  page_size: itemsPerPage.value,
+  total: totalCount.value,
+  total_pages: totalPages.value,
+}))
+
+const handlePageChange = (page) => {
+  currentPage.value = page
+}
+
+const handlePageSizeChange = (size) => {
+  itemsPerPage.value = size
+  currentPage.value = 1
+}
 
 // Handle highlight query parameter (from preprocessing history "Go to Document" navigation)
 const handleHighlight = async () => {

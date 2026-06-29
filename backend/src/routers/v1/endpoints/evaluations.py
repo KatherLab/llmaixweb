@@ -3,6 +3,7 @@
 
 import csv
 import io
+import logging
 import zipfile
 
 import pandas as pd
@@ -20,6 +21,8 @@ from ....utils.helpers import (
     collect_trial_document_metadata,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -30,6 +33,8 @@ def get_evaluations(
     project_id: int,
     groundtruth_id: int = Query(...),
     current_user: models.User = Depends(get_current_user),
+    limit: int = Query(1000, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
 ) -> list[schemas.Evaluation]:
     """Get evaluation results for all trials using a specific ground truth."""
     project: models.Project | None = db.execute(
@@ -59,9 +64,11 @@ def get_evaluations(
     # Get all evaluations for this ground truth
     evaluations = list(
         db.execute(
-            select(models.Evaluation).where(
-                models.Evaluation.groundtruth_id == groundtruth_id
-            )
+            select(models.Evaluation)
+            .where(models.Evaluation.groundtruth_id == groundtruth_id)
+            .order_by(models.Evaluation.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
         .scalars()
         .all()
@@ -234,6 +241,16 @@ def download_evaluations_report(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid evaluation_ids")
 
+    # Cap the batch: the gather loop issues two DB queries per evaluation (N+1).
+    # Compare with compare_evaluations (cap = 10).
+    max_evaluations = 50
+    if len(evaluation_ids_list) > max_evaluations:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot download more than {max_evaluations} evaluations at once "
+            f"(requested {len(evaluation_ids_list)}).",
+        )
+
     # Fetch project and permission check
     project = db.execute(
         select(models.Project).where(models.Project.id == project_id)
@@ -287,7 +304,7 @@ def download_evaluations_report(
         return Response(
             content=content,
             media_type=media_type,
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
     # --- CSV Export ---
@@ -311,7 +328,7 @@ def download_evaluations_report(
             ]
         )
         for eval_obj, trial in evaluations:
-            gt = db.query(models.GroundTruth).get(eval_obj.groundtruth_id)
+            gt = db.get(models.GroundTruth, eval_obj.groundtruth_id)
             writer.writerow(
                 [
                     eval_obj.id,
@@ -444,7 +461,7 @@ def download_evaluations_report(
             # Summary
             summary_data = []
             for eval_obj, trial in evaluations:
-                gt = db.query(models.GroundTruth).get(eval_obj.groundtruth_id)
+                gt = db.get(models.GroundTruth, eval_obj.groundtruth_id)
                 summary_data.append(
                     {
                         "Evaluation ID": eval_obj.id,
@@ -540,7 +557,7 @@ def download_evaluations_report(
     return Response(
         content=content,
         media_type=media_type,
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -606,7 +623,10 @@ def batch_evaluate_trials(
             )
             results.append(evaluation)
         except Exception as e:
-            errors.append(f"Error evaluating trial {trial_id}: {str(e)}")
+            # Log the full error server-side; only a category-only message
+            # reaches the client (str(e) can contain DB internals / paths).
+            logger.warning("Error evaluating trial %s: %s", trial_id, e, exc_info=True)
+            errors.append(f"Error evaluating trial {trial_id}")
     if errors and not results:
         raise HTTPException(
             status_code=400, detail=f"All evaluations failed: {'; '.join(errors)}"

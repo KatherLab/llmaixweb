@@ -8,11 +8,7 @@
       <SearchInput v-model="search" placeholder="Search files..." @input="onSearchInput" />
 
       <!-- Status Filter -->
-      <select
-        v-model="status"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="emit('fetch')"
-      >
+      <select v-model="status" :class="selectClass" @change="emit('fetch')">
         <option value="">All Status</option>
         <option value="not_preprocessed">Not Processed</option>
         <option value="processing">Processing</option>
@@ -21,11 +17,7 @@
       </select>
 
       <!-- File Type Filter -->
-      <select
-        v-model="fileType"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="emit('fetch')"
-      >
+      <select v-model="fileType" :class="selectClass" @change="emit('fetch')">
         <option value="">All Types</option>
         <option value="application/pdf">PDF</option>
         <option value="image/png">PNG</option>
@@ -43,11 +35,7 @@
       </select>
 
       <!-- Date Range Filter -->
-      <select
-        v-model="dateRange"
-        class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-        @change="onDateRangeChange"
-      >
+      <select v-model="dateRange" :class="selectClass" @change="onDateRangeChange">
         <option value="">All Time</option>
         <option value="today">Today</option>
         <option value="yesterday">Yesterday</option>
@@ -75,20 +63,20 @@
       class="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
     >
       <div class="flex items-center gap-2">
-        <label class="text-sm text-slate-600 dark:text-slate-300">From:</label>
+        <label :class="labelClass">From:</label>
         <input
           v-model="customFrom"
           type="date"
-          class="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+          :class="[inputClass, 'px-3 py-1.5']"
           @change="emit('fetch')"
         />
       </div>
       <div class="flex items-center gap-2">
-        <label class="text-sm text-slate-600 dark:text-slate-300">To:</label>
+        <label :class="labelClass">To:</label>
         <input
           v-model="customTo"
           type="date"
-          class="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+          :class="[inputClass, 'px-3 py-1.5']"
           @change="emit('fetch')"
         />
       </div>
@@ -142,6 +130,7 @@ import { getDateRangeLabel } from '@/utils/dateRange'
 import SearchInput from '@/components/common/SearchInput.vue'
 import FilterChip from '@/components/common/FilterChip.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 
 defineProps({
   totalCount: { type: Number, default: 0 },

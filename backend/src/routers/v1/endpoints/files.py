@@ -415,10 +415,21 @@ def get_project_file_content(
 
     # Stream the file from storage so a large PDF/image never has to be held in
     # memory in full before being sent to the client.
-    if preview:
-        headers = {"Content-Disposition": f"inline; filename={file.file_name}"}
-    else:
-        headers = {"Content-Disposition": f"attachment; filename={file.file_name}"}
+    #
+    # Only a safe allowlist of types is served inline (browser-rendered);
+    # everything else is forced as an attachment so user-uploaded HTML/SVG/JS
+    # can't execute in the API origin (stored XSS — the JWT lives in
+    # localStorage). SVG is deliberately excluded: it can carry <script>.
+    safe_inline_types = {
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+    }
+    serve_inline = preview and (file.file_type in safe_inline_types)
+    disposition = "inline" if serve_inline else "attachment"
+    headers = {"Content-Disposition": f'{disposition}; filename="{file.file_name}"'}
     return StreamingResponse(
         stream_file(file.file_uuid),
         media_type=file.file_type,
@@ -1131,6 +1142,17 @@ def move_files(
     if project_id == target_project_id:
         raise HTTPException(
             status_code=400, detail="Source and target projects cannot be the same"
+        )
+
+    # Cap the batch: the move loop issues a DB query per file (N+1). An
+    # unbounded list would tie up a worker and saturate the connection pool.
+    # Mirrors batch_delete_files / download_files_as_zip (cap = 200).
+    max_files = 200
+    if len(file_ids) > max_files:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot move more than {max_files} files at once "
+            f"(requested {len(file_ids)}).",
         )
 
     # Pre-flight: collect the IDs of all documents that would move, then block

@@ -22,33 +22,26 @@
     </h3>
     <form class="flex flex-col gap-4" @submit.prevent="createProject">
       <div>
-        <label
-          for="projectName"
-          class="block text-sm font-medium text-slate-700 dark:text-slate-300"
-          >Project Name</label
-        >
+        <label for="projectName" :class="labelClass">Project Name</label>
         <input
           id="projectName"
           v-model="projectData.name"
           type="text"
-          class="mt-1 block w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white shadow-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
+          :class="inputClass"
           required
           autocomplete="off"
           placeholder="e.g. Medical Document IE"
         />
       </div>
       <div>
-        <label
-          for="projectDescription"
-          class="block text-sm font-medium text-slate-700 dark:text-slate-300"
-          >Description
-          <span class="text-slate-400 dark:text-slate-500 text-xs">(optional)</span></label
+        <label for="projectDescription" :class="labelClass"
+          >Description <span class="text-content-subtle text-xs">(optional)</span></label
         >
         <textarea
           id="projectDescription"
           v-model="projectData.description"
           rows="3"
-          class="mt-1 block w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white shadow-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition resize-none"
+          :class="textareaClass"
           placeholder="Briefly describe your project"
         ></textarea>
       </div>
@@ -73,6 +66,7 @@ import { projectsApi } from '@/services/projectsApi'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { extractErrorMessage } from '@/utils/errors'
+import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 
 const router = useRouter()
 const isModalOpen = ref(false)

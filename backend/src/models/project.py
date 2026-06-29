@@ -19,6 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+from sqlalchemy.sql import text as sql_text
 
 from ..db.base import Base
 from ..utils.crypto import decrypt, encrypt
@@ -30,6 +31,7 @@ from ..utils.enums import (
     FileType,
     PreprocessingStatus,
     PreprocessingStrategy,
+    TrialResultStatus,
 )
 
 if TYPE_CHECKING:
@@ -94,18 +96,24 @@ preprocessing_task_file_association = Table(
     "preprocessing_task_file_association",
     Base.metadata,
     Column(
-        "preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True
+        "preprocessing_task_id",
+        ForeignKey("preprocessing_tasks.id", ondelete="CASCADE"),
+        primary_key=True,
     ),
-    Column("file_id", ForeignKey("files.id"), primary_key=True),
+    Column("file_id", ForeignKey("files.id", ondelete="CASCADE"), primary_key=True),
 )
 
 preprocessing_task_document_association = Table(
     "preprocessing_task_document_association",
     Base.metadata,
     Column(
-        "preprocessing_task_id", ForeignKey("preprocessing_tasks.id"), primary_key=True
+        "preprocessing_task_id",
+        ForeignKey("preprocessing_tasks.id", ondelete="CASCADE"),
+        primary_key=True,
     ),
-    Column("document_id", ForeignKey("documents.id"), primary_key=True),
+    Column(
+        "document_id", ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True
+    ),
 )
 
 preprocessing_configuration_file_association = Table(
@@ -113,10 +121,10 @@ preprocessing_configuration_file_association = Table(
     Base.metadata,
     Column(
         "configuration_id",
-        ForeignKey("preprocessing_configurations.id"),
+        ForeignKey("preprocessing_configurations.id", ondelete="CASCADE"),
         primary_key=True,
     ),
-    Column("file_id", ForeignKey("files.id"), primary_key=True),
+    Column("file_id", ForeignKey("files.id", ondelete="CASCADE"), primary_key=True),
 )
 
 
@@ -189,8 +197,14 @@ class File(Base):
 document_set_association = Table(
     "document_set_association",
     Base.metadata,
-    Column("document_id", ForeignKey("documents.id"), primary_key=True),
-    Column("document_set_id", ForeignKey("document_sets.id"), primary_key=True),
+    Column(
+        "document_id", ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True
+    ),
+    Column(
+        "document_set_id",
+        ForeignKey("document_sets.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
     # PK leads with document_id; index the reverse direction so "all documents
     # in a set" (document_set_id lookups) doesn't seq-scan at 100k+ members.
     Index("ix_document_set_association_document_set_id", "document_set_id"),
@@ -267,16 +281,22 @@ class Document(Base):
     # Unique constraint to support document versioning.
     # Only enforces uniqueness when is_latest=True, allowing unlimited
     # archived versions (is_latest=False) for version history.
-    # Note: The actual partial constraint is created via migration
-    # (fix_document_versioning_constraint) using postgresql_where.
+    #
+    # Declared as a partial unique index (not a UniqueConstraint) so that
+    # databases bootstrapped via create_all() match the migration-created
+    # schema: a plain UniqueConstraint would forbid multiple archived versions
+    # (is_latest=False) of the same (file, config, name) and break versioning.
+    # PostgreSQL and SQLite both support partial unique indexes; the
+    # postgresql_where dialect kwarg is also valid SQLite syntax (WHERE expr).
     __table_args__ = (
-        # This UniqueConstraint is for documentation/SQLAlchemy awareness.
-        # The actual DB constraint is partial (only when is_latest=True).
-        UniqueConstraint(
+        Index(
+            "_document_uniqueness",
             "original_file_id",
             "preprocessing_config_id",
             "document_name",
-            name="_document_uniqueness",
+            unique=True,
+            postgresql_where=sql_text("is_latest = true"),
+            sqlite_where=sql_text("is_latest = true"),
         ),
         Index("ix_documents_latest", "is_latest"),
         Index("ix_documents_version_of", "version_of"),
@@ -715,6 +735,11 @@ class TrialResult(Base):
     result: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), nullable=False)
     additional_content: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON), nullable=True
+    )
+    status: Mapped[TrialResultStatus] = mapped_column(
+        Enum(TrialResultStatus, native_enum=False, length=20),
+        nullable=True,
+        index=True,
     )
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

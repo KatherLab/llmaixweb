@@ -33,6 +33,7 @@ from sqlalchemy import func, select
 from .. import models
 from ..core.config import settings
 from ..db.session import db_session
+from ..utils.enums import TrialResultStatus
 
 logger = logging.getLogger(__name__)
 
@@ -890,6 +891,12 @@ def extract_info_single_doc(
         base_url=base_url,
         timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
         max_retries=3,
+        # follow_redirects=False: a user-controlled endpoint can't 3xx the
+        # request to a blocked internal/metadata address (SSRF). Mirrors
+        # _test_client above.
+        http_client=httpx.Client(
+            follow_redirects=False, timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS
+        ),
     ) as client:
         kwargs = _completion_kwargs(
             llm_model,
@@ -917,7 +924,7 @@ def extract_info_single_doc(
             bumped_kwargs = _completion_kwargs(
                 llm_model,
                 schema_def,
-                _build_messages(prompt_obj, document.text),
+                _build_messages(prompt_obj, document.text, schema_def),
                 bumped_adv,
                 base_url,
             )
@@ -1537,7 +1544,10 @@ def _store_result(
 
     # Only skip if existing result is successful
     if existing:
-        existing_status = (existing.additional_content or {}).get("status")
+        existing_status = existing.status.value if existing.status else None
+        if existing_status is None:
+            # Legacy rows written before the status column existed
+            existing_status = (existing.additional_content or {}).get("status")
         if existing_status == "success":
             return
         # For failed/incomplete results, we'll update/replace below
@@ -1599,6 +1609,7 @@ def _store_result(
         if existing:
             existing.result = None
             existing.additional_content = additional
+            existing.status = TrialResultStatus(additional["status"])
         else:
             db_session.add(
                 models.TrialResult(
@@ -1606,6 +1617,7 @@ def _store_result(
                     document_id=document_id,
                     result=None,
                     additional_content=additional,
+                    status=TrialResultStatus(additional["status"]),
                 )
             )
         db_session.commit()
@@ -1663,6 +1675,7 @@ def _store_result(
         if existing:
             existing.result = None
             existing.additional_content = additional
+            existing.status = TrialResultStatus(additional["status"])
         else:
             db_session.add(
                 models.TrialResult(
@@ -1670,6 +1683,7 @@ def _store_result(
                     document_id=document_id,
                     result=None,
                     additional_content=additional,
+                    status=TrialResultStatus(additional["status"]),
                 )
             )
         db_session.commit()
@@ -1710,6 +1724,7 @@ def _store_result(
         if existing:
             existing.result = None
             existing.additional_content = additional
+            existing.status = TrialResultStatus(additional["status"])
         else:
             db_session.add(
                 models.TrialResult(
@@ -1717,6 +1732,7 @@ def _store_result(
                     document_id=document_id,
                     result=None,
                     additional_content=additional,
+                    status=TrialResultStatus(additional["status"]),
                 )
             )
         db_session.commit()
@@ -1757,6 +1773,7 @@ def _store_result(
             if existing:
                 existing.result = None
                 existing.additional_content = additional
+                existing.status = TrialResultStatus(additional["status"])
             else:
                 db_session.add(
                     models.TrialResult(
@@ -1764,6 +1781,7 @@ def _store_result(
                         document_id=document_id,
                         result=None,
                         additional_content=additional,
+                        status=TrialResultStatus(additional["status"]),
                     )
                 )
             db_session.commit()
@@ -1790,6 +1808,7 @@ def _store_result(
     if existing:
         existing.result = result_json
         existing.additional_content = additional
+        existing.status = TrialResultStatus(additional["status"])
     else:
         db_session.add(
             models.TrialResult(
@@ -1797,6 +1816,7 @@ def _store_result(
                 document_id=document_id,
                 result=result_json,
                 additional_content=additional,
+                status=TrialResultStatus(additional["status"]),
             )
         )
     db_session.commit()

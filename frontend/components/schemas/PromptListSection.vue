@@ -25,50 +25,81 @@
       @action="emit('create')"
     />
 
-    <div v-else class="grid grid-cols-1 gap-6">
-      <div
-        v-for="prompt in prompts"
-        :key="prompt.id"
-        class="bg-white dark:bg-slate-900 border rounded-xl shadow-sm overflow-hidden hover:shadow-md dark:hover:bg-slate-800 transition-shadow duration-200"
-      >
-        <div class="p-6">
-          <div class="flex justify-between items-start mb-4">
-            <div>
-              <h3 class="text-lg font-medium text-slate-900 dark:text-white">{{ prompt.name }}</h3>
-              <p v-if="prompt.description" class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {{ prompt.description }}
-              </p>
-              <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                Created: {{ formatDate(prompt.created_at) }}
-              </p>
-            </div>
-            <div class="flex space-x-2">
-              <button
-                class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200"
-                title="View Prompt"
-                @click="emit('view', prompt)"
-              >
-                <Eye class="h-5 w-5" />
-              </button>
-              <button
-                class="text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors duration-200"
-                title="Edit Prompt"
-                @click="emit('edit', prompt)"
-              >
-                <Pencil class="h-5 w-5" />
-              </button>
-              <button
-                class="text-slate-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors duration-200"
-                title="Delete Prompt"
-                @click="emit('delete', prompt)"
-              >
-                <Trash2 class="h-5 w-5" />
-              </button>
-            </div>
-          </div>
+    <template v-else>
+      <FilterBar
+        v-model:search="searchQuery"
+        :total-count="prompts.length"
+        item-label="prompts"
+        search-placeholder="Search prompts..."
+        :active-filters="activeFilters"
+        @clear-filter="clearSearch"
+      />
 
-          <!-- Prompt Preview Cards -->
-          <div class="space-y-3">
+      <DataTable
+        :columns="columns"
+        :items="filteredPrompts"
+        row-key="id"
+        expandable
+        :expanded-keys="expandedKeys"
+        empty-title="No prompts match your search"
+        @expand="toggleExpand"
+      >
+        <template #cell-name="{ row: prompt }">
+          <div class="min-w-0">
+            <span class="text-sm font-medium text-slate-900 dark:text-white">{{
+              prompt.name
+            }}</span>
+            <p v-if="prompt.description" class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              {{ prompt.description }}
+            </p>
+          </div>
+        </template>
+
+        <template #cell-placeholder="{ row: prompt }">
+          <StatusBadge v-if="hasPlaceholder(prompt)" color="green" class="font-medium">
+            Contains placeholder
+          </StatusBadge>
+          <span v-else class="text-sm text-slate-400 dark:text-slate-500">—</span>
+        </template>
+
+        <template #cell-created_at="{ row: prompt }">
+          <span class="text-sm text-slate-500 dark:text-slate-400">
+            {{ formatDate(prompt.created_at) }}
+          </span>
+        </template>
+
+        <template #row-actions="{ row: prompt }">
+          <BaseButton
+            variant="icon"
+            tone="blue"
+            title="View Prompt"
+            aria-label="View Prompt"
+            @click.stop="emit('view', prompt)"
+          >
+            <Eye class="w-5 h-5" aria-hidden="true" />
+          </BaseButton>
+          <BaseButton
+            variant="icon"
+            tone="gray"
+            title="Edit Prompt"
+            aria-label="Edit Prompt"
+            @click.stop="emit('edit', prompt)"
+          >
+            <Pencil class="w-5 h-5" aria-hidden="true" />
+          </BaseButton>
+          <BaseButton
+            variant="icon"
+            tone="red"
+            title="Delete Prompt"
+            aria-label="Delete Prompt"
+            @click.stop="emit('delete', prompt)"
+          >
+            <Trash2 class="w-5 h-5" aria-hidden="true" />
+          </BaseButton>
+        </template>
+
+        <template #expanded="{ row: prompt }">
+          <div class="p-4 space-y-3">
             <div v-if="prompt.system_prompt" class="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
               <div class="flex items-center mb-2">
                 <span
@@ -104,21 +135,24 @@
               </p>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </template>
+      </DataTable>
+    </template>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { formatDate, truncateText } from '@/utils/formatters'
 import { Eye, Pencil, Plus, Trash2 } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import DataTable from '@/components/common/DataTable.vue'
+import FilterBar from '@/components/common/FilterBar.vue'
 
-defineProps({
+const props = defineProps({
   prompts: {
     type: Array,
     required: true,
@@ -130,4 +164,45 @@ defineProps({
 })
 
 const emit = defineEmits(['create', 'view', 'edit', 'delete'])
+
+const expandedKeys = ref([])
+const searchQuery = ref('')
+
+const filteredPrompts = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return props.prompts
+  return props.prompts.filter(
+    (p) =>
+      (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q),
+  )
+})
+
+const activeFilters = computed(() =>
+  searchQuery.value
+    ? [{ key: 'search', label: `Search: "${searchQuery.value}"`, color: 'blue' }]
+    : [],
+)
+
+const clearSearch = () => {
+  searchQuery.value = ''
+}
+
+const toggleExpand = (id) => {
+  const idx = expandedKeys.value.indexOf(id)
+  if (idx > -1) {
+    expandedKeys.value.splice(idx, 1)
+  } else {
+    expandedKeys.value.push(id)
+  }
+}
+
+const hasPlaceholder = (prompt) =>
+  (prompt.system_prompt && prompt.system_prompt.includes('{document_content}')) ||
+  (prompt.user_prompt && prompt.user_prompt.includes('{document_content}'))
+
+const columns = [
+  { key: 'name', label: 'Name' },
+  { key: 'placeholder', label: 'Placeholder' },
+  { key: 'created_at', label: 'Created' },
+]
 </script>

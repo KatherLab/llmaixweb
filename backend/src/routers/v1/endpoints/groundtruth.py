@@ -4,7 +4,16 @@
 import json
 import logging
 
-from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
@@ -56,6 +65,15 @@ async def upload_groundtruth(
         )
     # Save the file
     if multiple_json and files:
+        # Cap the number of files: each is read fully into memory and held in a
+        # BytesIO ZIP buffer, so an unbounded count could exhaust memory.
+        max_files = 100
+        if len(files) > max_files:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot upload more than {max_files} JSON files at once "
+                f"(requested {len(files)}).",
+            )
         # Create a ZIP file in memory containing all JSON files
         import io
         import zipfile
@@ -226,6 +244,8 @@ def get_groundtruth_files(
     db: Session = Depends(get_db),
     project_id: int,
     current_user: models.User = Depends(get_current_user),
+    limit: int = Query(1000, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
 ) -> list[schemas.GroundTruth]:
     """Get all ground truth files for a project."""
     project: models.Project | None = db.execute(
@@ -240,9 +260,11 @@ def get_groundtruth_files(
         )
     ground_truths = list(
         db.execute(
-            select(models.GroundTruth).where(
-                models.GroundTruth.project_id == project_id
-            )
+            select(models.GroundTruth)
+            .where(models.GroundTruth.project_id == project_id)
+            .order_by(models.GroundTruth.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
         .scalars()
         .all()

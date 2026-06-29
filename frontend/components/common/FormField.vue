@@ -13,6 +13,7 @@
  *  - trailing : inline content after the input (e.g. a "forgot password" link)
  */
 import { computed, useId } from 'vue'
+import { inputClass, labelClass } from '@/utils/formStyles'
 
 const props = defineProps({
   modelValue: { type: [String, Number], default: '' },
@@ -41,20 +42,16 @@ const emit = defineEmits(['update:modelValue'])
 const inputId = useId()
 
 const inputClasses = computed(() => [
-  'w-full px-3 py-2 rounded-lg border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50 outline-none transition disabled:bg-slate-100 dark:disabled:bg-slate-700',
+  inputClass,
   props.invalid || props.error
     ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800'
-    : 'border-slate-300 dark:border-slate-600',
+    : '',
 ])
 </script>
 
 <template>
   <div>
-    <label
-      v-if="label"
-      :for="inputId"
-      class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2"
-    >
+    <label v-if="label" :for="inputId" :class="labelClass">
       {{ label }}
     </label>
     <div class="relative">

@@ -78,3 +78,19 @@ class PreprocessingStrategy(str, Enum):
     FULL_DOCUMENT = "full_document"
     ROW_BY_ROW = "row_by_row"
     CUSTOM = "custom"
+
+
+class TrialResultStatus(str, enum.Enum):
+    """Outcome of a single document extraction within a trial.
+
+    Mirrors the `ResultStatus` Literal in `utils/info_extraction.py` — the values
+    are produced by `_determine_result_status` and persisted on `TrialResult.status`.
+    """
+
+    SUCCESS = "success"
+    FAILED = "failed"
+    INCOMPLETE = "incomplete"
+    INVALID_JSON = "invalid_json"
+    SCHEMA_INVALID = "schema_invalid"
+    REFUSED = "refused"
+    PROVIDER_ERROR = "provider_error"

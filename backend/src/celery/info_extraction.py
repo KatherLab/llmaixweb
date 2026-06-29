@@ -4,6 +4,7 @@ import datetime as dt
 import logging
 from typing import Any, Dict, List
 
+import httpx
 from openai import AsyncOpenAI
 from sqlalchemy import func, select
 
@@ -14,6 +15,12 @@ from ..utils.info_extraction import extract_info_single_doc_async, update_trial_
 from .celery_config import celery_app
 
 log = logging.getLogger(__name__)
+
+# Upper bound on per-trial LLM concurrency. Each concurrent document holds an
+# in-flight HTTP connection + response buffer; an unbounded value (user sets
+# max_concurrency=100000) would exhaust FDs/connections/memory in one worker.
+# 32 is comfortably above the default of 8 and any realistic trial.
+MAX_TRIAL_CONCURRENCY = 32
 
 
 def _broadcast_trial_update(trial: models.Trial, event: str = "progress"):
@@ -109,11 +116,18 @@ if celery_app:
                 # here — it never traverses the Celery broker as plaintext.
                 api_key = trial.api_key
 
-            # Create one client per task
+            # Create one client per task. follow_redirects=False closes the SSRF
+            # redirect-bypass vector: a user-controlled endpoint can't 3xx the
+            # request to a blocked internal/metadata address. Mirrors the
+            # _test_client helper in utils/info_extraction.py.
             async with AsyncOpenAI(
                 api_key=api_key,
                 base_url=base_url,
                 timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+                http_client=httpx.AsyncClient(
+                    follow_redirects=False,
+                    timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+                ),
             ) as client:
                 failures: Dict[str, str] = {}
                 doc_tasks: Dict[int, asyncio.Task] = {}
@@ -124,6 +138,8 @@ if celery_app:
                     max_conc = int(advanced_options.get("max_concurrency", max_conc))
                     if max_conc < 1:
                         max_conc = 1
+                    if max_conc > MAX_TRIAL_CONCURRENCY:
+                        max_conc = MAX_TRIAL_CONCURRENCY
                 sem = asyncio.Semaphore(max_conc)
 
                 # Per-document processing -------------------------------------------------

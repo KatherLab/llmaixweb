@@ -111,6 +111,29 @@ if celery_app:
                 if not task:
                     raise ValueError(f"PreprocessingTask with id {task_id} not found")
 
+                # ── Re-delivery guard: terminal tasks ──
+                # With task_acks_late=True and a Redis visibility_timeout, a
+                # message can be redelivered after a worker loss or a task that
+                # exceeded the visibility window — by which point this task may
+                # already have been finalized as COMPLETED/FAILED/CANCELLED
+                # (by the original run or the sweeper in task_signals.py).
+                # Re-running would resurrect a terminal task (status flaps
+                # COMPLETED -> IN_PROGRESS -> ...) and waste OCR cost on
+                # duplicate work. Bail out. Mirrors the trial task
+                # (celery/info_extraction.py).
+                if task.status in (
+                    models.PreprocessingStatus.COMPLETED,
+                    models.PreprocessingStatus.FAILED,
+                    models.PreprocessingStatus.CANCELLED,
+                ):
+                    log.warning(
+                        "PreprocessingTask %s: already terminal (%s), "
+                        "skipping re-delivery",
+                        task_id,
+                        task.status,
+                    )
+                    return
+
                 # Read custom OCR credentials from the task row. The api_key is
                 # stored encrypted (api_key_encrypted) and decrypted here; it is
                 # never passed through the Celery broker as plaintext. base_url

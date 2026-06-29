@@ -1,105 +1,94 @@
 <template>
-  <div :class="t.wrapper">
-    <table :class="t.table">
-      <thead :class="t.thead">
-        <tr>
-          <th :class="[t.th, 'text-left']">
-            <input
-              type="checkbox"
-              :checked="areAllSelected"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 rounded"
-              @change="emit('toggle-select-all')"
-            />
-          </th>
-          <th :class="t.th">Document</th>
-          <th :class="t.th">Configuration</th>
-          <th :class="t.th">Model</th>
-          <th :class="t.th">Created</th>
-          <th :class="[t.th, 'relative']">
-            <span class="sr-only">Actions</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody :class="t.tbody">
-        <tr v-for="doc in documents" :key="doc.id" :class="t.tr">
-          <td class="px-4 py-3 whitespace-nowrap">
-            <input
-              type="checkbox"
-              :checked="selectedDocuments.includes(doc.id)"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 rounded"
-              @change="emit('toggle-selection', doc.id)"
-            />
-          </td>
-          <td :class="t.td">
-            <div class="flex items-center">
-              <FileIcon :file-type="doc.original_file?.file_type" :size="40" />
-              <div class="ml-3">
-                <p class="text-sm font-medium text-slate-900 dark:text-white truncate max-w-xs">
-                  {{ doc.document_name || doc.original_file?.file_name || `Document #${doc.id}` }}
-                </p>
-                <p
-                  v-if="
-                    doc.document_name &&
-                    doc.original_file?.file_name &&
-                    doc.document_name !== doc.original_file?.file_name
-                  "
-                  class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs"
-                >
-                  {{ doc.original_file?.file_name }}
-                </p>
-                <p v-else class="text-xs text-slate-500 dark:text-slate-400">
-                  {{ formatFileSize(doc.original_file?.file_size) }}
-                </p>
-              </div>
-            </div>
-          </td>
-          <td class="px-4 py-3 whitespace-nowrap">
-            <div class="text-sm text-slate-900 dark:text-white">
-              {{ doc.preprocessing_config?.name || 'Custom Config' }}
-            </div>
-            <div v-if="getOcrDisplay(doc)" class="text-xs text-slate-500 dark:text-slate-400">
-              {{ getOcrDisplay(doc) }}
-            </div>
-          </td>
-          <td class="px-4 py-3 whitespace-nowrap">
-            <div class="text-sm text-slate-900 dark:text-white">
-              {{ getModelName(doc) }}
-            </div>
-          </td>
-          <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-            {{ formatDate(doc.created_at) }}
-          </td>
-          <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-            <div class="flex items-center justify-end space-x-2">
-              <button
-                class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                title="View"
-                @click="emit('view', doc)"
-              >
-                <Eye class="h-5 w-5" />
-              </button>
-              <button
-                class="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-300"
-                title="Download"
-                @click="emit('download', doc)"
-              >
-                <CloudDownload class="h-5 w-5" />
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <DataTable
+    :columns="columns"
+    :items="documents"
+    row-key="id"
+    selectable
+    :selected-keys="selectedDocuments"
+    :all-selected="areAllSelected"
+    :pagination="pagination"
+    :show-page-size-selector="false"
+    item-label="documents"
+    empty-title="No documents found"
+    @toggle-selection="$emit('toggle-selection', $event)"
+    @toggle-all="$emit('toggle-select-all')"
+    @page-change="$emit('page-change', $event)"
+    @page-size-change="$emit('page-size-change', $event)"
+  >
+    <template #cell-document="{ row: doc }">
+      <div class="flex items-center">
+        <FileIcon :file-type="doc.original_file?.file_type" :size="40" />
+        <div class="ml-3">
+          <p class="text-sm font-medium text-slate-900 dark:text-white truncate max-w-xs">
+            {{ doc.document_name || doc.original_file?.file_name || `Document #${doc.id}` }}
+          </p>
+          <p
+            v-if="
+              doc.document_name &&
+              doc.original_file?.file_name &&
+              doc.document_name !== doc.original_file?.file_name
+            "
+            class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs"
+          >
+            {{ doc.original_file?.file_name }}
+          </p>
+          <p v-else class="text-xs text-slate-500 dark:text-slate-400">
+            {{ formatFileSize(doc.original_file?.file_size) }}
+          </p>
+        </div>
+      </div>
+    </template>
+
+    <template #cell-configuration="{ row: doc }">
+      <div class="text-sm text-slate-900 dark:text-white">
+        {{ doc.preprocessing_config?.name || 'Custom Config' }}
+      </div>
+      <div v-if="getOcrDisplay(doc)" class="text-xs text-slate-500 dark:text-slate-400">
+        {{ getOcrDisplay(doc) }}
+      </div>
+    </template>
+
+    <template #cell-model="{ row: doc }">
+      <div class="text-sm text-slate-900 dark:text-white">
+        {{ getModelName(doc) }}
+      </div>
+    </template>
+
+    <template #cell-created_at="{ row: doc }">
+      <span class="text-sm text-slate-500 dark:text-slate-400">
+        {{ formatDate(doc.created_at) }}
+      </span>
+    </template>
+
+    <template #row-actions="{ row: doc }">
+      <BaseButton
+        variant="icon"
+        tone="blue"
+        title="View"
+        aria-label="View"
+        @click.stop="$emit('view', doc)"
+      >
+        <Eye class="w-5 h-5" aria-hidden="true" />
+      </BaseButton>
+      <BaseButton
+        variant="icon"
+        tone="gray"
+        title="Download"
+        aria-label="Download"
+        @click.stop="$emit('download', doc)"
+      >
+        <CloudDownload class="w-5 h-5" aria-hidden="true" />
+      </BaseButton>
+    </template>
+  </DataTable>
 </template>
 
 <script setup>
 import { CloudDownload, Eye } from '@lucide/vue'
 import FileIcon from '@/components/common/FileIcon.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import { formatFileSize, formatDate } from '@/utils/formatters'
-import { useTableClasses } from '@/composables/useTableClasses'
-
-const t = useTableClasses()
 
 defineProps({
   documents: {
@@ -114,9 +103,27 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  pagination: {
+    type: Object,
+    default: null,
+  },
 })
 
-const emit = defineEmits(['toggle-select-all', 'toggle-selection', 'view', 'download'])
+defineEmits([
+  'toggle-select-all',
+  'toggle-selection',
+  'view',
+  'download',
+  'page-change',
+  'page-size-change',
+])
+
+const columns = [
+  { key: 'document', label: 'Document' },
+  { key: 'configuration', label: 'Configuration' },
+  { key: 'model', label: 'Model' },
+  { key: 'created_at', label: 'Created' },
+]
 
 const getModelName = (doc) => {
   const metaData = doc.meta_data || {}
