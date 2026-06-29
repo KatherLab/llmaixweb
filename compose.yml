@@ -73,6 +73,9 @@ services:
     env_file: .env
     environment:
       - DOCLING_SERVE_URL=http://docling-serve:5001
+      # .env can override (e.g. DOCLING_SERVE_ENABLED=false). Keeps the worker
+      # and web process in agreement when .env is unset.
+      - DOCLING_SERVE_ENABLED=${DOCLING_SERVE_ENABLED:-true}
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
       worker -Q preprocess -c 1 --loglevel=info
