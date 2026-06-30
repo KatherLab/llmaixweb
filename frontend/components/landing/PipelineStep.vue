@@ -11,8 +11,8 @@
       >
         <component :is="step.icon" class="h-10 w-10 text-white" />
       </div>
-      <h3 class="font-bold text-white mb-2">{{ step.title }}</h3>
-      <p class="text-sm text-slate-400">{{ step.subtitle }}</p>
+      <h3 class="font-bold text-slate-900 mb-2 dark:text-white">{{ step.title }}</h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400">{{ step.subtitle }}</p>
     </div>
   </div>
 </template>

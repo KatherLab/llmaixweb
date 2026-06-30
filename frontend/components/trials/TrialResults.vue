@@ -160,13 +160,13 @@
     </div>
 
     <!-- Schema / Prompt snapshots (frozen at trial run) -->
-    <TrialSchemaModal
+    <SchemaViewModal
       :open="showSchemaModal"
       :schema="schemaForModal"
       :is-snapshot="schemaIsSnapshot"
       @close="showSchemaModal = false"
     />
-    <TrialPromptModal
+    <PromptViewModal
       :open="showPromptModal"
       :prompt="promptForModal"
       :is-snapshot="promptIsSnapshot"
@@ -185,8 +185,8 @@ import { schemasApi } from '@/services/schemasApi'
 import TrialMetaHeader from './TrialMetaHeader.vue'
 import TrialDocumentErrors from './TrialDocumentErrors.vue'
 import TrialResultDetailPanel from './TrialResultDetailPanel.vue'
-import TrialSchemaModal from './TrialSchemaModal.vue'
-import TrialPromptModal from './TrialPromptModal.vue'
+import SchemaViewModal from '@/components/schemas/SchemaViewModal.vue'
+import PromptViewModal from '@/components/schemas/PromptViewModal.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'

@@ -1,9 +1,11 @@
 <template>
   <div class="text-center">
     <div class="mb-8">
-      <h2 class="text-3xl font-bold text-white mb-4">Ready to Transform Your Medical Data?</h2>
-      <p class="text-xl text-slate-300">
-        Join researchers extracting structured insights from medical documents
+      <h2 class="text-3xl font-bold text-slate-900 mb-4 dark:text-white">
+        Start extracting structured data
+      </h2>
+      <p class="text-xl text-slate-600 dark:text-slate-300">
+        Upload your documents, define a schema, and run your first extraction trial.
       </p>
     </div>
 
@@ -27,7 +29,7 @@
       </router-link>
       <router-link
         to="/login"
-        class="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm text-white px-8 py-4 text-lg font-medium border border-white/20 transition hover:bg-white/20 hover:border-white/30"
+        class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 text-slate-700 px-8 py-4 text-lg font-medium backdrop-blur-sm transition hover:bg-slate-100 hover:border-slate-400 dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:hover:border-white/30"
       >
         Login
         <LogIn class="h-5 w-5" />
@@ -40,7 +42,7 @@
         href="https://github.com/KatherLab"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+        class="inline-flex items-center gap-2 text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
       >
         <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
           <path

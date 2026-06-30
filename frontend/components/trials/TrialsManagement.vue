@@ -167,14 +167,14 @@
       @complete="handleBatchActionComplete"
       @deleted="handleTrialsDeleted"
     />
-    <TrialSchemaModal
+    <SchemaViewModal
       v-if="showSchemaModal"
       :open="showSchemaModal"
       :schema="selectedSchema"
       :is-snapshot="schemaIsSnapshot"
       @close="showSchemaModal = false"
     />
-    <TrialPromptModal
+    <PromptViewModal
       v-if="showPromptModal"
       :open="showPromptModal"
       :prompt="selectedPrompt"
@@ -209,8 +209,8 @@ import TrialFiltersPanel from '@/components/trials/TrialFiltersPanel.vue'
 import BatchActionsModal from '@/components/documents/BatchActionsModal.vue'
 import RenameTrialModal from '@/components/trials/RenameTrialModal.vue'
 import TrialResults from '@/components/trials/TrialResults.vue'
-import TrialSchemaModal from '@/components/trials/TrialSchemaModal.vue'
-import TrialPromptModal from '@/components/trials/TrialPromptModal.vue'
+import SchemaViewModal from '@/components/schemas/SchemaViewModal.vue'
+import PromptViewModal from '@/components/schemas/PromptViewModal.vue'
 import DownloadModal from '@/components/trials/DownloadModal.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'

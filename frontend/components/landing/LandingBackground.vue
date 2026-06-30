@@ -2,20 +2,30 @@
   <div class="absolute inset-0 z-0">
     <!-- Gradient orbs with medical theme colors -->
     <div
-      class="absolute top-0 left-0 h-96 w-96 rounded-full bg-blue-500 opacity-10 blur-3xl animate-pulse"
+      class="absolute top-0 left-0 h-96 w-96 rounded-full bg-blue-500 opacity-10 blur-3xl animate-pulse dark:opacity-10"
     ></div>
     <div
-      class="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-blue-500 opacity-10 blur-3xl animate-pulse"
+      class="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-blue-500 opacity-10 blur-3xl animate-pulse dark:opacity-10"
       style="animation-delay: 2s"
     ></div>
     <div
-      class="absolute top-1/3 left-1/2 h-64 w-64 rounded-full bg-emerald-500 opacity-5 blur-3xl animate-pulse"
+      class="absolute top-1/3 left-1/2 h-64 w-64 rounded-full bg-emerald-500 opacity-5 blur-3xl animate-pulse dark:opacity-5"
       style="animation-delay: 1s"
     ></div>
 
     <!-- Grid pattern -->
     <div
-      class="absolute inset-0 opacity-5"
+      class="absolute inset-0 opacity-5 dark:opacity-5"
+      style="
+        background-image:
+          linear-gradient(to right, rgba(15, 23, 42, 0.4) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(15, 23, 42, 0.4) 1px, transparent 1px);
+        background-size: 24px 24px;
+      "
+    ></div>
+    <!-- Grid pattern override for dark mode (light lines on dark) -->
+    <div
+      class="absolute inset-0 opacity-5 hidden dark:block"
       style="
         background-image:
           linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
@@ -27,22 +37,22 @@
     <!-- Floating elements -->
     <div
       ref="floatingRoot"
-      class="floating-element absolute top-20 left-10 font-mono text-xs text-blue-300 opacity-20"
+      class="floating-element absolute top-20 left-10 font-mono text-xs text-blue-600 opacity-20 dark:text-blue-300 dark:opacity-20"
     >
       {"patient_id": "MED-2023-11"}
     </div>
     <div
-      class="floating-element absolute top-60 right-20 font-mono text-xs text-emerald-300 opacity-20"
+      class="floating-element absolute top-60 right-20 font-mono text-xs text-emerald-600 opacity-20 dark:text-emerald-300 dark:opacity-20"
     >
       [extraction_complete]
     </div>
     <div
-      class="floating-element absolute bottom-40 left-40 font-mono text-xs text-blue-300 opacity-20"
+      class="floating-element absolute bottom-40 left-40 font-mono text-xs text-blue-600 opacity-20 dark:text-blue-300 dark:opacity-20"
     >
       schema.json
     </div>
     <div
-      class="floating-element absolute bottom-20 right-60 font-mono text-xs text-purple-300 opacity-20"
+      class="floating-element absolute bottom-20 right-60 font-mono text-xs text-purple-600 opacity-20 dark:text-purple-300 dark:opacity-20"
     >
       {"accuracy": 0.92}
     </div>

@@ -1,6 +1,8 @@
 <!-- Landing.vue -->
 <template>
-  <div class="landing-root relative min-h-screen overflow-hidden bg-slate-950 text-white">
+  <div
+    class="landing-root relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white"
+  >
     <!-- Animated background elements -->
     <LandingBackground />
 

@@ -1,6 +1,8 @@
 <template>
   <div class="mb-24">
-    <h2 class="text-center text-3xl font-bold mb-12 text-white">How It Works</h2>
+    <h2 class="text-center text-3xl font-bold mb-12 text-slate-900 dark:text-white">
+      How It Works
+    </h2>
 
     <!-- Pipeline Container -->
     <div class="relative">

@@ -7,12 +7,28 @@
 
     <!-- Metadata -->
     <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-      <span
-        ><strong class="text-slate-700 dark:text-slate-300">Schema:</strong> {{ schemaName }}</span
-      >
-      <span v-if="promptName"
-        ><strong class="text-slate-700 dark:text-slate-300">Prompt:</strong> {{ promptName }}</span
-      >
+      <span class="inline-flex items-center gap-1">
+        <strong class="text-slate-700 dark:text-slate-300">Schema:</strong>
+        <button
+          type="button"
+          class="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+          title="View schema"
+          @click.stop="emit('view-schema', trial)"
+        >
+          {{ schemaName }}
+        </button>
+      </span>
+      <span v-if="promptName" class="inline-flex items-center gap-1">
+        <strong class="text-slate-700 dark:text-slate-300">Prompt:</strong>
+        <button
+          type="button"
+          class="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+          title="View prompt"
+          @click.stop="emit('view-prompt', trial)"
+        >
+          {{ promptName }}
+        </button>
+      </span>
       <span
         ><strong class="text-slate-700 dark:text-slate-300">LLM:</strong>
         {{ trial.llm_model }}</span
@@ -83,12 +99,6 @@
         </BaseButton>
         <BaseButton variant="primary" size="sm" @click.stop="emit('view-results', trial)">
           Results
-        </BaseButton>
-        <BaseButton variant="secondary" size="sm" @click.stop="emit('view-schema', trial)">
-          Schema
-        </BaseButton>
-        <BaseButton variant="secondary" size="sm" @click.stop="emit('view-prompt', trial)">
-          Prompt
         </BaseButton>
         <BaseButton
           v-if="trial.status === 'completed'"
