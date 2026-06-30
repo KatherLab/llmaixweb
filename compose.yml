@@ -145,13 +145,18 @@ services:
     env_file: .env
     entrypoint: >
       /bin/sh -c "
-        export S3_BUCKET_NAME='$${S3_BUCKET_NAME:-llmaixweb}';
+        set -e;
+        export S3_BUCKET_NAME="$${S3_BUCKET_NAME:-llmaixweb}";
         until rc alias set local http://rustfs:9000 ${RUSTFS_ACCESS_KEY} ${RUSTFS_SECRET_KEY}; do
+          echo 'Waiting for rustfs...' >&2;
           sleep 3;
         done;
-        rc mb local/$${S3_BUCKET_NAME} || true;
-        rc anonymous set public local/$${S3_BUCKET_NAME} || true;
-        echo 'Bucket '$${S3_BUCKET_NAME}' ready';
+        if ! rc mb local/$${S3_BUCKET_NAME} 2>/dev/null; then
+          rc ls local/$${S3_BUCKET_NAME} >/dev/null 2>&1 || { echo \"Failed to create or find bucket '$${S3_BUCKET_NAME}'\" >&2; exit 1; };
+          echo \"Bucket '$${S3_BUCKET_NAME}' already exists\";
+        fi;
+        rc anonymous set public local/$${S3_BUCKET_NAME} || { echo \"Failed to set anonymous access for '$${S3_BUCKET_NAME}'\" >&2; exit 1; };
+        echo \"Bucket '$${S3_BUCKET_NAME}' ready\";
       "
     restart: "no"
 
