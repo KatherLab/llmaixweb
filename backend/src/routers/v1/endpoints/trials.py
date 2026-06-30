@@ -28,6 +28,48 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _broadcast_trial_created(trial_db: models.Trial) -> None:
+    """Best-effort WebSocket broadcast that a new trial was just created.
+
+    The Celery extraction task emits progress/terminal updates on its own
+    heartbeat, but the first of those only fires ~3s after creation. Without
+    this initial "created" event, the ActivityBell and trials table don't
+    learn about a brand-new trial until that heartbeat lands (or until a page
+    reload) — so a freshly created trial sometimes doesn't appear live.
+
+    Mirrors the payload shape used by ``celery/info_extraction.py`` so the
+    frontend merge logic treats it identically. Best-effort: if Redis is down,
+    the trial still runs — the frontend just won't see the created event.
+    """
+    try:
+        from ....utils.redis_broadcast import publish_trial_update
+
+        publish_trial_update(
+            {
+                "type": "trial_update",
+                "trial_id": trial_db.id,
+                "project_id": trial_db.project_id,
+                "status": trial_db.status.value
+                if hasattr(trial_db.status, "value")
+                else str(trial_db.status),
+                "docs_done": trial_db.docs_done,
+                "documents_count": len(trial_db.document_ids)
+                if trial_db.document_ids
+                else 0,
+                "progress": float(trial_db.progress) if trial_db.progress else 0,
+                "name": trial_db.name,
+                "started_at": trial_db.started_at.isoformat()
+                if trial_db.started_at
+                else None,
+                "finished_at": None,
+                "meta": trial_db.meta,
+                "event": "created",
+            }
+        )
+    except Exception as e:
+        logger.debug("Trial created broadcast failed: %s", e)
+
+
 def _to_int(value) -> int:
     """Coerce a JSON-decoded numeric value to int, tolerating None/strings."""
     try:
@@ -218,6 +260,10 @@ def create_trial(
     db.add(trial_db)
     db.commit()
     db.refresh(trial_db)
+
+    # Notify WS clients immediately so the new trial appears in the ActivityBell
+    # and trials table without waiting for the first Celery heartbeat.
+    _broadcast_trial_created(trial_db)
 
     if trial.bypass_celery:
         # synchronous (debug)

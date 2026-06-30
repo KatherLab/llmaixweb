@@ -32,6 +32,7 @@
         item-label="prompts"
         search-placeholder="Search prompts..."
         :active-filters="activeFilters"
+        class="mb-4"
         @clear-filter="clearSearch"
       />
 

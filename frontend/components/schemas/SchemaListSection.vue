@@ -32,6 +32,7 @@
         item-label="schemas"
         search-placeholder="Search schemas..."
         :active-filters="activeFilters"
+        class="mb-4"
         @clear-filter="clearSearch"
       />
 

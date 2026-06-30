@@ -277,9 +277,6 @@ export function useModelTesting({
 
       if (response.data.success) {
         modelValid.value = true
-        toast.success(
-          `Model '${trialData.value.llm_model}' supports structured output with the selected schema!`,
-        )
       } else {
         modelValid.value = false
         modelTestError.value = response.data.message || 'Model test failed'

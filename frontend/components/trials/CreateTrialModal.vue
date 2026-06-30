@@ -162,9 +162,10 @@
           />
         </div>
 
-        <!-- Model test / status indicator -->
+        <!-- Model test / status indicator (Advanced mode only — Simple mode runs the
+             check transparently on submit) -->
         <ModelTestCard
-          v-if="trialData.llm_model && trialData.schema_id && hasValidConfig"
+          v-if="!simpleMode && trialData.llm_model && trialData.schema_id && hasValidConfig"
           :status="modelTestStatus"
           :is-testing="isTestingModel"
           :llm-model="trialData.llm_model"
@@ -183,8 +184,23 @@
       </div>
     </div>
 
-    <!-- Inline status line (always visible) -->
-    <div class="mt-6 flex items-center gap-2 text-sm">
+    <!-- Submission overlay: compatibility test running -->
+    <div
+      v-if="submitting"
+      class="mt-6 flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+    >
+      <LoadingSpinner size="small" color="blue" inline label="" />
+      <div class="text-sm text-blue-800 dark:text-blue-300">
+        <p class="font-medium text-blue-900 dark:text-blue-200">Checking model compatibility…</p>
+        <p class="mt-0.5">
+          Verifying that {{ trialData.llm_model || 'the model' }} works with your schema before
+          starting the trial.
+        </p>
+      </div>
+    </div>
+
+    <!-- Inline status line (hidden while submitting — the overlay above takes over) -->
+    <div v-else class="mt-6 flex items-center gap-2 text-sm">
       <component :is="statusIcon" v-if="statusIcon" :class="['h-4 w-4', statusIconClass]" />
       <p :class="statusTextClass">{{ statusMessage }}</p>
     </div>
@@ -223,6 +239,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import Tooltip from '@/components/common/Tooltip.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import TrialMetadataCard from './TrialMetadataCard.vue'
 import TrialPromptSelect from './TrialPromptSelect.vue'
 import TrialSchemaSelect from './TrialSchemaSelect.vue'
