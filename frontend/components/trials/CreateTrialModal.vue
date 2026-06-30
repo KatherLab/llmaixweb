@@ -1,11 +1,46 @@
 <template>
   <BaseModal :open="open" size="2xl" panel-class="max-h-[95vh]" @close="tryClose">
     <template #header>
-      <h3 class="text-lg font-semibold text-slate-900">Start New Trial</h3>
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Start New Trial</h3>
+          <Tooltip :text="trialHelpText">
+            <Info class="h-4 w-4 text-slate-400 hover:text-slate-600" />
+          </Tooltip>
+        </div>
+        <!-- Simple/Advanced Mode Toggle -->
+        <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+          <button
+            type="button"
+            :class="[
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
+              !simpleMode
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900',
+            ]"
+            @click="simpleMode = false"
+          >
+            Advanced
+          </button>
+          <button
+            type="button"
+            :class="[
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
+              simpleMode
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900',
+            ]"
+            @click="simpleMode = true"
+          >
+            Simple
+          </button>
+        </div>
+      </div>
     </template>
 
-    <!-- Orientation -->
+    <!-- Orientation (Advanced mode only) -->
     <div
+      v-if="!simpleMode"
       class="mb-6 flex items-start bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
     >
       <div class="flex-shrink-0 mt-0.5">
@@ -26,14 +61,39 @@
     <div class="grid md:grid-cols-2 gap-8">
       <!-- LEFT COLUMN -->
       <div>
-        <!-- Name / Description -->
-        <TrialMetadataCard
-          v-model:name="trialData.name"
-          v-model:description="trialData.description"
-        />
+        <!-- Name / Description: collapsible in Simple mode, always visible in Advanced -->
+        <div v-if="!simpleMode" class="mb-8">
+          <TrialMetadataCard
+            v-model:name="trialData.name"
+            v-model:description="trialData.description"
+          />
+        </div>
+        <div v-else class="mb-6">
+          <BaseButton
+            variant="link"
+            tone="blue"
+            class="text-sm flex items-center"
+            @click="metadataVisible = !metadataVisible"
+          >
+            <span>{{ metadataVisible ? 'Hide' : 'Add' }} name / notes</span>
+            <ChevronDown
+              :class="{ 'rotate-180': metadataVisible }"
+              class="h-4 w-4 ml-1 transition-transform"
+              aria-hidden="true"
+            />
+          </BaseButton>
+          <div v-if="metadataVisible" class="mt-3">
+            <TrialMetadataCard
+              v-model:name="trialData.name"
+              v-model:description="trialData.description"
+            />
+          </div>
+        </div>
 
         <!-- Prompt / Schema / Model -->
-        <div class="mb-8 bg-white border rounded-xl p-6 shadow">
+        <div
+          class="mb-8 bg-white dark:bg-slate-800/40 border dark:border-slate-700 rounded-xl p-6 shadow"
+        >
           <TrialPromptSelect
             v-model="trialData.prompt_id"
             :prompts="prompts"
@@ -55,8 +115,8 @@
           />
         </div>
 
-        <!-- Advanced toggles + sections -->
-        <div>
+        <!-- Advanced toggles + sections (Advanced mode only) -->
+        <div v-if="!simpleMode">
           <div class="flex items-center gap-4 mb-2">
             <BaseButton
               variant="link"
@@ -102,7 +162,7 @@
           />
         </div>
 
-        <!-- Model test card -->
+        <!-- Model test / status indicator -->
         <ModelTestCard
           v-if="trialData.llm_model && trialData.schema_id && hasValidConfig"
           :status="modelTestStatus"
@@ -123,19 +183,22 @@
       </div>
     </div>
 
+    <!-- Inline status line (always visible) -->
+    <div class="mt-6 flex items-center gap-2 text-sm">
+      <component :is="statusIcon" v-if="statusIcon" :class="['h-4 w-4', statusIconClass]" />
+      <p :class="statusTextClass">{{ statusMessage }}</p>
+    </div>
+
     <template #footer>
-      <BaseButton variant="secondary" @click="tryClose">Cancel</BaseButton>
+      <BaseButton variant="secondary" :disabled="submitting" @click="tryClose">Cancel</BaseButton>
       <BaseButton
         variant="primary"
-        :disabled="!isFormValid"
-        :title="
-          !isFormValid
-            ? 'Please ensure all required fields are filled, model is tested with schema, and configuration is valid'
-            : ''
-        "
-        @click="handleSubmit"
-        >Start Trial</BaseButton
+        :disabled="!canSubmit || submitting"
+        :loading="submitting"
+        @click="handleStartTrial"
       >
+        {{ submitting ? 'Verifying…' : 'Start Trial' }}
+      </BaseButton>
     </template>
 
     <!-- Discard unsaved changes confirmation -->
@@ -154,11 +217,12 @@
 
 <script setup>
 import { computed, ref, toRef, watch } from 'vue'
-import { ChevronDown, Info } from '@lucide/vue'
+import { CheckCircle2, ChevronDown, CircleAlert, Info, Loader2 } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
+import Tooltip from '@/components/common/Tooltip.vue'
 import TrialMetadataCard from './TrialMetadataCard.vue'
 import TrialPromptSelect from './TrialPromptSelect.vue'
 import TrialSchemaSelect from './TrialSchemaSelect.vue'
@@ -181,6 +245,9 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'create', 'create-group'])
 
+const trialHelpText =
+  'A trial runs an AI model over your documents to extract structured data. You need a Schema, a Prompt, a Model, and the Documents to process. The schema is automatically included with the prompt.'
+
 /* -------------------------------------------------------
  * General trial state
  * -----------------------------------------------------*/
@@ -196,6 +263,9 @@ const trialData = ref({
   advanced_options: {},
 })
 
+const simpleMode = ref(true)
+const submitting = ref(false)
+const metadataVisible = ref(false)
 const documentSelectionMode = ref('individual')
 
 // Advanced options
@@ -239,18 +309,55 @@ const {
 /* -------------------------------------------------------
  * Form validation
  * -----------------------------------------------------*/
-const isFormValid = computed(() => {
-  const basicValidation =
+// Core readiness — gates the Start Trial button. The model/schema compatibility
+// check is run automatically on submit (see handleStartTrial), so it is NOT
+// required to enable the button.
+const canSubmit = computed(() => {
+  return (
     trialData.value.schema_id &&
     trialData.value.prompt_id &&
     trialData.value.document_ids.length > 0 &&
     trialData.value.llm_model &&
-    availableModels.value.length > 0
+    availableModels.value.length > 0 &&
+    hasValidConfig.value
+  )
+})
 
-  const configValid = hasValidConfig.value
-  const modelValidated = modelTested.value && modelValid.value
+/* -------------------------------------------------------
+ * Inline status line
+ * -----------------------------------------------------*/
+const statusMessage = computed(() => {
+  if (submitting.value) return 'Verifying model works with your schema…'
+  if (isTestingModel.value) return modelTestStatus.value.message
+  if (!trialData.value.llm_model) return 'Choose a model to continue.'
+  if (!hasValidConfig.value) return configStatus.value.message
+  if (trialData.value.document_ids.length === 0) return 'Select documents to continue.'
+  if (modelTested.value && modelValid.value)
+    return 'Model verified with this schema — ready to start.'
+  if (modelTested.value && !modelValid.value)
+    return `Verification failed: ${modelTestStatus.value.message}`
+  return 'Model will be checked when you start the trial.'
+})
 
-  return basicValidation && configValid && modelValidated
+const statusIcon = computed(() => {
+  if (submitting.value || isTestingModel.value) return Loader2
+  if (modelTested.value && modelValid.value && canSubmit.value) return CheckCircle2
+  if (modelTested.value && !modelValid.value) return CircleAlert
+  return Info
+})
+
+const statusIconClass = computed(() => {
+  if (submitting.value || isTestingModel.value) return 'text-blue-500 animate-spin'
+  if (modelTested.value && modelValid.value && canSubmit.value) return 'text-green-500'
+  if (modelTested.value && !modelValid.value) return 'text-red-500'
+  return 'text-slate-400'
+})
+
+const statusTextClass = computed(() => {
+  if (modelTested.value && modelValid.value && canSubmit.value)
+    return 'text-green-700 dark:text-green-400'
+  if (modelTested.value && !modelValid.value) return 'text-red-700 dark:text-red-400'
+  return 'text-slate-600 dark:text-slate-400'
 })
 
 /* -------------------------------------------------------
@@ -269,6 +376,11 @@ const initializeForm = () => {
     advanced_options: {},
   }
 
+  simpleMode.value = true
+  submitting.value = false
+  metadataVisible.value = false
+  documentSelectionMode.value = 'individual'
+
   connectionTested.value = false
   connectionValid.value = false
   systemConfigError.value = null
@@ -285,15 +397,9 @@ const initializeForm = () => {
 }
 
 /* -------------------------------------------------------
- * Submission
+ * Submission (guided: verify model, then create)
  * -----------------------------------------------------*/
-const handleSubmit = () => {
-  if (!isFormValid.value) {
-    if (!modelTested.value || !modelValid.value)
-      toast.error('Please test the selected model with the schema before creating the trial')
-    return
-  }
-
+const buildFormData = () => {
   const formData = {
     name: (trialData.value.name || '').trim() || undefined,
     description: (trialData.value.description || '').trim() || undefined,
@@ -320,7 +426,28 @@ const handleSubmit = () => {
     formData.advanced_options = advancedOptions
   }
 
-  emit('create', formData)
+  return formData
+}
+
+const handleStartTrial = async () => {
+  if (!canSubmit.value || submitting.value) return
+
+  submitting.value = true
+  try {
+    // Fast path: already verified with the current model/schema/options.
+    if (!(modelTested.value && modelValid.value)) {
+      await testSelectedModel() // Phase 1 — verify
+      if (!modelValid.value) {
+        // Reason is shown via the inline status line + ModelTestCard.
+        submitting.value = false
+        return
+      }
+    }
+    emit('create', buildFormData()) // Phase 2 — submit
+  } catch {
+    toast.error('Could not start the trial. Please try again.')
+    submitting.value = false
+  }
 }
 
 /* -------------------------------------------------------
@@ -341,6 +468,7 @@ const isDirty = computed(() => {
 
 const showConfirm = ref(false)
 const tryClose = () => {
+  if (submitting.value) return
   if (isDirty.value) {
     showConfirm.value = true
   } else {

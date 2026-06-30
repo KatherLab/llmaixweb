@@ -128,6 +128,7 @@
             :ground-truth-field-types="groundTruthFieldTypes"
             :schema-selected="!!selectedSchemaId"
             @remove="removeMapping"
+            @update-method="updateMappingMethod"
           />
         </div>
         <BaseButton
@@ -498,12 +499,13 @@ const canAddMapping = computed(
 
 function addMapping() {
   if (!canAddMapping.value) return
+  const fieldType = schemaFieldTypes.value[selectedSchemaField.value] || 'string'
   mappings.value.push({
     schema_id: Number(selectedSchemaId.value),
     schema_field: selectedSchemaField.value,
     ground_truth_field: selectedGroundTruthField.value,
-    field_type: schemaFieldTypes.value[selectedSchemaField.value] || 'string',
-    comparison_method: 'exact',
+    field_type: fieldType,
+    comparison_method: defaultMethodFor(fieldType),
     comparison_options: {},
   })
   selectedSchemaField.value = ''
@@ -512,6 +514,22 @@ function addMapping() {
 
 function removeMapping(idx) {
   mappings.value.splice(idx, 1)
+}
+
+/** Pick a sensible default comparison method from the field type. */
+function defaultMethodFor(fieldType) {
+  const t = String(fieldType || '').toLowerCase()
+  if (t === 'category') return 'category'
+  if (t === 'number') return 'numeric'
+  if (t === 'boolean') return 'boolean'
+  if (t === 'date') return 'date'
+  return 'exact'
+}
+
+/** Update a mapping's comparison method from the MappingList selector. */
+function updateMappingMethod({ index, method }) {
+  if (index < 0 || index >= mappings.value.length) return
+  mappings.value[index].comparison_method = method
 }
 function clearMappings() {
   mappings.value = []
@@ -534,12 +552,13 @@ function autoMap() {
   mappings.value = []
   for (const schemaField of schemaFieldPaths.value) {
     if (groundTruthFieldPaths.value.includes(schemaField)) {
+      const fieldType = schemaFieldTypes.value[schemaField] || 'string'
       mappings.value.push({
         schema_id: Number(selectedSchemaId.value),
         schema_field: schemaField,
         ground_truth_field: schemaField,
-        field_type: schemaFieldTypes.value[schemaField] || 'string',
-        comparison_method: 'exact',
+        field_type: fieldType,
+        comparison_method: defaultMethodFor(fieldType),
         comparison_options: {},
       })
     }

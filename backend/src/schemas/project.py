@@ -685,6 +685,7 @@ class EvaluationDetail(UTCModel):
     document_count: int
     fields: dict
     documents: list
+    confusion_matrices: dict | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

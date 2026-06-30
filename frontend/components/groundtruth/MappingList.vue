@@ -59,6 +59,20 @@
             </template>
           </span>
         </span>
+        <!-- Comparison method selector -->
+        <select
+          :value="m.comparison_method || 'exact'"
+          class="ml-auto text-[11px] border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded px-1 py-0.5 focus:ring-1 focus:ring-blue-400"
+          :title="`How to compare ${m.schema_field}`"
+          @change="$emit('update-method', { index: i, method: $event.target.value })"
+        >
+          <option value="exact">exact</option>
+          <option value="fuzzy">fuzzy</option>
+          <option value="numeric">numeric</option>
+          <option value="category">category</option>
+          <option value="date">date</option>
+          <option value="boolean">boolean</option>
+        </select>
         <!-- Remove -->
         <button
           class="ml-2 text-red-300 hover:text-red-700"
@@ -79,6 +93,7 @@ const props = defineProps({
   schemaFieldTypes: { type: Object, default: () => ({}) },
   groundTruthFieldTypes: { type: Object, default: () => ({}) },
 })
+defineEmits(['remove', 'update-method'])
 const hoverIdx = ref(-1) // For schema
 const hoverIdx2 = ref(-1) // For GT
 </script>

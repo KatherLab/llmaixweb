@@ -2,7 +2,7 @@
  * Shared class strings for the custom HTML `<table>` components.
  *
  * Collapses the drift across FilesTable, DocumentsTable, DocumentsGroups,
- * EvaluationView, EvaluationOverview, DocumentAnalysis, ViewDocumentGroupModal
+ * EvaluationView, ViewDocumentGroupModal
  * and FilePreviewModal — which each hand-rolled slightly different radius,
  * padding, header weight, divider and dark-mode classes (several with no dark
  * variants at all, leaving tables unreadable in dark mode).

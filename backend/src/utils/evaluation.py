@@ -102,8 +102,8 @@ class EvaluationEngine:
             results, gt_data, field_mappings, document_data
         )
 
-        # Calculate metrics
-        metrics = self._calculate_metrics(evaluation_results)
+        # Calculate metrics (field_mappings drives confusion-matrix scoping)
+        metrics = self._calculate_metrics(evaluation_results, field_mappings)
 
         # Create evaluation record
         evaluation = models.Evaluation(
@@ -755,9 +755,12 @@ class EvaluationEngine:
         comparator = ValueComparator()
         return comparator.compare(gt_value, pred_value, field_type, method, options)
 
-    def _calculate_metrics(self, evaluation_results: Dict) -> Dict:
+    def _calculate_metrics(
+        self, evaluation_results: Dict, field_mappings: Dict
+    ) -> Dict:
         """Calculate overall and field-level metrics."""
         calculator = MetricsCalculator()
+        evaluation_results["field_mappings"] = field_mappings
         return calculator.calculate(evaluation_results)
 
 
@@ -1160,6 +1163,7 @@ class MetricsCalculator:
         """Calculate all metrics from evaluation results."""
         doc_evals = evaluation_results["document_evaluations"]
         detailed_metrics = evaluation_results["detailed_metrics"]
+        field_mappings = evaluation_results.get("field_mappings") or {}
         # Overall metrics
         overall = self._calculate_overall_metrics(doc_evals, detailed_metrics)
         # Field metrics
@@ -1167,13 +1171,46 @@ class MetricsCalculator:
         # Document metrics
         documents = self._calculate_document_metrics(doc_evals)
         # Confusion matrices for categorical fields
-        confusion_matrices = self._calculate_confusion_matrices(detailed_metrics)
+        confusion_matrices = self._calculate_confusion_matrices(
+            detailed_metrics, field_mappings
+        )
         return {
             "overall": overall,
             "fields": fields,
             "documents": documents,
             "confusion_matrices": confusion_matrices,
         }
+
+    @staticmethod
+    def _error_role(error_type: Optional[str]) -> str:
+        """Classify an incorrect prediction's error_type into a metric role.
+
+        Returns one of:
+          - ``"fn"`` — false negative: the model failed to extract a value
+            that exists in the ground truth (``missing``).
+          - ``"fp"`` — false positive: the model produced a wrong/extra value
+            (all ``*_mismatch``, ``type_error``, ``extra``,
+            ``date_parse_error``).
+        Correct predictions are handled separately (true positives).
+        """
+        if error_type == "missing":
+            return "fn"
+        # Every other error_type (mismatch, fuzzy_mismatch, numeric_mismatch,
+        # boolean_mismatch, category_mismatch, date_mismatch, type_error,
+        # extra, date_parse_error) is a wrong/extra value → false positive.
+        return "fp"
+
+    @staticmethod
+    def _prf(tp: int, fp: int, fn: int) -> Dict[str, float]:
+        """Compute precision / recall / F1 from raw counts."""
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = (
+            2 * precision * recall / (precision + recall)
+            if (precision + recall) > 0
+            else 0.0
+        )
+        return {"precision": precision, "recall": recall, "f1_score": f1}
 
     def _calculate_overall_metrics(
         self, doc_evals: List[Dict], detailed_metrics: List[Dict]
@@ -1188,6 +1225,11 @@ class MetricsCalculator:
         the documents failed to match ground truth would report an accuracy
         computed only over the surviving half, with no indication that
         documents were dropped.
+
+        Precision / recall / F1 are computed from the per-field detailed
+        metrics: TP = correct, FN = ``missing`` (GT present, prediction
+        absent), FP = any other incorrect value (wrong/extra). This is the
+        field-level extraction quality the user actually cares about.
         """
         total_docs = len(doc_evals)
         error_docs = sum(1 for d in doc_evals if d.get("error"))
@@ -1196,8 +1238,25 @@ class MetricsCalculator:
         correct_fields = sum(d.get("correct_fields", 0) for d in doc_evals)
         # Accuracy is over matched documents only (error docs have no scoreable fields).
         accuracy = correct_fields / total_fields if total_fields > 0 else 0
+
+        # Aggregate TP/FN/FP across all field-level metrics for P/R/F1.
+        tp = sum(1 for m in detailed_metrics if m.get("is_correct"))
+        fn = 0
+        fp = 0
+        for m in detailed_metrics:
+            if m.get("is_correct"):
+                continue
+            if self._error_role(m.get("error_type")) == "fn":
+                fn += 1
+            else:
+                fp += 1
+        prf = self._prf(tp, fp, fn)
+
         return {
             "accuracy": accuracy,
+            "precision": prf["precision"],
+            "recall": prf["recall"],
+            "f1_score": prf["f1_score"],
             "total_documents": total_docs,
             "matched_document_count": matched_docs,
             "error_document_count": error_docs,
@@ -1215,18 +1274,35 @@ class MetricsCalculator:
                     "total_count": 0,
                     "correct_count": 0,
                     "error_distribution": {},
+                    "_tp": 0,
+                    "_fp": 0,
+                    "_fn": 0,
                 }
             field_metrics[field_name]["total_count"] += 1
             if metric["is_correct"]:
                 field_metrics[field_name]["correct_count"] += 1
+                field_metrics[field_name]["_tp"] += 1
             else:
                 error_type = metric["error_type"]
                 if error_type not in field_metrics[field_name]["error_distribution"]:
                     field_metrics[field_name]["error_distribution"][error_type] = 0
                 field_metrics[field_name]["error_distribution"][error_type] += 1
-        # Calculate accuracy for each field
+                if self._error_role(error_type) == "fn":
+                    field_metrics[field_name]["_fn"] += 1
+                else:
+                    field_metrics[field_name]["_fp"] += 1
+        # Calculate accuracy + precision/recall/F1 for each field
         for field_name, metrics in field_metrics.items():
             metrics["accuracy"] = metrics["correct_count"] / metrics["total_count"]
+            prf = self._prf(metrics["_tp"], metrics["_fp"], metrics["_fn"])
+            metrics["precision"] = prf["precision"]
+            metrics["recall"] = prf["recall"]
+            metrics["f1_score"] = prf["f1_score"]
+            metrics["error_count"] = metrics["total_count"] - metrics["correct_count"]
+            # Drop the internal counters before persisting.
+            del metrics["_tp"]
+            del metrics["_fp"]
+            del metrics["_fn"]
         return field_metrics
 
     def _calculate_document_metrics(self, doc_evals: List[Dict]) -> List[Dict]:
@@ -1255,13 +1331,30 @@ class MetricsCalculator:
 
         return processed_docs
 
-    def _calculate_confusion_matrices(self, detailed_metrics: List[Dict]) -> Dict:
-        """Calculate confusion matrices for categorical fields."""
-        # This is a simplified example and may need to be adapted
-        # based on the actual requirements and data structure
+    def _calculate_confusion_matrices(
+        self, detailed_metrics: List[Dict], field_mappings: Dict
+    ) -> Dict:
+        """Calculate confusion matrices for categorical fields only.
+
+        A confusion matrix is only meaningful when the field has a small,
+        known set of allowed values — i.e. categorical/enum fields. Building
+        one for free-text fields produces a huge, unreadable GT×prediction
+        table (every distinct string its own row/column), so we restrict to
+        fields whose mapping ``type`` is ``"category"``.
+        """
+        categorical_fields = {
+            path
+            for path, mapping in field_mappings.items()
+            if mapping and str(mapping.get("type", "")).lower() == "category"
+        }
+        if not categorical_fields:
+            return {}
+
         confusion_matrices = {}
         for metric in detailed_metrics:
             field_name = metric["field_name"]
+            if field_name not in categorical_fields:
+                continue
             if field_name not in confusion_matrices:
                 confusion_matrices[field_name] = {}
             gt_value = metric["ground_truth_value"]

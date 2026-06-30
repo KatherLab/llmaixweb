@@ -129,6 +129,7 @@ def get_evaluation_detail(
         document_count=len(evaluation.document_metrics),
         fields=evaluation.field_metrics,
         documents=evaluation.document_metrics,
+        confusion_matrices=evaluation.confusion_matrices,
         created_at=evaluation.created_at,
     )
 
