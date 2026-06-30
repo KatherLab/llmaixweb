@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, selectinload
 from thefuzz import fuzz
 
 from .. import models
+from .enums import ComparisonMethod, FieldType
 from .helpers import flatten_dict
 from .json_utils import make_jsonable
 
@@ -1443,8 +1444,9 @@ class MetricsCalculator:
             for path, mapping in field_mappings.items()
             if mapping
             and (
-                str(mapping.get("type", "")).lower() in ("category", "boolean")
-                or str(mapping.get("method", "")).lower() in ("category", "boolean")
+                mapping.get("type") in (FieldType.CATEGORY, FieldType.BOOLEAN)
+                or mapping.get("method")
+                in (ComparisonMethod.CATEGORY, ComparisonMethod.BOOLEAN)
             )
         }
         if not discrete_fields:

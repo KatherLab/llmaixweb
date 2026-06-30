@@ -201,3 +201,38 @@ def test_confusion_matrix_excludes_free_text_and_numeric():
     assert "note" not in out["confusion_matrices"]
     assert "age" not in out["confusion_matrices"]
     assert out["confusion_matrices"] == {}
+
+
+def test_confusion_matrix_with_enum_typed_mappings():
+    """Mappings come from SQLAlchemy ``Enum`` columns, so ``type``/``method``
+    are ``FieldType``/``ComparisonMethod`` members (not plain strings).
+
+    On Python 3.11+ ``str(ComparisonMethod.BOOLEAN)`` is
+    ``'ComparisonMethod.BOOLEAN'`` — a ``str(...).lower()`` gate would never
+    match ``"boolean"``/``"category"`` and silently drop every matrix. The
+    gate must compare against the enum members directly (which also works for
+    plain strings via the ``str`` mixin).
+    """
+    from ..src.utils.enums import ComparisonMethod, FieldType
+
+    metrics = [
+        _metric("active", "true", "false", False, "boolean_mismatch"),
+        _metric("status", "A", "B", False, "category_mismatch"),
+    ]
+    mappings = {
+        "active": {
+            "gt_field": "active",
+            "type": FieldType.BOOLEAN,
+            "method": ComparisonMethod.BOOLEAN,
+            "options": {},
+        },
+        "status": {
+            "gt_field": "status",
+            "type": FieldType.CATEGORY,
+            "method": ComparisonMethod.CATEGORY,
+            "options": {},
+        },
+    }
+    out = _calculator().calculate(_results(metrics, mappings))
+    assert out["confusion_matrices"]["active"]["true"]["false"] == 1
+    assert out["confusion_matrices"]["status"]["A"]["B"] == 1
