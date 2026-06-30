@@ -266,7 +266,9 @@
             </div>
 
             <!-- Actions -->
-            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+            <div
+              class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700"
+            >
               <BaseButton
                 v-if="isTaskStatus(task, 'failed')"
                 variant="ghost"

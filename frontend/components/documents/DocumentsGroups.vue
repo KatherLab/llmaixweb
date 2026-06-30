@@ -185,7 +185,7 @@
         <input
           v-model="deleteDocumentsToo"
           type="checkbox"
-          class="h-4 w-4 text-red-600 focus:ring-red-500 border-slate-300 rounded"
+          class="h-4 w-4 text-red-600 focus:ring-red-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
         />
         <label class="ml-2 text-sm text-slate-700 dark:text-slate-300">
           Also delete all documents in this group (if not referenced elsewhere)

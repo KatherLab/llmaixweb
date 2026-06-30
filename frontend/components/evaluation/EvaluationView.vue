@@ -794,6 +794,12 @@ const onTrialEvaluate = async (evaluationSummary) => {
     evaluations.value.push(evaluation)
     showTrialSelector.value = false
     toast.success(`Trial #${evaluationSummary.trial_id} evaluation completed successfully`)
+    // Surface non-blocking validation warnings (e.g. low document↔GT match
+    // rate) so the researcher knows some documents could not be matched.
+    const warnings = evaluationSummary.warnings
+    if (Array.isArray(warnings) && warnings.length) {
+      toast.warning(warnings.join(' — '), { timeout: 12000 })
+    }
   } catch (err) {
     handleApiError(err, 'Processing evaluation result')
   }

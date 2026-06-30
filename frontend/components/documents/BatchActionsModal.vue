@@ -2,10 +2,10 @@
   <BaseModal :open="open" size="lg" @close="$emit('close')">
     <template #header>
       <div>
-        <h3 class="text-lg font-semibold text-slate-900">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
           {{ actionTitle }}
         </h3>
-        <p class="mt-1 text-sm text-slate-500">
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {{ documents.length }} {{ entityLabel }}{{ documents.length !== 1 ? 's' : '' }} selected
         </p>
       </div>
@@ -17,9 +17,9 @@
         <input
           v-model="forceReprocess"
           type="checkbox"
-          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
         />
-        <label class="ml-2 text-sm text-slate-700">
+        <label class="ml-2 text-sm text-slate-700 dark:text-slate-300">
           Force reprocess (ignore existing results)
         </label>
       </div>
@@ -27,12 +27,14 @@
 
     <!-- Export Action -->
     <div v-else-if="action === 'export'" class="space-y-4">
-      <p class="text-sm text-slate-600">Choose export format and options:</p>
+      <p class="text-sm text-slate-600 dark:text-slate-400">Choose export format and options:</p>
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-2"> Export Format </label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          Export Format
+        </label>
         <select
           v-model="exportFormat"
-          class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="json">JSON</option>
           <option value="csv">CSV</option>
@@ -45,29 +47,35 @@
           <input
             v-model="includeMetadata"
             type="checkbox"
-            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
           />
-          <span class="ml-2 text-sm text-slate-700">Include metadata</span>
+          <span class="ml-2 text-sm text-slate-700 dark:text-slate-300">Include metadata</span>
         </label>
         <label class="flex items-center">
           <input
             v-model="includePreprocessingInfo"
             type="checkbox"
-            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
           />
-          <span class="ml-2 text-sm text-slate-700">Include preprocessing information</span>
+          <span class="ml-2 text-sm text-slate-700 dark:text-slate-300"
+            >Include preprocessing information</span
+          >
         </label>
       </div>
     </div>
 
     <!-- Delete Action -->
     <div v-else-if="action === 'delete'" class="space-y-4">
-      <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div
+        class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4"
+      >
         <div class="flex">
           <AlertTriangle class="h-5 w-5 text-red-400 flex-shrink-0" />
           <div class="ml-3">
-            <h3 class="text-sm font-medium text-red-800">Warning: This action cannot be undone</h3>
-            <p class="mt-1 text-sm text-red-700">
+            <h3 class="text-sm font-medium text-red-800 dark:text-red-300">
+              Warning: This action cannot be undone
+            </h3>
+            <p class="mt-1 text-sm text-red-700 dark:text-red-400">
               {{ deleteWarningText }}
             </p>
           </div>
@@ -77,9 +85,9 @@
         <input
           v-model="confirmDelete"
           type="checkbox"
-          class="h-4 w-4 text-red-600 focus:ring-red-500 border-slate-300 rounded"
+          class="h-4 w-4 text-red-600 focus:ring-red-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
         />
-        <label class="ml-2 text-sm text-slate-700">
+        <label class="ml-2 text-sm text-slate-700 dark:text-slate-300">
           I understand that this action is permanent
         </label>
       </div>

@@ -3,7 +3,7 @@
   <BaseModal :open="open" size="xl" @close="$emit('close')">
     <template #header>
       <div class="flex items-center gap-3">
-        <h3 class="text-xl font-semibold text-slate-900">{{ group.name }}</h3>
+        <h3 class="text-xl font-semibold text-slate-900 dark:text-white">{{ group.name }}</h3>
         <BaseButton variant="primary" size="sm" @click="$emit('edit', group)">
           Edit Group
         </BaseButton>
@@ -14,25 +14,25 @@
       <!-- Group Info -->
       <div class="mb-6 space-y-4">
         <div>
-          <h4 class="text-sm font-medium text-slate-700">Description</h4>
-          <p class="mt-1 text-slate-900">
+          <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">Description</h4>
+          <p class="mt-1 text-slate-900 dark:text-white">
             {{ group.description || 'No description provided' }}
           </p>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <h4 class="text-sm font-medium text-slate-700">Created</h4>
-            <p class="mt-1 text-slate-900">{{ formatDate(group.created_at) }}</p>
+            <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">Created</h4>
+            <p class="mt-1 text-slate-900 dark:text-white">{{ formatDate(group.created_at) }}</p>
           </div>
           <div>
-            <h4 class="text-sm font-medium text-slate-700">Last Updated</h4>
-            <p class="mt-1 text-slate-900">{{ formatDate(group.updated_at) }}</p>
+            <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">Last Updated</h4>
+            <p class="mt-1 text-slate-900 dark:text-white">{{ formatDate(group.updated_at) }}</p>
           </div>
         </div>
 
         <div v-if="group.tags && group.tags.length > 0">
-          <h4 class="text-sm font-medium text-slate-700 mb-2">Tags</h4>
+          <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tags</h4>
           <div class="flex flex-wrap gap-2">
             <StatusBadge
               v-for="tag in group.tags"
@@ -46,20 +46,22 @@
         </div>
 
         <div v-if="group.preprocessing_config">
-          <h4 class="text-sm font-medium text-slate-700">Preprocessing Configuration</h4>
-          <p class="mt-1 text-slate-900">{{ group.preprocessing_config.name }}</p>
+          <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Preprocessing Configuration
+          </h4>
+          <p class="mt-1 text-slate-900 dark:text-white">{{ group.preprocessing_config.name }}</p>
         </div>
 
         <div v-if="group.trial_id">
-          <h4 class="text-sm font-medium text-slate-700">Source Trial</h4>
-          <p class="mt-1 text-slate-900">Trial #{{ group.trial_id }}</p>
+          <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">Source Trial</h4>
+          <p class="mt-1 text-slate-900 dark:text-white">Trial #{{ group.trial_id }}</p>
         </div>
       </div>
 
       <!-- Documents List -->
       <div>
         <div class="flex justify-between items-center mb-4">
-          <h4 class="font-medium text-slate-900">Documents ({{ docTotal }})</h4>
+          <h4 class="font-medium text-slate-900 dark:text-white">Documents ({{ docTotal }})</h4>
           <div class="flex items-center gap-2">
             <BaseButton variant="link" tone="blue" class="text-sm" @click="exportDocumentList">
               Export List
@@ -150,22 +152,24 @@
       </div>
 
       <!-- Usage Statistics -->
-      <div class="mt-6 bg-slate-50 rounded-lg p-4">
-        <h4 class="font-medium text-slate-900 mb-3">Usage Statistics</h4>
+      <div class="mt-6 bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+        <h4 class="font-medium text-slate-900 dark:text-white mb-3">Usage Statistics</h4>
         <div class="grid grid-cols-3 gap-4">
           <div>
-            <p class="text-sm text-slate-600">Used in Trials</p>
-            <p class="text-2xl font-semibold text-slate-900">{{ usageStats.trialsCount }}</p>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Used in Trials</p>
+            <p class="text-2xl font-semibold text-slate-900 dark:text-white">
+              {{ usageStats.trialsCount }}
+            </p>
           </div>
           <div>
-            <p class="text-sm text-slate-600">Total Extractions</p>
-            <p class="text-2xl font-semibold text-slate-900">
+            <p class="text-sm text-slate-600 dark:text-slate-400">Total Extractions</p>
+            <p class="text-2xl font-semibold text-slate-900 dark:text-white">
               {{ usageStats.extractionsCount }}
             </p>
           </div>
           <div>
-            <p class="text-sm text-slate-600">Last Used</p>
-            <p class="text-sm font-medium text-slate-900">
+            <p class="text-sm text-slate-600 dark:text-slate-400">Last Used</p>
+            <p class="text-sm font-medium text-slate-900 dark:text-white">
               {{ usageStats.lastUsed ? formatDate(usageStats.lastUsed) : 'Never' }}
             </p>
           </div>

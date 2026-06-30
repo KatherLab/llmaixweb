@@ -3,7 +3,11 @@
   <BaseModal :open="open" title="Project Settings" size="md" body-class="p-8" @close="emitClose">
     <!-- General Settings Section -->
     <div class="mb-6">
-      <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">General</h3>
+      <h3
+        class="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-3"
+      >
+        General
+      </h3>
       <input
         v-model="name"
         :class="[inputClass, 'text-lg font-semibold mb-3']"
@@ -21,10 +25,14 @@
     </div>
 
     <!-- Danger Zone Section -->
-    <div class="border-t border-slate-200 pt-6 mt-6">
-      <h3 class="text-sm font-semibold text-red-700 uppercase tracking-wide mb-3">Danger Zone</h3>
-      <div class="bg-red-50 rounded-lg p-4 border border-red-200">
-        <p class="text-sm text-red-700 mb-3">
+    <div class="border-t border-slate-200 dark:border-slate-700 pt-6 mt-6">
+      <h3 class="text-sm font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide mb-3">
+        Danger Zone
+      </h3>
+      <div
+        class="bg-red-50 dark:bg-red-900/30 rounded-lg p-4 border border-red-200 dark:border-red-800"
+      >
+        <p class="text-sm text-red-700 dark:text-red-400 mb-3">
           Once you delete a project, there is no going back. Please be certain.
         </p>
         <button

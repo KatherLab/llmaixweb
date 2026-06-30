@@ -228,7 +228,7 @@
                   </button>
                   <button
                     type="button"
-                    class="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                    class="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                     title="Delete Property"
                     @click="$emit('delete-property', propKey)"
                   >
@@ -286,7 +286,7 @@
               <div class="flex items-center space-x-1">
                 <button
                   type="button"
-                  class="p-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+                  class="p-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
                   title="Edit Array Items"
                   @click="$emit('edit-property', { key: 'items', schema: schema.items })"
                 >
@@ -295,7 +295,7 @@
                 <button
                   v-if="schema.items.type === 'object'"
                   type="button"
-                  class="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded"
+                  class="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                   title="Navigate Into Items"
                   @click="$emit('navigate', 'items')"
                 >

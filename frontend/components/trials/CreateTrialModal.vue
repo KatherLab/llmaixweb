@@ -5,7 +5,9 @@
         <div class="flex items-center gap-2">
           <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Start New Trial</h3>
           <Tooltip :text="trialHelpText">
-            <Info class="h-4 w-4 text-slate-400 hover:text-slate-600" />
+            <Info
+              class="h-4 w-4 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+            />
           </Tooltip>
         </div>
         <!-- Simple/Advanced Mode Toggle -->

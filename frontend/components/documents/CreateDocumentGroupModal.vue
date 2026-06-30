@@ -1,7 +1,7 @@
 <template>
   <BaseModal :open="visible" size="lg" @close="tryClose">
     <template #header>
-      <h3 class="text-lg font-semibold text-slate-900">
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
         {{ group ? 'Edit Document Group' : 'Create Document Group' }}
       </h3>
     </template>
@@ -69,9 +69,11 @@
     <div class="mb-4">
       <div class="flex justify-between items-center mb-2">
         <label :class="labelClass"> Select Documents <span class="text-red-500">*</span> </label>
-        <span class="text-sm text-slate-500">
+        <span class="text-sm text-slate-500 dark:text-slate-400">
           {{ selectedCount }} selected
-          <span v-if="loadingExisting" class="text-slate-400">(loading existing…)</span>
+          <span v-if="loadingExisting" class="text-slate-400 dark:text-slate-500"
+            >(loading existing…)</span
+          >
         </span>
       </div>
 
@@ -85,9 +87,16 @@
       </div>
 
       <!-- Document List -->
-      <div class="border rounded-md overflow-hidden max-h-64 overflow-y-auto">
-        <div v-if="searchLoading" class="p-4 text-center text-slate-500">Searching…</div>
-        <div v-else-if="searchResults.length === 0" class="p-4 text-center text-slate-500">
+      <div
+        class="border border-slate-200 dark:border-slate-700 rounded-md overflow-hidden max-h-64 overflow-y-auto"
+      >
+        <div v-if="searchLoading" class="p-4 text-center text-slate-500 dark:text-slate-400">
+          Searching…
+        </div>
+        <div
+          v-else-if="searchResults.length === 0"
+          class="p-4 text-center text-slate-500 dark:text-slate-400"
+        >
           No documents found
         </div>
         <div v-else>
@@ -95,8 +104,8 @@
             v-for="doc in searchResults"
             :key="doc.id"
             :class="[
-              'p-3 border-b last:border-b-0 cursor-pointer hover:bg-slate-50 flex items-center',
-              { 'bg-blue-50': isSelected(doc.id) },
+              'p-3 border-b border-slate-200 dark:border-slate-700 last:border-b-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center',
+              { 'bg-blue-50 dark:bg-blue-900/30': isSelected(doc.id) },
             ]"
             @click="toggleDocument(doc.id)"
           >
@@ -111,7 +120,7 @@
               <div class="font-medium text-sm">
                 {{ doc.original_file?.file_name || `Document #${doc.id}` }}
               </div>
-              <div class="text-xs text-slate-500">
+              <div class="text-xs text-slate-500 dark:text-slate-400">
                 Config: {{ doc.preprocessing_config?.name || 'N/A' }} • Created:
                 {{ formatDate(doc.created_at) }}
               </div>
@@ -132,16 +141,18 @@
           </BaseButton>
         </div>
         <div v-if="searchTotalPages > 1" class="flex items-center gap-2">
-          <span class="text-xs text-slate-500"> {{ searchPage }}/{{ searchTotalPages }} </span>
+          <span class="text-xs text-slate-500 dark:text-slate-400">
+            {{ searchPage }}/{{ searchTotalPages }}
+          </span>
           <button
-            class="px-2 py-1 text-sm border rounded disabled:opacity-50"
+            class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 dark:text-slate-200 rounded disabled:opacity-50"
             :disabled="searchPage <= 1"
             @click="prevSearchPage"
           >
             Prev
           </button>
           <button
-            class="px-2 py-1 text-sm border rounded disabled:opacity-50"
+            class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 dark:text-slate-200 rounded disabled:opacity-50"
             :disabled="searchPage >= searchTotalPages"
             @click="nextSearchPage"
           >

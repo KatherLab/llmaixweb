@@ -181,7 +181,9 @@
               v-if="field.type === 'String'"
               class="basis-full w-full flex flex-wrap items-center gap-1.5 pt-1.5 mt-0.5 border-t border-slate-200/70 dark:border-slate-700"
             >
-              <span class="text-xs font-medium text-slate-500 mr-0.5">Options</span>
+              <span class="text-xs font-medium text-slate-500 dark:text-slate-400 mr-0.5"
+                >Options</span
+              >
               <span
                 v-for="(opt, i) in field.options"
                 :key="i"

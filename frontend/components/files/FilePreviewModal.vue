@@ -419,10 +419,10 @@ onUnmounted(() => {
 
 function cellClasses(headerLabel) {
   if (headerLabel === idColumn.value && idColumn.value) {
-    return 'bg-blue-100 text-blue-700 font-semibold border-blue-200 shadow-sm'
+    return 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold border-blue-200 dark:border-blue-800 shadow-sm'
   }
   if (textColumns.value && textColumns.value.includes(headerLabel)) {
-    return 'bg-green-50 text-green-900 font-medium border-green-200'
+    return 'bg-green-50 dark:bg-green-900/30 text-green-900 dark:text-green-300 font-medium border-green-200 dark:border-green-800'
   }
   return ''
 }

@@ -123,6 +123,17 @@
               />
             </label>
             <span class="text-slate-400 dark:text-slate-500">higher = stricter match</span>
+            <label
+              class="flex items-center gap-1"
+              title="Off by default. Substring matching can invert meaning in medical text (e.g. 'cancer' vs 'non-cancer'), so it is opt-in."
+            >
+              <input
+                type="checkbox"
+                :checked="getOption(m, 'allow_partial_match', false)"
+                @change="setOption(i, 'allow_partial_match', $event.target.checked)"
+              />
+              allow partial / substring match
+            </label>
           </template>
           <template v-else-if="m.comparison_method === 'numeric'">
             <label class="flex items-center gap-1">

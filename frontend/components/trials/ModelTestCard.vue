@@ -29,7 +29,7 @@
           <AlertTriangle v-else-if="status.type === 'warning'" class="w-5 h-5 text-yellow-500" />
           <AlertCircle v-else-if="status.type === 'error'" class="w-5 h-5 text-red-500" />
           <CircleCheckBig v-else-if="status.type === 'success'" class="w-5 h-5 text-green-500" />
-          <Info v-else class="w-5 h-5 text-slate-500" />
+          <Info v-else class="w-5 h-5 text-slate-500 dark:text-slate-400" />
           <div>
             <h4 class="font-medium text-slate-900 dark:text-white">
               Model &amp; Schema Compatibility

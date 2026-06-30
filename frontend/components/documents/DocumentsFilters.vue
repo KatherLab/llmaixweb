@@ -121,7 +121,7 @@
         />
         <span class="text-sm text-slate-700 dark:text-slate-300">
           Include archived versions
-          <span v-if="includeArchived" class="text-xs text-slate-500 ml-1">
+          <span v-if="includeArchived" class="text-xs text-slate-500 dark:text-slate-400 ml-1">
             (showing document history)
           </span>
         </span>

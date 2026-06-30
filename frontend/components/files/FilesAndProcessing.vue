@@ -42,10 +42,10 @@
     <!-- Hint: Select files to preprocess -->
     <div
       v-if="files.length > 0 && selectedFiles.length === 0 && !hasActivePreprocessingTasks"
-      class="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+      class="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg"
     >
-      <Info class="w-5 h-5 text-blue-600 flex-shrink-0" />
-      <p class="text-sm text-blue-800">
+      <Info class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+      <p class="text-sm text-blue-800 dark:text-blue-300">
         <strong>Next step:</strong> Select files from the table below, then click
         <span class="font-semibold">Configure Preprocessing</span> to extract text from your
         documents.

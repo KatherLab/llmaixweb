@@ -3,7 +3,7 @@
     <!-- Basic Information -->
     <div class="space-y-4">
       <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100 flex items-center">
-        <Info class="h-4 w-4 mr-2 text-slate-500" />
+        <Info class="h-4 w-4 mr-2 text-slate-500 dark:text-slate-400" />
         Basic Information
       </h4>
 
@@ -306,9 +306,11 @@
           <input
             v-model="localProperty.uniqueItems"
             type="checkbox"
-            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
           />
-          <span class="text-sm font-medium text-slate-700">Items must be unique</span>
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+            >Items must be unique</span
+          >
         </label>
       </div>
     </div>
@@ -352,9 +354,11 @@
           <input
             v-model="localProperty.additionalProperties"
             type="checkbox"
-            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
           />
-          <span class="text-sm font-medium text-slate-700">Allow additional properties</span>
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+            >Allow additional properties</span
+          >
         </label>
       </div>
     </div>
@@ -371,28 +375,28 @@
               type="radio"
               :value="undefined"
               :checked="localProperty.default === undefined"
-              class="border-slate-300 text-blue-600 focus:ring-blue-500"
+              class="border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
               @change="localProperty.default = undefined"
             />
-            <span class="text-sm">No default</span>
+            <span class="text-sm dark:text-slate-300">No default</span>
           </label>
           <label class="flex items-center space-x-2">
             <input
               v-model="localProperty.default"
               type="radio"
               :value="true"
-              class="border-slate-300 text-blue-600 focus:ring-blue-500"
+              class="border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
             />
-            <span class="text-sm">True</span>
+            <span class="text-sm dark:text-slate-300">True</span>
           </label>
           <label class="flex items-center space-x-2">
             <input
               v-model="localProperty.default"
               type="radio"
               :value="false"
-              class="border-slate-300 text-blue-600 focus:ring-blue-500"
+              class="border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
             />
-            <span class="text-sm">False</span>
+            <span class="text-sm dark:text-slate-300">False</span>
           </label>
         </div>
         <input
@@ -423,9 +427,11 @@
           <input
             v-model="localProperty.readOnly"
             type="checkbox"
-            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
           />
-          <span class="text-sm font-medium text-slate-700">Read-only field</span>
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+            >Read-only field</span
+          >
         </label>
 
         <!-- Examples -->
