@@ -184,6 +184,57 @@ def build_evaluation_zipfiles(
         output.seek(0)
         files.append(("summary.xlsx", output.getvalue()))
 
+    # Field-level metrics are exported with precision/recall/F1 alongside
+    # accuracy — a researcher comparing fields usually cares more about recall
+    # (what the model missed) than accuracy alone.
+    field_metric_columns = [
+        "Evaluation ID",
+        "Field Name",
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1 Score",
+        "Total Count",
+        "Correct Count",
+        "Error Count",
+    ]
+
+    def _field_metric_row(eval_obj, field, metrics):
+        return [
+            eval_obj.id,
+            field,
+            metrics.get("accuracy", 0),
+            metrics.get("precision", 0),
+            metrics.get("recall", 0),
+            metrics.get("f1_score", 0),
+            metrics.get("total_count", 0),
+            metrics.get("correct_count", 0),
+            metrics.get("error_count", 0),
+        ]
+
+    # --- Field-level metrics (accuracy + precision/recall/F1 per field) ---
+    if include_details:
+        field_rows = []
+        for eval_obj, _ in evaluations:
+            for field, metrics in (eval_obj.field_metrics or {}).items():
+                field_rows.append(_field_metric_row(eval_obj, field, metrics))
+        if field_rows:
+            if zip_format == "csv":
+                out = io.StringIO()
+                w = csv.writer(out)
+                w.writerow(field_metric_columns)
+                for row in field_rows:
+                    w.writerow(row)
+                files.append(("field_metrics.csv", out.getvalue().encode("utf-8")))
+            else:
+                out = io.BytesIO()
+                with pd.ExcelWriter(out, engine="xlsxwriter") as writer:
+                    pd.DataFrame(field_rows, columns=field_metric_columns).to_excel(
+                        writer, sheet_name="Field Metrics", index=False
+                    )
+                out.seek(0)
+                files.append(("field_metrics.xlsx", out.getvalue()))
+
     # --- Field-by-field Details (CSV or Excel sheet) ---
     if include_field_details:
         details = []
@@ -708,7 +759,9 @@ def extract_field_types_from_schema(schema_def: dict, result: dict, prefix: str 
                     extract_field_types_from_schema(items, result, f"{full_path}[]")
                 else:
                     result[full_path + "[]"] = (
-                        _resolve_schema_type(items) if isinstance(items, dict) else "string"
+                        _resolve_schema_type(items)
+                        if isinstance(items, dict)
+                        else "string"
                     )
             else:
                 # Primitive type or enum

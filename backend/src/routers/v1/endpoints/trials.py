@@ -1445,6 +1445,7 @@ def evaluate_trial(
         created_at=evaluation.created_at,
         total_errors=total_errors,
         error_documents=error_documents,
+        warnings=getattr(engine, "last_warnings", None) or None,
     )
 
 

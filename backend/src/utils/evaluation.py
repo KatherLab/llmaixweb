@@ -52,11 +52,18 @@ class EvaluationEngine:
         self._cache = {}
         # Store engine for creating new sessions in parallel processing
         self.engine = db_session.bind
+        # Validation warnings from the most recent evaluate_trial() call
+        # (e.g. low document↔GT match rate). Read by the API layer to surface
+        # in the response. Reset on each call.
+        self.last_warnings: List[str] = []
 
     def evaluate_trial(
         self, trial_id: int, groundtruth_id: int, force_recalculate: bool = False
     ) -> models.Evaluation:
         """Evaluate a trial against ground truth with comprehensive validation."""
+
+        # Reset warnings from any previous evaluate_trial() call on this engine.
+        self.last_warnings = []
 
         # Pre-validation phase
         validation_result = self._validate_evaluation_prerequisites(
@@ -113,6 +120,10 @@ class EvaluationEngine:
             raise ValueError(
                 f"Data consistency issues: {'; '.join(consistency_check['errors'])}"
             )
+        # Stash validation warnings (e.g. low document↔GT match rate) so the
+        # API layer can surface them in the response — they no longer block
+        # evaluation, but a researcher should still see them.
+        self.last_warnings = consistency_check.get("warnings", [])
 
         # Pre-load all document data to avoid session issues in parallel processing
         document_data = self._preload_document_data(results)
@@ -250,9 +261,7 @@ class EvaluationEngine:
 
             # Try to find ground truth key. Use the SAME matcher as the actual
             # evaluation (_find_document_key_by_data) so the validation match
-            # rate reflects what evaluation will really achieve — previously
-            # this used _find_document_key_enhanced, which only checks
-            # original_file.file_name and misses document_name / doc_id matches.
+            # rate reflects what evaluation will really achieve.
             doc_info = {
                 "document_name": document.document_name,
                 "filename": document.original_file.file_name
@@ -275,8 +284,14 @@ class EvaluationEngine:
             (matched_count / total_results) * 100 if total_results > 0 else 0
         )
 
+        # Match-rate and unmatched-document signals are warnings, not hard
+        # errors: the engine already handles unmatched documents correctly
+        # (they become error-document rows excluded from accuracy), so there is
+        # no correctness reason to block evaluation. Surfacing them as warnings
+        # lets a researcher evaluate partial-overlap ground truth while still
+        # seeing that some documents could not be matched.
         if match_percentage < 50:
-            errors.append(
+            warnings.append(
                 f"Only {match_percentage:.1f}% of documents have matching ground truth data. "
                 f"This suggests a mismatch between document identifiers and ground truth keys."
             )
@@ -297,7 +312,7 @@ class EvaluationEngine:
 
             # Show available ground truth keys for debugging
             available_keys = list(gt_data.keys())[:5]
-            errors.append(
+            warnings.append(
                 f"Documents without ground truth matches: {', '.join(unmatched_list)}. "
                 f"Available ground truth keys: {available_keys}. "
                 f"Please check that ground truth keys match document IDs or filenames."
@@ -349,46 +364,6 @@ class EvaluationEngine:
                 logger.exception("Error loading document %s", doc_id)
 
         return document_data
-
-    def _find_document_key_enhanced(
-        self, doc_id: int, document: models.Document, gt_data: Dict
-    ) -> Optional[str]:
-        """Find ground truth key by matching only on original file filename (case-insensitive, with and without extension)."""
-        if (
-            not document
-            or not document.original_file
-            or not document.original_file.file_name
-        ):
-            return None
-
-        filename = document.original_file.file_name
-        filename_stem = Path(filename).stem
-        filename_lower = filename.lower()
-        filename_stem_lower = filename_stem.lower()
-
-        # Prepare all ground truth keys to lower for case-insensitive comparison
-        gt_keys_lower = {str(k).lower(): k for k in gt_data.keys()}
-
-        # 1. Try exact filename (case-insensitive, with extension)
-        if filename_lower in gt_keys_lower:
-            return gt_keys_lower[filename_lower]
-
-        # 2. Try filename without extension (case-insensitive)
-        if filename_stem_lower in gt_keys_lower:
-            return gt_keys_lower[filename_stem_lower]
-
-        # 3. Try again with just the filename part (in case keys contain full paths)
-        filename_name_lower = Path(filename).name.lower()
-        if filename_name_lower in gt_keys_lower:
-            return gt_keys_lower[filename_name_lower]
-
-        # 4. Try only stem of the filename part (no extension, no path)
-        filename_name_stem_lower = Path(filename).stem.lower()
-        if filename_name_stem_lower in gt_keys_lower:
-            return gt_keys_lower[filename_name_stem_lower]
-
-        # If still not found, no match
-        return None
 
     def get_available_columns(self, ground_truth: models.GroundTruth) -> List[str]:
         """
@@ -1093,16 +1068,26 @@ class ValueComparator:
         }
 
     def _fuzzy_compare(self, gt: Any, pred: Any, options: Dict) -> Dict:
-        """Fuzzy string comparison."""
+        """Fuzzy string comparison.
+
+        By default the score is ``max(ratio, token_sort_ratio)`` — both respect
+        length/order, so they tolerate typos and word reordering ("chest pain"
+        vs "pain chest") without rewarding pure substring containment.
+        ``partial_ratio`` (which would mark "cancer" vs "non-cancer" as highly
+        similar) is only included when ``allow_partial_match`` is set, because
+        for medical/lab coding a substring match can invert the meaning.
+        """
         threshold = options.get("threshold", 85)
+        allow_partial = options.get("allow_partial_match", False)
         gt_str = str(gt).lower().strip()
         pred_str = str(pred).lower().strip()
         # Calculate similarity
         ratio = fuzz.ratio(gt_str, pred_str)
-        partial_ratio = fuzz.partial_ratio(gt_str, pred_str)
         token_sort_ratio = fuzz.token_sort_ratio(gt_str, pred_str)
         # Use best score
-        score = max(ratio, partial_ratio, token_sort_ratio)
+        score = max(ratio, token_sort_ratio)
+        if allow_partial:
+            score = max(score, fuzz.partial_ratio(gt_str, pred_str))
         is_correct = score >= threshold
         return {
             "is_correct": is_correct,
@@ -1136,9 +1121,22 @@ class ValueComparator:
         }
 
     def _boolean_compare(self, gt: Any, pred: Any, options: Dict) -> Dict:
-        """Boolean comparison."""
+        """Boolean comparison.
+
+        A value that isn't a recognised boolean token (``true``/``false``/``yes``/
+        ``no``/``1``/``0``/...) is a *type error* — it is not silently coerced to
+        ``False``. Previously ``"maybe"`` vs ``"unknown"`` both defaulted to
+        ``False`` and scored as a correct match, hiding genuine ambiguity in
+        boolean clinical fields.
+        """
         gt_bool = self._to_boolean(gt)
         pred_bool = self._to_boolean(pred)
+        if gt_bool is None or pred_bool is None:
+            return {
+                "is_correct": False,
+                "error_type": "type_error",
+                "confidence_score": 0.0,
+            }
         is_correct = gt_bool == pred_bool
         return {
             "is_correct": is_correct,
@@ -1185,8 +1183,13 @@ class ValueComparator:
             "confidence_score": 1.0 if is_correct else 0.0,
         }
 
-    def _to_boolean(self, value: Any) -> bool:
-        """Convert value to boolean."""
+    def _to_boolean(self, value: Any) -> Optional[bool]:
+        """Convert value to boolean.
+
+        Returns ``None`` for values that are not recognised boolean tokens, so
+        the caller can flag them as a type error rather than silently treating
+        them as ``False``.
+        """
         if isinstance(value, bool):
             return value
         str_val = str(value).lower().strip()
@@ -1197,8 +1200,9 @@ class ValueComparator:
         elif str_val in false_values:
             return False
         else:
-            # Default to False for unknown values
-            return False
+            # Unrecognised token — not a boolean. Returning None lets the
+            # comparator emit a type_error instead of a silent False match.
+            return None
 
     def _to_date(self, value: Any) -> Optional[datetime]:
         """Convert value to date."""

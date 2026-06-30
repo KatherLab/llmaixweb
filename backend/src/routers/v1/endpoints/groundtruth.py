@@ -335,6 +335,11 @@ def update_groundtruth(
         file_uuid = save_file(file_content)
         groundtruth.file_uuid = file_uuid
 
+        # The parsed ground-truth cache was built from the *old* file bytes.
+        # Drop it so the next evaluation re-parses from the new file —
+        # otherwise a replaced GT file would be scored against stale values.
+        groundtruth.data_cache = None
+
         evaluations = (
             db.execute(
                 select(models.Evaluation).where(

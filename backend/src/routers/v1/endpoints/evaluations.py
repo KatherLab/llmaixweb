@@ -486,8 +486,12 @@ def download_evaluations_report(
                     "Evaluation ID",
                     "Field Name",
                     "Accuracy",
+                    "Precision",
+                    "Recall",
+                    "F1 Score",
                     "Total Count",
                     "Correct Count",
+                    "Error Count",
                 ]
             )
             for eval_obj, _ in evaluations:
@@ -497,8 +501,12 @@ def download_evaluations_report(
                             eval_obj.id,
                             field,
                             metrics.get("accuracy", 0),
+                            metrics.get("precision", 0),
+                            metrics.get("recall", 0),
+                            metrics.get("f1_score", 0),
                             metrics.get("total_count", 0),
                             metrics.get("correct_count", 0),
+                            metrics.get("error_count", 0),
                         ]
                     )
         # Field-by-field details
@@ -623,8 +631,12 @@ def download_evaluations_report(
                                 "Evaluation ID": eval_obj.id,
                                 "Field Name": field,
                                 "Accuracy": metrics.get("accuracy", 0),
+                                "Precision": metrics.get("precision", 0),
+                                "Recall": metrics.get("recall", 0),
+                                "F1 Score": metrics.get("f1_score", 0),
                                 "Total Count": metrics.get("total_count", 0),
                                 "Correct Count": metrics.get("correct_count", 0),
+                                "Error Count": metrics.get("error_count", 0),
                             }
                         )
                 if field_data:

@@ -786,6 +786,10 @@ class EvaluationSummary(UTCModel):
     # Add summary error information
     total_errors: int | None = None
     error_documents: list[int] | None = None
+    # Non-blocking validation warnings (e.g. low document↔GT match rate).
+    # Evaluation still runs; these are surfaced so the user knows some
+    # documents could not be matched to ground truth.
+    warnings: list[str] | None = None
 
 
 # Add new schema for error details

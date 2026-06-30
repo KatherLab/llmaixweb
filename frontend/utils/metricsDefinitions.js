@@ -16,18 +16,20 @@ export const METRIC_DEFINITIONS = {
   accuracy: {
     short: 'Accuracy',
     long: 'Share of all extracted fields that exactly match the ground truth.',
-    guidance: 'High accuracy = most fields are correct overall.',
+    guidance:
+      'High accuracy = most fields are correct overall. Computed over matched documents and the fields the ground truth actually provides a value for.',
   },
   precision: {
     short: 'Precision',
     long: 'Of the values the model extracted, the fraction that were correct.',
-    guidance: 'Low precision means the model often extracts wrong values (false positives).',
+    guidance:
+      'Low precision means the model often extracts wrong values (false positives). A wrong value where one was expected counts against precision too.',
   },
   recall: {
     short: 'Recall',
     long: 'Of the values that should have been extracted, the fraction the model got right.',
     guidance:
-      'Low recall means the model misses fields, or extracts the wrong value where a value was expected (false negatives).',
+      'Low recall means the model misses fields, or extracts the wrong value where a value was expected (false negatives). Per-field recall is over the documents whose ground truth has a value for that field.',
   },
   f1_score: {
     short: 'F1 Score',
@@ -106,7 +108,7 @@ export function getComparisonMethodDescription(method) {
   const descriptions = {
     exact: 'Exact text match (case-insensitive by default). Use for IDs, codes, enums.',
     fuzzy:
-      'Approximate string match. Correct if similarity ≥ threshold (default 85). Use for free text with minor variations.',
+      'Approximate string match. Correct if similarity ≥ threshold (default 85). Tolerates typos and word reordering; substring matching is off by default (opt-in) because it can invert meaning in medical text.',
     numeric:
       'Numeric comparison within a tolerance (default 0.001, absolute). Use for measurements, counts, lab values.',
     boolean: 'True/false comparison (true/yes/1 vs false/no/0).',
