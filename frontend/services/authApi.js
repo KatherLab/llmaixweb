@@ -10,6 +10,15 @@ export const authApi = {
   login(formBody) {
     return api.post('/auth/login', formBody, { headers: URLENCODED })
   },
+  refresh(refreshToken) {
+    return api.post('/auth/refresh', { refresh_token: refreshToken })
+  },
+  logout(refreshToken, everywhere = false) {
+    return api.post('/auth/logout', {
+      refresh_token: refreshToken || null,
+      everywhere,
+    })
+  },
   getSettings() {
     return api.get('/auth/settings')
   },

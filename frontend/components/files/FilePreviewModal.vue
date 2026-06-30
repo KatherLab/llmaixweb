@@ -11,14 +11,14 @@
         <div class="flex items-center gap-4">
           <FileIcon :file-type="file.file_type" :size="32" />
           <div>
-            <h3 class="text-xl font-bold text-slate-900">{{ file.file_name }}</h3>
-            <p class="text-xs text-slate-500">
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white">{{ file.file_name }}</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
               {{ formatFileSize(file.file_size, 'Unknown') }} &middot; {{ file.file_type }}
             </p>
           </div>
         </div>
         <button
-          class="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition"
+          class="p-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition"
           title="Download"
           @click="downloadFile"
         >
@@ -36,8 +36,8 @@
     <!-- Error State -->
     <div v-else-if="error" class="flex items-center justify-center h-full">
       <div class="text-center max-w-sm mx-auto">
-        <AlertTriangle class="mx-auto h-12 w-12 text-slate-300" />
-        <p class="mt-3 text-base text-slate-500">{{ error }}</p>
+        <AlertTriangle class="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" />
+        <p class="mt-3 text-base text-slate-500 dark:text-slate-400">{{ error }}</p>
         <BaseButton variant="ghost" size="sm" class="mt-5" @click="loadPreview">
           Try Again
         </BaseButton>
@@ -55,7 +55,7 @@
     <!-- Image Preview -->
     <div
       v-else-if="previewUrl && file.file_type?.startsWith('image/')"
-      class="flex items-center justify-center h-full p-10 bg-white rounded-b-2xl"
+      class="flex items-center justify-center h-full p-10 bg-white dark:bg-slate-900 rounded-b-2xl"
     >
       <img
         :src="previewUrl"
@@ -131,13 +131,13 @@
       <div class="flex flex-wrap gap-2 mt-4">
         <span
           v-if="idColumn"
-          class="inline-flex items-center px-3 py-1 rounded bg-blue-100 text-blue-800 text-xs font-medium"
+          class="inline-flex items-center px-3 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs font-medium"
         >
           <span class="mr-1 font-bold">ID column:</span> {{ idColumn }}
         </span>
         <span
           v-if="textColumns && textColumns.length"
-          class="inline-flex items-center px-3 py-1 rounded bg-green-50 text-green-800 text-xs font-medium"
+          class="inline-flex items-center px-3 py-1 rounded bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium"
         >
           <span class="mr-1 font-bold">Text columns:</span> {{ textColumns.join(', ') }}
         </span>
@@ -150,7 +150,7 @@
       class="h-full overflow-auto p-8"
     >
       <pre
-        class="text-sm font-mono whitespace-pre-wrap bg-white rounded-lg shadow p-6 border border-slate-100"
+        class="text-sm font-mono whitespace-pre-wrap bg-white dark:bg-slate-900 rounded-lg shadow p-6 border border-slate-100 dark:border-slate-700"
         >{{ previewContent }}</pre
       >
     </div>
@@ -159,7 +159,9 @@
     <div v-else class="flex items-center justify-center h-full">
       <div class="text-center">
         <FileIcon :file-type="file.file_type" :size="64" />
-        <p class="mt-4 text-sm text-slate-500">Preview not available for this file type.</p>
+        <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
+          Preview not available for this file type.
+        </p>
         <BaseButton class="mt-4" @click="downloadFile">
           <CloudDownload class="mr-2 h-4 w-4" />
           Download File
@@ -168,50 +170,34 @@
     </div>
 
     <!-- Modal for full text cell -->
-    <div
-      v-if="showModal"
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-      @click="closeModal"
+    <BaseModal
+      :open="showModal"
+      size="lg"
+      :title="modalHeader"
+      body-class="!p-6"
+      @close="closeModal"
     >
-      <div
-        class="bg-white rounded-xl shadow-xl max-w-xl w-full mx-4 p-6 border border-slate-100 relative"
-        @click.stop
+      <pre
+        class="whitespace-pre-wrap text-sm text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-900 rounded p-4 max-h-[60vh] overflow-auto"
+        >{{ modalContent }}</pre
       >
-        <button
-          class="absolute top-2 right-2 text-slate-400 hover:text-slate-700 p-1 rounded transition"
-          title="Close"
-          @click="closeModal"
-        >
-          <X class="h-5 w-5" />
-        </button>
-        <div v-if="modalHeader" class="mb-2 font-semibold text-slate-700">
-          {{ modalHeader }}
-        </div>
-        <pre
-          class="whitespace-pre-wrap text-sm text-slate-900 bg-slate-50 rounded p-4 max-h-[60vh] overflow-auto"
-          >{{ modalContent }}</pre
-        >
-        <BaseButton
-          variant="link"
-          tone="blue"
-          class="mt-4 text-xs underline"
-          @click="copyToClipboard"
-        >
+      <div class="mt-4 flex items-center gap-2">
+        <BaseButton variant="link" tone="blue" class="text-xs underline" @click="copyToClipboard">
           Copy
         </BaseButton>
-        <span v-if="copied" class="ml-2 text-green-700 text-xs">Copied!</span>
+        <span v-if="copied" class="text-green-700 dark:text-green-400 text-xs">Copied!</span>
       </div>
-    </div>
+    </BaseModal>
 
     <template #footer>
       <div class="flex items-center justify-between text-xs w-full">
-        <div class="flex items-center gap-6 text-slate-500">
+        <div class="flex items-center gap-6 text-slate-500 dark:text-slate-400">
           <span>Created: {{ formatDateFull(file.created_at) }}</span>
           <span v-if="file.file_hash" class="font-mono text-xs">
             Hash: {{ file.file_hash.substring(0, 8) }}...
           </span>
         </div>
-        <div v-if="file.description" class="text-slate-600 truncate">
+        <div v-if="file.description" class="text-slate-600 dark:text-slate-300 truncate">
           {{ file.description }}
         </div>
       </div>
@@ -221,7 +207,7 @@
 
 <script setup>
 import { ref, computed, onUnmounted, watch } from 'vue'
-import { AlertTriangle, CloudDownload, X } from '@lucide/vue'
+import { AlertTriangle, CloudDownload } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
 import FileIcon from '@/components/common/FileIcon.vue'

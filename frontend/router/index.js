@@ -9,14 +9,17 @@ import Register from '@/views/Register.vue'
 import ForgotPassword from '@/views/ForgotPassword.vue'
 import ResetPassword from '@/views/ResetPassword.vue'
 import InvitationLanding from '@/views/InvitationLandingPage.vue'
+import SsoComplete from '@/views/SsoComplete.vue'
 import NotFound from '@/views/NotFound.vue'
 
 import ProjectOverview from '@/views/ProjectOverview.vue'
 import ProjectDetail from '@/views/ProjectDetail.vue'
+import AccountSettings from '@/views/AccountSettings.vue'
 import AdminUserManagement from '@/views/AdminUserManagement.vue'
 import AdminDashboard from '@/views/AdminDashboard.vue'
 import AdminSettings from '@/views/AdminSettings.vue'
 import AdminCelery from '@/views/AdminCelery.vue'
+import AdminSSO from '@/views/AdminSSO.vue'
 
 import FirstAdminSetup from '@/views/FirstAdminSetup.vue'
 
@@ -31,6 +34,11 @@ const routes = [
     children: [
       { path: '', component: Landing },
       { path: 'projects', component: ProjectOverview, meta: { requiresAuth: true } },
+      {
+        path: 'account',
+        component: AccountSettings,
+        meta: { requiresAuth: true },
+      },
       {
         path: 'projects/:projectId',
         component: ProjectDetail,
@@ -49,6 +57,7 @@ const routes = [
         meta: { requiresAuth: true, adminOnly: true },
         children: [
           { path: 'settings', component: AdminSettings },
+          { path: 'sso', component: AdminSSO },
           { path: 'celery', component: AdminCelery },
           { path: '', redirect: '/admin/settings' },
         ],
@@ -66,6 +75,7 @@ const routes = [
       { path: 'forgot-password', component: ForgotPassword },
       { path: 'reset-password/:token', component: ResetPassword },
       { path: 'invitation/:token', component: InvitationLanding },
+      { path: 'auth/sso/complete', component: SsoComplete },
       { path: 'first-admin', component: FirstAdminSetup },
     ],
   },

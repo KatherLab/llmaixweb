@@ -8,7 +8,7 @@
     @close="$emit('close')"
   >
     <template #header>
-      <h3 class="text-lg font-semibold text-slate-900">Trial Results</h3>
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Trial Results</h3>
     </template>
 
     <!-- Loading -->
@@ -16,7 +16,7 @@
       <span class="mb-3">
         <LoadingSpinner size="medium" inline label="" />
       </span>
-      <span class="mt-2 text-slate-500">Loading trial results…</span>
+      <span class="mt-2 text-slate-500 dark:text-slate-400">Loading trial results…</span>
     </div>
     <!-- Error -->
     <ErrorBanner v-else-if="error" :message="error" class="mb-5 rounded-lg" />
@@ -26,6 +26,7 @@
       <TrialMetaHeader
         :trial="trial"
         :total-usage="totalUsage"
+        :results-count="totalCount"
         @open-schema="openSchemaModal"
         @open-prompt="openPromptModal"
       />
@@ -59,7 +60,7 @@
           <template #filters>
             <select
               v-model="statusFilter"
-              class="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+              :class="[selectClass, 'px-3 py-2']"
               @change="handleFilterChange"
             >
               <option value="">All Status</option>
@@ -152,8 +153,8 @@
     </template>
 
     <div v-else class="flex flex-col items-center justify-center py-16">
-      <Frown class="h-14 w-14 text-slate-300" />
-      <span class="text-slate-500 mt-3">Trial not found</span>
+      <Frown class="h-14 w-14 text-slate-300 dark:text-slate-600" />
+      <span class="text-slate-500 dark:text-slate-400 mt-3">Trial not found</span>
       <BaseButton variant="secondary" class="mt-6" @click="$emit('close')">
         Return to trials
       </BaseButton>
@@ -197,6 +198,7 @@ import FilterBar from '@/components/common/FilterBar.vue'
 import { getPillClass } from '@/utils/statusStyles'
 import { formatDateSmart } from '@/utils/formatters'
 import { extractErrorMessage } from '@/utils/errors'
+import { selectClass } from '@/utils/formStyles'
 
 const props = defineProps({
   projectId: { type: [String, Number], required: true },

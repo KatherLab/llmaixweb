@@ -25,7 +25,8 @@ from .project import (
     TrialResult,
     TrialStatus,
 )
-from .user import Invitation, PasswordResetToken, User, UserRole
+from .sso import IdentityProvider, UserIdentity
+from .user import Invitation, PasswordResetToken, RefreshToken, User, UserRole
 
 __all__ = [
     "AppSetting",
@@ -33,6 +34,9 @@ __all__ = [
     "User",
     "UserRole",
     "Invitation",
+    "IdentityProvider",
+    "UserIdentity",
+    "RefreshToken",
     "Project",
     "ProjectStatus",
     "File",

@@ -31,20 +31,19 @@
         maxlength="254"
         placeholder="admin@yourcompany.com"
       />
-      <FormField
-        v-model="password"
-        label="Password"
-        type="password"
-        required
-        placeholder="Password"
-      />
+      <PasswordInput v-model="password" label="Password" required placeholder="Password" />
       <FormField
         v-model="confirmPassword"
         label="Confirm Password"
         type="password"
         required
         placeholder="Confirm password"
-      />
+        :invalid="!!confirmPassword && confirmPassword !== password"
+      >
+        <template v-if="!!confirmPassword && confirmPassword !== password" #error>
+          Passwords do not match
+        </template>
+      </FormField>
       <BaseButton
         type="submit"
         size="lg"
@@ -75,6 +74,7 @@ import { useToast } from '@/composables/useToast'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FormField from '@/components/common/FormField.vue'
+import PasswordInput from '@/components/common/PasswordInput.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
@@ -114,8 +114,7 @@ async function handleSubmit() {
     formData.append('username', email.value)
     formData.append('password', password.value)
     const resp = await authApi.login(formData.toString())
-    await authStore.setToken(resp.data.access_token)
-    await authStore.fetchUser()
+    await authStore.setSession(resp.data.access_token, resp.data.refresh_token)
     // --- Re-check first-admin state (to update Pinia) ---
     const firstAdminStore = useFirstAdminStore()
     await firstAdminStore.checkFirstAdmin()

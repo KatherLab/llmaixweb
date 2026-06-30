@@ -26,7 +26,8 @@ export const METRIC_DEFINITIONS = {
   recall: {
     short: 'Recall',
     long: 'Of the values that should have been extracted, the fraction the model got right.',
-    guidance: 'Low recall means the model misses fields that are present (false negatives).',
+    guidance:
+      'Low recall means the model misses fields, or extracts the wrong value where a value was expected (false negatives).',
   },
   f1_score: {
     short: 'F1 Score',
@@ -48,7 +49,7 @@ export const METRIC_DEFINITIONS = {
 export function getMetricTooltip(key) {
   const def = METRIC_DEFINITIONS[key]
   if (!def) return ''
-  return `${def.long} ${def.guidance}`
+  return `${def.long}\n${def.guidance}`
 }
 
 /**
@@ -93,6 +94,26 @@ export function getErrorSuggestion(errorType) {
     date_parse_error: 'Check date format parsing or improve date extraction',
   }
   return suggestions[errorType] || 'Review extraction logic and ground truth data'
+}
+
+/**
+ * Plain-language description of a comparison method (used in the mapping
+ * configurator so users understand what "fuzzy" vs "exact" actually does).
+ * @param {string} method
+ * @returns {string}
+ */
+export function getComparisonMethodDescription(method) {
+  const descriptions = {
+    exact: 'Exact text match (case-insensitive by default). Use for IDs, codes, enums.',
+    fuzzy:
+      'Approximate string match. Correct if similarity ≥ threshold (default 85). Use for free text with minor variations.',
+    numeric:
+      'Numeric comparison within a tolerance (default 0.001, absolute). Use for measurements, counts, lab values.',
+    boolean: 'True/false comparison (true/yes/1 vs false/no/0).',
+    category: 'Categorical match with optional synonym mappings. Builds a confusion matrix.',
+    date: 'Date equality across common formats (e.g. 2024-01-02 vs 02/01/2024).',
+  }
+  return descriptions[method] || ''
 }
 
 /**

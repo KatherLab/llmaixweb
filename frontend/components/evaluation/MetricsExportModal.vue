@@ -9,12 +9,16 @@
     <div class="space-y-6">
       <!-- Export format selection -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-2">Export Format</label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2"
+          >Export Format</label
+        >
         <div class="grid grid-cols-3 gap-3">
           <div
             class="relative flex cursor-pointer rounded-lg border p-4 focus:outline-none"
             :class="
-              exportFormat === 'csv' ? 'border-blue-600 ring-2 ring-blue-600' : 'border-slate-300'
+              exportFormat === 'csv'
+                ? 'border-blue-600 ring-2 ring-blue-600 dark:border-blue-500 dark:ring-blue-500'
+                : 'border-slate-300 dark:border-slate-600'
             "
             @click="exportFormat = 'csv'"
           >
@@ -23,18 +27,20 @@
                 v-model="exportFormat"
                 type="radio"
                 value="csv"
-                class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500 dark:border-slate-500 dark:bg-slate-700"
               />
             </div>
             <div class="ml-3">
-              <div class="text-sm font-medium text-slate-900">CSV</div>
-              <div class="text-sm text-slate-500">Comma-separated values</div>
+              <div class="text-sm font-medium text-slate-900 dark:text-white">CSV</div>
+              <div class="text-sm text-slate-500 dark:text-slate-400">Comma-separated values</div>
             </div>
           </div>
           <div
             class="relative flex cursor-pointer rounded-lg border p-4 focus:outline-none"
             :class="
-              exportFormat === 'xlsx' ? 'border-blue-600 ring-2 ring-blue-600' : 'border-slate-300'
+              exportFormat === 'xlsx'
+                ? 'border-blue-600 ring-2 ring-blue-600 dark:border-blue-500 dark:ring-blue-500'
+                : 'border-slate-300 dark:border-slate-600'
             "
             @click="exportFormat = 'xlsx'"
           >
@@ -43,18 +49,20 @@
                 v-model="exportFormat"
                 type="radio"
                 value="xlsx"
-                class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500 dark:border-slate-500 dark:bg-slate-700"
               />
             </div>
             <div class="ml-3">
-              <div class="text-sm font-medium text-slate-900">Excel</div>
-              <div class="text-sm text-slate-500">Excel spreadsheet</div>
+              <div class="text-sm font-medium text-slate-900 dark:text-white">Excel</div>
+              <div class="text-sm text-slate-500 dark:text-slate-400">Excel spreadsheet</div>
             </div>
           </div>
           <div
             class="relative flex cursor-pointer rounded-lg border p-4 focus:outline-none"
             :class="
-              exportFormat === 'zip' ? 'border-blue-600 ring-2 ring-blue-600' : 'border-slate-300'
+              exportFormat === 'zip'
+                ? 'border-blue-600 ring-2 ring-blue-600 dark:border-blue-500 dark:ring-blue-500'
+                : 'border-slate-300 dark:border-slate-600'
             "
             @click="exportFormat = 'zip'"
           >
@@ -63,12 +71,12 @@
                 v-model="exportFormat"
                 type="radio"
                 value="zip"
-                class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500 dark:border-slate-500 dark:bg-slate-700"
               />
             </div>
             <div class="ml-3">
-              <div class="text-sm font-medium text-slate-900">ZIP</div>
-              <div class="text-sm text-slate-500">ZIP archive (advanced)</div>
+              <div class="text-sm font-medium text-slate-900 dark:text-white">ZIP</div>
+              <div class="text-sm text-slate-500 dark:text-slate-400">ZIP archive (advanced)</div>
             </div>
           </div>
         </div>
@@ -76,39 +84,47 @@
 
       <!-- Evaluation selection -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-2">Select Evaluations</label>
-        <div class="max-h-64 overflow-y-auto border border-slate-200 rounded-md">
-          <div class="p-3 border-b border-slate-200 bg-slate-50">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2"
+          >Select Evaluations</label
+        >
+        <div
+          class="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-md"
+        >
+          <div
+            class="p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+          >
             <label class="flex items-center">
               <input
                 type="checkbox"
                 :checked="allSelected"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
                 @change="toggleSelectAll"
               />
-              <span class="ml-2 text-sm font-medium text-slate-700">Select All</span>
+              <span class="ml-2 text-sm font-medium text-slate-700 dark:text-slate-200"
+                >Select All</span
+              >
             </label>
           </div>
-          <div class="divide-y divide-slate-200">
+          <div class="divide-y divide-slate-200 dark:divide-slate-700">
             <div
               v-for="evaluation in evaluations"
               :key="evaluation.id"
-              class="p-3 hover:bg-slate-50"
+              class="p-3 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               <label class="flex items-center">
                 <input
                   v-model="selectedEvaluations"
                   type="checkbox"
                   :value="evaluation.id"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
                 />
                 <div class="ml-3 flex-1">
-                  <div class="text-sm font-medium text-slate-900">
+                  <div class="text-sm font-medium text-slate-900 dark:text-white">
                     Trial #{{ evaluation.trial_id }}
                   </div>
-                  <div class="text-sm text-slate-500">
-                    {{ (evaluation.metrics.accuracy * 100).toFixed(1) }}% accuracy •
-                    {{ evaluation.document_metrics?.length || 0 }} documents •
+                  <div class="text-sm text-slate-500 dark:text-slate-400">
+                    {{ getEvaluationAccuracyPct(evaluation) }} accuracy •
+                    {{ getEvaluationDocumentCount(evaluation) }} documents •
                     {{ formatDate(evaluation.created_at) }}
                   </div>
                 </div>
@@ -116,23 +132,28 @@
             </div>
           </div>
         </div>
-        <div v-if="selectedEvaluations.length === 0" class="mt-2 text-sm text-red-600">
+        <div
+          v-if="selectedEvaluations.length === 0"
+          class="mt-2 text-sm text-red-600 dark:text-red-400"
+        >
           Please select at least one evaluation to export.
         </div>
       </div>
 
       <!-- Export options -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-3">Export Options</label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3"
+          >Export Options</label
+        >
         <div class="space-y-3">
           <div class="flex items-center">
             <input
               id="include-details"
               v-model="includeDetails"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
             />
-            <label for="include-details" class="ml-2 text-sm text-slate-700">
+            <label for="include-details" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
               Include detailed document-level metrics
             </label>
           </div>
@@ -141,9 +162,12 @@
               id="include-field-details"
               v-model="includeFieldDetails"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
             />
-            <label for="include-field-details" class="ml-2 text-sm text-slate-700">
+            <label
+              for="include-field-details"
+              class="ml-2 text-sm text-slate-700 dark:text-slate-300"
+            >
               Include field-by-field comparison data
             </label>
           </div>
@@ -152,9 +176,9 @@
               id="include-errors"
               v-model="includeErrors"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
             />
-            <label for="include-errors" class="ml-2 text-sm text-slate-700">
+            <label for="include-errors" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
               Include error analysis and examples
             </label>
           </div>
@@ -163,9 +187,12 @@
               id="include-document-content"
               v-model="includeDocumentContent"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
             />
-            <label for="include-document-content" class="ml-2 text-sm text-slate-700">
+            <label
+              for="include-document-content"
+              class="ml-2 text-sm text-slate-700 dark:text-slate-300"
+            >
               Include document content (in docs/)
             </label>
           </div>
@@ -174,9 +201,9 @@
               id="include-gt-content"
               v-model="includeGroundTruthContent"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
             />
-            <label for="include-gt-content" class="ml-2 text-sm text-slate-700">
+            <label for="include-gt-content" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
               Include ground truth content (in docs/)
             </label>
           </div>
@@ -184,9 +211,12 @@
       </div>
 
       <!-- Preview of export content -->
-      <div v-if="selectedEvaluations.length > 0" class="bg-slate-50 rounded-lg p-4">
-        <h4 class="text-sm font-medium text-slate-700 mb-2">Export Preview</h4>
-        <div class="text-sm text-slate-600 space-y-1">
+      <div
+        v-if="selectedEvaluations.length > 0"
+        class="bg-slate-50 dark:bg-slate-800 rounded-lg p-4"
+      >
+        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Export Preview</h4>
+        <div class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
           <div>• {{ selectedEvaluations.length }} evaluation(s) selected</div>
           <div>• {{ totalDocuments }} total documents</div>
           <div v-if="includeDetails">• Document-level metrics included</div>
@@ -198,8 +228,8 @@
           <div v-if="exportFormat === 'zip' && includeGroundTruthContent">
             • Ground truth files included
           </div>
-          <div class="text-xs text-slate-500 mt-2">
-            Estimated file size: {{ estimatedFileSize }}
+          <div v-if="includesLargeContent" class="text-xs text-amber-600 dark:text-amber-400 mt-2">
+            Includes original document/ground-truth files — the archive may be large.
           </div>
         </div>
       </div>
@@ -227,6 +257,7 @@ import { ref, computed, watch } from 'vue'
 import { Upload } from '@lucide/vue'
 import { evaluationsApi } from '@/services/evaluationsApi'
 import { formatDate } from '@/utils/formatters'
+import { getEvaluationAccuracyPct, getEvaluationDocumentCount } from '@/utils/evaluationHelpers'
 import { useToast } from '@/composables/useToast'
 import { useFileDownload } from '@/composables/useFileDownload'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -286,23 +317,19 @@ const allSelected = computed(() => {
 const totalDocuments = computed(() => {
   return selectedEvaluations.value.reduce((total, evalId) => {
     const evaluation = props.evaluations.find((e) => e.id === evalId)
-    return total + (evaluation?.document_metrics?.length || 0)
+    return total + getEvaluationDocumentCount(evaluation)
   }, 0)
 })
 
-const estimatedFileSize = computed(() => {
-  let baseSize = selectedEvaluations.value.length * 2
-  if (includeDetails.value) baseSize += totalDocuments.value * 1
-  if (includeFieldDetails.value) baseSize += totalDocuments.value * 5
-  if (includeErrors.value) baseSize += totalDocuments.value * 2
-  if (exportFormat.value === 'zip') {
-    if (includeDocumentContent.value) baseSize += totalDocuments.value * 30
-    if (includeGroundTruthContent.value) baseSize += totalDocuments.value * 15
-  }
-  if (baseSize < 1) return '< 1 KB'
-  if (baseSize < 1024) return `${Math.round(baseSize)} KB`
-  return `${Math.round((baseSize / 1024) * 10) / 10} MB`
-})
+// Note: we intentionally do NOT show a fake "estimated file size". The real
+// size depends on document/PDF content the frontend cannot measure, so any
+// estimate would be misleading — especially for ZIP exports with document
+// content, which could be orders of magnitude larger than a guess.
+const includesLargeContent = computed(
+  () =>
+    exportFormat.value === 'zip' &&
+    (includeDocumentContent.value || includeGroundTruthContent.value),
+)
 
 const toggleSelectAll = () => {
   if (allSelected.value) {

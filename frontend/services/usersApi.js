@@ -14,6 +14,13 @@ export const usersApi = {
   me() {
     return api.get('/user/me')
   },
+  // Linked SSO identities (self-service)
+  listMyIdentities() {
+    return api.get('/user/me/identities')
+  },
+  deleteMyIdentity(identityId) {
+    return api.delete(`/user/me/identities/${identityId}`)
+  },
   create(payload) {
     return api.post('/user', payload)
   },

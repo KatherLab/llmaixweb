@@ -410,6 +410,7 @@ const initializeForm = () => {
   reasoningEffort.value = ''
   resetModelTest()
 
+  snapshotInitialValues()
   testAndLoadModels()
 }
 
@@ -470,16 +471,47 @@ const handleStartTrial = async () => {
 /* -------------------------------------------------------
  * Close with confirmation
  * -----------------------------------------------------*/
+// Snapshot of the form state captured right after initializeForm(). Because
+// schema_id/prompt_id are pre-selected on open, comparing against an empty
+// baseline would always mark the form dirty and prompt "Discard changes?" on a
+// no-op open/close. Comparing against this baseline only flags *user* edits.
+const initialValues = ref({
+  name: '',
+  description: '',
+  schema_id: '',
+  prompt_id: '',
+  document_ids: [],
+  llm_model: '',
+  api_key: '',
+  base_url: '',
+})
+
+const snapshotInitialValues = () => {
+  initialValues.value = {
+    name: trialData.value.name,
+    description: trialData.value.description,
+    schema_id: trialData.value.schema_id,
+    prompt_id: trialData.value.prompt_id,
+    document_ids: [...trialData.value.document_ids],
+    llm_model: trialData.value.llm_model,
+    api_key: trialData.value.api_key,
+    base_url: trialData.value.base_url,
+  }
+}
+
 const isDirty = computed(() => {
-  return !!(
-    trialData.value.name ||
-    trialData.value.description ||
-    trialData.value.schema_id ||
-    trialData.value.prompt_id ||
-    (trialData.value.document_ids && trialData.value.document_ids.length > 0) ||
-    trialData.value.llm_model ||
-    trialData.value.api_key ||
-    trialData.value.base_url
+  const i = initialValues.value
+  const t = trialData.value
+  return (
+    t.name !== i.name ||
+    t.description !== i.description ||
+    t.schema_id !== i.schema_id ||
+    t.prompt_id !== i.prompt_id ||
+    t.llm_model !== i.llm_model ||
+    t.api_key !== i.api_key ||
+    t.base_url !== i.base_url ||
+    (t.document_ids || []).length !== (i.document_ids || []).length ||
+    (t.document_ids || []).some((id, idx) => id !== i.document_ids[idx])
   )
 })
 

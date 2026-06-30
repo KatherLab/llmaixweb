@@ -60,10 +60,10 @@ def setup_test_environment(configure_test_environment):
 
     # Create test users
     users = {
-        "admin@example.com": ("Admin User", "adminpassword", UserRole.admin),
-        "test@example.com": ("Test User", "testpassword", UserRole.user),
-        "another@example.com": ("Another User", "anotherpassword", UserRole.user),
-        "delete@example.com": ("Delete User", "testpassword", UserRole.user),
+        "admin@example.com": ("Admin User", "Adminpassword1", UserRole.admin),
+        "test@example.com": ("Test User", "Testpassword1", UserRole.user),
+        "another@example.com": ("Another User", "Anotherpassword1", UserRole.user),
+        "delete@example.com": ("Delete User", "Testpassword1", UserRole.user),
     }
 
     db = SessionLocal()

@@ -12,17 +12,22 @@
     <div class="space-y-6">
       <!-- Selected Files -->
       <div>
-        <h4 class="text-sm font-medium text-slate-700 mb-3">
+        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
           Files to Process ({{ selectedFiles.length }})
         </h4>
-        <div class="space-y-2 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-3">
+        <div
+          class="space-y-2 max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg p-3"
+        >
           <div
             v-for="fileId in selectedFiles"
             :key="fileId"
             class="flex items-center justify-between text-sm"
           >
             <span class="truncate">{{ getFileById(fileId)?.file_name || 'Unknown' }}</span>
-            <button class="text-slate-400 hover:text-red-500" @click="emit('remove-file', fileId)">
+            <button
+              class="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400"
+              @click="emit('remove-file', fileId)"
+            >
               <X class="w-4 h-4" />
             </button>
           </div>
@@ -47,18 +52,18 @@
             :class="[
               'w-full rounded-lg border-2 p-4 text-left transition-all',
               selectedEngine === 'docling_tesseract'
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-slate-200 hover:border-slate-300',
+                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
             ]"
             @click="selectedEngine = 'docling_tesseract'"
           >
             <div class="flex items-center">
               <Zap class="w-6 h-6 text-blue-600 mr-3" />
               <div>
-                <p class="font-medium text-slate-900">
+                <p class="font-medium text-slate-900 dark:text-white">
                   {{ getEngineLabel('docling_tesseract') }}
                 </p>
-                <p class="text-xs text-slate-500">
+                <p class="text-xs text-slate-500 dark:text-slate-400">
                   {{ getEngineSubtitle('docling_tesseract') }}
                 </p>
               </div>
@@ -71,18 +76,18 @@
             :class="[
               'w-full rounded-lg border-2 p-4 text-left transition-all',
               selectedEngine === 'mistral_ocr'
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-slate-200 hover:border-slate-300',
+                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
             ]"
             @click="selectedEngine = 'mistral_ocr'"
           >
             <div class="flex items-center">
               <CircleCheckBig class="w-6 h-6 text-blue-600 mr-3" />
               <div>
-                <p class="font-medium text-slate-900">
+                <p class="font-medium text-slate-900 dark:text-white">
                   {{ getEngineLabel('mistral_ocr') }}
                 </p>
-                <p class="text-xs text-slate-500">
+                <p class="text-xs text-slate-500 dark:text-slate-400">
                   {{ getEngineSubtitle('mistral_ocr') }}
                 </p>
               </div>
@@ -95,29 +100,36 @@
             :class="[
               'w-full rounded-lg border-2 p-4 text-left transition-all',
               selectedEngine === 'llm_vision'
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-slate-200 hover:border-slate-300',
+                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
             ]"
             @click="selectedEngine = 'llm_vision'"
           >
             <div class="flex items-center">
               <Eye class="w-6 h-6 text-blue-600 mr-3" />
               <div>
-                <p class="font-medium text-slate-900">
+                <p class="font-medium text-slate-900 dark:text-white">
                   {{ getEngineLabel('llm_vision') }}
                 </p>
-                <p class="text-xs text-slate-500">{{ getEngineSubtitle('llm_vision') }}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  {{ getEngineSubtitle('llm_vision') }}
+                </p>
               </div>
             </div>
           </button>
         </div>
         <!-- Warning: No OCR engines enabled -->
-        <div v-if="noOcrEnabled" class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <p class="text-sm font-medium text-amber-900 inline-flex items-center gap-1.5">
+        <div
+          v-if="noOcrEnabled"
+          class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-900/20 dark:border-amber-800"
+        >
+          <p
+            class="text-sm font-medium text-amber-900 dark:text-amber-300 inline-flex items-center gap-1.5"
+          >
             <AlertTriangle class="w-4 h-4" />
             All OCR engines are disabled. Only PDFs with embedded text can be processed.
           </p>
-          <p class="text-xs text-amber-700 mt-1">
+          <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">
             Image files (PNG/JPEG) require OCR. Enable Local OCR, Mistral OCR, or Vision LLM in
             Admin Settings to process images. PDFs will use pypdf for embedded text extraction.
           </p>
@@ -125,14 +137,14 @@
       </div>
 
       <!-- Force OCR (always visible) -->
-      <div class="border-t border-slate-200 pt-4">
+      <div class="border-t border-slate-200 dark:border-slate-700 pt-4">
         <label
-          class="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg border border-amber-200"
+          class="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
         >
           <input v-model="forceOcr" type="checkbox" class="mt-0.5 text-amber-600 rounded" />
           <div>
-            <p class="text-sm font-medium text-amber-900">Force OCR for PDFs</p>
-            <p class="text-xs text-amber-700 mt-1">
+            <p class="text-sm font-medium text-amber-900 dark:text-amber-300">Force OCR for PDFs</p>
+            <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">
               Skip embedded text extraction and run OCR on all PDF pages
             </p>
           </div>
@@ -151,9 +163,9 @@
       </div>
 
       <!-- Advanced Options -->
-      <div class="border-t border-slate-200 pt-4">
+      <div class="border-t border-slate-200 dark:border-slate-700 pt-4">
         <button
-          class="text-sm font-medium text-slate-700 flex items-center"
+          class="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center"
           @click="showAdvanced = !showAdvanced"
         >
           <ChevronRight
@@ -234,24 +246,26 @@
     </div>
 
     <!-- Panel Footer -->
-    <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
+    <div
+      class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex-shrink-0"
+    >
       <!-- Warning for unconfigured CSV/XLSX files -->
       <div
         v-if="unconfiguredCsvXlsxFiles.length > 0"
-        class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg"
+        class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-900/20 dark:border-amber-800"
       >
         <div class="flex items-start gap-2">
           <AlertTriangle class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div class="flex-1">
-            <p class="text-sm font-medium text-amber-900">
+            <p class="text-sm font-medium text-amber-900 dark:text-amber-300">
               {{ unconfiguredCsvXlsxFiles.length }} file(s) need import configuration
             </p>
-            <ul class="mt-1 text-xs text-amber-700 list-disc list-inside">
+            <ul class="mt-1 text-xs text-amber-700 dark:text-amber-400 list-disc list-inside">
               <li v-for="file in unconfiguredCsvXlsxFiles" :key="file.id" class="truncate">
                 {{ file.file_name }}
               </li>
             </ul>
-            <p class="mt-2 text-xs text-amber-700">
+            <p class="mt-2 text-xs text-amber-700 dark:text-amber-400">
               Click "Configure" next to each file above to set up import settings before
               preprocessing.
             </p>
@@ -259,7 +273,7 @@
         </div>
       </div>
 
-      <p class="text-xs text-slate-500 mb-4">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
         This will create a new preprocessing run. Existing runs and documents are preserved.
       </p>
     </div>

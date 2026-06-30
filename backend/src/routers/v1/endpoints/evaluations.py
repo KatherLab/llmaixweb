@@ -26,6 +26,87 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _enrich_document_metrics(db: Session, evaluation: models.Evaluation) -> list[dict]:
+    """Return ``evaluation.document_metrics`` enriched for display.
+
+    Each document entry gains:
+      - ``document_name`` — the Document's name (falling back to the original
+        file name), so the evaluation table can show real names instead of
+        ``Document #<id>`` (consistent with the Documents tab).
+      - ``field_details`` — per-field GT/predicted values, needed by the
+        frontend confusion-matrix filter (otherwise it matches zero docs).
+
+    Documents and EvaluationMetric rows are batch-loaded (one query each) to
+    avoid N+1 per document.
+    """
+    doc_metrics = evaluation.document_metrics or []
+    if not doc_metrics:
+        return []
+
+    doc_ids = []
+    for doc in doc_metrics:
+        try:
+            doc_ids.append(int(doc.get("document_id")))
+        except (TypeError, ValueError):
+            continue
+    if not doc_ids:
+        return [dict(d) if not isinstance(d, dict) else dict(d) for d in doc_metrics]
+
+    # Batch-load documents + their original_file (one query).
+    documents_by_id: dict[int, models.Document] = {
+        doc.id: doc
+        for doc in db.execute(
+            select(models.Document)
+            .where(models.Document.id.in_(doc_ids))
+            .options(selectinload(models.Document.original_file))
+        )
+        .scalars()
+        .all()
+    }
+
+    # Batch-load per-field metric details (one query).
+    field_details_by_doc: dict[int, dict] = {}
+    details = (
+        db.query(models.EvaluationMetric)
+        .filter(models.EvaluationMetric.evaluation_id == evaluation.id)
+        .all()
+    )
+    for detail in details:
+        field_details_by_doc.setdefault(detail.document_id, {})[detail.field_name] = (
+            schemas.EvaluationMetricDetail(
+                document_id=detail.document_id,
+                field_name=detail.field_name,
+                ground_truth_value=detail.ground_truth_value,
+                predicted_value=detail.predicted_value,
+                is_correct=detail.is_correct,
+                error_type=detail.error_type,
+                confidence_score=detail.confidence_score,
+            )
+        )
+
+    enriched = []
+    for doc in doc_metrics:
+        doc_dict = dict(doc) if not isinstance(doc, dict) else dict(doc)
+        doc_id = doc_dict.get("document_id")
+        document = documents_by_id.get(int(doc_id)) if doc_id is not None else None
+        # Mirror the Documents-tab resolution order: document_name, then the
+        # original file name. Leave the frontend's `Document #<id>` fallback
+        # intact when neither is available.
+        if document:
+            doc_dict["document_name"] = (
+                document.document_name
+                or (
+                    document.original_file.file_name if document.original_file else None
+                )
+                or doc_dict.get("document_name")
+            )
+        doc_dict["field_details"] = field_details_by_doc.get(
+            int(doc_id) if doc_id is not None else -1, {}
+        )
+        enriched.append(doc_dict)
+    return enriched
+
+
 @router.get("/evaluation", response_model=list[schemas.Evaluation])
 def get_evaluations(
     *,
@@ -128,12 +209,63 @@ def get_evaluation_detail(
         metrics=evaluation.metrics,
         document_count=len(evaluation.document_metrics),
         fields=evaluation.field_metrics,
-        documents=evaluation.document_metrics,
+        documents=_enrich_document_metrics(db, evaluation),
         confusion_matrices=evaluation.confusion_matrices,
         created_at=evaluation.created_at,
     )
 
     return evaluation_detail
+
+
+@router.delete("/evaluation/{evaluation_id}", status_code=204)
+def delete_evaluation(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    evaluation_id: int,
+    current_user: models.User = Depends(get_current_user),
+) -> None:
+    """Delete an evaluation and its detailed metrics.
+
+    The trial and ground-truth data are preserved; only the computed
+    evaluation record (and its child ``EvaluationMetric`` rows, via cascade)
+    is removed. Re-evaluating the trial will recreate it.
+    """
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if current_user.role != "admin" and project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to delete this project's evaluations",
+        )
+
+    evaluation: models.Evaluation | None = db.execute(
+        select(models.Evaluation).where(models.Evaluation.id == evaluation_id)
+    ).scalar_one_or_none()
+
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+
+    # Ensure the evaluation belongs to a trial in this project
+    trial: models.Trial | None = db.execute(
+        select(models.Trial).where(
+            models.Trial.id == evaluation.trial_id,
+            models.Trial.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+
+    if not trial:
+        raise HTTPException(
+            status_code=404, detail="Evaluation not found for this project"
+        )
+
+    db.delete(evaluation)
+    db.commit()
 
 
 @router.get(

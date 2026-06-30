@@ -12,7 +12,7 @@
     :open="isModalOpen"
     :closeable="false"
     size="sm"
-    panel-class="dark:bg-slate-900 dark:border-slate-700 rounded-xl shadow-sm"
+    panel-class="rounded-xl shadow-sm"
     body-class="p-6 flex flex-col gap-6"
     @close="closeModal"
   >

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+    <h2 class="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
       <CircleDot class="w-7 h-7 text-blue-600" />
       App Settings
     </h2>
@@ -18,19 +18,21 @@
         <!-- Label & Description -->
         <div class="font-semibold flex flex-col">
           <span>{{ val.label }}</span>
-          <span class="text-xs text-slate-400">{{ val.description }}</span>
+          <span class="text-xs text-slate-400 dark:text-slate-500">{{ val.description }}</span>
         </div>
 
         <!-- Value Display -->
-        <div class="text-xs text-slate-500 break-all">
+        <div class="text-xs text-slate-500 dark:text-slate-400 break-all">
           <template v-if="val.secret">
             <span v-if="val.is_set" class="text-green-700 dark:text-green-400">Set</span>
-            <span v-else class="text-red-500">Not Set</span>
+            <span v-else class="text-red-500 dark:text-red-400">Not Set</span>
           </template>
           <template v-else>
             <span v-if="val.override !== undefined && val.override !== null">
               <s>{{ val.original }}</s>
-              <span class="ml-1 text-blue-700 font-semibold">{{ val.override }}</span>
+              <span class="ml-1 text-blue-700 dark:text-blue-300 font-semibold">{{
+                val.override
+              }}</span>
             </span>
             <span v-else>{{ val.original }}</span>
           </template>
@@ -40,9 +42,9 @@
         <div>
           <!-- Read-only: .env only -->
           <template v-if="val.readonly">
-            <div class="text-slate-400 flex flex-col gap-1">
+            <div class="text-slate-400 dark:text-slate-500 flex flex-col gap-1">
               <span class="flex items-center gap-1">
-                <Lock class="w-4 h-4 mr-1 text-slate-400 inline-block" />
+                <Lock class="w-4 h-4 mr-1 text-slate-400 dark:text-slate-500 inline-block" />
                 Set in <code>.env</code>
               </span>
               <span class="text-xs"
@@ -57,7 +59,7 @@
               <div class="flex gap-2 mt-1">
                 <button
                   type="button"
-                  class="px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200"
+                  class="px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50"
                   @click="showSecretInput[key] = !showSecretInput[key]"
                 >
                   {{ val.is_set ? 'Update' : 'Set' }}
@@ -65,7 +67,7 @@
                 <button
                   v-if="val.is_set"
                   type="button"
-                  class="px-2 py-1 rounded bg-red-100 text-red-600 text-xs font-medium hover:bg-red-200"
+                  class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
                   @click="clearSecret(key)"
                 >
                   Clear
@@ -97,11 +99,15 @@
           <!-- Boolean -->
           <template v-else-if="val.type === 'bool'">
             <div class="flex items-center gap-2">
-              <input v-model="draft[key]" type="checkbox" class="w-5 h-5 text-blue-600" />
+              <input
+                v-model="draft[key]"
+                type="checkbox"
+                class="w-5 h-5 text-blue-600 dark:text-blue-400"
+              />
               <button
                 v-if="val.overridden"
                 type="button"
-                class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200"
+                class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
                 @click="deleteOverride(key)"
               >
                 Revert
@@ -115,7 +121,7 @@
               <button
                 v-if="val.overridden"
                 type="button"
-                class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200"
+                class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
                 @click="deleteOverride(key)"
               >
                 Revert
@@ -129,7 +135,7 @@
               <button
                 v-if="val.overridden"
                 type="button"
-                class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200"
+                class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
                 @click="deleteOverride(key)"
               >
                 Revert

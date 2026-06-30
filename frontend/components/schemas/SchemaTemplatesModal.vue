@@ -2,7 +2,7 @@
   <BaseModal
     :open="open"
     size="xl"
-    panel-class="dark:bg-slate-900 dark:border-slate-700 rounded-lg"
+    panel-class="rounded-lg"
     body-class="p-6"
     @close="emit('close')"
   >

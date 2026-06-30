@@ -29,6 +29,7 @@ from ....dependencies import get_db, remove_file
 from ....schemas import PasswordSet
 from ....utils.email_service import send_invitation_email, send_password_reset_email
 from ....utils.enums import UserRole
+from ....utils.password_policy import validate_password
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,9 @@ def first_admin_check(db: Session = Depends(get_db)):
 
 
 @router.post("/first-admin", response_model=schemas.UserResponse)
+@limiter.limit("3/hour" if not settings.DISABLE_RATE_LIMIT else "1000/hour")
 def create_first_admin(
+    request: Request,
     user_in: schemas.UserCreate,
     db: Session = Depends(get_db),
 ):
@@ -81,6 +84,8 @@ def create_first_admin(
         raise HTTPException(
             status_code=400, detail="Role must be admin for this endpoint."
         )
+
+    validate_password(user_in.password)
 
     user = db.query(models.User).filter(models.User.email == user_in.email).first()
     if user:
@@ -120,6 +125,7 @@ def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="New password must be different from the old password.",
         )
+    validate_password(password_data.new_password)
     current_user.hashed_password = get_password_hash(password_data.new_password)
     current_user.token_version += 1  # Revoke existing tokens
     db.commit()
@@ -146,6 +152,7 @@ def admin_set_user_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot change password of other admin users",
         )
+    validate_password(password_data.new_password)
     user.hashed_password = get_password_hash(password_data.new_password)
     user.token_version += 1  # Revoke existing tokens
     db.commit()
@@ -154,7 +161,9 @@ def admin_set_user_password(
 
 
 @router.post("", response_model=schemas.UserResponse)
+@limiter.limit("5/minute" if not settings.DISABLE_RATE_LIMIT else "1000/minute")
 def create_user(
+    request: Request,
     user_in: schemas.UserCreate,
     db: Session = Depends(get_db),
 ) -> schemas.UserResponse:
@@ -216,6 +225,8 @@ def create_user(
             detail="Unable to create account. Please check your invitation and try again.",
         )
 
+    validate_password(user_in.password)
+
     # Create the user
     user = models.User(
         email=str(user_in.email),
@@ -250,6 +261,60 @@ def read_current_user(
 ) -> schemas.UserResponse:
     """Get current user."""
     return schemas.UserResponse.model_validate(current_user)
+
+
+@router.get("/me/identities", response_model=list[schemas.UserIdentityResponse])
+def list_my_identities(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[schemas.UserIdentityResponse]:
+    """List the SSO identities linked to the current user."""
+    identities = (
+        db.query(models.UserIdentity)
+        .filter(models.UserIdentity.user_id == current_user.id)
+        .all()
+    )
+    return [
+        schemas.UserIdentityResponse(
+            id=ident.id,
+            provider_name=ident.provider.name,
+            external_subject=ident.external_subject,
+            created_at=ident.created_at,
+            last_login_at=ident.last_login_at,
+        )
+        for ident in identities
+    ]
+
+
+@router.delete("/me/identities/{identity_id}")
+def delete_my_identity(
+    identity_id: int = Path(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Unlink an SSO identity from the current user's account.
+
+    Refuses if it's the user's last sign-in method and the account has no
+    password set (would lock the user out).
+    """
+    identity = db.get(models.UserIdentity, identity_id)
+    if not identity or identity.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Identity not found."
+        )
+    remaining = (
+        db.query(models.UserIdentity)
+        .filter(models.UserIdentity.user_id == current_user.id)
+        .all()
+    )
+    if len(remaining) <= 1 and not current_user.hashed_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot disconnect your last sign-in method without a password set on the account.",
+        )
+    db.delete(identity)
+    db.commit()
+    return {"deleted": identity_id}
 
 
 @router.delete("/{user_id}", response_model=schemas.UserResponse)
@@ -507,7 +572,9 @@ def delete_invitation(
 
 
 @router.get("/validate-invitation/{token}", response_model=schemas.InvitationInfo)
+@limiter.limit("30/hour" if not settings.DISABLE_RATE_LIMIT else "1000/hour")
 def validate_invitation(
+    request: Request,
     token: str,
     db: Session = Depends(get_db),
 ) -> schemas.InvitationInfo:
@@ -581,7 +648,9 @@ def forgot_password(
 @router.get(
     "/validate-reset-token/{token}", response_model=schemas.PasswordResetValidate
 )
+@limiter.limit("30/hour" if not settings.DISABLE_RATE_LIMIT else "1000/hour")
 def validate_reset_token(
+    request: Request,
     token: str,
     db: Session = Depends(get_db),
 ) -> schemas.PasswordResetValidate:
@@ -602,7 +671,9 @@ def validate_reset_token(
 
 
 @router.post("/reset-password/{token}")
+@limiter.limit("10/hour" if not settings.DISABLE_RATE_LIMIT else "1000/hour")
 def reset_password(
+    request: Request,
     token: str,
     body: schemas.PasswordResetConfirm,
     db: Session = Depends(get_db),
@@ -636,6 +707,7 @@ def reset_password(
             detail="Invalid or expired reset token",
         )
 
+    validate_password(body.new_password)
     user.hashed_password = get_password_hash(body.new_password)
     user.token_version += 1  # Revoke existing JWT sessions
 

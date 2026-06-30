@@ -21,10 +21,10 @@
           tabindex="-1"
           :class="[
             placement === 'right'
-              ? 'relative h-full w-full flex flex-col bg-white shadow-xl border-l border-slate-200 overflow-hidden'
+              ? 'relative h-full w-full flex flex-col bg-white dark:bg-slate-900 shadow-xl border-l border-slate-200 dark:border-slate-700 overflow-hidden'
               : placement === 'fullscreen'
-                ? 'relative bg-white rounded-lg shadow-2xl w-full h-full flex flex-col overflow-hidden'
-                : 'relative bg-white rounded-2xl shadow-2xl w-full flex flex-col max-h-[90vh] border border-slate-200 overflow-hidden',
+                ? 'relative bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-full h-full flex flex-col overflow-hidden'
+                : 'relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 overflow-hidden',
             sizeClass,
             panelClass,
           ]"
@@ -33,16 +33,18 @@
           <!-- Header -->
           <div
             v-if="$slots.header || title || closeable"
-            class="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-200"
+            class="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-200 dark:border-slate-700"
             :class="headerClass"
           >
             <slot name="header">
-              <h3 :id="titleId" class="text-lg font-semibold text-slate-900">{{ title }}</h3>
+              <h3 :id="titleId" class="text-lg font-semibold text-slate-900 dark:text-white">
+                {{ title }}
+              </h3>
             </slot>
             <button
               v-if="closeable"
               type="button"
-              class="text-slate-400 hover:text-slate-600 transition-colors"
+              class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
               aria-label="Close"
               @click="emit('close')"
             >
@@ -58,7 +60,7 @@
           <!-- Footer -->
           <div
             v-if="$slots.footer"
-            class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3"
+            class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3"
             :class="footerClass"
           >
             <slot name="footer" />

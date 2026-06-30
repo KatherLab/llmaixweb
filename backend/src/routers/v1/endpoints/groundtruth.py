@@ -35,6 +35,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _gt_type_name(value) -> str:
+    """Normalize a ground-truth sample value to a schema-side type label.
+
+    Mirrors the vocabulary produced by ``extract_field_types_from_schema``
+    so the mapping UI shows the same type on both columns. ``bool`` must be
+    checked before ``int`` (bools are ints in Python).
+    """
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, (int, float)):
+        return "number"
+    return "string"
+
+
 @router.post("/groundtruth", response_model=schemas.GroundTruth)
 async def upload_groundtruth(
     *,
@@ -460,7 +476,10 @@ def preview_groundtruth(
             detail="Failed to load ground truth. See server logs for details.",
         )
 
-    # Collect field paths + types from a sample document
+    # Collect field paths + types from a sample document. Types are normalized
+    # to the same vocabulary the schema side uses (boolean/number/string/...)
+    # so the mapping UI shows consistent labels on both sides instead of raw
+    # Python type names like "bool" / "int" / "str".
     def collect_paths(doc: dict, prefix=""):
         paths = []
         types = {}
@@ -472,7 +491,7 @@ def preview_groundtruth(
                 types.update(subtypes)
             else:
                 paths.append(path)
-                types[path] = type(v).__name__ if v is not None else "null"
+                types[path] = _gt_type_name(v)
         return paths, types
 
     field_paths, field_types, sample_doc = [], {}, None
@@ -545,6 +564,26 @@ def configure_field_mapping(
     ).scalar_one_or_none()
     if not schema:
         raise HTTPException(status_code=404, detail="Schema not found")
+
+    # Validate that every mapped schema_field is an actual leaf path in the
+    # schema. A typo'd path would otherwise silently yield None predictions
+    # (counted as "missing" / false negatives), degrading recall with no
+    # signal that the mapping itself is broken.
+    schema_field_types: dict = {}
+    extract_field_types_from_schema(schema.schema_definition, schema_field_types)
+    valid_schema_paths = set(schema_field_types.keys())
+    invalid_paths = [
+        m.schema_field for m in mappings if m.schema_field not in valid_schema_paths
+    ]
+    if invalid_paths:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Schema field path(s) not found in schema: "
+                f"{', '.join(invalid_paths)}. Use a leaf path from the schema "
+                "(e.g. 'patient.age' or 'lab_results[].value')."
+            ),
+        )
 
     # Delete existing mappings for this groundtruth-schema combination
     db.execute(

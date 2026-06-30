@@ -56,8 +56,8 @@
       <!-- Errors -->
       <select v-model="filters.has_failures" :class="inlineSelectClass" @change="emit('apply')">
         <option value="">All</option>
-        <option :value="true">Has errors</option>
-        <option :value="false">No errors</option>
+        <option value="true">Has errors</option>
+        <option value="false">No errors</option>
       </select>
 
       <!-- Date Range -->
@@ -180,7 +180,7 @@ const activeFilters = computed(() => {
   if (filters.value.has_failures !== '' && filters.value.has_failures !== null)
     chips.push({
       key: 'has_failures',
-      label: `Errors: ${filters.value.has_failures ? 'Has errors' : 'No errors'}`,
+      label: `Errors: ${filters.value.has_failures === 'true' ? 'Has errors' : 'No errors'}`,
       color: 'red',
     })
   if (filters.value.dateRange && filters.value.dateRange !== 'custom')

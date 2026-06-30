@@ -3,7 +3,7 @@
     class="border-2 border-dashed rounded-xl text-center hover:border-blue-400 transition-colors"
     :class="[
       compact
-        ? 'border-slate-300 p-10 bg-slate-50'
+        ? 'border-slate-300 dark:border-slate-600 p-10 bg-slate-50 dark:bg-slate-800/50'
         : 'border-slate-300 dark:border-slate-600 p-12 bg-slate-50 dark:bg-slate-800/50',
       { 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-slate-800': dragging },
     ]"

@@ -54,11 +54,11 @@
     <ErrorBanner v-if="error" :message="error" />
     <LoadingSpinner v-if="isLoading" />
 
-    <!-- Empty -->
+    <!-- Empty: no trials have ever been created -->
     <EmptyState
-      v-else-if="trials.length === 0"
-      title="No trials found"
-      description="Try changing your filters or create a new trial."
+      v-else-if="trials.length === 0 && !hasActiveFilters"
+      title="No trials yet"
+      description="Run your first extraction trial to see results here."
       action-text="Start a Trial"
       :disabled="trialDisabled"
       :disabled-reason="trialDisabledReason"
@@ -66,6 +66,20 @@
     >
       <template #icon>
         <ClipboardList class="h-12 w-12 text-slate-400 dark:text-slate-500" />
+      </template>
+    </EmptyState>
+
+    <!-- Empty: filters matched nothing -->
+    <EmptyState
+      v-else-if="trials.length === 0 && hasActiveFilters"
+      title="No trials match your filters"
+      description="Try adjusting or clearing your filters to see more trials."
+    >
+      <template #icon>
+        <SearchX class="h-12 w-12 text-slate-400 dark:text-slate-500" />
+      </template>
+      <template #action>
+        <BaseButton variant="secondary" @click="clearFilters">Clear All Filters</BaseButton>
       </template>
     </EmptyState>
 
@@ -115,9 +129,9 @@
         @page-size-change="handlePageSizeChange"
         @rename="openRenameModal"
         @delete="confirmDeleteTrial"
-        @retry="retryTrial"
+        @retry="confirmRetryTrial"
         @download="openDownloadModal"
-        @cancel="cancelTrial"
+        @cancel="confirmCancelTrial"
         @view-results="viewTrialResults"
         @view-schema="viewTrialSchema"
         @view-prompt="viewTrialPrompt"
@@ -138,9 +152,11 @@
     <ConfirmationDialog
       v-if="isConfirmDialogOpen"
       :open="isConfirmDialogOpen"
-      title="Delete Trial"
-      message="Are you sure you want to delete this trial? This action cannot be undone."
-      @confirm="deleteTrial"
+      :title="confirmAction.title"
+      :message="confirmAction.message"
+      :confirm-text="confirmAction.confirmText"
+      :confirm-variant="confirmAction.variant"
+      @confirm="confirmAction.handler()"
       @cancel="isConfirmDialogOpen = false"
     />
     <TrialResults
@@ -195,7 +211,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { debounce } from 'perfect-debounce'
 import { useToast } from '@/composables/useToast'
-import { ClipboardList } from '@lucide/vue'
+import { ClipboardList, SearchX } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { documentsApi } from '@/services/documentsApi'
 import { schemasApi } from '@/services/schemasApi'
@@ -238,7 +254,18 @@ const isLoading = ref(true)
 const error = ref(null)
 const isModalOpen = ref(false)
 const isConfirmDialogOpen = ref(false)
-const trialToDelete = ref(null)
+// Generic confirmation dialog: { title, message, confirmText, variant, handler }
+const confirmAction = ref({
+  title: '',
+  message: '',
+  confirmText: 'Confirm',
+  variant: 'danger',
+  handler: () => {},
+})
+const openConfirm = (config) => {
+  confirmAction.value = { confirmText: 'Confirm', variant: 'danger', ...config }
+  isConfirmDialogOpen.value = true
+}
 const showRenameModal = ref(false)
 const editingTrial = ref(null)
 const selectedTrials = ref([])
@@ -291,6 +318,23 @@ const trialDisabledReason = computed(() => {
     return 'You need to upload at least one document to start a trial.'
   if (prompts.value.length === 0) return 'You need to create at least one prompt to start a trial.'
   return ''
+})
+
+// Distinguishes "project has no trials at all" from "filters matched nothing".
+const hasActiveFilters = computed(() => {
+  const f = filters.value
+  return !!(
+    f.search ||
+    f.status ||
+    f.schema_id ||
+    f.prompt_id ||
+    f.document_set_id ||
+    f.llm_model ||
+    (f.has_failures !== '' && f.has_failures !== null) ||
+    f.dateRange ||
+    customDateFrom.value ||
+    customDateTo.value
+  )
 })
 
 const filters = ref({
@@ -504,22 +548,39 @@ async function cancelTrial(trial) {
   }
 }
 
-function confirmDeleteTrial(trial) {
-  trialToDelete.value = trial
-  isConfirmDialogOpen.value = true
+function confirmCancelTrial(trial) {
+  openConfirm({
+    title: 'Cancel Trial',
+    message: 'Cancel this running trial? In-progress work will be discarded and cannot be resumed.',
+    confirmText: 'Cancel Trial',
+    variant: 'warning',
+    handler: () => {
+      isConfirmDialogOpen.value = false
+      cancelTrial(trial)
+    },
+  })
 }
-async function deleteTrial() {
-  if (!trialToDelete.value) return
+
+function confirmDeleteTrial(trial) {
+  openConfirm({
+    title: 'Delete Trial',
+    message: 'Are you sure you want to delete this trial? This action cannot be undone.',
+    confirmText: 'Delete',
+    variant: 'danger',
+    handler: () => deleteTrial(trial),
+  })
+}
+async function deleteTrial(trial) {
+  if (!trial) return
   try {
-    await trialsApi.delete(props.projectId, trialToDelete.value.id)
-    trials.value = trials.value.filter((t) => t.id !== trialToDelete.value.id)
+    await trialsApi.delete(props.projectId, trial.id)
+    trials.value = trials.value.filter((t) => t.id !== trial.id)
     totalTrials.value = Math.max(0, totalTrials.value - 1)
     toast.success('Trial deleted')
   } catch {
     toast.error('Failed to delete trial')
   } finally {
     isConfirmDialogOpen.value = false
-    trialToDelete.value = null
   }
 }
 
@@ -541,6 +602,20 @@ async function retryTrial(trial) {
   } catch {
     toast.error('Failed to restart trial')
   }
+}
+
+function confirmRetryTrial(trial) {
+  openConfirm({
+    title: 'Retry Trial',
+    message:
+      'Start a new trial run with the same configuration? This will consume LLM credits and process all documents again.',
+    confirmText: 'Retry Trial',
+    variant: 'primary',
+    handler: () => {
+      isConfirmDialogOpen.value = false
+      retryTrial(trial)
+    },
+  })
 }
 function openDownloadModal(trial) {
   trialToDownload.value = trial

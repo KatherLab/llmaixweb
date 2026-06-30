@@ -5,16 +5,16 @@
     :closeable="false"
     :close-on-esc="false"
     body-class="p-6"
-    footer-class="bg-slate-50"
+    footer-class="bg-slate-50 dark:bg-slate-800"
     @close="$emit('close')"
   >
     <template #header>
-      <h3 class="text-lg font-medium text-slate-900">Schema Editor Help</h3>
+      <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">Schema Editor Help</h3>
     </template>
 
     <div class="space-y-4">
       <div>
-        <h4 class="font-medium text-slate-900 mb-2">Field Types</h4>
+        <h4 class="font-medium text-slate-900 dark:text-slate-100 mb-2">Field Types</h4>
         <div class="grid grid-cols-2 gap-3">
           <div v-for="type in availableTypes" :key="type.value" class="flex items-start space-x-3">
             <div :class="['rounded-lg p-2', type.color]">
@@ -22,15 +22,15 @@
             </div>
             <div>
               <p class="font-medium text-sm">{{ type.label }}</p>
-              <p class="text-xs text-slate-600">{{ type.description }}</p>
+              <p class="text-xs text-slate-600 dark:text-slate-400">{{ type.description }}</p>
             </div>
           </div>
         </div>
       </div>
 
       <div>
-        <h4 class="font-medium text-slate-900 mb-2">Tips</h4>
-        <ul class="text-sm text-slate-600 space-y-1">
+        <h4 class="font-medium text-slate-900 dark:text-slate-100 mb-2">Tips</h4>
+        <ul class="text-sm text-slate-600 dark:text-slate-400 space-y-1">
           <li>• Click on any field block to edit its properties</li>
           <li>• Use the navigation breadcrumb to move between nested structures</li>
           <li>• Drag and drop to reorder fields (coming soon)</li>

@@ -39,6 +39,14 @@
               <div v-if="loading" class="flex justify-center py-12">
                 <LoadingSpinner size="medium" />
               </div>
+              <div v-else-if="loadUsersError" class="py-8">
+                <ErrorBanner :message="loadUsersError" />
+                <div class="mt-3 text-center">
+                  <BaseButton variant="secondary" size="sm" @click="loadUsers"
+                    >Try again</BaseButton
+                  >
+                </div>
+              </div>
               <UserGrid
                 v-else
                 :row-data="users"
@@ -76,6 +84,14 @@
             <div class="flex-1 min-h-0">
               <div v-if="loadingInvitations" class="flex justify-center py-12">
                 <LoadingSpinner size="medium" />
+              </div>
+              <div v-else-if="loadInvitationsError" class="py-8">
+                <ErrorBanner :message="loadInvitationsError" />
+                <div class="mt-3 text-center">
+                  <BaseButton variant="secondary" size="sm" @click="loadInvitations">
+                    Try again
+                  </BaseButton>
+                </div>
               </div>
               <InvitationGrid
                 v-else
@@ -142,6 +158,7 @@ import InviteUserModal from '@/components/admin/InviteUserModal.vue'
 import EditUserModal from '@/components/admin/EditUserModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import GlassCard from '@/components/common/GlassCard.vue'
@@ -155,10 +172,12 @@ const currentUserId = ref(null)
 
 const users = ref([])
 const loading = ref(true)
+const loadUsersError = ref(null)
 const userSearch = ref('')
 
 const invitations = ref([])
 const loadingInvitations = ref(true)
+const loadInvitationsError = ref(null)
 const invitationSearch = ref('')
 const showUsedInvitations = ref(false)
 
@@ -211,9 +230,12 @@ onMounted(async () => {
 
 async function loadUsers() {
   loading.value = true
+  loadUsersError.value = null
   try {
     const response = await usersApi.list()
     users.value = response.data
+  } catch (error) {
+    loadUsersError.value = extractErrorMessage(error, 'Failed to load users.')
   } finally {
     loading.value = false
   }
@@ -221,9 +243,12 @@ async function loadUsers() {
 
 async function loadInvitations() {
   loadingInvitations.value = true
+  loadInvitationsError.value = null
   try {
     const response = await usersApi.listInvitations()
     invitations.value = response.data
+  } catch (error) {
+    loadInvitationsError.value = extractErrorMessage(error, 'Failed to load invitations.')
   } finally {
     loadingInvitations.value = false
   }

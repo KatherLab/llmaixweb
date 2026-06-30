@@ -3,8 +3,6 @@
     :open="open"
     size="xl"
     body-class="p-0 flex flex-col min-h-0"
-    panel-class="dark:bg-slate-900 dark:border-slate-700"
-    header-class="dark:border-slate-700"
     @close="cancelPromptModal"
   >
     <template #header>
@@ -20,7 +18,7 @@
               'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
               !simplePromptMode
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900',
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
             ]"
             @click="simplePromptMode = false"
           >
@@ -32,7 +30,7 @@
               'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
               simplePromptMode
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900',
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
             ]"
             @click="simplePromptMode = true"
           >

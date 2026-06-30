@@ -1,5 +1,7 @@
 # backend/src/core/security.py
 import datetime
+import hashlib
+import secrets
 from typing import Any
 
 import bcrypt
@@ -12,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from ..core.config import settings
 from ..dependencies import get_db
-from ..models.user import User
+from ..models.user import RefreshToken, User
 from ..utils.enums import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
@@ -48,10 +50,87 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     if isinstance(hashed_password, str):
         hashed_password: bytes = hashed_password.encode("utf-8")
 
+    # Empty hash sentinel = "no password set" (SSO-only JIT accounts). These
+    # accounts can't be password-logged-in by design.
+    if not hashed_password:
+        return False
+
     try:
         return bcrypt.checkpw(plain_password, hashed_password)
     except Exception:
         return False
+
+
+# ───────────────────────── Refresh tokens ─────────────────────────
+
+
+def _hash_token(token: str) -> str:
+    """sha256 hex of a refresh token for storage. sha256 is sufficient here:
+    refresh tokens are high-entropy (48-byte) and short-lived, and we need
+    constant-time lookup by hash (indexed unique column)."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_refresh_token(db: Session, user: User) -> str:
+    """Mint + persist a refresh token for ``user``. Returns the plaintext token
+    (returned to the client exactly once)."""
+    plaintext = secrets.token_urlsafe(48)
+    expires_at = datetime.datetime.now(datetime.UTC).replace(
+        tzinfo=None
+    ) + datetime.timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    db.add(
+        RefreshToken(
+            user_id=user.id,
+            token_hash=_hash_token(plaintext),
+            expires_at=expires_at,
+        )
+    )
+    db.commit()
+    return plaintext
+
+
+def verify_refresh_token(token: str, db: Session) -> User | None:
+    """Look up a refresh token by hash. Returns the linked user if the token is
+    valid, unexpired, and unrevoked; otherwise ``None``. Does NOT rotate — the
+    caller (``/auth/refresh``) revokes + re-mints."""
+    if not token:
+        return None
+    row = db.execute(
+        select(RefreshToken).where(RefreshToken.token_hash == _hash_token(token))
+    ).scalar_one_or_none()
+    if not row or row.revoked:
+        return None
+    if row.expires_at < datetime.datetime.now(datetime.UTC).replace(tzinfo=None):
+        return None
+    user = db.get(User, row.user_id)
+    if not user or not user.is_active:
+        return None
+    return user
+
+
+def revoke_refresh_token(token: str, db: Session) -> None:
+    """Revoke a single refresh token (mark revoked). Idempotent."""
+    if not token:
+        return
+    row = db.execute(
+        select(RefreshToken).where(RefreshToken.token_hash == _hash_token(token))
+    ).scalar_one_or_none()
+    if row and not row.revoked:
+        row.revoked = True
+        db.commit()
+
+
+def revoke_all_refresh_tokens(db: Session, user: User) -> None:
+    """Revoke every refresh token for a user (used on logout-everywhere)."""
+    db.execute(
+        select(RefreshToken).where(
+            RefreshToken.user_id == user.id, RefreshToken.revoked.is_(False)
+        )
+    ).scalars().all()  # materialize before update
+    db.query(RefreshToken).filter(
+        RefreshToken.user_id == user.id, RefreshToken.revoked.is_(False)
+    ).update({RefreshToken.revoked: True})
+    db.commit()
 
 
 def get_password_hash(password: str) -> str:

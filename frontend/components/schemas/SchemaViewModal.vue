@@ -2,10 +2,9 @@
   <BaseModal
     :open="open"
     size="lg"
-    panel-class="dark:bg-slate-900 dark:border-slate-700 rounded-lg"
-    header-class="dark:border-slate-700"
+    panel-class="rounded-lg"
     body-class="p-6"
-    footer-class="dark:border-slate-700 dark:bg-slate-800"
+    footer-class="dark:bg-slate-800"
     @close="emit('close')"
   >
     <template #header>

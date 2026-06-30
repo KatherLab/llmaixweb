@@ -113,10 +113,10 @@
         <BaseButton variant="secondary" size="sm" @click.stop="emit('retry', trial)">
           Retry
         </BaseButton>
-        <BaseButton variant="secondary" size="sm" tone="purple" @click.stop="emit('rename', trial)">
+        <BaseButton variant="secondary" size="sm" @click.stop="emit('rename', trial)">
           Rename
         </BaseButton>
-        <BaseButton variant="secondary" size="sm" tone="red" @click.stop="emit('delete', trial)">
+        <BaseButton variant="danger" size="sm" @click.stop="emit('delete', trial)">
           Delete
         </BaseButton>
       </div>

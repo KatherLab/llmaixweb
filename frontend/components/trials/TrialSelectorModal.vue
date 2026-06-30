@@ -23,14 +23,12 @@
 
     <div class="flex-1 overflow-y-auto p-6">
       <!-- Prerequisites Warning -->
-      <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+      <div class="rounded-md p-4 mb-4" :class="getBannerClass('amber')">
         <div class="flex">
-          <AlertTriangle class="h-5 w-5 text-yellow-400" />
+          <AlertTriangle class="h-5 w-5 text-amber-400 flex-shrink-0" />
           <div class="ml-3">
-            <h3 class="text-sm font-medium text-yellow-800">
-              Schema-specific field mappings required
-            </h3>
-            <p class="mt-1 text-sm text-yellow-700">
+            <h3 class="text-sm font-medium">Schema-specific field mappings required</h3>
+            <p class="mt-1 text-sm">
               Each trial requires field mappings for its specific schema. Trials without mappings
               will be grayed out.
               <button class="underline hover:no-underline" @click="showMappingModal = true">
@@ -44,7 +42,9 @@
       <!-- Loading State -->
       <div v-if="loadingStates.trials" class="text-center py-8">
         <LoadingSpinner size="medium" />
-        <p class="mt-2 text-slate-500">Loading trials and checking mappings...</p>
+        <p class="mt-2 text-slate-500 dark:text-slate-400">
+          Loading trials and checking mappings...
+        </p>
       </div>
 
       <!-- No Trials State -->
@@ -57,21 +57,23 @@
       <!-- Trials List -->
       <div v-else>
         <div class="mb-4">
-          <h4 class="font-medium text-slate-900 mb-2">Select a trial to evaluate</h4>
-          <p class="text-sm text-slate-600">
+          <h4 class="font-medium text-slate-900 dark:text-white mb-2">
+            Select a trial to evaluate
+          </h4>
+          <p class="text-sm text-slate-600 dark:text-slate-400">
             Choose from completed trials to compare against your ground truth data.
           </p>
           <div class="mt-3 flex gap-4 text-sm">
-            <span class="text-slate-600">
+            <span class="text-slate-600 dark:text-slate-400">
               Total trials: <span class="font-medium">{{ trials.total }}</span>
             </span>
-            <span class="text-green-600">
+            <span class="text-green-600 dark:text-green-400">
               Ready for evaluation:
               <span class="font-medium">{{
                 availableTrials.filter((t) => t.hasMappings).length
               }}</span>
             </span>
-            <span class="text-red-600">
+            <span class="text-red-600 dark:text-red-400">
               Missing mappings:
               <span class="font-medium">{{
                 availableTrials.filter((t) => !t.hasMappings).length
@@ -83,30 +85,34 @@
         <!-- Mapping Status Loading -->
         <div v-if="loadingStates.mappings" class="text-center py-4">
           <LoadingSpinner size="small" />
-          <p class="mt-2 text-sm text-slate-500">Checking field mappings...</p>
+          <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Checking field mappings...</p>
         </div>
 
-        <div class="space-y-3 max-h-96 overflow-y-auto">
+        <div class="space-y-3">
           <div
             v-for="trial in availableTrials"
             :key="trial.id"
             class="border rounded-lg p-4 transition-colors"
             :class="{
-              'border-blue-500 bg-blue-50 cursor-pointer hover:bg-blue-100':
+              'border-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30':
                 trial.hasMappings && selectedTrial?.id === trial.id,
-              'border-slate-300 cursor-pointer hover:bg-slate-50':
+              'border-slate-300 dark:border-slate-600 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40':
                 trial.hasMappings && selectedTrial?.id !== trial.id,
-              'border-slate-200 bg-slate-50 cursor-not-allowed opacity-60': !trial.hasMappings,
+              'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 cursor-not-allowed opacity-60':
+                !trial.hasMappings,
             }"
             @click="trial.hasMappings ? selectTrial(trial) : showMappingRequiredTooltip(trial)"
           >
             <div class="flex justify-between items-start">
               <div class="flex-1">
                 <div class="flex items-center gap-3 mb-2">
-                  <h5 class="font-medium text-slate-900 truncate" :title="trialDisplayName(trial)">
+                  <h5
+                    class="font-medium text-slate-900 dark:text-white truncate"
+                    :title="trialDisplayName(trial)"
+                  >
                     {{ trialDisplayName(trial) }}
                   </h5>
-                  <div class="text-xs text-slate-500">ID: {{ trial.id }}</div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400">ID: {{ trial.id }}</div>
                   <StatusBadge :status="trial.status" class="px-2 py-1 font-medium" />
                   <StatusBadge
                     v-if="trial.hasMappings"
@@ -127,7 +133,9 @@
                     class="px-2 py-1 font-medium"
                   />
                 </div>
-                <div class="text-sm text-slate-600 grid grid-cols-2 gap-y-1 gap-x-4">
+                <div
+                  class="text-sm text-slate-600 dark:text-slate-400 grid grid-cols-2 gap-y-1 gap-x-4"
+                >
                   <div><span class="font-medium">Model:</span> {{ trial.llm_model }}</div>
                   <div>
                     <span class="font-medium">Schema:</span>
@@ -155,7 +163,7 @@
                 </div>
                 <div
                   v-if="!trial.hasMappings && trial.mappingStatus !== 'loading'"
-                  class="mt-2 text-xs text-red-600"
+                  class="mt-2 text-xs text-red-600 dark:text-red-400"
                 >
                   Configure field mappings for "{{ getSchemaName(trial.schema_id) }}" schema to
                   enable evaluation
@@ -164,21 +172,29 @@
               <div class="flex flex-col items-end gap-2">
                 <div
                   v-if="isAlreadyEvaluated(trial)"
-                  class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded"
+                  class="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded"
                 >
                   Already evaluated
                 </div>
-                <div class="text-xs text-slate-500">{{ trial.results_count }} results</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">
+                  {{ trial.results_count }} results
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Load more for pagination -->
-          <div v-if="trials.items.length < trials.total" class="pt-2 flex justify-center">
-            <BaseButton variant="secondary" :disabled="loadingStates.trials" @click="loadMore">{{
-              loadingStates.trials ? 'Loading...' : 'Load more'
-            }}</BaseButton>
-          </div>
+          <!-- Pagination -->
+          <PaginationControls
+            v-if="totalPages > 1"
+            :model-value="trials.page"
+            :total-pages="totalPages"
+            :visible-pages="visiblePages"
+            :total-items="trials.total"
+            :page-size="trials.limit"
+            item-label="trials"
+            class="-mx-4 sm:-mx-0 rounded-none border-t border-slate-200 dark:border-slate-700 sm:rounded-md mt-2"
+            @update:model-value="goToPage"
+          />
         </div>
       </div>
     </div>
@@ -226,10 +242,12 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreviewModal.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import PaginationControls from '@/components/common/PaginationControls.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { describeHttpError, extractErrorMessage } from '@/utils/errors'
+import { getBannerClass } from '@/utils/statusStyles'
 
 const props = defineProps({
   open: {
@@ -262,7 +280,7 @@ const trials = ref({
   items: [],
   total: 0,
   limit: 20,
-  offset: 0,
+  page: 1,
 })
 
 const schemas = ref([])
@@ -300,6 +318,30 @@ const availableTrials = computed(() => {
       mappingStatus: trialMappingStatus.value[trial.id] === undefined ? 'loading' : 'loaded',
     }))
 })
+
+// Server-side pagination
+const totalPages = computed(() => Math.max(1, Math.ceil(trials.value.total / trials.value.limit)))
+
+// Compact page list with ellipses for PaginationControls
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = trials.value.page
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages = [1]
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  if (start > 2) pages.push('...')
+  for (let p = start; p <= end; p++) pages.push(p)
+  if (end < total - 1) pages.push('...')
+  pages.push(total)
+  return pages
+})
+
+const goToPage = async (page) => {
+  if (page === '...' || page === trials.value.page || page < 1 || page > totalPages.value) return
+  trials.value.page = page
+  await fetchTrials()
+}
 
 // Utility functions
 const isAlreadyEvaluated = (trial) => {
@@ -347,12 +389,13 @@ const retryLastOperation = async () => {
 }
 
 // Data fetching functions
-const fetchTrials = async ({ append = false } = {}) => {
-  lastFailedOperation.value = () => fetchTrials({ append })
+const fetchTrials = async () => {
+  lastFailedOperation.value = fetchTrials
   loadingStates.value.trials = true
 
   try {
-    const { limit, offset } = trials.value
+    const { limit, page } = trials.value
+    const offset = (page - 1) * limit
     // Filter to completed to avoid extra client-side filtering volume
     const { data } = await trialsApi.list(props.projectId, {
       limit,
@@ -360,11 +403,7 @@ const fetchTrials = async ({ append = false } = {}) => {
       status: 'completed',
     })
 
-    if (append) {
-      trials.value.items.push(...(data.items || []))
-    } else {
-      trials.value.items = data.items || []
-    }
+    trials.value.items = data.items || []
     trials.value.total = data.total || trials.value.items.length
 
     // Once a page is loaded, check mapping statuses for those trials
@@ -376,12 +415,6 @@ const fetchTrials = async ({ append = false } = {}) => {
   } finally {
     loadingStates.value.trials = false
   }
-}
-
-const loadMore = async () => {
-  if (trials.value.items.length >= trials.value.total) return
-  trials.value.offset = trials.value.items.length
-  await fetchTrials({ append: true })
 }
 
 // Fetch schemas and existing evaluations for this ground truth
@@ -401,7 +434,7 @@ const fetchData = async () => {
   try {
     // Reset paging for fresh open
     trials.value.limit = 20
-    trials.value.offset = 0
+    trials.value.page = 1
 
     await Promise.all([fetchSchemasAndEvaluations(), fetchTrials()])
 

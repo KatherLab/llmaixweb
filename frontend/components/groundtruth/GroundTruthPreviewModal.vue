@@ -2,20 +2,22 @@
   <BaseModal
     :open="open"
     size="full"
-    panel-class="bg-white/90 max-w-none min-h-[420px]"
-    header-class="bg-gradient-to-r from-white/80 to-blue-50/70 sticky top-0 z-10 rounded-t-2xl"
+    panel-class="bg-white/90 dark:bg-slate-900/95 max-w-none min-h-[420px]"
+    header-class="bg-gradient-to-r from-white/80 to-blue-50/70 dark:from-slate-900/80 dark:to-slate-800/70 sticky top-0 z-10 rounded-t-2xl"
     body-class="flex flex-col"
-    footer-class="bg-white/90 flex-col md:flex-row md:items-center justify-between! sticky bottom-0 z-10 rounded-b-2xl shadow text-[15px]"
+    footer-class="bg-white/90 dark:bg-slate-900/95 flex-col md:flex-row md:items-center justify-between! sticky bottom-0 z-10 rounded-b-2xl shadow text-[15px]"
     @close="close"
   >
     <template #header>
       <div>
-        <h2 class="text-xl font-bold tracking-tight mb-0.5">Configure Ground Truth Mapping</h2>
-        <div class="flex items-center gap-2 text-[11px] text-slate-500">
-          <span class="font-mono text-blue-700">Project {{ projectId }}</span>
+        <h2 class="text-xl font-bold tracking-tight mb-0.5 dark:text-white">
+          Configure Ground Truth Mapping
+        </h2>
+        <div class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+          <span class="font-mono text-blue-700 dark:text-blue-400">Project {{ projectId }}</span>
           <span
             v-if="selectedSchemaId"
-            class="inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-800"
+            class="inline-block px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300"
             >{{ schemaDisplayName }}</span
           >
         </div>
@@ -28,13 +30,13 @@
 
     <!-- TOP CONTROLS -->
     <section
-      class="flex flex-wrap md:flex-nowrap items-center gap-3 px-6 py-3 border-b bg-white/90 backdrop-blur rounded-t-none z-10 text-[15px]"
+      class="flex flex-wrap md:flex-nowrap items-center gap-3 px-6 py-3 border-b bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-t-none z-10 text-[15px] dark:border-slate-700"
     >
       <div>
-        <label class="text-[15px] font-medium mr-2">Schema</label>
+        <label class="text-[15px] font-medium mr-2 dark:text-slate-200">Schema</label>
         <select
           v-model="selectedSchemaId"
-          class="px-2 py-1.5 rounded-lg border border-blue-200 bg-white/70 text-[15px] shadow focus:ring-2 focus:ring-blue-400 transition"
+          class="px-2 py-1.5 rounded-lg border border-blue-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800 text-[15px] dark:text-slate-100 shadow focus:ring-2 focus:ring-blue-400 transition"
           @change="onSchemaChange"
         >
           <option value="" disabled>Select schema...</option>
@@ -43,11 +45,13 @@
           </option>
         </select>
       </div>
-      <div v-if="schemaFieldPaths.length" class="text-xs text-slate-400">
-        <span class="font-mono text-blue-600">{{ schemaFieldPaths.length }}</span> fields
+      <div v-if="schemaFieldPaths.length" class="text-xs text-slate-400 dark:text-slate-500">
+        <span class="font-mono text-blue-600 dark:text-blue-400">{{
+          schemaFieldPaths.length
+        }}</span>
+        fields
       </div>
       <div class="flex-1"></div>
-      <ValidationBanner :status="validationStatus" class="mr-3" />
       <div>
         <IdFieldSelector
           v-if="showIdSelector"
@@ -67,15 +71,19 @@
 
     <!-- MAIN CONTENT: EVEN 3 COLUMNS, SCROLLS IF NEEDED -->
     <div
-      class="flex-1 flex flex-col md:flex-row min-h-0 bg-gradient-to-br from-white/95 to-blue-50/80 overflow-y-auto"
+      class="flex-1 flex flex-col md:flex-row min-h-0 bg-gradient-to-br from-white/95 to-blue-50/80 dark:from-slate-900/95 dark:to-slate-800/80 overflow-y-auto"
     >
       <!-- LEFT: SCHEMA FIELDS -->
-      <section class="w-full md:w-1/3 flex flex-col border-r bg-white/80 p-4 min-w-0">
-        <div class="mb-2 text-base font-semibold text-blue-800 flex items-center gap-2">
+      <section
+        class="w-full md:w-1/3 flex flex-col border-r bg-white/80 dark:bg-slate-900/60 dark:border-slate-700 p-4 min-w-0"
+      >
+        <div
+          class="mb-2 text-base font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2"
+        >
           <span>Schema Fields</span>
           <span
             v-if="requiredFields.length"
-            class="ml-2 px-2 py-0.5 rounded-full text-pink-700 bg-pink-50 text-xs"
+            class="ml-2 px-2 py-0.5 rounded-full text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-900/30 text-xs"
             >required: {{ requiredFields.length }}</span
           >
         </div>
@@ -86,7 +94,7 @@
             :required="requiredFields"
             :selected="selectedSchemaField"
             :disabled="!selectedSchemaId"
-            node-color="text-blue-700"
+            node-color="text-blue-700 dark:text-blue-400"
             :mapped="mappedSchemaPaths"
             :highlight="highlightRequiredUnmapped"
             @select="onSchemaFieldSelect"
@@ -96,7 +104,7 @@
 
       <!-- CENTER: MAPPING PANEL -->
       <section
-        class="w-full md:w-1/3 flex flex-col border-r bg-gradient-to-b from-blue-50/80 to-blue-100/80 px-3 pt-6 pb-2 min-w-0"
+        class="w-full md:w-1/3 flex flex-col border-r bg-gradient-to-b from-blue-50/80 to-blue-100/80 dark:from-slate-800/80 dark:to-slate-800/60 dark:border-slate-700 px-3 pt-6 pb-2 min-w-0"
       >
         <div class="flex flex-col gap-3 mb-3">
           <BaseButton
@@ -128,7 +136,8 @@
             :ground-truth-field-types="groundTruthFieldTypes"
             :schema-selected="!!selectedSchemaId"
             @remove="removeMapping"
-            @update-method="updateMappingMethod"
+            @update-method="updateMethod"
+            @update-options="updateMappingOptions"
           />
         </div>
         <BaseButton
@@ -143,10 +152,14 @@
       </section>
 
       <!-- RIGHT: GT FIELDS + SAMPLE (SAMPLE ALWAYS AT BOTTOM) -->
-      <section class="w-full md:w-1/3 flex flex-col bg-white/90 p-4 min-w-0">
-        <div class="mb-2 text-base font-semibold text-purple-900 flex items-center gap-2">
+      <section class="w-full md:w-1/3 flex flex-col bg-white/90 dark:bg-slate-900/60 p-4 min-w-0">
+        <div
+          class="mb-2 text-base font-semibold text-purple-900 dark:text-purple-300 flex items-center gap-2"
+        >
           Ground Truth Fields
-          <span v-if="groundTruthFieldPaths.length" class="ml-2 text-slate-400 text-xs"
+          <span
+            v-if="groundTruthFieldPaths.length"
+            class="ml-2 text-slate-400 dark:text-slate-500 text-xs"
             >{{ groundTruthFieldPaths.length }} fields</span
           >
         </div>
@@ -156,7 +169,7 @@
             :types="groundTruthFieldTypes"
             :selected="selectedGroundTruthField"
             :disabled="!selectedSchemaId"
-            node-color="text-purple-700"
+            node-color="text-purple-700 dark:text-purple-400"
             :mapped="mappedGtPaths"
             @select="onGroundTruthFieldSelect"
           />
@@ -175,27 +188,27 @@
     <!-- Loading Overlay -->
     <div
       v-if="loading"
-      class="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-20 rounded-2xl"
+      class="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex flex-col items-center justify-center z-20 rounded-2xl"
     >
       <LoadingSpinner size="large" />
-      <div class="mt-3 text-blue-600 font-bold text-lg">Loading...</div>
+      <div class="mt-3 text-blue-600 dark:text-blue-400 font-bold text-lg">Loading...</div>
     </div>
 
     <template #footer>
       <div>
-        <span v-if="!selectedSchemaId" class="text-slate-500">
+        <span v-if="!selectedSchemaId" class="text-slate-500 dark:text-slate-400">
           Please select a schema to start mapping fields.
         </span>
         <span
           v-else-if="mappings.length && !mappingComplete"
-          class="text-yellow-700 font-medium flex items-center gap-2"
+          class="text-yellow-700 dark:text-yellow-400 font-medium flex items-center gap-2"
         >
           <CircleAlert class="w-5 h-5 text-yellow-500" />
           Warning: not all required fields are mapped!
         </span>
         <span
           v-if="isTabularFormat && !idColumn"
-          class="block mt-1 text-xs text-red-600 font-semibold flex items-center gap-2"
+          class="block mt-1 text-xs text-red-600 dark:text-red-400 font-semibold flex items-center gap-2"
         >
           <CircleAlert class="w-4 h-4" />
           Please select the ID column before saving.
@@ -218,7 +231,7 @@
             :class="[
               'ml-2 px-7 py-2 rounded-full font-bold text-base transition shadow-xl',
               saveDisabled
-                ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
+                ? 'bg-slate-300 text-slate-500 dark:bg-slate-700 dark:text-slate-400 cursor-not-allowed opacity-60'
                 : 'bg-gradient-to-r from-blue-600 via-purple-500 to-pink-400 text-white hover:scale-105 hover:shadow-2xl',
             ]"
             style="pointer-events: auto !important"
@@ -257,7 +270,6 @@ import { ArrowUpRight, Check, CircleAlert, Sun } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FieldTree from '@/components/groundtruth/FieldTree.vue'
 import MappingList from '@/components/groundtruth/MappingList.vue'
-import ValidationBanner from '@/components/groundtruth/ValidationBanner.vue'
 import GroundTruthSample from '@/components/groundtruth/GroundTruthSample.vue'
 import IdFieldSelector from '@/components/groundtruth/IdFieldSelector.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -291,7 +303,6 @@ const jsonIdField = ref('') // for JSON/ZIP
 const selectedSchemaField = ref('')
 const selectedGroundTruthField = ref('')
 const mappings = ref([])
-const validationStatus = ref(null)
 const loading = ref(false)
 const justSaved = ref(false)
 const saveDisabled = computed(() => !canSave.value || justSaved.value)
@@ -371,7 +382,6 @@ watch(
       selectedSchemaField.value = ''
       selectedGroundTruthField.value = ''
       mappings.value = []
-      validationStatus.value = null
       justSaved.value = false
     }
   },
@@ -452,7 +462,6 @@ async function onSchemaChange() {
   await loadExistingMappings()
   selectedSchemaField.value = ''
   selectedGroundTruthField.value = ''
-  validationStatus.value = null
   loading.value = false
 }
 
@@ -527,9 +536,15 @@ function defaultMethodFor(fieldType) {
 }
 
 /** Update a mapping's comparison method from the MappingList selector. */
-function updateMappingMethod({ index, method }) {
+function updateMethod({ index, method }) {
   if (index < 0 || index >= mappings.value.length) return
   mappings.value[index].comparison_method = method
+}
+
+/** Update a mapping's comparison options (e.g. fuzzy threshold, numeric tolerance). */
+function updateMappingOptions({ index, options }) {
+  if (index < 0 || index >= mappings.value.length) return
+  mappings.value[index].comparison_options = options
 }
 function clearMappings() {
   mappings.value = []
@@ -677,9 +692,3 @@ function close() {
   emit('close')
 }
 </script>
-
-<style scoped>
-.bg-slate-800 {
-  background-color: #262626;
-}
-</style>

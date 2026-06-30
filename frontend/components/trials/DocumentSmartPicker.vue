@@ -1,7 +1,9 @@
 <template>
   <div class="mt-4 flex-1 flex flex-col gap-4">
     <div>
-      <h4 class="text-sm font-medium text-slate-700 mb-2">Load from Previous Trial</h4>
+      <h4 class="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+        Load from Previous Trial
+      </h4>
       <select
         v-model="selectedTrialId"
         :class="selectClass"
@@ -18,7 +20,9 @@
     </div>
 
     <div>
-      <h4 class="text-sm font-medium text-slate-700 mb-2">Filter by Date Range</h4>
+      <h4 class="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+        Filter by Date Range
+      </h4>
       <div class="grid grid-cols-2 gap-2">
         <input v-model="dateRange.start" :class="inputClass" type="date" />
         <input v-model="dateRange.end" :class="inputClass" type="date" />
@@ -42,9 +46,9 @@
       >
     </div>
 
-    <div v-if="selectedIds.length > 0" class="mt-4 p-3 bg-blue-50 rounded-lg">
+    <div v-if="selectedIds.length > 0" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
       <div class="flex items-center justify-between">
-        <span class="text-sm font-medium text-blue-900">
+        <span class="text-sm font-medium text-blue-900 dark:text-blue-200">
           {{ selectedIds.length }} document{{ selectedIds.length > 1 ? 's' : '' }} selected
         </span>
         <div class="flex items-center gap-2">
@@ -70,9 +74,9 @@
       <transition name="fade">
         <div
           v-show="showSelectedDocs"
-          class="mt-2 bg-white rounded shadow p-2 max-h-40 overflow-y-auto border border-blue-100"
+          class="mt-2 bg-white dark:bg-slate-800 rounded shadow p-2 max-h-40 overflow-y-auto border border-blue-100 dark:border-slate-700"
         >
-          <ul class="text-xs text-slate-800 space-y-1">
+          <ul class="text-xs text-slate-800 dark:text-slate-200 space-y-1">
             <li v-for="docId in selectedIds" :key="docId">
               {{ getDocLabel(docId) }}
             </li>

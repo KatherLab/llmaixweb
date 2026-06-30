@@ -19,35 +19,42 @@
             <option value="csv">CSV (flattened fields with dots)</option>
             <option value="json">JSON (single file with document map or multiple files)</option>
             <option value="zip">ZIP (multiple JSON files)</option>
-            +
             <option value="xlsx">Excel (.xlsx, dot-paths build nesting)</option>
           </select>
         </div>
 
-        <!-- Add info box for JSON -->
+        <!-- Format-specific guidance -->
         <div
           v-if="groundTruthFormat === 'json' || groundTruthFormat === 'zip'"
-          class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md"
+          class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md dark:bg-blue-900/20 dark:border-blue-700"
         >
-          <p class="text-sm text-blue-700">
+          <p class="text-sm text-blue-700 dark:text-blue-300">
             <strong>Important:</strong> Each document must have an 'id' field that matches your
             document identifiers.
+          </p>
+        </div>
+        <div
+          v-else-if="groundTruthFormat === 'csv' || groundTruthFormat === 'xlsx'"
+          class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md dark:bg-blue-900/20 dark:border-blue-700"
+        >
+          <p class="text-sm text-blue-700 dark:text-blue-300">
+            You'll choose the ID column (matching your document identifiers) on the next step.
           </p>
         </div>
 
         <div>
           <label for="file-upload" :class="labelClass">File(s)</label>
           <div
-            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md"
+            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 dark:border-slate-600 border-dashed rounded-md"
             @dragover.prevent
             @drop.prevent="handleFileDrop"
           >
             <div class="space-y-1 text-center">
-              <ImageIcon class="mx-auto h-12 w-12 text-slate-400" />
-              <div class="flex text-sm text-slate-600 justify-center">
+              <ImageIcon class="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500" />
+              <div class="flex text-sm text-slate-600 dark:text-slate-300 justify-center">
                 <label
                   for="file-upload"
-                  class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
+                  class="relative cursor-pointer bg-white dark:bg-slate-800 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
                 >
                   <span>Upload file(s)</span>
                   <input
@@ -62,7 +69,7 @@
                 </label>
                 <p class="pl-1">or drag and drop</p>
               </div>
-              <p class="text-xs text-slate-500">
+              <p class="text-xs text-slate-500 dark:text-slate-400">
                 <template v-if="groundTruthFormat === 'csv'"
                   >CSV file with flattened fields (dots for nesting)</template
                 >
@@ -76,8 +83,10 @@
             </div>
           </div>
           <div v-if="selectedFiles.length > 0" class="mt-2">
-            <p class="text-sm font-medium text-slate-700 mb-1">Selected files:</p>
-            <ul class="text-sm text-slate-600 space-y-1">
+            <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Selected files:
+            </p>
+            <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
               <li
                 v-for="(file, index) in selectedFiles"
                 :key="index"
@@ -185,12 +194,21 @@ const handleFileSelect = (event) => {
 const handleFileDrop = (event) => {
   const files = Array.from(event.dataTransfer.files)
   if (groundTruthFormat.value === 'json') {
-    selectedFiles.value = files.filter((f) => f.name.endsWith('.json'))
+    const jsonFiles = files.filter((f) => f.name.toLowerCase().endsWith('.json'))
+    selectedFiles.value = jsonFiles
+    if (jsonFiles.length === 0 && files.length > 0) {
+      toast.warning('Only .json files are accepted for the JSON format.')
+    }
   } else {
     // CSV / ZIP / XLSX are single-file
     const allowed = ['.csv', '.zip', '.xlsx', '.xls']
     const picked = files.find((f) => allowed.some((ext) => f.name.toLowerCase().endsWith(ext)))
     selectedFiles.value = picked ? [picked] : []
+    if (!picked && files.length > 0) {
+      toast.warning(
+        `No file matching the ${groundTruthFormat.value.toUpperCase()} format was found in the drop.`,
+      )
+    }
   }
 }
 
@@ -237,7 +255,8 @@ const uploadGroundTruth = async () => {
     }
 
     emit('uploaded', response.data)
-    toast.success('Ground truth uploaded successfully')
+    // Success toast is shown by the parent (onGroundTruthUploaded) — don't
+    // double-fire here.
   } catch (err) {
     const errorMessage = extractErrorMessage(err)
     toast.error(`Failed to upload ground truth: ${errorMessage}`)

@@ -141,10 +141,12 @@ Users can upload **GroundTruth** files (CSV/XLSX with correct extraction values)
 
 ### API Structure
 All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
-- `/api/v1/auth/*` — login, token refresh
-- `/api/v1/user/*` — user CRUD, invitations
+- `/api/v1/auth/*` — login, token refresh, logout, public settings (incl. SSO provider list)
+- `/api/v1/auth/sso/*` — OIDC SSO flow (login redirect + callback with JIT provisioning)
+- `/api/v1/user/*` — user CRUD, invitations, self-service linked identities (`/me/identities`)
 - `/api/v1/project/*` — projects (with sub-routers for files, documents, trials, etc.)
 - `/api/v1/admin/*` — admin settings, Celery monitoring
+- `/api/v1/admin/sso/*` — admin CRUD for OIDC identity providers
 
 **Projects router** (`routers/v1/endpoints/projects.py`) has nested sub-routers via `APIRouter.include_router`. Each sub-resource (files, preprocess, documents, schemas, prompts, trials, groundtruth, evaluations) is a separate module with its own prefix.
 
@@ -154,7 +156,7 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 |------|---------|
 | `main.py` | FastAPI app, lifespan (DB init + Celery worker spawn), CORS |
 | `core/config.py` | Pydantic `Settings` class with lazy init, all env vars, runtime validation |
-| `core/security.py` | JWT token create/verify, password hashing, OAuth2 scheme, admin guard |
+| `core/security.py` | JWT token create/verify, password hashing, OAuth2 scheme, admin guard, refresh-token create/verify/revoke |
 | `core/dynamic_settings.py` | DB-backed runtime settings override (cached via `lru_cache`) |
 | `db/session.py` | SQLAlchemy engine + session factory, `init_db()` |
 | `dependencies.py` | OpenAI client, S3 client, file get/save/remove, `get_db()` |
@@ -165,6 +167,11 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 | `utils/preprocessing.py` | `PreprocessingPipeline` class — main preprocessing orchestrator |
 | `utils/info_extraction.py` | LLM extraction logic (called by trial executor) |
 | `utils/evaluation.py` | Evaluation metrics computation |
+| `utils/password_policy.py` | Shared password validator (complexity rules, config-driven) |
+| `utils/crypto.py` | Fernet encrypt/decrypt for secrets at rest (e.g. SSO client secrets) |
+| `services/oidc_service.py` | OIDC discovery, authorize URL (PKCE + signed state), code exchange, userinfo |
+| `routers/v1/endpoints/sso.py` | OIDC SSO login/callback flow + JIT user provisioning |
+| `routers/v1/endpoints/admin_sso.py` | Admin CRUD for OIDC identity providers |
 | `utils/enums.py` | All shared enums (FileType, PreprocessingStrategy, etc.) |
 | `utils/url_safety.py` | SSRF guardrails for user-supplied custom API endpoints (blocks cloud-metadata, restricts schemes, disables redirect-following) |
 
@@ -195,14 +202,17 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
   / (Landing)               → Landing
   /projects                 → ProjectOverview
   /projects/:projectId      → ProjectDetail (workflow tabs: Files → Preprocessing → Documents → Schemas → Trials → Evaluation)
+  /account                  → AccountSettings (profile, change password, connected SSO accounts)
   /admin                    → AdminDashboard
     /admin/settings         → AdminSettings
+    /admin/sso              → AdminSSO (OIDC provider management)
     /admin/celery           → AdminCelery
   /admin/user-management    → AdminUserManagement (admin only)
 /                           → AuthLayout (no navbar)
-  /login                    → Login
+  /login                    → Login (shows SSO "Continue with…" buttons when enabled)
   /register                 → Register
   /invitation/:token        → InvitationLanding
+  /auth/sso/complete        → SsoComplete (SSO callback: reads tokens from URL fragment)
   /first-admin              → FirstAdminSetup
   /forgot-password          → ForgotPassword
   /reset-password/:token    → ResetPassword
@@ -225,12 +235,12 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - Response interceptor: auto-logout on 401/403, toast notification
 
 ### API Service Layer (`services/*Api.js`)
-Per-resource modules wrap the raw `api` instance — **components import functions from these, not the raw `api` instance**. One module per backend resource: `authApi`, `usersApi`, `projectsApi`, `llmApi`, `filesApi`, `preprocessingApi`, `documentsApi`, `documentSetsApi`, `schemasApi`, `promptsApi`, `trialsApi`, `groundtruthApi`, `evaluationsApi`, `adminApi`, `versionApi`. Each exports typed functions (e.g. `trialsApi.list(projectId, params)`, `documentsApi.delete(projectId, docId)`). The only legitimate direct `api` import outside `services/` is `stores/auth.js` (for the auth-header config).
+Per-resource modules wrap the raw `api` instance — **components import functions from these, not the raw `api` instance**. One module per backend resource: `authApi`, `usersApi`, `ssoApi`, `projectsApi`, `llmApi`, `filesApi`, `preprocessingApi`, `documentsApi`, `documentSetsApi`, `schemasApi`, `promptsApi`, `trialsApi`, `groundtruthApi`, `evaluationsApi`, `adminApi`, `versionApi`. Each exports typed functions (e.g. `trialsApi.list(projectId, params)`, `documentsApi.delete(projectId, docId)`). The only legitimate direct `api` import outside `services/` is `stores/auth.js` (for the auth-header config).
 
 ### Shared Primitives & Composables
 The frontend has a layer of reusable building blocks — prefer these over re-implementing:
 
-- **`components/common/`** — `BaseModal` (Teleport + ref-counted scroll lock + ESC/backdrop close; the keystone most `*Modal.vue` components build on), `BaseButton`, `ConfirmationDialog`, `StatusBadge` (+ `utils/statusStyles.js`), `FilterChip`, `SearchInput`, `PaginationControls`, `JsonViewer`, `LoadingSpinner`, `EmptyState`, `ErrorBanner`, `Tooltip`, `FileIcon`.
+- **`components/common/`** — `BaseModal` (Teleport + ref-counted scroll lock + ESC/backdrop close; the keystone most `*Modal.vue` components build on), `BaseButton`, `ConfirmationDialog`, `StatusBadge` (+ `utils/statusStyles.js`), `FilterChip`, `SearchInput`, `PaginationControls`, `JsonViewer`, `LoadingSpinner`, `EmptyState`, `ErrorBanner`, `Tooltip`, `FileIcon`, `PasswordInput` (password field w/ strength meter + show/hide, used by all auth/admin password flows), `FormField`.
 - **`composables/`** — `useScrollLock` (ref-counted body scroll lock for stacked modals), `useFileDownload` (blob→objectURL→revoke), `usePagination` / `useDocumentPagination`, `useGridTheme` (shared ag-grid theme + dark-mode reactivity), `usePreprocessingUpdates` / `useTrialUpdates` (WebSocket subscribe + project-id filtering for live task progress), `useModelTesting`, `useSchemaKeyboard`.
 - **`utils/`** — `formatters.js` (dates, file sizes, durations), `dateRange.js`, `errors.js` (`extractErrorMessage`), `markdown.js`, `schemaTypeIcons.js` (shared type→icon/color maps for the schema editor), `schemaTemplates.js` + `promptTemplates.js`, `ocrLabels.js`.
 
@@ -244,6 +254,8 @@ Large components are **orchestration shells** — they compose smaller sibling c
 - **`ProjectDetail.vue`** — project detail with tabbed workflow interface (Files → Preprocessing → Documents → Schemas → Trials → Evaluation)
 - **`AdminUserManagement.vue`** — user and invitation management (composes `InviteUserModal`/`EditUserModal` + ag-grid `UserGrid`/`InvitationGrid`)
 - **`AdminSettings.vue`** — system settings configuration
+- **`AdminSSO.vue`** — OIDC identity provider CRUD (admin tab under `/admin/sso`)
+- **`AccountSettings.vue`** — self-service profile, change password, connected SSO accounts, sign out (`/account`)
 - **`AdminCelery.vue`** — Celery task monitoring
 
 **Components (reusable, by folder):**

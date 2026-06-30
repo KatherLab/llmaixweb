@@ -20,7 +20,7 @@ def client():
 def test_create_project(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -39,7 +39,7 @@ def test_create_project(client, api_url):
 def test_get_projects(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -54,7 +54,7 @@ def test_get_projects(client, api_url):
 def test_get_project(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -80,7 +80,7 @@ def test_get_project(client, api_url):
 def test_update_project(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -108,7 +108,7 @@ def test_update_project(client, api_url):
 def test_delete_project(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -130,7 +130,7 @@ def test_delete_project(client, api_url):
 def test_get_project_files(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -154,7 +154,7 @@ def test_get_project_files(client, api_url):
 def test_upload_file(client, api_url, files_base_path):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -195,7 +195,7 @@ def test_upload_file(client, api_url, files_base_path):
 def test_get_project_file(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -236,7 +236,7 @@ def test_get_project_file(client, api_url):
 def test_delete_file(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -277,7 +277,7 @@ def test_delete_file(client, api_url):
 def test_get_project_file_content(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -331,7 +331,7 @@ def test_preprocess_project_data_v2(
     # Run preprocessing tasks with admin user as normal user is not allowed to bypass celery
     user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -430,7 +430,7 @@ def test_preprocess_project_data_v2(
 def test_preprocess_with_inline_config(client, api_url):
     user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -482,7 +482,7 @@ def test_preprocess_with_inline_config(client, api_url):
 def test_duplicate_detection(client, api_url):
     user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -567,7 +567,7 @@ def test_cancel_preprocessing_task(client, api_url):
 def test_table_file_preprocessing(client, api_url):
     user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -682,7 +682,7 @@ def test_row_by_row_document_set_auto_generation(client, api_url):
     """Test that row-by-row preprocessing automatically creates a DocumentSet."""
     user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -796,7 +796,7 @@ P003,Asthma,Bronchodilators"""
 def test_image_file_preprocessing(client, api_url, files_base_path):
     user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -866,7 +866,7 @@ def test_image_file_preprocessing(client, api_url, files_base_path):
 def test_preprocessing_progress_tracking(client, api_url):
     user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -943,7 +943,7 @@ def test_retry_failed_preprocessing(client, api_url):
 def test_excel_file_preprocessing(client, api_url):
     user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -1061,7 +1061,7 @@ def test_excel_file_preprocessing(client, api_url):
 def test_project_access_control(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -1078,12 +1078,12 @@ def test_project_access_control(client, api_url):
     # Login as another user
     another_user_data = {
         "username": "another@example.com",
-        "password": "anotherpassword",
+        "password": "Anotherpassword1",
     }
     # Create another user
     admin_user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=admin_user_data)
     assert response.status_code == 200
@@ -1098,7 +1098,7 @@ def test_project_access_control(client, api_url):
     another_user_create_data = {
         "email": "anotherinvited@example.com",
         "full_name": "Another User",
-        "password": "anotherpassword",
+        "password": "Anotherpassword1",
         "invitation_token": invitation_token,
     }
     response = client.post(f"{api_url}/user", json=another_user_create_data)
@@ -1141,7 +1141,7 @@ def test_document_set_crud_and_stats(client, api_url):
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     # Login
-    user_data = {"username": "admin@example.com", "password": "adminpassword"}
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
     resp = client.post(f"{api_url}/auth/login", data=user_data)
     headers = {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
@@ -1282,7 +1282,7 @@ def test_document_set_crud_and_stats(client, api_url):
 
 
 def test_prompt_crud(client, api_url):
-    user_data = {"username": "test@example.com", "password": "testpassword"}
+    user_data = {"username": "test@example.com", "password": "Testpassword1"}
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
     access_token = response.json()["access_token"]
@@ -1365,7 +1365,7 @@ def test_prompt_crud(client, api_url):
 def test_create_schema(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -1405,7 +1405,7 @@ def test_create_schema(client, api_url):
 def test_get_schema(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -1452,7 +1452,7 @@ def test_get_schema(client, api_url):
 def test_delete_schema(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -1507,7 +1507,7 @@ def test_delete_schema_referenced_by_trial(client, api_url):
 
     user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -1624,7 +1624,7 @@ def test_get_available_llm_models(client, api_url):
 
     login = client.post(
         f"{api_url}/auth/login",
-        data={"username": "test@example.com", "password": "testpassword"},
+        data={"username": "test@example.com", "password": "Testpassword1"},
     )
     assert login.status_code == 200, login.text
     token = login.json()["access_token"]
@@ -1645,7 +1645,7 @@ def test_test_llm_connection(client, api_url):
     if settings.OPENAI_NO_API_CHECK:
         pytest.skip("Skipping LLM connection test due to OPENAI_NO_API_CHECK setting")
 
-    user_data = {"username": "test@example.com", "password": "testpassword"}
+    user_data = {"username": "test@example.com", "password": "Testpassword1"}
     login = client.post(f"{api_url}/auth/login", data=user_data)
     assert login.status_code == 200, login.text
 
@@ -1665,7 +1665,7 @@ def test_trial_crud_and_extraction(client, api_url):
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     # Login as user
-    user_data = {"username": "admin@example.com", "password": "adminpassword"}
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
     access_token = response.json()["access_token"]
@@ -1801,7 +1801,7 @@ def test_trial_crud_and_extraction(client, api_url):
     )
     trial_id = response.json()["id"]
 
-    user2 = {"username": "another@example.com", "password": "anotherpassword"}
+    user2 = {"username": "another@example.com", "password": "Anotherpassword1"}
     resp = client.post(f"{api_url}/auth/login", data=user2)
     assert resp.status_code == 200
     access_token2 = resp.json()["access_token"]
@@ -1820,7 +1820,7 @@ def test_trial_result_download_and_status(client, api_url):
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     # Login as admin
-    user_data = {"username": "admin@example.com", "password": "adminpassword"}
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
     headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
@@ -1923,7 +1923,7 @@ def test_create_trial_with_table_preprocessing(client, api_url):
     if settings.OPENAI_NO_API_CHECK:
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
-    user_data = {"username": "admin@example.com", "password": "adminpassword"}
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
     response = client.post(f"{api_url}/auth/login", data=user_data)
     access_token = response.json()["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -2056,7 +2056,7 @@ def test_create_trial_with_mixed_preprocessing(client, api_url, files_base_path)
     if settings.OPENAI_NO_API_CHECK:
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
-    user_data = {"username": "admin@example.com", "password": "adminpassword"}
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
     access_token = client.post(f"{api_url}/auth/login", data=user_data).json()[
         "access_token"
     ]
@@ -2180,7 +2180,7 @@ def test_ocr_preprocessing_for_extraction(client, api_url, files_base_path):
     if settings.OPENAI_NO_API_CHECK:
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
-    user_data = {"username": "admin@example.com", "password": "adminpassword"}
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
     access_token = client.post(f"{api_url}/auth/login", data=user_data).json()[
         "access_token"
     ]
@@ -2285,7 +2285,7 @@ def test_field_mapping_and_evaluation(client, api_url, files_base_path):
     if settings.OPENAI_NO_API_CHECK:
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
-    user_data = {"username": "admin@example.com", "password": "adminpassword"}
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
     resp = client.post(f"{api_url}/auth/login", data=user_data)
     access_token = resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -2450,7 +2450,7 @@ def test_trial_download_and_error_endpoints(client, api_url, files_base_path):
         pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
 
     # Prepare minimal project with prompt, schema, file, document, trial, result
-    user_data = {"username": "admin@example.com", "password": "adminpassword"}
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
     resp = client.post(f"{api_url}/auth/login", data=user_data)
     access_token = resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -2609,7 +2609,7 @@ def test_evaluation_full_pipeline(client, api_url, files_base_path):
     import json
 
     # --- Auth ---
-    user_data = {"username": "admin@example.com", "password": "adminpassword"}
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
     r = client.post(f"{api_url}/auth/login", data=user_data)
     assert r.status_code == 200, r.text
     access_token = r.json()["access_token"]
@@ -3019,7 +3019,7 @@ def test_preprocess_preview_detects_same_config_image_duplicate(
     from ..src.models.project import Document, File, PreprocessingConfiguration
     from ..src.utils.enums import FileCreator, FileType, PreprocessingStrategy
 
-    user_data = {"username": "test@example.com", "password": "testpassword"}
+    user_data = {"username": "test@example.com", "password": "Testpassword1"}
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
     access_token = response.json()["access_token"]

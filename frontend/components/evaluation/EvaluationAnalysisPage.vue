@@ -3,17 +3,16 @@
     <!-- Header -->
     <div class="flex items-center justify-between gap-4 mb-4">
       <div class="min-w-0">
-        <button
-          class="text-sm text-blue-600 dark:text-blue-400 hover:underline mb-1 flex items-center gap-1"
-          @click="$emit('back')"
-        >
+        <BaseButton variant="link" size="sm" tone="gray" class="-ml-1 mb-2" @click="$emit('back')">
           <ChevronLeft class="h-4 w-4" /> Back to evaluations
-        </button>
+        </BaseButton>
         <h1 class="text-2xl font-bold text-slate-900 dark:text-white truncate">
-          {{ trialName || `Trial #${evaluationDetail?.trial_id}` }}
+          {{ trialName || loadedTrialName || `Trial #${evaluationDetail?.trial_id}` }}
         </h1>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          <span v-if="evaluationDetail?.model">{{ evaluationDetail.model }}</span>
+          <span v-if="evaluationDetail?.model || loadedTrialModel">{{
+            evaluationDetail?.model || loadedTrialModel
+          }}</span>
           <span v-if="groundTruthName"> · {{ groundTruthName }}</span>
           <span v-if="createdDate"> · {{ createdDate }}</span>
         </p>
@@ -35,9 +34,22 @@
       <aside class="lg:col-span-1 space-y-4">
         <!-- Overall metrics -->
         <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4">
-          <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
-            Overall Metrics
-          </h2>
+          <div class="flex items-baseline justify-between mb-3">
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Overall Metrics
+            </h2>
+            <span
+              v-if="matchedDocInfo"
+              class="text-[11px] text-slate-500 dark:text-slate-400"
+              :title="
+                errorDocCount > 0
+                  ? 'Accuracy is computed over matched documents only. Unmatched documents are listed in the table below.'
+                  : ''
+              "
+            >
+              {{ matchedDocInfo }}
+            </span>
+          </div>
           <div class="grid grid-cols-2 gap-3">
             <div
               v-for="m in overallMetrics"
@@ -46,7 +58,7 @@
             >
               <div class="flex items-center gap-1">
                 <span class="text-xs text-slate-500 dark:text-slate-400">{{ m.label }}</span>
-                <Tooltip :text="m.tooltip">
+                <Tooltip :text="m.tooltip" :title="m.tooltipTitle">
                   <Info
                     class="h-3.5 w-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   />
@@ -55,10 +67,17 @@
               <div class="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
                 {{ m.value }}
               </div>
+              <div
+                v-if="m.sub"
+                class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate"
+              >
+                {{ m.sub }}
+              </div>
             </div>
           </div>
           <div v-if="errorDocCount > 0" class="mt-3 text-xs text-yellow-600 dark:text-yellow-400">
-            {{ errorDocCount }} document(s) could not be scored (no ground-truth match).
+            {{ errorDocCount }} of {{ totalDocCount }} document(s) could not be scored (no
+            ground-truth match) and are excluded from the accuracy above.
           </div>
         </div>
 
@@ -66,13 +85,23 @@
         <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Fields</h2>
-            <button
-              v-if="selectedFieldFilter"
-              class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-              @click="selectedFieldFilter = ''"
-            >
-              Clear filter
-            </button>
+            <div class="flex items-center gap-3">
+              <button
+                class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 inline-flex items-center gap-1"
+                :title="fieldSort === 'accuracy' ? 'Sorted worst-first' : 'Sorted alphabetically'"
+                @click="toggleFieldSort"
+              >
+                <ArrowDownWideNarrow class="h-3.5 w-3.5" />
+                {{ fieldSort === 'accuracy' ? 'Worst first' : 'A→Z' }}
+              </button>
+              <button
+                v-if="selectedFieldFilter"
+                class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                @click="selectedFieldFilter = ''"
+              >
+                Clear filter
+              </button>
+            </div>
           </div>
           <ul class="space-y-1 max-h-[420px] overflow-y-auto">
             <li
@@ -93,9 +122,12 @@
               <div class="flex items-center gap-2 shrink-0">
                 <span
                   v-if="field.isCategory"
-                  class="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                  >cat</span
+                  class="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                  title="Categorical field — select it to view its confusion matrix"
                 >
+                  <Tags class="h-2.5 w-2.5" />
+                  CAT
+                </span>
                 <span
                   v-if="field.errorCount > 0"
                   class="text-[10px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
@@ -135,7 +167,7 @@
             <option value="failed">Failed</option>
             <option value="incorrect">Has wrong values</option>
             <option value="missing">Has missing fields</option>
-            <option value="perfect">Perfect (≥90%)</option>
+            <option value="perfect">High (≥90%)</option>
             <option value="low">Low (&lt;50%)</option>
           </select>
           <div v-if="selectedFieldFilter" class="flex items-center gap-1">
@@ -154,6 +186,55 @@
           </div>
         </div>
 
+        <!-- Per-field metrics for the selected field -->
+        <div
+          v-if="selectedFieldMetrics"
+          class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4 mb-4"
+        >
+          <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Field metrics — {{ prettifyField(selectedFieldFilter) }}
+            </h3>
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {{ selectedFieldMetrics.correct_count }}/{{ selectedFieldMetrics.total_count }}
+              correct
+            </span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div
+              v-for="m in selectedFieldMetricCards"
+              :key="m.key"
+              class="bg-slate-50 dark:bg-slate-800 rounded-lg p-2.5"
+            >
+              <div class="flex items-center gap-1">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">{{ m.label }}</span>
+                <Tooltip :text="m.tooltip" :title="m.tooltipTitle">
+                  <Info
+                    class="h-3 w-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  />
+                </Tooltip>
+              </div>
+              <div class="text-base font-bold" :class="accuracyColor(m.value)">
+                {{ formatMetricPercent(m.value) }}
+              </div>
+            </div>
+          </div>
+          <div
+            v-if="Object.keys(selectedFieldMetrics.error_distribution).length"
+            class="mt-3 flex flex-wrap items-center gap-1.5"
+          >
+            <span class="text-xs text-slate-500 dark:text-slate-400 mr-1">Errors:</span>
+            <span
+              v-for="(count, type) in selectedFieldMetrics.error_distribution"
+              :key="type"
+              :title="getErrorTypeDescription(type) + ' — ' + getErrorSuggestion(type)"
+              class="text-[11px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 cursor-help"
+            >
+              {{ prettifyErrorType(type) }}: {{ count }}
+            </span>
+          </div>
+        </div>
+
         <!-- Confusion matrix for the selected categorical field -->
         <div
           v-if="confusionMatrixForField"
@@ -162,7 +243,11 @@
           <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
             Confusion matrix — {{ prettifyField(selectedFieldFilter) }}
           </h3>
-          <ConfusionMatrix :matrix="confusionMatrixForField" @filter="onConfusionFilter" />
+          <ConfusionMatrix
+            :matrix="confusionMatrixForField"
+            :active-filter="confusionFilter"
+            @filter="onConfusionFilter"
+          />
         </div>
 
         <!-- Document table -->
@@ -194,10 +279,9 @@
               </span>
             </template>
             <template #cell-status="{ row }">
-              <StatusBadge v-if="row.has_error" color="red">Error</StatusBadge>
-              <StatusBadge v-else-if="row.accuracy >= 0.9" color="green">OK</StatusBadge>
-              <StatusBadge v-else-if="row.accuracy < 0.5" color="red">Low</StatusBadge>
-              <StatusBadge v-else color="yellow">Partial</StatusBadge>
+              <StatusBadge :color="documentStatusColor(row)">{{
+                documentStatusLabel(row)
+              }}</StatusBadge>
             </template>
           </DataTable>
           <PaginationControls
@@ -235,14 +319,27 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { ChevronLeft, Download, Info } from '@lucide/vue'
+import { ArrowDownWideNarrow, ChevronLeft, Download, Info, Tags } from '@lucide/vue'
 import { evaluationsApi } from '@/services/evaluationsApi'
 import { trialsApi } from '@/services/trialsApi'
 import { documentsApi } from '@/services/documentsApi'
 import { schemasApi } from '@/services/schemasApi'
 import { filesApi } from '@/services/filesApi'
 import { formatDate } from '@/utils/formatters'
-import { formatMetricPercent, getMetricTooltip } from '@/utils/metricsDefinitions'
+import {
+  formatMetricPercent,
+  getMetricTooltip,
+  getErrorTypeDescription,
+  getErrorSuggestion,
+} from '@/utils/metricsDefinitions'
+import {
+  prettifyField,
+  accuracyColor,
+  prettifyErrorType,
+  documentStatusLabel,
+  documentStatusColor,
+  ACCURACY_THRESHOLDS,
+} from '@/utils/evaluationHelpers'
 import { getTypeIcon } from '@/utils/schemaTypeIcons'
 import { describeHttpError } from '@/utils/errors'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -270,6 +367,10 @@ defineEmits(['back', 'export'])
 const evaluationDetail = ref(null)
 const loading = ref(true)
 const loadError = ref('')
+// Trial name/model fetched in loadAll — used as a fallback for deep links
+// that arrive without a ?trialName query param (e.g. a shared/bookmarked URL).
+const loadedTrialName = ref('')
+const loadedTrialModel = ref('')
 
 // Field types: { dot_path: 'category' | 'string' | ... }
 const fieldTypes = ref({})
@@ -282,6 +383,9 @@ const search = ref('')
 const statusFilter = ref('all')
 const selectedFieldFilter = ref('')
 const confusionFilter = ref(null) // { groundTruth, predicted, field }
+// Field-list ordering: 'accuracy' (worst-first, default — surfaces problem
+// fields) or 'alpha' (alphabetical).
+const fieldSort = ref('accuracy')
 
 // ---- Pagination ----
 const currentPage = ref(1)
@@ -307,30 +411,54 @@ const overallMetrics = computed(() => {
       key: 'accuracy',
       label: 'Accuracy',
       value: formatMetricPercent(m.accuracy),
+      sub:
+        m.total_fields != null && m.correct_fields != null
+          ? `${m.correct_fields}/${m.total_fields} fields`
+          : '',
+      tooltipTitle: 'Accuracy',
       tooltip: getMetricTooltip('accuracy'),
     },
     {
       key: 'precision',
       label: 'Precision',
       value: formatMetricPercent(m.precision),
+      sub:
+        m.matched_document_count != null
+          ? `${m.matched_document_count}/${m.total_documents} docs matched`
+          : '',
+      tooltipTitle: 'Precision',
       tooltip: getMetricTooltip('precision'),
     },
     {
       key: 'recall',
       label: 'Recall',
       value: formatMetricPercent(m.recall),
+      sub: '',
+      tooltipTitle: 'Recall',
       tooltip: getMetricTooltip('recall'),
     },
     {
       key: 'f1_score',
       label: 'F1',
       value: formatMetricPercent(m.f1_score),
+      sub: '',
+      tooltipTitle: 'F1 Score',
       tooltip: getMetricTooltip('f1_score'),
     },
   ]
 })
 
 const errorDocCount = computed(() => evaluationDetail.value?.metrics?.error_document_count || 0)
+const totalDocCount = computed(() => evaluationDetail.value?.metrics?.total_documents || 0)
+const matchedDocCount = computed(() => evaluationDetail.value?.metrics?.matched_document_count || 0)
+// "X / Y documents matched" — surfaces that accuracy is over matched docs only.
+const matchedDocInfo = computed(() => {
+  if (!totalDocCount.value) return ''
+  if (errorDocCount.value > 0) {
+    return `${matchedDocCount.value}/${totalDocCount.value} docs matched`
+  }
+  return `${totalDocCount.value} doc${totalDocCount.value === 1 ? '' : 's'}`
+})
 const createdDate = computed(() =>
   evaluationDetail.value?.created_at ? formatDate(evaluationDetail.value.created_at) : '',
 )
@@ -338,19 +466,33 @@ const createdDate = computed(() =>
 // ---- Computed: field list ----
 const fieldList = computed(() => {
   const fields = evaluationDetail.value?.fields || {}
-  return Object.entries(fields).map(([name, m]) => {
+  const list = Object.entries(fields).map(([name, m]) => {
     const type = fieldTypes.value[name] || 'string'
     return {
       name,
       label: prettifyField(name),
       accuracy: m.accuracy ?? 0,
-      errorCount: m.error_count ?? m.total_count - m.correct_count,
+      errorCount:
+        m.error_count ??
+        (m.total_count != null && m.correct_count != null ? m.total_count - m.correct_count : 0),
       isCategory: type === 'category',
       icon: getTypeIcon(type === 'category' ? 'string' : type),
       iconColor: iconTextColor(type),
     }
   })
+  if (fieldSort.value === 'accuracy') {
+    // Worst accuracy first (ties broken by most errors), so problem fields
+    // surface without scanning the whole list.
+    list.sort((a, b) => a.accuracy - b.accuracy || b.errorCount - a.errorCount)
+  } else {
+    list.sort((a, b) => a.label.localeCompare(b.label))
+  }
+  return list
 })
+
+const toggleFieldSort = () => {
+  fieldSort.value = fieldSort.value === 'accuracy' ? 'alpha' : 'accuracy'
+}
 
 const iconTextColor = (type) => {
   const map = {
@@ -372,6 +514,62 @@ const confusionMatrixForField = computed(() => {
   return matrices[selectedFieldFilter.value] || null
 })
 
+// ---- Computed: per-field metrics for the selected field ----
+const selectedFieldMetrics = computed(() => {
+  if (!selectedFieldFilter.value) return null
+  const fields = evaluationDetail.value?.fields || {}
+  const m = fields[selectedFieldFilter.value]
+  if (!m) return null
+  const errorDistribution = m.error_distribution || {}
+  return {
+    accuracy: m.accuracy ?? 0,
+    precision: m.precision,
+    recall: m.recall,
+    f1_score: m.f1_score,
+    total_count: m.total_count ?? 0,
+    correct_count: m.correct_count ?? 0,
+    error_count:
+      m.error_count ??
+      (m.total_count != null && m.correct_count != null ? m.total_count - m.correct_count : 0),
+    error_distribution: errorDistribution,
+  }
+})
+
+const selectedFieldMetricCards = computed(() => {
+  const m = selectedFieldMetrics.value
+  if (!m) return []
+  return [
+    {
+      key: 'accuracy',
+      label: 'Accuracy',
+      value: m.accuracy,
+      tooltipTitle: 'Accuracy',
+      tooltip: getMetricTooltip('accuracy'),
+    },
+    {
+      key: 'precision',
+      label: 'Precision',
+      value: m.precision,
+      tooltipTitle: 'Precision',
+      tooltip: getMetricTooltip('precision'),
+    },
+    {
+      key: 'recall',
+      label: 'Recall',
+      value: m.recall,
+      tooltipTitle: 'Recall',
+      tooltip: getMetricTooltip('recall'),
+    },
+    {
+      key: 'f1_score',
+      label: 'F1',
+      value: m.f1_score,
+      tooltipTitle: 'F1 Score',
+      tooltip: getMetricTooltip('f1_score'),
+    },
+  ]
+})
+
 const confusionFilterLabel = computed(() => {
   if (!confusionFilter.value) return ''
   return `${confusionFilter.value.groundTruth} → ${confusionFilter.value.predicted}`
@@ -386,7 +584,12 @@ const filteredDocs = computed(() => {
       (d.document_name || `Document #${d.document_id}`).toLowerCase().includes(q),
     )
   }
-  if (selectedFieldFilter.value) {
+  if (selectedFieldFilter.value && !confusionFilter.value) {
+    // Filter to documents where this field is wrong — but only when no
+    // confusion-matrix cell is selected. A confusion cell is the more
+    // specific filter (and may target CORRECT predictions, e.g. a green
+    // diagonal cell), so it must take precedence; otherwise correct docs
+    // are filtered out here before the confusion filter can match them.
     docs = docs.filter(
       (d) =>
         d.incorrect_fields?.includes(selectedFieldFilter.value) ||
@@ -413,9 +616,9 @@ const filteredDocs = computed(() => {
         case 'missing':
           return (d.missing_fields?.length || 0) > 0
         case 'perfect':
-          return !d.has_error && d.accuracy >= 0.9
+          return !d.has_error && d.accuracy >= ACCURACY_THRESHOLDS.HIGH
         case 'low':
-          return !d.has_error && d.accuracy < 0.5
+          return !d.has_error && d.accuracy < ACCURACY_THRESHOLDS.LOW
         default:
           return true
       }
@@ -481,6 +684,8 @@ const loadAll = async () => {
     evaluationDetail.value = data
     // Schema field types (for category detection / icons)
     const trial = await trialsApi.get(props.projectId, data.trial_id, { include_results: false })
+    if (trial.data?.name) loadedTrialName.value = trial.data.name
+    if (trial.data?.llm_model) loadedTrialModel.value = trial.data.llm_model
     if (trial.data?.schema_id) {
       try {
         const ft = await schemasApi.getFieldTypes(props.projectId, trial.data.schema_id)
@@ -586,31 +791,10 @@ const toggleFieldFilter = (name) => {
 }
 
 // ---- Helpers ----
-const accuracyColor = (acc) => {
-  if (acc === null || acc === undefined) return 'text-slate-400'
-  if (acc >= 0.9) return 'text-green-600 dark:text-green-400'
-  if (acc < 0.5) return 'text-red-600 dark:text-red-400'
-  return 'text-yellow-600 dark:text-yellow-400'
-}
-
-const prettifyField = (key) => {
-  if (!key) return ''
-  const last =
-    String(key)
-      .split(/[.[\]]/)
-      .filter(Boolean)
-      .pop() || key
-  return last
-    .replace(/[_-]+/g, ' ')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
 const columns = [
   { key: 'document_name', label: 'Document', sortable: true },
   { key: 'accuracy', label: 'Accuracy', sortable: true, align: 'right' },
-  { key: 'incorrect_fields', label: 'Wrong / Total', align: 'right' },
+  { key: 'incorrect_fields', label: 'Wrong of Total', align: 'right' },
   { key: 'status', label: 'Status' },
 ]
 

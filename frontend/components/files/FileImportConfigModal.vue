@@ -56,13 +56,8 @@
     <div class="space-y-6">
       <div class="flex flex-wrap gap-4">
         <div>
-          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1"
-            >Encoding</label
-          >
-          <select
-            v-model="encoding"
-            class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded px-2 py-1"
-          >
+          <label :class="labelClass">Encoding</label>
+          <select v-model="encoding" :class="selectClass">
             <option v-for="enc in detectedEncodings" :key="enc" :value="enc">
               {{ enc }}
             </option>
@@ -70,13 +65,8 @@
         </div>
 
         <div v-if="isCSV">
-          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1"
-            >Delimiter</label
-          >
-          <select
-            v-model="delimiter"
-            class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded px-2 py-1"
-          >
+          <label :class="labelClass">Delimiter</label>
+          <select v-model="delimiter" :class="selectClass">
             <option v-for="d in detectedDelimiters" :key="d" :value="d">
               {{ displayDelimiter(d) }}
             </option>
@@ -84,30 +74,21 @@
         </div>
 
         <div v-if="isCSV || isXLSX">
-          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1"
-            >Header Row</label
-          >
+          <label :class="labelClass">Header Row</label>
           <input v-model="hasHeader" type="checkbox" />
           <span class="text-sm text-slate-700 dark:text-slate-300">File contains header row</span>
         </div>
 
         <div v-if="isXLSX && sheets.length">
-          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1"
-            >Sheet</label
-          >
-          <select
-            v-model="sheet"
-            class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded px-2 py-1"
-          >
+          <label :class="labelClass">Sheet</label>
+          <select v-model="sheet" :class="selectClass">
             <option v-for="s in sheets" :key="s" :value="s">{{ s }}</option>
           </select>
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1"
-          >Import Strategy</label
-        >
+        <label :class="labelClass">Import Strategy</label>
         <div class="flex items-center gap-4">
           <label class="text-slate-700 dark:text-slate-300">
             <input v-model="preprocessingStrategy" type="radio" value="row_by_row" />
@@ -123,13 +104,11 @@
       <div v-if="preprocessingStrategy === 'row_by_row' && headerLabels.length" class="space-y-3">
         <!-- Text columns -->
         <div>
-          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1"
-            >Text Columns <span class="text-red-500">*</span></label
-          >
+          <label :class="labelClass">Text Columns <span class="text-red-500">*</span></label>
           <select
             v-model="textColumns"
             multiple
-            class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent py-2"
+            :class="[selectClass, 'focus:ring-2 focus:ring-blue-500 focus:border-transparent py-2']"
           >
             <option v-for="(col, idx) in headerLabels" :key="idx" :value="col">
               {{ col }}
@@ -144,13 +123,8 @@
 
         <!-- ID column -->
         <div>
-          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1"
-            >Case/Document ID Column</label
-          >
-          <select
-            v-model="caseIdColumn"
-            class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded py-2"
-          >
+          <label :class="labelClass">Case/Document ID Column</label>
+          <select v-model="caseIdColumn" :class="selectClass">
             <option value="">(Row number)</option>
             <option v-for="(col, idx) in headerLabels" :key="idx" :value="col">
               {{ col }}<span v-if="isRecommendedId(col)"> (Recommended)</span>
@@ -196,6 +170,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import { selectClass, labelClass } from '@/utils/formStyles'
 
 const props = defineProps({
   open: { type: Boolean, required: true },

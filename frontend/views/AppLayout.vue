@@ -101,7 +101,7 @@
             <div v-if="authReady && isAuthenticated" class="relative">
               <button
                 aria-label="Open user menu"
-                class="group flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                class="group flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 focus:ring-blue-500"
                 @click="toggleUserMenu"
               >
                 <div
@@ -143,6 +143,14 @@
                       {{ userEmail }}
                     </div>
                   </div>
+                  <router-link
+                    class="block px-5 py-3 text-base text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+                    to="/account"
+                    @click="showUserMenu = false"
+                  >
+                    <Settings class="inline-block w-5 h-5 mr-2 text-blue-500" />
+                    Account settings
+                  </router-link>
                   <a
                     class="block px-5 py-3 text-base text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
                     href="#"
@@ -210,8 +218,6 @@
       :open="showChangePasswordModal"
       title="Change Password"
       size="sm"
-      panel-class="dark:bg-slate-900 dark:border-slate-800"
-      header-class="dark:bg-slate-900"
       @close="closeChangePasswordModal"
     >
       <form class="flex flex-col gap-5" @submit.prevent="handleChangePassword">
@@ -223,10 +229,9 @@
           placeholder="Enter current password"
           autocomplete="current-password"
         />
-        <FormField
+        <PasswordInput
           v-model="newPassword"
           label="New Password"
-          type="password"
           required
           :minlength="8"
           :maxlength="128"
@@ -273,6 +278,7 @@ import ActivityBell from '@/components/admin/ActivityBell.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FormField from '@/components/common/FormField.vue'
+import PasswordInput from '@/components/common/PasswordInput.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { getBannerClass } from '@/utils/statusStyles'
 import { extractErrorMessage } from '@/utils/errors'

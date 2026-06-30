@@ -1,6 +1,6 @@
 <template>
   <div class="json-viewer">
-    <div v-if="!data" class="text-slate-500 italic text-xs">null</div>
+    <div v-if="!data" class="text-slate-500 dark:text-slate-400 italic text-xs">null</div>
     <div v-else-if="typeof data !== 'object'" class="json-value text-xs">
       {{ formatValue(data) }}
     </div>
@@ -25,14 +25,16 @@
             </span>
             <span v-else class="w-3 h-3 inline-block"></span>
           </span>
-          <span class="key-name text-xs font-medium text-purple-700">{{ key }}:</span>
+          <span class="key-name text-xs font-medium text-purple-700 dark:text-purple-300"
+            >{{ key }}:</span
+          >
           <span v-if="!isExpandable(value) || !expanded[key]" class="json-value text-xs ml-1">
             {{ formatValue(value, !expanded[key]) }}
           </span>
         </div>
         <div
           v-if="isExpandable(value) && expanded[key]"
-          class="json-children ml-3 pl-2 border-l border-slate-200"
+          class="json-children ml-3 pl-2 border-l border-slate-200 dark:border-slate-700"
         >
           <JsonViewer :data="value" :max-depth="maxDepth - 1" />
         </div>
@@ -127,5 +129,9 @@ const formatValue = (value, collapsed = false) => {
 .json-value {
   color: #1e40af;
   word-break: break-word;
+}
+
+.dark .json-value {
+  color: #93c5fd;
 }
 </style>

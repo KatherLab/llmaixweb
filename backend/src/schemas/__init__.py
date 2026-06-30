@@ -1,4 +1,4 @@
-from .auth import Token, TokenPayload
+from .auth import LogoutRequest, RefreshRequest, Token, TokenPayload
 from .project import (
     Document,
     DocumentBase,
@@ -58,6 +58,13 @@ from .project import (
     TrialSummary,
     TrialUpdate,
 )
+from .sso import (
+    IdentityProviderCreate,
+    IdentityProviderPublic,
+    IdentityProviderResponse,
+    IdentityProviderUpdate,
+    UserIdentityResponse,
+)
 from .user import (
     InvitationInfo,
     InvitationResponse,
@@ -76,6 +83,13 @@ from .user import (
 __all__ = [
     "Token",
     "TokenPayload",
+    "RefreshRequest",
+    "LogoutRequest",
+    "IdentityProviderCreate",
+    "IdentityProviderResponse",
+    "IdentityProviderUpdate",
+    "IdentityProviderPublic",
+    "UserIdentityResponse",
     "PasswordChange",
     "PasswordSet",
     "PasswordResetRequest",

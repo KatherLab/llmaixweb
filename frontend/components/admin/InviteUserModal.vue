@@ -1,11 +1,5 @@
 <template>
-  <BaseModal
-    :open="open"
-    size="sm"
-    panel-class="dark:bg-slate-900 dark:border-slate-700"
-    :close-on-backdrop="!isInviting"
-    @close="emit('close')"
-  >
+  <BaseModal :open="open" size="sm" :close-on-backdrop="!isInviting" @close="emit('close')">
     <template #header>
       <h3 class="text-lg font-bold text-slate-900 dark:text-white">Invite New User</h3>
     </template>
@@ -61,6 +55,7 @@
           />
           <button
             type="button"
+            aria-label="Copy invitation link"
             class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all relative"
             @click="copyGeneratedLink"
           >

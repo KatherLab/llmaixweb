@@ -1,21 +1,22 @@
 /**
  * Markdown helpers shared across result/document viewers.
  *
- * `renderMarkdown` renders markdown to HTML via `marked`. Note: this does NOT
- * sanitize with DOMPurify (unlike DocumentViewer.vue's local copy) — it
- * preserves the original TrialResults.vue behaviour verbatim. The eslint
- * `vue/no-v-html` warnings on callers are pre-existing and acceptable.
+ * `renderMarkdown` renders markdown to HTML via `marked` and sanitizes the
+ * result with DOMPurify. The inputs (LLM reasoning output, extracted document
+ * text) are untrusted, so sanitization is mandatory before feeding the output
+ * to `v-html`.
  */
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 /**
- * Render a markdown string to HTML.
+ * Render a markdown string to sanitized HTML.
  * @param {string} text - Markdown source
- * @returns {string} Rendered HTML (or the original text on failure)
+ * @returns {string} Sanitized HTML (or the original text on failure)
  */
 export const renderMarkdown = (text) => {
   try {
-    return marked(text)
+    return DOMPurify.sanitize(marked.parse(text))
   } catch {
     return text
   }

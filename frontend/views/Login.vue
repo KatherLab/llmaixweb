@@ -13,6 +13,24 @@
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >
+      <!-- SSO providers -->
+      <div v-if="ssoProviders.length" class="flex flex-col gap-2">
+        <a
+          v-for="provider in ssoProviders"
+          :key="provider.slug"
+          :href="ssoLoginUrl(provider.slug, redirectTarget)"
+          class="w-full py-2.5 px-4 rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 transition flex items-center justify-center gap-2"
+        >
+          <LogIn class="h-4 w-4" aria-hidden="true" />
+          Continue with {{ provider.name }}
+        </a>
+        <div class="flex items-center gap-3 my-1">
+          <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+          <span class="text-xs text-slate-400">or</span>
+          <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+        </div>
+      </div>
+
       <FormField
         v-model="email"
         label="Email address"
@@ -32,7 +50,10 @@
         autocomplete="current-password"
       >
         <template #trailing>
-          <router-link to="/forgot-password" class="text-xs text-blue-600 hover:underline">
+          <router-link
+            to="/forgot-password"
+            class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+          >
             Forgot your password?
           </router-link>
         </template>
@@ -52,7 +73,7 @@
       </transition>
       <router-link
         to="/register"
-        class="block mt-3 text-center text-blue-600 hover:underline text-sm transition"
+        class="block mt-3 text-center text-blue-600 dark:text-blue-400 hover:underline text-sm transition"
       >
         Don’t have an account? <span class="font-semibold">Register here</span>
       </router-link>
@@ -62,10 +83,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { Lock } from '@lucide/vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Lock, LogIn } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/authApi'
+import { ssoLoginUrl } from '@/services/ssoApi'
 import { useToast } from '@/composables/useToast'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -73,6 +95,7 @@ import FormField from '@/components/common/FormField.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const toast = useToast()
 const firstAdminStore = useFirstAdminStore()
@@ -81,6 +104,8 @@ const email = ref('')
 const password = ref('')
 const isLoading = ref(false)
 const error = ref(null)
+const ssoProviders = ref([])
+const redirectTarget = ref('/')
 
 onMounted(async () => {
   // If first-admin flow is needed, redirect to it (extra safe)
@@ -89,6 +114,18 @@ onMounted(async () => {
   }
   if (firstAdminStore.needsFirstAdmin) {
     router.replace('/first-admin')
+    return
+  }
+  // Preserve the intended destination for post-login redirect (and SSO).
+  if (route.query.redirect) {
+    redirectTarget.value = String(route.query.redirect)
+  }
+  // Load SSO providers advertised by the backend.
+  try {
+    const res = await authApi.getSettings()
+    ssoProviders.value = res.data.sso_providers || []
+  } catch {
+    ssoProviders.value = []
   }
 })
 
@@ -104,9 +141,8 @@ async function handleSubmit() {
 
     const response = await authApi.login(formData.toString())
 
-    await authStore.setToken(response.data.access_token)
-    await authStore.fetchUser()
-    router.push(authStore.isAdmin ? '/' : '/')
+    await authStore.setSession(response.data.access_token, response.data.refresh_token)
+    router.push(redirectTarget.value || '/')
   } catch (err) {
     error.value = 'Invalid email or password'
     toast.error('Invalid email or password', {

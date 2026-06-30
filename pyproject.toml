@@ -4,15 +4,15 @@ version = "0.4.1"
 description = "LLM Information Extraction Web Application"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "fastapi[standard]==0.138.0",
+    "fastapi[standard]==0.138.2",
     "uvicorn==0.49.0",
     "pyjwt==2.13.0",
     "sqlalchemy==2.0.51",
     "psycopg[binary,pool]==3.3.4",
     "pydantic_settings==2.14.2",
-    "openai==2.43.0",
+    "openai==2.44.0",
     "bcrypt==5.0.0",
-    "boto3==1.43.36",
+    "boto3==1.43.37",
     "mistralai==2.5.0",
     "pypdf==6.14.2",
     "redis==8.0.1",
@@ -21,7 +21,7 @@ dependencies = [
     "thefuzz==0.22.1",
     "pandas==3.0.3",
     "xlsxwriter==3.2.9",
-    "alembic==1.18.4",
+    "alembic==1.18.5",
     "slowapi==0.1.10",
     "cryptography==49.0.0",
     "rtree==1.4.1",
@@ -29,8 +29,8 @@ dependencies = [
     "torchvision==0.27.1",
     "scipy==1.18.0",
     "opencv-python-headless==4.13.0.92",
-    "pymupdf==1.27.2.3",
-    "httpx2==2.4.0",
+    "pymupdf==1.28.0",
+    "httpx2==2.5.0",
     "pydantic==2.13.4",
     "requests==2.34.2",
     "websockets==16.0"
@@ -38,12 +38,12 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff==0.15.19",
-    "ty==0.0.53",
+    "ruff==0.15.20",
+    "ty==0.0.55",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
     "isort==8.0.1",
-    "boto3-stubs==1.43.36",
+    "boto3-stubs==1.43.37",
     "pandas-stubs==3.0.3.260530",
     "celery-types==0.26.0",
     # Docling for local fallback during tests (when docling-serve unavailable)

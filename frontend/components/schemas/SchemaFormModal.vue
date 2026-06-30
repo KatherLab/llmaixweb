@@ -3,8 +3,7 @@
     :open="open"
     size="full"
     body-class="p-0 flex flex-col min-h-0"
-    panel-class="max-w-[1600px] h-[90vh] dark:bg-slate-900 dark:border-slate-700"
-    header-class="dark:border-slate-700"
+    panel-class="max-w-[1600px] h-[90vh]"
     @close="cancelSchemaModal"
   >
     <template #header>
@@ -20,7 +19,7 @@
               'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
               !simpleMode
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900',
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
             ]"
             @click="simpleMode = false"
           >
@@ -32,7 +31,7 @@
               'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
               simpleMode
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900',
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
             ]"
             @click="simpleMode = true"
           >
@@ -59,7 +58,7 @@
               <input
                 id="schema-name"
                 v-model="schemaForm.schema_name"
-                class="block w-full border-0 border-b-2 border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-800 dark:text-white px-3 py-2 text-lg font-semibold text-slate-900 dark:text-white focus:ring-0 focus:border-blue-500 dark:focus:border-blue-400 transition-colors placeholder-slate-400"
+                class="block w-full border-0 border-b-2 border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-800 dark:text-white px-3 py-2 text-lg font-semibold text-slate-900 dark:text-white focus:ring-0 focus:border-blue-500 dark:focus:border-blue-400 transition-colors placeholder-slate-400 dark:placeholder-slate-500"
                 placeholder="e.g., Patient Information"
                 maxlength="100"
                 required

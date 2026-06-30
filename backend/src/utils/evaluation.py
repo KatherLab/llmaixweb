@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from pandas.errors import ParserError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 from thefuzz import fuzz
 
@@ -66,7 +66,11 @@ class EvaluationEngine:
                 f"Evaluation prerequisites not met: {'; '.join(validation_result['errors'])}"
             )
 
-        # Check cache
+        # Check cache. A cached evaluation is reused only when the trial's
+        # results have not changed since it was computed — otherwise the user
+        # would silently see metrics for stale results. (Field-mapping, ID-column
+        # and ground-truth file changes already delete the cached evaluation;
+        # this guards against the trial simply being re-run.)
         if not force_recalculate:
             existing = (
                 self.db.query(models.Evaluation)
@@ -74,7 +78,22 @@ class EvaluationEngine:
                 .first()
             )
             if existing:
-                return existing
+                latest_result_update = (
+                    self.db.query(func.max(models.TrialResult.updated_at))
+                    .filter_by(trial_id=trial_id)
+                    .scalar()
+                )
+                if (
+                    latest_result_update is None
+                    or existing.created_at >= latest_result_update
+                ):
+                    return existing
+                # Results changed since the cached evaluation → recompute.
+                # Delete the stale row first (cascade removes its
+                # EvaluationMetric children) so we don't leave duplicate
+                # evaluations for the same (trial, ground truth) pair.
+                self.db.delete(existing)
+                self.db.flush()
 
         # Load validated data
         trial = self.db.get(models.Trial, trial_id)
@@ -965,6 +984,11 @@ class ValueComparator:
             return {"is_correct": False, "error_type": "missing"}
         if gt_value is None:
             return {"is_correct": False, "error_type": "extra"}
+        # Array-valued fields: compare element-wise as sets (order-independent).
+        # Previously `_get_nested_value` collapsed arrays to their first element,
+        # so a 5-item lab-values list scored "correct" if the first matched.
+        if isinstance(gt_value, list) or isinstance(pred_value, list):
+            return self._compare_list(gt_value, pred_value, field_type, method, options)
         # Convert to appropriate types
         gt_value = self._convert_value(gt_value, field_type)
         pred_value = self._convert_value(pred_value, field_type)
@@ -983,6 +1007,57 @@ class ValueComparator:
             return self._date_compare(gt_value, pred_value, options)
         else:
             return self._exact_compare(gt_value, pred_value, options)
+
+    def _compare_list(
+        self,
+        gt_value: Any,
+        pred_value: Any,
+        field_type: str,
+        method: str,
+        options: Dict,
+    ) -> Dict:
+        """Compare two lists element-wise, order-independent (set semantics).
+
+        A prediction is correct when every ground-truth element is matched by
+        some predicted element and there are no extra predicted elements. Each
+        element is scored with the underlying scalar comparison method, so
+        ``numeric`` tolerance / ``fuzzy`` thresholds still apply per item.
+        """
+        gt_list = gt_value if isinstance(gt_value, list) else [gt_value]
+        pred_list = pred_value if isinstance(pred_value, list) else [pred_value]
+
+        # Fast path: equal-length and every element matches in order.
+        if len(gt_list) == len(pred_list) and all(
+            self.compare(g, p, field_type, method, options)["is_correct"]
+            for g, p in zip(gt_list, pred_list)
+        ):
+            return {"is_correct": True, "error_type": None, "confidence_score": 1.0}
+
+        # Set semantics: match each GT element to a distinct predicted element.
+        unmatched_pred = list(pred_list)
+        for g in gt_list:
+            for i, p in enumerate(unmatched_pred):
+                if p is None:
+                    continue
+                if self.compare(g, p, field_type, method, options)["is_correct"]:
+                    unmatched_pred[i] = None
+                    break
+            else:
+                # No predicted element matched this GT element → missing item.
+                return {
+                    "is_correct": False,
+                    "error_type": "missing",
+                    "confidence_score": 0.0,
+                }
+        # Any leftover predicted elements are extras.
+        extras = [p for p in unmatched_pred if p is not None]
+        if extras:
+            return {
+                "is_correct": False,
+                "error_type": "extra",
+                "confidence_score": 0.0,
+            }
+        return {"is_correct": True, "error_type": None, "confidence_score": 1.0}
 
     def _convert_value(self, value: Any, field_type: str) -> Any:
         """Convert value to appropriate type."""
@@ -1182,23 +1257,35 @@ class MetricsCalculator:
         }
 
     @staticmethod
-    def _error_role(error_type: Optional[str]) -> str:
-        """Classify an incorrect prediction's error_type into a metric role.
+    def _error_roles(error_type: Optional[str]) -> set:
+        """Classify an incorrect prediction's error_type into metric role(s).
 
-        Returns one of:
-          - ``"fn"`` — false negative: the model failed to extract a value
-            that exists in the ground truth (``missing``).
-          - ``"fp"`` — false positive: the model produced a wrong/extra value
-            (all ``*_mismatch``, ``type_error``, ``extra``,
-            ``date_parse_error``).
-        Correct predictions are handled separately (true positives).
+        Returns a set drawn from:
+          - ``"fn"`` — false negative: the ground-truth value went unrecovered.
+          - ``"fp"`` — false positive: the model emitted a value it should not
+            have (a wrong or extra value).
+
+        A ``missing`` field (GT present, prediction absent) is FN-only: the
+        model failed to extract something that exists. An ``extra`` field
+        (prediction present, GT absent) is FP-only: the model invented
+        something. A *substitution* — any ``*_mismatch`` / ``type_error`` /
+        ``date_parse_error``, where the model produced a value where the GT
+        also had one, but it was wrong — counts as **both** FP and FN. This
+        follows the standard IE/MUC scoring convention: a wrong value is one
+        false positive *and* one missed true positive, so it penalises both
+        precision and recall. Counting it as FP-only made recall artificially
+        tolerant of wrong values (a fully-wrong-but-present field set reported
+        recall = 100%).
         """
         if error_type == "missing":
-            return "fn"
-        # Every other error_type (mismatch, fuzzy_mismatch, numeric_mismatch,
-        # boolean_mismatch, category_mismatch, date_mismatch, type_error,
-        # extra, date_parse_error) is a wrong/extra value → false positive.
-        return "fp"
+            return {"fn"}
+        if error_type == "extra":
+            return {"fp"}
+        # Every remaining error_type (mismatch, fuzzy_mismatch,
+        # numeric_mismatch, boolean_mismatch, category_mismatch,
+        # date_mismatch, type_error, date_parse_error) is a substitution:
+        # the model emitted a value where the GT had one, but it was wrong.
+        return {"fp", "fn"}
 
     @staticmethod
     def _prf(tp: int, fp: int, fn: int) -> Dict[str, float]:
@@ -1227,8 +1314,10 @@ class MetricsCalculator:
         documents were dropped.
 
         Precision / recall / F1 are computed from the per-field detailed
-        metrics: TP = correct, FN = ``missing`` (GT present, prediction
-        absent), FP = any other incorrect value (wrong/extra). This is the
+        metrics: TP = correct, FN = ``missing`` or a substitution (wrong
+        value where the GT had one), FP = any wrong/extra value. A wrong
+        value is thus counted once against precision and once against recall
+        (standard IE/MUC convention) — see ``_error_roles``. This is the
         field-level extraction quality the user actually cares about.
         """
         total_docs = len(doc_evals)
@@ -1240,15 +1329,17 @@ class MetricsCalculator:
         accuracy = correct_fields / total_fields if total_fields > 0 else 0
 
         # Aggregate TP/FN/FP across all field-level metrics for P/R/F1.
+        # A substitution counts as both FP and FN (see ``_error_roles``).
         tp = sum(1 for m in detailed_metrics if m.get("is_correct"))
         fn = 0
         fp = 0
         for m in detailed_metrics:
             if m.get("is_correct"):
                 continue
-            if self._error_role(m.get("error_type")) == "fn":
+            roles = self._error_roles(m.get("error_type"))
+            if "fn" in roles:
                 fn += 1
-            else:
+            if "fp" in roles:
                 fp += 1
         prf = self._prf(tp, fp, fn)
 
@@ -1287,9 +1378,10 @@ class MetricsCalculator:
                 if error_type not in field_metrics[field_name]["error_distribution"]:
                     field_metrics[field_name]["error_distribution"][error_type] = 0
                 field_metrics[field_name]["error_distribution"][error_type] += 1
-                if self._error_role(error_type) == "fn":
+                roles = self._error_roles(error_type)
+                if "fn" in roles:
                     field_metrics[field_name]["_fn"] += 1
-                else:
+                if "fp" in roles:
                     field_metrics[field_name]["_fp"] += 1
         # Calculate accuracy + precision/recall/F1 for each field
         for field_name, metrics in field_metrics.items():
@@ -1334,26 +1426,34 @@ class MetricsCalculator:
     def _calculate_confusion_matrices(
         self, detailed_metrics: List[Dict], field_mappings: Dict
     ) -> Dict:
-        """Calculate confusion matrices for categorical fields only.
+        """Calculate confusion matrices for discrete-valued fields.
 
         A confusion matrix is only meaningful when the field has a small,
-        known set of allowed values — i.e. categorical/enum fields. Building
-        one for free-text fields produces a huge, unreadable GT×prediction
-        table (every distinct string its own row/column), so we restrict to
-        fields whose mapping ``type`` is ``"category"``.
+        known set of allowed values — i.e. boolean or categorical/enum
+        fields. Building one for free-text fields produces a huge,
+        unreadable GT×prediction table (every distinct string its own
+        row/column), so we restrict to fields whose mapping ``type`` or
+        ``method`` is ``"boolean"`` or ``"category"``. Keying off the
+        comparison ``method`` as well as the schema ``type`` catches
+        categorical fields whose stored ``field_type`` is ``"string"``
+        (e.g. enum-less or auto-mapped categories).
         """
-        categorical_fields = {
+        discrete_fields = {
             path
             for path, mapping in field_mappings.items()
-            if mapping and str(mapping.get("type", "")).lower() == "category"
+            if mapping
+            and (
+                str(mapping.get("type", "")).lower() in ("category", "boolean")
+                or str(mapping.get("method", "")).lower() in ("category", "boolean")
+            )
         }
-        if not categorical_fields:
+        if not discrete_fields:
             return {}
 
         confusion_matrices = {}
         for metric in detailed_metrics:
             field_name = metric["field_name"]
-            if field_name not in categorical_fields:
+            if field_name not in discrete_fields:
                 continue
             if field_name not in confusion_matrices:
                 confusion_matrices[field_name] = {}

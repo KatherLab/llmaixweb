@@ -3,13 +3,19 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api } from '@/services/api'
+import { authApi } from '@/services/authApi'
 import { usersApi } from '@/services/usersApi'
 import { websocketService } from '@/services/websocket'
+
+const REFRESH_KEY = 'refreshToken'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const token = ref(localStorage.getItem('token'))
+  const refreshToken = ref(localStorage.getItem(REFRESH_KEY))
   const isInitialized = ref(false)
+  // Guards the silent-refresh path so concurrent 401s only trigger one refresh.
+  let _refreshing = null
 
   if (token.value) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
@@ -43,6 +49,19 @@ export const useAuthStore = defineStore('auth', () => {
     api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
   }
 
+  /**
+   * Set both access + refresh tokens and load the user. Used by the SSO
+   * callback route and any flow that receives a token pair at once.
+   */
+  async function setSession(accessToken, newRefreshToken) {
+    await setToken(accessToken)
+    if (newRefreshToken) {
+      refreshToken.value = newRefreshToken
+      localStorage.setItem(REFRESH_KEY, newRefreshToken)
+    }
+    return fetchUser()
+  }
+
   async function fetchUser() {
     const storedToken = localStorage.getItem('token')
     if (!storedToken) {
@@ -63,10 +82,53 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function logout() {
+  /**
+   * Silently refresh the access token using the stored refresh token.
+   * Returns the new access token, or null if refresh failed (caller should
+   * log out). Concurrent callers share a single in-flight refresh.
+   */
+  async function refresh() {
+    const storedRefresh = localStorage.getItem(REFRESH_KEY)
+    if (!storedRefresh) {
+      return null
+    }
+    if (_refreshing) {
+      return _refreshing
+    }
+    _refreshing = (async () => {
+      try {
+        const resp = await authApi.refresh(storedRefresh)
+        await setToken(resp.data.access_token)
+        if (resp.data.refresh_token) {
+          refreshToken.value = resp.data.refresh_token
+          localStorage.setItem(REFRESH_KEY, resp.data.refresh_token)
+        }
+        return resp.data.access_token
+      } catch (e) {
+        console.error('Token refresh failed:', e)
+        return null
+      } finally {
+        _refreshing = null
+      }
+    })()
+    return _refreshing
+  }
+
+  async function logout(opts = { serverSide: true, everywhere: false }) {
+    // Best-effort server-side revoke. Don't block UI on it; if it fails the
+    // token is still cleared client-side and will expire naturally.
+    if (opts.serverSide && refreshToken.value) {
+      try {
+        await authApi.logout(refreshToken.value, !!opts.everywhere)
+      } catch (e) {
+        /* ignore — clearing locally is the source of truth */
+      }
+    }
     token.value = null
+    refreshToken.value = null
     user.value = null
     localStorage.removeItem('token')
+    localStorage.removeItem(REFRESH_KEY)
     delete api.defaults.headers.common['Authorization']
     // Tear down the WebSocket so it doesn't linger with a now-revoked token.
     websocketService.disconnect()
@@ -76,10 +138,13 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     token,
+    refreshToken,
     isAuthenticated,
     isAdmin,
     setToken,
+    setSession,
     fetchUser,
+    refresh,
     logout,
     initialize,
   }

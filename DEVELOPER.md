@@ -102,7 +102,11 @@ See `.env.example` for all available options. Key categories:
 | Category | Variables |
 |----------|-----------|
 | **LLM Provider** | `OPENAI_API_KEY`, `OPENAI_API_BASE`, `OPENAI_API_MODEL`, `OPENAI_NO_API_CHECK` |
-| **Security** | `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REQUIRE_INVITATION`, `ALLOW_FIRST_ADMIN_SETUP` |
+| **Security** | `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REQUIRE_INVITATION`, `ALLOW_FIRST_ADMIN_SETUP`, `INVITATION_EXPIRE_HOURS` |
+| **Password Policy** | `PASSWORD_POLICY_MIN_LENGTH`, `PASSWORD_POLICY_MAX_LENGTH`, `PASSWORD_POLICY_REQUIRE_UPPERCASE`/`LOWERCASE`/`DIGIT`/`SYMBOL` |
+| **Account Lockout** | `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCKOUT_MINUTES` |
+| **Refresh Tokens** | `REFRESH_TOKEN_EXPIRE_DAYS` |
+| **SSO / OIDC** | `SSO_ENABLED`, `SSO_JIT_DEFAULT_ROLE`, `SSO_BYPASS_INVITATION`, `SSO_CLIENT_SECRET_ENCRYPTION_KEY` (providers configured in Admin → SSO) |
 | **Storage** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_ENDPOINT_URL`, `S3_BUCKET_NAME` OR `LOCAL_DIRECTORY` |
 | **Database** | `POSTGRES_SERVER`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `SQLALCHEMY_DATABASE_URI` |
 | **Celery** | `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`, `DISABLE_CELERY`, `CELERY_PREPROCESS_POOL` |
@@ -452,11 +456,17 @@ backend/src/
 ├── db/
 │   └── session.py        # SQLAlchemy engine, session factory
 ├── models/
-│   └── project.py        # SQLAlchemy ORM models
+│   ├── project.py        # SQLAlchemy ORM models
+│   ├── user.py           # User, Invitation, PasswordResetToken, RefreshToken
+│   └── sso.py            # IdentityProvider, UserIdentity (OIDC)
 ├── schemas/
 │   └── project.py        # Pydantic request/response schemas
 ├── routers/v1/endpoints/ # API route handlers
 │   ├── projects.py       # Main project router with sub-routers
+│   ├── auth.py           # login, refresh, logout, public settings
+│   ├── users.py          # user CRUD, invitations, self-service identities
+│   ├── sso.py            # OIDC login/callback flow + JIT provisioning
+│   ├── admin_sso.py      # admin CRUD for OIDC providers
 │   ├── files.py
 │   ├── preprocessing.py
 │   ├── documents.py
@@ -464,7 +474,8 @@ backend/src/
 │   ├── prompts.py
 │   ├── trials.py
 │   └── ...
-├── services/             # External service integrations (OCR)
+├── services/             # External service integrations (OCR, OIDC)
+│   └── oidc_service.py   # OIDC discovery, PKCE, token exchange, userinfo
 ├── celery/
 │   ├── celery_config.py  # Celery app, queues, workers
 │   ├── preprocessing.py  # Celery preprocessing tasks
@@ -472,7 +483,9 @@ backend/src/
 └── utils/
     ├── preprocessing.py  # PreprocessingPipeline orchestrator
     ├── info_extraction.py # LLM extraction logic
-    └── evaluation.py     # Evaluation metrics
+    ├── evaluation.py     # Evaluation metrics
+    ├── password_policy.py # Shared password validator
+    └── crypto.py         # Fernet encrypt/decrypt for secrets at rest
 ```
 
 ### Frontend Structure

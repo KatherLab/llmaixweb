@@ -7,7 +7,7 @@
     body-class="p-6"
     @close="$emit('close')"
   >
-    <h3 class="text-lg font-medium text-slate-900 mb-4">
+    <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100 mb-4">
       Add {{ advancedMode ? 'Property' : 'Field' }}
     </h3>
 
@@ -38,8 +38,8 @@
               :class="[
                 'relative rounded-lg border p-4 flex flex-col items-center cursor-pointer focus:outline-none transition-all',
                 form.type === type.value
-                  ? 'border-blue-500 ring-2 ring-blue-500 bg-blue-50'
-                  : 'border-slate-300 hover:border-slate-400',
+                  ? 'border-blue-500 ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400'
+                  : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500',
               ]"
               @click="form.type = type.value"
             >

@@ -59,17 +59,14 @@
       <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Enter your new password below.</p>
       <form @submit.prevent="handleResetPassword">
         <div class="mb-4">
-          <FormField
+          <PasswordInput
             v-model="newPassword"
             label="New Password"
-            type="password"
             required
             :minlength="8"
             placeholder="At least 8 characters"
             autocomplete="new-password"
-          >
-            <template v-if="passwordHint" #hint>{{ passwordHint }}</template>
-          </FormField>
+          />
         </div>
         <div class="mb-5">
           <FormField
@@ -115,6 +112,7 @@ import { usersApi } from '@/services/usersApi'
 import { useToast } from '@/composables/useToast'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FormField from '@/components/common/FormField.vue'
+import PasswordInput from '@/components/common/PasswordInput.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { extractErrorMessage } from '@/utils/errors'
@@ -128,12 +126,6 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 const isLoading = ref(false)
 const error = ref(null)
-
-const passwordHint = computed(() => {
-  if (!newPassword.value) return ''
-  if (newPassword.value.length < 8) return 'Minimum 8 characters'
-  return 'Password strength: okay'
-})
 
 const passwordsMismatch = computed(() => {
   if (!confirmPassword.value) return false

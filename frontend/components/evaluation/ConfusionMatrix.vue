@@ -1,48 +1,80 @@
 <template>
   <div class="overflow-x-auto">
-    <table class="border-collapse text-xs">
-      <thead>
-        <tr>
-          <th class="p-2 text-left text-slate-500 dark:text-slate-400">
-            <span class="block">Ground truth ↓</span>
-            <span class="block">Predicted →</span>
-          </th>
-          <th
-            v-for="col in labels"
-            :key="`col-${col}`"
-            class="p-2 font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap max-w-[140px] truncate"
-            :title="col"
-          >
-            {{ col }}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in labels" :key="`row-${row}`">
-          <th
-            class="p-2 font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap max-w-[140px] truncate text-left"
-            :title="row"
-          >
-            {{ row }}
-          </th>
-          <td
-            v-for="col in labels"
-            :key="`cell-${row}-${col}`"
-            :class="[
-              'p-2 text-center border border-slate-200 dark:border-slate-700 cursor-pointer transition-colors',
-              cellClass(row, col),
-            ]"
-            :title="`${row} → ${col}: ${count(row, col)} document(s). Click to filter.`"
-            @click="$emit('filter', { groundTruth: row, predicted: col })"
-          >
-            {{ count(row, col) || '' }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="inline-block min-w-full">
+      <table class="border-collapse text-xs">
+        <thead>
+          <tr>
+            <th class="sticky left-0 z-20 bg-white dark:bg-slate-900">
+              <!-- Axis legend -->
+              <div
+                class="flex flex-col items-center justify-center gap-0.5 w-[120px] min-h-[64px] p-2"
+              >
+                <span class="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500"
+                  >Predicted →</span
+                >
+                <span class="text-[10px] text-slate-400 dark:text-slate-500">Ground truth ↓</span>
+              </div>
+            </th>
+            <th
+              v-for="col in labels"
+              :key="`col-${col}`"
+              class="p-2 font-medium text-slate-600 dark:text-slate-300 align-bottom max-w-[140px] border-b border-slate-200 dark:border-slate-700"
+              :title="col"
+            >
+              <div class="whitespace-normal break-words text-center leading-tight">
+                {{ col }}
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in labels" :key="`row-${row}`">
+            <th
+              class="sticky left-0 z-10 bg-white dark:bg-slate-900 p-2 font-medium text-slate-600 dark:text-slate-300 whitespace-normal break-words max-w-[140px] text-left border-r border-slate-200 dark:border-slate-700 align-middle"
+              :title="row"
+            >
+              {{ row }}
+            </th>
+            <td
+              v-for="col in labels"
+              :key="`cell-${row}-${col}`"
+              class="p-1.5 text-center border border-slate-200 dark:border-slate-700 transition-all duration-150 select-none"
+              :class="
+                count(row, col) > 0
+                  ? [
+                      'cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500',
+                      cellClass(row, col),
+                    ]
+                  : ['cursor-default', cellClass(row, col)]
+              "
+              :style="cellStyle(row, col)"
+              :role="count(row, col) > 0 ? 'button' : undefined"
+              :tabindex="count(row, col) > 0 ? 0 : -1"
+              :aria-label="cellTitle(row, col)"
+              :title="cellTitle(row, col)"
+              @click="onCellClick(row, col)"
+              @keydown="onCellKeydown($event, row, col)"
+            >
+              <div class="flex flex-col items-center leading-none">
+                <span class="text-sm font-semibold tabular-nums">{{ count(row, col) || '·' }}</span>
+                <span
+                  v-if="count(row, col) > 0"
+                  class="text-[9px] tabular-nums opacity-70 mt-0.5"
+                  >{{ rowPercent(row, col) }}</span
+                >
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-      Click a cell to show documents where the model predicted that value. The diagonal (correct
-      predictions) is highlighted green.
+      Each cell shows the document count and its share of the ground-truth row. The diagonal
+      (correct predictions) is green, errors are red — intensity scales with count.
+      <span class="font-medium text-slate-600 dark:text-slate-300"
+        >Click a cell (or focus it with Tab and press Enter)</span
+      >
+      to filter the document table; the selected cell is outlined in blue.
     </p>
   </div>
 </template>
@@ -59,9 +91,32 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  /**
+   * Currently active cell filter (mirrors the parent's confusionFilter),
+   * so the selected cell can be highlighted. Shape: { groundTruth, predicted } | null
+   */
+  activeFilter: {
+    type: Object,
+    default: undefined,
+  },
 })
 
-defineEmits(['filter'])
+const emit = defineEmits(['filter'])
+
+// Emit a filter event for a cell. Only non-empty cells are interactive
+// (clickable + keyboard-focusable), so this is a no-op when count is 0.
+const onCellClick = (gt, pred) => {
+  if (count(gt, pred) > 0) emit('filter', { groundTruth: gt, predicted: pred })
+}
+
+// Keyboard equivalent of clicking a cell: Enter / Space toggles the filter.
+const onCellKeydown = (e, gt, pred) => {
+  if (count(gt, pred) === 0) return
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    emit('filter', { groundTruth: gt, predicted: pred })
+  }
+}
 
 // Sorted union of all ground-truth and predicted values as row/column labels.
 const labels = computed(() => {
@@ -81,12 +136,80 @@ const count = (gt, pred) => {
   return row[pred] || 0
 }
 
-const cellClass = (gt, pred) => {
-  const c = count(gt, pred)
-  if (c === 0) return 'text-slate-300 dark:text-slate-700'
-  if (gt === pred) {
-    return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-semibold hover:bg-green-200 dark:hover:bg-green-900/50'
+// Total count of a ground-truth value across all predictions (row sum).
+const rowTotal = (gt) =>
+  Object.values(props.matrix?.[gt] || {}).reduce((sum, c) => sum + (c || 0), 0)
+
+// Highest non-diagonal count drives the error-heatmap scale; diagonal uses its
+// own max so a dominant correct cell doesn't wash out the error cells.
+const maxError = computed(() => {
+  let m = 0
+  for (const gt of labels.value) {
+    for (const pred of labels.value) {
+      if (gt !== pred) m = Math.max(m, count(gt, pred))
+    }
   }
-  return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40'
+  return m || 1
+})
+const maxCorrect = computed(() => {
+  let m = 0
+  for (const gt of labels.value) m = Math.max(m, count(gt, gt))
+  return m || 1
+})
+
+// Share of the ground-truth row — "of all GT=X docs, what fraction predicted Y".
+const rowPercent = (gt, pred) => {
+  const rt = rowTotal(gt)
+  if (!rt) return '0%'
+  return `${Math.round((count(gt, pred) / rt) * 100)}%`
+}
+
+const isActive = (gt, pred) =>
+  !!props.activeFilter &&
+  String(props.activeFilter.groundTruth) === String(gt) &&
+  String(props.activeFilter.predicted) === String(pred)
+
+const cellTitle = (gt, pred) => {
+  const c = count(gt, pred)
+  const rt = rowTotal(gt)
+  const pct = rt ? Math.round((c / rt) * 100) : 0
+  const verdict = gt === pred ? 'correct' : 'mismatch'
+  return `${gt} → ${pred}: ${c} document(s) — ${pct}% of GT row (${verdict}). Click to filter.`
+}
+
+// Intensity-scaled background. Diagonal = green, off-diagonal with count>0 =
+// red, empty cells stay neutral. Alpha grows with the cell's share of its
+// scale max so patterns are visible at a glance.
+const cellStyle = (gt, pred) => {
+  const c = count(gt, pred)
+  if (c === 0) return {}
+  if (gt === pred) {
+    const alpha = 0.18 + 0.55 * (c / maxCorrect.value)
+    return { backgroundColor: `rgba(34, 197, 94, ${alpha.toFixed(2)})` }
+  }
+  const alpha = 0.14 + 0.6 * (c / maxError.value)
+  return { backgroundColor: `rgba(239, 68, 68, ${alpha.toFixed(2)})` }
+}
+
+const cellClass = (gt, pred) => {
+  const classes = []
+  if (count(gt, pred) === 0) {
+    classes.push('text-slate-300 dark:text-slate-700')
+  } else if (gt === pred) {
+    classes.push('text-green-800 dark:text-green-300')
+  } else {
+    classes.push('text-red-700 dark:text-red-300')
+  }
+  // Hover lift (only on non-empty cells)
+  if (count(gt, pred) > 0) {
+    classes.push('hover:brightness-95 dark:hover:brightness-110')
+  }
+  // Active-filter highlight — strong blue ring + lift, drawn above neighbors.
+  if (isActive(gt, pred)) {
+    classes.push(
+      'ring-2 ring-inset ring-blue-500 dark:ring-blue-400 relative z-10 shadow-[0_0_0_3px_rgba(59,130,246,0.25)] scale-[1.04]',
+    )
+  }
+  return classes.join(' ')
 }
 </script>

@@ -64,6 +64,10 @@ class UserResponse(BaseModel):
     full_name: str
     role: UserRole
     is_active: bool
+    last_login_at: datetime | None = None
+    # True if the user has at least one linked SSO identity. Populated by the
+    # list endpoint (not a DB column) so the admin grid can show SSO vs local.
+    has_sso: bool | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

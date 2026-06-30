@@ -51,6 +51,15 @@ export const TYPE_PILL_COLORS = {
   array: 'pink',
 }
 
+/** Map of schema type -> block border class (dark-mode-aware, for schema-block cards). */
+export const TYPE_BLOCK_BORDERS = {
+  string: 'border-green-200 dark:border-green-800',
+  number: 'border-blue-200 dark:border-blue-800',
+  boolean: 'border-purple-200 dark:border-purple-800',
+  object: 'border-orange-200 dark:border-orange-800',
+  array: 'border-pink-200 dark:border-pink-800',
+}
+
 /**
  * Get the icon component for a schema type (falls back to StringIcon).
  * @param {string} type - JSON schema type ('string' | 'number' | 'boolean' | 'object' | 'array')
@@ -77,4 +86,14 @@ export function getTypeColor(type) {
  */
 export function getTypePillClass(type) {
   return getPillClass(TYPE_PILL_COLORS[type] || 'gray')
+}
+
+/**
+ * Get the block border class for a schema type (dark-mode-aware).
+ * Used by SchemaBlock for the colored card outline.
+ * @param {string} type - JSON schema type
+ * @returns {string} Tailwind class
+ */
+export function getTypeBlockBorder(type) {
+  return TYPE_BLOCK_BORDERS[type] || 'border-slate-200 dark:border-slate-700'
 }

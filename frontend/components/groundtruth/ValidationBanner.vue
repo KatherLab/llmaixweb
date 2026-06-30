@@ -1,6 +1,9 @@
 <template>
   <div v-if="status" class="ml-2">
-    <div v-if="status.errors?.length" class="p-2 bg-red-50 text-red-700 rounded text-xs">
+    <div
+      v-if="status.errors?.length"
+      class="p-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded text-xs"
+    >
       <b>{{ status.errors.length }} validation errors</b>:
       <ul class="list-disc pl-4">
         <li v-for="e in status.errors.slice(0, 5)" :key="e">{{ e }}</li>
@@ -9,7 +12,7 @@
     </div>
     <div
       v-else-if="status.warnings?.length"
-      class="p-2 bg-yellow-50 text-yellow-800 rounded text-xs"
+      class="p-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 rounded text-xs"
     >
       <b>{{ status.warnings.length }} warning(s)</b>:
       <ul class="list-disc pl-4">
@@ -17,7 +20,12 @@
         <li v-if="status.warnings.length > 5">...and {{ status.warnings.length - 5 }} more</li>
       </ul>
     </div>
-    <div v-else class="p-2 bg-green-50 text-green-700 rounded text-xs">Validation passed!</div>
+    <div
+      v-else
+      class="p-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded text-xs"
+    >
+      Validation passed!
+    </div>
   </div>
 </template>
 <script setup>

@@ -16,15 +16,18 @@
     </div>
 
     <div class="border rounded-md overflow-hidden flex-1 min-h-[100px] flex flex-col">
-      <div v-if="docsError" class="p-4 text-center text-red-600 text-sm">
+      <div v-if="docsError" class="p-4 text-center text-red-600 dark:text-red-400 text-sm">
         {{ docsError }}
       </div>
 
-      <div v-else-if="isLoadingDocs" class="p-6 text-center text-slate-500">
+      <div v-else-if="isLoadingDocs" class="p-6 text-center text-slate-500 dark:text-slate-400">
         <LoadingSpinner />
       </div>
 
-      <div v-else-if="docsPage.length === 0" class="p-4 text-center text-slate-500">
+      <div
+        v-else-if="docsPage.length === 0"
+        class="p-4 text-center text-slate-500 dark:text-slate-400"
+      >
         No documents match your criteria
       </div>
 
@@ -33,8 +36,8 @@
           v-for="doc in docsPage"
           :key="doc.id"
           :class="[
-            'p-3 border-b last:border-b-0 cursor-pointer hover:bg-slate-50 flex items-center',
-            { 'bg-blue-50': selectedIds.includes(doc.id) },
+            'p-3 border-b last:border-b-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center',
+            { 'bg-blue-50 dark:bg-blue-900/20': selectedIds.includes(doc.id) },
           ]"
           @click="emit('toggle', doc.id)"
         >
@@ -57,12 +60,12 @@
                 doc.original_file?.file_name &&
                 doc.document_name !== doc.original_file.file_name
               "
-              class="text-xs text-slate-400 italic"
+              class="text-xs text-slate-400 dark:text-slate-500 italic"
             >
               (Original: {{ doc.original_file.file_name }})
             </div>
 
-            <div class="text-xs text-slate-500">
+            <div class="text-xs text-slate-500 dark:text-slate-400">
               Config: {{ doc.preprocessing_config?.name || 'N/A' }} • Created:
               {{ formatDate(doc.created_at) }}
             </div>
@@ -71,10 +74,10 @@
       </div>
 
       <!-- Pager -->
-      <div class="px-3 py-2 flex items-center justify-between text-sm bg-white">
+      <div class="px-3 py-2 flex items-center justify-between text-sm bg-white dark:bg-slate-800">
         <div>
           <span class="font-medium">{{ totalDocs }}</span> total
-          <span class="text-slate-400">•</span>
+          <span class="text-slate-400 dark:text-slate-500">•</span>
           page <span class="font-medium">{{ page }}</span>
           /
           {{ Math.max(1, Math.ceil(totalDocs / pageSize)) }}

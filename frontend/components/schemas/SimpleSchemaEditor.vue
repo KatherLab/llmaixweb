@@ -1,10 +1,12 @@
 <template>
-  <div class="simple-schema-editor flex flex-col h-full bg-white">
+  <div class="simple-schema-editor flex flex-col h-full bg-white dark:bg-slate-900">
     <!-- Header -->
     <div class="border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
       <div>
-        <h3 class="text-base font-semibold text-slate-900">Extract Fields</h3>
-        <p class="text-sm text-slate-500 mt-0.5">Drag to reorder • Click field to edit</p>
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Extract Fields</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          Drag to reorder • Click field to edit
+        </p>
       </div>
       <BaseButton class="shadow-sm hover:shadow" @click="addField">
         <Plus class="h-4 w-4" />
@@ -31,7 +33,7 @@
         <!-- Read-only fields notice -->
         <div
           v-if="hasReadonlyFields"
-          class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800"
+          class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300"
         >
           <ShieldAlert class="h-4 w-4 flex-shrink-0" />
           <span>
@@ -44,7 +46,7 @@
           <!-- Read-only hint row (nested objects/arrays, enums, constraints, …) -->
           <div
             v-if="field.kind === 'readonly'"
-            class="group flex items-center gap-3 p-3 rounded-xl border border-amber-200 bg-amber-50/60"
+            class="group flex items-center gap-3 p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-900/20"
             :title="`Read-only — edit “${field.name}” in Advanced mode`"
           >
             <!-- Lock icon (in place of the drag handle) -->
@@ -54,22 +56,29 @@
 
             <!-- Type badge -->
             <div
-              class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-amber-200 text-amber-800 text-[10px] font-semibold"
+              class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-amber-200 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[10px] font-semibold"
             >
               {{ readonlyTypeLabel(field) }}
             </div>
 
             <!-- Field name (read-only) -->
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-slate-700 truncate">{{ field.name }}</p>
-              <p v-if="field.description" class="text-xs text-slate-500 truncate">
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
+                {{ field.name }}
+              </p>
+              <p
+                v-if="field.description"
+                class="text-xs text-slate-500 dark:text-slate-400 truncate"
+              >
                 {{ field.description }}
               </p>
             </div>
 
             <!-- Hint to edit in Advanced mode -->
             <div class="flex-1 min-w-0 hidden lg:block">
-              <p class="text-xs text-amber-700 truncate">Edit in Advanced mode</p>
+              <p class="text-xs text-amber-700 dark:text-amber-400 truncate">
+                Edit in Advanced mode
+              </p>
             </div>
 
             <!-- Spacer to align with the editable rows' remove button -->
@@ -83,8 +92,8 @@
             :class="[
               'group flex flex-wrap items-center gap-3 p-3 rounded-xl border transition-all duration-200',
               draggingIndex === index
-                ? 'border-blue-400 bg-blue-50 shadow-md scale-[1.02]'
-                : 'border-slate-200 hover:border-blue-300 hover:shadow-sm bg-slate-50/50 hover:bg-white',
+                ? 'border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/30 shadow-md scale-[1.02]'
+                : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 hover:shadow-sm bg-slate-50/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800',
             ]"
             draggable
             @dragstart="handleDragStart"
@@ -95,7 +104,7 @@
           >
             <!-- Drag Handle -->
             <div
-              class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/50 transition-all"
+              class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-slate-400 hover:text-slate-600 dark:hover:bg-slate-700 rounded-lg hover:bg-slate-200/50 transition-all"
               title="Drag to reorder"
             >
               <GripVertical class="h-5 w-5" />
@@ -106,8 +115,8 @@
               :class="[
                 'flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-all',
                 draggingIndex === index
-                  ? 'bg-blue-200 text-blue-800'
-                  : 'bg-slate-200 text-slate-600',
+                  ? 'bg-blue-200 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
               ]"
             >
               {{ index + 1 }}
@@ -117,7 +126,7 @@
             <div class="flex-1 min-w-0">
               <input
                 v-model="field.name"
-                class="w-full bg-transparent border-0 border-b border-slate-300 focus:border-blue-500 focus:ring-0 text-sm font-medium text-slate-900 placeholder-slate-400 transition-colors py-1.5"
+                class="w-full bg-transparent border-0 border-b border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-0 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 transition-colors py-1.5"
                 placeholder="field_name (e.g., patient_name)"
                 @input="emitChange"
               />
@@ -128,7 +137,7 @@
               <div class="relative">
                 <select
                   v-model="field.type"
-                  class="appearance-none bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-lg text-sm font-medium py-2 pl-3 pr-8 cursor-pointer transition-all"
+                  :class="[selectClass, 'appearance-none pl-3 pr-8 cursor-pointer']"
                   @change="emitChange"
                 >
                   <option value="String">Text</option>
@@ -140,7 +149,7 @@
                   <option value="Email">Email</option>
                 </select>
                 <ChevronDown
-                  class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+                  class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500"
                 />
               </div>
             </div>
@@ -149,7 +158,7 @@
             <div class="flex-1 min-w-0 hidden lg:block">
               <input
                 v-model="field.description"
-                class="w-full bg-transparent border-0 border-b border-slate-300 focus:border-blue-500 focus:ring-0 text-xs text-slate-600 placeholder-slate-400 transition-colors py-1.5"
+                class="w-full bg-transparent border-0 border-b border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-0 text-xs text-slate-600 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 transition-colors py-1.5"
                 placeholder="What is this field? (optional)"
                 @input="emitChange"
               />
@@ -170,13 +179,13 @@
             <!-- Pre-defined options (string enum). Only for plain Text fields. -->
             <div
               v-if="field.type === 'String'"
-              class="basis-full w-full flex flex-wrap items-center gap-1.5 pt-1.5 mt-0.5 border-t border-slate-200/70"
+              class="basis-full w-full flex flex-wrap items-center gap-1.5 pt-1.5 mt-0.5 border-t border-slate-200/70 dark:border-slate-700"
             >
               <span class="text-xs font-medium text-slate-500 mr-0.5">Options</span>
               <span
                 v-for="(opt, i) in field.options"
                 :key="i"
-                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md bg-blue-100 text-blue-800 text-xs font-medium"
+                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-medium"
               >
                 {{ opt }}
                 <button
@@ -190,7 +199,7 @@
               </span>
               <input
                 :value="pendingOptions[field.id] || ''"
-                class="flex-1 min-w-[120px] bg-transparent border-0 border-b border-dashed border-slate-300 focus:border-blue-500 focus:ring-0 text-xs text-slate-700 placeholder-slate-400 transition-colors py-0.5"
+                class="flex-1 min-w-[120px] bg-transparent border-0 border-b border-dashed border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-0 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 transition-colors py-0.5"
                 placeholder="add option — press Enter"
                 @input="setPendingOption(field.id, $event.target.value)"
                 @keydown="onOptionKeydown(field, $event)"
@@ -205,23 +214,27 @@
     <!-- Help Footer -->
     <div
       v-if="fields.length > 0"
-      class="border-t px-6 py-4 bg-gradient-to-r from-blue-50 to-purple-50"
+      class="border-t px-6 py-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20"
     >
       <div class="flex items-start gap-3">
         <div
-          class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mt-0.5"
+          class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center mt-0.5"
         >
-          <Info class="h-3 w-3 text-blue-600" />
+          <Info class="h-3 w-3 text-blue-600 dark:text-blue-300" />
         </div>
-        <div class="text-sm text-blue-900">
+        <div class="text-sm text-blue-900 dark:text-blue-200">
           <p class="font-medium mb-1.5">Quick Tips</p>
-          <ul class="space-y-1 text-blue-700">
+          <ul class="space-y-1 text-blue-700 dark:text-blue-300">
             <li class="flex items-center gap-2">
               <span class="w-1 h-1 rounded-full bg-blue-400"></span>
               Use clear names like
-              <code class="px-1.5 py-0.5 bg-white/60 rounded text-xs font-mono">patient_name</code>
+              <code class="px-1.5 py-0.5 bg-white/60 dark:bg-slate-800/60 rounded text-xs font-mono"
+                >patient_name</code
+              >
               or
-              <code class="px-1.5 py-0.5 bg-white/60 rounded text-xs font-mono">date_of_birth</code>
+              <code class="px-1.5 py-0.5 bg-white/60 dark:bg-slate-800/60 rounded text-xs font-mono"
+                >date_of_birth</code
+              >
             </li>
             <li class="flex items-center gap-2">
               <span class="w-1 h-1 rounded-full bg-blue-400"></span>
@@ -243,6 +256,7 @@ import { ref, watch, computed } from 'vue'
 import { ChevronDown, GripVertical, Info, Lock, Plus, ShieldAlert, Trash2, X } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { selectClass } from '@/utils/formStyles'
 
 const props = defineProps({
   schema: {
@@ -602,5 +616,14 @@ select:focus {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+/* Dark mode scrollbar override */
+:global(.dark) ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+:global(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 </style>

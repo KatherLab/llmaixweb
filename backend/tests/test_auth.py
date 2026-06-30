@@ -22,7 +22,7 @@ def test_register_user(client, api_url):
     # Create an invitation first
     admin_user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=admin_user_data)
     assert response.status_code == 200
@@ -48,7 +48,7 @@ def test_register_user(client, api_url):
     user_data = {
         "email": "new@example.com",
         "full_name": "New User",
-        "password": "testpassword",
+        "password": "Testpassword1",
         "invitation_token": invitation_token,
     }
     response = client.post(f"{api_url}/user", json=user_data)
@@ -61,7 +61,7 @@ def test_register_user(client, api_url):
     user_data = {
         "email": "inviteduser@example.com",
         "full_name": "New User",
-        "password": "testpassword",
+        "password": "Testpassword1",
         "invitation_token": invitation_token,
     }
     response = client.post(f"{api_url}/user", json=user_data)
@@ -74,7 +74,7 @@ def test_register_user(client, api_url):
 def test_login_user(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -85,7 +85,7 @@ def test_login_user(client, api_url):
 def test_read_current_user(client, api_url):
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -101,7 +101,7 @@ def test_read_current_user(client, api_url):
 def test_list_users(client, api_url):
     admin_user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=admin_user_data)
     assert response.status_code == 200
@@ -113,7 +113,7 @@ def test_list_users(client, api_url):
     # Test with user role
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -131,7 +131,7 @@ def test_list_users(client, api_url):
 def test_invite_user(client, api_url):
     admin_user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=admin_user_data)
     assert response.status_code == 200
@@ -153,7 +153,7 @@ def test_invite_user(client, api_url):
     # Test with user role
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -169,7 +169,7 @@ def test_invite_user(client, api_url):
 def test_validate_invitation(client, api_url):
     admin_user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=admin_user_data)
     assert response.status_code == 200
@@ -194,7 +194,7 @@ def test_validate_invitation(client, api_url):
 def test_list_invitations(client, api_url):
     admin_user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=admin_user_data)
     assert response.status_code == 200
@@ -206,7 +206,7 @@ def test_list_invitations(client, api_url):
     # Test with user role
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -220,7 +220,7 @@ def test_list_invitations(client, api_url):
 def test_delete_invitation(client, api_url):
     admin_user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=admin_user_data)
     assert response.status_code == 200
@@ -240,7 +240,7 @@ def test_delete_invitation(client, api_url):
     # Test with user role
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     assert response.status_code == 200
@@ -261,7 +261,7 @@ def test_toggle_user_status(client, api_url):
     # Admin user login
     admin_user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=admin_user_data)
     assert response.status_code == 200
@@ -270,7 +270,7 @@ def test_toggle_user_status(client, api_url):
 
     # Create a new test user with unique email
     toggle_test_email = "toggletest@example.com"
-    test_password = "toggletestpassword"
+    test_password = "Toggletestpassword1"
 
     # Admin invites the new user
     invitation_data = {"email": toggle_test_email}
@@ -379,7 +379,7 @@ def test_reset_password(client, api_url):
     assert response.json()["valid"] is True
 
     # Step 4: Reset the password using the token
-    new_password = "newtestpassword123"
+    new_password = "Newtestpassword123"
     response = client.post(
         f"{api_url}/user/reset-password/{token}",
         json={"token": token, "new_password": new_password},
@@ -390,7 +390,7 @@ def test_reset_password(client, api_url):
     # Step 5: Verify old password no longer works
     response = client.post(
         f"{api_url}/auth/login",
-        data={"username": "test@example.com", "password": "testpassword"},
+        data={"username": "test@example.com", "password": "Testpassword1"},
     )
     assert response.status_code == 401
 
@@ -412,14 +412,14 @@ def test_reset_password(client, api_url):
     # Restore original password
     from .helpers import restore_user
 
-    restore_user("test@example.com", "testpassword", UserRole.user, True)
+    restore_user("test@example.com", "Testpassword1", UserRole.user, True)
 
 
 # Test Delete User (admin only)
 def test_delete_user(client, api_url):
     admin_user_data = {
         "username": "admin@example.com",
-        "password": "adminpassword",
+        "password": "Adminpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=admin_user_data)
     assert response.status_code == 200
@@ -446,7 +446,7 @@ def test_delete_user(client, api_url):
     # Test with user role
     user_data = {
         "username": "test@example.com",
-        "password": "testpassword",
+        "password": "Testpassword1",
     }
     response = client.post(f"{api_url}/auth/login", data=user_data)
     print(response.json())
@@ -460,4 +460,4 @@ def test_delete_user(client, api_url):
 
     from .helpers import restore_user
 
-    restore_user("delete@example.com", "testpassword", UserRole.user, True)
+    restore_user("delete@example.com", "Testpassword1", UserRole.user, True)

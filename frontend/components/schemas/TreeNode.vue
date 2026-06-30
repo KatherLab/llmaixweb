@@ -2,15 +2,19 @@
   <li>
     <div class="relative">
       <!-- Connection lines -->
-      <div class="absolute left-0 top-0 -ml-3 mt-2.5 h-full w-0.5 bg-slate-200"></div>
-      <div class="absolute left-0 top-2.5 -ml-3 w-3 h-0.5 bg-slate-200"></div>
+      <div
+        class="absolute left-0 top-0 -ml-3 mt-2.5 h-full w-0.5 bg-slate-200 dark:bg-slate-700"
+      ></div>
+      <div class="absolute left-0 top-2.5 -ml-3 w-3 h-0.5 bg-slate-200 dark:bg-slate-700"></div>
 
       <!-- Node button -->
       <button
         type="button"
         :class="[
           'w-full text-left px-3 py-1.5 rounded-md text-sm transition-colors flex items-center justify-between group',
-          isActive ? 'bg-blue-50 text-blue-700 font-medium' : 'hover:bg-slate-100 text-slate-700',
+          isActive
+            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
+            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300',
         ]"
         @click="navigate"
       >
@@ -19,7 +23,7 @@
           <button
             v-if="hasChildren"
             type="button"
-            class="h-3 w-3 text-slate-400 transition-transform cursor-pointer p-0 hover:text-slate-600"
+            class="h-3 w-3 text-slate-400 dark:text-slate-500 transition-transform cursor-pointer p-0 hover:text-slate-600 dark:hover:text-slate-300"
             :class="{ 'rotate-90': isExpanded }"
             @click.stop="toggleExpanded"
           >
@@ -39,7 +43,7 @@
         </div>
 
         <!-- Type label -->
-        <span class="text-xs text-slate-500 ml-2">
+        <span class="text-xs text-slate-500 dark:text-slate-400 ml-2">
           {{ nodeSchema.type }}
         </span>
       </button>

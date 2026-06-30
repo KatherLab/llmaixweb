@@ -30,24 +30,23 @@
           </p>
         </div>
         <div class="flex gap-2">
-          <button
-            class="px-4 py-2 rounded-md font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-600 dark:disabled:bg-blue-900"
+          <BaseButton
+            variant="secondary"
             :disabled="loadingStates.groundTruthFiles"
             @click="showUploadModal = true"
           >
+            <Upload class="h-4 w-4" />
             Upload Ground Truth
-          </button>
-          <button
+          </BaseButton>
+          <BaseButton
             v-if="evaluations.length > 0"
-            class="px-4 py-2 rounded-md font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-600 dark:disabled:bg-green-900"
+            variant="success"
             :disabled="loadingStates.evaluations"
             @click="showExportModal = true"
           >
-            <span class="flex items-center">
-              <Download class="mr-1 h-4 w-4" />
-              Export Results
-            </span>
-          </button>
+            <Download class="h-4 w-4" />
+            Export Results
+          </BaseButton>
         </div>
       </div>
 
@@ -125,34 +124,53 @@
           </div>
           <div v-else>
             <div class="flex justify-between items-center mb-4">
-              <h2 class="font-medium text-slate-900 dark:text-white">Evaluation Dashboard</h2>
-              <div class="flex gap-2">
+              <div class="flex items-center gap-2">
+                <h2 class="font-medium text-slate-900 dark:text-white">Evaluation Dashboard</h2>
                 <button
-                  class="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed"
+                  class="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                  :title="showConcepts ? 'Hide the quick explainer' : 'Show how evaluation works'"
+                  @click="showConcepts = !showConcepts"
+                >
+                  <HelpCircle class="h-3.5 w-3.5" />
+                  {{ showConcepts ? 'Hide help' : 'How it works' }}
+                </button>
+              </div>
+              <div class="flex gap-2">
+                <BaseButton
+                  size="sm"
                   :disabled="!canStartEvaluation"
                   @click="showTrialSelectorWithValidation"
                 >
                   Evaluate Trial
-                </button>
-                <button
+                </BaseButton>
+                <BaseButton
                   v-if="selectedGroundTruth"
-                  class="px-3 py-1.5 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded-md text-sm hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
+                  variant="secondary"
+                  size="sm"
                   @click="previewGroundTruth"
                 >
                   {{ hasMappings ? 'Edit mappings' : 'Configure mappings' }}
-                </button>
+                </BaseButton>
               </div>
             </div>
 
-            <!-- Concepts explainer (shown once, until mappings exist) -->
+            <!-- Concepts explainer: auto-shown until mappings exist, then
+                 recallable via the "How it works" link next to the heading. -->
             <div
-              v-if="!hasMappings"
-              class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm"
+              v-if="showConcepts"
+              class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm relative"
             >
+              <button
+                class="absolute top-2 right-2 text-blue-400 hover:text-blue-700 dark:hover:text-blue-200"
+                title="Hide"
+                @click="showConcepts = false"
+              >
+                <X class="h-4 w-4" />
+              </button>
               <h3 class="font-medium text-blue-900 dark:text-blue-300 mb-1">
                 How evaluation works
               </h3>
-              <dl class="space-y-1 text-blue-800 dark:text-blue-300">
+              <dl class="space-y-1 text-blue-800 dark:text-blue-300 pr-6">
                 <div>
                   <dt class="inline font-semibold">Ground truth</dt>
                   <dd class="inline">
@@ -190,13 +208,15 @@
                   <p class="mt-1 text-sm text-yellow-700 dark:text-yellow-400">
                     {{ evaluationPrerequisiteMessage }}
                   </p>
-                  <button
+                  <BaseButton
                     v-if="selectedGroundTruth && !hasMappings"
-                    class="mt-2 inline-flex items-center px-3 py-1.5 bg-yellow-600 text-white rounded-md text-sm font-medium hover:bg-yellow-700 transition-colors"
+                    variant="warning"
+                    size="sm"
+                    class="mt-2"
                     @click="previewGroundTruth"
                   >
                     Configure mappings
-                  </button>
+                  </BaseButton>
                 </div>
               </div>
             </div>
@@ -259,7 +279,14 @@
                       </div>
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900 dark:text-white">
-                      {{ getDocumentCount(evaluation) }}
+                      <div>{{ getDocumentCount(evaluation) }} docs</div>
+                      <div
+                        v-if="getUnmatchedDocCount(evaluation) > 0"
+                        class="text-xs text-yellow-600 dark:text-yellow-400"
+                        :title="`${getUnmatchedDocCount(evaluation)} document(s) could not be matched to ground truth and are excluded from the accuracy.`"
+                      >
+                        {{ getMatchedDocCount(evaluation) }} matched
+                      </div>
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm">
                       <StatusBadge
@@ -270,7 +297,7 @@
                         Has Errors ({{ getErrorCount(evaluation) }})
                       </StatusBadge>
                       <StatusBadge v-else color="green" class="py-1 font-medium">
-                        Complete
+                        Scored
                       </StatusBadge>
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm">
@@ -281,22 +308,19 @@
                         >
                           Analysis
                         </button>
+                        <button
+                          class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm underline"
+                          title="Delete evaluation"
+                          @click="confirmDeleteEvaluation(evaluation)"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-
-            <!-- (Optional) Trials pagination controls just for caching models -->
-            <PaginationControls
-              v-if="trialsTotalPages > 1"
-              v-model="trialsCurrentPage"
-              :total-pages="trialsTotalPages"
-              :visible-pages="trialsVisiblePages"
-              :total-items="trials.total"
-              :page-size="trials.limit"
-            />
           </div>
         </div>
       </div>
@@ -337,24 +361,47 @@
       :evaluations="evaluations"
       @close="showExportModal = false"
     />
+    <ConfirmationDialog
+      :open="!!evaluationToDelete"
+      title="Delete evaluation?"
+      :message="`This removes the computed metrics for Trial #${evaluationToDelete?.trial_id}. The trial and its results are kept; you can re-evaluate anytime.`"
+      confirm-text="Delete"
+      :loading="deletingEvaluation"
+      @confirm="deleteEvaluation"
+      @cancel="evaluationToDelete = null"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AlertTriangle, BarChart3, ClipboardList, Download } from '@lucide/vue'
+import {
+  AlertTriangle,
+  BarChart3,
+  ClipboardList,
+  Download,
+  HelpCircle,
+  Upload,
+  X,
+} from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { evaluationsApi } from '@/services/evaluationsApi'
 import { formatDate } from '@/utils/formatters'
-import { computeVisiblePages } from '@/composables/usePagination'
 import { useToast } from '@/composables/useToast'
+import {
+  getEvaluationAccuracy,
+  getEvaluationDocumentCount,
+  getEvaluationDocuments,
+} from '@/utils/evaluationHelpers'
+import { extractErrorMessage } from '@/utils/errors'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
-import PaginationControls from '@/components/common/PaginationControls.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import GroundTruthUploadModal from '@/components/groundtruth/GroundTruthUploadModal.vue'
 import GroundTruthManager from '@/components/groundtruth/GroundTruthManager.vue'
 import TrialSelectorModal from '@/components/trials/TrialSelectorModal.vue'
@@ -425,6 +472,13 @@ const showGroundTruthManager = ref(false)
 const showTrialSelector = ref(false)
 const showGroundTruthPreview = ref(false)
 const showExportModal = ref(false)
+// "How evaluation works" explainer. Auto-shown until mappings exist (see the
+// watcher below), then recallable via the help link next to the heading.
+const showConcepts = ref(false)
+
+// Delete-evaluation flow
+const evaluationToDelete = ref(null)
+const deletingEvaluation = ref(false)
 
 // Computed properties
 const canStartEvaluation = computed(() => {
@@ -440,6 +494,18 @@ const canStartEvaluation = computed(() => {
 const hasMappings = computed(() => {
   return (selectedGroundTruth.value?.field_mappings?.length || 0) > 0
 })
+
+// Auto-show the concepts explainer while mappings are still missing (the
+// onboarding state); once mappings exist, leave it to the user to recall via
+// the "How it works" link. We only drive the auto-open direction so a user
+// who dismisses it post-mapping isn't forced back in.
+watch(
+  hasMappings,
+  (has) => {
+    if (!has) showConcepts.value = true
+  },
+  { immediate: true },
+)
 
 const evaluationPrerequisiteMessage = computed(() => {
   if (!selectedGroundTruth.value) {
@@ -477,10 +543,9 @@ const clearError = () => {
 const handleApiError = (err, operation) => {
   console.error(`${operation} failed:`, err)
 
-  const errorMessage = describeHttpError(err, operation)
-
-  error.value = errorMessage
-  toast.error(errorMessage)
+  // Surface in the ErrorBanner (which has a retry action). Don't also fire a
+  // toast — that would duplicate the message for every error in this view.
+  error.value = describeHttpError(err, operation)
 }
 
 const retryLastOperation = async () => {
@@ -551,23 +616,6 @@ const fetchTrials = async (opts = {}) => {
   }
 }
 
-// Page-based view over the offset-based trials pagination (for PaginationControls)
-const trialsTotalPages = computed(() =>
-  trials.value.limit ? Math.max(1, Math.ceil(trials.value.total / trials.value.limit)) : 1,
-)
-const trialsCurrentPage = computed({
-  get: () => (trials.value.limit ? Math.floor(trials.value.offset / trials.value.limit) + 1 : 1),
-  set: (newPage) => {
-    if (loadingStates.value.trials) return
-    const newOffset = (newPage - 1) * trials.value.limit
-    if (newOffset === trials.value.offset) return
-    fetchTrials({ offset: newOffset, limit: trials.value.limit })
-  },
-})
-const trialsVisiblePages = computed(() =>
-  computeVisiblePages(trialsCurrentPage.value, trialsTotalPages.value),
-)
-
 // Lazy fetch full trial (only if a view ever needs more than the summary)
 const fetchTrialIfMissing = async (id) => {
   if (trialCache.value[id]?.results || pendingTrialFetches.has(id)) return
@@ -603,23 +651,41 @@ const getTrialName = (trialId) => {
   return `Trial #${trialId}`
 }
 
-const getAccuracyPercentage = (evaluation) => {
-  const accuracy = evaluation.overall_metrics?.accuracy || evaluation.metrics?.accuracy || 0
-  return (accuracy * 100).toFixed(1)
+// Returns the bare numeric percentage (0–100, rounded to 1 decimal); callers
+// append the `%` sign themselves. Using getEvaluationAccuracyPct here would
+// double the `%`.
+const getAccuracyPercentage = (evaluation) =>
+  Math.round(getEvaluationAccuracy(evaluation) * 1000) / 10
+
+const getDocumentCount = (evaluation) => getEvaluationDocumentCount(evaluation)
+
+// Matched vs total documents. Accuracy is computed over matched docs only,
+// so when some documents couldn't be matched to ground truth we surface it
+// in the list row — otherwise a half-unmatched trial hides behind a number
+// computed only over the surviving half.
+const getOverallMetrics = (evaluation) => evaluation?.overall_metrics || evaluation?.metrics || {}
+
+const getMatchedDocCount = (evaluation) => {
+  const m = getOverallMetrics(evaluation)
+  return m.matched_document_count ?? m.total_documents ?? getDocumentCount(evaluation)
 }
 
-const getDocumentCount = (evaluation) => {
-  return evaluation.document_summaries?.length || evaluation.document_metrics?.length || 0
+const getUnmatchedDocCount = (evaluation) => {
+  const m = getOverallMetrics(evaluation)
+  if (m.error_document_count != null) return m.error_document_count
+  // Fall back to total - matched when the backend didn't split it out.
+  if (m.total_documents != null && m.matched_document_count != null) {
+    return Math.max(0, m.total_documents - m.matched_document_count)
+  }
+  return 0
 }
 
 const hasEvaluationErrors = (evaluation) => {
-  const documents = evaluation.document_summaries || evaluation.document_metrics || []
-  return documents.some((doc) => doc.error || doc.has_error)
+  return getEvaluationDocuments(evaluation).some((doc) => doc.error || doc.has_error)
 }
 
 const getErrorCount = (evaluation) => {
-  const documents = evaluation.document_summaries || evaluation.document_metrics || []
-  return documents.filter((doc) => doc.error || doc.has_error).length
+  return getEvaluationDocuments(evaluation).filter((doc) => doc.error || doc.has_error).length
 }
 
 // Validation functions
@@ -641,8 +707,7 @@ const showTrialSelectorWithValidation = () => {
   const validationErrors = validateEvaluationPrerequisites()
 
   if (validationErrors.length > 0) {
-    error.value = `Cannot start evaluation: ${validationErrors.join(', ')}`
-    toast.error(error.value)
+    toast.error(`Cannot start evaluation: ${validationErrors.join(', ')}`)
     return
   }
 
@@ -773,6 +838,26 @@ const viewEvaluationAnalysis = (evaluation) => {
     gtName: selectedGroundTruth.value?.name || '',
   }
   router.push({ query })
+}
+
+const confirmDeleteEvaluation = (evaluation) => {
+  evaluationToDelete.value = evaluation
+}
+
+const deleteEvaluation = async () => {
+  const evaluation = evaluationToDelete.value
+  if (!evaluation) return
+  deletingEvaluation.value = true
+  try {
+    await evaluationsApi.delete(props.projectId, evaluation.id)
+    evaluations.value = evaluations.value.filter((e) => e.id !== evaluation.id)
+    evaluationToDelete.value = null
+    toast.success(`Deleted evaluation for Trial #${evaluation.trial_id}`)
+  } catch (err) {
+    toast.error(`Failed to delete evaluation: ${extractErrorMessage(err)}`)
+  } finally {
+    deletingEvaluation.value = false
+  }
 }
 
 // Initialize component

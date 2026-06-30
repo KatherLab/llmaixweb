@@ -4,10 +4,9 @@
     size="sm"
     role="alertdialog"
     :title="title"
-    panel-class="dark:bg-slate-900 dark:border-slate-700 rounded-xl"
-    header-class="dark:border-slate-700"
+    panel-class="rounded-xl"
     body-class="p-6"
-    footer-class="dark:border-slate-700 dark:bg-slate-800"
+    footer-class="dark:bg-slate-800"
     @close="emit('cancel')"
   >
     <p class="text-slate-600 dark:text-slate-400 mb-6">{{ message }}</p>

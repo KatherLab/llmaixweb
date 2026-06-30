@@ -108,3 +108,80 @@ body {
     transform: scaleX(0);
   }
 }
+
+/* Rendered-markdown styling for every v-html markdown surface (document text,
+   LLM reasoning, etc.). CSS vars drive the colors so `.dark` on <html> adapts
+   the rendered markdown automatically. Promoted here from a scoped block in
+   TrialResultDetailPanel.vue so DocumentTextView / DocumentCompareView share
+   the same dark-aware look. */
+.markdown-content {
+  --md-text: #333;
+  --md-code-bg: #f0f0f0;
+  --md-pre-bg: #f6f8fa;
+  --md-link: #0366d6;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--md-text);
+}
+.dark .markdown-content {
+  --md-text: #e2e8f0;
+  --md-code-bg: #1e293b;
+  --md-pre-bg: #0f172a;
+  --md-link: #60a5fa;
+}
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.markdown-content h1 {
+  font-size: 1.5em;
+}
+.markdown-content h2 {
+  font-size: 1.25em;
+}
+.markdown-content h3 {
+  font-size: 1.125em;
+}
+.markdown-content p {
+  margin-bottom: 1em;
+}
+.markdown-content ul,
+.markdown-content ol {
+  margin-bottom: 1em;
+  padding-left: 1.5em;
+}
+.markdown-content li {
+  margin-bottom: 0.25em;
+}
+.markdown-content code {
+  background-color: var(--md-code-bg);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 85%;
+  font-family: SFMono-Regular, Consolas, Menlo, monospace;
+}
+.markdown-content pre {
+  background-color: var(--md-pre-bg);
+  border-radius: 3px;
+  padding: 1em;
+  overflow: auto;
+  margin-bottom: 1em;
+}
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+.markdown-content a {
+  color: var(--md-link);
+  text-decoration: none;
+}
+.markdown-content a:hover {
+  text-decoration: underline;
+}

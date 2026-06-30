@@ -22,6 +22,55 @@ class Settings(BaseSettings):
     # 0 = never expire (not recommended — leaked invitation links never revoke).
     INVITATION_EXPIRE_HOURS: int = 24 * 7
 
+    # ─────────────────────────────────────────────────────────────
+    # Password policy
+    # ─────────────────────────────────────────────────────────────
+    # Enforced centrally by utils.password_policy.validate_password,
+    # which every password-setting endpoint calls in addition to the
+    # Pydantic min/max length gates on the request schemas.
+    PASSWORD_POLICY_MIN_LENGTH: int = Field(default=8, ge=8, le=128)
+    PASSWORD_POLICY_MAX_LENGTH: int = Field(default=128, ge=8, le=256)
+    PASSWORD_POLICY_REQUIRE_UPPERCASE: bool = True
+    PASSWORD_POLICY_REQUIRE_LOWERCASE: bool = True
+    PASSWORD_POLICY_REQUIRE_DIGIT: bool = True
+    PASSWORD_POLICY_REQUIRE_SYMBOL: bool = False
+
+    # ─────────────────────────────────────────────────────────────
+    # Account lockout (login brute-force protection)
+    # ─────────────────────────────────────────────────────────────
+    # Per-user: after LOGIN_MAX_ATTEMPTS failed logins, the account is
+    # locked for LOGIN_LOCKOUT_MINUTES. The IP rate limit (10/min on
+    # /login) is the first line of defense; this is the per-account
+    # backstop that survives distributed attacks across IPs.
+    LOGIN_MAX_ATTEMPTS: int = Field(default=5, ge=1, le=50)
+    LOGIN_LOCKOUT_MINUTES: int = Field(default=15, ge=1, le=1440)
+
+    # ─────────────────────────────────────────────────────────────
+    # SSO / OpenID Connect
+    # ─────────────────────────────────────────────────────────────
+    # Global feature flag. When False, all /auth/sso/* endpoints refuse
+    # to start a flow (providers list is empty). Individual providers are
+    # also toggled via IdentityProvider.enabled in the DB.
+    SSO_ENABLED: bool = False
+    # Fernet key for encrypting provider client_secret at rest. If empty,
+    # a key is derived from SECRET_KEY via PBKDF2 (see utils.crypto).
+    # Set explicitly only if you want to rotate independently of SECRET_KEY.
+    SSO_CLIENT_SECRET_ENCRYPTION_KEY: str = ""
+    # Role assigned to users auto-provisioned via SSO (JIT).
+    SSO_JIT_DEFAULT_ROLE: str = "user"
+    # When True, SSO login bypasses REQUIRE_INVITATION (standard for SSO —
+    # the IdP is the trust source, not an invitation token).
+    SSO_BYPASS_INVITATION: bool = True
+
+    # ─────────────────────────────────────────────────────────────
+    # Refresh tokens
+    # ─────────────────────────────────────────────────────────────
+    # Refresh tokens are stored hashed (sha256) in the refresh_tokens
+    # table, rotated on each use, and revocable. Issued alongside the
+    # access token when the client opts in (login response includes
+    # refresh_token only when this is enabled and the client requests it).
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=30, ge=1, le=365)
+
     # Skip runtime validation checks (useful for Alembic migrations)
     SKIP_RUNTIME_CHECKS: bool = False
 
@@ -554,6 +603,103 @@ SETTINGS_META = {
         "readonly": False,
         "category": "Security",
         "label": "Invitation Expiry (hours)",
+    },
+    "PASSWORD_POLICY_MIN_LENGTH": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Password Min Length",
+        "help": "Minimum password length enforced by the shared password validator (8-128).",
+    },
+    "PASSWORD_POLICY_MAX_LENGTH": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Password Max Length",
+    },
+    "PASSWORD_POLICY_REQUIRE_UPPERCASE": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Require Uppercase",
+    },
+    "PASSWORD_POLICY_REQUIRE_LOWERCASE": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Require Lowercase",
+    },
+    "PASSWORD_POLICY_REQUIRE_DIGIT": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Require Digit",
+    },
+    "PASSWORD_POLICY_REQUIRE_SYMBOL": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Require Symbol",
+    },
+    "LOGIN_MAX_ATTEMPTS": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Max Login Attempts",
+        "help": "Failed logins before an account is temporarily locked (1-50).",
+    },
+    "LOGIN_LOCKOUT_MINUTES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Lockout Duration (min)",
+    },
+    "SSO_ENABLED": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "SSO",
+        "label": "SSO Enabled",
+        "help": "Global feature flag for OpenID Connect single sign-on. Individual providers are configured in the SSO admin panel.",
+    },
+    "SSO_CLIENT_SECRET_ENCRYPTION_KEY": {
+        "type": "str",
+        "secret": True,
+        "readonly": True,
+        "category": "SSO",
+        "label": "SSO Secret Encryption Key",
+    },
+    "SSO_JIT_DEFAULT_ROLE": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "SSO",
+        "label": "JIT Default Role",
+        "help": "Role assigned to users auto-created on first SSO login (user/admin).",
+    },
+    "SSO_BYPASS_INVITATION": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "SSO",
+        "label": "SSO Bypass Invitation",
+        "help": "When True, SSO login ignores REQUIRE_INVITATION (the IdP is the trust source).",
+    },
+    "REFRESH_TOKEN_EXPIRE_DAYS": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Refresh Token Expiry (days)",
+        "help": "Lifetime of refresh tokens (1-365 days). Refresh tokens are rotated on each use and revocable.",
     },
     "POSTGRES_SERVER": {
         "type": "str",

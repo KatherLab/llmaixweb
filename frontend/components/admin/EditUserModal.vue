@@ -1,12 +1,5 @@
 <template>
-  <BaseModal
-    :open="open"
-    size="md"
-    panel-class="dark:bg-slate-900 dark:border-slate-700"
-    header-class="dark:border-slate-800"
-    footer-class="dark:border-slate-800 dark:bg-slate-900"
-    @close="emit('close')"
-  >
+  <BaseModal :open="open" size="md" @close="emit('close')">
     <template #header>
       <div>
         <h3 class="text-lg font-bold text-slate-900 dark:text-white">Edit User</h3>
@@ -76,6 +69,10 @@
               <div class="flex items-center gap-3 mt-2">
                 <button
                   type="button"
+                  role="switch"
+                  :aria-checked="editForm.is_active"
+                  :aria-label="`User account ${editForm.is_active ? 'active' : 'inactive'}`"
+                  :disabled="user?.id === currentUserId"
                   class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
                   :class="[
                     editForm.is_active ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600',
@@ -123,14 +120,16 @@
               placeholder="Enter new password (optional)"
             />
           </div>
-          <button
+          <BaseButton
             type="button"
+            variant="primary"
+            size="sm"
             :disabled="!editPassword || isSettingPassword"
-            class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 dark:bg-blue-500 rounded-lg shadow-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition disabled:opacity-50"
+            :loading="isSettingPassword"
             @click="setPasswordForEditUser"
           >
-            {{ isSettingPassword ? '...' : 'Set' }}
-          </button>
+            Set
+          </BaseButton>
         </div>
       </div>
 

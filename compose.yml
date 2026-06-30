@@ -44,6 +44,15 @@ services:
       # env_file, because a literal value in `environment:` would override .env.
       - DOCLING_SERVE_ENABLED=${DOCLING_SERVE_ENABLED:-true}
     # ports: ["8000:8000"] # uncomment for local debugging / testing the backend
+    healthcheck:
+      # '/' returns {"message": "Hello, hello!"} once uvicorn is ready to serve.
+      # This lets downstream services (frontend, workers) wait for actual readiness
+      # rather than just container start. start_period covers migrations on first boot.
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     depends_on:
       docling-serve:
         condition: service_healthy
@@ -96,7 +105,7 @@ services:
     ports: ["5173:8080"]
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
 
   postgres:
     image: postgres:18-alpine

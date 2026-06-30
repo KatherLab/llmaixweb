@@ -1,7 +1,9 @@
 <template>
   <div class="flex flex-col gap-1 min-w-[220px]">
-    <div class="font-semibold text-blue-900 mb-0.5 text-base flex items-center gap-2">
-      <span class="text-xs text-blue-500">
+    <div
+      class="font-semibold text-blue-900 dark:text-blue-300 mb-0.5 text-base flex items-center gap-2"
+    >
+      <span class="text-xs text-blue-500 dark:text-blue-400">
         <!-- File SVG -->
         <FileText class="w-4 h-4 inline-block" />
       </span>
@@ -13,7 +15,8 @@
       <select
         v-model="innerIdColumn"
         :class="[
-          'px-3 py-1.5 rounded-lg border bg-white/80 text-base shadow focus:ring-2 focus:ring-blue-400 transition min-w-[140px]',
+          selectClass,
+          'min-w-[140px]',
           !innerIdColumn ? 'border-red-300 focus:border-red-400' : 'border-blue-200',
         ]"
         required
@@ -39,7 +42,7 @@
             @change="updateId"
           />
           <span
-            class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100"
+            class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-100 dark:border-blue-800"
           >
             Use document filename
           </span>
@@ -53,14 +56,14 @@
             @change="updateId"
           />
           <span
-            class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100"
+            class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-100 dark:border-blue-800"
           >
             Use field:
           </span>
           <select
             v-if="innerIdColumn === '__field__'"
             v-model="innerJsonIdField"
-            class="ml-1 px-2 py-1 rounded-lg border text-base bg-white/90 shadow min-w-[120px]"
+            :class="[selectClass, 'min-w-[120px]']"
             @change="updateJsonId"
           >
             <option value="" disabled>Select field...</option>
@@ -79,7 +82,7 @@
         </StatusBadge>
       </div>
     </template>
-    <div class="text-xs text-slate-500 mt-1">
+    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
       Controls how documents are matched to trial results for evaluation.
     </div>
   </div>
@@ -89,6 +92,7 @@
 import { ref, watch } from 'vue'
 import { CircleAlert, FileText, Key } from '@lucide/vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import { selectClass } from '@/utils/formStyles'
 const props = defineProps({
   isJson: Boolean,
   isTabular: Boolean,

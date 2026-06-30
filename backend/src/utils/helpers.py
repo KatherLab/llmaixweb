@@ -653,6 +653,46 @@ def flatten_dict(d, parent_key="", sep="."):
     return flat_dict
 
 
+def _resolve_schema_type(prop_def: dict) -> str:
+    """Resolve a JSON-schema property to a single normalized type string.
+
+    Handles the common cases that the raw ``type`` key does not cover:
+    nullable types (``"type": ["string", "null"]``), ``anyOf``/``oneOf``
+    unions, and ``$ref`` / ``const`` definitions. Returns the first non-null
+    type (mapped to our internal vocabulary), falling back to ``"string"``.
+    """
+    type_mapping = {
+        "boolean": "boolean",
+        "integer": "number",
+        "number": "number",
+        "string": "string",
+    }
+
+    raw_type = prop_def.get("type")
+    # A list type (e.g. ["string", "null"]) means nullable; pick the first
+    # non-null member. A plain string type is the common case.
+    if isinstance(raw_type, list):
+        candidates = [t for t in raw_type if t != "null"]
+        raw_type = candidates[0] if candidates else None
+    if isinstance(raw_type, str):
+        return type_mapping.get(raw_type, "string")
+
+    # anyOf / oneOf: pick the first non-null member schema's type.
+    for combiner in ("anyOf", "oneOf"):
+        sub_schemas = prop_def.get(combiner)
+        if isinstance(sub_schemas, list):
+            for sub in sub_schemas:
+                if isinstance(sub, dict) and sub.get("type") != "null":
+                    return _resolve_schema_type(sub)
+
+    # $ref: an unresolvable reference at this layer — treat as opaque/string
+    # rather than crashing, so mapping still works.
+    if prop_def.get("$ref") is not None or prop_def.get("const") is not None:
+        return "string"
+
+    return "string"
+
+
 def extract_field_types_from_schema(schema_def: dict, result: dict, prefix: str = ""):
     """Extract all field types from a JSON schema as dot notation (leaf paths)."""
     if "properties" in schema_def:
@@ -662,27 +702,20 @@ def extract_field_types_from_schema(schema_def: dict, result: dict, prefix: str 
             if prop_def.get("type") == "object" and "properties" in prop_def:
                 extract_field_types_from_schema(prop_def, result, full_path)
             elif prop_def.get("type") == "array" and "items" in prop_def:
-                if prop_def["items"].get("type") == "object":
+                items = prop_def["items"]
+                if isinstance(items, dict) and items.get("type") == "object":
                     # For arrays of objects, list the full path with []
-                    extract_field_types_from_schema(
-                        prop_def["items"], result, f"{full_path}[]"
-                    )
+                    extract_field_types_from_schema(items, result, f"{full_path}[]")
                 else:
-                    result[full_path + "[]"] = prop_def["items"].get("type", "string")
+                    result[full_path + "[]"] = (
+                        _resolve_schema_type(items) if isinstance(items, dict) else "string"
+                    )
             else:
                 # Primitive type or enum
                 if "enum" in prop_def:
                     result[full_path] = "category"
                 else:
-                    type_mapping = {
-                        "boolean": "boolean",
-                        "integer": "number",
-                        "number": "number",
-                        "string": "string",
-                    }
-                    result[full_path] = type_mapping.get(
-                        prop_def.get("type", "string"), "string"
-                    )
+                    result[full_path] = _resolve_schema_type(prop_def)
 
             if prop_def.get("format") in ["date", "date-time"]:
                 result[full_path] = "date"

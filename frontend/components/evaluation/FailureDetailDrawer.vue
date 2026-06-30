@@ -1,10 +1,5 @@
 <template>
-  <BaseModal
-    :open="open"
-    placement="right"
-    panel-class="w-full max-w-6xl dark:bg-slate-900 dark:border-slate-700"
-    @close="$emit('close')"
-  >
+  <BaseModal :open="open" placement="right" panel-class="w-full max-w-6xl" @close="$emit('close')">
     <template #header>
       <div class="flex items-center justify-between gap-4 pr-8">
         <div class="min-w-0">
@@ -150,7 +145,7 @@
                     <Tooltip v-if="!detail.is_correct" :text="errorTooltip(detail.error_type)">
                       <span
                         class="text-[10px] text-red-600 dark:text-red-400 underline cursor-help"
-                        >{{ detail.error_type }}</span
+                        >{{ prettifyErrorType(detail.error_type) }}</span
                       >
                     </Tooltip>
                   </td>
@@ -211,6 +206,12 @@ import {
   getErrorTypeDescription,
   getErrorSuggestion,
 } from '@/utils/metricsDefinitions'
+import {
+  prettifyField,
+  accuracyColor,
+  prettifyErrorType,
+  ACCURACY_THRESHOLDS,
+} from '@/utils/evaluationHelpers'
 
 // `Scale` is exported as `Scale` by lucide; alias for template clarity.
 const ScaleIcon = Scale
@@ -255,19 +256,16 @@ const viewMode = computed(() => {
 
 const statusLabel = computed(() => {
   if (props.docEval?.has_error || props.docEval?.error) return 'Evaluation error'
-  if (props.docEval && props.docEval.accuracy >= 0.9) return 'High accuracy'
-  if (props.docEval && props.docEval.accuracy < 0.5) return 'Low accuracy'
+  if (props.docEval && props.docEval.accuracy >= ACCURACY_THRESHOLDS.HIGH) return 'High accuracy'
+  if (props.docEval && props.docEval.accuracy < ACCURACY_THRESHOLDS.LOW) return 'Low accuracy'
   return 'Partial'
 })
 
 const statusClass = computed(() => {
   if (props.docEval?.has_error || props.docEval?.error)
     return 'text-red-600 dark:text-red-400 font-medium'
-  if (props.docEval && props.docEval.accuracy >= 0.9)
-    return 'text-green-600 dark:text-green-400 font-medium'
-  if (props.docEval && props.docEval.accuracy < 0.5)
-    return 'text-red-600 dark:text-red-400 font-medium'
-  return 'text-yellow-600 dark:text-yellow-400 font-medium'
+  // accuracyColor returns the same green/red/yellow tiers; append weight here.
+  return `${accuracyColor(props.docEval?.accuracy)} font-medium`
 })
 
 const toggleOriginalView = () => {
@@ -278,20 +276,6 @@ const formatValue = (value) => {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
-}
-
-const prettifyField = (key) => {
-  if (!key) return ''
-  const last =
-    String(key)
-      .split(/[.[\]]/)
-      .filter(Boolean)
-      .pop() || key
-  return last
-    .replace(/[_-]+/g, ' ')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 const errorTooltip = (errorType) => {

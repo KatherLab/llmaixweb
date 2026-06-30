@@ -20,6 +20,7 @@ const route = useRoute()
 
 const tabs = computed(() => [
   { label: 'Settings', value: '/admin/settings', to: '/admin/settings' },
+  { label: 'SSO', value: '/admin/sso', to: '/admin/sso' },
   { label: 'Celery & Queues', value: '/admin/celery', to: '/admin/celery' },
 ])
 </script>

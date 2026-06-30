@@ -25,7 +25,7 @@ from .celery.celery_config import celery_app
 from .core.dynamic_settings import get_settings
 from .core.rate_limit import limiter
 from .db.session import init_db
-from .routers.v1.endpoints import admin, auth, projects, users
+from .routers.v1.endpoints import admin, admin_sso, auth, projects, sso, users
 from .utils.logging_config import setup_logging
 from .websocket_manager import manager
 
@@ -257,9 +257,11 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(sso.router, prefix="/auth/sso", tags=["sso"])
 api_router.include_router(users.router, prefix="/user", tags=["users"])
 api_router.include_router(projects.router, prefix="/project", tags=["projects"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(admin_sso.router, prefix="/admin/sso", tags=["admin-sso"])
 app.include_router(api_router)
 
 logger.info("CORS origins: %s", settings.BACKEND_CORS_ORIGINS_LIST)

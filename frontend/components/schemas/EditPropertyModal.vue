@@ -5,11 +5,11 @@
     :closeable="false"
     :close-on-esc="false"
     body-class="p-6"
-    footer-class="bg-slate-50"
+    footer-class="bg-slate-50 dark:bg-slate-800"
     @close="handleBackdropClose"
   >
     <template #header>
-      <h3 class="text-lg font-medium text-slate-900">
+      <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">
         Edit
         {{
           localEditingProperty?.key === '__root__'

@@ -17,11 +17,16 @@
     <template #cell-is_used="{ row: invitation }">
       <span
         v-if="invitation.is_used"
-        class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs"
+        class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs"
       >
         Yes
       </span>
-      <span v-else class="bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-xs"> No </span>
+      <span
+        v-else
+        class="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full text-xs"
+      >
+        No
+      </span>
     </template>
 
     <template #row-actions="{ row: invitation }">

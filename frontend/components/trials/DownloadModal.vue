@@ -6,6 +6,8 @@ import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
+import { selectClass, labelClass } from '@/utils/formStyles'
+import { getBannerClass } from '@/utils/statusStyles'
 
 const { downloadFromApi } = useFileDownload()
 
@@ -68,9 +70,10 @@ async function download() {
     @close="$emit('close')"
   >
     <div
-      class="mb-4 flex items-center gap-2 text-xs text-slate-600 bg-slate-50 rounded px-3 py-2 border border-slate-100"
+      class="mb-4 flex items-start gap-2 text-xs rounded px-3 py-2"
+      :class="getBannerClass('gray')"
     >
-      <Info class="w-4 h-4 text-blue-400" />
+      <Info class="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
       <span v-if="isJsonZip">
         <strong>JSON (per-document):</strong> Downloads a <b>ZIP archive</b> with one JSON file per
         document.
@@ -95,28 +98,25 @@ async function download() {
     </div>
 
     <div class="mb-4">
-      <label class="block text-sm font-medium text-slate-700 mb-1">Format</label>
-      <select
-        v-model="format"
-        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-      >
+      <label :class="labelClass">Format</label>
+      <select v-model="format" :class="selectClass">
         <option value="json">JSON (per-document, ZIP)</option>
         <option value="csv">CSV (table, with optional files)</option>
       </select>
     </div>
 
     <div class="mb-4">
-      <label class="block text-sm font-medium text-slate-700 mb-1">Options</label>
-      <label class="flex items-center text-sm">
+      <label :class="labelClass">Options</label>
+      <label class="flex items-center text-sm text-slate-700 dark:text-slate-300">
         <input
           v-model="includeContent"
           type="checkbox"
-          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
         />
         <span class="ml-2"
           >Include document content
           <span
-            class="text-slate-400"
+            class="text-slate-400 dark:text-slate-500"
             title="If checked: you will also receive the original document text and files inside the ZIP."
           >
             (adds document text and source files)
@@ -125,7 +125,7 @@ async function download() {
       </label>
     </div>
 
-    <div v-if="format === 'csv'" class="mb-3 text-xs text-slate-500">
+    <div v-if="format === 'csv'" class="mb-3 text-xs text-slate-500 dark:text-slate-400">
       <span v-if="includeContent">
         Will include original files and full document text inside a ZIP.<br />
         <b>Note:</b> Download may be large if your trial contains many files.

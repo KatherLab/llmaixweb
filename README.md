@@ -22,8 +22,11 @@ A web application that turns unstructured medical/lab documents into structured 
 * **Evaluation** — upload ground truth CSVs, compare field-by-field, compute per-field and overall accuracy metrics.
 * **Privacy-first** — run fully local or with self-hosted providers. No forced external calls.
 * **Admin dashboard** — user management (invitations, roles), provider configuration, Celery monitoring.
+* **Authentication & SSO** — email/password login with account lockout, refresh tokens, and optional OpenID Connect single sign-on (Google, Keycloak, Azure AD, …) with just-in-time user provisioning.
 
 > Tech stack: **Vue 3 + Vite + TailwindCSS** (frontend), **FastAPI** (backend), **SQLAlchemy**, **Celery**, **Pydantic** for configuration.
+
+> 📖 **New here?** See the [Usage Example](USAGE.md) for a complete, step-by-step walkthrough — from a CSV of 8 medical reports to evaluated extraction results — using the original LLMAIx example dataset, schema, and prompt.
 
 ---
 
@@ -168,6 +171,13 @@ Edit `.env` for your deployment. **At minimum**, configure your LLM provider and
 | `BACKEND_CORS_ORIGINS`    | Comma-separated allowed origins       | `http://localhost:5173`        |
 | `REQUIRE_INVITATION`      | Require invitation for signup         | `false`                        |
 | `ALLOW_FIRST_ADMIN_SETUP` | Allow first user to become admin      | `true`                         |
+| `PASSWORD_POLICY_*`       | Password complexity rules (length, upper/lower/digit/symbol) | min 8, require upper/lower/digit |
+| `LOGIN_MAX_ATTEMPTS`      | Failed logins before account lockout  | `5`                            |
+| `LOGIN_LOCKOUT_MINUTES`   | Account lockout duration              | `15`                           |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token lifetime (rotatable, revocable) | `30`                    |
+| `SSO_ENABLED`             | Enable OpenID Connect single sign-on  | `false`                        |
+| `SSO_JIT_DEFAULT_ROLE`    | Role for SSO auto-provisioned users   | `user`                         |
+| `SSO_BYPASS_INVITATION`   | SSO login bypasses `REQUIRE_INVITATION` | `true`                       |
 | `CELERY_PREPROCESS_POOL`  | Pool type (`auto`, `solo`, `prefork`) | `auto` (use `solo` on macOS)   |
 | `MISTRAL_API_BASE`        | Mistral OCR API base URL              | `https://api.mistral.ai`       |
 | `MISTRAL_API_KEY`         | Mistral OCR API key (server default)  | (empty)                        |
@@ -254,9 +264,22 @@ Open an issue at [github.com/KatherLab/llmaixweb/issues](https://github.com/Kath
 
 ---
 
+## Usage Example
+
+For a complete end-to-end walkthrough (upload → preprocess → schema/prompt → trial → evaluation) using the 8-report lung-embolism example dataset, see [USAGE.md](USAGE.md).
+
+---
+
 ## Development
 
 See [DEVELOPER.md](DEVELOPER.md) for local development and testing instructions.
+
+---
+
+## Deployment
+
+For production deployment — architecture, reverse proxy/TLS, backups, upgrades,
+health checks, and a security checklist — see [DEPLOY.md](DEPLOY.md).
 
 ---
 

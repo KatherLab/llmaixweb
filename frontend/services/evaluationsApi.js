@@ -12,6 +12,9 @@ export const evaluationsApi = {
   get(projectId, evaluationId) {
     return api.get(`/project/${projectId}/evaluation/${evaluationId}`)
   },
+  delete(projectId, evaluationId) {
+    return api.delete(`/project/${projectId}/evaluation/${evaluationId}`)
+  },
   getDocument(projectId, evaluationId, documentId) {
     return api.get(`/project/${projectId}/evaluation/${evaluationId}/document/${documentId}`)
   },

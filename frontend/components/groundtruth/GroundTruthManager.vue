@@ -29,12 +29,12 @@
       <div
         v-for="(gt, index) in groundTruthFiles"
         :key="gt.id"
-        class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+        class="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow"
       >
         <div class="flex justify-between items-start">
           <div class="flex-1">
             <div class="flex items-center gap-3 mb-2">
-              <h4 class="font-medium text-slate-900">
+              <h4 class="font-medium text-slate-900 dark:text-white">
                 {{ gt.name || `Ground Truth #${index + 1}` }}
               </h4>
               <StatusBadge color="blue" class="px-2 py-1 font-medium">{{
@@ -47,7 +47,7 @@
                 >{{ gt.field_mappings.length }} mappings</StatusBadge
               >
             </div>
-            <div class="text-xs text-slate-600 flex flex-wrap gap-4">
+            <div class="text-xs text-slate-600 dark:text-slate-400 flex flex-wrap gap-4">
               <span>Created: {{ formatDate(gt.created_at) }}</span>
               <span v-if="gt.updated_at !== gt.created_at">
                 Updated: {{ formatDate(gt.updated_at) }}
@@ -57,7 +57,7 @@
           <div class="flex items-center gap-2">
             <!-- Configure mappings -->
             <button
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-md transition-colors"
               title="Configure field mappings"
               @click="previewGroundTruth(gt)"
             >
@@ -66,7 +66,7 @@
             </button>
             <!-- Rename (pencil) -->
             <button
-              class="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700 rounded-md transition-colors"
+              class="p-2 text-slate-600 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700 rounded-md transition-colors"
               title="Rename"
               @click="editGroundTruth(gt)"
             >
@@ -74,7 +74,7 @@
             </button>
             <!-- Delete (trash) -->
             <button
-              class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+              class="p-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
               title="Delete"
               @click="deleteGroundTruth(gt)"
             >
@@ -83,20 +83,29 @@
           </div>
         </div>
         <!-- Field mappings preview -->
-        <div v-if="gt.field_mappings?.length" class="mt-3 pt-3 border-t border-slate-100">
-          <h5 class="text-xs font-medium text-slate-700 mb-1">Configured Field Mappings</h5>
+        <div
+          v-if="gt.field_mappings?.length"
+          class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700"
+        >
+          <h5 class="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Configured Field Mappings
+          </h5>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
             <div
               v-for="mapping in gt.field_mappings.slice(0, 6)"
               :key="mapping.id"
-              class="bg-slate-50 px-2 py-1 rounded flex justify-between"
+              class="bg-slate-50 dark:bg-slate-700/50 px-2 py-1 rounded flex justify-between"
             >
-              <span class="font-mono text-blue-800">{{ mapping.schema_field }}</span>
-              <span class="text-slate-500">→ {{ mapping.ground_truth_field }}</span>
+              <span class="font-mono text-blue-800 dark:text-blue-300">{{
+                mapping.schema_field
+              }}</span>
+              <span class="text-slate-500 dark:text-slate-400"
+                >→ {{ mapping.ground_truth_field }}</span
+              >
             </div>
             <div
               v-if="gt.field_mappings.length > 6"
-              class="bg-slate-50 px-2 py-1 rounded text-center text-slate-500"
+              class="bg-slate-50 dark:bg-slate-700/50 px-2 py-1 rounded text-center text-slate-500 dark:text-slate-400"
             >
               +{{ gt.field_mappings.length - 6 }} more...
             </div>

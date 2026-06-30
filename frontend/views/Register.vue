@@ -43,20 +43,19 @@
           This email is linked to your invitation
         </template>
       </FormField>
-      <FormField
-        v-model="password"
-        label="Password"
-        type="password"
-        required
-        placeholder="Create a password"
-      />
+      <PasswordInput v-model="password" label="Password" required placeholder="Create a password" />
       <FormField
         v-model="confirmPassword"
         label="Confirm Password"
         type="password"
         required
         placeholder="Confirm your password"
-      />
+        :invalid="!!confirmPassword && confirmPassword !== password"
+      >
+        <template v-if="!!confirmPassword && confirmPassword !== password" #error>
+          Passwords do not match
+        </template>
+      </FormField>
       <BaseButton
         type="submit"
         size="lg"
@@ -71,7 +70,7 @@
       </transition>
       <router-link
         to="/login"
-        class="block mt-3 text-center text-blue-600 hover:underline text-sm transition"
+        class="block mt-3 text-center text-blue-600 dark:text-blue-400 hover:underline text-sm transition"
       >
         Already have an account? <span class="font-semibold">Sign in here</span>
       </router-link>
@@ -89,6 +88,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FormField from '@/components/common/FormField.vue'
+import PasswordInput from '@/components/common/PasswordInput.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
@@ -152,7 +152,7 @@ const isFormValid = computed(
   () =>
     fullName.value.length >= 2 &&
     email.value.includes('@') &&
-    password.value.length >= 6 &&
+    password.value.length >= 8 &&
     password.value === confirmPassword.value,
 )
 
@@ -181,8 +181,7 @@ async function handleSubmit() {
 
     const loginResponse = await authApi.login(formData.toString())
 
-    await authStore.setToken(loginResponse.data.access_token)
-    await authStore.fetchUser()
+    await authStore.setSession(loginResponse.data.access_token, loginResponse.data.refresh_token)
 
     toast.success('Registration successful! Logging you in...')
     router.push(authStore.isAdmin ? '/' : '/')
