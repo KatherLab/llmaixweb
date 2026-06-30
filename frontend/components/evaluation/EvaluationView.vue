@@ -124,13 +124,43 @@
                 Evaluate Trial
               </button>
               <button
-                v-if="selectedGroundTruth && !selectedGroundTruth.field_mappings?.length"
+                v-if="selectedGroundTruth"
                 class="px-3 py-1.5 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded-md text-sm hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
                 @click="previewGroundTruth"
               >
-                Preview & Configure
+                {{ hasMappings ? 'Edit mappings' : 'Configure mappings' }}
               </button>
             </div>
+          </div>
+
+          <!-- Concepts explainer (shown once, until mappings exist) -->
+          <div
+            v-if="!hasMappings"
+            class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm"
+          >
+            <h3 class="font-medium text-blue-900 dark:text-blue-300 mb-1">How evaluation works</h3>
+            <dl class="space-y-1 text-blue-800 dark:text-blue-300">
+              <div>
+                <dt class="inline font-semibold">Ground truth</dt>
+                <dd class="inline">
+                  — a file with the correct extracted values to compare trial results against.
+                </dd>
+              </div>
+              <div>
+                <dt class="inline font-semibold">Field mapping</dt>
+                <dd class="inline">
+                  — links each ground-truth column to the matching schema field so values can be
+                  compared.
+                </dd>
+              </div>
+              <div>
+                <dt class="inline font-semibold">ID field</dt>
+                <dd class="inline">
+                  — the column that uniquely identifies each document, so each extraction is matched
+                  to its correct row.
+                </dd>
+              </div>
+            </dl>
           </div>
 
           <!-- Prerequisites Warning -->
@@ -140,13 +170,20 @@
           >
             <div class="flex">
               <AlertTriangle class="h-5 w-5 text-yellow-400 flex-shrink-0" />
-              <div class="ml-3">
+              <div class="ml-3 flex-1">
                 <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-300">
                   Setup Required
                 </h3>
                 <p class="mt-1 text-sm text-yellow-700 dark:text-yellow-400">
                   {{ evaluationPrerequisiteMessage }}
                 </p>
+                <button
+                  v-if="selectedGroundTruth && !hasMappings"
+                  class="mt-2 inline-flex items-center px-3 py-1.5 bg-yellow-600 text-white rounded-md text-sm font-medium hover:bg-yellow-700 transition-colors"
+                  @click="previewGroundTruth"
+                >
+                  Configure mappings
+                </button>
               </div>
             </div>
           </div>
@@ -377,6 +414,10 @@ const canStartEvaluation = computed(() => {
     !loadingStates.value.evaluations &&
     !error.value
   )
+})
+
+const hasMappings = computed(() => {
+  return (selectedGroundTruth.value?.field_mappings?.length || 0) > 0
 })
 
 const evaluationPrerequisiteMessage = computed(() => {
@@ -642,6 +683,8 @@ const onGroundTruthUploaded = async (groundTruth) => {
     await selectGroundTruth(groundTruth)
     showUploadModal.value = false
     toast.success('Ground truth uploaded successfully')
+    // Land the user directly in the next step: configure field mappings.
+    showGroundTruthPreview.value = true
   } catch (err) {
     handleApiError(err, 'Processing uploaded ground truth')
   }

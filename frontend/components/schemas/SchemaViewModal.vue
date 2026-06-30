@@ -15,9 +15,7 @@
     </template>
 
     <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-md overflow-auto max-h-96">
-      <pre class="text-sm text-slate-700 dark:text-slate-300">{{
-        formatJSON(schema?.schema_definition)
-      }}</pre>
+      <SchemaFieldList :schema-definition="schema?.schema_definition" show-raw-json-toggle />
     </div>
 
     <template #footer>
@@ -29,7 +27,7 @@
 <script setup>
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
-import { formatJSON } from '@/utils/schemaTemplates'
+import SchemaFieldList from './SchemaFieldList.vue'
 
 defineProps({
   open: {

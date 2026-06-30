@@ -109,17 +109,23 @@
               <div class="flex-shrink-0 mt-0.5">
                 <Info class="h-5 w-5 text-blue-400" />
               </div>
-              <div class="ml-3">
-                <h3 class="text-sm font-medium text-blue-900 dark:text-blue-300">
-                  Document Content Placeholder
-                </h3>
-                <p class="text-sm text-blue-800 dark:text-blue-300">
-                  Use
-                  <code
-                    class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded font-mono text-xs"
-                    >{document_content}</code
-                  >
-                  in your prompts where you want the document text to be inserted.
+              <div class="ml-3 text-sm text-blue-800 dark:text-blue-300 space-y-2">
+                <div>
+                  <h3 class="font-medium text-blue-900 dark:text-blue-300">How prompts work</h3>
+                  <p>
+                    <strong>System prompt</strong> — the AI's role and rules (applies to every
+                    document). <strong>User prompt</strong> — per-document instructions, where
+                    <code
+                      class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded font-mono text-xs"
+                      >{document_content}</code
+                    >
+                    is replaced with the document text.
+                  </p>
+                </div>
+                <p>
+                  <strong>The selected schema is automatically included</strong> when the trial
+                  runs, so the model knows which fields to extract. You don't need to paste the
+                  schema JSON into your prompt — doing so would duplicate it.
                 </p>
               </div>
             </div>

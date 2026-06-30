@@ -19,6 +19,10 @@
             >{{ schemaDisplayName }}</span
           >
         </div>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          For each schema field (left), pick the ground-truth column (right) that holds the matching
+          value. The ID field links each document's extraction to its correct row.
+        </p>
       </div>
     </template>
 

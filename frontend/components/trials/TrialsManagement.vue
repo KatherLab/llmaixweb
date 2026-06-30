@@ -5,7 +5,8 @@
       <div>
         <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Trials</h1>
         <p class="text-slate-500 dark:text-slate-400 mt-1">
-          Run and manage information extraction trials
+          Run an AI model over your documents to extract structured data, then compare results
+          across trials.
         </p>
       </div>
       <div class="flex items-center gap-4">

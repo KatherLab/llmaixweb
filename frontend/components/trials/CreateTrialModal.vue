@@ -4,6 +4,25 @@
       <h3 class="text-lg font-semibold text-slate-900">Start New Trial</h3>
     </template>
 
+    <!-- Orientation -->
+    <div
+      class="mb-6 flex items-start bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+    >
+      <div class="flex-shrink-0 mt-0.5">
+        <Info class="h-5 w-5 text-blue-400" />
+      </div>
+      <div class="ml-3 text-sm text-blue-800 dark:text-blue-300">
+        <p class="font-medium text-blue-900 dark:text-blue-300">What is a trial?</p>
+        <p class="mt-1">
+          A trial runs an AI model over your documents to extract structured data. You need four
+          things: a <strong>Schema</strong> (the fields to extract), a
+          <strong>Prompt</strong> (extraction instructions), a <strong>Model</strong> (the AI), and
+          the <strong>Documents</strong> to process. Your schema is automatically included with the
+          prompt — you don't need to describe the fields manually.
+        </p>
+      </div>
+    </div>
+
     <div class="grid md:grid-cols-2 gap-8">
       <!-- LEFT COLUMN -->
       <div>
@@ -135,7 +154,7 @@
 
 <script setup>
 import { computed, ref, toRef, watch } from 'vue'
-import { ChevronDown } from '@lucide/vue'
+import { ChevronDown, Info } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'

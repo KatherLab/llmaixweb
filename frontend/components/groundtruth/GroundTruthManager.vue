@@ -6,8 +6,24 @@
     panel-class="rounded-xl shadow-lg"
     @close="emitClose"
   >
+    <template #header>
+      <div>
+        <h3 class="text-lg font-medium text-slate-900 dark:text-white">
+          Manage Ground Truth Files
+        </h3>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Ground truth files contain the correct extracted values you compare trial results against.
+          Configure field mappings to link each ground-truth column to a schema field.
+        </p>
+      </div>
+    </template>
+
     <!-- BODY: Files List -->
-    <EmptyState v-if="groundTruthFiles.length === 0" title="No ground truth files uploaded yet" />
+    <EmptyState
+      v-if="groundTruthFiles.length === 0"
+      title="No ground truth files uploaded yet"
+      description="Upload a file with the correct values (CSV, XLSX, or JSON) to start evaluating trial accuracy."
+    />
 
     <div v-else class="space-y-4">
       <div
@@ -39,17 +55,18 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <!-- Configure mappings (wrench icon) -->
+            <!-- Configure mappings -->
             <button
-              class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
-              title="Configure mappings"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+              title="Configure field mappings"
               @click="previewGroundTruth(gt)"
             >
-              <Settings class="w-5 h-5" />
+              <Settings class="w-4 h-4" />
+              Configure mappings
             </button>
             <!-- Rename (pencil) -->
             <button
-              class="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-md transition-colors"
+              class="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700 rounded-md transition-colors"
               title="Rename"
               @click="editGroundTruth(gt)"
             >
@@ -57,7 +74,7 @@
             </button>
             <!-- Delete (trash) -->
             <button
-              class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+              class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
               title="Delete"
               @click="deleteGroundTruth(gt)"
             >

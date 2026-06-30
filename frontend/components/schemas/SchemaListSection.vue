@@ -48,6 +48,9 @@
           <span class="text-sm font-medium text-slate-900 dark:text-white">{{
             schema.schema_name
           }}</span>
+          <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{
+            summarizeSchema(schema.schema_definition)
+          }}</span>
         </template>
 
         <template #cell-created_at="{ row: schema }">
@@ -88,9 +91,7 @@
 
         <template #expanded="{ row: schema }">
           <div class="p-4 max-h-64 overflow-auto">
-            <pre class="text-xs text-slate-700 dark:text-slate-300">{{
-              formatJSON(schema.schema_definition)
-            }}</pre>
+            <SchemaFieldList :schema-definition="schema.schema_definition" />
           </div>
         </template>
       </DataTable>
@@ -101,13 +102,14 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { formatDate } from '@/utils/formatters'
-import { formatJSON } from '@/utils/schemaTemplates'
+import { summarizeSchema } from '@/utils/schemaFieldList'
 import { Eye, Pencil, Plus, Trash2 } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import FilterBar from '@/components/common/FilterBar.vue'
+import SchemaFieldList from './SchemaFieldList.vue'
 
 const props = defineProps({
   schemas: {

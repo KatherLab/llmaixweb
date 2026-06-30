@@ -13,19 +13,26 @@
         {{ schema.schema_name }}
       </option>
     </select>
-    <details class="mt-1 text-xs">
-      <summary class="text-blue-700 cursor-pointer">Preview Schema</summary>
-      <pre
-        v-if="selectedSchema"
-        class="bg-slate-50 border rounded p-2 mt-1 max-h-32 overflow-auto font-mono text-xs"
-        >{{ JSON.stringify(selectedSchema.schema_definition, null, 2) }}</pre
-      >
-    </details>
+    <div v-if="selectedSchema" class="mt-1 text-xs">
+      <p class="text-slate-500 dark:text-slate-400">
+        {{ summarizeSchema(selectedSchema.schema_definition) }}
+      </p>
+      <details>
+        <summary class="text-blue-700 dark:text-blue-400 cursor-pointer hover:underline">
+          Preview fields
+        </summary>
+        <div class="bg-slate-50 dark:bg-slate-800 border rounded p-2 mt-1 max-h-48 overflow-auto">
+          <SchemaFieldList :schema-definition="selectedSchema.schema_definition" />
+        </div>
+      </details>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { summarizeSchema } from '@/utils/schemaFieldList'
+import SchemaFieldList from '@/components/schemas/SchemaFieldList.vue'
 
 const props = defineProps({
   schemas: {
