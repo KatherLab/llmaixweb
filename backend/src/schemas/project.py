@@ -76,17 +76,6 @@ class File(FileBase):
     updated_at: datetime
     file_creator: FileCreator = FileCreator.user
 
-    # Add computed properties
-    @property
-    def is_linked(self) -> bool:
-        """Check if file is linked to documents or preprocessing tasks"""
-        return bool(
-            self.documents_as_original
-            or self.documents_as_preprocessed
-            or self.preprocessing_tasks
-            or self.file_preprocessing_tasks
-        )
-
     model_config = ConfigDict(from_attributes=True)
 
 

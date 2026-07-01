@@ -322,7 +322,9 @@ class DoclingServeClient:
                         do_ocr=do_ocr,
                         force_ocr=force_ocr,
                         ocr_engine=ocr_engine,
-                        ocr_langs=ocr_langs,
+                        ocr_langs=[ocr_langs]
+                        if isinstance(ocr_langs, str)
+                        else ocr_langs,
                     )
                 else:
                     last_error = DoclingServeError(
@@ -445,7 +447,7 @@ def _convert_with_local_docling(
         )
 
     # Build format options
-    format_options = {}
+    format_options: dict = {}
     if is_pdf:
         format_options[InputFormat.PDF] = PdfFormatOption(
             pipeline_options=pipeline_options

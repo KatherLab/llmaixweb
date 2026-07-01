@@ -9,11 +9,15 @@ and issues the same JWT the password flow uses.
 """
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
+
+if TYPE_CHECKING:
+    from .user import User
 
 
 class IdentityProvider(Base):
@@ -63,5 +67,5 @@ class UserIdentity(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
 
-    user: Mapped["User"] = relationship(back_populates="identities")  # noqa: F821
+    user: Mapped["User"] = relationship(back_populates="identities")
     provider: Mapped["IdentityProvider"] = relationship(back_populates="identities")

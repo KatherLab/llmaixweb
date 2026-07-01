@@ -3,7 +3,7 @@
 import datetime
 import io
 import logging
-from typing import List
+from typing import Any, List, cast
 
 import httpx
 import pandas as pd
@@ -40,7 +40,10 @@ class PreprocessingPipeline:
         base_url: str | None = None,
     ):
         self.db = db
-        self.task = db.get(models.PreprocessingTask, task_id)
+        task = db.get(models.PreprocessingTask, task_id)
+        if task is None:
+            raise ValueError(f"PreprocessingTask {task_id} not found")
+        self.task: models.PreprocessingTask = task
         self.config = self.task.configuration
         self.cancelled = False
         self.client = None
@@ -2089,6 +2092,9 @@ class PreprocessingPipeline:
             row_counter = 0
 
             for idx, row in df.iterrows():
+                row_idx = int(
+                    cast(Any, idx)
+                )  # pandas yields a Hashable index; coerce to int
                 row_counter += 1
                 if row_counter % cancel_check_interval == 0 and self.check_cancelled():
                     break
@@ -2120,7 +2126,7 @@ class PreprocessingPipeline:
                     text=content,
                     document_name=doc_name,
                     meta_data={
-                        "row_index": int(idx),  # Convert numpy int to Python int
+                        "row_index": row_idx,  # Convert numpy int to Python int
                         "source_columns": text_columns,
                         "case_id": str(row[case_id_column])
                         if case_id_column and case_id_column in row
@@ -2145,7 +2151,7 @@ class PreprocessingPipeline:
                     batch_documents = []
 
                     # Update progress
-                    file_task.progress = (idx + 1) / total_rows * 100
+                    file_task.progress = (row_idx + 1) / total_rows * 100
                     self.db.commit()
 
             # Save remaining documents

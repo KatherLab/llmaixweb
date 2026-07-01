@@ -1,6 +1,7 @@
 # backend/src/core/dynamic_settings.py
 import logging
 from functools import lru_cache
+from typing import cast
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -68,7 +69,7 @@ def get_settings() -> Settings:
             # Don't let an invalid override value break settings access —
             # fall back to the existing (base) instance.
             logger.warning("Failed to apply runtime settings overrides: %s", e)
-    return _settings_proxy
+    return cast(Settings, _settings_proxy)
 
 
 def reload_settings_cache(broadcast: bool = True) -> None:

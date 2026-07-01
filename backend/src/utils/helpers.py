@@ -593,7 +593,7 @@ def check_field_types(data: dict, schema_def: dict, prefix: str = "") -> list[st
             elif expected_type == "array" and isinstance(value, list):
                 items_schema = prop_def.get("items", {})
                 for i, item in enumerate(value):
-                    if items_schema.get("type") == "object":
+                    if items_schema.get("type") == "object" and isinstance(item, dict):
                         nested_errors = check_field_types(
                             item, items_schema, f"{field_path}[{i}]"
                         )

@@ -423,7 +423,7 @@ async def preprocess_project_data(
         "application/vnd.ms-excel",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     }
-    unconfigured_files = []
+    unconfigured_files: list[dict[str, str | int]] = []
     for file in files:
         if file.file_type in csv_xlsx_types and not file.preprocessing_strategy:
             unconfigured_files.append(
@@ -435,7 +435,7 @@ async def preprocess_project_data(
             )
 
     if unconfigured_files:
-        file_names = ", ".join([f["name"] for f in unconfigured_files])
+        file_names = ", ".join(str(f["name"]) for f in unconfigured_files)
         raise HTTPException(
             status_code=400,
             detail={
@@ -846,7 +846,9 @@ def get_preprocessing_progress(
         task.status == models.PreprocessingStatus.IN_PROGRESS
         and task.processed_files > 0
     ):
-        elapsed = datetime.datetime.now(datetime.UTC) - task.started_at
+        elapsed = datetime.datetime.now(datetime.UTC) - (
+            task.started_at or datetime.datetime.now(datetime.UTC)
+        )
         avg_time_per_file = elapsed.total_seconds() / task.processed_files
         remaining_files = task.total_files - task.processed_files - task.failed_files
 

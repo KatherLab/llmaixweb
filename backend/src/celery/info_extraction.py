@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 import httpx
 from openai import AsyncOpenAI
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from .. import models
 from ..core.config import settings
@@ -278,7 +278,7 @@ if celery_app:
                         # being created concurrently.
                         if trial.rollback_on_cancel:
                             db.execute(
-                                models.TrialResult.__table__.delete().where(
+                                delete(models.TrialResult).where(
                                     models.TrialResult.trial_id == trial_id
                                 )
                             )

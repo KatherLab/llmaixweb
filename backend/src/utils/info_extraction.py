@@ -1350,7 +1350,9 @@ def _summarize_recommendations_for_message(
     """Condense a list of recommendations into a short 'Try: ...; ...; ...' string."""
     phrases: list[str] = []
     for r in recos or []:
-        phrases.append(_suggestion_phrase(r.get("action"), r.get("suggested_value")))
+        phrases.append(
+            _suggestion_phrase(r.get("action") or "", r.get("suggested_value"))
+        )
     # Deduplicate while preserving order
     seen = set()
     uniq = []
@@ -1788,7 +1790,7 @@ def _store_result(
 
             raise IncompleteLLMResponseError(
                 f"Schema validation failed: {schema_error}",
-                user_message=f"Extracted JSON does not match schema: {schema_error[:100]}...",
+                user_message=f"Extracted JSON does not match schema: {(schema_error or '')[:100]}...",
             )
 
     # Success path - store result

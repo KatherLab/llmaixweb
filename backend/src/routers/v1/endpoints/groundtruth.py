@@ -3,6 +3,7 @@
 
 import json
 import logging
+from typing import cast
 
 from fastapi import (
     APIRouter,
@@ -28,6 +29,7 @@ from ....dependencies import (
     remove_file,
     save_file,
 )
+from ....utils.enums import ComparisonMethod
 from ....utils.helpers import extract_field_types_from_schema
 
 logger = logging.getLogger(__name__)
@@ -106,7 +108,7 @@ async def upload_groundtruth(
                         status_code=400,
                         detail=f"File {json_file.filename} is not valid JSON",
                     )
-                zf.writestr(json_file.filename, content)
+                zf.writestr(json_file.filename or "", content)
 
         zip_buffer.seek(0)
         file_content = zip_buffer.read()
@@ -722,11 +724,16 @@ def delete_field_mappings(
         raise HTTPException(status_code=404, detail="Schema not found")
 
     # Delete mappings for this groundtruth-schema combination
-    deleted_count = db.execute(
-        delete(models.FieldMapping).where(
-            models.FieldMapping.ground_truth_id == groundtruth_id,
-            models.FieldMapping.schema_id == schema_id,
-        )
+    from sqlalchemy.engine import CursorResult
+
+    deleted_count = cast(
+        CursorResult,
+        db.execute(
+            delete(models.FieldMapping).where(
+                models.FieldMapping.ground_truth_id == groundtruth_id,
+                models.FieldMapping.schema_id == schema_id,
+            )
+        ),
     ).rowcount
 
     # Invalidate related evaluations
@@ -826,17 +833,18 @@ def suggest_field_mappings(
             if schema_field in gt_fields_flat:
                 # Exact match found
                 suggestions.append(
-                    {
-                        "id": 0,
-                        "ground_truth_id": groundtruth_id,
-                        "schema_id": schema_id,
-                        "schema_field": schema_field,
-                        "ground_truth_field": schema_field,
-                        "field_type": field_type,
-                        "comparison_method": _get_comparison_method(field_type),
-                        "comparison_options": {},
-                        "confidence": 1.0,
-                    }
+                    schemas.FieldMapping(
+                        id=0,
+                        ground_truth_id=groundtruth_id,
+                        schema_id=schema_id,
+                        schema_field=schema_field,
+                        ground_truth_field=schema_field,
+                        field_type=field_type,
+                        comparison_method=ComparisonMethod(
+                            _get_comparison_method(field_type)
+                        ),
+                        comparison_options={},
+                    )
                 )
 
         return suggestions
@@ -853,16 +861,17 @@ def suggest_field_mappings(
             # Try exact match
             if schema_field in gt_fields:
                 suggestions.append(
-                    {
-                        "id": 0,
-                        "ground_truth_id": groundtruth_id,
-                        "schema_id": schema_id,
-                        "schema_field": schema_field,
-                        "ground_truth_field": schema_field,
-                        "field_type": field_type,
-                        "comparison_method": _get_comparison_method(field_type),
-                        "confidence": 1.0,
-                    }
+                    schemas.FieldMapping(
+                        id=0,
+                        ground_truth_id=groundtruth_id,
+                        schema_id=schema_id,
+                        schema_field=schema_field,
+                        ground_truth_field=schema_field,
+                        field_type=field_type,
+                        comparison_method=ComparisonMethod(
+                            _get_comparison_method(field_type)
+                        ),
+                    )
                 )
                 continue
 
@@ -877,16 +886,17 @@ def suggest_field_mappings(
 
             if best_match:
                 suggestions.append(
-                    {
-                        "id": 0,
-                        "ground_truth_id": groundtruth_id,
-                        "schema_id": schema_id,
-                        "schema_field": schema_field,
-                        "ground_truth_field": best_match,
-                        "field_type": field_type,
-                        "comparison_method": _get_comparison_method(field_type),
-                        "confidence": best_score / 100.0,
-                    }
+                    schemas.FieldMapping(
+                        id=0,
+                        ground_truth_id=groundtruth_id,
+                        schema_id=schema_id,
+                        schema_field=schema_field,
+                        ground_truth_field=best_match,
+                        field_type=field_type,
+                        comparison_method=ComparisonMethod(
+                            _get_comparison_method(field_type)
+                        ),
+                    )
                 )
 
         return suggestions
@@ -1163,6 +1173,7 @@ def check_mapping_status(
             models.FieldMapping.schema_id == schema_id,
         )
     ).scalar()
+    mapping_count = int(mapping_count or 0)
 
     # Get schema field count
     schema_fields = {}

@@ -133,6 +133,7 @@ def delete_setting(
 @router.get("/celery/workers")
 def get_celery_workers(current_user=Depends(get_admin_user)):
     """Show Celery worker stats and health."""
+    assert celery_app is not None  # guarded by INITIALIZE_CELERY at startup
     i = celery_app.control.inspect()
     return {
         "active": i.active(),
@@ -145,6 +146,7 @@ def get_celery_workers(current_user=Depends(get_admin_user)):
 @router.get("/celery/queues")
 def get_celery_queues(current_user=Depends(get_admin_user)):
     """Show queue/task status."""
+    assert celery_app is not None  # guarded by INITIALIZE_CELERY at startup
     i = celery_app.control.inspect()
     return {
         "reserved": i.reserved(),
@@ -171,6 +173,7 @@ def revoke_task(
     task_id: str, terminate: bool = False, current_user=Depends(get_admin_user)
 ):
     """Revoke (cancel) a running celery task."""
+    assert celery_app is not None  # guarded by INITIALIZE_CELERY at startup
     celery_app.control.revoke(task_id, terminate=terminate)
     return {"revoked": task_id, "terminate": terminate}
 

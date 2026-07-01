@@ -359,6 +359,9 @@ class LLMVisionOCRService:
         data_url = f"data:image/png;base64,{base64_image}"
 
         def make_request():
+            assert (
+                self.client is not None
+            )  # constructed in __init__; closed only after use
             return self.client.chat.completions.create(
                 model=self.model,
                 messages=[

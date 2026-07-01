@@ -1,5 +1,6 @@
 # backend/src/models/project.py
 import enum
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
@@ -53,10 +54,10 @@ class Project(Base):
     status: Mapped[ProjectStatus] = mapped_column(
         Enum(ProjectStatus, native_enum=False, length=10), default=ProjectStatus.ACTIVE
     )
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     files: Mapped[list["File"]] = relationship(
@@ -157,10 +158,10 @@ class File(Base):
     file_size: Mapped[int] = mapped_column(nullable=True)  # Size in bytes
     file_hash: Mapped[str] = mapped_column(String(64), nullable=True)  # SHA-256 hash
 
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
@@ -252,10 +253,10 @@ class Document(Base):
         ForeignKey("documents.id", ondelete="SET NULL"), nullable=True
     )  # Links to the "root" document for version chains
 
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
@@ -333,10 +334,10 @@ class DocumentSet(Base):
         ForeignKey("preprocessing_configurations.id"), nullable=True
     )
 
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
@@ -400,10 +401,10 @@ class PreprocessingConfiguration(Base):
         MutableDict.as_mutable(JSON), nullable=True
     )
 
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
@@ -461,21 +462,23 @@ class PreprocessingTask(Base):
     celery_task_id: Mapped[str] = mapped_column(String(100), nullable=True)
 
     # Timing
-    started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[DateTime] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    estimated_completion: Mapped[DateTime] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    estimated_completion: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     meta: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON), default=dict
     )  # ETA, etc.
 
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
@@ -545,18 +548,20 @@ class FilePreprocessingTask(Base):
         MutableDict.as_mutable(JSON), nullable=True, default=dict
     )
 
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[DateTime] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     # Bumped periodically while the file is actively processing. The orphan
     # sweeper treats a stale last_heartbeat_at (rather than started_at) as
     # evidence of a dead worker, so a slow-but-legitimate file whose per-file
     # timeout exceeds the sweeper cutoff is not wrongly marked FAILED.
-    last_heartbeat_at: Mapped[DateTime] = mapped_column(
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -588,10 +593,10 @@ class Prompt(Base):
 
     __table_args__ = (Index("ix_prompts_project_created", "project_id", "created_at"),)
 
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     project: Mapped["Project"] = relationship(back_populates="prompts")
@@ -608,10 +613,10 @@ class Schema(Base):
     )
 
     __table_args__ = (Index("ix_schemas_project_created", "project_id", "created_at"),)
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     project: Mapped["Project"] = relationship(back_populates="schemas")
@@ -678,8 +683,10 @@ class Trial(Base):
     # ── progress tracking ───────────────────────────────────────────────────────
     docs_done: Mapped[int] = mapped_column(Integer, default=0)
     progress: Mapped[float] = mapped_column(Float, default=0.0)  # 0.0-1.0
-    started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
-    finished_at: Mapped[DateTime] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     meta: Mapped[dict] = mapped_column(
@@ -691,10 +698,10 @@ class Trial(Base):
     rollback_on_cancel: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # ── timestamps ──────────────────────────────────────────────────────────────
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
@@ -741,10 +748,10 @@ class TrialResult(Base):
         nullable=True,
         index=True,
     )
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     trial: Mapped["Trial"] = relationship(back_populates="results")
@@ -781,7 +788,7 @@ class FieldMapping(Base):
     comparison_options: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON), nullable=True
     )
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     schema: Mapped[Schema] = relationship(back_populates="field_mappings")
@@ -812,7 +819,7 @@ class EvaluationMetric(Base):
     is_correct: Mapped[bool] = mapped_column(Boolean, nullable=False)
     error_type: Mapped[str] = mapped_column(String(50), nullable=True)
     confidence_score: Mapped[float] = mapped_column(Float, nullable=True)
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     evaluation: Mapped["Evaluation"] = relationship(back_populates="detailed_metrics")
@@ -831,14 +838,14 @@ class GroundTruth(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     format: Mapped[str] = mapped_column(String(10), nullable=False)
     file_uuid: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
-    data_cache: Mapped[dict] = mapped_column(
+    data_cache: Mapped[dict | None] = mapped_column(
         MutableDict.as_mutable(JSON), nullable=True
     )
     id_column_name: Mapped[str] = mapped_column(String(200), nullable=True)
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    updated_at: Mapped[DateTime] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     project: Mapped["Project"] = relationship(back_populates="ground_truth_files")
@@ -869,7 +876,7 @@ class Evaluation(Base):
     confusion_matrices: Mapped[dict] = mapped_column(
         MutableDict.as_mutable(JSON), nullable=True
     )
-    created_at: Mapped[DateTime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
     trial: Mapped["Trial"] = relationship(back_populates="evaluations")

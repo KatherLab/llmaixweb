@@ -4,9 +4,9 @@ import json
 import logging
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import pandas as pd
 from pandas.errors import ParserError
@@ -107,6 +107,11 @@ class EvaluationEngine:
         trial = self.db.get(models.Trial, trial_id)
         ground_truth = self.db.get(models.GroundTruth, groundtruth_id)
         results = self.db.query(models.TrialResult).filter_by(trial_id=trial_id).all()
+
+        if trial is None:
+            raise ValueError(f"Trial {trial_id} not found")
+        if ground_truth is None:
+            raise ValueError(f"GroundTruth {groundtruth_id} not found")
 
         # Load and validate ground truth data
         gt_data = self._load_ground_truth(ground_truth)
@@ -458,39 +463,6 @@ class EvaluationEngine:
 
         return mappings
 
-    def validate_json_against_schema(
-        self, json_data: Dict, schema_def: Dict
-    ) -> Dict[str, List[str]]:
-        """Validate JSON ground truth against schema definition."""
-        errors = []
-        warnings = []
-
-        # Extract required fields from schema
-        required_fields = self._extract_required_fields(schema_def)
-
-        # Check for missing required fields
-        for field in required_fields:
-            if field not in json_data:
-                errors.append(f"Missing required field: {field}")
-
-        # Validate data types
-        for field, value in json_data.items():
-            expected_type = self._get_expected_type(field, schema_def)
-            if expected_type and not self._validate_type(value, expected_type):
-                errors.append(
-                    f"Field '{field}' has wrong type. Expected {expected_type}"
-                )
-
-        # Extra fields are OK (warnings only)
-        schema_fields = self._extract_all_fields(schema_def)
-        for field in json_data:
-            if field not in schema_fields and field not in ["id", "document_id"]:
-                warnings.append(
-                    f"Extra field '{field}' not in schema (will be ignored)"
-                )
-
-        return {"errors": errors, "warnings": warnings}
-
     def _evaluate_parallel(
         self,
         results: List[models.TrialResult],
@@ -809,10 +781,11 @@ class GroundTruthParser:
                 for i, doc in enumerate(data):
                     if not isinstance(doc, dict):
                         raise ValueError(f"Document at index {i} is not an object")
-                    if "id" in doc:
-                        doc_id = str(doc["id"])
-                    elif "patient_id" in doc:
-                        doc_id = str(doc["patient_id"])
+                    doc_dict = cast(dict[str, Any], doc)
+                    if "id" in doc_dict:
+                        doc_id = str(doc_dict["id"])
+                    elif "patient_id" in doc_dict:
+                        doc_id = str(doc_dict["patient_id"])
                     else:
                         raise ValueError(f"Doc at {i} missing 'id' or 'patient_id'")
                     result[doc_id] = doc
@@ -1204,7 +1177,7 @@ class ValueComparator:
             # comparator emit a type_error instead of a silent False match.
             return None
 
-    def _to_date(self, value: Any) -> Optional[datetime]:
+    def _to_date(self, value: Any) -> Optional[date]:
         """Convert value to date."""
         if isinstance(value, datetime):
             return value.date()
@@ -1362,7 +1335,7 @@ class MetricsCalculator:
 
     def _calculate_field_metrics(self, detailed_metrics: List[Dict]) -> Dict:
         """Calculate field-level metrics."""
-        field_metrics = {}
+        field_metrics: Dict[str, Dict[str, Any]] = {}
         for metric in detailed_metrics:
             field_name = metric["field_name"]
             if field_name not in field_metrics:

@@ -110,6 +110,7 @@ def _spawn_celery_worker(
         f"{queue}@%(hostname)s",  # unique node‑name → no warnings
     ]
 
+    assert celery_app is not None  # guarded by caller (INITIALIZE_CELERY block)
     proc = mp.Process(
         target=celery_app.worker_main,
         args=(argv,),
@@ -375,7 +376,10 @@ async def activity_websocket(websocket: WebSocket):
             algorithms=["HS256"],
             options={"require": ["exp", "sub"]},  # Require expiration and subject
         )
-        user_id: str = payload.get("sub")
+        user_id: str | None = payload.get("sub")
+        if user_id is None:
+            await websocket.close(code=4401, reason="Invalid token")
+            return
         # Malformed "sub" (non-int) → treat as invalid token rather than a 500.
         user_id_int = int(user_id)
 

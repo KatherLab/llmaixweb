@@ -715,7 +715,7 @@ def batch_evaluate_trials(
     groundtruth_id: int = Body(...),
     force_recalculate: bool = Body(False),
     current_user: models.User = Depends(get_current_user),
-) -> list[schemas.EvaluationSummary]:
+) -> list[models.Evaluation]:
     """Evaluate multiple trials against ground truth."""
     # Cap the batch to bound work (each trial evaluation recomputes metrics
     # across all its documents).
@@ -812,7 +812,7 @@ def compare_evaluations(
         )
 
     # Get evaluations
-    evaluations = []
+    evaluations: list[tuple[models.Evaluation, models.Trial]] = []
     for eval_id in evaluation_ids:
         eval_obj = db.execute(
             select(models.Evaluation).where(models.Evaluation.id == eval_id)
@@ -828,7 +828,7 @@ def compare_evaluations(
             ).scalar_one_or_none()
 
             if trial:
-                evaluations.append({"evaluation": eval_obj, "trial": trial})
+                evaluations.append((eval_obj, trial))
 
     if not evaluations:
         raise HTTPException(status_code=404, detail="No evaluations found")
@@ -843,23 +843,19 @@ def compare_evaluations(
 
     # Collect all fields
     all_fields = set()
-    for eval_data in evaluations:
-        eval = eval_data["evaluation"]
-        all_fields.update(eval.field_metrics.keys())
+    for eval_obj, _trial in evaluations:
+        all_fields.update(eval_obj.field_metrics.keys())
 
     # Build evaluation summaries
-    for eval_data in evaluations:
-        eval = eval_data["evaluation"]
-        trial = eval_data["trial"]
-
+    for eval_obj, trial in evaluations:
         comparison["evaluations"].append(
             {
-                "id": eval.id,
-                "trial_id": eval.trial_id,
+                "id": eval_obj.id,
+                "trial_id": eval_obj.trial_id,
                 "model": trial.llm_model,
-                "groundtruth_id": eval.groundtruth_id,
-                "metrics": eval.metrics,
-                "created_at": eval.created_at.isoformat(),
+                "groundtruth_id": eval_obj.groundtruth_id,
+                "metrics": eval_obj.metrics,
+                "created_at": eval_obj.created_at.isoformat(),
             }
         )
 
@@ -867,27 +863,23 @@ def compare_evaluations(
     metrics_to_compare = ["accuracy", "precision", "recall", "f1_score"]
     for metric in metrics_to_compare:
         comparison["overall_comparison"][metric] = []
-        for eval_data in evaluations:
-            eval = eval_data["evaluation"]
-            trial = eval_data["trial"]
+        for eval_obj, trial in evaluations:
             comparison["overall_comparison"][metric].append(
                 {
-                    "evaluation_id": eval.id,
+                    "evaluation_id": eval_obj.id,
                     "model": trial.llm_model,
-                    "value": eval.metrics.get(metric, 0),
+                    "value": eval_obj.metrics.get(metric, 0),
                 }
             )
 
     # Compare field metrics
     for field in sorted(all_fields):
         comparison["field_comparison"][field] = []
-        for eval_data in evaluations:
-            eval = eval_data["evaluation"]
-            trial = eval_data["trial"]
-            field_metric = eval.field_metrics.get(field, {})
+        for eval_obj, trial in evaluations:
+            field_metric = eval_obj.field_metrics.get(field, {})
             comparison["field_comparison"][field].append(
                 {
-                    "evaluation_id": eval.id,
+                    "evaluation_id": eval_obj.id,
                     "model": trial.llm_model,
                     "accuracy": field_metric.get("accuracy", 0),
                     "total_count": field_metric.get("total_count", 0),
@@ -897,14 +889,12 @@ def compare_evaluations(
 
     # Group by model
     model_groups = {}
-    for eval_data in evaluations:
-        eval = eval_data["evaluation"]
-        trial = eval_data["trial"]
+    for eval_obj, trial in evaluations:
         model = trial.llm_model
 
         if model not in model_groups:
             model_groups[model] = []
-        model_groups[model].append(eval.metrics.get("accuracy", 0))
+        model_groups[model].append(eval_obj.metrics.get("accuracy", 0))
 
     comparison["model_comparison"] = {
         model: {

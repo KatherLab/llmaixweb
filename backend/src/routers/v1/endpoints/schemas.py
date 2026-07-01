@@ -186,7 +186,7 @@ def delete_schema(
         raise HTTPException(status_code=404, detail="Schema not found")
 
     # Check if the schema is referenced by any trials
-    trials: list[models.Trial] = (
+    trials: list[models.Trial] = list(
         db.execute(select(models.Trial).where(models.Trial.schema_id == schema_id))
         .scalars()
         .all()

@@ -257,8 +257,9 @@ def get_project_files(
         selectinload(models.File.preprocessing_tasks),
         selectinload(models.File.file_preprocessing_tasks),
         # Only load minimal fields for document relationships (avoid loading
-        # full text). All four are loaded because `File.is_linked` checks all
-        # of them — a missing one triggers a lazy N+1 per file.
+        # full text). All four are loaded because the linked-resource check in
+        # delete_file / file serialization touches all of them — a missing one
+        # triggers a lazy N+1 per file.
         selectinload(models.File.documents_as_original).load_only(
             models.Document.id,
             models.Document.is_latest,
@@ -338,11 +339,12 @@ def get_file_stats(
     recent_count = db.execute(recent_query).scalar()
 
     return {
-        "total_files": stats.total_files or 0,
-        "total_size": stats.total_size or 0,
-        "unique_files": stats.unique_files or 0,
+        "total_files": (stats.total_files if stats else 0) or 0,
+        "total_size": (stats.total_size if stats else 0) or 0,
+        "unique_files": (stats.unique_files if stats else 0) or 0,
         "recent_files": recent_count or 0,
-        "duplicates": (stats.total_files or 0) - (stats.unique_files or 0),
+        "duplicates": ((stats.total_files if stats else 0) or 0)
+        - ((stats.unique_files if stats else 0) or 0),
         "by_type": [
             {"type": t.file_type, "count": t.count, "size": t.size or 0}
             for t in type_stats
@@ -448,7 +450,7 @@ def upload_file(
 ) -> schemas.File:
     """Upload a file with duplicate detection and *server-side MIME normalization*"""
     try:
-        file_info = schemas.FileCreate.model_validate_json(file_info)
+        file_create = schemas.FileCreate.model_validate_json(file_info)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON in file_info")
     except ValidationError as e:
@@ -464,7 +466,7 @@ def upload_file(
 
     # --- Normalize MIME based on content + filename (fixes CSV mislabeled as vnd.ms-excel) ---
     # Prefer the originally submitted file name if present in the upload field; otherwise use the JSON's file_name.
-    incoming_name = file.filename or file_info.file_name
+    incoming_name = file.filename or file_create.file_name
     normalized_mime = detect_structured_mime(
         file_name=incoming_name,
         content=file_content,
@@ -497,21 +499,21 @@ def upload_file(
     # - Name: prefer actual upload name
     # - Type: normalized
     # - Store file_metadata from JSON if present
-    file_info.file_name = incoming_name
-    file_info.file_type = normalized_mime or "application/octet-stream"
+    file_create.file_name = incoming_name
+    file_create.file_type = normalized_mime or "application/octet-stream"
 
     # Save the file bytes and persist DB row
     file_uuid = save_file(file_content)
 
     new_file = models.File(
-        **file_info.model_dump(
+        **file_create.model_dump(
             exclude={"file_uuid", "file_size", "file_hash", "file_metadata"}
         ),
         project_id=project_id,
         file_uuid=file_uuid,
         file_size=file_size,
         file_hash=file_hash,
-        file_metadata=getattr(file_info, "file_metadata", None),
+        file_metadata=getattr(file_create, "file_metadata", None),
     )
 
     db.add(new_file)

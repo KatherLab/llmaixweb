@@ -3,7 +3,7 @@ import hashlib
 import os
 import threading
 import uuid
-from typing import Generator
+from typing import Any, Generator
 
 import boto3
 from botocore.client import BaseClient
@@ -30,6 +30,10 @@ def get_s3_client() -> BaseClient:
     Cached on the (endpoint, access key, secret key) tuple so that admin
     changes to S3 config take effect on the next call without rebuilding the
     client on every request.
+
+    Typed as ``BaseClient`` but callers use S3 service methods (``get_object``,
+    ``put_object``, …) — without ``boto3-stubs`` the static type checker only
+    knows the base client, so call sites ``cast`` to ``Any`` for those methods.
     """
     global _s3_client_cache
     key = (
@@ -163,7 +167,7 @@ def stream_file(file_name: str):
                     break
                 yield chunk
     else:
-        s3 = get_s3_client()
+        s3: Any = get_s3_client()
         response = s3.get_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
         body = response["Body"]
         try:
@@ -221,7 +225,7 @@ def save_file(file_content: bytes) -> str:
         with open(file_path, "wb") as file:
             file.write(file_content)
     else:
-        s3 = get_s3_client()
+        s3: Any = get_s3_client()
         s3.put_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name, Body=file_content)
 
     return file_name
@@ -243,7 +247,7 @@ def remove_file(file_name: str) -> None:
             raise FileNotFoundError(f"File {file_name} not found in local storage.")
         os.remove(file_path)
     else:
-        s3 = get_s3_client()
+        s3: Any = get_s3_client()
         try:
             s3.head_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)
             s3.delete_object(Bucket=settings.S3_BUCKET_NAME, Key=file_name)

@@ -320,7 +320,7 @@ def get_projects(
             "created_at": project.created_at,
             "updated_at": project.updated_at,
         }
-        projects.append(schemas.Project(**project_dict))
+        projects.append(schemas.Project.model_validate(project_dict))
 
     return projects
 
@@ -343,7 +343,7 @@ def get_project(
             status_code=403, detail="Not authorized to access this project"
         )
 
-    return project
+    return schemas.Project.model_validate(project)
 
 
 @router.post("", response_model=schemas.Project)

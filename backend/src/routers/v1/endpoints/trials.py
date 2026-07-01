@@ -155,7 +155,7 @@ def create_trial(
             )
         # Fetch doc IDs from the set without materializing full Document rows
         # (the relationship would load 100k ORM objects incl. the text column).
-        document_ids = (
+        document_ids = list(
             db.execute(
                 select(models.Document.id).where(
                     models.Document.document_sets.any(
@@ -404,7 +404,7 @@ def get_trials(
         if search_id is not None:
             conds.append(T.id == search_id)
         else:
-            conds.append(cast(T.id, String).ilike(pattern))
+            conds.append(T.id.cast(String).ilike(pattern))
         base = base.where(or_(*conds))
 
     apply_python_has_failures = has_failures is not None
@@ -422,7 +422,7 @@ def get_trials(
         )
     )
 
-    page_trials: list[models.Trial] = db.execute(page_q).scalars().all()
+    page_trials: list[models.Trial] = list(db.execute(page_q).scalars().all())
     if not page_trials:
         return schemas.PaginatedTrials(items=[], total=0 if offset == 0 else total_pre)
 
@@ -626,7 +626,7 @@ def list_trial_results(
             selectinload(TR.document).joinedload(Doc.original_file),
         )
     )
-    page_results: list[models.TrialResult] = db.execute(page_q).scalars().all()
+    page_results: list[models.TrialResult] = list(db.execute(page_q).scalars().all())
 
     items: list[schemas.TrialResultItem] = []
     for r in page_results:

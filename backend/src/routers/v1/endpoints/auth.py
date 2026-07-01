@@ -60,7 +60,7 @@ def get_settings(db: Session = Depends(get_db)):
         try:
             from sqlalchemy import select
 
-            from ..models.sso import IdentityProvider
+            from ....models.sso import IdentityProvider
 
             providers = (
                 db.execute(

@@ -6,7 +6,7 @@ import io
 import logging
 import urllib.parse
 import zipfile
-from typing import Annotated
+from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.responses import StreamingResponse
@@ -583,8 +583,9 @@ def get_document_sets(
     doc_counts: dict[int, int] = {}
     trial_counts: dict[int, int] = {}
     if set_ids:
-        doc_counts = dict(
-            db.execute(
+        doc_counts = {
+            row[0]: row[1]
+            for row in db.execute(
                 select(
                     document_set_association.c.document_set_id,
                     func.count(),
@@ -592,9 +593,10 @@ def get_document_sets(
                 .where(document_set_association.c.document_set_id.in_(set_ids))
                 .group_by(document_set_association.c.document_set_id)
             ).all()
-        )
-        trial_counts = dict(
-            db.execute(
+        }
+        trial_counts = {
+            row[0]: row[1]
+            for row in db.execute(
                 select(
                     models.Trial.document_set_id,
                     func.count(),
@@ -602,7 +604,7 @@ def get_document_sets(
                 .where(models.Trial.document_set_id.in_(set_ids))
                 .group_by(models.Trial.document_set_id)
             ).all()
-        )
+        }
 
     items = []
     for s in page_sets:
@@ -871,14 +873,14 @@ class _StreamingZipSink:
         return data
 
 
-def _stream_set_zip(file_rows: list[tuple[str, str]]):
+def _stream_set_zip(file_rows):
     """Yield a ZIP archive byte-stream for ``(file_name, file_uuid)`` entries.
 
     Each file's content is read from storage (via ``get_file``) lazily as the
     stream is consumed, so we never hold more than one file's bytes in memory.
     """
     sink = _StreamingZipSink()
-    zf = zipfile.ZipFile(sink, "w", zipfile.ZIP_DEFLATED)
+    zf = zipfile.ZipFile(cast(Any, sink), "w", zipfile.ZIP_DEFLATED)
     try:
         for file_name, file_uuid in file_rows:
             try:
@@ -916,21 +918,23 @@ def download_all_documents(
     # Collect only (file_name, file_uuid) for the set's members — do not load
     # the Document rows (and especially not the `text` column). File contents
     # are read lazily from storage during streaming.
-    file_rows = db.execute(
-        select(models.File.file_name, models.File.file_uuid)
-        .join(
-            models.Document,
-            models.Document.original_file_id == models.File.id,
-        )
-        .join(
-            document_set_association,
-            document_set_association.c.document_id == models.Document.id,
-        )
-        .where(
-            document_set_association.c.document_set_id == set_id,
-            models.Document.project_id == project_id,
-        )
-    ).all()
+    file_rows = list(
+        db.execute(
+            select(models.File.file_name, models.File.file_uuid)
+            .join(
+                models.Document,
+                models.Document.original_file_id == models.File.id,
+            )
+            .join(
+                document_set_association,
+                document_set_association.c.document_id == models.Document.id,
+            )
+            .where(
+                document_set_association.c.document_set_id == set_id,
+                models.Document.project_id == project_id,
+            )
+        ).all()
+    )
 
     # RFC 5987 / safely-quoted filename for the Content-Disposition header.
     safe_name = doc_set.name.replace(" ", "_") or "documents"
@@ -965,7 +969,7 @@ def get_document_set_stats(
 
     # Get document IDs in this set directly from the association table — avoids
     # loading every member Document (incl. the `text` column) as an ORM object.
-    doc_ids = (
+    doc_ids = list(
         db.execute(
             select(document_set_association.c.document_id).where(
                 document_set_association.c.document_set_id == set_id

@@ -154,7 +154,9 @@ def _is_preprocess_task(sender_name: str) -> bool:
 # ────────────────── Celery signal handlers ──────────────────
 @signals.task_prerun.connect
 def mark_started(sender=None, task_id=None, args=None, **_):
-    if not _is_preprocess_task(sender.name):
+    if sender is None or not _is_preprocess_task(sender.name):
+        return
+    if not args:
         return
     # Don't resurrect a task that's already terminal. With task_acks_late=True
     # and a Redis visibility_timeout, a message can be re-delivered after the
@@ -187,7 +189,9 @@ def mark_started(sender=None, task_id=None, args=None, **_):
 @signals.task_failure.connect
 def mark_failed(sender=None, task_id=None, exception=None, args=None, **_):
     """Convert raw Celery errors into user‑friendly messages and broadcast via WebSocket."""
-    if not _is_preprocess_task(sender.name):
+    if sender is None or not _is_preprocess_task(sender.name):
+        return
+    if not args:
         return
 
     if isinstance(exception, WorkerLostError):
@@ -334,7 +338,7 @@ def sweep_orphans():
 # DISABLE_CELERY mode. Under normal operation this module is imported inside
 # celery_config's `if not DISABLE_CELERY` block, where celery_app is set.
 if celery_app is not None:
-    sweep_orphans = celery_app.task(
+    sweep_orphans_task = celery_app.task(
         name="backend.src.celery.task_signals.sweep_orphans"
     )(sweep_orphans)
 
@@ -343,7 +347,7 @@ if celery_app is not None:
         """Register the periodic orphan sweeper (every 5 minutes)."""
         sender.add_periodic_task(
             300,  # seconds
-            sweep_orphans.s(),
+            sweep_orphans_task.s(),
             name="sweep_orphaned_file_tasks",
         )
 
