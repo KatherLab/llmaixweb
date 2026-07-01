@@ -200,10 +200,11 @@ async def _log_public_url():
     # Always state how the app is reached; if APP_URL is the default, that's
     # almost certainly wrong in a compose deployment — warn and tell the user
     # to set it, but still show the URL so they know what's currently in use.
+    # APP_URL is the public frontend origin (the nginx proxy in compose), i.e.
+    # how users reach the full app — not the backend's internal bind address.
     is_default = settings.APP_URL == "http://localhost:5173"
     logger.warning(
-        "🌐 %s is reachable at: %s%s",
-        settings.PROJECT_NAME,
+        "🌐 LLMAIx-v2 is reachable at: %s%s",
         settings.APP_URL,
         (
             " (APP_URL is not set — configure the public origin, used for SSO "
