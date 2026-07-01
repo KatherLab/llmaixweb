@@ -185,6 +185,35 @@ async def _redis_subscriber_task():
             pass
 
 
+async def _log_public_url():
+    """Surface the configured public origin so users know how to reach the app.
+
+    uvicorn logs its bind address (e.g. http://0.0.0.0:8000), which is the
+    internal container address — in the compose stack the app is reached via
+    the frontend nginx proxy at APP_URL, not the backend's bind address.
+    Scheduled after startup completes (uvicorn prints its "running on" line
+    only after the lifespan yields) so this lands cleanly below it rather than
+    being buried mid-startup.
+    """
+    # Let uvicorn's own startup-complete lines flush first.
+    await asyncio.sleep(0.5)
+    # Always state how the app is reached; if APP_URL is the default, that's
+    # almost certainly wrong in a compose deployment — warn and tell the user
+    # to set it, but still show the URL so they know what's currently in use.
+    is_default = settings.APP_URL == "http://localhost:5173"
+    logger.warning(
+        "🌐 %s is reachable at: %s%s",
+        settings.PROJECT_NAME,
+        settings.APP_URL,
+        (
+            " (APP_URL is not set — configure the public origin, used for SSO "
+            "redirects, share links, etc.)"
+            if is_default
+            else ""
+        ),
+    )
+
+
 @asynccontextmanager
 async def lifespan(app):
     setup_logging(level=settings.LOG_LEVEL)
@@ -231,6 +260,10 @@ async def lifespan(app):
         except Exception as e:
             logger.debug(f"Redis subscriber not started: {e}")
 
+    # Print the public app URL as the last startup line (after uvicorn's own
+    # "running on" line, which is logged only once this lifespan yields).
+    url_task = asyncio.create_task(_log_public_url())
+
     try:
         yield
     finally:
@@ -240,6 +273,11 @@ async def lifespan(app):
                 await redis_task
             except asyncio.CancelledError:
                 pass
+        url_task.cancel()
+        try:
+            await url_task
+        except asyncio.CancelledError:
+            pass
 
         for p in workers:
             if p.is_alive():
