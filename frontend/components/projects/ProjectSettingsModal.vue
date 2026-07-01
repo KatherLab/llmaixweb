@@ -35,14 +35,10 @@
         <p class="text-sm text-red-700 dark:text-red-400 mb-3">
           Once you delete a project, there is no going back. Please be certain.
         </p>
-        <button
-          type="button"
-          class="w-full px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition shadow-sm flex items-center justify-center"
-          @click="onDeleteClick"
-        >
-          <Trash2 class="w-4 h-4 mr-2" />
+        <BaseButton variant="danger" class="w-full" @click="onDeleteClick">
+          <Trash2 class="w-4 h-4" />
           Delete Project
-        </button>
+        </BaseButton>
       </div>
     </div>
 

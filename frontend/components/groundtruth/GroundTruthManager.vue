@@ -1,11 +1,5 @@
 <template>
-  <BaseModal
-    :open="open"
-    title="Manage Ground Truth Files"
-    size="xl"
-    panel-class="rounded-xl shadow-lg"
-    @close="emitClose"
-  >
+  <BaseModal :open="open" title="Manage Ground Truth Files" size="xl" @close="emitClose">
     <template #header>
       <div>
         <h3 class="text-lg font-medium text-slate-900 dark:text-white">

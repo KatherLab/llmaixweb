@@ -24,7 +24,7 @@
               ? 'relative h-full w-full flex flex-col bg-white dark:bg-slate-900 shadow-xl border-l border-slate-200 dark:border-slate-700 overflow-hidden'
               : placement === 'fullscreen'
                 ? 'relative bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-full h-full flex flex-col overflow-hidden'
-                : 'relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 overflow-hidden',
+                : 'relative bg-white dark:bg-slate-900 rounded-modal shadow-2xl w-full flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 overflow-hidden',
             sizeClass,
             panelClass,
           ]"

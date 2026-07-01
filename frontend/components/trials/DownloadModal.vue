@@ -1,13 +1,12 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { Info } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
-import { selectClass, labelClass } from '@/utils/formStyles'
-import { getBannerClass } from '@/utils/statusStyles'
+import { selectClass, labelClass, checkboxClass } from '@/utils/formStyles'
 
 const { downloadFromApi } = useFileDownload()
 
@@ -69,11 +68,7 @@ async function download() {
     body-class="p-6"
     @close="$emit('close')"
   >
-    <div
-      class="mb-4 flex items-start gap-2 text-xs rounded px-3 py-2"
-      :class="getBannerClass('gray')"
-    >
-      <Info class="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+    <Callout variant="gray" class="mb-4 text-xs">
       <span v-if="isJsonZip">
         <strong>JSON (per-document):</strong> Downloads a <b>ZIP archive</b> with one JSON file per
         document.
@@ -95,7 +90,7 @@ async function download() {
         Includes all extracted results, document metadata, preprocessing configuration, and trial
         configuration.
       </span>
-    </div>
+    </Callout>
 
     <div class="mb-4">
       <label :class="labelClass">Format</label>
@@ -108,11 +103,7 @@ async function download() {
     <div class="mb-4">
       <label :class="labelClass">Options</label>
       <label class="flex items-center text-sm text-slate-700 dark:text-slate-300">
-        <input
-          v-model="includeContent"
-          type="checkbox"
-          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
-        />
+        <input v-model="includeContent" type="checkbox" :class="checkboxClass" />
         <span class="ml-2"
           >Include document content
           <span

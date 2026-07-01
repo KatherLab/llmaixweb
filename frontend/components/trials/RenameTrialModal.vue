@@ -5,10 +5,8 @@
     <label :class="labelClass">Description</label>
     <textarea v-model="description" maxlength="512" :class="[textareaClass, 'mb-3']" rows="2" />
     <template #footer>
-      <BaseButton variant="secondary" size="sm" @click="$emit('close')">Cancel</BaseButton>
-      <BaseButton variant="primary" size="sm" :disabled="!name.trim()" @click="submit"
-        >Save</BaseButton
-      >
+      <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
+      <BaseButton variant="primary" :disabled="!name.trim()" @click="submit">Save</BaseButton>
     </template>
   </BaseModal>
 </template>

@@ -11,54 +11,26 @@
           </Tooltip>
         </div>
         <!-- Simple/Advanced Mode Toggle -->
-        <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-          <button
-            type="button"
-            :class="[
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
-              !simpleMode
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900',
-            ]"
-            @click="simpleMode = false"
-          >
-            Advanced
-          </button>
-          <button
-            type="button"
-            :class="[
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
-              simpleMode
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900',
-            ]"
-            @click="simpleMode = true"
-          >
-            Simple
-          </button>
-        </div>
+        <BaseSegmentedControl
+          v-model="simpleMode"
+          :options="[
+            { label: 'Simple', value: true },
+            { label: 'Advanced', value: false },
+          ]"
+        />
       </div>
     </template>
 
     <!-- Orientation (Advanced mode only) -->
-    <div
-      v-if="!simpleMode"
-      class="mb-6 flex items-start bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
-    >
-      <div class="flex-shrink-0 mt-0.5">
-        <Info class="h-5 w-5 text-blue-400" />
-      </div>
-      <div class="ml-3 text-sm text-blue-800 dark:text-blue-300">
-        <p class="font-medium text-blue-900 dark:text-blue-300">What is a trial?</p>
-        <p class="mt-1">
-          A trial runs an AI model over your documents to extract structured data. You need four
-          things: a <strong>Schema</strong> (the fields to extract), a
-          <strong>Prompt</strong> (extraction instructions), a <strong>Model</strong> (the AI), and
-          the <strong>Documents</strong> to process. Your schema is automatically included with the
-          prompt — you don't need to describe the fields manually.
-        </p>
-      </div>
-    </div>
+    <Callout v-if="!simpleMode" variant="info" title="What is a trial?" class="mb-6">
+      <p class="mt-1">
+        A trial runs an AI model over your documents to extract structured data. You need four
+        things: a <strong>Schema</strong> (the fields to extract), a
+        <strong>Prompt</strong> (extraction instructions), a <strong>Model</strong> (the AI), and
+        the <strong>Documents</strong> to process. Your schema is automatically included with the
+        prompt — you don't need to describe the fields manually.
+      </p>
+    </Callout>
 
     <div class="grid md:grid-cols-2 gap-8">
       <!-- LEFT COLUMN -->
@@ -239,6 +211,8 @@ import { CheckCircle2, ChevronDown, CircleAlert, Info, Loader2 } from '@lucide/v
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
+import Callout from '@/components/common/Callout.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import Tooltip from '@/components/common/Tooltip.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'

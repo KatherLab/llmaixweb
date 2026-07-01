@@ -30,18 +30,13 @@
           embedded text will be extracted directly regardless of the selected OCR engine. The result
           will be identical to previous extractions.
         </p>
-        <div
-          class="bg-blue-50 border border-blue-200 rounded-lg p-3 dark:bg-blue-900/20 dark:border-blue-700"
-        >
-          <div class="flex items-start gap-2">
-            <CircleCheckBig class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <p class="text-xs text-blue-800 dark:text-blue-300">
-              <strong>Tip:</strong> Enable
-              <code class="bg-blue-100 px-1 rounded dark:bg-blue-900/40">Force OCR for PDFs</code>
-              in Advanced Options to force OCR on all pages, ignoring embedded text.
-            </p>
-          </div>
-        </div>
+        <Callout :icon="CircleCheckBig" variant="info">
+          <p class="text-xs">
+            <strong>Tip:</strong> Enable
+            <code class="bg-blue-100 px-1 rounded dark:bg-blue-900/40">Force OCR for PDFs</code>
+            in Advanced Options to force OCR on all pages, ignoring embedded text.
+          </p>
+        </Callout>
       </template>
 
       <template v-else-if="hasSameConfigDuplicates">
@@ -56,7 +51,7 @@
         <label
           class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:hover:bg-blue-900/30 transition-colors"
         >
-          <input v-model="skipExisting" type="checkbox" class="mt-0.5 text-blue-600 rounded" />
+          <input v-model="skipExisting" type="checkbox" :class="[checkboxClass, 'mt-0.5']" />
           <div class="flex-1">
             <p class="text-sm font-medium text-blue-900 dark:text-blue-200">
               Only process files without existing documents
@@ -198,20 +193,13 @@
       </div>
 
       <!-- Info note about document versioning (only for same-config duplicates) -->
-      <div
-        v-if="hasSameConfigDuplicates"
-        class="bg-blue-50 border border-blue-200 rounded-lg p-3 dark:bg-blue-900/20 dark:border-blue-700"
-      >
-        <div class="flex items-start gap-2">
-          <Info class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <p class="text-xs text-blue-800 dark:text-blue-300">
-            <strong>Document versioning:</strong> Previous versions are preserved with
-            <code class="bg-blue-100 px-1 rounded dark:bg-blue-900/40">is_latest=false</code> and
-            can be restored if needed. Only the latest version is shown in the document list by
-            default.
-          </p>
-        </div>
-      </div>
+      <Callout v-if="hasSameConfigDuplicates" variant="info">
+        <p class="text-xs">
+          <strong>Document versioning:</strong> Previous versions are preserved with
+          <code class="bg-blue-100 px-1 rounded dark:bg-blue-900/40">is_latest=false</code> and can
+          be restored if needed. Only the latest version is shown in the document list by default.
+        </p>
+      </Callout>
     </div>
 
     <!-- Footer Actions -->
@@ -235,6 +223,8 @@ import { ref, computed, watch } from 'vue'
 import { AlertTriangle, Check, CircleCheckBig, Info } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
+import { checkboxClass } from '@/utils/formStyles'
 
 const props = defineProps({
   open: { type: Boolean, required: true },

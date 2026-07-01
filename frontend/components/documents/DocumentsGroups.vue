@@ -155,6 +155,7 @@
     <!-- Create/Edit Group Modal -->
     <CreateDocumentGroupModal
       v-if="showCreateModal || editingGroup"
+      :open="showCreateModal || !!editingGroup"
       :group="editingGroup"
       :project-id="projectId"
       @close="closeModal"
@@ -185,7 +186,7 @@
         <input
           v-model="deleteDocumentsToo"
           type="checkbox"
-          class="h-4 w-4 text-red-600 focus:ring-red-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
+          :class="[checkboxClass, 'text-red-600 focus:ring-red-500']"
         />
         <label class="ml-2 text-sm text-slate-700 dark:text-slate-300">
           Also delete all documents in this group (if not referenced elsewhere)
@@ -210,6 +211,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import { usePagination } from '@/composables/usePagination'
 import { extractErrorMessage } from '@/utils/errors'
+import { checkboxClass } from '@/utils/formStyles'
 
 const props = defineProps({
   projectId: {

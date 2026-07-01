@@ -2,7 +2,6 @@
   <BaseModal
     :open="open"
     size="lg"
-    panel-class="rounded-lg"
     body-class="p-6"
     footer-class="dark:bg-slate-800"
     @close="emit('close')"

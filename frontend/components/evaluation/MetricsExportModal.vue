@@ -3,15 +3,13 @@
     :open="open"
     title="Export Evaluation Report"
     size="lg"
-    body-class="p-6 min-h-[600px]"
+    body-class="p-6"
     @close="$emit('close')"
   >
     <div class="space-y-6">
       <!-- Export format selection -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2"
-          >Export Format</label
-        >
+        <label :class="labelClass">Export Format</label>
         <div class="grid grid-cols-3 gap-3">
           <div
             class="relative flex cursor-pointer rounded-lg border p-4 focus:outline-none"
@@ -23,12 +21,7 @@
             @click="exportFormat = 'csv'"
           >
             <div class="flex h-5 items-center">
-              <input
-                v-model="exportFormat"
-                type="radio"
-                value="csv"
-                class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500 dark:border-slate-500 dark:bg-slate-700"
-              />
+              <input v-model="exportFormat" type="radio" value="csv" :class="radioClass" />
             </div>
             <div class="ml-3">
               <div class="text-sm font-medium text-slate-900 dark:text-white">CSV</div>
@@ -45,12 +38,7 @@
             @click="exportFormat = 'xlsx'"
           >
             <div class="flex h-5 items-center">
-              <input
-                v-model="exportFormat"
-                type="radio"
-                value="xlsx"
-                class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500 dark:border-slate-500 dark:bg-slate-700"
-              />
+              <input v-model="exportFormat" type="radio" value="xlsx" :class="radioClass" />
             </div>
             <div class="ml-3">
               <div class="text-sm font-medium text-slate-900 dark:text-white">Excel</div>
@@ -67,12 +55,7 @@
             @click="exportFormat = 'zip'"
           >
             <div class="flex h-5 items-center">
-              <input
-                v-model="exportFormat"
-                type="radio"
-                value="zip"
-                class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500 dark:border-slate-500 dark:bg-slate-700"
-              />
+              <input v-model="exportFormat" type="radio" value="zip" :class="radioClass" />
             </div>
             <div class="ml-3">
               <div class="text-sm font-medium text-slate-900 dark:text-white">ZIP</div>
@@ -84,9 +67,7 @@
 
       <!-- Evaluation selection -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2"
-          >Select Evaluations</label
-        >
+        <label :class="labelClass">Select Evaluations</label>
         <div
           class="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-md"
         >
@@ -97,7 +78,7 @@
               <input
                 type="checkbox"
                 :checked="allSelected"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
+                :class="checkboxClass"
                 @change="toggleSelectAll"
               />
               <span class="ml-2 text-sm font-medium text-slate-700 dark:text-slate-200"
@@ -116,7 +97,7 @@
                   v-model="selectedEvaluations"
                   type="checkbox"
                   :value="evaluation.id"
-                  class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
+                  :class="checkboxClass"
                 />
                 <div class="ml-3 flex-1">
                   <div class="text-sm font-medium text-slate-900 dark:text-white">
@@ -142,16 +123,14 @@
 
       <!-- Export options -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3"
-          >Export Options</label
-        >
+        <label :class="labelClass">Export Options</label>
         <div class="space-y-3">
           <div class="flex items-center">
             <input
               id="include-details"
               v-model="includeDetails"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
+              :class="checkboxClass"
             />
             <label for="include-details" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
               Include detailed document-level metrics
@@ -162,7 +141,7 @@
               id="include-field-details"
               v-model="includeFieldDetails"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
+              :class="checkboxClass"
             />
             <label
               for="include-field-details"
@@ -176,7 +155,7 @@
               id="include-errors"
               v-model="includeErrors"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
+              :class="checkboxClass"
             />
             <label for="include-errors" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
               Include error analysis and examples
@@ -187,7 +166,7 @@
               id="include-document-content"
               v-model="includeDocumentContent"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
+              :class="checkboxClass"
             />
             <label
               for="include-document-content"
@@ -201,7 +180,7 @@
               id="include-gt-content"
               v-model="includeGroundTruthContent"
               type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded dark:border-slate-500 dark:bg-slate-700"
+              :class="checkboxClass"
             />
             <label for="include-gt-content" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
               Include ground truth content (in docs/)
@@ -258,6 +237,7 @@ import { Upload } from '@lucide/vue'
 import { evaluationsApi } from '@/services/evaluationsApi'
 import { formatDate } from '@/utils/formatters'
 import { getEvaluationAccuracyPct, getEvaluationDocumentCount } from '@/utils/evaluationHelpers'
+import { checkboxClass, radioClass, labelClass } from '@/utils/formStyles'
 import { useToast } from '@/composables/useToast'
 import { useFileDownload } from '@/composables/useFileDownload'
 import BaseButton from '@/components/common/BaseButton.vue'

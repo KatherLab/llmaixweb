@@ -66,12 +66,13 @@
           />
         </div>
       </div>
-
-      <div class="mt-6 flex justify-end space-x-3">
-        <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
-        <BaseButton type="submit">Add {{ advancedMode ? 'Property' : 'Field' }}</BaseButton>
-      </div>
     </form>
+    <template #footer>
+      <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
+      <BaseButton variant="primary" @click="submit"
+        >Add {{ advancedMode ? 'Property' : 'Field' }}</BaseButton
+      >
+    </template>
   </BaseModal>
 </template>
 

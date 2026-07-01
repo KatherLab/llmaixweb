@@ -1,11 +1,5 @@
 <template>
-  <BaseModal
-    :open="open"
-    size="xl"
-    panel-class="rounded-lg"
-    body-class="p-6"
-    @close="emit('close')"
-  >
+  <BaseModal :open="open" size="xl" body-class="p-6" @close="emit('close')">
     <template #header>
       <div>
         <h3 class="text-lg font-medium text-slate-900 dark:text-white">Schema Templates</h3>

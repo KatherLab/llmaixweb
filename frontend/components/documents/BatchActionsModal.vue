@@ -14,11 +14,7 @@
     <!-- Reprocess Action -->
     <div v-if="action === 'reprocess'" class="space-y-4">
       <div class="flex items-center">
-        <input
-          v-model="forceReprocess"
-          type="checkbox"
-          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
-        />
+        <input v-model="forceReprocess" type="checkbox" :class="checkboxClass" />
         <label class="ml-2 text-sm text-slate-700 dark:text-slate-300">
           Force reprocess (ignore existing results)
         </label>
@@ -29,13 +25,8 @@
     <div v-else-if="action === 'export'" class="space-y-4">
       <p class="text-sm text-slate-600 dark:text-slate-400">Choose export format and options:</p>
       <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          Export Format
-        </label>
-        <select
-          v-model="exportFormat"
-          class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
+        <label :class="labelClass"> Export Format </label>
+        <select v-model="exportFormat" :class="selectClass">
           <option value="json">JSON</option>
           <option value="csv">CSV</option>
           <option value="txt">Plain Text</option>
@@ -44,19 +35,11 @@
       </div>
       <div class="space-y-2">
         <label class="flex items-center">
-          <input
-            v-model="includeMetadata"
-            type="checkbox"
-            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
-          />
+          <input v-model="includeMetadata" type="checkbox" :class="checkboxClass" />
           <span class="ml-2 text-sm text-slate-700 dark:text-slate-300">Include metadata</span>
         </label>
         <label class="flex items-center">
-          <input
-            v-model="includePreprocessingInfo"
-            type="checkbox"
-            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
-          />
+          <input v-model="includePreprocessingInfo" type="checkbox" :class="checkboxClass" />
           <span class="ml-2 text-sm text-slate-700 dark:text-slate-300"
             >Include preprocessing information</span
           >
@@ -66,26 +49,14 @@
 
     <!-- Delete Action -->
     <div v-else-if="action === 'delete'" class="space-y-4">
-      <div
-        class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4"
-      >
-        <div class="flex">
-          <AlertTriangle class="h-5 w-5 text-red-400 flex-shrink-0" />
-          <div class="ml-3">
-            <h3 class="text-sm font-medium text-red-800 dark:text-red-300">
-              Warning: This action cannot be undone
-            </h3>
-            <p class="mt-1 text-sm text-red-700 dark:text-red-400">
-              {{ deleteWarningText }}
-            </p>
-          </div>
-        </div>
-      </div>
+      <Callout variant="danger" title="Warning: This action cannot be undone">
+        <p class="mt-1">{{ deleteWarningText }}</p>
+      </Callout>
       <div class="flex items-center">
         <input
           v-model="confirmDelete"
           type="checkbox"
-          class="h-4 w-4 text-red-600 focus:ring-red-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
+          :class="[checkboxClass, 'text-red-600 focus:ring-red-500']"
         />
         <label class="ml-2 text-sm text-slate-700 dark:text-slate-300">
           I understand that this action is permanent
@@ -109,13 +80,14 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { AlertTriangle } from '@lucide/vue'
+import BaseModal from '@/components/common/BaseModal.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
+import { checkboxClass, selectClass, labelClass } from '@/utils/formStyles'
 import { documentsApi } from '@/services/documentsApi'
 import { trialsApi } from '@/services/trialsApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { useToast } from '@/composables/useToast'
-import BaseModal from '@/components/common/BaseModal.vue'
-import BaseButton from '@/components/common/BaseButton.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({

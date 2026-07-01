@@ -18,11 +18,7 @@
       </div>
       <div class="mb-5">
         <label class="flex items-center gap-2 cursor-pointer">
-          <input
-            v-model="sendInviteEmail"
-            type="checkbox"
-            class="rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400"
-          />
+          <input v-model="sendInviteEmail" type="checkbox" :class="checkboxClass" />
           <span class="text-sm text-slate-700 dark:text-slate-300">Send invitation via email</span>
         </label>
       </div>
@@ -69,24 +65,20 @@
           </button>
         </div>
       </div>
-      <div class="mt-7 flex justify-end gap-2">
-        <BaseButton
-          variant="secondary"
-          class="dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700"
-          @click="emit('close')"
-        >
-          Cancel
-        </BaseButton>
-        <BaseButton
-          type="submit"
-          variant="primary"
-          :disabled="isInviting"
-          class="dark:bg-blue-500 dark:hover:bg-blue-600"
-        >
-          {{ isInviting ? 'Sending...' : 'Send Invitation' }}
-        </BaseButton>
-      </div>
     </form>
+    <template #footer>
+      <BaseButton variant="secondary" :disabled="isInviting" @click="emit('close')">
+        Cancel
+      </BaseButton>
+      <BaseButton
+        variant="primary"
+        :loading="isInviting"
+        :disabled="isInviting"
+        @click="sendInvitation"
+      >
+        {{ isInviting ? 'Sending...' : 'Send Invitation' }}
+      </BaseButton>
+    </template>
   </BaseModal>
 </template>
 
@@ -97,7 +89,10 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
-import { inputClass, labelClass } from '@/utils/formStyles'
+import { useToast } from '@/composables/useToast'
+import { inputClass, labelClass, checkboxClass } from '@/utils/formStyles'
+
+const toast = useToast()
 
 const props = defineProps({
   open: { type: Boolean, required: true },
@@ -192,7 +187,7 @@ function copyGeneratedLink() {
             copySuccess.value = false
           }, 2000)
         } else {
-          alert(`Failed to copy. Please copy this link manually:\n${link}`)
+          toast.error('Failed to copy. Please copy the link manually.')
         }
       })
   } else {
@@ -203,7 +198,7 @@ function copyGeneratedLink() {
         copySuccess.value = false
       }, 2000)
     } else {
-      alert(`Failed to copy. Please copy this link manually:\n${link}`)
+      toast.error('Failed to copy. Please copy the link manually.')
     }
   }
 }

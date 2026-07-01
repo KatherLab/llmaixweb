@@ -25,3 +25,11 @@ export const selectClass = inputClass
 
 // Label — single convention (replaces the ~8 per-component label variants).
 export const labelClass = 'block text-sm font-medium text-content-muted mb-1.5'
+
+// Checkbox — native control, accent token-backed, dark-mode automatic.
+// Replaces the ~5 incompatible checkbox class variants across modals.
+export const checkboxClass =
+  'h-4 w-4 rounded border-default-border text-primary focus:ring-ring/50 dark:border-slate-600 dark:bg-slate-700'
+
+// Radio — same shape as checkbox (native radio uses square accent color).
+export const radioClass = checkboxClass

@@ -11,32 +11,13 @@
           {{ isEdit ? 'Edit Prompt' : 'Create New Prompt' }}
         </h3>
         <!-- Simple/Advanced Mode Toggle -->
-        <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-          <button
-            type="button"
-            :class="[
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
-              !simplePromptMode
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
-            ]"
-            @click="simplePromptMode = false"
-          >
-            Advanced
-          </button>
-          <button
-            type="button"
-            :class="[
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
-              simplePromptMode
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
-            ]"
-            @click="simplePromptMode = true"
-          >
-            Simple
-          </button>
-        </div>
+        <BaseSegmentedControl
+          v-model="simplePromptMode"
+          :options="[
+            { label: 'Simple', value: true },
+            { label: 'Advanced', value: false },
+          ]"
+        />
       </div>
     </template>
 
@@ -101,32 +82,24 @@
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <!-- Info Banner - Advanced Mode Only -->
           <div class="md:col-span-2">
-            <div
-              class="flex items-start bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
-            >
-              <div class="flex-shrink-0 mt-0.5">
-                <Info class="h-5 w-5 text-blue-400" />
-              </div>
-              <div class="ml-3 text-sm text-blue-800 dark:text-blue-300 space-y-2">
-                <div>
-                  <h3 class="font-medium text-blue-900 dark:text-blue-300">How prompts work</h3>
-                  <p>
-                    <strong>System prompt</strong> — the AI's role and rules (applies to every
-                    document). <strong>User prompt</strong> — per-document instructions, where
-                    <code
-                      class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded font-mono text-xs"
-                      >{document_content}</code
-                    >
-                    is replaced with the document text.
-                  </p>
-                </div>
+            <Callout variant="info" title="How prompts work" class="p-4">
+              <div class="space-y-2">
+                <p>
+                  <strong>System prompt</strong> — the AI's role and rules (applies to every
+                  document). <strong>User prompt</strong> — per-document instructions, where
+                  <code
+                    class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded font-mono text-xs"
+                    >{document_content}</code
+                  >
+                  is replaced with the document text.
+                </p>
                 <p>
                   <strong>The selected schema is automatically included</strong> when the trial
                   runs, so the model knows which fields to extract. You don't need to paste the
                   schema JSON into your prompt — doing so would duplicate it.
                 </p>
               </div>
-            </div>
+            </Callout>
           </div>
 
           <!-- System Prompt -->
@@ -263,37 +236,38 @@
         <!-- Validation Error -->
         <ErrorBanner v-if="promptError" :message="promptError" class="mt-4" />
       </div>
-
-      <!-- Modal Footer -->
-      <div
-        class="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-t dark:border-slate-700 flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0 md:space-x-3 flex-shrink-0"
-      >
-        <button
-          type="button"
-          class="inline-flex items-center px-3 py-2 border border-blue-100 dark:border-blue-800 text-sm font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
-          @click="useTemplate"
-        >
-          <FileText class="h-4 w-4 mr-1" />
+    </form>
+    <template #footer>
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-3">
+        <BaseButton variant="secondary" @click="useTemplate">
+          <FileText class="h-4 w-4" />
           Use Template
-        </button>
-        <div class="flex space-x-3">
+        </BaseButton>
+        <div class="flex gap-3">
           <BaseButton variant="secondary" @click="cancelPromptModal">Cancel</BaseButton>
-          <BaseButton type="submit" :loading="isSubmitting" :disabled="!isPromptValid">
+          <BaseButton
+            variant="primary"
+            :loading="isSubmitting"
+            :disabled="!isPromptValid"
+            @click="isEdit ? updatePrompt() : createPrompt()"
+          >
             {{ isEdit ? 'Update' : 'Create' }}
           </BaseButton>
         </div>
       </div>
-    </form>
+    </template>
   </BaseModal>
 </template>
 
 <script setup>
 import { ref, watch, nextTick, computed } from 'vue'
-import { Check, FileText, Info } from '@lucide/vue'
+import { Check, FileText } from '@lucide/vue'
 import { promptsApi } from '@/services/promptsApi'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
+import Callout from '@/components/common/Callout.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'

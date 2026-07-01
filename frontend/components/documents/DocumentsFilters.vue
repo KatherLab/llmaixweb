@@ -116,7 +116,7 @@
         <input
           v-model="includeArchived"
           type="checkbox"
-          class="rounded text-blue-600 focus:ring-blue-500"
+          :class="checkboxClass"
           @change="emit('fetch')"
         />
         <span class="text-sm text-slate-700 dark:text-slate-300">
@@ -136,7 +136,7 @@ import { X } from '@lucide/vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import FilterChip from '@/components/common/FilterChip.vue'
 import { getDateRangeLabel } from '@/utils/dateRange'
-import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
+import { inputClass, selectClass, labelClass, checkboxClass } from '@/utils/formStyles'
 
 defineProps({
   totalCount: {

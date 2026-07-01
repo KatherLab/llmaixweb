@@ -12,32 +12,13 @@
           {{ isEdit ? 'Edit Schema' : 'Create New Schema' }}
         </h3>
         <!-- Simple/Advanced Mode Toggle -->
-        <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-          <button
-            type="button"
-            :class="[
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
-              !simpleMode
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
-            ]"
-            @click="simpleMode = false"
-          >
-            Advanced
-          </button>
-          <button
-            type="button"
-            :class="[
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-all',
-              simpleMode
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
-            ]"
-            @click="simpleMode = true"
-          >
-            Simple
-          </button>
-        </div>
+        <BaseSegmentedControl
+          v-model="simpleMode"
+          :options="[
+            { label: 'Simple', value: true },
+            { label: 'Advanced', value: false },
+          ]"
+        />
       </div>
     </template>
 
@@ -90,21 +71,13 @@
           <div class="flex items-center space-x-4 pb-2">
             <!-- Advanced Features Toggle -->
             <label class="flex items-center space-x-2 text-sm">
-              <input
-                v-model="advancedMode"
-                type="checkbox"
-                class="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
-              />
+              <input v-model="advancedMode" type="checkbox" :class="checkboxClass" />
               <span class="text-slate-700 dark:text-slate-300">Enable advanced features</span>
             </label>
 
             <!-- Split View Toggle -->
             <label class="flex items-center space-x-2 text-sm">
-              <input
-                v-model="splitView"
-                type="checkbox"
-                class="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
-              />
+              <input v-model="splitView" type="checkbox" :class="checkboxClass" />
               <span class="text-slate-700 dark:text-slate-300">Split view</span>
             </label>
 
@@ -188,17 +161,18 @@
           {{ schemaError }}
         </p>
       </div>
-
-      <!-- Modal Footer -->
-      <div
-        class="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-t dark:border-slate-700 flex justify-end space-x-3 flex-shrink-0"
-      >
-        <BaseButton variant="secondary" @click="cancelSchemaModal">Cancel</BaseButton>
-        <BaseButton type="submit" :loading="isSubmitting" :disabled="!isSchemaValid">
-          {{ isEdit ? 'Update' : 'Create' }}
-        </BaseButton>
-      </div>
     </form>
+    <template #footer>
+      <BaseButton variant="secondary" @click="cancelSchemaModal">Cancel</BaseButton>
+      <BaseButton
+        variant="primary"
+        :loading="isSubmitting"
+        :disabled="!isSchemaValid"
+        @click="isEdit ? updateSchema() : createSchema()"
+      >
+        {{ isEdit ? 'Update' : 'Create' }}
+      </BaseButton>
+    </template>
   </BaseModal>
 
   <!-- Templates Modal -->
@@ -229,6 +203,7 @@ import { schemasApi } from '@/services/schemasApi'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
+import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
 import VisualSchemaEditor from './VisualSchemaEditor.vue'
 import SimpleSchemaEditor from './SimpleSchemaEditor.vue'
 import SchemaTemplatesModal from './SchemaTemplatesModal.vue'
@@ -236,7 +211,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import { formatJSON, STARTER_SCHEMA, schemaTemplates } from '@/utils/schemaTemplates'
 import { getPillClass } from '@/utils/statusStyles'
-import { inputClass } from '@/utils/formStyles'
+import { inputClass, checkboxClass } from '@/utils/formStyles'
 import { extractErrorMessage } from '@/utils/errors'
 
 const props = defineProps({

@@ -1,11 +1,5 @@
 <template>
-  <BaseModal
-    :open="open"
-    size="xl"
-    panel-class="rounded-xl"
-    body-class="p-6"
-    @close="emit('close')"
-  >
+  <BaseModal :open="open" size="xl" body-class="p-6" @close="emit('close')">
     <template #header>
       <div>
         <div class="flex items-center gap-2">

@@ -156,6 +156,7 @@
       <!-- Create Document Group Modal (from documents tab) -->
       <CreateDocumentGroupModal
         v-if="showCreateGroupModal"
+        :open="showCreateGroupModal"
         :documents="documents"
         :project-id="projectId"
         :selected-document-ids="createGroupWithDocs"

@@ -23,21 +23,15 @@
 
     <div class="flex-1 overflow-y-auto p-6">
       <!-- Prerequisites Warning -->
-      <div class="rounded-md p-4 mb-4" :class="getBannerClass('amber')">
-        <div class="flex">
-          <AlertTriangle class="h-5 w-5 text-amber-400 flex-shrink-0" />
-          <div class="ml-3">
-            <h3 class="text-sm font-medium">Schema-specific field mappings required</h3>
-            <p class="mt-1 text-sm">
-              Each trial requires field mappings for its specific schema. Trials without mappings
-              will be grayed out.
-              <button class="underline hover:no-underline" @click="showMappingModal = true">
-                Configure mappings
-              </button>
-            </p>
-          </div>
-        </div>
-      </div>
+      <Callout variant="warning" class="mb-4" title="Schema-specific field mappings required">
+        <p class="mt-1">
+          Each trial requires field mappings for its specific schema. Trials without mappings will
+          be grayed out.
+          <button class="underline hover:no-underline" @click="showMappingModal = true">
+            Configure mappings
+          </button>
+        </p>
+      </Callout>
 
       <!-- Loading State -->
       <div v-if="loadingStates.trials" class="text-center py-8">
@@ -231,7 +225,6 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { AlertTriangle } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { schemasApi } from '@/services/schemasApi'
 import { evaluationsApi } from '@/services/evaluationsApi'
@@ -239,6 +232,7 @@ import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
+import Callout from '@/components/common/Callout.vue'
 import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreviewModal.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -247,7 +241,6 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { describeHttpError, extractErrorMessage } from '@/utils/errors'
-import { getBannerClass } from '@/utils/statusStyles'
 
 const props = defineProps({
   open: {

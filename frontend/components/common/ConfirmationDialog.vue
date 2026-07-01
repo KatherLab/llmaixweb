@@ -4,7 +4,6 @@
     size="sm"
     role="alertdialog"
     :title="title"
-    panel-class="rounded-xl"
     body-class="p-6"
     footer-class="dark:bg-slate-800"
     @close="emit('cancel')"

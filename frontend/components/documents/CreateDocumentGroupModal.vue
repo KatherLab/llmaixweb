@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :open="visible" size="lg" @close="tryClose">
+  <BaseModal :open="open" size="lg" @close="tryClose">
     <template #header>
       <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
         {{ group ? 'Edit Document Group' : 'Create Document Group' }}
@@ -112,7 +112,7 @@
             <input
               type="checkbox"
               :checked="isSelected(doc.id)"
-              class="mr-3"
+              :class="[checkboxClass, 'mr-3']"
               readonly
               @click.stop
             />
@@ -194,12 +194,12 @@ import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
+import { inputClass, textareaClass, labelClass, checkboxClass } from '@/utils/formStyles'
 
 const props = defineProps({
   group: { type: Object, default: null },
   projectId: { type: [String, Number], required: true },
-  visible: { type: Boolean, default: true }, // allow parent to show/hide
+  open: { type: Boolean, default: true }, // allow parent to show/hide
   selectedDocumentIds: { type: Array, default: null }, // optional pre-selected documents
 })
 
