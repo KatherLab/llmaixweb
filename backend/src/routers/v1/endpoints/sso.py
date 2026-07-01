@@ -82,10 +82,15 @@ def _sso_enabled_guard() -> None:
 def _redirect_uri(slug: str, request: Request) -> str:
     """The canonical callback URL registered with the IdP.
 
-    Built from the incoming request's base URL so it works regardless of the
-    proxy/host header, as long as the IdP is configured to allow it.
+    Derived from ``settings.APP_URL`` (the configured public origin) rather than
+    the incoming request's base URL: behind a TLS-terminating proxy (nginx →
+    backend over plain HTTP) Starlette doesn't honor ``X-Forwarded-Proto`` unless
+    ``ProxyHeadersMiddleware`` is mounted, so ``request.base_url`` would resolve
+    to ``http://`` on an HTTPS deployment and break the IdP redirect_uri match.
+    APP_URL is the source of truth admins actually configure, so it's stable.
+    Falls back to the request base URL only when APP_URL is unset.
     """
-    base = str(request.base_url).rstrip("/")
+    base = (settings.APP_URL or str(request.base_url)).rstrip("/")
     return f"{base}/api/v1/auth/sso/{slug}/callback"
 
 
