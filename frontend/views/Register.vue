@@ -124,7 +124,7 @@ onMounted(async () => {
   try {
     const res = await authApi.getSettings()
     requireInvitation.value = !!res.data.require_invitation
-  } catch (e) {
+  } catch {
     requireInvitation.value = true
   } finally {
     isLoadingSettings.value = false
@@ -142,7 +142,7 @@ onMounted(async () => {
       } else {
         error.value = 'Invitation is invalid or has already been used'
       }
-    } catch (err) {
+    } catch {
       error.value = 'Failed to validate invitation. It may be expired or invalid.'
     }
   }

@@ -222,7 +222,7 @@ onMounted(async () => {
   try {
     const me = await usersApi.me()
     currentUserId.value = me.data.id
-  } catch (_) {
+  } catch {
     /* ignore */
   }
   await Promise.all([loadUsers(), loadInvitations()])

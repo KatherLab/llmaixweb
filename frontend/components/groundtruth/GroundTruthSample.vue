@@ -19,7 +19,7 @@
   </div>
 </template>
 <script setup>
-const props = defineProps({
+defineProps({
   doc: { type: Object, default: () => ({}) },
   format: { type: String, default: '' },
 })

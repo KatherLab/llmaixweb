@@ -14,7 +14,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
  * The action button only renders when `actionText` is set, so the component
  * also covers no-action empty states (icon + text only).
  */
-const props = defineProps({
+defineProps({
   title: { type: String, required: true },
   description: { type: String, default: '' },
   actionText: { type: String, default: '' },

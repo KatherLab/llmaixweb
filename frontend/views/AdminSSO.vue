@@ -188,7 +188,7 @@ onMounted(async () => {
   try {
     const res = await authApi.getSettings()
     ssoEnabled.value = !!res.data.sso_enabled
-  } catch (e) {
+  } catch {
     /* ignore */
   }
   await load()

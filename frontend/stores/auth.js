@@ -120,7 +120,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (opts.serverSide && refreshToken.value) {
       try {
         await authApi.logout(refreshToken.value, !!opts.everywhere)
-      } catch (e) {
+      } catch {
         /* ignore — clearing locally is the source of truth */
       }
     }

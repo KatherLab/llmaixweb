@@ -198,7 +198,7 @@ const activeTab = ref('All')
 const filteredSettings = computed(() => {
   if (activeTab.value === 'All') return settings
   return Object.fromEntries(
-    Object.entries(settings).filter(([k, v]) => v.category === activeTab.value),
+    Object.entries(settings).filter(([_k, v]) => v.category === activeTab.value),
   )
 })
 
@@ -281,7 +281,7 @@ async function fetchSettings() {
     const res = await adminApi.getSettings()
     Object.assign(settings, res.data)
     resetDraft()
-  } catch (e) {
+  } catch {
     error.value = 'Failed to load settings'
   } finally {
     loading.value = false

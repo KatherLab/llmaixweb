@@ -103,8 +103,7 @@ const props = defineProps({
   mapped: { type: Array, default: () => [] }, // paths already mapped
   dimMapped: { type: Boolean, default: true }, // allow parent to toggle (optional)
 })
-const emit = defineEmits(['select'])
-
+defineEmits(['select'])
 const path = (key) => (props.prefix ? `${props.prefix}.${key}` : key)
 
 function isObject(val) {

@@ -142,7 +142,7 @@ onMounted(async () => {
   try {
     await usersApi.validateResetToken(token)
     state.value = 'form'
-  } catch (err) {
+  } catch {
     state.value = 'invalid'
   }
 })

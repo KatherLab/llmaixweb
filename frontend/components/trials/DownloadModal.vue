@@ -52,7 +52,7 @@ async function download() {
     )
     toast.success('Downloaded!')
     emit('close')
-  } catch (e) {
+  } catch {
     toast.error('Download failed')
   } finally {
     isDownloading.value = false

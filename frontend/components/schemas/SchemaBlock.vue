@@ -344,14 +344,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits([
-  'update',
-  'add-property',
-  'edit-property',
-  'delete-property',
-  'navigate',
-  'edit-root',
-])
+defineEmits(['update', 'add-property', 'edit-property', 'delete-property', 'navigate', 'edit-root'])
 
 const showDetails = ref(false)
 

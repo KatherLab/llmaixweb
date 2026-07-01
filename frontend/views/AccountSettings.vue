@@ -231,7 +231,7 @@ onMounted(async () => {
     if (res.data.sso_enabled) {
       await loadIdentities()
     }
-  } catch (e) {
+  } catch {
     ssoEnabled.value = false
   }
 })
@@ -241,7 +241,7 @@ async function loadIdentities() {
   try {
     const res = await usersApi.listMyIdentities()
     identities.value = res.data
-  } catch (e) {
+  } catch {
     /* non-fatal */
   } finally {
     loadingIdentities.value = false

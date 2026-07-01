@@ -316,7 +316,7 @@ const loadPreview = async () => {
     // XLSX sheet default
     if (isXLSX.value && !sheet.value && data.sheets && data.sheets.length)
       sheet.value = data.sheets[0]
-  } catch (err) {
+  } catch {
     toast.error('Failed to load preview')
     preview.value = { headers: [], rows: [] }
   }
@@ -397,7 +397,7 @@ const saveConfig = async () => {
     toast.success('Import configuration saved!')
     emit('saved')
     doClose()
-  } catch (err) {
+  } catch {
     toast.error('Failed to save import configuration')
   } finally {
     saving.value = false

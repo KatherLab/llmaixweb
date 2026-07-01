@@ -151,8 +151,7 @@
     >
       <pre
         class="text-sm font-mono whitespace-pre-wrap bg-white dark:bg-slate-900 rounded-lg shadow p-6 border border-slate-100 dark:border-slate-700"
-        >{{ previewContent }}</pre
-      >
+        >{{ previewContent }}</pre>
     </div>
 
     <!-- Fallback -->
@@ -179,8 +178,7 @@
     >
       <pre
         class="whitespace-pre-wrap text-sm text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-900 rounded p-4 max-h-[60vh] overflow-auto"
-        >{{ modalContent }}</pre
-      >
+        >{{ modalContent }}</pre>
       <div class="mt-4 flex items-center gap-2">
         <BaseButton variant="link" tone="blue" class="text-xs underline" @click="copyToClipboard">
           Copy
@@ -221,8 +219,8 @@ const props = defineProps({
   file: { type: Object, required: true },
   projectId: { type: [String, Number], required: true },
 })
-const emit = defineEmits(['close'])
 const toast = useToast()
+defineEmits(['close'])
 
 const isLoading = ref(true)
 const error = ref('')

@@ -184,7 +184,7 @@ import { AlertTriangle, ArrowLeft, FileText } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
-const props = defineProps({
+defineProps({
   document: {
     type: Object,
     required: true,
@@ -199,7 +199,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['load-content', 'back-to-documents'])
+defineEmits(['load-content', 'back-to-documents'])
 
 const formatFieldValue = (value) => {
   if (value === null || value === undefined) return 'null'

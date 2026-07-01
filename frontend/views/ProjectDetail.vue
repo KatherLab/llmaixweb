@@ -123,15 +123,27 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide, watch } from 'vue'
+import { ref, computed, onMounted, provide, watch, defineAsyncComponent } from 'vue'
 import { ChevronLeft, Settings } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { projectsApi } from '@/services/projectsApi'
-import FilesAndProcessing from '@/components/files/FilesAndProcessing.vue'
-import DocumentsManagement from '@/components/documents/DocumentsManagement.vue'
-import TrialsManagement from '@/components/trials/TrialsManagement.vue'
-import SchemaManagement from '@/components/schemas/SchemaManagement.vue'
-import EvaluationView from '@/components/evaluation/EvaluationView.vue'
+// Tab components are lazy-loaded so each workflow step is code-split into its
+// own chunk (only one tab is rendered at a time, see the v-if chain below).
+const FilesAndProcessing = defineAsyncComponent(
+  () => import('@/components/files/FilesAndProcessing.vue'),
+)
+const DocumentsManagement = defineAsyncComponent(
+  () => import('@/components/documents/DocumentsManagement.vue'),
+)
+const TrialsManagement = defineAsyncComponent(
+  () => import('@/components/trials/TrialsManagement.vue'),
+)
+const SchemaManagement = defineAsyncComponent(
+  () => import('@/components/schemas/SchemaManagement.vue'),
+)
+const EvaluationView = defineAsyncComponent(
+  () => import('@/components/evaluation/EvaluationView.vue'),
+)
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import ProjectSettingsModal from '@/components/projects/ProjectSettingsModal.vue'
 import { useToast } from '@/composables/useToast'

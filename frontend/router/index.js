@@ -1,27 +1,30 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+// Layouts + landing are eager: they're part of the first paint.
 import Landing from '@/views/Landing.vue'
 import AppLayout from '@/views/AppLayout.vue'
 import AuthLayout from '@/views/AuthLayout.vue'
 
-import Login from '@/views/Login.vue'
-import Register from '@/views/Register.vue'
-import ForgotPassword from '@/views/ForgotPassword.vue'
-import ResetPassword from '@/views/ResetPassword.vue'
-import InvitationLanding from '@/views/InvitationLandingPage.vue'
-import SsoComplete from '@/views/SsoComplete.vue'
-import NotFound from '@/views/NotFound.vue'
+// Route views are lazy-loaded via dynamic import() so each page is code-split
+// into its own chunk instead of everything landing in the initial bundle.
+const Login = () => import('@/views/Login.vue')
+const Register = () => import('@/views/Register.vue')
+const ForgotPassword = () => import('@/views/ForgotPassword.vue')
+const ResetPassword = () => import('@/views/ResetPassword.vue')
+const InvitationLanding = () => import('@/views/InvitationLandingPage.vue')
+const SsoComplete = () => import('@/views/SsoComplete.vue')
+const NotFound = () => import('@/views/NotFound.vue')
 
-import ProjectOverview from '@/views/ProjectOverview.vue'
-import ProjectDetail from '@/views/ProjectDetail.vue'
-import AccountSettings from '@/views/AccountSettings.vue'
-import AdminUserManagement from '@/views/AdminUserManagement.vue'
-import AdminDashboard from '@/views/AdminDashboard.vue'
-import AdminSettings from '@/views/AdminSettings.vue'
-import AdminCelery from '@/views/AdminCelery.vue'
-import AdminSSO from '@/views/AdminSSO.vue'
+const ProjectOverview = () => import('@/views/ProjectOverview.vue')
+const ProjectDetail = () => import('@/views/ProjectDetail.vue')
+const AccountSettings = () => import('@/views/AccountSettings.vue')
+const AdminUserManagement = () => import('@/views/AdminUserManagement.vue')
+const AdminDashboard = () => import('@/views/AdminDashboard.vue')
+const AdminSettings = () => import('@/views/AdminSettings.vue')
+const AdminCelery = () => import('@/views/AdminCelery.vue')
+const AdminSSO = () => import('@/views/AdminSSO.vue')
 
-import FirstAdminSetup from '@/views/FirstAdminSetup.vue'
+const FirstAdminSetup = () => import('@/views/FirstAdminSetup.vue')
 
 import { useAuthStore } from '@/stores/auth'
 import { useFirstAdminStore } from '@/stores/firstAdmin'

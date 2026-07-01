@@ -55,8 +55,7 @@
       </summary>
       <pre
         class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 mt-1 max-h-64 overflow-auto font-mono text-xs text-slate-700 dark:text-slate-300"
-        >{{ formatJSON(schemaDefinition) }}</pre
-      >
+        >{{ formatJSON(schemaDefinition) }}</pre>
     </details>
   </div>
 </template>

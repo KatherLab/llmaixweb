@@ -15,15 +15,13 @@
         <h3 class="font-semibold text-lg mb-2">Workers</h3>
         <pre
           class="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-800 overflow-x-auto text-sm"
-          >{{ pretty(workers) }}</pre
-        >
+          >{{ pretty(workers) }}</pre>
       </div>
       <div class="mt-8">
         <h3 class="font-semibold text-lg mb-2">Queues & Tasks</h3>
         <pre
           class="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-800 overflow-x-auto text-sm"
-          >{{ pretty(queues) }}</pre
-        >
+          >{{ pretty(queues) }}</pre>
       </div>
       <div class="mt-8">
         <label :class="labelClass">Inspect Task by ID:</label>
@@ -34,8 +32,7 @@
         <div v-if="taskStatus">
           <pre
             class="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-800 overflow-x-auto text-sm"
-            >{{ pretty(taskStatus) }}</pre
-          >
+            >{{ pretty(taskStatus) }}</pre>
           <BaseButton
             v-if="['PENDING', 'STARTED', 'RETRY'].includes(taskStatus.status)"
             variant="danger"

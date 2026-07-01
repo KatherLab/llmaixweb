@@ -34,6 +34,9 @@ export default [
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'vue/require-toggle-inside-transition': 'warn',
       'vue/valid-v-on': ['warn', { modifiers: ['outside'] }],
+      // All v-html usages render output of `renderMarkdown` (utils/markdown.js),
+      // which sanitizes via DOMPurify, or a pre-sanitized `safeMarkdown` prop.
+      'vue/no-v-html': 'off',
     },
   },
   {

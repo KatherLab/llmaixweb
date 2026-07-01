@@ -62,8 +62,7 @@
               <pre
                 v-if="documentText"
                 class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap"
-                >{{ documentText }}</pre
-              >
+                >{{ documentText }}</pre>
               <p v-else class="text-xs text-slate-500 dark:text-slate-400 italic">
                 No preview available for this file type. Showing extracted text instead — but none
                 was extracted during preprocessing.

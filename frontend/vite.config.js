@@ -10,7 +10,6 @@ export default defineConfig(({ mode }) => {
 
   // Backend URL - can be overridden via env var VITE_BACKEND_URL
   const backendUrl = env.VITE_BACKEND_URL || 'http://localhost:8000'
-  const backendHost = backendUrl.replace('https://', '').replace('http://', '')
 
   return {
     plugins: [vue(), tailwindcss()],
