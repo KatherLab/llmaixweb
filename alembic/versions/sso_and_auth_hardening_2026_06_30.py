@@ -101,7 +101,9 @@ def upgrade() -> None:
     # ── users: lockout + last-login columns ──
     op.add_column(
         "users",
-        sa.Column("failed_login_attempts", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "failed_login_attempts", sa.Integer(), nullable=False, server_default="0"
+        ),
     )
     op.add_column(
         "users",

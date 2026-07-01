@@ -103,48 +103,43 @@
   </div>
 </template>
 
-<script setup>
-import { formatDate } from '@/utils/formatters.js'
+<script setup lang="ts">
+import { formatDate } from '@/utils/formatters'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
+import type { DocumentListItem } from '@/types'
 
-defineProps({
-  selectedIds: {
-    type: Array,
-    default: () => [],
+withDefaults(
+  defineProps<{
+    selectedIds?: number[]
+    docsPage?: DocumentListItem[]
+    totalDocs?: number
+    pageSize?: number
+    page?: number
+    isLoadingDocs?: boolean
+    docsError?: string | null
+    isSelectingAll?: boolean
+  }>(),
+  {
+    selectedIds: () => [],
+    docsPage: () => [],
+    totalDocs: 0,
+    pageSize: 50,
+    page: 1,
+    isLoadingDocs: false,
+    docsError: null,
+    isSelectingAll: false,
   },
-  docsPage: {
-    type: Array,
-    default: () => [],
-  },
-  totalDocs: {
-    type: Number,
-    default: 0,
-  },
-  pageSize: {
-    type: Number,
-    default: 50,
-  },
-  page: {
-    type: Number,
-    default: 1,
-  },
-  isLoadingDocs: {
-    type: Boolean,
-    default: false,
-  },
-  docsError: {
-    type: String,
-    default: null,
-  },
-  isSelectingAll: {
-    type: Boolean,
-    default: false,
-  },
-})
+)
 
-const emit = defineEmits(['toggle', 'select-all', 'clear', 'prev-page', 'next-page'])
+const emit = defineEmits<{
+  toggle: [docId: number]
+  'select-all': []
+  clear: []
+  'prev-page': []
+  'next-page': []
+}>()
 
-const searchTerm = defineModel('searchTerm', { type: String, default: '' })
+const searchTerm = defineModel<string>('searchTerm', { default: '' })
 </script>

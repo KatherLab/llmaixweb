@@ -124,28 +124,29 @@
   </div>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { computed, type PropType } from 'vue'
 import { AlertCircle, CircleCheckBig } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { formatDuration, formatDateFull } from '@/utils/formatters'
+import type { TrialSummary, Schema, Prompt } from '@/types'
 
 const props = defineProps({
-  trial: { type: Object, required: true },
-  schemas: { type: Array, required: true },
-  prompts: { type: Array, required: true },
+  trial: { type: Object as PropType<TrialSummary>, required: true },
+  schemas: { type: Array as PropType<Schema[]>, required: true },
+  prompts: { type: Array as PropType<Prompt[]>, required: true },
 })
 
-const emit = defineEmits([
-  'rename',
-  'delete',
-  'retry',
-  'download',
-  'view-results',
-  'view-schema',
-  'view-prompt',
-  'cancel',
-])
+const emit = defineEmits<{
+  rename: [trial: TrialSummary]
+  delete: [trial: TrialSummary]
+  retry: [trial: TrialSummary]
+  download: [trial: TrialSummary]
+  'view-results': [trial: TrialSummary]
+  'view-schema': [trial: TrialSummary]
+  'view-prompt': [trial: TrialSummary]
+  cancel: [trial: TrialSummary]
+}>()
 
 const schema = computed(() => props.schemas.find((s) => s.id === props.trial.schema_id))
 const prompt = computed(() => props.prompts.find((p) => p.id === props.trial.prompt_id))

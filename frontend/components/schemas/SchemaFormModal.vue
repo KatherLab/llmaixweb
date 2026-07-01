@@ -196,7 +196,7 @@
   />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onUnmounted, watch, nextTick, computed } from 'vue'
 import { ArrowUpDown, BookOpen, CircleAlert, CircleCheckBig, Layers } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
@@ -213,42 +213,46 @@ import { formatJSON, STARTER_SCHEMA, schemaTemplates } from '@/utils/schemaTempl
 import { getPillClass } from '@/utils/statusStyles'
 import { inputClass, checkboxClass } from '@/utils/formStyles'
 import { extractErrorMessage } from '@/utils/errors'
+import type { Schema, SchemaDefinition } from '@/types'
+import type { SchemaTemplate } from '@/utils/schemaTemplates'
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-  schema: {
-    type: Object,
-    default: null,
-  },
+interface Props {
+  open: boolean
+  projectId: string | number
+  schema?: Schema | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  schema: null,
 })
 
-const emit = defineEmits(['close', 'created', 'updated'])
+const emit = defineEmits<{
+  close: []
+  created: [schema: Schema]
+  updated: [schema: Schema]
+}>()
 
 const toast = useToast()
 
 const isEdit = computed(() => !!props.schema)
 
 const hasUnsavedChanges = ref(false)
-const rawJsonTextarea = ref(null)
+const rawJsonTextarea = ref<HTMLTextAreaElement | null>(null)
 const cursorPosition = ref(0)
 const isSubmitting = ref(false)
 const schemaError = ref('')
 const showTemplates = ref(false)
-const schemaForm = ref({
+const schemaForm = ref<{
+  schema_name: string
+  schema_definition: string
+}>({
   schema_name: '',
   schema_definition: '',
 })
 
-let isUpdating = false
+const isUpdating = false
 let isUpdatingFromWatch = false
-let updateTimeout = null
+let updateTimeout: ReturnType<typeof setTimeout> | null = null
 
 const activeTab = ref('visual')
 // Tab config for BaseTabGroup (lucide icons rendered via #tab scoped slot)
@@ -256,7 +260,7 @@ const tabs = [
   { label: 'Visual Editor', value: 'visual' },
   { label: 'Raw JSON', value: 'raw' },
 ]
-const visualSchema = ref({
+const visualSchema = ref<SchemaDefinition>({
   type: 'object',
   properties: {},
 })
@@ -265,7 +269,7 @@ const splitView = ref(false)
 
 // Simple mode refs (default to simple mode)
 const simpleMode = ref(true)
-const simpleSchema = ref({
+const simpleSchema = ref<SchemaDefinition>({
   type: 'object',
   properties: {},
 })
@@ -277,7 +281,7 @@ const formatJsonInput = () => {
     visualSchema.value = parsedJson
     schemaError.value = ''
   } catch (err) {
-    schemaError.value = 'Invalid JSON: ' + err.message
+    schemaError.value = 'Invalid JSON: ' + (err as Error).message
   }
 }
 
@@ -299,11 +303,11 @@ const createSchema = async () => {
   isSubmitting.value = true
   let response
   try {
-    let schemaDefinition
+    let schemaDefinition: SchemaDefinition
     try {
       schemaDefinition = JSON.parse(schemaForm.value.schema_definition)
     } catch (err) {
-      schemaError.value = 'Invalid JSON: ' + err.message
+      schemaError.value = 'Invalid JSON: ' + (err as Error).message
       toast.error('Invalid JSON format. Please check your schema definition.')
       isSubmitting.value = false
       return
@@ -335,11 +339,11 @@ const updateSchema = async () => {
   isSubmitting.value = true
   let response
   try {
-    let schemaDefinition
+    let schemaDefinition: SchemaDefinition
     try {
       schemaDefinition = JSON.parse(schemaForm.value.schema_definition)
     } catch (err) {
-      schemaError.value = 'Invalid JSON: ' + err.message
+      schemaError.value = 'Invalid JSON: ' + (err as Error).message
       toast.error('Invalid JSON format. Please check your schema definition.')
       isSubmitting.value = false
       return
@@ -349,7 +353,7 @@ const updateSchema = async () => {
       isSubmitting.value = false
       return
     }
-    response = await schemasApi.update(props.projectId, props.schema.id, {
+    response = await schemasApi.update(props.projectId, props.schema!.id, {
       schema_name: schemaForm.value.schema_name,
       schema_definition: schemaDefinition,
     })
@@ -373,21 +377,21 @@ const isSchemaValid = computed(() => {
     return (
       !!parsed &&
       typeof parsed === 'object' &&
-      !!parsed.properties &&
-      Object.keys(parsed.properties).length > 0
+      !!(parsed as Record<string, unknown>).properties &&
+      Object.keys((parsed as Record<string, unknown>).properties as object).length > 0
     )
   } catch {
     return false
   }
 })
 
-const validateSchema = (schema) => {
+const validateSchema = (schema: unknown): boolean => {
   schemaError.value = ''
   if (
     !schema ||
     typeof schema !== 'object' ||
-    !schema.properties ||
-    Object.keys(schema.properties).length === 0
+    !(schema as SchemaDefinition).properties ||
+    Object.keys((schema as SchemaDefinition).properties as object).length === 0
   ) {
     schemaError.value = 'Schema must contain at least one field.'
     return false
@@ -424,12 +428,12 @@ const onRawSchemaChange = () => {
         }
       })
     } catch (err) {
-      schemaError.value = 'Invalid JSON: ' + err.message
+      schemaError.value = 'Invalid JSON: ' + (err as Error).message
     }
   }, 300)
 }
 
-const applyTemplate = (template) => {
+const applyTemplate = (template: SchemaTemplate) => {
   visualSchema.value = template.schema
   schemaForm.value.schema_definition = JSON.stringify(template.schema, null, 2)
   schemaForm.value.schema_name = template.name
@@ -437,7 +441,7 @@ const applyTemplate = (template) => {
   toast.info(`Template "${template.name}" applied`)
 }
 
-const updateVisualSchema = (newSchema) => {
+const updateVisualSchema = (newSchema: SchemaDefinition) => {
   if (isUpdatingFromWatch) return
 
   // Clear any pending updates
@@ -455,14 +459,15 @@ const updateVisualSchema = (newSchema) => {
   })
 }
 
-const updateSimpleSchema = (newSchema) => {
+const updateSimpleSchema = (newSchema: SchemaDefinition) => {
   simpleSchema.value = newSchema
   schemaForm.value.schema_definition = JSON.stringify(newSchema, null, 2)
   schemaError.value = ''
 }
 
-const preserveCursorPosition = (event) => {
-  cursorPosition.value = event.target.selectionStart
+const preserveCursorPosition = (event: Event) => {
+  const target = event.target as HTMLTextAreaElement
+  cursorPosition.value = target.selectionStart
 }
 
 // Cleanup on unmount
@@ -521,7 +526,7 @@ watch(
         // Edit mode
         const formattedJson = formatJSON(props.schema.schema_definition)
         schemaForm.value = {
-          schema_name: props.schema.schema_name,
+          schema_name: props.schema.schema_name || '',
           schema_definition: formattedJson,
         }
         try {

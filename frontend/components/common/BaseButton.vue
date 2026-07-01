@@ -11,45 +11,32 @@
   </button>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({
+interface Props {
   // 'primary' | 'secondary' | 'danger' | 'warning' | 'success' | 'ghost' | 'link' | 'icon'
-  variant: {
-    type: String,
-    default: 'primary',
-    validator: (v) =>
-      ['primary', 'secondary', 'danger', 'warning', 'success', 'ghost', 'link', 'icon'].includes(v),
-  },
+  variant?: 'primary' | 'secondary' | 'danger' | 'warning' | 'success' | 'ghost' | 'link' | 'icon'
   // 'sm' | 'md' | 'lg'
-  size: {
-    type: String,
-    default: 'md',
-    validator: (v) => ['sm', 'md', 'lg'].includes(v),
-  },
+  size?: 'sm' | 'md' | 'lg'
   // Used by variant="link" and variant="icon": sets the text/hover color tone.
   // 'blue' | 'red' | 'green' | 'purple' | 'gray'
-  tone: {
-    type: String,
-    default: 'blue',
-    validator: (v) => ['blue', 'red', 'green', 'purple', 'gray'].includes(v),
-  },
-  type: {
-    type: String,
-    default: 'button',
-  },
-  loading: {
-    type: Boolean,
-    default: false,
-  },
-  disabled: {
-    type: Boolean,
-    default: false,
-  },
+  tone?: 'blue' | 'red' | 'green' | 'purple' | 'gray'
+  type?: 'button' | 'submit' | 'reset'
+  loading?: boolean
+  disabled?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  variant: 'primary',
+  size: 'md',
+  tone: 'blue',
+  type: 'button',
+  loading: false,
+  disabled: false,
 })
 
 const baseClass =

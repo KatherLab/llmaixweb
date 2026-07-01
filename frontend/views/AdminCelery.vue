@@ -50,7 +50,7 @@
     </div>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { CircleDot } from '@lucide/vue'
 import { adminApi } from '@/services/adminApi'
@@ -58,28 +58,35 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { extractErrorMessage } from '@/utils/errors'
 import { inputClass, labelClass } from '@/utils/formStyles'
+import type { CeleryWorkersResponse, CeleryQueuesResponse } from '@/types'
 
-const loading = ref(true)
-const error = ref('')
-const workers = ref({})
-const queues = ref({})
-const taskId = ref('')
-const taskStatus = ref(null)
-const revokedId = ref('')
+interface CeleryTaskStatus {
+  id: string
+  status: string
+  [key: string]: unknown
+}
 
-function pretty(obj) {
+const loading = ref<boolean>(true)
+const error = ref<string>('')
+const workers = ref<CeleryWorkersResponse | Record<string, unknown>>({})
+const queues = ref<CeleryQueuesResponse | Record<string, unknown>>({})
+const taskId = ref<string>('')
+const taskStatus = ref<CeleryTaskStatus | null>(null)
+const revokedId = ref<string>('')
+
+function pretty(obj: unknown): string {
   return JSON.stringify(obj, null, 2)
 }
 
-async function fetchWorkers() {
+async function fetchWorkers(): Promise<void> {
   const res = await adminApi.celeryWorkers()
   workers.value = res.data
 }
-async function fetchQueues() {
+async function fetchQueues(): Promise<void> {
   const res = await adminApi.celeryQueues()
   queues.value = res.data
 }
-async function fetchAll() {
+async function fetchAll(): Promise<void> {
   loading.value = true
   error.value = ''
   try {
@@ -90,18 +97,18 @@ async function fetchAll() {
     loading.value = false
   }
 }
-async function inspectTask() {
+async function inspectTask(): Promise<void> {
   if (!taskId.value) return
   error.value = ''
   taskStatus.value = null
   try {
     const res = await adminApi.celeryTask(taskId.value)
-    taskStatus.value = res.data
+    taskStatus.value = res.data as CeleryTaskStatus
   } catch (e) {
     error.value = extractErrorMessage(e, 'Failed to inspect task')
   }
 }
-async function revokeTask(id) {
+async function revokeTask(id: string): Promise<void> {
   error.value = ''
   revokedId.value = ''
   try {

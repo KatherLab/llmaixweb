@@ -223,8 +223,8 @@
   />
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch, type PropType } from 'vue'
 import { trialsApi } from '@/services/trialsApi'
 import { schemasApi } from '@/services/schemasApi'
 import { evaluationsApi } from '@/services/evaluationsApi'
@@ -241,6 +241,25 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { describeHttpError, extractErrorMessage } from '@/utils/errors'
+import type { GroundTruth, Schema, TrialSummary, Evaluation } from '@/types'
+
+interface LoadingStates {
+  trials: boolean
+  mappings: boolean
+  evaluation: boolean
+}
+
+interface TrialsState {
+  items: TrialSummary[]
+  total: number
+  limit: number
+  page: number
+}
+
+interface AvailableTrial extends TrialSummary {
+  hasMappings: boolean
+  mappingStatus: 'loading' | 'loaded'
+}
 
 const props = defineProps({
   open: {
@@ -248,43 +267,46 @@ const props = defineProps({
     required: true,
   },
   projectId: {
-    type: [String, Number],
+    type: [String, Number] as PropType<string | number>,
     required: true,
   },
   groundTruth: {
-    type: Object,
+    type: Object as PropType<GroundTruth>,
     required: true,
   },
 })
 
-const emit = defineEmits(['close', 'evaluate'])
+const emit = defineEmits<{
+  close: []
+  evaluate: [evaluation: Evaluation]
+}>()
 
 const toast = useToast()
 
 // Loading states
-const loadingStates = ref({
+const loadingStates = ref<LoadingStates>({
   trials: false,
   mappings: false,
   evaluation: false,
 })
 
 // Paginated trials data (summaries)
-const trials = ref({
+const trials = ref<TrialsState>({
   items: [],
   total: 0,
   limit: 20,
   page: 1,
 })
 
-const schemas = ref([])
-const selectedTrial = ref(null)
-const existingEvaluations = ref([])
-const trialMappingStatus = ref({})
+const schemas = ref<Schema[]>([])
+const selectedTrial = ref<AvailableTrial | null>(null)
+const existingEvaluations = ref<Evaluation[]>([])
+const trialMappingStatus = ref<Record<number, boolean>>({})
 const showMappingModal = ref(false)
 
 // Error handling
-const error = ref(null)
-const lastFailedOperation = ref(null)
+const error = ref<string | null>(null)
+const lastFailedOperation = ref<(() => Promise<void>) | null>(null)
 const isRetrying = ref(false)
 
 // Computed properties
@@ -302,7 +324,7 @@ const canEvaluate = computed(() => {
 })
 
 // Only completed trials are shown in this selector
-const availableTrials = computed(() => {
+const availableTrials = computed<AvailableTrial[]>(() => {
   return trials.value.items
     .filter((trial) => trial.status === 'completed')
     .map((trial) => ({
@@ -316,11 +338,11 @@ const availableTrials = computed(() => {
 const totalPages = computed(() => Math.max(1, Math.ceil(trials.value.total / trials.value.limit)))
 
 // Compact page list with ellipses for PaginationControls
-const visiblePages = computed(() => {
+const visiblePages = computed<(number | '...')[]>(() => {
   const total = totalPages.value
   const current = trials.value.page
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-  const pages = [1]
+  const pages: (number | '...')[] = [1]
   const start = Math.max(2, current - 1)
   const end = Math.min(total - 1, current + 1)
   if (start > 2) pages.push('...')
@@ -330,32 +352,34 @@ const visiblePages = computed(() => {
   return pages
 })
 
-const goToPage = async (page) => {
-  if (page === '...' || page === trials.value.page || page < 1 || page > totalPages.value) return
-  trials.value.page = page
+const goToPage = async (page: number | string): Promise<void> => {
+  if (page === '...' || page === trials.value.page) return
+  const pageNum = Number(page)
+  if (pageNum < 1 || pageNum > totalPages.value) return
+  trials.value.page = pageNum
   await fetchTrials()
 }
 
 // Utility functions
-const isAlreadyEvaluated = (trial) => {
+const isAlreadyEvaluated = (trial: AvailableTrial): boolean => {
   return existingEvaluations.value.some((evaluation) => evaluation.trial_id === trial.id)
 }
 
-const getSchemaName = (schemaId) => {
+const getSchemaName = (schemaId: number): string => {
   const schema = schemas.value.find((s) => s.id === schemaId)
   return schema?.schema_name || `Schema ${schemaId}`
 }
 
 // Error handling functions
-const clearError = () => {
+const clearError = (): void => {
   error.value = null
   lastFailedOperation.value = null
 }
 
-const trialDisplayName = (trial) =>
-  trial?.name && trial.name.trim().length > 0 ? trial.name : `Trial #${trial.id}`
+const trialDisplayName = (trial: AvailableTrial | null): string =>
+  trial?.name && trial.name.trim().length > 0 ? trial.name : `Trial #${trial?.id}`
 
-const handleApiError = (err, operation) => {
+const handleApiError = (err: unknown, operation: string): void => {
   console.error(`${operation} failed:`, err)
 
   const errorMessage = describeHttpError(err, operation)
@@ -364,7 +388,7 @@ const handleApiError = (err, operation) => {
   toast.error(errorMessage)
 }
 
-const retryLastOperation = async () => {
+const retryLastOperation = async (): Promise<void> => {
   if (!lastFailedOperation.value) return
 
   isRetrying.value = true
@@ -382,7 +406,7 @@ const retryLastOperation = async () => {
 }
 
 // Data fetching functions
-const fetchTrials = async () => {
+const fetchTrials = async (): Promise<void> => {
   lastFailedOperation.value = fetchTrials
   loadingStates.value.trials = true
 
@@ -411,7 +435,7 @@ const fetchTrials = async () => {
 }
 
 // Fetch schemas and existing evaluations for this ground truth
-const fetchSchemasAndEvaluations = async () => {
+const fetchSchemasAndEvaluations = async (): Promise<void> => {
   const [schemasResponse, evaluationsResponse] = await Promise.all([
     schemasApi.list(props.projectId),
     evaluationsApi.list(props.projectId, { groundtruth_id: props.groundTruth.id }),
@@ -420,7 +444,7 @@ const fetchSchemasAndEvaluations = async () => {
   existingEvaluations.value = evaluationsResponse.data
 }
 
-const fetchData = async () => {
+const fetchData = async (): Promise<void> => {
   lastFailedOperation.value = fetchData
   error.value = null
 
@@ -438,21 +462,23 @@ const fetchData = async () => {
 }
 
 // Mapping checks
-const checkMappingStatus = async (trial) => {
+const checkMappingStatus = async (trial: TrialSummary): Promise<boolean> => {
   try {
     const response = await groundtruthApi.getMappingStatus(
       props.projectId,
       props.groundTruth.id,
       trial.schema_id,
     )
-    return response.data.has_mappings || false
+    // Backend returns `has_mappings` (not the typed `is_configured`); the
+    // shared FieldMappingStatus type is out of sync with the API response.
+    return (response.data as unknown as { has_mappings?: boolean }).has_mappings || false
   } catch (err) {
     console.error(`Failed to check mapping status for trial ${trial.id}:`, err)
     return false
   }
 }
 
-const loadMappingStatusesFor = async (trialList) => {
+const loadMappingStatusesFor = async (trialList: TrialSummary[]): Promise<void> => {
   const completed = trialList.filter((t) => t.status === 'completed')
   if (!completed.length) return
 
@@ -471,20 +497,20 @@ const loadMappingStatusesFor = async (trialList) => {
 }
 
 // Trial selection
-const selectTrial = (trial) => {
+const selectTrial = (trial: AvailableTrial): void => {
   if (trial.hasMappings) {
     selectedTrial.value = trial
     error.value = null
   }
 }
 
-const showMappingRequiredTooltip = (trial) => {
+const showMappingRequiredTooltip = (trial: AvailableTrial): void => {
   toast.warning(`Configure field mappings for "${getSchemaName(trial.schema_id)}" schema first`)
 }
 
 // Validation (uses summary fields)
-const validateEvaluationPrerequisites = () => {
-  const errors = []
+const validateEvaluationPrerequisites = (): string[] => {
+  const errors: string[] = []
 
   if (!selectedTrial.value) {
     errors.push('Please select a trial to evaluate')
@@ -508,7 +534,7 @@ const validateEvaluationPrerequisites = () => {
 }
 
 // Evaluate
-const evaluateTrialWithValidation = async () => {
+const evaluateTrialWithValidation = async (): Promise<void> => {
   const validationErrors = validateEvaluationPrerequisites()
   if (validationErrors.length > 0) {
     error.value = `Cannot evaluate trial: ${validationErrors.join(', ')}`
@@ -522,24 +548,26 @@ const evaluateTrialWithValidation = async () => {
 
   try {
     // Re-check mapping before posting
-    const mappingStatus = await checkMappingStatus(selectedTrial.value)
+    const mappingStatus = await checkMappingStatus(selectedTrial.value!)
     if (!mappingStatus) {
       throw new Error(
-        `Field mappings for schema "${getSchemaName(selectedTrial.value.schema_id)}" are not configured or have been removed`,
+        `Field mappings for schema "${getSchemaName(selectedTrial.value!.schema_id)}" are not configured or have been removed`,
       )
     }
 
     const response = await trialsApi.evaluate(
       props.projectId,
-      selectedTrial.value.id,
+      selectedTrial.value!.id,
       props.groundTruth.id,
     )
 
-    emit('evaluate', response.data)
+    // The evaluate endpoint returns an EvaluationSummary; the emit is typed as
+    // Evaluation to match the parent (EvaluationView) which casts at the boundary.
+    emit('evaluate', response.data as unknown as Evaluation)
     toast.success(`${trialDisplayName(selectedTrial.value)} evaluation completed successfully`)
     lastFailedOperation.value = null
   } catch (err) {
-    if (err.response?.status === 400) {
+    if ((err as { response?: { status?: number } })?.response?.status === 400) {
       const detail = extractErrorMessage(err)
       if (detail.includes('No field mapping found')) {
         error.value = `Field mappings missing: ${detail}`
@@ -567,7 +595,7 @@ const evaluateTrialWithValidation = async () => {
 }
 
 // Mapping configured
-const onMappingConfigured = async () => {
+const onMappingConfigured = async (): Promise<void> => {
   showMappingModal.value = false
   try {
     await loadMappingStatusesFor(trials.value.items)
@@ -577,7 +605,7 @@ const onMappingConfigured = async () => {
   }
 }
 
-const handleClose = () => {
+const handleClose = (): void => {
   emit('close')
 }
 

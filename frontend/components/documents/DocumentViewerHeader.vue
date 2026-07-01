@@ -67,21 +67,36 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ArrowLeftRight, Clock, CloudDownload, FileText, X } from '@lucide/vue'
 import ExtractionMethodBadge from './ExtractionMethodBadge.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import type { DocumentListItem } from '@/types'
 
-defineProps({
-  document: { type: Object, required: true },
-  hasVersionHistory: { type: Boolean, default: false },
-  showVersionHistory: { type: Boolean, default: false },
-  versionCount: { type: Number, default: 0 },
-  hasDisplayableOriginalFile: { type: Boolean, default: false },
-  hasText: { type: Boolean, default: false },
-  viewModeLabel: { type: String, default: 'Show Both' },
+interface Props {
+  document: DocumentListItem
+  hasVersionHistory?: boolean
+  showVersionHistory?: boolean
+  versionCount?: number
+  hasDisplayableOriginalFile?: boolean
+  hasText?: boolean
+  viewModeLabel?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  hasVersionHistory: false,
+  showVersionHistory: false,
+  versionCount: 0,
+  hasDisplayableOriginalFile: false,
+  hasText: false,
+  viewModeLabel: 'Show Both',
 })
 
-defineEmits(['close', 'toggle-version-history', 'toggle-view', 'download'])
+defineEmits<{
+  close: []
+  'toggle-version-history': []
+  'toggle-view': []
+  download: []
+}>()
 </script>

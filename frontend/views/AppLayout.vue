@@ -265,10 +265,10 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { Settings, Sun, Moon, ShieldCheck, ChevronDown, Lock } from '@lucide/vue'
-import { frontendVersion, frontendGitCommit } from '@/version.js'
+import { frontendVersion, frontendGitCommit } from '@/version'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { versionApi } from '@/services/versionApi'
@@ -285,18 +285,18 @@ import { extractErrorMessage } from '@/utils/errors'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const showUserMenu = ref(false)
-const backendVersion = ref('')
-const backendGitCommit = ref('')
-const isBackendDown = ref(false)
-const currentYear = new Date().getFullYear()
-const authReady = ref(false)
+const showUserMenu = ref<boolean>(false)
+const backendVersion = ref<string>('')
+const backendGitCommit = ref<string>('')
+const isBackendDown = ref<boolean>(false)
+const currentYear: number = new Date().getFullYear()
+const authReady = ref<boolean>(false)
 const toast = useToast()
 
-const showAdminMenu = ref(false)
+const showAdminMenu = ref<boolean>(false)
 
 // Initialize dark mode state from localStorage or system preference
-const getInitialDarkMode = () => {
+const getInitialDarkMode = (): boolean => {
   const saved = localStorage.getItem('darkMode')
   if (saved !== null) {
     return saved === '1'
@@ -304,10 +304,10 @@ const getInitialDarkMode = () => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-const isDark = ref(getInitialDarkMode())
+const isDark = ref<boolean>(getInitialDarkMode())
 
 // Apply dark mode class on mount
-const applyDarkMode = (val) => {
+const applyDarkMode = (val: boolean): void => {
   if (val) {
     document.documentElement.classList.add('dark')
   } else {
@@ -318,20 +318,20 @@ const applyDarkMode = (val) => {
 // Apply initial dark mode immediately
 applyDarkMode(isDark.value)
 
-function setDarkClass(val) {
+function setDarkClass(val: boolean): void {
   applyDarkMode(val)
   isDark.value = val
   localStorage.setItem('darkMode', val ? '1' : '0')
 }
 
-function toggleDarkMode() {
+function toggleDarkMode(): void {
   setDarkClass(!isDark.value)
 }
 
 // Watch for system theme changes (only if user hasn't set explicit preference)
 if (typeof window !== 'undefined' && window.matchMedia) {
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-  const handleChange = (e) => {
+  const handleChange = (e: MediaQueryListEvent): void => {
     const saved = localStorage.getItem('darkMode')
     if (saved === null) {
       // User hasn't set explicit preference, follow system
@@ -346,7 +346,8 @@ onMounted(async () => {
   try {
     const response = await versionApi.get()
     backendVersion.value = response.data.backend_version || response.data.version
-    backendGitCommit.value = response.data.backend_git_commit || 'unknown'
+    backendGitCommit.value =
+      (response.data as { backend_git_commit?: string }).backend_git_commit || 'unknown'
     isBackendDown.value = false
   } catch (error) {
     console.error('Error fetching backend version:', error)
@@ -357,10 +358,10 @@ onMounted(async () => {
   authReady.value = true
 })
 
-const isAuthenticated = computed(() => authStore.isAuthenticated)
-const isAdmin = computed(() => authStore.isAdmin)
-const userName = computed(() => authStore.user?.full_name || '')
-const userInitials = computed(() => {
+const isAuthenticated = computed<boolean>(() => authStore.isAuthenticated)
+const isAdmin = computed<boolean>(() => authStore.isAdmin)
+const userName = computed<string>(() => authStore.user?.full_name || '')
+const userInitials = computed<string>(() => {
   if (!authStore.user?.full_name) return ''
   return authStore.user.full_name
     .split(' ')
@@ -368,15 +369,15 @@ const userInitials = computed(() => {
     .join('')
     .toUpperCase()
 })
-const userEmail = computed(() => authStore.user?.email || '')
+const userEmail = computed<string>(() => authStore.user?.email || '')
 
-async function logout() {
+async function logout(): Promise<void> {
   await authStore.logout()
   showUserMenu.value = false
   router.push('/login')
 }
 
-function toggleUserMenu() {
+function toggleUserMenu(): void {
   showUserMenu.value = !showUserMenu.value
 }
 
@@ -391,20 +392,20 @@ watch(
 // -----------------------
 // Change Password Modal
 // -----------------------
-const showChangePasswordModal = ref(false)
-const currentPassword = ref('')
-const newPassword = ref('')
-const confirmPassword = ref('')
-const passwordError = ref('')
-const passwordSuccess = ref('')
-const isChangingPassword = ref(false)
+const showChangePasswordModal = ref<boolean>(false)
+const currentPassword = ref<string>('')
+const newPassword = ref<string>('')
+const confirmPassword = ref<string>('')
+const passwordError = ref<string>('')
+const passwordSuccess = ref<string>('')
+const isChangingPassword = ref<boolean>(false)
 
-const isPasswordValid = computed(
+const isPasswordValid = computed<boolean>(
   () => newPassword.value.length >= 8 && newPassword.value.length <= 128,
 )
-const doPasswordsMatch = computed(() => newPassword.value === confirmPassword.value)
+const doPasswordsMatch = computed<boolean>(() => newPassword.value === confirmPassword.value)
 
-function openChangePasswordModal() {
+function openChangePasswordModal(): void {
   passwordError.value = ''
   passwordSuccess.value = ''
   currentPassword.value = ''
@@ -413,11 +414,11 @@ function openChangePasswordModal() {
   showChangePasswordModal.value = true
 }
 
-function closeChangePasswordModal() {
+function closeChangePasswordModal(): void {
   showChangePasswordModal.value = false
 }
 
-async function handleChangePassword() {
+async function handleChangePassword(): Promise<void> {
   passwordError.value = ''
   passwordSuccess.value = ''
   if (!currentPassword.value || !newPassword.value) {

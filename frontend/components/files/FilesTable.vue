@@ -13,7 +13,7 @@
     :page-size-options="[25, 50, 100, 250]"
     item-label="files"
     empty-title="No files found"
-    @toggle-selection="$emit('toggle-selection', $event)"
+    @toggle-selection="onToggleSelection"
     @toggle-all="$emit('toggle-all')"
     @select-all="$emit('select-all-files')"
     @clear-selection="$emit('clear-selection')"
@@ -49,7 +49,7 @@
               variant="ghost"
               size="sm"
               class="text-xs underline"
-              @click.stop="$emit('configure-import', file)"
+              @click.stop="onConfigureImport(file)"
             >
               {{ file.preprocessing_strategy ? 'Edit' : 'Configure' }}
             </BaseButton>
@@ -91,7 +91,7 @@
         tone="purple"
         title="Preprocessing History"
         aria-label="Preprocessing History"
-        @click.stop="$emit('view-history', file)"
+        @click.stop="onViewHistory(file)"
       >
         <Clock class="w-4 h-4" aria-hidden="true" />
       </BaseButton>
@@ -100,7 +100,7 @@
         tone="blue"
         title="Preview"
         aria-label="Preview"
-        @click.stop="$emit('preview', file)"
+        @click.stop="onPreview(file)"
       >
         <Eye class="w-4 h-4" aria-hidden="true" />
       </BaseButton>
@@ -109,7 +109,7 @@
         tone="green"
         title="Download"
         aria-label="Download"
-        @click.stop="$emit('download', file)"
+        @click.stop="onDownload(file)"
       >
         <CloudDownload class="w-4 h-4" aria-hidden="true" />
       </BaseButton>
@@ -118,7 +118,7 @@
         tone="red"
         title="Delete"
         aria-label="Delete"
-        @click.stop="$emit('delete', file)"
+        @click.stop="onDelete(file)"
       >
         <Trash2 class="w-4 h-4" aria-hidden="true" />
       </BaseButton>
@@ -130,7 +130,7 @@
   </DataTable>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { Clock, CloudDownload, Eye, FilePlus, Trash2 } from '@lucide/vue'
 import FileIcon from '@/components/common/FileIcon.vue'
@@ -138,32 +138,83 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import { formatFileSize, formatDateSmart, formatDateFull } from '@/utils/formatters'
+import type { FileWithTasks } from '@/composables/usePreprocessingUpdates'
 
-const props = defineProps({
-  files: { type: Array, required: true },
-  selectedFiles: { type: Array, required: true },
-  sortBy: { type: String, default: 'created_at' },
-  sortOrder: { type: String, default: 'desc' },
-  pagination: {
-    type: Object,
-    default: () => ({ page: 1, page_size: 25, total: 0, total_pages: 0, start: 0, end: 0 }),
-  },
+/**
+ * Loose row shape used by the template helpers. DataTable is a generic
+ * component (`T extends Record<string, any>`) and vue-tsc types its slot
+ * `row` as the constraint rather than the inferred `T`, so the helpers accept
+ * this minimal structural type (which `Record<string, any>` is assignable to)
+ * instead of `FileWithTasks`.
+ */
+interface FileRow {
+  file_type?: string | null
+  file_name?: string | null
+  file_size?: number | null
+  created_at?: string
+  preprocessing_strategy?: string | null
+  _status?: string
+}
+
+interface Pagination {
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+  start: number
+  end: number
+}
+
+interface Props {
+  files: FileWithTasks[]
+  selectedFiles: number[]
+  sortBy?: string
+  sortOrder?: string
+  pagination?: Pagination
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  sortBy: 'created_at',
+  sortOrder: 'desc',
+  pagination: () => ({ page: 1, page_size: 25, total: 0, total_pages: 0, start: 0, end: 0 }),
 })
 
-defineEmits([
-  'toggle-selection',
-  'toggle-all',
-  'preview',
-  'download',
-  'delete',
-  'configure-import',
-  'page-change',
-  'page-size-change',
-  'sort',
-  'view-history',
-  'select-all-files',
-  'clear-selection',
-])
+const emit = defineEmits<{
+  'toggle-selection': [fileId: number]
+  'toggle-all': []
+  preview: [file: FileWithTasks]
+  download: [file: FileWithTasks]
+  delete: [file: FileWithTasks]
+  'configure-import': [file: FileWithTasks]
+  'page-change': [page: number]
+  'page-size-change': [size: number]
+  sort: [field: string]
+  'view-history': [file: FileWithTasks]
+  'select-all-files': []
+  'clear-selection': []
+}>()
+
+// Bridge handlers: DataTable emits loose slot/row types (its generic `T` is
+// widened to `Record<string, any>` by vue-tsc), so we cast back to the concrete
+// types our emits expect. Runtime values are always FileWithTasks / number.
+const onToggleSelection = (key: string | number): void => {
+  emit('toggle-selection', Number(key))
+}
+const onPreview = (file: FileRow): void => {
+  emit('preview', file as unknown as FileWithTasks)
+}
+const onDownload = (file: FileRow): void => {
+  emit('download', file as unknown as FileWithTasks)
+}
+const onDelete = (file: FileRow): void => {
+  emit('delete', file as unknown as FileWithTasks)
+}
+const onConfigureImport = (file: FileRow): void => {
+  emit('configure-import', file as unknown as FileWithTasks)
+}
+const onViewHistory = (file: FileRow): void => {
+  emit('view-history', file as unknown as FileWithTasks)
+}
 
 const allSelected = computed(
   () => props.files.length > 0 && props.selectedFiles.length === props.files.length,
@@ -177,7 +228,7 @@ const columns = [
   { key: 'status', label: 'Status', sortable: true },
 ]
 
-function isCSVXLSX(file) {
+function isCSVXLSX(file: FileRow): boolean {
   if (!file || !file.file_type) return false
   return (
     file.file_type === 'text/csv' ||
@@ -186,8 +237,8 @@ function isCSVXLSX(file) {
   )
 }
 
-function getFileTypeLabel(mimeType) {
-  const typeMap = {
+function getFileTypeLabel(mimeType: string | null | undefined): string {
+  const typeMap: Record<string, string> = {
     'application/pdf': 'PDF',
     'image/jpeg': 'JPEG',
     'image/png': 'PNG',
@@ -197,12 +248,12 @@ function getFileTypeLabel(mimeType) {
     'application/vnd.ms-excel': 'Excel',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word',
   }
-  return typeMap[mimeType] || 'File'
+  return (mimeType && typeMap[mimeType]) || 'File'
 }
 
-function getStatusLabel(file) {
+function getStatusLabel(file: FileRow): string {
   const status = file._status || 'not_preprocessed'
-  const labelMap = {
+  const labelMap: Record<string, string> = {
     completed: 'Processed',
     processing: 'Processing',
     failed: 'Failed',

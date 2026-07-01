@@ -203,7 +203,7 @@
                 :value="pendingOptions[field.id] || ''"
                 class="flex-1 min-w-[120px] bg-transparent border-0 border-b border-dashed border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-0 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 transition-colors py-0.5"
                 placeholder="add option — press Enter"
-                @input="setPendingOption(field.id, $event.target.value)"
+                @input="setPendingOption(field.id, ($event.target as HTMLInputElement).value)"
                 @keydown="onOptionKeydown(field, $event)"
                 @blur="commitOption(field)"
               />
@@ -253,24 +253,46 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { ChevronDown, GripVertical, Info, Lock, Plus, ShieldAlert, Trash2, X } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { selectClass } from '@/utils/formStyles'
+import type { SchemaDefinition, SchemaProperty } from '@/types'
 
-const props = defineProps({
-  schema: {
-    type: Object,
-    required: true,
-  },
-})
+interface Props {
+  schema: SchemaDefinition
+}
 
-const emit = defineEmits(['update:schema'])
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  'update:schema': [schema: SchemaDefinition]
+}>()
+
+// Field types used in the simple editor
+interface SimpleField {
+  id: string
+  kind: 'simple'
+  name: string
+  type: string
+  description: string
+  options: string[]
+}
+
+interface ReadonlyField {
+  id: string
+  kind: 'readonly'
+  name: string
+  description: string
+  rawSchema: SchemaProperty
+}
+
+type Field = SimpleField | ReadonlyField
 
 // Internal field storage with unique IDs
-const fields = ref([])
+const fields = ref<Field[]>([])
 const draggingIndex = ref(-1)
 const dragOverIndex = ref(-1)
 const isInternalChange = ref(false)
@@ -279,14 +301,14 @@ const isInternalChange = ref(false)
 // preserve root-level keys (e.g. `required`, `additionalProperties`) and any
 // read-only properties verbatim, instead of rebuilding the whole schema from
 // only the editable fields (which would silently drop advanced features).
-const originalSchema = ref(null)
+const originalSchema = ref<SchemaDefinition | null>(null)
 
 // Generate unique ID
 let fieldIdCounter = 0
-const generateId = () => `field_${Date.now()}_${fieldIdCounter++}`
+const generateId = (): string => `field_${Date.now()}_${fieldIdCounter++}`
 
 // Type mapping: Simple type → JSON Schema type + format
-const typeMapping = {
+const typeMapping: Record<string, { type: string; format?: string }> = {
   String: { type: 'string' },
   Text: { type: 'string' },
   Number: { type: 'number' },
@@ -305,12 +327,12 @@ const typeMapping = {
 const SIMPLE_TYPES = ['string', 'number', 'integer', 'boolean']
 const KNOWN_FORMATS = ['date', 'time', 'date-time', 'email']
 
-const isSimpleEditable = (propSchema) => {
+const isSimpleEditable = (propSchema: SchemaProperty): boolean => {
   if (!propSchema || !SIMPLE_TYPES.includes(propSchema.type)) return false
   // `enum` is allowed only on string fields — it represents the
   // pre-defined options feature (e.g. side: left/right/center).
   const isStringWithEnum = propSchema.type === 'string' && Array.isArray(propSchema.enum)
-  const allowedKeys = new Set([
+  const allowedKeys = new Set<string>([
     'type',
     'title',
     'description',
@@ -323,12 +345,13 @@ const isSimpleEditable = (propSchema) => {
   // A string field with a format (date, email, …) and an enum is ambiguous —
   // treat it as advanced so we don't silently drop the format.
   if (isStringWithEnum && propSchema.format) return false
-  if (propSchema.format && !KNOWN_FORMATS.includes(propSchema.format)) return false
+  const format = propSchema.format as string
+  if (format && !KNOWN_FORMATS.includes(format)) return false
   return true
 }
 
 // Human-readable label for a read-only property's type
-const readonlyTypeLabel = (field) => {
+const readonlyTypeLabel = (field: ReadonlyField): string => {
   const t = field.rawSchema?.type
   if (t === 'object') return 'Group'
   if (t === 'array') return 'List'
@@ -342,8 +365,8 @@ const readonlyTypeLabel = (field) => {
 const hasReadonlyFields = computed(() => fields.value.some((f) => f.kind === 'readonly'))
 
 // Convert JSON Schema → Simple fields
-const parseSchema = (schema) => {
-  const parsedFields = []
+const parseSchema = (schema: SchemaDefinition): Field[] => {
+  const parsedFields: Field[] = []
   const props = schema?.properties || {}
 
   for (const [name, propSchema] of Object.entries(props)) {
@@ -372,7 +395,7 @@ const parseSchema = (schema) => {
         type: matchedType,
         description: propSchema.description || '',
         // Pre-defined options (string enum). Stored as a list of strings.
-        options: Array.isArray(propSchema.enum) ? [...propSchema.enum] : [],
+        options: Array.isArray(propSchema.enum) ? [...(propSchema.enum as string[])] : [],
       })
     } else {
       // Nested objects/arrays and anything the simple editor can't represent
@@ -394,13 +417,13 @@ const parseSchema = (schema) => {
 // Rebuilds editable fields from scratch but preserves read-only (advanced)
 // properties and root-level keys verbatim, so editing simple fields never
 // drops nested structures, `required`, etc.
-const buildSchema = () => {
-  const schema = originalSchema.value
+const buildSchema = (): SchemaDefinition => {
+  const schema: SchemaDefinition = originalSchema.value
     ? JSON.parse(JSON.stringify(originalSchema.value))
     : { type: 'object' }
   if (!schema.type) schema.type = 'object'
 
-  const properties = {}
+  const properties: Record<string, SchemaProperty> = {}
 
   for (const field of fields.value) {
     if (!field.name || !field.name.trim()) continue
@@ -411,7 +434,7 @@ const buildSchema = () => {
     }
 
     const mapping = typeMapping[field.type] || typeMapping.String
-    const propSchema = {
+    const propSchema: SchemaProperty = {
       type: mapping.type,
       title: field.name
         .trim()
@@ -476,7 +499,7 @@ const addField = () => {
 }
 
 // Remove field
-const removeField = (id) => {
+const removeField = (id: string) => {
   fields.value = fields.value.filter((f) => f.id !== id)
   emitChange()
 }
@@ -484,13 +507,13 @@ const removeField = (id) => {
 // --- Pre-defined options (string enum) ---
 // In-flight text for the "add option" input, keyed by field id so each
 // field tracks its own draft independently.
-const pendingOptions = ref({})
+const pendingOptions = ref<Record<string, string>>({})
 
-const setPendingOption = (fieldId, value) => {
+const setPendingOption = (fieldId: string, value: string) => {
   pendingOptions.value[fieldId] = value
 }
 
-const commitOption = (field) => {
+const commitOption = (field: SimpleField) => {
   const raw = (pendingOptions.value[field.id] || '').trim()
   pendingOptions.value[field.id] = ''
   if (!raw) return
@@ -501,13 +524,13 @@ const commitOption = (field) => {
   }
 }
 
-const removeOption = (field, index) => {
+const removeOption = (field: SimpleField, index: number) => {
   if (!Array.isArray(field.options)) return
   field.options.splice(index, 1)
   emitChange()
 }
 
-const onOptionKeydown = (field, e) => {
+const onOptionKeydown = (field: SimpleField, e: KeyboardEvent) => {
   if (e.key === 'Enter' || e.key === ',') {
     e.preventDefault()
     commitOption(field)
@@ -524,23 +547,30 @@ const onOptionKeydown = (field, e) => {
 }
 
 // Drag and Drop handlers
-const handleDragStart = (e) => {
-  draggingIndex.value = parseInt(e.target.dataset.index)
-  e.target.style.opacity = '0.5'
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', draggingIndex.value)
+const handleDragStart = (e: DragEvent) => {
+  const target = e.target as HTMLElement
+  draggingIndex.value = parseInt(target.dataset.index || '0')
+  target.style.opacity = '0.5'
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(draggingIndex.value))
+  }
 }
 
-const handleDragEnd = (e) => {
-  e.target.style.opacity = '1'
+const handleDragEnd = (e: DragEvent) => {
+  const target = e.target as HTMLElement
+  target.style.opacity = '1'
   draggingIndex.value = -1
   dragOverIndex.value = -1
 }
 
-const handleDragOver = (e) => {
+const handleDragOver = (e: DragEvent) => {
   e.preventDefault()
-  e.dataTransfer.dropEffect = 'move'
-  const currentIndex = parseInt(e.currentTarget.dataset.index)
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+  const currentTarget = e.currentTarget as HTMLElement
+  const currentIndex = parseInt(currentTarget.dataset.index || '0')
   if (currentIndex !== draggingIndex.value) {
     dragOverIndex.value = currentIndex
   }
@@ -550,10 +580,11 @@ const handleDragLeave = () => {
   dragOverIndex.value = -1
 }
 
-const handleDrop = (e) => {
+const handleDrop = (e: DragEvent) => {
   e.preventDefault()
   const fromIndex = draggingIndex.value
-  const toIndex = parseInt(e.currentTarget.dataset.index)
+  const currentTarget = e.currentTarget as HTMLElement
+  const toIndex = parseInt(currentTarget.dataset.index || '0')
 
   if (fromIndex !== toIndex && fromIndex >= 0 && toIndex >= 0) {
     const newFields = [...fields.value]

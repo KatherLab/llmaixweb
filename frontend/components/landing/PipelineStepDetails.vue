@@ -317,28 +317,30 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { Component } from 'vue'
 import { FileText, MessageSquare, Database, Zap, ChevronRight, X } from '@lucide/vue'
 import CheckIcon from '@/components/landing/CheckIcon.vue'
 
-defineProps({
-  step: {
-    type: Number,
-    default: null,
-  },
+interface Props {
+  step?: number | null
+}
+
+withDefaults(defineProps<Props>(), {
+  step: null,
 })
 
-defineEmits(['close'])
+defineEmits<{ close: [] }>()
 
 // Step 1 data
-const uploadFeatures = [
+const uploadFeatures: string[] = [
   'Batch upload multiple files',
   'Automatic format detection',
   'SHA-256 duplicate detection',
 ]
 
 // Step 2 data — matches the README's four-engine breakdown
-const ocrMethods = [
+const ocrMethods: { name: string; description: string }[] = [
   {
     name: 'Quick (Local OCR)',
     description:
@@ -356,7 +358,7 @@ const ocrMethods = [
   },
 ]
 
-const documentParsers = [
+const documentParsers: { name: string; description: string }[] = [
   {
     name: 'Docling',
     description:
@@ -369,26 +371,26 @@ const documentParsers = [
 ]
 
 // Step 3 data
-const documentFeatures = [
+const documentFeatures: string[] = [
   'Group documents into reusable sets',
   'Filter and search by metadata',
   'Preview extracted text',
   'Track OCR engine and origin per document',
 ]
 
-const selectionOptions = [
+const selectionOptions: { name: string; description: string }[] = [
   { name: 'Document Sets', description: 'Run a trial against an entire group at once' },
   { name: 'Individual Selection', description: 'Hand-pick specific documents for a trial' },
 ]
 
 // Step 4 data
-const schemaTreeFields = [
+const schemaTreeFields: { name: string; type: string; typeClass: string }[] = [
   { name: 'patient_id', type: 'string', typeClass: 'text-yellow-600 dark:text-yellow-400' },
   { name: 'first_name', type: 'string', typeClass: 'text-yellow-600 dark:text-yellow-400' },
   { name: 'diagnosis', type: 'array', typeClass: 'text-purple-600 dark:text-purple-400' },
 ]
 
-const schemaFeatures = [
+const schemaFeatures: string[] = [
   'Nested objects and arrays',
   'All JSON data types',
   'Import / export JSON schemas',
@@ -396,7 +398,12 @@ const schemaFeatures = [
 ]
 
 // Step 5 data
-const extractionFlow = [
+const extractionFlow: {
+  label: string
+  bg: string
+  icon: Component | null
+  iconClass: string
+}[] = [
   {
     label: 'Document',
     bg: 'bg-blue-100 dark:bg-blue-500/20',
@@ -429,20 +436,20 @@ const extractionFlow = [
   },
 ]
 
-const flowArrows = [
+const flowArrows: { line: string; arrowClass: string }[] = [
   { line: 'bg-gradient-to-r from-blue-500 to-blue-500', arrowClass: 'text-blue-500' },
   { line: 'bg-gradient-to-r from-blue-500 to-purple-500', arrowClass: 'text-purple-500' },
   { line: 'bg-gradient-to-r from-purple-500 to-emerald-500', arrowClass: 'text-emerald-500' },
   { line: 'bg-gradient-to-r from-emerald-500 to-teal-500', arrowClass: 'text-teal-500' },
 ]
 
-const llmProviders = [
+const llmProviders: { name: string; description: string }[] = [
   { name: 'OpenAI API', description: 'GPT-4o and other OpenAI models' },
   { name: 'Local Models', description: 'Ollama, llama.cpp, vLLM — fully offline' },
   { name: 'Custom Endpoints', description: 'Any OpenAI-compatible API gateway' },
 ]
 
-const trialConfig = [
+const trialConfig: string[] = [
   'Set temperature and token limits',
   'Run across full document sets',
   'Compare prompts, schemas, and models',
@@ -450,7 +457,7 @@ const trialConfig = [
 ]
 
 // Step 6 data
-const evaluationProcess = [
+const evaluationProcess: { step: number; title: string; description: string }[] = [
   { step: 1, title: 'Upload Ground Truth', description: 'Provide a CSV/XLSX of validated values' },
   {
     step: 2,

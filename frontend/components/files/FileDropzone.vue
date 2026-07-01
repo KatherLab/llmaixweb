@@ -37,29 +37,37 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { UploadCloud } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
-defineProps({
-  compact: { type: Boolean, default: false },
-})
-
-const emit = defineEmits(['drop', 'select'])
-
-// Synced with the parent so empty-state visibility guards keep working.
-const dragging = defineModel('dragging', { type: Boolean, default: false })
-
-const inputRef = ref(null)
-
-const onDrop = (e) => {
-  dragging.value = false
-  emit('drop', Array.from(e.dataTransfer.files))
+interface Props {
+  compact?: boolean
 }
 
-const onSelect = (e) => {
-  emit('select', Array.from(e.target.files))
-  e.target.value = null
+withDefaults(defineProps<Props>(), {
+  compact: false,
+})
+
+const emit = defineEmits<{
+  drop: [files: File[]]
+  select: [files: File[]]
+}>()
+
+// Synced with the parent so empty-state visibility guards keep working.
+const dragging = defineModel<boolean>('dragging', { default: false })
+
+const inputRef = ref<HTMLInputElement | null>(null)
+
+const onDrop = (e: DragEvent) => {
+  dragging.value = false
+  emit('drop', Array.from(e.dataTransfer?.files ?? []))
+}
+
+const onSelect = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  emit('select', Array.from(target.files ?? []))
+  target.value = ''
 }
 </script>

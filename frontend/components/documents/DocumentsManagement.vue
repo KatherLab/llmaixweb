@@ -176,7 +176,7 @@
     <!-- Document Viewer Modal (moved outside tabs to be always available) -->
     <DocumentViewer
       :open="showDocumentViewer"
-      :document="viewingDocument"
+      :document="viewingDocument!"
       :project-id="projectId"
       @close="showDocumentViewer = false"
       @reprocess="reprocessDocument"
@@ -184,7 +184,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { FileText, Search } from '@lucide/vue'
@@ -211,13 +211,13 @@ import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
 import DocumentsFilters from './DocumentsFilters.vue'
 import DocumentsTable from './DocumentsTable.vue'
 import { extractErrorMessage } from '@/utils/errors'
+import type { DocumentListItem, DocumentSetCreate } from '@/types'
 
-const props = defineProps({
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-})
+interface Props {
+  projectId: string | number
+}
+
+const props = defineProps<Props>()
 
 const route = useRoute()
 const router = useRouter()
@@ -225,26 +225,26 @@ const toast = useToast()
 const { downloadFromApi } = useFileDownload()
 
 // State
-const documents = ref([]) // All documents for groups modal
-const allDocumentsLoaded = ref(false) // Track if we've fetched all documents
-const isLoading = ref(true)
-const selectedDocuments = ref([])
-const viewingDocument = ref(null)
-const showDocumentViewer = ref(false)
-const showBatchActions = ref(false)
-const batchAction = ref('')
-const itemsPerPage = ref(50)
-const totalCount = ref(0) // total rows on the server (after filters) — must be declared before usePagination (its getTotal reads it eagerly during setup)
+const documents = ref<DocumentListItem[]>([]) // All documents for groups modal
+const allDocumentsLoaded = ref<boolean>(false) // Track if we've fetched all documents
+const isLoading = ref<boolean>(true)
+const selectedDocuments = ref<number[]>([])
+const viewingDocument = ref<DocumentListItem | null>(null)
+const showDocumentViewer = ref<boolean>(false)
+const showBatchActions = ref<boolean>(false)
+const batchAction = ref<string>('')
+const itemsPerPage = ref<number>(50)
+const totalCount = ref<number>(0) // total rows on the server (after filters) — must be declared before usePagination (its getTotal reads it eagerly during setup)
 const pagination = usePagination({
   getTotal: () => totalCount.value,
   pageSize: itemsPerPage.value,
 })
 const currentPage = pagination.currentPage
-const activeTab = ref('documents')
-const showCreateGroupModal = ref(false)
-const createGroupWithDocs = ref([]) // Documents to pre-select when creating group
-const serverItems = ref([]) // current page rows from the server
-const documentGroupsCount = ref(0) // count of document groups
+const activeTab = ref<string>('documents')
+const showCreateGroupModal = ref<boolean>(false)
+const createGroupWithDocs = ref<number[]>([]) // Documents to pre-select when creating group
+const serverItems = ref<DocumentListItem[]>([]) // current page rows from the server
+const documentGroupsCount = ref<number>(0) // count of document groups
 
 // Tab config for BaseTabGroup (badges rendered via #tab scoped slot to keep StatusBadge styling)
 const tabs = computed(() => [
@@ -253,7 +253,14 @@ const tabs = computed(() => [
 ])
 
 // Filters
-const filters = ref({
+interface FilterState {
+  search: string
+  dateRange: string
+  ocrEngine: string
+  includeArchived: boolean
+}
+
+const filters = ref<FilterState>({
   search: '',
   dateRange: '',
   ocrEngine: '',
@@ -261,30 +268,30 @@ const filters = ref({
 })
 
 // Custom date range state
-const customDateFrom = ref('')
-const customDateTo = ref('')
+const customDateFrom = ref<string>('')
+const customDateTo = ref<string>('')
 
 // Track if we've ever loaded documents (for filter UX)
-const hasLoadedDocuments = ref(false)
+const hasLoadedDocuments = ref<boolean>(false)
 
 // Check if any filters are active
-const hasActiveFilters = computed(() => {
+const hasActiveFilters = computed<boolean>(() => {
   return (
-    filters.value.search ||
-    filters.value.dateRange ||
-    filters.value.ocrEngine ||
-    (filters.value.dateRange === 'custom' && customDateFrom.value) ||
+    !!filters.value.search ||
+    !!filters.value.dateRange ||
+    !!filters.value.ocrEngine ||
+    (filters.value.dateRange === 'custom' && !!customDateFrom.value) ||
     filters.value.includeArchived
   )
 })
 
 // Compute date bounds for date range filter
-const computeDateBounds = (range) => {
+const computeDateBounds = (range: string) => {
   return getDateRangeBounds(range, customDateFrom.value, customDateTo.value)
 }
 
 // Handle date range change
-const handleDateRangeChange = () => {
+const handleDateRangeChange = (): void => {
   if (filters.value.dateRange === 'custom') {
     // Don't fetch yet - wait for user to select dates
     return
@@ -294,7 +301,7 @@ const handleDateRangeChange = () => {
 }
 
 // Apply custom date range
-const applyCustomDateRange = () => {
+const applyCustomDateRange = (): void => {
   currentPage.value = 1
   fetchDocuments()
 }
@@ -312,23 +319,23 @@ const tablePagination = computed(() => ({
   total_pages: totalPages.value,
 }))
 
-const handlePageChange = (page) => {
+const handlePageChange = (page: number): void => {
   currentPage.value = page
 }
 
-const handlePageSizeChange = (size) => {
+const handlePageSizeChange = (size: number): void => {
   itemsPerPage.value = size
   currentPage.value = 1
 }
 
 // Handle highlight query parameter (from preprocessing history "Go to Document" navigation)
-const handleHighlight = async () => {
+const handleHighlight = async (): Promise<void> => {
   const highlightId = route.query.highlight
   if (!highlightId) return
 
   try {
     // Fetch the specific document by ID
-    const { data } = await documentsApi.get(props.projectId, highlightId)
+    const { data } = await documentsApi.get(props.projectId, highlightId as string | number)
     if (data) {
       // Open the document viewer
       viewingDocument.value = data
@@ -356,7 +363,7 @@ watch(
 )
 
 // Methods
-const fetchDocuments = async () => {
+const fetchDocuments = async (): Promise<void> => {
   isLoading.value = true
   try {
     const { date_from, date_to } = computeDateBounds(filters.value.dateRange)
@@ -395,7 +402,7 @@ const fetchDocuments = async () => {
   }
 }
 
-const toggleDocumentSelection = (docId) => {
+const toggleDocumentSelection = (docId: number): void => {
   const index = selectedDocuments.value.indexOf(docId)
   if (index > -1) {
     selectedDocuments.value.splice(index, 1)
@@ -404,7 +411,7 @@ const toggleDocumentSelection = (docId) => {
   }
 }
 
-const toggleSelectAll = () => {
+const toggleSelectAll = (): void => {
   if (areAllDocumentsSelected.value) {
     // Deselect all - remove current page items from selection
     const currentPageIds = serverItems.value.map((doc) => doc.id)
@@ -417,19 +424,19 @@ const toggleSelectAll = () => {
   }
 }
 
-const areAllDocumentsSelected = computed(() => {
+const areAllDocumentsSelected = computed<boolean>(() => {
   return (
     serverItems.value.length > 0 &&
     serverItems.value.every((doc) => selectedDocuments.value.includes(doc.id))
   )
 })
 
-const viewDocument = (doc) => {
+const viewDocument = (doc: DocumentListItem): void => {
   viewingDocument.value = doc
   showDocumentViewer.value = true
 }
 
-const downloadDocument = async (doc) => {
+const downloadDocument = async (doc: DocumentListItem): Promise<void> => {
   try {
     const fileId = doc.preprocessed_file?.id || doc.original_file?.id
     if (!fileId) {
@@ -447,7 +454,7 @@ const downloadDocument = async (doc) => {
   }
 }
 
-const performBatchAction = (action) => {
+const performBatchAction = (action: string): void => {
   if (selectedDocuments.value.length === 0) {
     toast.warning('Please select documents first')
     return
@@ -457,7 +464,7 @@ const performBatchAction = (action) => {
   showBatchActions.value = true
 }
 
-const createGroupFromSelection = () => {
+const createGroupFromSelection = (): void => {
   if (selectedDocuments.value.length === 0) {
     toast.warning('Please select documents first')
     return
@@ -466,12 +473,12 @@ const createGroupFromSelection = () => {
   showCreateGroupModal.value = true
 }
 
-const handleCreateGroupModalClose = () => {
+const handleCreateGroupModalClose = (): void => {
   showCreateGroupModal.value = false
   createGroupWithDocs.value = []
 }
 
-const handleCreateGroupModalSave = async (groupData) => {
+const handleCreateGroupModalSave = async (groupData: DocumentSetCreate): Promise<void> => {
   try {
     await documentSetsApi.create(props.projectId, groupData)
     toast.success('Document group created successfully')
@@ -485,20 +492,20 @@ const handleCreateGroupModalSave = async (groupData) => {
 }
 
 // Fetch all documents for the CreateDocumentGroupModal
-const fetchAllDocuments = async () => {
+const fetchAllDocuments = async (): Promise<void> => {
   if (allDocumentsLoaded.value) {
     return
   }
   try {
     const PAGE_SIZE = 500
     let offset = 0
-    let allDocs = []
+    let allDocs: DocumentListItem[] = []
     let hasMore = true
 
     while (hasMore) {
       const { data } = await documentsApi.list(props.projectId, { limit: PAGE_SIZE, offset })
       allDocs = allDocs.concat(data.items || [])
-      hasMore = data.items && data.items.length === PAGE_SIZE
+      hasMore = !!data.items && data.items.length === PAGE_SIZE
       offset += PAGE_SIZE
     }
 
@@ -510,12 +517,12 @@ const fetchAllDocuments = async () => {
   }
 }
 
-const handleDocumentsDeleted = (deletedIds) => {
+const handleDocumentsDeleted = (deletedIds: number[]): void => {
   // Remove successfully deleted documents from selection
   selectedDocuments.value = selectedDocuments.value.filter((id) => !deletedIds.includes(id))
 }
 
-const handleBatchComplete = () => {
+const handleBatchComplete = (): void => {
   // Clear selection and close modal - fetchDocuments will be called separately
   selectedDocuments.value = []
   showBatchActions.value = false
@@ -523,13 +530,13 @@ const handleBatchComplete = () => {
   fetchDocuments()
 }
 
-const handleGroupsRefresh = async () => {
+const handleGroupsRefresh = async (): Promise<void> => {
   // Refresh both groups and documents (since documents may have been deleted too)
   await fetchDocumentGroupsCount()
   await fetchDocuments()
 }
 
-const reprocessDocument = async (doc) => {
+const reprocessDocument = async (doc: Partial<DocumentListItem>): Promise<void> => {
   try {
     const fileId = doc.original_file?.id
     if (!fileId) {
@@ -554,7 +561,7 @@ const reprocessDocument = async (doc) => {
   }
 }
 
-const clearFilters = () => {
+const clearFilters = (): void => {
   filters.value = {
     search: '',
     dateRange: '',
@@ -567,28 +574,28 @@ const clearFilters = () => {
   fetchDocuments()
 }
 
-const clearSearchFilter = () => {
+const clearSearchFilter = (): void => {
   filters.value.search = ''
   currentPage.value = 1
   fetchDocuments()
 }
 
-const clearOcrEngineFilter = () => {
+const clearOcrEngineFilter = (): void => {
   filters.value.ocrEngine = ''
   fetchDocuments()
 }
 
-const clearDateRangeFilter = () => {
+const clearDateRangeFilter = (): void => {
   filters.value.dateRange = ''
   fetchDocuments()
 }
 
-const clearArchivedFilter = () => {
+const clearArchivedFilter = (): void => {
   filters.value.includeArchived = false
   fetchDocuments()
 }
 
-const clearCustomDateRange = () => {
+const clearCustomDateRange = (): void => {
   customDateFrom.value = ''
   customDateTo.value = ''
   filters.value.dateRange = ''
@@ -596,7 +603,7 @@ const clearCustomDateRange = () => {
 }
 
 // Dispatch individual filter-chip clears to the original handlers (preserves per-filter behavior)
-const handleClearFilter = (field) => {
+const handleClearFilter = (field: string): void => {
   if (field === 'search') clearSearchFilter()
   else if (field === 'ocrEngine') clearOcrEngineFilter()
   else if (field === 'dateRange') clearDateRangeFilter()
@@ -634,7 +641,7 @@ watch(
 )
 
 // Fetch document groups count
-const fetchDocumentGroupsCount = async () => {
+const fetchDocumentGroupsCount = async (): Promise<void> => {
   try {
     const { data } = await documentSetsApi.list(props.projectId, {
       include_auto_generated: true,

@@ -51,27 +51,39 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { Trash2 } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { inputClass, textareaClass } from '@/utils/formStyles'
+import type { ProjectUpdate } from '@/types'
 
-const props = defineProps({
-  open: Boolean,
-  initialName: { type: String, default: '' },
-  initialDescription: { type: String, default: '' },
-  isSaving: Boolean,
+interface Props {
+  open: boolean
+  initialName?: string
+  initialDescription?: string
+  isSaving?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  initialName: '',
+  initialDescription: '',
+  isSaving: false,
 })
-const emit = defineEmits(['save', 'close', 'delete'])
+
+const emit = defineEmits<{
+  save: [payload: ProjectUpdate]
+  close: []
+  delete: []
+}>()
 
 const name = ref(props.initialName || '')
 const description = ref(props.initialDescription || '')
 
 // Sync props changes
 watch(
-  () => [props.initialName, props.initialDescription],
+  () => [props.initialName, props.initialDescription] as const,
   ([newName, newDesc]) => {
     name.value = newName || ''
     description.value = newDesc || ''
@@ -79,25 +91,25 @@ watch(
 )
 
 // Emit save event with form data
-function onSave() {
+function onSave(): void {
   emit('save', { name: name.value, description: description.value })
 }
 
 // Emit close event
-function emitClose() {
+function emitClose(): void {
   if (!props.isSaving) {
     emit('close')
   }
 }
 
 // Emit delete event
-function onDeleteClick() {
+function onDeleteClick(): void {
   emit('delete')
 }
 
 onMounted(() => {
   if (props.open) {
-    setTimeout(() => document.querySelector('input[autofocus]')?.focus(), 10)
+    setTimeout(() => document.querySelector<HTMLInputElement>('input[autofocus]')?.focus(), 10)
   }
 })
 </script>

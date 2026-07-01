@@ -68,7 +68,12 @@
             :value="m.comparison_method || 'exact'"
             :class="[selectClass, 'ml-auto text-[11px] px-1 py-0.5']"
             :title="getComparisonMethodDescription(m.comparison_method || 'exact')"
-            @change="$emit('update-method', { index: i, method: $event.target.value })"
+            @change="
+              $emit('update-method', {
+                index: i,
+                method: ($event.target as HTMLSelectElement).value,
+              })
+            "
           >
             <option value="exact">exact</option>
             <option value="fuzzy">fuzzy</option>
@@ -119,7 +124,9 @@
                 step="1"
                 :class="[inputClass, 'w-16 px-1 py-0.5']"
                 :value="getOption(m, 'threshold', 85)"
-                @input="setOption(i, 'threshold', Number($event.target.value))"
+                @input="
+                  setOption(i, 'threshold', Number(($event.target as HTMLInputElement).value))
+                "
               />
             </label>
             <span class="text-slate-400 dark:text-slate-500">higher = stricter match</span>
@@ -129,8 +136,10 @@
             >
               <input
                 type="checkbox"
-                :checked="getOption(m, 'allow_partial_match', false)"
-                @change="setOption(i, 'allow_partial_match', $event.target.checked)"
+                :checked="!!getOption(m, 'allow_partial_match', false)"
+                @change="
+                  setOption(i, 'allow_partial_match', ($event.target as HTMLInputElement).checked)
+                "
               />
               allow partial / substring match
             </label>
@@ -144,14 +153,16 @@
                 step="0.001"
                 :class="[inputClass, 'w-16 px-1 py-0.5']"
                 :value="getOption(m, 'tolerance', 0.001)"
-                @input="setOption(i, 'tolerance', Number($event.target.value))"
+                @input="
+                  setOption(i, 'tolerance', Number(($event.target as HTMLInputElement).value))
+                "
               />
             </label>
             <label class="flex items-center gap-1">
               <input
                 type="checkbox"
-                :checked="getOption(m, 'relative', false)"
-                @change="setOption(i, 'relative', $event.target.checked)"
+                :checked="!!getOption(m, 'relative', false)"
+                @change="setOption(i, 'relative', ($event.target as HTMLInputElement).checked)"
               />
               relative (±%)
             </label>
@@ -161,38 +172,59 @@
     </ul>
   </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { ArrowRight, SlidersHorizontal, X } from '@lucide/vue'
 import { getComparisonMethodDescription } from '@/utils/metricsDefinitions'
 import { selectClass, inputClass } from '@/utils/formStyles'
+import type { ComparisonMethod } from '@/types'
 
-const props = defineProps({
-  mappings: { type: Array, default: () => [] },
-  schemaFieldTypes: { type: Object, default: () => ({}) },
-  groundTruthFieldTypes: { type: Object, default: () => ({}) },
+interface MappingItem {
+  schema_id: number
+  schema_field: string
+  ground_truth_field: string
+  field_type: string
+  comparison_method: ComparisonMethod | string
+  comparison_options?: Record<string, unknown> | null
+}
+
+interface Props {
+  mappings?: MappingItem[]
+  schemaFieldTypes?: Record<string, string>
+  groundTruthFieldTypes?: Record<string, string>
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  mappings: () => [],
+  schemaFieldTypes: () => ({}),
+  groundTruthFieldTypes: () => ({}),
 })
-const emit = defineEmits(['remove', 'update-method', 'update-options'])
+
+const emit = defineEmits<{
+  remove: [index: number]
+  'update-method': [payload: { index: number; method: string }]
+  'update-options': [payload: { index: number; options: Record<string, unknown> }]
+}>()
 
 const hoverIdx = ref(-1) // For schema
 const hoverIdx2 = ref(-1) // For GT
-const optionsOpen = ref({}) // { [index]: true }
+const optionsOpen = ref<Record<number, boolean>>({}) // { [index]: true }
 
-function toggleOptions(i) {
+function toggleOptions(i: number) {
   optionsOpen.value = { ...optionsOpen.value, [i]: !optionsOpen.value[i] }
 }
 
-function hasOptions(method) {
+function hasOptions(method: string | undefined): boolean {
   return method === 'fuzzy' || method === 'numeric'
 }
 
-function getOption(mapping, key, fallback) {
+function getOption(mapping: MappingItem, key: string, fallback: unknown): unknown {
   const opts = mapping.comparison_options || {}
   const v = opts[key]
   return v === undefined || v === null || v === '' ? fallback : v
 }
 
-function setOption(index, key, value) {
+function setOption(index: number, key: string, value: unknown) {
   const mapping = props.mappings[index]
   if (!mapping) return
   const options = { ...(mapping.comparison_options || {}) }

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Glassmorphism section card: translucent panel with blur + border.
  *
@@ -6,13 +6,19 @@
  * p-4 sm:p-5 ... backdrop-filter: blur(8px)` wrapper duplicated across
  * ProjectOverview, AdminUserManagement, ProjectDetail, etc.
  */
-defineProps({
+interface Props {
   // Padding scale: 'sm' (p-4 sm:p-5) | 'lg' (p-6 sm:p-8)
-  padding: { type: String, default: 'sm' },
+  padding?: 'sm' | 'lg'
   // Rounded corner scale: 'lg' (rounded-xl) | '3xl' (rounded-3xl)
-  rounded: { type: String, default: 'lg' },
+  rounded?: 'lg' | '3xl'
   // Backdrop blur strength in px (translucent glass effect).
-  blur: { type: [String, Number], default: 8 },
+  blur?: string | number
+}
+
+withDefaults(defineProps<Props>(), {
+  padding: 'sm',
+  rounded: 'lg',
+  blur: 8,
 })
 </script>
 

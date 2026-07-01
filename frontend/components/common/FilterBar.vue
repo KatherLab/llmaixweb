@@ -57,31 +57,53 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { X } from '@lucide/vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import FilterChip from '@/components/common/FilterChip.vue'
 
-const props = defineProps({
+export interface ActiveFilter {
+  key: string
+  label: string
+  color?: string
+}
+
+interface Props {
   // search
-  search: { type: String, default: '' },
-  searchable: { type: Boolean, default: true },
-  searchPlaceholder: { type: String, default: 'Search...' },
+  search?: string
+  searchable?: boolean
+  searchPlaceholder?: string
 
   // count
-  totalCount: { type: Number, default: 0 },
-  showCount: { type: Boolean, default: true },
-  itemLabel: { type: String, default: 'items' },
+  totalCount?: number
+  showCount?: boolean
+  itemLabel?: string
 
   // active filter chips: [{ key, label, color? }]
-  activeFilters: { type: Array, default: () => [] },
+  activeFilters?: ActiveFilter[]
 
   // clear-all button visibility (still only shown when filters active)
-  showClear: { type: Boolean, default: true },
+  showClear?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  search: '',
+  searchable: true,
+  searchPlaceholder: 'Search...',
+  totalCount: 0,
+  showCount: true,
+  itemLabel: 'items',
+  activeFilters: () => [],
+  showClear: true,
 })
 
-defineEmits(['update:search', 'search-input', 'clear-all', 'clear-filter'])
+defineEmits<{
+  (e: 'update:search', value: string): void
+  (e: 'search-input'): void
+  (e: 'clear-all'): void
+  (e: 'clear-filter', key: string): void
+}>()
 
 const hasActiveFilters = computed(() => props.activeFilters.length > 0)
 </script>

@@ -35,32 +35,33 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Info } from '@lucide/vue'
 import Tooltip from '@/components/common/Tooltip.vue'
 import { selectClass, labelClass } from '@/utils/formStyles'
 
-defineProps({
-  availableModels: {
-    type: Array,
-    default: () => [],
+interface StatusDescriptor {
+  type: 'loading' | 'warning' | 'error' | 'success' | 'none'
+  message: string
+}
+
+withDefaults(
+  defineProps<{
+    availableModels?: string[]
+    isLoadingModels?: boolean
+    isTestingConnection?: boolean
+    configStatus?: StatusDescriptor
+  }>(),
+  {
+    availableModels: () => [],
+    isLoadingModels: false,
+    isTestingConnection: false,
+    configStatus: () => ({ type: 'none', message: '' }),
   },
-  isLoadingModels: {
-    type: Boolean,
-    default: false,
-  },
-  isTestingConnection: {
-    type: Boolean,
-    default: false,
-  },
-  configStatus: {
-    type: Object,
-    default: () => ({ type: 'none', message: '' }),
-  },
-})
+)
 
 const modelHelpText =
   'The AI model used for extraction. Models are fetched from your LLM provider (system default or your custom API settings). The list shows raw model IDs from the provider; use the compatibility test to confirm a model can produce structured output matching your schema.'
 
-const model = defineModel({ type: String, default: '' })
+const model = defineModel<string>({ default: '' })
 </script>

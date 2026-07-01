@@ -10,23 +10,22 @@
   />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 
-defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  propertyKey: {
-    type: String,
-    default: '',
-  },
-  advancedMode: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  open: boolean
+  propertyKey?: string
+  advancedMode?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  propertyKey: '',
+  advancedMode: false,
 })
 
-defineEmits(['confirm', 'cancel'])
+defineEmits<{
+  confirm: []
+  cancel: []
+}>()
 </script>

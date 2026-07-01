@@ -51,12 +51,22 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  hasDisplayableOriginalFile: { type: Boolean, default: false },
-  originalPdfUrl: { type: String, default: '' },
-  originalImageUrl: { type: String, default: '' },
-  originalFileType: { type: String, default: null },
-  safeMarkdown: { type: String, default: '' },
+<script setup lang="ts">
+interface Props {
+  hasDisplayableOriginalFile?: boolean
+  originalPdfUrl?: string
+  originalImageUrl?: string
+  // Parent (DocumentViewer) computes 'pdf' | 'image' | 'other' | null; typed as
+  // string here so template `includes(...)` checks pass (runtime null is harmless).
+  originalFileType?: string
+  safeMarkdown?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  hasDisplayableOriginalFile: false,
+  originalPdfUrl: '',
+  originalImageUrl: '',
+  originalFileType: '',
+  safeMarkdown: '',
 })
 </script>

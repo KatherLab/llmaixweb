@@ -10,18 +10,21 @@
           <span class="font-medium">{{ totalSelected }}</span>
           {{ itemLabelSingular }}
           {{ totalSelected !== 1 ? 's' : '' }} selected
-          <span v-if="totalSelected < pagination.total" class="text-blue-600 dark:text-blue-400">
-            out of {{ pagination.total }} total
+          <span
+            v-if="totalSelected < (pagination?.total ?? 0)"
+            class="text-blue-600 dark:text-blue-400"
+          >
+            out of {{ pagination?.total }} total
           </span>
         </p>
         <BaseButton
-          v-if="totalSelected < pagination.total"
+          v-if="totalSelected < (pagination?.total ?? 0)"
           variant="ghost"
           size="sm"
           class="font-medium underline"
           @click="$emit('select-all')"
         >
-          Select all {{ pagination.total }} {{ itemLabel }}
+          Select all {{ pagination?.total }} {{ itemLabel }}
         </BaseButton>
         <BaseButton v-else variant="ghost" size="sm" @click="$emit('clear-selection')">
           Clear selection
@@ -168,7 +171,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts" generic="T extends Record<string, any>">
 import { computed, useSlots } from 'vue'
 import { ChevronDown } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -177,61 +180,99 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import { useTableClasses } from '@/composables/useTableClasses'
 import { computeVisiblePages } from '@/composables/usePagination'
 
-const props = defineProps({
+export interface DataTableColumn {
+  key: string
+  label: string
+  sortable?: boolean
+  align?: 'left' | 'right'
+  width?: string
+}
+
+export interface DataTablePagination {
+  page: number
+  total_pages: number
+  total: number
+  page_size: number
+}
+
+interface Props {
   // [{ key, label, sortable?: boolean, align?: 'left'|'right', width?: string }]
-  columns: { type: Array, required: true },
-  items: { type: Array, required: true },
-  rowKey: { type: String, default: 'id' },
+  columns: DataTableColumn[]
+  items: T[]
+  rowKey?: string
 
   // selection
-  selectable: { type: Boolean, default: false },
-  selectedKeys: { type: Array, default: () => [] },
-  allSelected: { type: Boolean, default: false },
+  selectable?: boolean
+  selectedKeys?: (string | number)[]
+  allSelected?: boolean
 
   // sorting
-  sortBy: { type: String, default: '' },
-  sortOrder: { type: String, default: 'desc' },
+  sortBy?: string
+  sortOrder?: string
 
   // pagination — pass null/omit to hide
-  pagination: { type: Object, default: null },
-  showPageSizeSelector: { type: Boolean, default: true },
-  pageSizeOptions: { type: Array, default: () => [25, 50, 100, 250] },
-  itemLabel: { type: String, default: 'items' },
+  pagination?: DataTablePagination | null
+  showPageSizeSelector?: boolean
+  pageSizeOptions?: number[]
+  itemLabel?: string
 
   // cross-page select-all banner
-  totalSelected: { type: Number, default: 0 },
+  totalSelected?: number
 
   // per-row highlight (e.g. emerald ring for "just notified" rows)
-  highlightedKeys: { type: Array, default: () => [] },
+  highlightedKeys?: (string | number)[]
 
   // optional id prefix for each <tr> (enables scroll-to-row via getElementById)
-  rowIdPrefix: { type: String, default: '' },
+  rowIdPrefix?: string
 
   // make whole rows clickable (emits `row-click` with the row object)
-  rowClickable: { type: Boolean, default: false },
+  rowClickable?: boolean
 
   // expandable rows
-  expandable: { type: Boolean, default: false },
-  expandedKeys: { type: Array, default: () => [] },
+  expandable?: boolean
+  expandedKeys?: (string | number)[]
 
   // presentation
-  density: { type: String, default: 'default' },
-  emptyTitle: { type: String, default: 'No items found' },
-  emptyDescription: { type: String, default: '' },
-  loading: { type: Boolean, default: false },
+  density?: 'default' | 'compact'
+  emptyTitle?: string
+  emptyDescription?: string
+  loading?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  rowKey: 'id',
+  selectable: false,
+  selectedKeys: () => [],
+  allSelected: false,
+  sortBy: '',
+  sortOrder: 'desc',
+  pagination: null,
+  showPageSizeSelector: true,
+  pageSizeOptions: () => [25, 50, 100, 250],
+  itemLabel: 'items',
+  totalSelected: 0,
+  highlightedKeys: () => [],
+  rowIdPrefix: '',
+  rowClickable: false,
+  expandable: false,
+  expandedKeys: () => [],
+  density: 'default',
+  emptyTitle: 'No items found',
+  emptyDescription: '',
+  loading: false,
 })
 
-defineEmits([
-  'sort',
-  'toggle-selection',
-  'toggle-all',
-  'select-all',
-  'clear-selection',
-  'page-change',
-  'page-size-change',
-  'expand',
-  'row-click',
-])
+defineEmits<{
+  (e: 'sort', key: string): void
+  (e: 'toggle-selection', key: string | number): void
+  (e: 'toggle-all'): void
+  (e: 'select-all'): void
+  (e: 'clear-selection'): void
+  (e: 'page-change', page: number): void
+  (e: 'page-size-change', size: number): void
+  (e: 'expand', key: string | number): void
+  (e: 'row-click', row: T): void
+}>()
 
 const slots = useSlots()
 const t = useTableClasses({ density: props.density })
@@ -268,24 +309,24 @@ const itemLabelSingular = computed(() => {
   return label.endsWith('s') ? label.slice(0, -1) : label
 })
 
-function getRowKeyValue(row) {
-  return row?.[props.rowKey]
+function getRowKeyValue(row: T): string | number {
+  return (row?.[props.rowKey] ?? undefined) as string | number
 }
 
-function getRowKey(row) {
+function getRowKey(row: T): string | number {
   const v = getRowKeyValue(row)
   return v !== undefined ? v : JSON.stringify(row)
 }
 
-function isRowSelected(row) {
+function isRowSelected(row: T): boolean {
   return props.selectedKeys.includes(getRowKeyValue(row))
 }
 
-function isRowHighlighted(row) {
+function isRowHighlighted(row: T): boolean {
   return props.highlightedKeys.includes(getRowKeyValue(row))
 }
 
-function isRowExpanded(row) {
+function isRowExpanded(row: T): boolean {
   return props.expandedKeys.includes(getRowKeyValue(row))
 }
 </script>

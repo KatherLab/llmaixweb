@@ -21,40 +21,28 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
-defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  title: {
-    type: String,
-    default: 'Confirm Action',
-  },
-  message: {
-    type: String,
-    default: 'Are you sure you want to perform this action?',
-  },
-  confirmText: {
-    type: String,
-    default: 'Confirm',
-  },
-  cancelText: {
-    type: String,
-    default: 'Cancel',
-  },
-  confirmVariant: {
-    type: String,
-    default: 'danger', // 'danger', 'warning', 'primary'
-  },
-  loading: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  open: boolean
+  title?: string
+  message?: string
+  confirmText?: string
+  cancelText?: string
+  confirmVariant?: 'danger' | 'warning' | 'primary'
+  loading?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  title: 'Confirm Action',
+  message: 'Are you sure you want to perform this action?',
+  confirmText: 'Confirm',
+  cancelText: 'Cancel',
+  confirmVariant: 'danger',
+  loading: false,
 })
 
-const emit = defineEmits(['confirm', 'cancel'])
+const emit = defineEmits<{ (e: 'confirm'): void; (e: 'cancel'): void }>()
 </script>

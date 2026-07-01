@@ -53,10 +53,10 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 
-const maxCompletionTokens = defineModel('maxCompletionTokens', { type: String, default: '' })
-const temperature = defineModel('temperature', { type: String, default: '' })
-const reasoningEffort = defineModel('reasoningEffort', { type: String, default: '' })
+const maxCompletionTokens = defineModel<string>('maxCompletionTokens', { default: '' })
+const temperature = defineModel<string>('temperature', { default: '' })
+const reasoningEffort = defineModel<string>('reasoningEffort', { default: '' })
 </script>

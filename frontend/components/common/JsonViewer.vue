@@ -36,40 +36,45 @@
           v-if="isExpandable(value) && expanded[key]"
           class="json-children ml-3 pl-2 border-l border-slate-200 dark:border-slate-700"
         >
-          <JsonViewer :data="value" :max-depth="maxDepth - 1" />
+          <JsonViewer :data="value as JsonValue" :max-depth="maxDepth - 1" />
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { reactive } from 'vue'
 
-const props = defineProps({
-  data: {
-    type: [Object, Array, String, Number, Boolean],
-    default: null,
-  },
-  maxDepth: {
-    type: Number,
-    default: 3,
-  },
-})
+type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null
 
-const expanded = reactive({})
-
-const isExpandable = (value) => {
-  return value && typeof value === 'object' && props.maxDepth > 0
+interface Props {
+  // Accepts any JSON-shaped value (object, array, primitive, or null).
+  data?: JsonValue
+  maxDepth?: number
 }
 
-const toggleExpanded = (key) => {
-  if (isExpandable(props.data[key])) {
-    expanded[key] = !expanded[key]
+const props = withDefaults(defineProps<Props>(), {
+  data: null,
+  maxDepth: 3,
+})
+
+const expanded = reactive<Record<string, boolean>>({})
+
+const isExpandable = (value: unknown): boolean => {
+  return !!value && typeof value === 'object' && props.maxDepth > 0
+}
+
+const toggleExpanded = (key: string | number): void => {
+  const k = String(key)
+  if (props.data && typeof props.data === 'object' && !Array.isArray(props.data)) {
+    if (isExpandable((props.data as Record<string, unknown>)[k])) {
+      expanded[k] = !expanded[k]
+    }
   }
 }
 
-const formatValue = (value, collapsed = false) => {
+const formatValue = (value: unknown, collapsed = false): string => {
   if (value === null) return 'null'
   if (value === undefined) return 'undefined'
   if (typeof value === 'string') return `"${value}"`

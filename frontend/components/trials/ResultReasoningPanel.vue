@@ -42,19 +42,26 @@
   </div>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { computed, type PropType } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
-import { renderMarkdown } from '@/utils/markdown.js'
+import { renderMarkdown } from '@/utils/markdown'
+
+interface AdditionalContent {
+  reasoning_content?: string
+  usage?: Record<string, unknown>
+  finish_reason?: string
+  [key: string]: unknown
+}
 
 const props = defineProps({
   reasoningContent: {
-    type: String,
+    type: [String, null] as PropType<string | null>,
     default: '',
   },
   additionalContent: {
-    type: Object,
+    type: Object as PropType<AdditionalContent | null>,
     default: null,
   },
   show: {
@@ -63,7 +70,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['toggle'])
+defineEmits<{ toggle: [] }>()
 
 // Count of hidden metadata sections, surfaced as a badge on the collapsed
 // toggle so users know there's content worth expanding.

@@ -148,7 +148,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from '@/composables/useToast'
 import { Users } from '@lucide/vue'
@@ -165,37 +165,40 @@ import GlassCard from '@/components/common/GlassCard.vue'
 import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import type { UserResponse, InvitationResponse } from '@/types'
 
 const toast = useToast()
 
-const currentUserId = ref(null)
+const currentUserId = ref<number | null>(null)
 
-const users = ref([])
-const loading = ref(true)
-const loadUsersError = ref(null)
-const userSearch = ref('')
+const users = ref<UserResponse[]>([])
+const loading = ref<boolean>(true)
+const loadUsersError = ref<string | null>(null)
+const userSearch = ref<string>('')
 
-const invitations = ref([])
-const loadingInvitations = ref(true)
-const loadInvitationsError = ref(null)
-const invitationSearch = ref('')
-const showUsedInvitations = ref(false)
+const invitations = ref<InvitationResponse[]>([])
+const loadingInvitations = ref<boolean>(true)
+const loadInvitationsError = ref<string | null>(null)
+const invitationSearch = ref<string>('')
+const showUsedInvitations = ref<boolean>(false)
 
 // --- Invite modal ---
-const showInviteModal = ref(false)
+const showInviteModal = ref<boolean>(false)
 
 // --- Edit modal ---
-const editUser = ref(null)
+const editUser = ref<UserResponse | null>(null)
 
 // --- Delete state (shared by user + invitation delete) ---
-const deleteUserModal = ref(false)
-const userToDelete = ref(null)
-const deleteInvitationModal = ref(false)
-const invitationToDelete = ref(null)
-const isProcessingDelete = ref(false)
+const deleteUserModal = ref<boolean>(false)
+const userToDelete = ref<UserResponse | null>(null)
+const deleteInvitationModal = ref<boolean>(false)
+const invitationToDelete = ref<InvitationResponse | null>(null)
+const isProcessingDelete = ref<boolean>(false)
 
-const activeInvitations = computed(() => invitations.value.filter((inv) => !inv.is_used).length)
-const filteredInvitations = computed(() => {
+const activeInvitations = computed<number>(
+  () => invitations.value.filter((inv) => !inv.is_used).length,
+)
+const filteredInvitations = computed<InvitationResponse[]>(() => {
   let filtered = [...invitations.value]
   if (!showUsedInvitations.value) {
     filtered = filtered.filter((inv) => !inv.is_used)
@@ -208,12 +211,12 @@ const filteredInvitations = computed(() => {
   })
 })
 
-const deleteUserMessage = computed(() => {
+const deleteUserMessage = computed<string>(() => {
   if (!userToDelete.value) return ''
   return `This will permanently delete the user account and all associated data, including all projects owned by this user (files, documents, schemas, prompts, trials, evaluations) and uploaded files removed from storage.\n\nAre you sure you want to delete this user?\n${userToDelete.value.full_name} (${userToDelete.value.email})`
 })
 
-const deleteInvitationMessage = computed(() => {
+const deleteInvitationMessage = computed<string>(() => {
   if (!invitationToDelete.value) return ''
   return `Are you sure you want to delete this invitation? This action cannot be undone.\n${invitationToDelete.value.email}`
 })
@@ -228,7 +231,7 @@ onMounted(async () => {
   await Promise.all([loadUsers(), loadInvitations()])
 })
 
-async function loadUsers() {
+async function loadUsers(): Promise<void> {
   loading.value = true
   loadUsersError.value = null
   try {
@@ -241,7 +244,7 @@ async function loadUsers() {
   }
 }
 
-async function loadInvitations() {
+async function loadInvitations(): Promise<void> {
   loadingInvitations.value = true
   loadInvitationsError.value = null
   try {
@@ -255,11 +258,11 @@ async function loadInvitations() {
 }
 
 // --- Edit User ---
-function openEditModal(user) {
+function openEditModal(user: UserResponse): void {
   editUser.value = user
 }
 
-function handleUserSaved(updatedUser) {
+function handleUserSaved(updatedUser: UserResponse): void {
   const idx = users.value.findIndex((u) => u.id === updatedUser.id)
   if (idx !== -1) {
     users.value[idx] = updatedUser
@@ -268,19 +271,20 @@ function handleUserSaved(updatedUser) {
   editUser.value = updatedUser
 }
 
-function handleDeleteRequested(user) {
+function handleDeleteRequested(user: UserResponse): void {
   userToDelete.value = user
   deleteUserModal.value = true
 }
 
 // --- Delete user ---
-async function deleteUser() {
+async function deleteUser(): Promise<void> {
   if (!userToDelete.value || isProcessingDelete.value) return
   isProcessingDelete.value = true
-  const userName = userToDelete.value.full_name
+  const target = userToDelete.value
+  const userName = target.full_name
   try {
-    await usersApi.delete(userToDelete.value.id)
-    users.value = users.value.filter((u) => u.id !== userToDelete.value.id)
+    await usersApi.delete(target.id)
+    users.value = users.value.filter((u) => u.id !== target.id)
     toast.success(`User "${userName}" deleted successfully.`)
     deleteUserModal.value = false
     userToDelete.value = null
@@ -292,24 +296,25 @@ async function deleteUser() {
   }
 }
 
-function cancelDelete() {
+function cancelDelete(): void {
   deleteUserModal.value = false
   userToDelete.value = null
 }
 
 // --- Delete invitation ---
-function confirmDeleteInvitation(invitation) {
+function confirmDeleteInvitation(invitation: InvitationResponse): void {
   invitationToDelete.value = invitation
   deleteInvitationModal.value = true
 }
 
-async function deleteInvitation() {
+async function deleteInvitation(): Promise<void> {
   if (!invitationToDelete.value || isProcessingDelete.value) return
   isProcessingDelete.value = true
+  const target = invitationToDelete.value
   try {
-    await usersApi.deleteInvitation(invitationToDelete.value.id)
-    invitations.value = invitations.value.filter((inv) => inv.id !== invitationToDelete.value.id)
-    toast.success(`Invitation for "${invitationToDelete.value.email}" deleted.`)
+    await usersApi.deleteInvitation(target.id)
+    invitations.value = invitations.value.filter((inv) => inv.id !== target.id)
+    toast.success(`Invitation for "${target.email}" deleted.`)
     deleteInvitationModal.value = false
     invitationToDelete.value = null
   } catch (error) {
@@ -319,7 +324,7 @@ async function deleteInvitation() {
   }
 }
 
-function cancelDeleteInvitation() {
+function cancelDeleteInvitation(): void {
   deleteInvitationModal.value = false
   invitationToDelete.value = null
 }

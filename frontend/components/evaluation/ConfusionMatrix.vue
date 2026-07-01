@@ -79,38 +79,45 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps({
-  /**
-   * Confusion matrix for a single categorical field:
-   * { gt_value: { pred_value: count } }
-   */
-  matrix: {
-    type: Object,
-    default: () => ({}),
-  },
-  /**
-   * Currently active cell filter (mirrors the parent's confusionFilter),
-   * so the selected cell can be highlighted. Shape: { groundTruth, predicted } | null
-   */
-  activeFilter: {
-    type: Object,
-    default: undefined,
-  },
+/**
+ * Confusion matrix for a single categorical field:
+ * { gt_value: { pred_value: count } }
+ */
+type ConfusionMatrix = Record<string, Record<string, number>>
+
+/** Active cell filter shape: { groundTruth, predicted } | null */
+interface ConfusionFilter {
+  groundTruth: string
+  predicted: string
+  field?: string
+}
+
+interface Props {
+  matrix?: ConfusionMatrix
+  /** Currently active cell filter (mirrors the parent's confusionFilter). */
+  activeFilter?: ConfusionFilter | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  matrix: () => ({}),
+  activeFilter: undefined,
 })
 
-const emit = defineEmits(['filter'])
+const emit = defineEmits<{
+  filter: [filter: ConfusionFilter]
+}>()
 
 // Emit a filter event for a cell. Only non-empty cells are interactive
 // (clickable + keyboard-focusable), so this is a no-op when count is 0.
-const onCellClick = (gt, pred) => {
+const onCellClick = (gt: string, pred: string): void => {
   if (count(gt, pred) > 0) emit('filter', { groundTruth: gt, predicted: pred })
 }
 
 // Keyboard equivalent of clicking a cell: Enter / Space toggles the filter.
-const onCellKeydown = (e, gt, pred) => {
+const onCellKeydown = (e: KeyboardEvent, gt: string, pred: string): void => {
   if (count(gt, pred) === 0) return
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault()
@@ -119,8 +126,8 @@ const onCellKeydown = (e, gt, pred) => {
 }
 
 // Sorted union of all ground-truth and predicted values as row/column labels.
-const labels = computed(() => {
-  const set = new Set()
+const labels = computed<string[]>(() => {
+  const set = new Set<string>()
   for (const gt of Object.keys(props.matrix || {})) {
     set.add(gt)
     for (const pred of Object.keys(props.matrix[gt] || {})) {
@@ -130,14 +137,14 @@ const labels = computed(() => {
   return [...set].sort((a, b) => a.localeCompare(b))
 })
 
-const count = (gt, pred) => {
+const count = (gt: string, pred: string): number => {
   const row = props.matrix?.[gt]
   if (!row) return 0
   return row[pred] || 0
 }
 
 // Total count of a ground-truth value across all predictions (row sum).
-const rowTotal = (gt) =>
+const rowTotal = (gt: string): number =>
   Object.values(props.matrix?.[gt] || {}).reduce((sum, c) => sum + (c || 0), 0)
 
 // Highest non-diagonal count drives the error-heatmap scale; diagonal uses its
@@ -158,18 +165,18 @@ const maxCorrect = computed(() => {
 })
 
 // Share of the ground-truth row — "of all GT=X docs, what fraction predicted Y".
-const rowPercent = (gt, pred) => {
+const rowPercent = (gt: string, pred: string): string => {
   const rt = rowTotal(gt)
   if (!rt) return '0%'
   return `${Math.round((count(gt, pred) / rt) * 100)}%`
 }
 
-const isActive = (gt, pred) =>
+const isActive = (gt: string, pred: string): boolean =>
   !!props.activeFilter &&
   String(props.activeFilter.groundTruth) === String(gt) &&
   String(props.activeFilter.predicted) === String(pred)
 
-const cellTitle = (gt, pred) => {
+const cellTitle = (gt: string, pred: string): string => {
   const c = count(gt, pred)
   const rt = rowTotal(gt)
   const pct = rt ? Math.round((c / rt) * 100) : 0
@@ -180,7 +187,7 @@ const cellTitle = (gt, pred) => {
 // Intensity-scaled background. Diagonal = green, off-diagonal with count>0 =
 // red, empty cells stay neutral. Alpha grows with the cell's share of its
 // scale max so patterns are visible at a glance.
-const cellStyle = (gt, pred) => {
+const cellStyle = (gt: string, pred: string): Record<string, string> => {
   const c = count(gt, pred)
   if (c === 0) return {}
   if (gt === pred) {
@@ -191,8 +198,8 @@ const cellStyle = (gt, pred) => {
   return { backgroundColor: `rgba(239, 68, 68, ${alpha.toFixed(2)})` }
 }
 
-const cellClass = (gt, pred) => {
-  const classes = []
+const cellClass = (gt: string, pred: string): string => {
+  const classes: string[] = []
   if (count(gt, pred) === 0) {
     classes.push('text-slate-300 dark:text-slate-700')
   } else if (gt === pred) {

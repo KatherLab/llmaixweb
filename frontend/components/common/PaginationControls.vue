@@ -40,7 +40,7 @@
           <select
             :value="pageSize"
             class="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded px-2 py-1 text-sm text-slate-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-            @change="$emit('update:pageSize', Number($event.target.value))"
+            @change="$emit('update:pageSize', Number(($event.target as HTMLSelectElement).value))"
           >
             <option v-for="size in pageSizeOptions" :key="size" :value="size">{{ size }}</option>
           </select>
@@ -71,7 +71,7 @@
                 : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800',
               page === '...' ? 'cursor-default disabled:opacity-100' : '',
             ]"
-            @click="$emit('update:modelValue', page)"
+            @click="page !== '...' && $emit('update:modelValue', page)"
           >
             {{ page }}
           </button>
@@ -89,43 +89,30 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ChevronsLeft, ChevronsRight } from '@lucide/vue'
 
-defineProps({
-  modelValue: {
-    type: Number,
-    required: true,
-  },
-  totalPages: {
-    type: Number,
-    required: true,
-  },
-  visiblePages: {
-    type: Array,
-    required: true,
-  },
-  totalItems: {
-    type: Number,
-    default: 0,
-  },
-  pageSize: {
-    type: Number,
-    default: 10,
-  },
-  showPageSizeSelector: {
-    type: Boolean,
-    default: false,
-  },
-  pageSizeOptions: {
-    type: Array,
-    default: () => [10, 25, 50, 100],
-  },
-  itemLabel: {
-    type: String,
-    default: 'results',
-  },
+interface Props {
+  modelValue: number
+  totalPages: number
+  visiblePages: (number | '...')[]
+  totalItems?: number
+  pageSize?: number
+  showPageSizeSelector?: boolean
+  pageSizeOptions?: number[]
+  itemLabel?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  totalItems: 0,
+  pageSize: 10,
+  showPageSizeSelector: false,
+  pageSizeOptions: () => [10, 25, 50, 100],
+  itemLabel: 'results',
 })
 
-defineEmits(['update:modelValue', 'update:pageSize'])
+defineEmits<{
+  (e: 'update:modelValue', value: number): void
+  (e: 'update:pageSize', value: number): void
+}>()
 </script>

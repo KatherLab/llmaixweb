@@ -238,7 +238,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, toRef, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { AlertTriangle, Info, Search, Settings, Upload } from '@lucide/vue'
@@ -263,20 +263,31 @@ import { setEngineLabels } from '@/utils/ocrLabels'
 import { getDateRangeBounds } from '@/utils/dateRange'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { usePreprocessingUpdates } from '@/composables/usePreprocessingUpdates'
+import type { FileWithTasks } from '@/composables/usePreprocessingUpdates'
 import { extractErrorMessage } from '@/utils/errors'
+import type {
+  File as FileModel,
+  PreprocessingTask,
+  PreprocessingTaskCreate,
+  PreprocessingDuplicatePreview,
+} from '@/types'
 
-const props = defineProps({
-  projectId: { type: [String, Number], required: true },
-})
+interface Props {
+  projectId: string | number
+}
 
-const emit = defineEmits(['files-changed'])
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  'files-changed': []
+}>()
 const toast = useToast()
 const router = useRouter()
 const { downloadBlob } = useFileDownload()
 
 // State
-const files = ref([])
-const selectedFiles = ref([])
+const files = ref<FileWithTasks[]>([])
+const selectedFiles = ref<number[]>([])
 const searchQuery = ref('')
 const filterStatus = ref('')
 const filterFileType = ref('')
@@ -285,13 +296,13 @@ const isDragging = ref(false)
 const showUploadModal = ref(false)
 const showProcessingPanel = ref(false)
 const showHistoryPanel = ref(false)
-const historyFile = ref(null)
-const highlightTaskId = ref(null)
-const previewingFile = ref(null)
+const historyFile = ref<FileWithTasks | null>(null)
+const highlightTaskId = ref<number | null>(null)
+const previewingFile = ref<FileModel | null>(null)
 const showFilePreview = ref(false)
-const fileToDelete = ref(null)
+const fileToDelete = ref<FileModel | null>(null)
 const showImportConfigModal = ref(false)
-const configuringFile = ref(null)
+const configuringFile = ref<FileModel | null>(null)
 const isLoading = ref(true)
 const hasLoadedFiles = ref(false) // Track if we've ever loaded files (for filter UX)
 
@@ -301,14 +312,23 @@ const customDateTo = ref('')
 
 // Duplicate preview state
 const showDuplicatePreviewModal = ref(false)
-const duplicatePreview = ref(null)
-const pendingProcessingSettings = ref(null)
+const duplicatePreview = ref<PreprocessingDuplicatePreview | null>(null)
+const pendingProcessingSettings = ref<PreprocessingTaskCreate | null>(null)
 
 // "Select all" across all pages state
 const selectAllMode = ref(false) // true = all files in project, false = only current page
 
+interface PaginationState {
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+  start: number
+  end: number
+}
+
 // Pagination state
-const pagination = ref({
+const pagination = ref<PaginationState>({
   page: 1,
   page_size: 50,
   total: 0,
@@ -328,17 +348,17 @@ const doclingOcrEnabled = ref(true)
 const isSubmitting = ref(false)
 
 // Cache for preprocessing tasks to avoid refetching on every file refresh
-let cachedTasks = null
-let cachedTasksTimestamp = null
+let cachedTasks: PreprocessingTask[] | null = null
+let cachedTasksTimestamp: number | null = null
 const TASKS_CACHE_TTL_MS = 30000 // 30 seconds cache (increased for 50k+ files scaling)
 
-const invalidateTaskCache = () => {
+const invalidateTaskCache = (): void => {
   cachedTasks = null
   cachedTasksTimestamp = null
 }
 
 // Compute date bounds for date range filter
-const getDateBounds = (range) => {
+const getDateBounds = (range: string): { date_from?: string; date_to?: string } => {
   return getDateRangeBounds(range, customDateFrom.value, customDateTo.value)
 }
 
@@ -348,13 +368,13 @@ const hasActiveFilters = computed(() => {
 })
 
 // Fetch on any filter change emitted by the filter bar (resets to first page)
-const onFilterFetch = () => {
+const onFilterFetch = (): void => {
   pagination.value.page = 1
   fetchFiles()
 }
 
 // Clear all filters
-const clearFilters = () => {
+const clearFilters = (): void => {
   searchQuery.value = ''
   filterStatus.value = ''
   filterFileType.value = ''
@@ -365,8 +385,31 @@ const clearFilters = () => {
   fetchFiles()
 }
 
+// Get file status based on latest preprocessing task
+const getFileStatus = (file: FileWithTasks): string => {
+  if (!file || !Array.isArray(file.preprocessing_tasks) || file.preprocessing_tasks.length === 0) {
+    return 'not_preprocessed'
+  }
+
+  const latestTask = [...file.preprocessing_tasks].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  )[0]
+
+  if (!latestTask) return 'not_preprocessed'
+
+  const status = String(latestTask.status || '').toLowerCase()
+
+  if (['pending', 'processing', 'in_progress'].includes(status)) {
+    return 'processing'
+  } else if (status === 'completed') {
+    return 'completed'
+  } else {
+    return 'failed'
+  }
+}
+
 // Fetch files with preprocessing tasks (paginated)
-const fetchFiles = async (options = {}) => {
+const fetchFiles = async (options: { forceRefreshTasks?: boolean } = {}): Promise<void> => {
   const { forceRefreshTasks = false } = options
 
   try {
@@ -399,17 +442,29 @@ const fetchFiles = async (options = {}) => {
       if (date_to) params.append('date_to', date_to)
     }
 
-    const response = await filesApi.list(props.projectId, params)
-    const data = response.data
+    const response = await filesApi.list(
+      props.projectId,
+      params as unknown as Record<string, unknown>,
+    )
+    const data = response.data as {
+      items?: FileModel[]
+      page?: number
+      page_size?: number
+      total?: number
+      total_pages?: number
+    }
 
     // Update pagination
+    const page = data.page || 1
+    const pageSize = data.page_size || 25
+    const total = data.total || 0
     pagination.value = {
-      page: data.page || 1,
-      page_size: data.page_size || 25,
-      total: data.total || 0,
+      page,
+      page_size: pageSize,
+      total,
       total_pages: data.total_pages || 0,
-      start: (data.page - 1) * data.page_size + 1,
-      end: Math.min(data.page * data.page_size, data.total),
+      start: (page - 1) * pageSize + 1,
+      end: Math.min(page * pageSize, total),
     }
 
     // Fetch preprocessing tasks with caching to avoid refetching on every file refresh
@@ -420,18 +475,18 @@ const fetchFiles = async (options = {}) => {
       !cachedTasksTimestamp ||
       now - cachedTasksTimestamp > TASKS_CACHE_TTL_MS
 
-    let allTasks = []
+    let allTasks: PreprocessingTask[] = []
     if (needTasks) {
       const tasksResponse = await preprocessingApi.list(props.projectId, { limit: 100 })
-      allTasks = tasksResponse.data || []
+      allTasks = (tasksResponse.data as PreprocessingTask[]) || []
       cachedTasks = allTasks
       cachedTasksTimestamp = now
     } else {
-      allTasks = cachedTasks
+      allTasks = cachedTasks ?? []
     }
 
     // Build a map: file_id -> [tasks]
-    const tasksByFileId = new Map()
+    const tasksByFileId = new Map<number, PreprocessingTask[]>()
     for (const task of allTasks) {
       if (task.file_tasks && Array.isArray(task.file_tasks)) {
         for (const ft of task.file_tasks) {
@@ -439,15 +494,17 @@ const fetchFiles = async (options = {}) => {
           if (!tasksByFileId.has(fid)) {
             tasksByFileId.set(fid, [])
           }
-          tasksByFileId.get(fid).push(task)
+          tasksByFileId.get(fid)!.push(task)
         }
       }
     }
 
     // Create new file objects with _status and preprocessing_tasks for proper reactivity
-    const filesWithTasks = (data.items || []).map((file) => {
+    const filesWithTasks: FileWithTasks[] = (data.items || []).map((file) => {
       const fileTasks = tasksByFileId.get(file.id) || []
-      const sortedTasks = fileTasks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      const sortedTasks = fileTasks.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
       return {
         ...file,
         preprocessing_tasks: sortedTasks,
@@ -462,7 +519,7 @@ const fetchFiles = async (options = {}) => {
 
     // Update historyFile if panel is open
     if (showHistoryPanel.value && historyFile.value) {
-      const updatedHistoryFile = filesWithTasks.find((f) => f.id === historyFile.value.id)
+      const updatedHistoryFile = filesWithTasks.find((f) => f.id === historyFile.value!.id)
       if (updatedHistoryFile) {
         historyFile.value = { ...updatedHistoryFile }
       }
@@ -478,45 +535,22 @@ const fetchFiles = async (options = {}) => {
 // Display files (for the table - just returns files.value since pagination is server-side)
 const displayFiles = computed(() => files.value)
 
-// Get file status based on latest preprocessing task
-const getFileStatus = (file) => {
-  if (!file || !Array.isArray(file.preprocessing_tasks) || file.preprocessing_tasks.length === 0) {
-    return 'not_preprocessed'
-  }
-
-  const latestTask = [...file.preprocessing_tasks].sort(
-    (a, b) => new Date(b.created_at) - new Date(a.created_at),
-  )[0]
-
-  if (!latestTask) return 'not_preprocessed'
-
-  const status = String(latestTask.status || '').toLowerCase()
-
-  if (['pending', 'processing', 'in_progress'].includes(status)) {
-    return 'processing'
-  } else if (status === 'completed') {
-    return 'completed'
-  } else {
-    return 'failed'
-  }
-}
-
 // Pagination handlers
-const handlePageChange = (newPage) => {
+const handlePageChange = (newPage: number): void => {
   if (newPage >= 1 && newPage <= pagination.value.total_pages) {
     pagination.value.page = newPage
     fetchFiles()
   }
 }
 
-const handlePageSizeChange = (newSize) => {
+const handlePageSizeChange = (newSize: number | string): void => {
   pagination.value.page_size = Number(newSize)
   pagination.value.page = 1 // Reset to first page
   fetchFiles()
 }
 
 // Sorting handler
-const handleSort = (field) => {
+const handleSort = (field: string): void => {
   if (sortBy.value === field) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
   } else {
@@ -528,7 +562,7 @@ const handleSort = (field) => {
 }
 
 // Toggle file selection
-const toggleSelection = (fileId) => {
+const toggleSelection = (fileId: number): void => {
   const idx = selectedFiles.value.indexOf(fileId)
   if (idx > -1) {
     selectedFiles.value.splice(idx, 1)
@@ -538,7 +572,7 @@ const toggleSelection = (fileId) => {
 }
 
 // Toggle select all (for current page only)
-const toggleSelectAll = () => {
+const toggleSelectAll = (): void => {
   if (selectedFiles.value.length === files.value.length) {
     selectedFiles.value = []
     selectAllMode.value = false
@@ -549,13 +583,13 @@ const toggleSelectAll = () => {
 }
 
 // Select ALL files across all pages (for 50k+ files)
-const selectAllFiles = async () => {
+const selectAllFiles = async (): Promise<void> => {
   selectAllMode.value = true
   // Fetch all file IDs from the project (server-side)
   try {
     // We need to fetch all file IDs - use a minimal request
     // This is a one-time operation even for large projects
-    const allFileIds = []
+    const allFileIds: number[] = []
     let page = 1
     const pageSize = 250 // Max allowed per page
 
@@ -570,11 +604,15 @@ const selectAllFiles = async () => {
       if (searchQuery.value) params.append('search', searchQuery.value)
       if (filterStatus.value) params.append('file_type', filterStatus.value)
 
-      const response = await filesApi.list(props.projectId, params)
-      const fileIds = response.data.items.map((f) => f.id)
+      const response = await filesApi.list(
+        props.projectId,
+        params as unknown as Record<string, unknown>,
+      )
+      const respData = response.data as { items: FileModel[]; total_pages: number }
+      const fileIds = respData.items.map((f) => f.id)
       allFileIds.push(...fileIds)
 
-      if (page >= response.data.total_pages) break
+      if (page >= respData.total_pages) break
       page++
     }
 
@@ -588,19 +626,19 @@ const selectAllFiles = async () => {
 }
 
 // Clear selection
-const clearSelection = () => {
+const clearSelection = (): void => {
   selectedFiles.value = []
   selectAllMode.value = false
 }
 
 // Clear selection and close the processing panel (for "Select different files")
-const clearSelectionAndClosePanel = () => {
+const clearSelectionAndClosePanel = (): void => {
   selectedFiles.value = []
   showProcessingPanel.value = false
 }
 
 // Navigate to document
-const navigateToDocument = (documentId) => {
+const navigateToDocument = (documentId: number): void => {
   // Close the history panel (the panel's scroll lock releases via its open watcher)
   showHistoryPanel.value = false
   // Switch to documents tab and highlight the document
@@ -613,11 +651,11 @@ const navigateToDocument = (documentId) => {
 
 // Confirm delete file (confirmed via ConfirmationDialog)
 const showDeleteFileConfirm = ref(false)
-const confirmDeleteFile = (file) => {
+const confirmDeleteFile = (file: FileModel): void => {
   fileToDelete.value = file
   showDeleteFileConfirm.value = true
 }
-const executeDeleteFile = async () => {
+const executeDeleteFile = async (): Promise<void> => {
   const file = fileToDelete.value
   showDeleteFileConfirm.value = false
   if (!file) return
@@ -626,7 +664,7 @@ const executeDeleteFile = async () => {
 }
 
 // Delete file
-const deleteFile = async (file) => {
+const deleteFile = async (file: FileModel): Promise<void> => {
   try {
     await filesApi.delete(props.projectId, file.id)
     toast.success(`Deleted ${file.file_name}`)
@@ -641,36 +679,36 @@ const deleteFile = async (file) => {
 }
 
 // Open import config modal
-const openImportConfigModal = (file) => {
+const openImportConfigModal = (file: FileModel): void => {
   configuringFile.value = file
   showImportConfigModal.value = true
 }
 
 // Get file by ID (for panel display)
-const getFileById = (id) => {
+const getFileById = (id: number): FileWithTasks | undefined => {
   return files.value.find((f) => f.id === id)
 }
 
 // Handle view preprocessing history
-const handleViewHistory = (file) => {
+const handleViewHistory = (file: FileWithTasks): void => {
   historyFile.value = file
   showHistoryPanel.value = true
 }
 
 // Process file and close history panel
-const processFileAndClose = (file) => {
+const processFileAndClose = (file: FileWithTasks): void => {
   quickProcessFile(file)
   showHistoryPanel.value = false
 }
 
 // Process file and close panel (for footer button)
-const processFileAndClosePanel = (file) => {
+const processFileAndClosePanel = (file: FileWithTasks): void => {
   quickProcessFile(file)
   showHistoryPanel.value = false
 }
 
 // Retry failed files for a task
-const retryFailedFiles = async (taskId) => {
+const retryFailedFiles = async (taskId: number): Promise<void> => {
   try {
     await preprocessingApi.retryFailed(props.projectId, taskId)
     toast.success('Retrying failed files...')
@@ -684,12 +722,12 @@ const retryFailedFiles = async (taskId) => {
 
 // Cancel preprocessing task (confirmed via ConfirmationDialog)
 const showCancelTaskConfirm = ref(false)
-const pendingCancelTask = ref(null)
-const cancelPreprocessingTask = (task) => {
+const pendingCancelTask = ref<PreprocessingTask | null>(null)
+const cancelPreprocessingTask = (task: PreprocessingTask): void => {
   pendingCancelTask.value = task
   showCancelTaskConfirm.value = true
 }
-const executeCancelTask = async () => {
+const executeCancelTask = async (): Promise<void> => {
   const task = pendingCancelTask.value
   showCancelTaskConfirm.value = false
   pendingCancelTask.value = null
@@ -709,29 +747,29 @@ const executeCancelTask = async () => {
 }
 
 // Preview file
-const previewFile = (file) => {
+const previewFile = (file: FileModel): void => {
   previewingFile.value = file
   showFilePreview.value = true
 }
 
 // Download file
-const downloadFile = async (file) => {
+const downloadFile = async (file: FileModel): Promise<void> => {
   try {
     const response = await filesApi.getContent(props.projectId, file.id)
-    downloadBlob(response.data, file.file_name)
+    downloadBlob(response.data, file.file_name || 'download')
   } catch {
     toast.error(`Failed to download ${file.file_name}`)
   }
 }
 
 // Quick process single file
-const quickProcessFile = (file) => {
+const quickProcessFile = (file: FileModel): void => {
   selectedFiles.value = [file.id]
   openProcessingPanel()
 }
 
 // Open processing panel
-const openProcessingPanel = () => {
+const openProcessingPanel = (): void => {
   showProcessingPanel.value = true
 }
 
@@ -767,7 +805,7 @@ const hasActivePreprocessingTasks = computed(() => {
 
 // Check for duplicates and start processing (or show confirmation).
 // Receives the built settings payload from PreprocessingConfigPanel.
-const startProcessing = async (payload) => {
+const startProcessing = async (payload: PreprocessingTaskCreate): Promise<void> => {
   if (!canStartProcessing.value) return
 
   isSubmitting.value = true
@@ -782,16 +820,15 @@ const startProcessing = async (payload) => {
       pendingProcessingSettings.value,
     )
 
-    duplicatePreview.value = previewResponse.data
+    duplicatePreview.value = previewResponse.data as PreprocessingDuplicatePreview
 
     // Only show modal if there are same-config duplicates (not just different OCR configs)
     // Also show if PDFs with embedded text exist (to inform user OCR won't affect result)
+    const previewData = duplicatePreview.value
     const hasSameConfigDuplicates =
-      previewResponse.data.same_config_duplicates &&
-      previewResponse.data.same_config_duplicates.length > 0
+      !!previewData.same_config_duplicates && previewData.same_config_duplicates.length > 0
     const hasPdfsWithEmbeddedText =
-      previewResponse.data.pdfs_with_embedded_text &&
-      previewResponse.data.pdfs_with_embedded_text.length > 0
+      !!previewData.pdfs_with_embedded_text && previewData.pdfs_with_embedded_text.length > 0
 
     if (hasSameConfigDuplicates || hasPdfsWithEmbeddedText) {
       showDuplicatePreviewModal.value = true
@@ -811,7 +848,7 @@ const startProcessing = async (payload) => {
 }
 
 // Cancel duplicate preview and close modal
-const cancelDuplicatePreview = () => {
+const cancelDuplicatePreview = (): void => {
   showDuplicatePreviewModal.value = false
   duplicatePreview.value = null
   pendingProcessingSettings.value = null
@@ -819,12 +856,12 @@ const cancelDuplicatePreview = () => {
 }
 
 // User confirmed the duplicate preview modal — proceed with the skipExisting choice.
-const onDuplicateConfirm = ({ skipExisting }) => {
+const onDuplicateConfirm = ({ skipExisting }: { skipExisting: boolean }): void => {
   confirmAndStartProcessing(skipExisting)
 }
 
 // Confirm and start processing (called after user approves duplicate preview)
-const confirmAndStartProcessing = async (skipExisting = false) => {
+const confirmAndStartProcessing = async (skipExisting = false): Promise<void> => {
   if (!pendingProcessingSettings.value) return
 
   // Add skip_existing flag if user selected it
@@ -861,22 +898,23 @@ const confirmAndStartProcessing = async (skipExisting = false) => {
     }
   } catch (err) {
     console.error('Failed to start processing:', err)
-    const detail = err.response?.data?.detail
+    const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
     let errorMsg = 'Failed to start preprocessing'
 
     // Handle structured error response
     if (detail && typeof detail === 'object') {
-      if (detail.code === 'csv_xlsx_needs_config') {
-        errorMsg = detail.message || 'CSV/XLSX files need import configuration'
-      } else if (detail.code === 'files_already_being_processed') {
-        errorMsg = detail.message || 'One or more files are already being processed'
-      } else if (detail.code === 'no_ocr_engine_enabled') {
-        errorMsg = detail.message || 'No OCR engine enabled'
-      } else if (detail.message) {
-        errorMsg = detail.message
+      const d = detail as { code?: string; message?: string }
+      if (d.code === 'csv_xlsx_needs_config') {
+        errorMsg = d.message || 'CSV/XLSX files need import configuration'
+      } else if (d.code === 'files_already_being_processed') {
+        errorMsg = d.message || 'One or more files are already being processed'
+      } else if (d.code === 'no_ocr_engine_enabled') {
+        errorMsg = d.message || 'No OCR engine enabled'
+      } else if (d.message) {
+        errorMsg = d.message
       }
     } else if (Array.isArray(detail) && detail.length > 0) {
-      const firstError = detail[0]
+      const firstError = detail[0] as { msg?: string }
       errorMsg = firstError.msg || JSON.stringify(firstError)
     } else if (typeof detail === 'string') {
       errorMsg = detail
@@ -889,7 +927,7 @@ const confirmAndStartProcessing = async (skipExisting = false) => {
 }
 
 // Upload files
-const uploadFiles = async (fileList) => {
+const uploadFiles = async (fileList: File[]): Promise<void> => {
   if (!fileList.length) return
 
   isSubmitting.value = true
@@ -925,7 +963,7 @@ const uploadFiles = async (fileList) => {
 }
 
 // Fetch OCR settings on mount to use server-provided display names
-const fetchOcrSettings = async () => {
+const fetchOcrSettings = async (): Promise<void> => {
   try {
     const res = await authApi.getSettings()
     setEngineLabels(res.data)
@@ -951,12 +989,13 @@ const { start: startWebSocket, stop: stopWebSocket } = usePreprocessingUpdates({
 })
 
 // Handle expand-preprocessing-task event from ActivityBell
-const handleExpandTask = (event) => {
-  const taskId = event.detail?.id
+const handleExpandTask = (event: Event): void => {
+  const customEvent = event as CustomEvent<{ id?: string | number }>
+  const taskId = customEvent.detail?.id
   if (!taskId) return
 
   // Try to find and expand the task, retrying a few times if files aren't loaded yet
-  const tryExpandTask = (attempts = 0) => {
+  const tryExpandTask = (attempts = 0): void => {
     const fileWithTask = files.value.find((f) =>
       f.preprocessing_tasks?.some((t) => t.id === Number(taskId)),
     )
@@ -979,11 +1018,11 @@ onMounted(async () => {
   fetchOcrSettings()
   startWebSocket()
   // Listen for expand event from ActivityBell
-  document.addEventListener('expand-preprocessing-task', handleExpandTask)
+  document.addEventListener('expand-preprocessing-task', handleExpandTask as EventListener)
 })
 
 onUnmounted(() => {
   stopWebSocket()
-  document.removeEventListener('expand-preprocessing-task', handleExpandTask)
+  document.removeEventListener('expand-preprocessing-task', handleExpandTask as EventListener)
 })
 </script>

@@ -44,7 +44,7 @@
           :has-displayable-original-file="hasDisplayableOriginalFile"
           :original-pdf-url="originalPdfUrl"
           :original-image-url="originalImageUrl"
-          :original-file-type="originalFileType"
+          :original-file-type="originalFileType ?? ''"
           :safe-markdown="safeMarkdown"
         />
       </div>
@@ -84,7 +84,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onUnmounted, watch } from 'vue'
 import { documentsApi } from '@/services/documentsApi'
 import { filesApi } from '@/services/filesApi'
@@ -100,36 +100,44 @@ import DocumentFilePreview from './DocumentFilePreview.vue'
 import DocumentCompareView from './DocumentCompareView.vue'
 import VersionHistorySidebar from './VersionHistorySidebar.vue'
 import DocumentInfoSidebar from './DocumentInfoSidebar.vue'
+import type { DocumentListItem, DocumentFilter } from '@/types'
 
-const props = defineProps({
-  open: { type: Boolean, required: true },
-  document: { type: Object, required: true },
-  projectId: { type: [String, Number], required: true },
-})
+interface Props {
+  open: boolean
+  document: DocumentListItem
+  projectId: string | number
+}
 
-const emit = defineEmits(['close', 'reprocess', 'update-document'])
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  close: []
+  reprocess: [payload: Partial<DocumentListItem>]
+  'update-document': [version: DocumentListItem]
+}>()
 const toast = useToast()
 const { downloadBlob } = useFileDownload()
-const viewMode = ref('text')
-const originalPdfUrl = ref('')
-const originalImageUrl = ref('')
+type ViewMode = 'text' | 'pdf' | 'image' | 'compare'
+const viewMode = ref<ViewMode>('text')
+const originalPdfUrl = ref<string>('')
+const originalImageUrl = ref<string>('')
 
 // Version history state
-const showVersionHistory = ref(false)
-const versions = ref([])
-const loadingVersions = ref(false)
-const selectedVersion = ref(null)
+const showVersionHistory = ref<boolean>(false)
+const versions = ref<DocumentListItem[]>([])
+const loadingVersions = ref<boolean>(false)
+const selectedVersion = ref<DocumentListItem | null>(null)
 
 // Full text is fetched on demand (GET /document/{id}); list items no longer
 // carry the (potentially large) `text` column, so we can't read it from the
 // passed-in document object.
-const fullText = ref(null)
-const textLoading = ref(false)
+const fullText = ref<string | null>(null)
+const textLoading = ref<boolean>(false)
 
 // Check if document has an original file that can be displayed
 // For TXT files and row-by-row CSV/XLSX, the "original file" exists but shouldn't show split-screen
 // because the extracted text IS the original content (TXT) or represents partial data (CSV row)
-const hasDisplayableOriginalFile = computed(() => {
+const hasDisplayableOriginalFile = computed<boolean>(() => {
   if (!props.document.original_file?.id) return false
   if (!props.document.original_file?.file_type) return false
 
@@ -144,25 +152,25 @@ const hasDisplayableOriginalFile = computed(() => {
   return true
 })
 
-const hasText = computed(() => !!fullText.value)
+const hasText = computed<boolean>(() => !!fullText.value)
 
 // Check if document has version history (either has version_of or is part of a version chain)
-const hasVersionHistory = computed(() => {
+const hasVersionHistory = computed<boolean>(() => {
   return (
-    props.document.version_of ||
-    props.document.meta_data?.version_of ||
-    props.document.meta_data?.replaced_document_id ||
+    !!props.document.version_of ||
+    !!props.document.meta_data?.version_of ||
+    !!props.document.meta_data?.replaced_document_id ||
     versions.value.length > 1
   )
 })
 
 // Total version count (estimated based on version_of chain)
-const versionCount = computed(() => {
+const versionCount = computed<number>(() => {
   // This is a placeholder - actual count comes from fetched versions
   return versions.value.length || 1
 })
 
-const originalFileType = computed(() => {
+const originalFileType = computed<'pdf' | 'image' | 'other' | null>(() => {
   const fileType = props.document.original_file?.file_type
   if (!fileType) return null
   if (fileType.includes('pdf')) return 'pdf'
@@ -170,7 +178,7 @@ const originalFileType = computed(() => {
   return 'other'
 })
 
-const viewModeLabel = computed(() => {
+const viewModeLabel = computed<string>(() => {
   // Label describes what clicking will show, not current view
   // No displayable original file: only text view available, no toggle
   if (!hasDisplayableOriginalFile.value) return 'Text Only'
@@ -181,7 +189,7 @@ const viewModeLabel = computed(() => {
 })
 
 // Set default view mode: compare (file + text side-by-side) if both available
-const setDefaultViewMode = () => {
+const setDefaultViewMode = (): void => {
   if (hasDisplayableOriginalFile.value && hasText.value) {
     viewMode.value = 'compare'
   } else if (hasDisplayableOriginalFile.value) {
@@ -193,13 +201,13 @@ const setDefaultViewMode = () => {
 }
 
 // Markdown rendering with XSS sanitizing
-const safeMarkdown = computed(() => {
+const safeMarkdown = computed<string>(() => {
   const text = fullText.value
   if (!text) return '<em>No text content available</em>'
-  return DOMPurify.sanitize(marked.parse(text))
+  return DOMPurify.sanitize(marked.parse(text) as string)
 })
 
-const toggleView = () => {
+const toggleView = (): void => {
   const isImage = originalFileType.value === 'image'
 
   // No displayable original file: only text view is available
@@ -225,7 +233,7 @@ const toggleView = () => {
   }
 }
 
-const downloadDocument = async () => {
+const downloadDocument = async (): Promise<void> => {
   try {
     const fileId = props.document.preprocessed_file?.id || props.document.original_file?.id
     if (!fileId) {
@@ -245,7 +253,7 @@ const downloadDocument = async () => {
 
 // Fetch the full document (with text) for a given document id. List items no
 // longer include `text`, so the viewer pulls it on demand.
-const fetchFullText = async (docId) => {
+const fetchFullText = async (docId: number | null | undefined): Promise<void> => {
   if (!docId) return
   textLoading.value = true
   try {
@@ -260,7 +268,7 @@ const fetchFullText = async (docId) => {
 }
 
 // Fetch all versions of this document
-const fetchVersions = async () => {
+const fetchVersions = async (): Promise<void> => {
   if (!props.document.original_file_id) return
 
   loadingVersions.value = true
@@ -271,17 +279,17 @@ const fetchVersions = async () => {
       config_id: props.document.preprocessing_config_id,
       include_archived: true,
       limit: 100, // Get all versions
-    })
+    } as DocumentFilter)
 
     // Filter to only documents with same name (same document chain)
     const docName = props.document.document_name || props.document.original_file?.file_name
     versions.value = (response.data.items || [])
       .filter((d) => d.document_name === docName)
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
     // Set current document as selected
     selectedVersion.value =
-      versions.value.find((v) => v.id === props.document.id) || versions.value[0]
+      versions.value.find((v) => v.id === props.document.id) || versions.value[0] || null
   } catch (error) {
     console.error('Failed to fetch document versions:', error)
     versions.value = []
@@ -291,7 +299,7 @@ const fetchVersions = async () => {
 }
 
 // Select a version to view
-const selectVersion = (version) => {
+const selectVersion = (version: DocumentListItem): void => {
   selectedVersion.value = version
   // Load that version's text (versions list items don't carry `text`).
   fetchFullText(version.id)
@@ -301,13 +309,13 @@ const selectVersion = (version) => {
 
 // Restore an archived version (creates a new latest version with same content).
 // Confirms via the shared ConfirmationDialog instead of a browser confirm().
-const showRestoreConfirm = ref(false)
-const pendingRestoreVersion = ref(null)
-const restoreVersion = (version) => {
+const showRestoreConfirm = ref<boolean>(false)
+const pendingRestoreVersion = ref<DocumentListItem | null>(null)
+const restoreVersion = (version: DocumentListItem): void => {
   pendingRestoreVersion.value = version
   showRestoreConfirm.value = true
 }
-const confirmRestore = () => {
+const confirmRestore = (): void => {
   const version = pendingRestoreVersion.value
   showRestoreConfirm.value = false
   pendingRestoreVersion.value = null
@@ -316,7 +324,7 @@ const confirmRestore = () => {
   try {
     // We need to reprocess the original file with the same config to create a new version
     // For now, emit event to parent to handle restoration
-    emit('reprocess', { ...document, ...version })
+    emit('reprocess', { ...props.document, ...version })
     toast.success('Version restoration initiated. The document will be reprocessed.')
   } catch (error) {
     console.error('Failed to restore version:', error)
@@ -326,7 +334,7 @@ const confirmRestore = () => {
 
 // Load the full document (text + original-file preview + versions). Called on
 // each open since the component stays mounted to enable the close transition.
-async function loadDocument() {
+async function loadDocument(): Promise<void> {
   // Reset preview URLs from any previously viewed document.
   if (originalPdfUrl.value) window.URL.revokeObjectURL(originalPdfUrl.value)
   if (originalImageUrl.value) window.URL.revokeObjectURL(originalImageUrl.value)

@@ -162,7 +162,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { filesApi } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
@@ -171,13 +171,19 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { selectClass, labelClass } from '@/utils/formStyles'
+import type { File } from '@/types'
 
-const props = defineProps({
-  open: { type: Boolean, required: true },
-  file: { type: Object, required: true },
-  projectId: { type: [String, Number], required: true },
-})
-const emit = defineEmits(['close', 'saved'])
+interface Props {
+  open: boolean
+  file: File | null
+  projectId: string | number
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  close: []
+  saved: []
+}>()
 
 const toast = useToast()
 
@@ -204,22 +210,28 @@ const isXLSX = computed(() => {
   )
 })
 
-const preview = ref({ headers: [], rows: [] })
-const detectedDelimiters = ref([',', ';', '\t'])
+interface PreviewData {
+  headers: (string | null)[]
+  rows: (string | null)[][]
+  sheets?: string[]
+}
+
+const preview = ref<PreviewData>({ headers: [], rows: [] })
+const detectedDelimiters = ref<string[]>([',', ';', '\t'])
 const delimiter = ref(',')
 const encoding = ref('utf-8')
-const detectedEncodings = ref(['utf-8', 'latin1'])
+const detectedEncodings = ref<string[]>(['utf-8', 'latin1'])
 const hasHeader = ref(true)
 const sheet = ref('')
-const sheets = ref([])
+const sheets = ref<string[]>([])
 
 const preprocessingStrategy = ref('row_by_row')
-const textColumns = ref([])
+const textColumns = ref<string[]>([])
 const caseIdColumn = ref('')
 
 const saving = ref(false)
 const showConfirm = ref(false)
-const initialConfig = ref({})
+const initialConfig = ref('')
 
 // Derived header labels (no null/empty headers)
 const headerLabels = computed(() =>
@@ -231,20 +243,20 @@ const headerLabels = computed(() =>
   }),
 )
 
-function displayDelimiter(d) {
+function displayDelimiter(d: string): string {
   if (d === '\t') return 'Tab'
   if (d === ',') return 'Comma (,)'
   if (d === ';') return 'Semicolon (;)'
   return d
 }
 
-function isRecommendedId(col) {
+function isRecommendedId(col: string): boolean {
   if (!col) return false
   const idCandidates = ['id', 'case_id', 'patient_id', 'identifier', 'studyid', 'record_id']
   return idCandidates.some((name) => col.trim().toLowerCase().includes(name))
 }
 
-function guessIdColumn(headers) {
+function guessIdColumn(headers: (string | null)[]): string {
   if (!headers) return ''
   const idCandidates = ['id', 'case_id', 'patient_id', 'identifier', 'studyid', 'record_id']
   for (const candidate of idCandidates) {
@@ -263,7 +275,7 @@ function guessIdColumn(headers) {
 }
 
 // Unsaved change detection
-function getConfigSnapshot() {
+function getConfigSnapshot(): string {
   return JSON.stringify({
     delimiter: delimiter.value,
     encoding: encoding.value,
@@ -274,30 +286,41 @@ function getConfigSnapshot() {
     caseIdColumn: caseIdColumn.value,
   })
 }
-function resetInitialConfig() {
+function resetInitialConfig(): void {
   initialConfig.value = getConfigSnapshot()
 }
-function hasUnsavedChanges() {
+function hasUnsavedChanges(): boolean {
   return getConfigSnapshot() !== initialConfig.value
 }
 
-const loadPreview = async () => {
+const loadPreview = async (): Promise<void> => {
+  if (!props.file) return
   try {
-    let params = new URLSearchParams({ encoding: encoding.value })
+    const params = new URLSearchParams({ encoding: encoding.value })
     if (isCSV.value && delimiter.value) params.append('delimiter', delimiter.value)
     if (isXLSX.value && sheet.value) params.append('sheet', sheet.value)
-    params.append('has_header', hasHeader.value)
-    params.append('max_rows', 10)
+    params.append('has_header', String(hasHeader.value))
+    params.append('max_rows', '10')
 
-    const { data } = await filesApi.getPreviewRows(props.projectId, props.file.id, params)
+    const { data } = await filesApi.getPreviewRows(
+      props.projectId,
+      props.file.id,
+      params as unknown as Record<string, unknown>,
+    )
 
-    preview.value = data
-    if (data.sheets) sheets.value = data.sheets
+    // The API response shape (headers/rows 2D array, sheets) differs from the
+    // declared FilePreviewRows type; cast to the shape this component uses.
+    const previewData = data as unknown as PreviewData & {
+      sheets?: string[]
+    }
+
+    preview.value = previewData
+    if (previewData.sheets) sheets.value = previewData.sheets
 
     const labels = headerLabels.value
 
     // Case ID
-    let guessed = guessIdColumn(data.headers || [])
+    let guessed = guessIdColumn(previewData.headers || [])
     if (!guessed || !labels.includes(guessed)) {
       guessed = guessIdColumn(labels) || ''
     }
@@ -314,8 +337,8 @@ const loadPreview = async () => {
     }
 
     // XLSX sheet default
-    if (isXLSX.value && !sheet.value && data.sheets && data.sheets.length)
-      sheet.value = data.sheets[0]
+    if (isXLSX.value && !sheet.value && previewData.sheets && previewData.sheets.length)
+      sheet.value = previewData.sheets[0]
   } catch {
     toast.error('Failed to load preview')
     preview.value = { headers: [], rows: [] }
@@ -324,8 +347,10 @@ const loadPreview = async () => {
 
 // (Re)initialize config from the current file's metadata + load preview whenever
 // the modal opens. Component stays mounted to enable the close transition.
-async function initFromMeta() {
-  isEdit.value = !!props.file.preprocessing_strategy
+async function initFromMeta(): Promise<void> {
+  if (!props.file) return
+  const file = props.file
+  isEdit.value = !!file.preprocessing_strategy
 
   // Reset transient config to defaults before pre-filling from metadata.
   delimiter.value = ','
@@ -336,7 +361,7 @@ async function initFromMeta() {
   caseIdColumn.value = ''
   preprocessingStrategy.value = 'row_by_row'
 
-  const meta = props.file.file_metadata || {}
+  const meta = file.file_metadata || {}
   if (meta.delimiter) delimiter.value = meta.delimiter
   if (meta.has_header !== undefined) hasHeader.value = meta.has_header
   if (meta.encoding) encoding.value = meta.encoding
@@ -344,8 +369,7 @@ async function initFromMeta() {
   if (meta.text_columns) textColumns.value = meta.text_columns.map(String).filter(Boolean)
   if (meta.case_id_column !== undefined) caseIdColumn.value = String(meta.case_id_column || '')
 
-  if (props.file.preprocessing_strategy)
-    preprocessingStrategy.value = props.file.preprocessing_strategy
+  if (file.preprocessing_strategy) preprocessingStrategy.value = file.preprocessing_strategy
 
   await loadPreview()
 
@@ -370,7 +394,8 @@ watch([delimiter, encoding, sheet, hasHeader], async () => {
   await loadPreview()
 })
 
-const saveConfig = async () => {
+const saveConfig = async (): Promise<void> => {
+  if (!props.file) return
   saving.value = true
   try {
     const cleanTextCols =
@@ -404,18 +429,18 @@ const saveConfig = async () => {
   }
 }
 
-function tryClose() {
+function tryClose(): void {
   if (hasUnsavedChanges()) {
     showConfirm.value = true
   } else {
     doClose()
   }
 }
-function confirmClose() {
+function confirmClose(): void {
   showConfirm.value = false
   doClose()
 }
-function doClose() {
+function doClose(): void {
   emit('close')
 }
 </script>

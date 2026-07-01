@@ -50,34 +50,45 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import PropertyDetailsEditor from './PropertyDetailsEditor.vue'
+import type { SchemaDefinition, SchemaProperty } from '@/types'
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  advancedMode: {
-    type: Boolean,
-    default: false,
-  },
-  propertyData: {
-    type: Object,
-    default: null,
-  },
+interface PropertyData {
+  key: string
+  schema: SchemaDefinition | SchemaProperty
+}
+
+interface Props {
+  open: boolean
+  advancedMode?: boolean
+  propertyData?: PropertyData | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  advancedMode: false,
+  propertyData: null,
 })
 
-const emit = defineEmits(['close', 'save'])
+const emit = defineEmits<{
+  close: []
+  save: [payload: { key: string; newKey: string; schema: SchemaDefinition | SchemaProperty }]
+}>()
 
 // Internal editing state (initialized from propertyData when modal opens)
-const localEditingProperty = ref(null)
-const originalEditingProperty = ref(null)
-const originalEditingPropertyKey = ref(null)
+interface EditingProperty {
+  key: string
+  newKey?: string
+  schema: SchemaDefinition | SchemaProperty
+}
+
+const localEditingProperty = ref<EditingProperty | null>(null)
+const originalEditingProperty = ref<SchemaDefinition | SchemaProperty | null>(null)
+const originalEditingPropertyKey = ref<string | null>(null)
 
 watch(
   () => props.open,
@@ -100,21 +111,21 @@ watch(
 )
 
 // PropertyDetailsEditor event handlers
-const updateProperty = (newSchema) => {
+const updateProperty = (newSchema: SchemaDefinition | SchemaProperty) => {
   if (localEditingProperty.value) {
     // Deep-clone to break reactivity links
     localEditingProperty.value.schema = JSON.parse(JSON.stringify(newSchema))
   }
 }
 
-const updatePropertyKey = (newKey) => {
+const updatePropertyKey = (newKey: string) => {
   if (localEditingProperty.value) {
     localEditingProperty.value.newKey = newKey
   }
 }
 
 // Unsaved-changes detection (for backdrop close guard)
-const hasUnsavedPropertyChanges = () => {
+const hasUnsavedPropertyChanges = (): boolean => {
   if (!localEditingProperty.value || !originalEditingProperty.value) return false
 
   const currentKey = localEditingProperty.value.newKey || localEditingProperty.value.key

@@ -291,7 +291,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { AlertTriangle, ChevronRight, CircleCheckBig, Eye, X, Zap } from '@lucide/vue'
 import { getEngineLabel, getEngineSubtitle } from '@/utils/ocrLabels'
@@ -299,24 +299,38 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FormField from '@/components/common/FormField.vue'
 import { textareaClass, selectClass, labelClass } from '@/utils/formStyles'
+import type { File, PreprocessingTaskCreate } from '@/types'
 
-const props = defineProps({
-  open: { type: Boolean, required: true },
-  selectedFiles: { type: Array, required: true },
-  getFileById: { type: Function, required: true },
-  unconfiguredCsvXlsxFiles: { type: Array, required: true },
-  canStartProcessing: { type: Boolean, required: true },
-  isSubmitting: { type: Boolean, required: true },
+type OcrEngine = 'docling_tesseract' | 'mistral_ocr' | 'llm_vision' | null
+
+interface Props {
+  open: boolean
+  selectedFiles: number[]
+  getFileById: (id: number) => File | undefined
+  unconfiguredCsvXlsxFiles: File[]
+  canStartProcessing: boolean
+  isSubmitting: boolean
   // OCR engine availability flags (from server settings)
-  doclingOcrEnabled: { type: Boolean, default: true },
-  mistralOcrEnabled: { type: Boolean, default: false },
-  visionOcrEnabled: { type: Boolean, default: false },
+  doclingOcrEnabled?: boolean
+  mistralOcrEnabled?: boolean
+  visionOcrEnabled?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  doclingOcrEnabled: true,
+  mistralOcrEnabled: false,
+  visionOcrEnabled: false,
 })
 
-const emit = defineEmits(['close', 'remove-file', 'clear-and-close', 'start'])
+const emit = defineEmits<{
+  close: []
+  'remove-file': [fileId: number]
+  'clear-and-close': []
+  start: [payload: PreprocessingTaskCreate]
+}>()
 
 // Processing config (owned by this panel)
-const selectedEngine = ref('docling_tesseract')
+const selectedEngine = ref<OcrEngine>('docling_tesseract')
 const forceOcr = ref(false)
 const tesseractLang = ref('auto')
 const mistralApiKey = ref('')
@@ -360,10 +374,10 @@ const noOcrEnabled = computed(() => !anyOcrEnabled.value)
 
 // Build the processing settings payload and emit start.
 // Mirrors the logic that previously lived in the parent's startProcessing().
-const onStart = () => {
+const onStart = (): void => {
   if (!props.canStartProcessing || props.isSubmitting) return
 
-  const settings = {
+  const settings: Record<string, unknown> = {
     ocr_engine: selectedEngine.value,
     force_ocr: forceOcr.value,
   }
@@ -385,13 +399,13 @@ const onStart = () => {
     if (visionMaxImageDim.value > 0) settings.vision_max_image_dim = visionMaxImageDim.value
   }
 
-  const engineNames = {
+  const engineNames: Record<string, string> = {
     docling_tesseract: 'Local OCR (Docling)',
     mistral_ocr: 'Mistral OCR',
     llm_vision: 'Vision LLM',
   }
   const forceOcrText = forceOcr.value ? ' + Force OCR' : ''
-  const taskName = `${engineNames[selectedEngine.value] || 'Custom'}${forceOcrText}`
+  const taskName = `${engineNames[selectedEngine.value ?? ''] || 'Custom'}${forceOcrText}`
 
   emit('start', {
     file_ids: props.selectedFiles,

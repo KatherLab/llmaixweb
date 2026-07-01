@@ -34,7 +34,7 @@
         variant="secondary"
         size="sm"
         tone="red"
-        @click.stop="$emit('delete-requested', invitation)"
+        @click.stop="$emit('delete-requested', invitation as InvitationResponse)"
       >
         Delete
       </BaseButton>
@@ -42,18 +42,26 @@
   </DataTable>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import type { InvitationResponse } from '@/types'
 import DataTable from '@/components/common/DataTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { usePagination } from '@/composables/usePagination'
 
-const props = defineProps({
-  rowData: { type: Array, default: () => [] },
-  search: { type: String, default: '' },
+interface Props {
+  rowData?: InvitationResponse[]
+  search?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  rowData: () => [],
+  search: '',
 })
 
-defineEmits(['delete-requested'])
+defineEmits<{
+  (e: 'delete-requested', invitation: InvitationResponse): void
+}>()
 
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -87,10 +95,10 @@ const tablePagination = computed(() => ({
   total_pages: pagination.totalPages.value,
 }))
 
-function handlePageChange(page) {
+function handlePageChange(page: number): void {
   currentPage.value = page
 }
-function handlePageSizeChange(size) {
+function handlePageSizeChange(size: number): void {
   pageSize.value = size
   currentPage.value = 1
 }

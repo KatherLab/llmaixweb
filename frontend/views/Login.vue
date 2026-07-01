@@ -81,7 +81,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Lock, LogIn } from '@lucide/vue'
@@ -93,6 +93,7 @@ import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FormField from '@/components/common/FormField.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import type { SsoProviderPublic } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
@@ -100,12 +101,12 @@ const authStore = useAuthStore()
 const toast = useToast()
 const firstAdminStore = useFirstAdminStore()
 
-const email = ref('')
-const password = ref('')
-const isLoading = ref(false)
-const error = ref(null)
-const ssoProviders = ref([])
-const redirectTarget = ref('/')
+const email = ref<string>('')
+const password = ref<string>('')
+const isLoading = ref<boolean>(false)
+const error = ref<string | null>(null)
+const ssoProviders = ref<SsoProviderPublic[]>([])
+const redirectTarget = ref<string>('/')
 
 onMounted(async () => {
   // If first-admin flow is needed, redirect to it (extra safe)
@@ -129,7 +130,7 @@ onMounted(async () => {
   }
 })
 
-async function handleSubmit() {
+async function handleSubmit(): Promise<void> {
   if (isLoading.value) return
   isLoading.value = true
   error.value = null

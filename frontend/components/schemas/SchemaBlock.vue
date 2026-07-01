@@ -127,7 +127,7 @@
 
             <!-- Enum values -->
             <div
-              v-if="schema.enum && schema.enum.length > 0"
+              v-if="Array.isArray(schema.enum) && (schema.enum as unknown[]).length > 0"
               class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3"
             >
               <label
@@ -319,8 +319,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, type Component } from 'vue'
 import { ArrowRight, ChevronRight, List, Plus, SquarePen, Trash2 } from '@lucide/vue'
 import {
   getTypeIcon,
@@ -328,30 +328,34 @@ import {
   getTypePillClass,
   getTypeBlockBorder,
 } from '@/utils/schemaTypeIcons'
+import type { SchemaDefinition, SchemaProperty } from '@/types'
 
-const props = defineProps({
-  schema: {
-    type: Object,
-    required: true,
-  },
-  path: {
-    type: Array,
-    default: () => [],
-  },
-  advancedMode: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  schema: SchemaDefinition
+  path?: string[]
+  advancedMode?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  path: () => [],
+  advancedMode: false,
 })
 
-defineEmits(['update', 'add-property', 'edit-property', 'delete-property', 'navigate', 'edit-root'])
+defineEmits<{
+  update: [schema: SchemaProperty]
+  'add-property': []
+  'edit-property': [payload: { key: string; schema: SchemaDefinition | SchemaProperty }]
+  'delete-property': [key: string]
+  navigate: [key: string]
+  'edit-root': []
+}>()
 
 const showDetails = ref(false)
 
 // Type Icons + colors: shared via @/utils/schemaTypeIcons
 
 // Computed properties
-const typeIcon = computed(() => getTypeIcon(props.schema.type))
+const typeIcon = computed<Component>(() => getTypeIcon(props.schema.type))
 
 const typeLabel = computed(() => {
   return getTypeLabel(props.schema.type)
@@ -362,12 +366,13 @@ const blockColorClass = computed(() => getTypeBlockBorder(props.schema.type))
 const headerColorClass = computed(() => getTypeColor(props.schema.type))
 
 // Methods
-const getTypeLabel = (type) => {
+const getTypeLabel = (type: string | undefined): string => {
+  if (!type) return ''
   if (props.advancedMode) {
     return type.charAt(0).toUpperCase() + type.slice(1)
   }
 
-  const labels = {
+  const labels: Record<string, string> = {
     string: 'Text',
     number: 'Number',
     boolean: 'Yes/No',
@@ -377,14 +382,14 @@ const getTypeLabel = (type) => {
   return labels[type] || type
 }
 
-const getTypeBadgeClass = (type) => getTypePillClass(type)
+const getTypeBadgeClass = (type: string | undefined): string => getTypePillClass(type)
 
-const formatTitle = (key) => {
+const formatTitle = (key: string | undefined): string => {
   if (!key) return ''
   return key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 }
 
-const getCurrentKey = () => {
+const getCurrentKey = (): string => {
   // For root level, return a special identifier
   if (props.path.length === 0) {
     return '__root__'
@@ -395,7 +400,7 @@ const getCurrentKey = () => {
 
 onMounted(() => {
   // Auto-expand details for leaf elements (string, number, boolean)
-  if (['string', 'number', 'boolean'].includes(props.schema.type)) {
+  if (props.schema.type && ['string', 'number', 'boolean'].includes(props.schema.type)) {
     showDetails.value = true
   }
 })

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Shared inline callout: leading icon + tinted box (title + body).
  *
@@ -18,21 +18,23 @@
  *  - default : body content
  *  - icon    : override the leading icon entirely
  */
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 import { Info, AlertTriangle, CircleAlert, CircleCheckBig } from '@lucide/vue'
 import { getBannerClass } from '@/utils/statusStyles'
 
-const props = defineProps({
-  variant: {
-    type: String,
-    default: 'info',
-    validator: (v) => ['info', 'warning', 'danger', 'success', 'gray'].includes(v),
-  },
-  icon: { type: [Object, Function], default: undefined },
-  title: { type: String, default: '' },
+interface Props {
+  variant?: 'info' | 'warning' | 'danger' | 'success' | 'gray'
+  icon?: Component
+  title?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  variant: 'info',
+  icon: undefined,
+  title: '',
 })
 
-const COLOR_KEY = {
+const COLOR_KEY: Record<Props['variant'] & string, string> = {
   info: 'blue',
   warning: 'amber',
   danger: 'red',
@@ -40,7 +42,7 @@ const COLOR_KEY = {
   gray: 'gray',
 }
 
-const DEFAULT_ICON = {
+const DEFAULT_ICON: Record<Props['variant'] & string, Component> = {
   info: Info,
   warning: AlertTriangle,
   danger: CircleAlert,

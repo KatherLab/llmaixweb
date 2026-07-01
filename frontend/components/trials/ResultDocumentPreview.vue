@@ -22,18 +22,12 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { FileText } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
-defineProps({
-  pdfUrl: {
-    type: String,
-    default: '',
-  },
-  pdfLoading: {
-    type: Boolean,
-    default: false,
-  },
-})
+defineProps<{
+  pdfUrl?: string
+  pdfLoading?: boolean
+}>()
 </script>

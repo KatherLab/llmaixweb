@@ -11,17 +11,27 @@
   </BaseModal>
 </template>
 
-<script setup>
-import { ref, watch } from 'vue'
+<script setup lang="ts">
+import { ref, watch, type PropType } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
+import type { TrialSummary } from '@/types'
+
+interface RenamePayload {
+  id: number
+  name: string
+  description: string
+}
 
 const props = defineProps({
-  open: Boolean,
-  trial: { type: Object, default: () => ({}) },
+  open: { type: Boolean, default: false },
+  trial: { type: Object as PropType<Partial<TrialSummary> | null>, default: () => ({}) },
 })
-const emit = defineEmits(['close', 'rename'])
+const emit = defineEmits<{
+  close: []
+  rename: [payload: RenamePayload]
+}>()
 
 const name = ref('')
 const description = ref('')
@@ -29,15 +39,15 @@ const description = ref('')
 watch(
   () => props.trial,
   (t) => {
-    name.value = t?.name || `Trial #${t?.id}` || ''
+    name.value = t?.name || (t?.id != null ? `Trial #${t.id}` : '') || ''
     description.value = t?.description || ''
   },
   { immediate: true },
 )
 
-function submit() {
+function submit(): void {
   emit('rename', {
-    id: props.trial.id,
+    id: props.trial?.id ?? 0,
     name: name.value.trim(),
     description: description.value.trim(),
   })

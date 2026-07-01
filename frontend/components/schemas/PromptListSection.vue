@@ -57,7 +57,7 @@
         </template>
 
         <template #cell-placeholder="{ row: prompt }">
-          <StatusBadge v-if="hasPlaceholder(prompt)" color="green" class="font-medium">
+          <StatusBadge v-if="hasPlaceholder(prompt as Prompt)" color="green" class="font-medium">
             Contains placeholder
           </StatusBadge>
           <span v-else class="text-sm text-slate-400 dark:text-slate-500">—</span>
@@ -75,7 +75,7 @@
             tone="blue"
             title="View Prompt"
             aria-label="View Prompt"
-            @click.stop="emit('view', prompt)"
+            @click.stop="emit('view', prompt as Prompt)"
           >
             <Eye class="w-5 h-5" aria-hidden="true" />
           </BaseButton>
@@ -84,7 +84,7 @@
             tone="gray"
             title="Edit Prompt"
             aria-label="Edit Prompt"
-            @click.stop="emit('edit', prompt)"
+            @click.stop="emit('edit', prompt as Prompt)"
           >
             <Pencil class="w-5 h-5" aria-hidden="true" />
           </BaseButton>
@@ -93,7 +93,7 @@
             tone="red"
             title="Delete Prompt"
             aria-label="Delete Prompt"
-            @click.stop="emit('delete', prompt)"
+            @click.stop="emit('delete', prompt as Prompt)"
           >
             <Trash2 class="w-5 h-5" aria-hidden="true" />
           </BaseButton>
@@ -142,7 +142,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { formatDate, truncateText } from '@/utils/formatters'
 import { Eye, Pencil, Plus, Trash2 } from '@lucide/vue'
@@ -152,21 +152,25 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import FilterBar from '@/components/common/FilterBar.vue'
+import type { Prompt } from '@/types'
 
-const props = defineProps({
-  prompts: {
-    type: Array,
-    required: true,
-  },
-  isLoading: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  prompts: Prompt[]
+  isLoading?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isLoading: false,
 })
 
-const emit = defineEmits(['create', 'view', 'edit', 'delete'])
+const emit = defineEmits<{
+  create: []
+  view: [prompt: Prompt]
+  edit: [prompt: Prompt]
+  delete: [prompt: Prompt]
+}>()
 
-const expandedKeys = ref([])
+const expandedKeys = ref<number[]>([])
 const searchQuery = ref('')
 
 const filteredPrompts = computed(() => {
@@ -188,7 +192,7 @@ const clearSearch = () => {
   searchQuery.value = ''
 }
 
-const toggleExpand = (id) => {
+const toggleExpand = (id: number) => {
   const idx = expandedKeys.value.indexOf(id)
   if (idx > -1) {
     expandedKeys.value.splice(idx, 1)
@@ -197,9 +201,9 @@ const toggleExpand = (id) => {
   }
 }
 
-const hasPlaceholder = (prompt) =>
-  (prompt.system_prompt && prompt.system_prompt.includes('{document_content}')) ||
-  (prompt.user_prompt && prompt.user_prompt.includes('{document_content}'))
+const hasPlaceholder = (prompt: Prompt): boolean =>
+  (!!prompt.system_prompt && prompt.system_prompt.includes('{document_content}')) ||
+  (!!prompt.user_prompt && prompt.user_prompt.includes('{document_content}'))
 
 const columns = [
   { key: 'name', label: 'Name' },

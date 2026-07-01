@@ -169,7 +169,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -184,41 +184,49 @@ import FormField from '@/components/common/FormField.vue'
 import PasswordInput from '@/components/common/PasswordInput.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import GlassCard from '@/components/common/GlassCard.vue'
+import type { UserIdentityResponse } from '@/types'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()
 
 // ── Profile ──
-const profileForm = reactive({ full_name: '', email: '' })
-const savingProfile = ref(false)
-const profileSaved = ref(false)
-const profileDirty = computed(
+const profileForm = reactive<{ full_name: string; email: string }>({
+  full_name: '',
+  email: '',
+})
+const savingProfile = ref<boolean>(false)
+const profileSaved = ref<boolean>(false)
+const profileDirty = computed<boolean>(
   () =>
     profileForm.full_name !== authStore.user?.full_name ||
     profileForm.email !== authStore.user?.email,
 )
 
 // ── Password ──
-const passwordForm = reactive({ old_password: '', new_password: '', confirm: '' })
-const savingPassword = ref(false)
-const passwordError = ref('')
-const passwordSaved = ref(false)
-const canChangePassword = computed(
+const passwordForm = reactive<{ old_password: string; new_password: string; confirm: string }>({
+  old_password: '',
+  new_password: '',
+  confirm: '',
+})
+const savingPassword = ref<boolean>(false)
+const passwordError = ref<string>('')
+const passwordSaved = ref<boolean>(false)
+const canChangePassword = computed<boolean>(
   () =>
-    passwordForm.old_password &&
+    !!passwordForm.old_password &&
     passwordForm.new_password.length >= 8 &&
     passwordForm.new_password === passwordForm.confirm,
 )
 
 // ── Identities ──
-const ssoEnabled = ref(null)
-const identities = ref([])
-const loadingIdentities = ref(false)
-const disconnectingId = ref(null)
+const ssoEnabled = ref<boolean | null>(null)
+const identities = ref<UserIdentityResponse[]>([])
+const loadingIdentities = ref<boolean>(false)
+const disconnectingId = ref<number | null>(null)
 
 // ── Sign out ──
-const signingOut = ref(false)
+const signingOut = ref<boolean>(false)
 
 onMounted(async () => {
   if (authStore.user) {
@@ -236,7 +244,7 @@ onMounted(async () => {
   }
 })
 
-async function loadIdentities() {
+async function loadIdentities(): Promise<void> {
   loadingIdentities.value = true
   try {
     const res = await usersApi.listMyIdentities()
@@ -248,16 +256,16 @@ async function loadIdentities() {
   }
 }
 
-async function saveProfile() {
+async function saveProfile(): Promise<void> {
   if (!profileDirty.value) return
   savingProfile.value = true
   profileSaved.value = false
   try {
-    const payload = {}
-    if (profileForm.full_name !== authStore.user.full_name)
+    const payload: { full_name?: string; email?: string } = {}
+    if (profileForm.full_name !== authStore.user!.full_name)
       payload.full_name = profileForm.full_name
-    if (profileForm.email !== authStore.user.email) payload.email = profileForm.email
-    const res = await usersApi.update(authStore.user.id, payload)
+    if (profileForm.email !== authStore.user!.email) payload.email = profileForm.email
+    const res = await usersApi.update(authStore.user!.id, payload)
     authStore.user = res.data
     profileSaved.value = true
     toast.success('Profile updated.')
@@ -268,7 +276,7 @@ async function saveProfile() {
   }
 }
 
-async function changePassword() {
+async function changePassword(): Promise<void> {
   if (!canChangePassword.value) return
   savingPassword.value = true
   passwordError.value = ''
@@ -290,7 +298,7 @@ async function changePassword() {
   }
 }
 
-async function disconnectIdentity(ident) {
+async function disconnectIdentity(ident: UserIdentityResponse): Promise<void> {
   disconnectingId.value = ident.id
   try {
     await usersApi.deleteMyIdentity(ident.id)
@@ -303,7 +311,7 @@ async function disconnectIdentity(ident) {
   }
 }
 
-async function signOut(everywhere) {
+async function signOut(everywhere: boolean): Promise<void> {
   signingOut.value = true
   try {
     await authStore.logout({ serverSide: true, everywhere })

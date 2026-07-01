@@ -118,7 +118,10 @@ def _find_fk(inspector, table: str, column: str, ref_table: str) -> dict | None:
     for fk in inspector.get_foreign_keys(table):
         if not fk.get("constrained_columns"):
             continue
-        if column in fk["constrained_columns"] and fk.get("referred_table") == ref_table:
+        if (
+            column in fk["constrained_columns"]
+            and fk.get("referred_table") == ref_table
+        ):
             return fk
     return None
 
@@ -167,8 +170,7 @@ def upgrade() -> None:
     # Backfill any NULLs first, then set the server default so raw inserts
     # populate the column without the ORM. Existing rows keep their timestamps.
     op.execute(
-        "UPDATE password_reset_tokens SET created_at = NOW() "
-        "WHERE created_at IS NULL"
+        "UPDATE password_reset_tokens SET created_at = NOW() WHERE created_at IS NULL"
     )
     op.alter_column(
         "password_reset_tokens",

@@ -59,7 +59,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { CirclePlus } from '@lucide/vue'
@@ -73,12 +73,12 @@ const router = useRouter()
 const isModalOpen = ref(false)
 const isLoading = ref(false)
 const error = ref('')
-const projectData = ref({
+const projectData = ref<{ name: string; description: string }>({
   name: '',
   description: '',
 })
 
-const createProject = async () => {
+const createProject = async (): Promise<void> => {
   isLoading.value = true
   error.value = ''
   try {
@@ -92,7 +92,7 @@ const createProject = async () => {
   }
 }
 
-const closeModal = () => {
+const closeModal = (): void => {
   if (!isLoading.value) {
     isModalOpen.value = false
   }

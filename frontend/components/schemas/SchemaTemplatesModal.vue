@@ -27,20 +27,20 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import type { SchemaTemplate } from '@/utils/schemaTemplates'
 
-defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  templates: {
-    type: Array,
-    required: true,
-  },
-})
+interface Props {
+  open: boolean
+  templates: SchemaTemplate[]
+}
 
-const emit = defineEmits(['close', 'apply'])
+defineProps<Props>()
+
+const emit = defineEmits<{
+  close: []
+  apply: [template: SchemaTemplate]
+}>()
 </script>

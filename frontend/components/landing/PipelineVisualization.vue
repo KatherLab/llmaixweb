@@ -32,15 +32,24 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, type Component } from 'vue'
 import { UploadCloud, FileText, FolderOpen, Database, Zap, BarChart3 } from '@lucide/vue'
 import PipelineStep from '@/components/landing/PipelineStep.vue'
 import PipelineStepDetails from '@/components/landing/PipelineStepDetails.vue'
 
-const activeStep = ref(null)
+interface Step {
+  id: number
+  title: string
+  subtitle: string
+  gradient: string
+  shadow: string
+  icon: Component
+}
 
-const steps = [
+const activeStep = ref<number | null>(null)
+
+const steps: Step[] = [
   {
     id: 1,
     title: 'Upload Files',

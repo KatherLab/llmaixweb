@@ -259,7 +259,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
 import { Check, FileText } from '@lucide/vue'
 import { promptsApi } from '@/services/promptsApi'
@@ -273,23 +273,23 @@ import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 import { promptTemplates, sampleDocument } from '@/utils/promptTemplates'
 import { extractErrorMessage } from '@/utils/errors'
+import type { Prompt } from '@/types'
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-  prompt: {
-    type: Object,
-    default: null,
-  },
+interface Props {
+  open: boolean
+  projectId: string | number
+  prompt?: Prompt | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  prompt: null,
 })
 
-const emit = defineEmits(['close', 'created', 'updated'])
+const emit = defineEmits<{
+  close: []
+  created: [prompt: Prompt]
+  updated: [prompt: Prompt]
+}>()
 
 const toast = useToast()
 
@@ -299,10 +299,15 @@ const promptError = ref('')
 const showPreviewSystem = ref(false)
 const showPreviewUser = ref(false)
 
-const systemPromptRef = ref(null)
-const userPromptRef = ref(null)
+const systemPromptRef = ref<HTMLTextAreaElement | null>(null)
+const userPromptRef = ref<HTMLTextAreaElement | null>(null)
 
-const promptForm = ref({
+const promptForm = ref<{
+  name: string
+  description: string
+  system_prompt: string
+  user_prompt: string
+}>({
   name: '',
   description: '',
   system_prompt: '',
@@ -318,31 +323,31 @@ const isPromptValid = computed(() => {
 
   // In simple mode, only check user_prompt
   if (simplePromptMode.value) {
-    return promptForm.value.user_prompt && promptForm.value.user_prompt.trim() !== ''
+    return !!promptForm.value.user_prompt && promptForm.value.user_prompt.trim() !== ''
   }
 
   // Advanced mode validation
   if (!promptForm.value.system_prompt && !promptForm.value.user_prompt) return false
 
   const hasPlaceholder =
-    (promptForm.value.system_prompt &&
+    (!!promptForm.value.system_prompt &&
       promptForm.value.system_prompt.includes('{document_content}')) ||
-    (promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}'))
+    (!!promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}'))
 
   return hasPlaceholder
 })
 
 const hasDocumentContentPlaceholder = computed(
   () =>
-    (promptForm.value.system_prompt &&
+    (!!promptForm.value.system_prompt &&
       promptForm.value.system_prompt.includes('{document_content}')) ||
-    (promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}')),
+    (!!promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}')),
 )
 
-function insertPlaceholder(type) {
+function insertPlaceholder(type: 'system' | 'user') {
   if (hasDocumentContentPlaceholder.value) return // Defensive, shouldn't show if true.
 
-  let refObj, modelValue, setter
+  let refObj: HTMLTextAreaElement | null, modelValue: string, setter: (v: string) => void
   if (type === 'system') {
     refObj = systemPromptRef.value
     modelValue = promptForm.value.system_prompt || ''
@@ -355,9 +360,9 @@ function insertPlaceholder(type) {
 
   // If either prompt already has the placeholder, bail
   if (
-    (promptForm.value.system_prompt &&
+    (!!promptForm.value.system_prompt &&
       promptForm.value.system_prompt.includes('{document_content}')) ||
-    (promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}'))
+    (!!promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}'))
   ) {
     return
   }
@@ -370,9 +375,9 @@ function insertPlaceholder(type) {
     const after = modelValue.slice(insertPos)
     setter(before + '{document_content}' + after)
     nextTick(() => {
-      refObj.focus()
+      refObj!.focus()
       const newPos = insertPos + '{document_content}'.length
-      refObj.setSelectionRange(newPos, newPos)
+      refObj!.setSelectionRange(newPos, newPos)
     })
   } else {
     setter(modelValue + '{document_content}')
@@ -380,7 +385,7 @@ function insertPlaceholder(type) {
   validatePromptPlaceholder()
 }
 
-const validatePromptPlaceholder = () => {
+const validatePromptPlaceholder = (): boolean => {
   promptError.value = '' // Clear previous errors
 
   // In simple mode, just check user_prompt has content
@@ -403,9 +408,9 @@ const validatePromptPlaceholder = () => {
   }
 
   const hasPlaceholder =
-    (promptForm.value.system_prompt &&
+    (!!promptForm.value.system_prompt &&
       promptForm.value.system_prompt.includes('{document_content}')) ||
-    (promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}'))
+    (!!promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}'))
 
   if (!hasPlaceholder) {
     promptError.value =
@@ -434,7 +439,7 @@ const createPrompt = async () => {
   try {
     const response = await promptsApi.create(props.projectId, {
       ...promptForm.value,
-      project_id: props.projectId,
+      project_id: Number(props.projectId),
     })
     emit('created', response.data)
     emit('close')
@@ -456,7 +461,7 @@ const updatePrompt = async () => {
 
   isSubmitting.value = true
   try {
-    const response = await promptsApi.update(props.projectId, props.prompt.id, promptForm.value)
+    const response = await promptsApi.update(props.projectId, props.prompt!.id, promptForm.value)
     emit('updated', response.data)
     emit('close')
     resetPromptForm()
@@ -469,7 +474,7 @@ const updatePrompt = async () => {
   }
 }
 
-const togglePreview = (type) => {
+const togglePreview = (type: 'system' | 'user') => {
   if (type === 'system') {
     showPreviewSystem.value = !showPreviewSystem.value
   } else {
@@ -514,7 +519,7 @@ watch(
       if (props.prompt) {
         // Edit mode
         promptForm.value = {
-          name: props.prompt.name,
+          name: props.prompt.name || '',
           description: props.prompt.description || '',
           system_prompt: props.prompt.system_prompt || '',
           user_prompt: props.prompt.user_prompt || '',

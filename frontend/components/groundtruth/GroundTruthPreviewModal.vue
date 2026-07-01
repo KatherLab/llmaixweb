@@ -178,7 +178,7 @@
           <GroundTruthSample
             v-if="sampleDoc"
             :doc="sampleDoc"
-            :format="groundTruth.format"
+            :format="groundTruth?.format ?? ''"
             class="w-full"
           />
         </div>
@@ -262,7 +262,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useToast } from '@/composables/useToast'
 import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/vue'
@@ -276,39 +276,64 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { schemasApi } from '@/services/schemasApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
+import type { GroundTruth, Schema, SchemaDefinition, ComparisonMethod, FieldType } from '@/types'
 
-const props = defineProps({
-  open: { type: Boolean, required: true },
-  projectId: { type: [String, Number], default: undefined },
-  groundTruth: { type: Object, default: () => ({}) },
+/** Actual shape returned by `GET /groundtruth/{id}/preview` (richer than the
+ * shared `GroundTruthPreview` type, which only models the list-view summary). */
+interface GroundTruthPreviewData {
+  fields?: string[]
+  field_types?: Record<string, string>
+  preview_data?: Record<string, unknown>
+  available_columns?: string[]
+  current_id_column?: string | null
+}
+
+interface MappingItem {
+  schema_id: number
+  schema_field: string
+  ground_truth_field: string
+  field_type: FieldType
+  comparison_method: ComparisonMethod
+  comparison_options: Record<string, unknown>
+}
+
+interface Props {
+  open: boolean
+  projectId?: string | number
+  groundTruth?: GroundTruth | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  projectId: undefined,
+  groundTruth: () => ({}) as GroundTruth,
 })
-const emit = defineEmits(['close', 'configured'])
+const emit = defineEmits<{ close: []; configured: [] }>()
 const toast = useToast()
 
 // --- State
-const schemas = ref([])
+const schemas = ref<Schema[]>([])
 const selectedSchemaId = ref('')
-const schemaFieldTypes = ref({})
-const schemaFieldPaths = ref([])
-const schemaFieldTree = ref({})
-const requiredFields = ref([])
-const groundTruthFieldTypes = ref({})
-const groundTruthFieldPaths = ref([])
-const groundTruthFieldTree = ref({})
-const sampleDoc = ref(null)
-const availableColumns = ref([])
+const schemaFieldTypes = ref<Record<string, string>>({})
+const schemaFieldPaths = ref<string[]>([])
+const schemaFieldTree = ref<Record<string, unknown>>({})
+const requiredFields = ref<string[]>([])
+const groundTruthFieldTypes = ref<Record<string, string>>({})
+const groundTruthFieldPaths = ref<string[]>([])
+const groundTruthFieldTree = ref<Record<string, unknown>>({})
+const sampleDoc = ref<Record<string, unknown> | null>(null)
+const availableColumns = ref<string[]>([])
 const currentIdColumn = ref('')
 const idColumn = ref('') // for all formats
 const jsonIdField = ref('') // for JSON/ZIP
 const selectedSchemaField = ref('')
 const selectedGroundTruthField = ref('')
-const mappings = ref([])
+const mappings = ref<MappingItem[]>([])
 const loading = ref(false)
 const justSaved = ref(false)
 const saveDisabled = computed(() => !canSave.value || justSaved.value)
 
-const saveBtnRef = ref(null)
-const tooltipRef = ref(null)
+const saveBtnRef = ref<HTMLElement | null>(null)
+const tooltipRef = ref<HTMLElement | null>(null)
 const showTooltip = ref(false)
 
 const { floatingStyles } = useFloating(saveBtnRef, tooltipRef, {
@@ -317,10 +342,10 @@ const { floatingStyles } = useFloating(saveBtnRef, tooltipRef, {
   whileElementsMounted: autoUpdate,
 })
 
-function normStr(v) {
+function normStr(v: unknown): string {
   return (v ?? '').toString().trim()
 }
-function mergeColumns(rawCols, sample) {
+function mergeColumns(rawCols: string[], sample: Record<string, unknown> | null): string[] {
   const merged = Array.isArray(rawCols) ? [...rawCols] : []
   const seen = new Set(merged.map((c) => normStr(c).toLowerCase()).filter(Boolean))
   if (sample && typeof sample === 'object' && !Array.isArray(sample)) {
@@ -352,11 +377,11 @@ const saveDisabledReason = computed(() => {
 })
 
 const schemaDisplayName = computed(
-  () => schemas.value.find((s) => s.id == selectedSchemaId.value)?.schema_name ?? '',
+  () => schemas.value.find((s) => String(s.id) === selectedSchemaId.value)?.schema_name ?? '',
 )
 
-const isTabularFormat = computed(() => ['csv', 'xlsx'].includes(props.groundTruth.format))
-const isJsonFormat = computed(() => ['json', 'zip'].includes(props.groundTruth.format))
+const isTabularFormat = computed(() => ['csv', 'xlsx'].includes(props.groundTruth?.format ?? ''))
+const isJsonFormat = computed(() => ['json', 'zip'].includes(props.groundTruth?.format ?? ''))
 const showIdSelector = computed(
   () =>
     isTabularFormat.value ||
@@ -389,38 +414,35 @@ watch(
 )
 
 async function loadSchemas() {
-  const res = await schemasApi.list(props.projectId)
+  const res = await schemasApi.list(props.projectId!)
   schemas.value = res.data
 }
 
 async function loadGroundTruthPreview() {
-  const previewRes = await groundtruthApi.preview(props.projectId, props.groundTruth.id)
+  const previewRes = await groundtruthApi.preview(props.projectId!, props.groundTruth!.id)
+  const data = previewRes.data as GroundTruthPreviewData
 
-  groundTruthFieldPaths.value = previewRes.data.fields || []
-  groundTruthFieldTypes.value = previewRes.data.field_types || {}
+  groundTruthFieldPaths.value = data.fields || []
+  groundTruthFieldTypes.value = data.field_types || {}
   groundTruthFieldTree.value = buildTree(groundTruthFieldPaths.value)
 
   // Sample doc FIRST (we'll use its keys to augment columns for CSV)
   sampleDoc.value = null
-  if (previewRes.data.preview_data) {
-    const docs = Object.values(previewRes.data.preview_data)
-    sampleDoc.value = docs.length ? docs[0] : null
+  if (data.preview_data) {
+    const docs = Object.values(data.preview_data)
+    sampleDoc.value = docs.length ? (docs[0] as Record<string, unknown>) : null
   }
 
   // Raw columns from backend
-  const rawCols = Array.isArray(previewRes.data.available_columns)
-    ? previewRes.data.available_columns
-    : []
+  const rawCols = Array.isArray(data.available_columns) ? data.available_columns : []
 
   // Merge with sample headers to catch newly uploaded CSV columns (incl. ID)
   availableColumns.value = isTabularFormat.value ? mergeColumns(rawCols, sampleDoc.value) : rawCols
 
   // Resolve saved/detected ID under multiple keys
   const idColRaw =
-    previewRes.data.current_id_column ??
-    previewRes.data.id_column_name ??
-    previewRes.data.detected_id_column ??
-    previewRes.data.id_column ??
+    (data.current_id_column as string | null) ??
+    (props.groundTruth!.id_column_name as string | null) ??
     ''
   const idCol = normStr(idColRaw)
   currentIdColumn.value = idCol
@@ -453,11 +475,11 @@ async function loadGroundTruthPreview() {
 async function onSchemaChange() {
   if (!selectedSchemaId.value) return
   loading.value = true
-  const schemaFieldRes = await schemasApi.getFieldTypes(props.projectId, selectedSchemaId.value)
+  const schemaFieldRes = await schemasApi.getFieldTypes(props.projectId!, selectedSchemaId.value)
   schemaFieldTypes.value = schemaFieldRes.data || {}
   schemaFieldPaths.value = Object.keys(schemaFieldTypes.value)
   schemaFieldTree.value = buildTree(schemaFieldPaths.value)
-  const schemaRes = await schemasApi.get(props.projectId, selectedSchemaId.value)
+  const schemaRes = await schemasApi.get(props.projectId!, selectedSchemaId.value)
   requiredFields.value = extractRequiredFields(schemaRes.data.schema_definition)
   await loadExistingMappings()
   selectedSchemaField.value = ''
@@ -466,32 +488,34 @@ async function onSchemaChange() {
 }
 
 // --- Build tree structure from dot-paths
-function buildTree(paths) {
-  const tree = {}
+function buildTree(paths: string[]): Record<string, unknown> {
+  const tree: Record<string, unknown> = {}
   for (const path of paths) {
     const parts = path.split('.')
     let node = tree
     for (const part of parts) {
       if (!node[part]) node[part] = {}
-      node = node[part]
+      node = node[part] as Record<string, unknown>
     }
   }
   return tree
 }
 
 // --- Extract required fields as dot-paths
-function extractRequiredFields(schema, prefix = '') {
-  let req = []
-  if (schema.properties) {
+function extractRequiredFields(schema: SchemaDefinition | null, prefix = ''): string[] {
+  let req: string[] = []
+  if (schema?.properties) {
     for (const prop in schema.properties) {
       const propDef = schema.properties[prop]
       const full = prefix ? `${prefix}.${prop}` : prop
       if ((schema.required || []).includes(prop)) req.push(full)
       if (propDef.type === 'object' && propDef.properties) {
-        req = req.concat(extractRequiredFields(propDef, full))
+        req = req.concat(extractRequiredFields(propDef as unknown as SchemaDefinition, full))
       }
       if (propDef.type === 'array' && propDef.items?.type === 'object') {
-        req = req.concat(extractRequiredFields(propDef.items, full + '[]'))
+        req = req.concat(
+          extractRequiredFields(propDef.items as unknown as SchemaDefinition, full + '[]'),
+        )
       }
     }
   }
@@ -508,7 +532,7 @@ const canAddMapping = computed(
 
 function addMapping() {
   if (!canAddMapping.value) return
-  const fieldType = schemaFieldTypes.value[selectedSchemaField.value] || 'string'
+  const fieldType = (schemaFieldTypes.value[selectedSchemaField.value] || 'string') as FieldType
   mappings.value.push({
     schema_id: Number(selectedSchemaId.value),
     schema_field: selectedSchemaField.value,
@@ -521,12 +545,12 @@ function addMapping() {
   selectedGroundTruthField.value = ''
 }
 
-function removeMapping(idx) {
+function removeMapping(idx: number) {
   mappings.value.splice(idx, 1)
 }
 
 /** Pick a sensible default comparison method from the field type. */
-function defaultMethodFor(fieldType) {
+function defaultMethodFor(fieldType: string): ComparisonMethod {
   const t = String(fieldType || '').toLowerCase()
   if (t === 'category') return 'category'
   if (t === 'number') return 'numeric'
@@ -536,20 +560,26 @@ function defaultMethodFor(fieldType) {
 }
 
 /** Update a mapping's comparison method from the MappingList selector. */
-function updateMethod({ index, method }) {
+function updateMethod({ index, method }: { index: number; method: string }) {
   if (index < 0 || index >= mappings.value.length) return
-  mappings.value[index].comparison_method = method
+  mappings.value[index].comparison_method = method as ComparisonMethod
 }
 
 /** Update a mapping's comparison options (e.g. fuzzy threshold, numeric tolerance). */
-function updateMappingOptions({ index, options }) {
+function updateMappingOptions({
+  index,
+  options,
+}: {
+  index: number
+  options: Record<string, unknown>
+}) {
   if (index < 0 || index >= mappings.value.length) return
   mappings.value[index].comparison_options = options
 }
 function clearMappings() {
   mappings.value = []
 }
-function isMapped(schemaPath) {
+function isMapped(schemaPath: string) {
   return mappings.value.some((m) => m.schema_field === schemaPath)
 }
 const mappingComplete = computed(() => {
@@ -559,7 +589,7 @@ const mappedSchemaPaths = computed(() => mappings.value.map((m) => m.schema_fiel
 const mappedGtPaths = computed(() => mappings.value.map((m) => m.ground_truth_field))
 
 /** mark required fields that are not yet mapped */
-const highlightRequiredUnmapped = (p) =>
+const highlightRequiredUnmapped = (p: string): boolean =>
   requiredFields.value.includes(p) && !mappings.value.some((m) => m.schema_field === p)
 
 function autoMap() {
@@ -567,7 +597,7 @@ function autoMap() {
   mappings.value = []
   for (const schemaField of schemaFieldPaths.value) {
     if (groundTruthFieldPaths.value.includes(schemaField)) {
-      const fieldType = schemaFieldTypes.value[schemaField] || 'string'
+      const fieldType = (schemaFieldTypes.value[schemaField] || 'string') as FieldType
       mappings.value.push({
         schema_id: Number(selectedSchemaId.value),
         schema_field: schemaField,
@@ -604,8 +634,8 @@ async function saveMappings() {
   }
   // Save mappings
   await groundtruthApi.setMappings(
-    props.projectId,
-    props.groundTruth.id,
+    props.projectId!,
+    props.groundTruth!.id,
     selectedSchemaId.value,
     mappings.value,
   )
@@ -619,7 +649,7 @@ async function saveMappings() {
 }
 
 async function saveIdColumn() {
-  let payload = {}
+  const payload: Record<string, unknown> = {}
   if (isTabularFormat.value) {
     payload.id_column = idColumn.value
   } else if (isJsonFormat.value) {
@@ -629,7 +659,7 @@ async function saveIdColumn() {
       payload.id_column = '' // use filename
     }
   }
-  await groundtruthApi.setIdColumn(props.projectId, props.groundTruth.id, payload)
+  await groundtruthApi.setIdColumn(props.projectId!, props.groundTruth!.id, payload)
   currentIdColumn.value =
     isJsonFormat.value && idColumn.value === '__field__'
       ? jsonIdField.value
@@ -641,26 +671,29 @@ async function saveIdColumn() {
 async function loadExistingMappings() {
   try {
     const res = await groundtruthApi.getMappings(
-      props.projectId,
-      props.groundTruth.id,
+      props.projectId!,
+      props.groundTruth!.id,
       selectedSchemaId.value,
     )
-    mappings.value = (res.data || []).map((m) => ({
-      ...m,
-      schema_id: Number(selectedSchemaId.value),
-      field_type: m.field_type || 'string',
-      comparison_method: m.comparison_method || 'exact',
-      comparison_options: m.comparison_options || {},
-    }))
+    mappings.value = (res.data || []).map(
+      (m) =>
+        ({
+          ...m,
+          schema_id: Number(selectedSchemaId.value),
+          field_type: (m.field_type || 'string') as FieldType,
+          comparison_method: (m.comparison_method || 'exact') as ComparisonMethod,
+          comparison_options: m.comparison_options || {},
+        }) as MappingItem,
+    )
   } catch {
     mappings.value = []
   }
 }
-function onSchemaFieldSelect(path) {
+function onSchemaFieldSelect(path: string) {
   if (!selectedSchemaId.value) return
   selectedSchemaField.value = path
 }
-function onGroundTruthFieldSelect(path) {
+function onGroundTruthFieldSelect(path: string) {
   if (!selectedSchemaId.value) return
   selectedGroundTruthField.value = path
 }
@@ -677,10 +710,10 @@ const displayedColumns = computed(() => {
   return idCol && !hasId ? [idCol, ...cols] : cols
 })
 
-function updateIdColumn(val) {
+function updateIdColumn(val: string) {
   idColumn.value = val
 }
-function updateJsonIdField(val) {
+function updateJsonIdField(val: string) {
   jsonIdField.value = val
 }
 watch(idColumn, (val) => {

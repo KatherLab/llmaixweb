@@ -18,12 +18,18 @@
     </div>
   </div>
 </template>
-<script setup>
-defineProps({
-  doc: { type: Object, default: () => ({}) },
-  format: { type: String, default: '' },
+<script setup lang="ts">
+interface Props {
+  doc?: Record<string, unknown>
+  format?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  doc: () => ({}),
+  format: '',
 })
-function prettyJson(o) {
+
+function prettyJson(o: unknown): string {
   try {
     return JSON.stringify(o, null, 2)
   } catch {

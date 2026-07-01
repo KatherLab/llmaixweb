@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Shared form field: label + input + hint/error.
  *
@@ -15,29 +15,49 @@
 import { computed, useId } from 'vue'
 import { inputClass, labelClass } from '@/utils/formStyles'
 
-const props = defineProps({
-  modelValue: { type: [String, Number], default: '' },
-  label: { type: String, default: '' },
-  type: { type: String, default: 'text' },
-  placeholder: { type: String, default: '' },
-  autocomplete: { type: String, default: 'off' },
-  required: { type: Boolean, default: false },
-  disabled: { type: Boolean, default: false },
-  spellcheck: { type: Boolean, default: true },
-  minlength: { type: [String, Number], default: undefined },
-  maxlength: { type: [String, Number], default: undefined },
+interface Props {
+  modelValue?: string | number
+  label?: string
+  type?: string
+  placeholder?: string
+  autocomplete?: string
+  required?: boolean
+  disabled?: boolean
+  spellcheck?: boolean
+  minlength?: string | number
+  maxlength?: string | number
   // Numeric / pattern constraints (passed through to the <input>).
-  min: { type: [String, Number], default: undefined },
-  max: { type: [String, Number], default: undefined },
-  step: { type: [String, Number], default: undefined },
-  pattern: { type: String, default: undefined },
+  min?: string | number
+  max?: string | number
+  step?: string | number
+  pattern?: string
   // When true, renders the input with an error border (e.g. mismatch).
-  invalid: { type: Boolean, default: false },
-  hint: { type: String, default: '' },
-  error: { type: String, default: '' },
+  invalid?: boolean
+  hint?: string
+  error?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: '',
+  label: '',
+  type: 'text',
+  placeholder: '',
+  autocomplete: 'off',
+  required: false,
+  disabled: false,
+  spellcheck: true,
+  minlength: undefined,
+  maxlength: undefined,
+  min: undefined,
+  max: undefined,
+  step: undefined,
+  pattern: undefined,
+  invalid: false,
+  hint: '',
+  error: '',
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{ (e: 'update:modelValue', value: string | number): void }>()
 
 const inputId = useId()
 
@@ -71,7 +91,7 @@ const inputClasses = computed(() => [
         :step="step"
         :pattern="pattern"
         :class="inputClasses"
-        @input="emit('update:modelValue', $event.target.value)"
+        @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
       <div v-if="$slots.trailing" class="mt-1 text-right">
         <slot name="trailing" />

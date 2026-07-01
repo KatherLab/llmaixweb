@@ -63,7 +63,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { CircleUser } from '@lucide/vue'
@@ -82,14 +82,14 @@ const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()
 
-const fullName = ref('')
-const email = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const isLoading = ref(false)
-const error = ref(null)
+const fullName = ref<string>('')
+const email = ref<string>('')
+const password = ref<string>('')
+const confirmPassword = ref<string>('')
+const isLoading = ref<boolean>(false)
+const error = ref<string | null>(null)
 
-const isFormValid = computed(
+const isFormValid = computed<boolean>(
   () =>
     fullName.value.length >= 2 &&
     email.value.includes('@') &&
@@ -97,18 +97,22 @@ const isFormValid = computed(
     password.value === confirmPassword.value,
 )
 
-async function handleSubmit() {
+async function handleSubmit(): Promise<void> {
   if (!isFormValid.value || isLoading.value) return
   isLoading.value = true
   error.value = null
 
   try {
-    await usersApi.createFirstAdmin({
+    // `role` is accepted by the backend's first-admin endpoint but not
+    // declared on UserCreate — build as a plain record to avoid excess-
+    // property checking at the call site.
+    const payload = {
       full_name: fullName.value,
       email: email.value,
       password: password.value,
       role: 'admin',
-    })
+    }
+    await usersApi.createFirstAdmin(payload)
     // Auto-login
     const formData = new URLSearchParams()
     formData.append('username', email.value)

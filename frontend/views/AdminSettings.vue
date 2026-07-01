@@ -165,7 +165,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { CircleDot, Lock } from '@lucide/vue'
 import { adminApi } from '@/services/adminApi'
@@ -173,15 +173,17 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import { extractErrorMessage } from '@/utils/errors'
 import { inputClass } from '@/utils/formStyles'
+import type { AdminSettings, AdminSettingEntry } from '@/types'
 
-const settings = reactive({})
-const draft = reactive({})
-const loading = ref(true)
-const saving = ref(false)
-const error = ref('')
-const success = ref(false)
+const settings = reactive<AdminSettings>({})
+// Draft values are a mix of booleans, numbers, and strings.
+const draft = reactive<Record<string, string | number | boolean>>({})
+const loading = ref<boolean>(true)
+const saving = ref<boolean>(false)
+const error = ref<string>('')
+const success = ref<boolean>(false)
 
-const categories = [
+const categories: string[] = [
   'All',
   'General',
   'OpenAI',
@@ -193,9 +195,9 @@ const categories = [
   'Email',
 ]
 const categoryTabs = computed(() => categories.map((cat) => ({ label: cat, value: cat })))
-const activeTab = ref('All')
+const activeTab = ref<string>('All')
 
-const filteredSettings = computed(() => {
+const filteredSettings = computed<AdminSettings>(() => {
   if (activeTab.value === 'All') return settings
   return Object.fromEntries(
     Object.entries(settings).filter(([_k, v]) => v.category === activeTab.value),
@@ -203,15 +205,15 @@ const filteredSettings = computed(() => {
 })
 
 // --- Secrets state ---
-const showSecretInput = reactive({})
-const secretDraft = reactive({})
+const showSecretInput = reactive<Record<string, boolean>>({})
+const secretDraft = reactive<Record<string, string>>({})
 
-function cancelSecretInput(key) {
+function cancelSecretInput(key: string): void {
   showSecretInput[key] = false
   secretDraft[key] = ''
 }
 
-async function saveSecret(key) {
+async function saveSecret(key: string): Promise<void> {
   saving.value = true
   error.value = ''
   try {
@@ -233,7 +235,7 @@ async function saveSecret(key) {
   }
 }
 
-async function clearSecret(key) {
+async function clearSecret(key: string): Promise<void> {
   saving.value = true
   error.value = ''
   try {
@@ -255,27 +257,33 @@ async function clearSecret(key) {
 
 // --- Normal (non-secret) settings ---
 
-function resetDraft() {
+function resetDraft(): void {
   Object.keys(settings).forEach((k) => {
-    if (!settings[k].readonly && !settings[k].secret) {
-      if (settings[k].type === 'bool') {
+    const entry: AdminSettingEntry = settings[k]
+    if (!entry.readonly && !entry.secret) {
+      if (entry.type === 'bool') {
+        // Backend may return booleans or their string representations for
+        // bool-typed settings; the AdminSettingEntry types override/original
+        // as `string | null`, so cast broadly to match runtime values.
+        const overrideBool = entry.override as string | boolean | null
+        const originalBool = entry.original as string | boolean | null
         draft[k] =
-          settings[k].override !== undefined && settings[k].override !== null
-            ? settings[k].override === true || settings[k].override === 'true'
-            : settings[k].original === true || settings[k].original === 'true'
-      } else if (settings[k].type === 'int') {
+          overrideBool !== undefined && overrideBool !== null
+            ? overrideBool === true || overrideBool === 'true'
+            : originalBool === true || originalBool === 'true'
+      } else if (entry.type === 'int') {
         draft[k] =
-          settings[k].override !== undefined && settings[k].override !== null
-            ? Number(settings[k].override)
-            : Number(settings[k].original)
+          entry.override !== undefined && entry.override !== null
+            ? Number(entry.override)
+            : Number(entry.original)
       } else {
-        draft[k] = settings[k].override ?? settings[k].original
+        draft[k] = entry.override ?? entry.original ?? ''
       }
     }
   })
 }
 
-async function fetchSettings() {
+async function fetchSettings(): Promise<void> {
   loading.value = true
   try {
     const res = await adminApi.getSettings()
@@ -288,7 +296,7 @@ async function fetchSettings() {
   }
 }
 
-async function save() {
+async function save(): Promise<void> {
   saving.value = true
   error.value = ''
   success.value = false
@@ -298,8 +306,8 @@ async function save() {
     )
     await adminApi.updateSettings(payload)
     Object.entries(payload).forEach(([k, v]) => {
-      settings[k].override = v
-      settings[k].effective = v
+      settings[k].override = String(v)
+      settings[k].effective = String(v)
       settings[k].overridden = true
     })
     success.value = true
@@ -313,13 +321,13 @@ async function save() {
   }
 }
 
-async function deleteOverride(key) {
+async function deleteOverride(key: string): Promise<void> {
   try {
     await adminApi.deleteSetting(key)
-    settings[key].override = undefined
+    settings[key].override = null
     settings[key].effective = settings[key].original
     settings[key].overridden = false
-    draft[key] = settings[key].original
+    draft[key] = settings[key].original ?? ''
   } catch (e) {
     error.value = extractErrorMessage(e, 'Failed to remove override')
   }

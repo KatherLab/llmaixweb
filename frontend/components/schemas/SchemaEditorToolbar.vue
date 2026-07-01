@@ -39,15 +39,20 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ChevronRight, CircleHelp } from '@lucide/vue'
 
-defineProps({
-  navigationPath: {
-    type: Array,
-    default: () => [],
-  },
+interface Props {
+  navigationPath?: string[]
+}
+
+withDefaults(defineProps<Props>(), {
+  navigationPath: () => [],
 })
 
-defineEmits(['navigate-to-root', 'navigate-to-path', 'show-help'])
+defineEmits<{
+  'navigate-to-root': []
+  'navigate-to-path': [index: number]
+  'show-help': []
+}>()
 </script>

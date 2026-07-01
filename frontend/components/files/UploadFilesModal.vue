@@ -4,24 +4,29 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
 import FileDropzone from '@/components/files/FileDropzone.vue'
 
-defineProps({
-  open: { type: Boolean, required: true },
-})
+interface Props {
+  open: boolean
+}
 
-const emit = defineEmits(['close', 'files'])
+defineProps<Props>()
+
+const emit = defineEmits<{
+  close: []
+  files: [files: File[]]
+}>()
 
 // Shared dragging state (kept local — the modal is the only dropzone when open).
-const dragging = defineModel('dragging', { type: Boolean, default: false })
+const dragging = defineModel<boolean>('dragging', { default: false })
 
-const onDrop = (files) => {
+const onDrop = (files: File[]) => {
   emit('files', files)
 }
 
-const onSelect = (files) => {
+const onSelect = (files: File[]) => {
   emit('files', files)
 }
 </script>

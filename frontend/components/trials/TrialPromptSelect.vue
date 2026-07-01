@@ -35,23 +35,24 @@
   </div>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { computed, type PropType } from 'vue'
 import { selectClass, labelClass } from '@/utils/formStyles'
+import type { Prompt } from '@/types'
 
 const props = defineProps({
   prompts: {
-    type: Array,
+    type: Array as PropType<Prompt[]>,
     default: () => [],
   },
 })
 
-const emit = defineEmits(['change'])
+const emit = defineEmits<{ change: [] }>()
 
-const model = defineModel({ type: String, default: '' })
+const model = defineModel<string>({ default: '' })
 
 const selectedPrompt = computed(() => {
   if (!model.value) return null
-  return props.prompts.find((prompt) => prompt.id.toString() === model.value)
+  return props.prompts.find((prompt) => prompt.id.toString() === model.value) ?? null
 })
 </script>

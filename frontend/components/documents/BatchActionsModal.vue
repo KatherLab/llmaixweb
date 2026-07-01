@@ -78,7 +78,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -89,31 +89,36 @@ import { trialsApi } from '@/services/trialsApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { useToast } from '@/composables/useToast'
 import { extractErrorMessage } from '@/utils/errors'
+import type { PreprocessingTaskCreate } from '@/types'
 
-const props = defineProps({
-  open: { type: Boolean, required: true },
-  action: { type: String, required: true },
-  documents: { type: Array, required: true },
-  projectId: { type: [String, Number], required: true },
+interface Props {
+  open: boolean
+  action: string
+  documents: number[]
+  projectId: string | number
   // 'documents' (default) operates on documents via documentsApi;
   // 'trials' operates on trials via trialsApi (delete only).
-  mode: {
-    type: String,
-    default: 'documents',
-    validator: (v) => v === 'documents' || v === 'trials',
-  },
+  mode?: 'documents' | 'trials'
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  mode: 'documents',
 })
 
-const emit = defineEmits(['close', 'complete', 'deleted'])
+const emit = defineEmits<{
+  close: []
+  complete: []
+  deleted: [ids: number[]]
+}>()
 const toast = useToast()
 
 // Form state
-const forceReprocess = ref(false)
-const exportFormat = ref('json')
-const includeMetadata = ref(true)
-const includePreprocessingInfo = ref(true)
-const confirmDelete = ref(false)
-const isProcessing = ref(false)
+const forceReprocess = ref<boolean>(false)
+const exportFormat = ref<string>('json')
+const includeMetadata = ref<boolean>(true)
+const includePreprocessingInfo = ref<boolean>(true)
+const confirmDelete = ref<boolean>(false)
+const isProcessing = ref<boolean>(false)
 
 // Computed
 const entityLabel = computed(() => (props.mode === 'trials' ? 'trial' : 'document'))
@@ -169,7 +174,7 @@ const canPerformAction = computed(() => {
 })
 
 // Methods
-const performAction = async () => {
+const performAction = async (): Promise<void> => {
   if (!canPerformAction.value) return
   isProcessing.value = true
   try {
@@ -202,9 +207,9 @@ const performAction = async () => {
   }
 }
 
-const reprocessDocuments = async () => {
+const reprocessDocuments = async (): Promise<void> => {
   const fileIds = props.documents
-  const taskData = {
+  const taskData: PreprocessingTaskCreate = {
     inline_config: {
       name: `Reprocess ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
       additional_settings: {},
@@ -216,13 +221,18 @@ const reprocessDocuments = async () => {
   toast.success('Reprocessing task started')
 }
 
-const exportDocuments = async () => {
+const exportDocuments = async (): Promise<void> => {
   toast.info('Export functionality would be implemented here')
 }
 
-const deleteDocuments = async () => {
-  const failedDocs = []
-  const successDocs = []
+interface FailedDoc {
+  docId: number
+  error: string
+}
+
+const deleteDocuments = async (): Promise<number[]> => {
+  const failedDocs: FailedDoc[] = []
+  const successDocs: number[] = []
   const deleteFn = props.mode === 'trials' ? trialsApi.delete : documentsApi.delete
   const label = entityLabel.value
 

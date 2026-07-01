@@ -1,5 +1,5 @@
 <!-- src/components/EmptyState.vue -->
-<script setup>
+<script setup lang="ts">
 import { Plus } from '@lucide/vue'
 import Tooltip from '@/components/common/Tooltip.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -14,15 +14,22 @@ import BaseButton from '@/components/common/BaseButton.vue'
  * The action button only renders when `actionText` is set, so the component
  * also covers no-action empty states (icon + text only).
  */
-defineProps({
-  title: { type: String, required: true },
-  description: { type: String, default: '' },
-  actionText: { type: String, default: '' },
-  disabled: { type: Boolean, default: false },
-  disabledReason: { type: String, default: '' },
+interface Props {
+  title: string
+  description?: string
+  actionText?: string
+  disabled?: boolean
+  disabledReason?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  description: '',
+  actionText: '',
+  disabled: false,
+  disabledReason: '',
 })
 
-const emit = defineEmits(['action'])
+const emit = defineEmits<{ (e: 'action'): void }>()
 </script>
 
 <template>

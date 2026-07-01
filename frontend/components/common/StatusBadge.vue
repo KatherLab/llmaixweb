@@ -10,28 +10,25 @@
   </span>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { getStatusBadgeClass, getPillClass } from '@/utils/statusStyles'
 
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({
-  status: {
-    type: String,
-    default: '',
-  },
-  label: {
-    type: String,
-    default: '',
-  },
+interface Props {
+  status?: string
+  label?: string
   // When set, uses the generic color pill map (dark-mode aware) instead of the
   // status map. Use for semantic non-status pills (counts, "active", match/
   // mismatch, …). Values: blue|green|yellow|red|purple|teal|cyan|orange|gray
-  color: {
-    type: String,
-    default: '',
-  },
+  color?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  status: '',
+  label: '',
+  color: '',
 })
 
 const badgeClass = computed(() =>

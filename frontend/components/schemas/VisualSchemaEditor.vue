@@ -90,8 +90,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch, type Component } from 'vue'
 import {
   StringIcon,
   NumberIcon,
@@ -109,19 +109,20 @@ import EditPropertyModal from './EditPropertyModal.vue'
 import DeletePropertyModal from './DeletePropertyModal.vue'
 import SchemaEditorHelpModal from './SchemaEditorHelpModal.vue'
 import { useSchemaKeyboard } from '@/composables/useSchemaKeyboard'
+import type { SchemaDefinition, SchemaProperty } from '@/types'
 
-const props = defineProps({
-  schema: {
-    type: Object,
-    required: true,
-  },
-  advancedMode: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  schema: SchemaDefinition
+  advancedMode?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  advancedMode: false,
 })
 
-const emit = defineEmits(['update:schema'])
+const emit = defineEmits<{
+  'update:schema': [schema: SchemaDefinition]
+}>()
 
 // UI State
 const showTreeNav = ref(true)
@@ -131,7 +132,7 @@ const showDeleteModal = ref(false)
 const showHelp = ref(false)
 
 // Navigation
-const currentPath = ref([])
+const currentPath = ref<string[]>([])
 const navigationPath = computed(() => {
   return currentPath.value.map((segment) => {
     // Make path segments more readable
@@ -140,9 +141,9 @@ const navigationPath = computed(() => {
 })
 
 // Schema Data
-const localSchema = ref(JSON.parse(JSON.stringify(props.schema)))
-const currentSchema = computed(() => {
-  let schema = localSchema.value
+const localSchema = ref<SchemaDefinition>(JSON.parse(JSON.stringify(props.schema)))
+const currentSchema = computed<SchemaDefinition>(() => {
+  let schema: SchemaDefinition = localSchema.value
   for (const segment of currentPath.value) {
     if (schema.properties && schema.properties[segment]) {
       schema = schema.properties[segment]
@@ -154,7 +155,15 @@ const currentSchema = computed(() => {
 })
 
 // Property type definitions with icons — icons shared via @/utils/schemaTypeIcons
-const availableTypes = computed(() => [
+interface AvailableType {
+  value: string
+  label: string
+  color: string
+  icon: Component
+  description: string
+}
+
+const availableTypes = computed<AvailableType[]>(() => [
   {
     value: 'string',
     label: props.advancedMode ? 'String' : 'Text',
@@ -193,7 +202,12 @@ const availableTypes = computed(() => [
 ])
 
 // Edit property data (passed to EditPropertyModal)
-const editingPropertyData = ref(null)
+interface EditingPropertyData {
+  key: string
+  schema: SchemaDefinition | SchemaProperty
+}
+
+const editingPropertyData = ref<EditingPropertyData | null>(null)
 
 // Delete property
 const propertyToDelete = ref('')
@@ -233,7 +247,7 @@ const navigateToRoot = () => {
   currentPath.value = []
 }
 
-const navigateToPath = (pathIndex) => {
+const navigateToPath = (pathIndex: number | string[]) => {
   if (typeof pathIndex === 'number') {
     currentPath.value = currentPath.value.slice(0, pathIndex + 1)
   } else if (Array.isArray(pathIndex)) {
@@ -241,13 +255,13 @@ const navigateToPath = (pathIndex) => {
   }
 }
 
-const navigateToProperty = (propertyKey) => {
+const navigateToProperty = (propertyKey: string) => {
   currentPath.value = [...currentPath.value, propertyKey]
 }
 
 // Schema update methods
-const updateCurrentSchema = (updates) => {
-  let schema = localSchema.value
+const updateCurrentSchema = (updates: SchemaProperty) => {
+  let schema: SchemaDefinition = localSchema.value
   const path = [...currentPath.value]
   const lastSegment = path.pop()
 
@@ -274,7 +288,12 @@ const updateCurrentSchema = (updates) => {
 }
 
 // Add property (receives form data from AddPropertyModal)
-const onAddProperty = (formData) => {
+const onAddProperty = (formData: {
+  name: string
+  type: string
+  title: string
+  description: string
+}) => {
   const key = formData.name.trim()
   if (currentSchema.value.properties?.[key]) {
     alert(`Property "${key}" already exists!`)
@@ -284,7 +303,7 @@ const onAddProperty = (formData) => {
   if (!formData.name.trim()) return
 
   const propertyKey = formData.name.trim()
-  const propertySchema = {
+  const propertySchema: SchemaProperty = {
     type: formData.type,
     title: formData.title || propertyKey,
     description: formData.description,
@@ -307,7 +326,13 @@ const onAddProperty = (formData) => {
 }
 
 // Edit property — opens EditPropertyModal with initial data
-const editProperty = ({ key, schema }) => {
+const editProperty = ({
+  key,
+  schema,
+}: {
+  key: string
+  schema: SchemaDefinition | SchemaProperty
+}) => {
   editingPropertyData.value = {
     key,
     schema: JSON.parse(JSON.stringify(schema)),
@@ -324,7 +349,11 @@ const editRootSchema = () => {
 }
 
 // Edit save — applies mutation to localSchema
-const onEditSave = (payload) => {
+const onEditSave = (payload: {
+  key: string
+  newKey: string
+  schema: SchemaDefinition | SchemaProperty
+}) => {
   if (savePropertyEdits(payload)) {
     showEditPropertyModal.value = false
   }
@@ -334,7 +363,15 @@ const onEditClose = () => {
   showEditPropertyModal.value = false
 }
 
-const savePropertyEdits = ({ key, newKey, schema }) => {
+const savePropertyEdits = ({
+  key,
+  newKey,
+  schema,
+}: {
+  key: string
+  newKey: string
+  schema: SchemaDefinition | SchemaProperty
+}): boolean => {
   /* ---------- 1. ROOT SCHEMA ---------- */
   if (key === '__root__') {
     // Replace (don't merge) the entire root schema
@@ -346,7 +383,7 @@ const savePropertyEdits = ({ key, newKey, schema }) => {
   const oldKey = key
 
   // Find the parent container of the property being edited
-  let parent = localSchema.value
+  let parent: SchemaDefinition = localSchema.value
   const path = [...currentPath.value]
   for (const segment of path) {
     if (parent.properties && parent.properties[segment]) {
@@ -363,7 +400,7 @@ const savePropertyEdits = ({ key, newKey, schema }) => {
   }
 
   // Deep-clone the edited schema so we don't keep reactive links
-  const freshSchema = JSON.parse(JSON.stringify(schema))
+  const freshSchema: SchemaProperty = JSON.parse(JSON.stringify(schema))
 
   // If the container is an OBJECT
   if (parent.properties) {
@@ -390,7 +427,7 @@ const savePropertyEdits = ({ key, newKey, schema }) => {
 }
 
 // Delete property
-const confirmDeleteProperty = (propertyKey) => {
+const confirmDeleteProperty = (propertyKey: string) => {
   propertyToDelete.value = propertyKey
   showDeleteModal.value = true
 }

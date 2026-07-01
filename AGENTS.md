@@ -8,7 +8,7 @@ This file explains the structure, concepts, and conventions of the **LLMAIx Web*
 
 A web application for extracting structured JSON data from unstructured medical/lab documents using LLMs. Users upload files (PDFs, images, spreadsheets), preprocess them via OCR/text extraction, define JSON schemas and prompts, run LLM-based extraction "trials", and evaluate results against ground truth data. Privacy-first: can run fully local or with self-hosted LLM providers.
 
-**Tech stack:** Vue 3 + Vite + TailwindCSS (frontend), FastAPI (backend), SQLAlchemy (ORM), Celery (async tasks), PostgreSQL (primary DB, SQLite for dev), Pydantic (config).
+**Tech stack:** Vue 3 + Vite + TypeScript + TailwindCSS (frontend), FastAPI (backend), SQLAlchemy (ORM), Celery (async tasks), PostgreSQL (primary DB, SQLite for dev), Pydantic (config).
 
 ---
 
@@ -31,8 +31,9 @@ llmaixweb/
 │   ├── components/           # Reusable UI components (common/, + per-domain folders)
 │   ├── composables/          # Reusable composition functions (download, pagination, WS updates, theme…)
 │   ├── stores/               # Pinia stores (auth, firstAdmin)
-│   ├── services/             # Axios client (`api.js`) + per-resource API modules (`*Api.js`)
+│   ├── services/             # Axios client (`api.ts`) + per-resource API modules (`*Api.ts`)
 │   ├── router/               # Vue Router config
+│   ├── types/                # Hand-written TS domain types mirroring backend Pydantic schemas
 │   └── utils/                # Formatters, date/err/markdown/schema helpers
 ├── alembic/                  # Database migrations
 ├── pyproject.toml            # Python deps, Ruff config, project metadata
@@ -196,7 +197,7 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 
 ## Frontend Architecture
 
-### Routing Structure (`router/index.js`)
+### Routing Structure (`router/index.ts`)
 ```
 /                           → AppLayout (navbar)
   / (Landing)               → Landing
@@ -229,20 +230,21 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
   - `auth.js` — user session, token (localStorage), login/logout, `isAuthenticated`/`isAdmin` computed properties
   - `firstAdmin.js` — checks if any admin user exists (for first-run setup flow)
 
-### API Client (`services/api.js`)
+### API Client (`services/api.ts`)
 - Axios instance with dynamic base URL (runtime config > build-time env var > default)
 - Request interceptor: adds Bearer token from localStorage
 - Response interceptor: auto-logout on 401/403, toast notification
 
-### API Service Layer (`services/*Api.js`)
-Per-resource modules wrap the raw `api` instance — **components import functions from these, not the raw `api` instance**. One module per backend resource: `authApi`, `usersApi`, `ssoApi`, `projectsApi`, `llmApi`, `filesApi`, `preprocessingApi`, `documentsApi`, `documentSetsApi`, `schemasApi`, `promptsApi`, `trialsApi`, `groundtruthApi`, `evaluationsApi`, `adminApi`, `versionApi`. Each exports typed functions (e.g. `trialsApi.list(projectId, params)`, `documentsApi.delete(projectId, docId)`). The only legitimate direct `api` import outside `services/` is `stores/auth.js` (for the auth-header config).
+### API Service Layer (`services/*Api.ts`)
+Per-resource modules wrap the raw `api` instance — **components import functions from these, not the raw `api` instance**. One module per backend resource: `authApi`, `usersApi`, `ssoApi`, `projectsApi`, `llmApi`, `filesApi`, `preprocessingApi`, `documentsApi`, `documentSetsApi`, `schemasApi`, `promptsApi`, `trialsApi`, `groundtruthApi`, `evaluationsApi`, `adminApi`, `versionApi`. Each exports typed functions (e.g. `trialsApi.list(projectId, params)`, `documentsApi.delete(projectId, docId)`) with `Promise<AxiosResponse<T>>` returns tied to the `@/types` domain interfaces. The only legitimate direct `api` import outside `services/` is `stores/auth.ts` (for the auth-header config).
 
 ### Shared Primitives & Composables
 The frontend has a layer of reusable building blocks — prefer these over re-implementing:
 
-- **`components/common/`** — `BaseModal` (Teleport + ref-counted scroll lock + ESC/backdrop close; the keystone most `*Modal.vue` components build on), `BaseButton`, `ConfirmationDialog`, `StatusBadge` (+ `utils/statusStyles.js`), `FilterChip`, `SearchInput`, `PaginationControls`, `JsonViewer`, `LoadingSpinner`, `EmptyState`, `ErrorBanner`, `Tooltip`, `FileIcon`, `PasswordInput` (password field w/ strength meter + show/hide, used by all auth/admin password flows), `FormField`.
+- **`components/common/`** — `BaseModal` (Teleport + ref-counted scroll lock + ESC/backdrop close; the keystone most `*Modal.vue` components build on), `BaseButton`, `ConfirmationDialog`, `StatusBadge` (+ `utils/statusStyles.ts`), `FilterChip`, `SearchInput`, `PaginationControls`, `JsonViewer`, `LoadingSpinner`, `EmptyState`, `ErrorBanner`, `Tooltip`, `FileIcon`, `PasswordInput` (password field w/ strength meter + show/hide, used by all auth/admin password flows), `FormField`.
 - **`composables/`** — `useScrollLock` (ref-counted body scroll lock for stacked modals), `useFileDownload` (blob→objectURL→revoke), `usePagination` / `useDocumentPagination`, `useGridTheme` (shared ag-grid theme + dark-mode reactivity), `usePreprocessingUpdates` / `useTrialUpdates` (WebSocket subscribe + project-id filtering for live task progress), `useModelTesting`, `useSchemaKeyboard`.
-- **`utils/`** — `formatters.js` (dates, file sizes, durations), `dateRange.js`, `errors.js` (`extractErrorMessage`), `markdown.js`, `schemaTypeIcons.js` (shared type→icon/color maps for the schema editor), `schemaTemplates.js` + `promptTemplates.js`, `ocrLabels.js`.
+- **`utils/`** — `formatters.ts` (dates, file sizes, durations), `dateRange.ts`, `errors.ts` (`extractErrorMessage`), `markdown.ts`, `schemaTypeIcons.ts` (shared type→icon/color maps for the schema editor), `schemaTemplates.ts` + `promptTemplates.ts`, `ocrLabels.ts`.
+- **`types/`** — hand-written TypeScript domain types mirroring the backend Pydantic schemas (`@/types` barrel). One file per domain (auth, user, sso, project, file, document, documentSet, schema, prompt, trial, preprocessing, groundtruth, evaluation, admin, llm, enums, api helpers, websocket payloads). Import these for API responses, props, and composable signatures.
 
 ### Key UI Components
 
@@ -279,11 +281,11 @@ Large components are **orchestration shells** — they compose smaller sibling c
 
 ### Frontend Patterns
 - **Build modals on `BaseModal`** (Teleport + ref-counted scroll lock + ESC/backdrop). Don't hand-roll Teleport/backdrop/scroll-lock — nested modals will break.
-- **Call the API through `services/*Api.js`**, not the raw `api` instance. Add a function to the relevant module if one is missing.
-- **Reuse `composables/` and `components/common/`** before duplicating: downloads (`useFileDownload`), pagination (`usePagination` + `PaginationControls`), live task progress (`usePreprocessingUpdates`/`useTrialUpdates`), grid theming (`useGridTheme`), status pills (`StatusBadge`), error messages (`utils/errors.js` `extractErrorMessage`), dates/sizes (`utils/formatters.js`).
-- **`defineProps` style**: use full `{ type, required, default }` validation. Object/Array defaults must be factory functions (`() => ({})` / `() => []`); use `default: undefined` for optional Object/Function props that are falsy-checked (`v-if="prop"`). Don't use `() => null` for Object/Array (triggers Vue dev-mode type warnings).
+- **Call the API through `services/*Api.ts`**, not the raw `api` instance. Add a function to the relevant module if one is missing.
+- **Reuse `composables/` and `components/common/`** before duplicating: downloads (`useFileDownload`), pagination (`usePagination` + `PaginationControls`), live task progress (`usePreprocessingUpdates`/`useTrialUpdates`), grid theming (`useGridTheme`), status pills (`StatusBadge`), error messages (`utils/errors.ts` `extractErrorMessage`), dates/sizes (`utils/formatters.ts`).
+- **`defineProps` style**: use the TypeScript generic form `defineProps<Props>()` + `withDefaults(defineProps<Props>(), {...})` where defaults exist. Define a `Props` interface per component, importing shared domain types from `@/types` (e.g. `Trial`, `Document`, `File`). For string-literal-union props (the ones that previously used `validator:`), declare a union type. `defineEmits` uses `defineEmits<{ (e: 'event', payload: T): void }>()`; `defineModel` uses `defineModel<T>()`.
 - **Dark mode**: AppLayout owns the `darkMode` toggle (writes `localStorage['darkMode']` + toggles the `dark` class on `<html>`). Tailwind is `darkMode: 'class'`. ag-grids theme via `useGridTheme`, which re-themes on the class change.
-- **Verification gate**: `npm run check` (prettier + eslint, 0 errors required) and `npm run build` must pass before committing.
+- **Verification gate**: `npm run check` (prettier + eslint + `vue-tsc --noEmit`, 0 errors required) and `npm run build` must pass before committing.
 
 ### Linting & Formatting
 
@@ -291,12 +293,13 @@ Always run these checks before committing changes:
 
 **Frontend:**
 ```bash
-npm run check          # prettier --check + eslint
+npm run check          # prettier --check + eslint + vue-tsc --noEmit
+npm run type-check     # vue-tsc --noEmit (type checking only)
 npm run format         # prettier --write (auto-fix)
 npm run lint:fix       # eslint --fix
 ```
 
-Pre-commit hook auto-runs `lint-staged` (eslint + prettier on staged `.js`/`.vue` files via `simple-git-hooks`).
+Pre-commit hook auto-runs `lint-staged` (eslint + prettier on staged `.js`/`.ts`/`.vue` files via `simple-git-hooks`).
 
 **Backend:**
 ```bash
@@ -367,7 +370,7 @@ Frontend tests are currently not set up.
 1. **Backend model** → add to `models/project.py`, create Alembic migration
 2. **Pydantic schema** → add to `schemas/project.py` or new schema file
 3. **API endpoint** → add as new router file in `routers/v1/endpoints/`, register in `projects.py` sub-router or in `main.py` top-level router
-4. **Frontend component** → add to `components/<domain>/` or `views/`, add route in `router/index.js`. Add API calls to the matching `services/*Api.js` module; build modals on `BaseModal` and reuse `composables/` + `components/common/` per the Frontend Patterns above.
+4. **Frontend component** → add to `components/<domain>/` or `views/` as a `<script setup lang="ts">` SFC, add route in `router/index.ts`. Add API calls to the matching `services/*Api.ts` module (type the request/response against `@/types`); build modals on `BaseModal` and reuse `composables/` + `components/common/` per the Frontend Patterns above. Shared domain types live in `frontend/types/` (importable as `@/types`) — add new interfaces there, hand-written to match the backend Pydantic schemas.
 5. **Celery task** → add to `celery/` directory, register in `celery_config.py` `include` list
 
 ### Async Task Lifecycle

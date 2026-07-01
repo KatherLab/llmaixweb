@@ -76,28 +76,34 @@
   </BaseModal>
 </template>
 
-<script setup>
-import { ref, watch, nextTick } from 'vue'
+<script setup lang="ts">
+import { ref, watch, nextTick, type Component } from 'vue'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  advancedMode: {
-    type: Boolean,
-    default: false,
-  },
-  availableTypes: {
-    type: Array,
-    required: true,
-  },
+interface AvailableType {
+  value: string
+  label: string
+  color: string
+  icon: Component
+  description?: string
+}
+
+interface Props {
+  open: boolean
+  advancedMode?: boolean
+  availableTypes: AvailableType[]
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  advancedMode: false,
 })
 
-const emit = defineEmits(['close', 'add'])
+const emit = defineEmits<{
+  close: []
+  add: [formData: { name: string; type: string; title: string; description: string }]
+}>()
 
 // Form state (reset every time the modal opens)
 const form = ref({
@@ -108,7 +114,7 @@ const form = ref({
 })
 
 // Template ref for the name input — Phase 0 auto-focus fix (preserved)
-const propertyNameInput = ref(null)
+const propertyNameInput = ref<HTMLInputElement | null>(null)
 
 watch(
   () => props.open,

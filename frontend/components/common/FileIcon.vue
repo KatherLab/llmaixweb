@@ -108,18 +108,17 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps({
-  fileType: {
-    type: String,
-    default: '',
-  },
-  size: {
-    type: Number,
-    default: 24,
-  },
+interface Props {
+  fileType?: string | null
+  size?: number
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  fileType: '',
+  size: 24,
 })
 
 const iconType = computed(() => {

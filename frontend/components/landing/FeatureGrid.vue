@@ -15,11 +15,24 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { Component } from 'vue'
 import { Lock, Code, ClipboardList, BarChart3, LayoutDashboard, Terminal } from '@lucide/vue'
 import FeatureCard from '@/components/landing/FeatureCard.vue'
 
-const features = [
+interface Feature {
+  title: string
+  description: string
+  icon: Component
+  borderHover: string
+  shadowHover: string
+  gradientFrom: string
+  iconBg: string
+  iconText: string
+  iconHoverBg: string
+}
+
+const features: Feature[] = [
   {
     title: 'Privacy-First Design',
     description:

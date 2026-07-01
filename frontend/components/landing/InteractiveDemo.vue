@@ -211,13 +211,13 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { FileText, Zap, BarChart3, ChevronRight, CircleCheckBig } from '@lucide/vue'
 import { onMounted } from 'vue'
 
 onMounted(() => {
   // Interactive hover effects for demo section
-  const highlightPairs = [
+  const highlightPairs: { source: string; target: string }[] = [
     { source: '.highlight-patient', target: '.highlight-target-patient' },
     { source: '.highlight-dob', target: '.highlight-target-dob' },
     { source: '.highlight-mrn', target: '.highlight-target-mrn' },

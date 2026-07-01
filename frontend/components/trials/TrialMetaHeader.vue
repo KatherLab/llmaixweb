@@ -87,26 +87,25 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { FileText } from '@lucide/vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
-import { formatDate } from '@/utils/formatters.js'
+import { formatDate } from '@/utils/formatters'
+import type { Trial } from '@/types'
 
-defineProps({
-  trial: {
-    type: Object,
-    required: true,
-  },
-  totalUsage: {
-    type: Object,
-    required: true,
-  },
-  resultsCount: {
-    type: Number,
-    default: 0,
-  },
-})
+interface TokenUsage {
+  prompt_tokens?: number
+  completion_tokens?: number
+  total_tokens?: number
+  [key: string]: unknown
+}
 
-defineEmits(['open-schema', 'open-prompt'])
+defineProps<{
+  trial: Trial
+  totalUsage: TokenUsage
+  resultsCount?: number
+}>()
+
+defineEmits<{ 'open-schema': []; 'open-prompt': [] }>()
 </script>

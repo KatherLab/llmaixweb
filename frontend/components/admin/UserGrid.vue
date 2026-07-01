@@ -8,7 +8,7 @@
     :page-size-options="[10, 25, 50]"
     item-label="users"
     empty-title="No users found"
-    @row-click="$emit('edit-requested', $event)"
+    @row-click="$emit('edit-requested', $event as UserResponse)"
     @page-change="handlePageChange"
     @page-size-change="handlePageSizeChange"
   >
@@ -17,7 +17,9 @@
         <div
           class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 dark:bg-slate-700 flex items-center justify-center"
         >
-          <span class="text-blue-800 dark:text-blue-300 font-medium">{{ initials(user) }}</span>
+          <span class="text-blue-800 dark:text-blue-300 font-medium">{{
+            initials(user as UserResponse)
+          }}</span>
         </div>
         <div class="ml-3">
           <div class="text-sm font-medium text-slate-900 dark:text-white">
@@ -46,25 +48,37 @@
     </template>
 
     <template #row-actions="{ row: user }">
-      <BaseButton variant="secondary" size="sm" @click.stop="$emit('edit-requested', user)">
+      <BaseButton
+        variant="secondary"
+        size="sm"
+        @click.stop="$emit('edit-requested', user as UserResponse)"
+      >
         Edit
       </BaseButton>
     </template>
   </DataTable>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import type { UserResponse } from '@/types'
 import DataTable from '@/components/common/DataTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { usePagination } from '@/composables/usePagination'
 
-const props = defineProps({
-  rowData: { type: Array, default: () => [] },
-  search: { type: String, default: '' },
+interface Props {
+  rowData?: UserResponse[]
+  search?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  rowData: () => [],
+  search: '',
 })
 
-defineEmits(['edit-requested'])
+defineEmits<{
+  (e: 'edit-requested', user: UserResponse): void
+}>()
 
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -104,15 +118,15 @@ const tablePagination = computed(() => ({
 }))
 
 // Override the pagination object shape DataTable expects
-function handlePageChange(page) {
+function handlePageChange(page: number): void {
   currentPage.value = page
 }
-function handlePageSizeChange(size) {
+function handlePageSizeChange(size: number): void {
   pageSize.value = size
   currentPage.value = 1
 }
 
-const initials = (user) => {
+const initials = (user: UserResponse): string => {
   const name = user.full_name || ''
   if (!name) return '?'
   return name

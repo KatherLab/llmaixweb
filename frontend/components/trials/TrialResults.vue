@@ -31,7 +31,7 @@
         @open-prompt="openPromptModal"
       />
 
-      <TrialDocumentErrors :failures="trial?.meta?.failures" />
+      <TrialDocumentErrors :failures="trialFailures" />
 
       <!-- Results table -->
       <EmptyState
@@ -88,7 +88,7 @@
         >
           <template #cell-index="{ row }">
             <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{{
-              resultIndex(row)
+              resultIndex(row as unknown as TrialResultItem)
             }}</span>
           </template>
 
@@ -146,7 +146,10 @@
           </template>
 
           <template #expanded="{ row }">
-            <TrialResultDetailPanel :result="row" :project-id="props.projectId" />
+            <TrialResultDetailPanel
+              :result="row as unknown as TrialResultItem"
+              :project-id="props.projectId"
+            />
           </template>
         </DataTable>
       </template>
@@ -176,8 +179,8 @@
   </BaseModal>
 </template>
 
-<script setup>
-import { ref, onMounted, computed } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, computed, type PropType } from 'vue'
 import { useRoute } from 'vue-router'
 import { debounce } from 'perfect-debounce'
 import { Frown } from '@lucide/vue'
@@ -199,30 +202,55 @@ import { getPillClass } from '@/utils/statusStyles'
 import { formatDateSmart } from '@/utils/formatters'
 import { extractErrorMessage } from '@/utils/errors'
 import { selectClass } from '@/utils/formStyles'
+import type { Trial, TrialResultItem, Schema, Prompt } from '@/types'
+
+interface TokenUsage {
+  prompt_tokens?: number
+  completion_tokens?: number
+  total_tokens?: number
+  [key: string]: unknown
+}
+
+interface FilterChip {
+  key: string
+  label: string
+  color: string
+}
+
+interface TablePagination {
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+}
 
 const props = defineProps({
-  projectId: { type: [String, Number], required: true },
-  trialId: { type: [String, Number], required: true },
+  projectId: { type: [String, Number] as PropType<string | number>, required: true },
+  trialId: { type: [String, Number] as PropType<string | number>, required: true },
   isModal: { type: Boolean, default: false },
 })
-defineEmits(['close'])
+defineEmits<{ close: [] }>()
 
 const route = useRoute()
-const trialId = computed(() => props.trialId || parseInt(route.params.trialId))
+const trialId = computed(() => props.trialId || parseInt(route.params.trialId as string))
 
 // Trial-level state (for the meta header + failures map)
 const isLoading = ref(true)
-const error = ref(null)
-const trial = ref(null)
+const error = ref<string | null>(null)
+const trial = ref<Trial | null>(null)
 
 // Results pagination state
-const results = ref([])
+const results = ref<TrialResultItem[]>([])
 const totalCount = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(50)
 const resultsLoading = ref(false)
-const expandedKeys = ref([])
-const totalUsage = ref({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 })
+const expandedKeys = ref<number[]>([])
+const totalUsage = ref<TokenUsage>({
+  prompt_tokens: 0,
+  completion_tokens: 0,
+  total_tokens: 0,
+})
 
 // Filters
 const search = ref('')
@@ -231,11 +259,21 @@ const statusFilter = ref('')
 // Schema / Prompt snapshot display
 const showSchemaModal = ref(false)
 const showPromptModal = ref(false)
-const schemaFallback = ref(null)
-const schemaForModal = computed(() => trial.value?.schema_snapshot || schemaFallback.value || null)
-const promptForModal = computed(() => trial.value?.prompt_snapshot || trial.value?.prompt || null)
+const schemaFallback = ref<Schema | null>(null)
+const schemaForModal = computed<Schema | null>(
+  () => (trial.value?.schema_snapshot as Schema | null) || schemaFallback.value || null,
+)
+const promptForModal = computed<Prompt | null>(
+  () => (trial.value?.prompt_snapshot as Prompt | null) || trial.value?.prompt || null,
+)
 const schemaIsSnapshot = computed(() => !!trial.value?.schema_snapshot)
 const promptIsSnapshot = computed(() => !!trial.value?.prompt_snapshot)
+
+// Failures map stored on trial.meta (typed loosely on the backend).
+const trialFailures = computed<Record<string, string>>(() => {
+  const f = trial.value?.meta?.failures
+  return f && typeof f === 'object' ? (f as Record<string, string>) : {}
+})
 
 const columns = [
   { key: 'index', label: '#', width: '60px' },
@@ -257,7 +295,7 @@ const statusOptions = [
   { value: 'provider_error', label: 'Provider error' },
 ]
 
-const STATUS_LABELS = {
+const STATUS_LABELS: Record<string, string> = {
   success: 'OK',
   failed: 'Error',
   incomplete: 'Incomplete',
@@ -267,9 +305,9 @@ const STATUS_LABELS = {
   provider_error: 'Provider error',
 }
 
-const statusLabel = (status) => STATUS_LABELS[status] || (status ? status : '—')
+const statusLabel = (status: string): string => STATUS_LABELS[status] || (status ? status : '—')
 
-const statusPillClass = (status) => {
+const statusPillClass = (status: string): string => {
   if (status === 'success') return getPillClass('green')
   if (status === 'incomplete') return getPillClass('yellow')
   if (status === 'refused') return getPillClass('orange')
@@ -277,8 +315,8 @@ const statusPillClass = (status) => {
   return getPillClass('red')
 }
 
-const activeFilters = computed(() => {
-  const chips = []
+const activeFilters = computed<FilterChip[]>(() => {
+  const chips: FilterChip[] = []
   if (search.value) chips.push({ key: 'search', label: `Search: "${search.value}"`, color: 'blue' })
   if (statusFilter.value)
     chips.push({
@@ -289,7 +327,7 @@ const activeFilters = computed(() => {
   return chips
 })
 
-const tablePagination = computed(() => ({
+const tablePagination = computed<TablePagination>(() => ({
   page: currentPage.value,
   page_size: pageSize.value,
   total: totalCount.value,
@@ -297,15 +335,15 @@ const tablePagination = computed(() => ({
 }))
 
 // Global result index (stable across pages) for the "#" column
-const resultIndex = (row) => {
+const resultIndex = (row: TrialResultItem): string => {
   const idxInPage = results.value.findIndex((r) => r.id === row.id)
   if (idxInPage === -1) return ''
-  return (currentPage.value - 1) * pageSize.value + idxInPage + 1
+  return String((currentPage.value - 1) * pageSize.value + idxInPage + 1)
 }
 
 // --- Fetch ---
 
-const fetchTrial = async () => {
+const fetchTrial = async (): Promise<void> => {
   isLoading.value = true
   error.value = null
   try {
@@ -321,10 +359,10 @@ const fetchTrial = async () => {
   }
 }
 
-const fetchResults = async () => {
+const fetchResults = async (): Promise<void> => {
   resultsLoading.value = true
   try {
-    const params = {
+    const params: Record<string, unknown> = {
       limit: pageSize.value,
       offset: (currentPage.value - 1) * pageSize.value,
     }
@@ -354,25 +392,25 @@ const debouncedFetchResults = debounce(() => {
   fetchResults()
 }, 300)
 
-function handleFilterChange() {
+function handleFilterChange(): void {
   currentPage.value = 1
   fetchResults()
 }
 
-function handlePageChange(page) {
+function handlePageChange(page: number): void {
   currentPage.value = page
   expandedKeys.value = []
   fetchResults()
 }
 
-function handlePageSizeChange(size) {
+function handlePageSizeChange(size: number): void {
   pageSize.value = size
   currentPage.value = 1
   expandedKeys.value = []
   fetchResults()
 }
 
-function toggleExpand(id) {
+function toggleExpand(id: number): void {
   const idx = expandedKeys.value.indexOf(id)
   if (idx > -1) {
     expandedKeys.value.splice(idx, 1)
@@ -381,21 +419,21 @@ function toggleExpand(id) {
   }
 }
 
-function clearFilters() {
+function clearFilters(): void {
   search.value = ''
   statusFilter.value = ''
   currentPage.value = 1
   fetchResults()
 }
 
-function clearFilter(key) {
+function clearFilter(key: string): void {
   if (key === 'search') search.value = ''
   else if (key === 'status') statusFilter.value = ''
   currentPage.value = 1
   fetchResults()
 }
 
-async function openSchemaModal() {
+async function openSchemaModal(): Promise<void> {
   if (!trial.value?.schema_snapshot && trial.value?.schema_id && !schemaFallback.value) {
     try {
       const res = await schemasApi.get(props.projectId, trial.value.schema_id)
@@ -407,7 +445,7 @@ async function openSchemaModal() {
   showSchemaModal.value = true
 }
 
-function openPromptModal() {
+function openPromptModal(): void {
   showPromptModal.value = true
 }
 

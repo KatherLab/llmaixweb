@@ -28,6 +28,11 @@
     </div>
   </div>
 </template>
-<script setup>
-defineProps({ status: { type: Object, default: undefined } })
+<script setup lang="ts">
+interface ValidationStatus {
+  errors?: string[]
+  warnings?: string[]
+}
+
+defineProps<{ status?: ValidationStatus }>()
 </script>

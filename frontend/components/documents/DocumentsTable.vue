@@ -43,14 +43,17 @@
       <div class="text-sm text-slate-900 dark:text-white">
         {{ doc.preprocessing_config?.name || 'Custom Config' }}
       </div>
-      <div v-if="getOcrDisplay(doc)" class="text-xs text-slate-500 dark:text-slate-400">
-        {{ getOcrDisplay(doc) }}
+      <div
+        v-if="getOcrDisplay(doc as DocumentListItem)"
+        class="text-xs text-slate-500 dark:text-slate-400"
+      >
+        {{ getOcrDisplay(doc as DocumentListItem) }}
       </div>
     </template>
 
     <template #cell-model="{ row: doc }">
       <div class="text-sm text-slate-900 dark:text-white">
-        {{ getModelName(doc) }}
+        {{ getModelName(doc as DocumentListItem) }}
       </div>
     </template>
 
@@ -66,7 +69,7 @@
         tone="blue"
         title="View"
         aria-label="View"
-        @click.stop="$emit('view', doc)"
+        @click.stop="$emit('view', doc as DocumentListItem)"
       >
         <Eye class="w-5 h-5" aria-hidden="true" />
       </BaseButton>
@@ -75,7 +78,7 @@
         tone="gray"
         title="Download"
         aria-label="Download"
-        @click.stop="$emit('download', doc)"
+        @click.stop="$emit('download', doc as DocumentListItem)"
       >
         <CloudDownload class="w-5 h-5" aria-hidden="true" />
       </BaseButton>
@@ -83,40 +86,43 @@
   </DataTable>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { CloudDownload, Eye } from '@lucide/vue'
 import FileIcon from '@/components/common/FileIcon.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import { formatFileSize, formatDate } from '@/utils/formatters'
+import type { DocumentListItem, DocumentMetaData } from '@/types'
 
-defineProps({
-  documents: {
-    type: Array,
-    default: () => [],
-  },
-  selectedDocuments: {
-    type: Array,
-    default: () => [],
-  },
-  areAllSelected: {
-    type: Boolean,
-    default: false,
-  },
-  pagination: {
-    type: Object,
-    default: null,
-  },
+interface TablePagination {
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+}
+
+interface Props {
+  documents?: DocumentListItem[]
+  selectedDocuments?: number[]
+  areAllSelected?: boolean
+  pagination?: TablePagination | null
+}
+
+withDefaults(defineProps<Props>(), {
+  documents: () => [],
+  selectedDocuments: () => [],
+  areAllSelected: false,
+  pagination: null,
 })
 
-defineEmits([
-  'toggle-select-all',
-  'toggle-selection',
-  'view',
-  'download',
-  'page-change',
-  'page-size-change',
-])
+defineEmits<{
+  'toggle-select-all': []
+  'toggle-selection': [id: number]
+  view: [doc: DocumentListItem]
+  download: [doc: DocumentListItem]
+  'page-change': [page: number]
+  'page-size-change': [size: number]
+}>()
 
 const columns = [
   { key: 'document', label: 'Document' },
@@ -125,13 +131,13 @@ const columns = [
   { key: 'created_at', label: 'Created' },
 ]
 
-const getModelName = (doc) => {
-  const metaData = doc.meta_data || {}
+const getModelName = (doc: DocumentListItem): string => {
+  const metaData = doc.meta_data || ({} as DocumentMetaData)
   // Check for specific model fields first
-  if (metaData.mistral_model) return metaData.mistral_model
-  if (metaData.vision_model) return metaData.vision_model
+  if (metaData.mistral_model) return String(metaData.mistral_model)
+  if (metaData.vision_model) return String(metaData.vision_model)
   // Fallback to generic model field
-  if (metaData.model) return metaData.model
+  if (metaData.model) return String(metaData.model)
   // No model for local OCR
   return '—'
 }
@@ -141,16 +147,16 @@ const getModelName = (doc) => {
  * Checks meta_data.ocr_engine to determine if OCR was applied.
  * Returns null if no OCR was used (e.g., embedded text extraction, plain text files, CSV).
  */
-const getOcrDisplay = (doc) => {
-  const metaData = doc.meta_data || {}
-  const ocrEngine = metaData.ocr_engine
+const getOcrDisplay = (doc: DocumentListItem): string | null => {
+  const metaData = doc.meta_data || ({} as DocumentMetaData)
+  const ocrEngine = metaData.ocr_engine as string | undefined
   const extractionMethod = metaData.extraction_method
-  const file_type = metaData.file_type
+  const file_type = metaData.file_type as string | undefined
 
   // If ocr_engine is explicitly set, show the appropriate label
   if (ocrEngine) {
     // Map internal engine names to display names
-    const engineLabels = {
+    const engineLabels: Record<string, string> = {
       tesseract: 'Tesseract OCR',
       docling_tesseract: 'Tesseract OCR',
       mistral_ocr: 'Mistral OCR',
@@ -193,7 +199,7 @@ const getOcrDisplay = (doc) => {
       'llm_vision_ocr',
     ]
     if (ocrMethods.includes(extractionMethod)) {
-      const engineLabels = {
+      const engineLabels: Record<string, string> = {
         tesseract: 'Tesseract OCR',
         mistral_ocr: 'Mistral OCR',
         llm_vision: 'Vision LLM OCR',

@@ -7,7 +7,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 /**
  * SSO completion route.
  *
@@ -26,9 +26,15 @@ const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()
 
-const statusMessage = ref('Completing sign-in…')
+const statusMessage = ref<string>('Completing sign-in…')
 
-function parseFragment() {
+interface FragmentTokens {
+  accessToken: string | null
+  refreshToken: string | null
+  redirect: string
+}
+
+function parseFragment(): FragmentTokens {
   const hash = window.location.hash.replace(/^#/, '')
   const params = new URLSearchParams(hash)
   return {

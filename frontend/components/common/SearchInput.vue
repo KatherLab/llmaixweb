@@ -15,25 +15,28 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Search } from '@lucide/vue'
 import { inputClass } from '@/utils/formStyles'
 
-defineProps({
-  modelValue: {
-    type: String,
-    default: '',
-  },
-  placeholder: {
-    type: String,
-    default: 'Search...',
-  },
+interface Props {
+  modelValue?: string
+  placeholder?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  modelValue: '',
+  placeholder: 'Search...',
 })
 
-const emit = defineEmits(['update:modelValue', 'input'])
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string): void
+  (e: 'input', value: string): void
+}>()
 
-function onInput(event) {
-  emit('update:modelValue', event.target.value)
-  emit('input', event.target.value)
+function onInput(event: Event) {
+  const value = (event.target as HTMLInputElement).value
+  emit('update:modelValue', value)
+  emit('input', value)
 }
 </script>

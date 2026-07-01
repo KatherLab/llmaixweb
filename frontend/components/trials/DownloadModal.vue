@@ -1,5 +1,5 @@
-<script setup>
-import { ref, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch, type PropType } from 'vue'
 import { trialsApi } from '@/services/trialsApi'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -7,17 +7,18 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { selectClass, labelClass, checkboxClass } from '@/utils/formStyles'
+import type { TrialSummary } from '@/types'
 
 const { downloadFromApi } = useFileDownload()
 
 const props = defineProps({
-  open: Boolean,
-  trial: { type: Object, default: () => ({}) },
-  projectId: { type: [String, Number], default: undefined },
+  open: { type: Boolean, default: false },
+  trial: { type: Object as PropType<Partial<TrialSummary> | null>, default: () => ({}) },
+  projectId: { type: [String, Number] as PropType<string | number>, default: undefined },
 })
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 
-const format = ref('json')
+const format = ref<'json' | 'csv'>('json')
 const includeContent = ref(true)
 
 const isDownloading = ref(false)
@@ -38,17 +39,17 @@ watch(
   },
 )
 
-async function download() {
+async function download(): Promise<void> {
   if (isDownloading.value) return
   isDownloading.value = true
   try {
     await downloadFromApi(
       () =>
-        trialsApi.download(props.projectId, props.trial.id, {
+        trialsApi.download(props.projectId!, props.trial!.id!, {
           format: format.value,
           include_content: includeContent.value,
         }),
-      `trial_${props.trial.id}_results.${fileExt.value}`,
+      `trial_${props.trial!.id}_results.${fileExt.value}`,
     )
     toast.success('Downloaded!')
     emit('close')

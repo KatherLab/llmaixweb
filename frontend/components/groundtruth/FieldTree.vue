@@ -86,37 +86,52 @@
   </ul>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Check, Folder } from '@lucide/vue'
 import { getTypePillClass } from '@/utils/schemaTypeIcons'
 import { getPillClass } from '@/utils/statusStyles'
 
-const props = defineProps({
-  fields: { type: Object, default: () => ({}) },
-  types: { type: Object, default: () => ({}) },
-  required: { type: Array, default: () => [] },
-  selected: { type: String, default: '' },
-  highlight: { type: Function, default: undefined },
-  nodeColor: { type: String, default: 'text-blue-700' },
-  disabled: Boolean,
-  prefix: { type: String, default: '' },
-  mapped: { type: Array, default: () => [] }, // paths already mapped
-  dimMapped: { type: Boolean, default: true }, // allow parent to toggle (optional)
-})
-defineEmits(['select'])
-const path = (key) => (props.prefix ? `${props.prefix}.${key}` : key)
-
-function isObject(val) {
-  return val && typeof val === 'object' && Object.keys(val).length > 0
+interface Props {
+  fields?: Record<string, unknown>
+  types?: Record<string, string>
+  required?: string[]
+  selected?: string
+  highlight?: ((path: string) => boolean) | undefined
+  nodeColor?: string
+  disabled?: boolean
+  prefix?: string
+  mapped?: string[]
+  dimMapped?: boolean
 }
-function isLeaf(key) {
+
+const props = withDefaults(defineProps<Props>(), {
+  fields: () => ({}),
+  types: () => ({}),
+  required: () => [],
+  selected: '',
+  highlight: undefined,
+  nodeColor: 'text-blue-700',
+  disabled: false,
+  prefix: '',
+  mapped: () => [],
+  dimMapped: true,
+})
+
+defineEmits<{ select: [path: string] }>()
+
+const path = (key: string): string => (props.prefix ? `${props.prefix}.${key}` : key)
+
+function isObject(val: unknown): val is Record<string, unknown> {
+  return !!val && typeof val === 'object' && !Array.isArray(val) && Object.keys(val).length > 0
+}
+function isLeaf(key: string): boolean {
   return !!props.types?.[path(key)]
 }
-function isMapped(p) {
-  return props.mapped?.includes?.(p)
+function isMapped(p: string): boolean {
+  return props.mapped?.includes?.(p) ?? false
 }
 
-function badgeLabel(type) {
+function badgeLabel(type: string | undefined): string {
   switch (type) {
     case 'string':
       return 'str'
@@ -134,7 +149,7 @@ function badgeLabel(type) {
       return type || ''
   }
 }
-function typeBadgeClass(type) {
+function typeBadgeClass(type: string | undefined): string {
   // Schema types use the shared type→pill mapping (consistent with
   // SchemaBlock / TreeNode / VisualSchemaEditor). `category` and unknowns
   // fall back to a gray pill.

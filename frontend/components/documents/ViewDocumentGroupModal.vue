@@ -98,7 +98,7 @@
               <tr v-for="doc in documents" :key="doc.id" :class="t.tr">
                 <td :class="t.td">
                   <div class="flex items-center">
-                    <FileIcon :file-type="doc.original_file?.file_type" :size="32" />
+                    <FileIcon :file-type="doc.original_file?.file_type ?? ''" :size="32" />
                     <div class="ml-3">
                       <p class="text-sm font-medium text-slate-900 dark:text-white">
                         {{
@@ -191,7 +191,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { documentsApi } from '@/services/documentsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
@@ -206,29 +206,40 @@ import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { useTableClasses } from '@/composables/useTableClasses'
+import type { DocumentListItem, DocumentSetSummary } from '@/types'
+
+/** DocumentSetSummary as returned by the set list, optionally with `trial_id`. */
+interface ViewGroup extends DocumentSetSummary {
+  trial_id?: number | null
+}
+
+/** Local usage-stats state shape (camelCase keys, as read by the template). */
+interface UsageStats {
+  trialsCount: number
+  extractionsCount: number
+  lastUsed: string | null
+  [key: string]: unknown
+}
+
+interface Props {
+  open: boolean
+  group: ViewGroup
+  projectId: string | number
+}
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  close: []
+  edit: [group: ViewGroup]
+  'view-document': [doc: DocumentListItem]
+}>()
 
 const t = useTableClasses()
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  group: {
-    type: Object,
-    required: true,
-  },
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-})
-
-const emit = defineEmits(['close', 'edit', 'view-document'])
-
 const toast = useToast()
 const { downloadBlob, downloadFromApi } = useFileDownload()
-const usageStats = ref({
+const usageStats = ref<UsageStats>({
   trialsCount: 0,
   extractionsCount: 0,
   lastUsed: null,
@@ -239,19 +250,19 @@ const usageStats = ref({
 // `docTotal` is (re)set from `group.document_count` on each open in the watch
 // below; default 0 here because the component stays mounted (enabling the close
 // transition) and `group` may be null while closed.
-const documents = ref([])
-const docTotal = ref(0)
-const docPage = ref(1)
-const docPageSize = ref(25)
-const docLoading = ref(false)
+const documents = ref<DocumentListItem[]>([])
+const docTotal = ref<number>(0)
+const docPage = ref<number>(1)
+const docPageSize = ref<number>(25)
+const docLoading = ref<boolean>(false)
 
-const docTotalPages = computed(() =>
+const docTotalPages = computed<number>(() =>
   docPageSize.value ? Math.ceil(docTotal.value / docPageSize.value) : 1,
 )
 
 const docVisiblePages = computed(() => computeVisiblePages(docPage.value, docTotalPages.value))
 
-const fetchDocuments = async () => {
+const fetchDocuments = async (): Promise<void> => {
   docLoading.value = true
   try {
     const { data } = await documentsApi.list(props.projectId, {
@@ -286,7 +297,7 @@ watch(
       docTotal.value = props.group.document_count ?? 0
       try {
         const response = await documentSetsApi.getStats(props.projectId, props.group.id)
-        usageStats.value = response.data
+        usageStats.value = response.data as unknown as UsageStats
       } catch (error) {
         console.error('Failed to load usage stats:', error)
       }
@@ -296,11 +307,11 @@ watch(
   { immediate: true },
 )
 
-const viewDocument = (doc) => {
+const viewDocument = (doc: DocumentListItem): void => {
   emit('view-document', doc)
 }
 
-const exportDocumentList = () => {
+const exportDocumentList = (): void => {
   const data = documents.value.map((doc) => ({
     id: doc.id,
     filename: doc.original_file?.file_name || `Document #${doc.id}`,
@@ -310,21 +321,25 @@ const exportDocumentList = () => {
 
   const csv = [
     ['ID', 'Filename', 'Configuration', 'Created'],
-    ...data.map((row) => [row.id, row.filename, row.configuration, row.created]),
+    ...data.map((row) => [String(row.id), row.filename, row.configuration, row.created]),
   ]
     .map((row) => row.join(','))
     .join('\n')
 
-  downloadBlob(csv, `${props.group.name.replace(/[^a-z0-9]/gi, '_')}_documents.csv`, 'text/csv')
+  downloadBlob(
+    csv as unknown as Blob,
+    `${props.group.name.replace(/[^a-z0-9]/gi, '_')}_documents.csv`,
+    'text/csv',
+  )
 
   toast.success('Document list exported')
 }
 
-const showDownloadAllConfirm = ref(false)
-const downloadAllDocuments = () => {
+const showDownloadAllConfirm = ref<boolean>(false)
+const downloadAllDocuments = (): void => {
   showDownloadAllConfirm.value = true
 }
-const executeDownloadAll = async () => {
+const executeDownloadAll = async (): Promise<void> => {
   showDownloadAllConfirm.value = false
   try {
     await downloadFromApi(

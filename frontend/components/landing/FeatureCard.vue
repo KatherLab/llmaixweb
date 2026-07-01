@@ -21,21 +21,31 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, type Component } from 'vue'
 
-const props = defineProps({
-  feature: {
-    type: Object,
-    required: true,
-  },
-  index: {
-    type: Number,
-    default: 0,
-  },
+interface Feature {
+  title: string
+  description: string
+  icon: Component
+  borderHover: string
+  shadowHover: string
+  gradientFrom: string
+  iconBg: string
+  iconText: string
+  iconHoverBg: string
+}
+
+interface Props {
+  feature: Feature
+  index?: number
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  index: 0,
 })
 
-const cardEl = ref(null)
+const cardEl = ref<HTMLElement | null>(null)
 
 onMounted(() => {
   if (!cardEl.value) return

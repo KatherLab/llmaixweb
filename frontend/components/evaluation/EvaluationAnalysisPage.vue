@@ -288,6 +288,7 @@
             v-if="totalPages > 1"
             v-model="currentPage"
             :total-pages="totalPages"
+            :visible-pages="visiblePages"
             :total-items="filteredDocs.length"
             :page-size="pageSize"
           />
@@ -317,7 +318,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { ArrowDownWideNarrow, ChevronLeft, Download, Info, Tags } from '@lucide/vue'
 import { evaluationsApi } from '@/services/evaluationsApi'
@@ -336,11 +337,12 @@ import {
   prettifyField,
   accuracyColor,
   prettifyErrorType,
-  documentStatusLabel,
-  documentStatusColor,
+  documentStatusLabel as _documentStatusLabel,
+  documentStatusColor as _documentStatusColor,
   ACCURACY_THRESHOLDS,
 } from '@/utils/evaluationHelpers'
 import { getTypeIcon } from '@/utils/schemaTypeIcons'
+import { computeVisiblePages } from '@/composables/usePagination'
 import { describeHttpError } from '@/utils/errors'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
@@ -353,18 +355,56 @@ import FilterChip from '@/components/common/FilterChip.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import ConfusionMatrix from './ConfusionMatrix.vue'
 import FailureDetailDrawer from './FailureDetailDrawer.vue'
+import type {
+  EvaluationDetail,
+  DocumentEvaluationDetail,
+  TrialResultItem,
+  FieldEvaluationSummary,
+} from '@/types'
 
-const props = defineProps({
-  projectId: { type: [String, Number], required: true },
-  evaluationId: { type: [String, Number], required: true },
-  trialName: { type: String, default: '' },
-  groundTruthName: { type: String, default: '' },
+interface Props {
+  projectId: string | number
+  evaluationId: string | number
+  trialName?: string
+  groundTruthName?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  trialName: '',
+  groundTruthName: '',
 })
 
-defineEmits(['back', 'export'])
+defineEmits<{ back: []; export: [] }>()
+
+// ---- Shared inner types ----
+/** A field-level metrics summary as found in EvaluationDetail.fields. */
+type FieldMetrics = Partial<FieldEvaluationSummary> & {
+  accuracy?: number | null
+  precision?: number | null
+  recall?: number | null
+  f1_score?: number | null
+  total_count?: number | null
+  correct_count?: number | null
+  error_count?: number | null
+  error_distribution?: Record<string, number>
+}
+
+/** Confusion-matrix filter state (field is the dot-path the cell belongs to). */
+interface ConfusionFilterState {
+  groundTruth: string
+  predicted: string
+  field: string
+}
+
+/** Original file attached to a document (subset used here). */
+interface OriginalFile {
+  id?: number
+  file_type?: string
+  [key: string]: unknown
+}
 
 // ---- Top-level data ----
-const evaluationDetail = ref(null)
+const evaluationDetail = ref<EvaluationDetail | null>(null)
 const loading = ref(true)
 const loadError = ref('')
 // Trial name/model fetched in loadAll — used as a fallback for deep links
@@ -373,30 +413,30 @@ const loadedTrialName = ref('')
 const loadedTrialModel = ref('')
 
 // Field types: { dot_path: 'category' | 'string' | ... }
-const fieldTypes = ref({})
+const fieldTypes = ref<Record<string, string>>({})
 // Trial results keyed by document_id (source of reasoning + result)
-const resultMap = ref({})
+const resultMap = ref<Record<number, TrialResultItem>>({})
 const resultsLoaded = ref(false)
 
 // ---- Filters ----
 const search = ref('')
 const statusFilter = ref('all')
 const selectedFieldFilter = ref('')
-const confusionFilter = ref(null) // { groundTruth, predicted, field }
+const confusionFilter = ref<ConfusionFilterState | null>(null)
 // Field-list ordering: 'accuracy' (worst-first, default — surfaces problem
 // fields) or 'alpha' (alphabetical).
-const fieldSort = ref('accuracy')
+const fieldSort = ref<'accuracy' | 'alpha'>('accuracy')
 
 // ---- Pagination ----
 const currentPage = ref(1)
 const pageSize = 25
 
 // ---- Drawer state ----
-const selectedDocId = ref(null)
-const selectedDocEval = ref(null)
-const selectedDocResult = ref(null)
+const selectedDocId = ref<number | null>(null)
+const selectedDocEval = ref<DocumentEvaluationDetail | null>(null)
+const selectedDocResult = ref<TrialResultItem | null>(null)
 const selectedDocText = ref('')
-const selectedOriginalFile = ref(null)
+const selectedOriginalFile = ref<OriginalFile | null>(null)
 const selectedOriginalFileUrl = ref('')
 const selectedOriginalFileType = ref('')
 const loadingDocDetail = ref(false)
@@ -405,7 +445,7 @@ let currentObjectUrl = ''
 
 // ---- Computed: metrics ----
 const overallMetrics = computed(() => {
-  const m = evaluationDetail.value?.metrics || {}
+  const m = (evaluationDetail.value?.metrics || {}) as Record<string, number | null>
   return [
     {
       key: 'accuracy',
@@ -448,9 +488,15 @@ const overallMetrics = computed(() => {
   ]
 })
 
-const errorDocCount = computed(() => evaluationDetail.value?.metrics?.error_document_count || 0)
-const totalDocCount = computed(() => evaluationDetail.value?.metrics?.total_documents || 0)
-const matchedDocCount = computed(() => evaluationDetail.value?.metrics?.matched_document_count || 0)
+const errorDocCount = computed(
+  () => (evaluationDetail.value?.metrics?.error_document_count as number | undefined) || 0,
+)
+const totalDocCount = computed(
+  () => (evaluationDetail.value?.metrics?.total_documents as number | undefined) || 0,
+)
+const matchedDocCount = computed(
+  () => (evaluationDetail.value?.metrics?.matched_document_count as number | undefined) || 0,
+)
 // "X / Y documents matched" — surfaces that accuracy is over matched docs only.
 const matchedDocInfo = computed(() => {
   if (!totalDocCount.value) return ''
@@ -465,7 +511,7 @@ const createdDate = computed(() =>
 
 // ---- Computed: field list ----
 const fieldList = computed(() => {
-  const fields = evaluationDetail.value?.fields || {}
+  const fields = (evaluationDetail.value?.fields || {}) as Record<string, FieldMetrics>
   const list = Object.entries(fields).map(([name, m]) => {
     const type = fieldTypes.value[name] || 'string'
     return {
@@ -490,12 +536,12 @@ const fieldList = computed(() => {
   return list
 })
 
-const toggleFieldSort = () => {
+const toggleFieldSort = (): void => {
   fieldSort.value = fieldSort.value === 'accuracy' ? 'alpha' : 'accuracy'
 }
 
-const iconTextColor = (type) => {
-  const map = {
+const iconTextColor = (type: string): string => {
+  const map: Record<string, string> = {
     string: 'text-green-600 dark:text-green-400',
     number: 'text-blue-600 dark:text-blue-400',
     boolean: 'text-purple-600 dark:text-purple-400',
@@ -510,14 +556,17 @@ const iconTextColor = (type) => {
 // ---- Computed: confusion matrix for the selected categorical field ----
 const confusionMatrixForField = computed(() => {
   if (!selectedFieldFilter.value) return null
-  const matrices = evaluationDetail.value?.confusion_matrices || {}
+  const matrices = (evaluationDetail.value?.confusion_matrices || {}) as Record<
+    string,
+    Record<string, Record<string, number>>
+  >
   return matrices[selectedFieldFilter.value] || null
 })
 
 // ---- Computed: per-field metrics for the selected field ----
 const selectedFieldMetrics = computed(() => {
   if (!selectedFieldFilter.value) return null
-  const fields = evaluationDetail.value?.fields || {}
+  const fields = (evaluationDetail.value?.fields || {}) as Record<string, FieldMetrics>
   const m = fields[selectedFieldFilter.value]
   if (!m) return null
   const errorDistribution = m.error_distribution || {}
@@ -577,7 +626,7 @@ const confusionFilterLabel = computed(() => {
 
 // ---- Computed: filtered + paginated documents ----
 const filteredDocs = computed(() => {
-  let docs = evaluationDetail.value?.documents || []
+  let docs = (evaluationDetail.value?.documents || []) as unknown as DocumentEvaluationDetail[]
   const q = search.value.trim().toLowerCase()
   if (q) {
     docs = docs.filter((d) =>
@@ -598,11 +647,11 @@ const filteredDocs = computed(() => {
   }
   if (confusionFilter.value) {
     docs = docs.filter((d) => {
-      const detail = d.field_details?.[confusionFilter.value.field]
+      const detail = d.field_details?.[confusionFilter.value!.field]
       if (!detail) return false
       return (
-        String(detail.ground_truth_value) === confusionFilter.value.groundTruth &&
-        String(detail.predicted_value) === confusionFilter.value.predicted
+        String(detail.ground_truth_value) === confusionFilter.value!.groundTruth &&
+        String(detail.predicted_value) === confusionFilter.value!.predicted
       )
     })
   }
@@ -628,6 +677,7 @@ const filteredDocs = computed(() => {
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredDocs.value.length / pageSize)))
+const visiblePages = computed(() => computeVisiblePages(currentPage.value, totalPages.value))
 const pagedDocs = computed(() => {
   const start = (currentPage.value - 1) * pageSize
   return filteredDocs.value.slice(start, start + pageSize)
@@ -652,12 +702,12 @@ const hasNextDoc = computed(
   () => currentDocIndex.value >= 0 && currentDocIndex.value < filteredDocs.value.length - 1,
 )
 
-const openDoc = (row) => {
+const openDoc = (row: DocumentEvaluationDetail): void => {
   selectedDocId.value = row.document_id
   loadDocDetail(row.document_id)
 }
 
-const closeDrawer = () => {
+const closeDrawer = (): void => {
   selectedDocId.value = null
   selectedDocEval.value = null
   selectedDocResult.value = null
@@ -667,7 +717,7 @@ const closeDrawer = () => {
   revokeObjectUrl()
 }
 
-const moveDoc = (delta) => {
+const moveDoc = (delta: number): void => {
   const next = currentDocIndex.value + delta
   if (next < 0 || next >= filteredDocs.value.length) return
   const doc = filteredDocs.value[next]
@@ -676,12 +726,12 @@ const moveDoc = (delta) => {
 }
 
 // ---- Data loading ----
-const loadAll = async () => {
+const loadAll = async (): Promise<void> => {
   loading.value = true
   loadError.value = ''
   try {
     const { data } = await evaluationsApi.get(props.projectId, props.evaluationId)
-    evaluationDetail.value = data
+    evaluationDetail.value = data as EvaluationDetail
     // Schema field types (for category detection / icons)
     const trial = await trialsApi.get(props.projectId, data.trial_id, { include_results: false })
     if (trial.data?.name) loadedTrialName.value = trial.data.name
@@ -689,7 +739,7 @@ const loadAll = async () => {
     if (trial.data?.schema_id) {
       try {
         const ft = await schemasApi.getFieldTypes(props.projectId, trial.data.schema_id)
-        fieldTypes.value = ft.data || {}
+        fieldTypes.value = (ft.data as Record<string, string>) || {}
       } catch {
         /* field types optional */
       }
@@ -703,7 +753,7 @@ const loadAll = async () => {
   }
 }
 
-const loadAllResults = async (trialId) => {
+const loadAllResults = async (trialId: number): Promise<void> => {
   resultMap.value = {}
   resultsLoaded.value = false
   const limit = 200
@@ -711,7 +761,7 @@ const loadAllResults = async (trialId) => {
   try {
     while (true) {
       const { data } = await trialsApi.listResults(props.projectId, trialId, { limit, offset })
-      for (const item of data.items || []) {
+      for (const item of (data.items || []) as TrialResultItem[]) {
         resultMap.value[item.document_id] = item
       }
       const total = data.total || 0
@@ -725,7 +775,7 @@ const loadAllResults = async (trialId) => {
   }
 }
 
-const loadDocDetail = async (docId) => {
+const loadDocDetail = async (docId: number): Promise<void> => {
   selectedDocEval.value = null
   selectedDocResult.value = null
   selectedDocText.value = ''
@@ -739,7 +789,7 @@ const loadDocDetail = async (docId) => {
   // Per-document field details (GT vs predicted)
   try {
     const { data } = await evaluationsApi.getDocument(props.projectId, props.evaluationId, docId)
-    selectedDocEval.value = data
+    selectedDocEval.value = data as DocumentEvaluationDetail
   } catch {
     selectedDocEval.value = null
   } finally {
@@ -753,9 +803,9 @@ const loadDocDetail = async (docId) => {
   // Document text + original file
   try {
     const { data: doc } = await documentsApi.get(props.projectId, docId)
-    selectedDocText.value = doc.text || ''
-    selectedOriginalFile.value = doc.original_file || null
-    const fileType = doc.original_file?.file_type || ''
+    selectedDocText.value = (doc.text as string) || ''
+    selectedOriginalFile.value = (doc.original_file as unknown as OriginalFile) || null
+    const fileType: string = (doc.original_file?.file_type as string) || ''
     if (fileType.includes('pdf')) selectedOriginalFileType.value = 'pdf'
     else if (fileType.includes('image')) selectedOriginalFileType.value = 'image'
     else selectedOriginalFileType.value = 'other'
@@ -764,7 +814,7 @@ const loadDocDetail = async (docId) => {
       const resp = await filesApi.getContent(props.projectId, doc.original_file.id, {
         preview: true,
       })
-      currentObjectUrl = window.URL.createObjectURL(resp.data)
+      currentObjectUrl = window.URL.createObjectURL(resp.data as Blob)
       selectedOriginalFileUrl.value = currentObjectUrl
     }
   } catch {
@@ -772,7 +822,7 @@ const loadDocDetail = async (docId) => {
   }
 }
 
-const revokeObjectUrl = () => {
+const revokeObjectUrl = (): void => {
   if (currentObjectUrl) {
     window.URL.revokeObjectURL(currentObjectUrl)
     currentObjectUrl = ''
@@ -781,16 +831,29 @@ const revokeObjectUrl = () => {
 }
 
 // ---- Confusion-matrix filter ----
-const onConfusionFilter = ({ groundTruth, predicted }) => {
+const onConfusionFilter = ({
+  groundTruth,
+  predicted,
+}: {
+  groundTruth: string
+  predicted: string
+}): void => {
   confusionFilter.value = { groundTruth, predicted, field: selectedFieldFilter.value }
 }
 
-const toggleFieldFilter = (name) => {
+const toggleFieldFilter = (name: string): void => {
   selectedFieldFilter.value = selectedFieldFilter.value === name ? '' : name
   confusionFilter.value = null
 }
 
 // ---- Helpers ----
+// DataTable slot `row` is typed as `Record<string, any>` (its generic
+// constraint), so wrap the status helpers to accept the slot row and cast.
+const documentStatusLabel = (row: unknown): string =>
+  _documentStatusLabel(row as DocumentEvaluationDetail | null | undefined)
+const documentStatusColor = (row: unknown): 'red' | 'green' | 'yellow' =>
+  _documentStatusColor(row as DocumentEvaluationDetail | null | undefined)
+
 const columns = [
   { key: 'document_name', label: 'Document', sortable: true },
   { key: 'accuracy', label: 'Accuracy', sortable: true, align: 'right' },
@@ -799,9 +862,9 @@ const columns = [
 ]
 
 // ---- Keyboard nav (J/K) ----
-const onKeydown = (e) => {
+const onKeydown = (e: KeyboardEvent): void => {
   if (!selectedDocId.value) return
-  const tag = (e.target?.tagName || '').toLowerCase()
+  const tag = ((e.target as HTMLElement | null)?.tagName || '').toLowerCase()
   if (tag === 'input' || tag === 'textarea' || tag === 'select') return
   if (e.key === 'j') {
     e.preventDefault()

@@ -205,8 +205,8 @@
   </BaseModal>
 </template>
 
-<script setup>
-import { computed, ref, toRef, watch } from 'vue'
+<script setup lang="ts">
+import { computed, ref, toRef, watch, type Component, type PropType } from 'vue'
 import { CheckCircle2, ChevronDown, CircleAlert, Info, Loader2 } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -224,19 +224,50 @@ import AdvancedSettingsPanel from './AdvancedSettingsPanel.vue'
 import CustomApiSettingsPanel from './CustomApiSettingsPanel.vue'
 import ModelTestCard from './ModelTestCard.vue'
 import DocumentSelectionPanel from './DocumentSelectionPanel.vue'
-import { useModelTesting } from '@/composables/useModelTesting'
+import { useModelTesting, type TrialFormData } from '@/composables/useModelTesting'
+import type { DocumentListItem, Schema, Prompt } from '@/types'
+
+/** Concrete form-data shape (narrower than TrialFormData so v-model children
+ *  that expect `string` type-check against non-null fields). */
+interface CreateTrialFormData extends TrialFormData {
+  name: string
+  description: string
+  schema_id: string
+  prompt_id: string
+  document_ids: number[]
+  llm_model: string
+  api_key: string
+  base_url: string
+  advanced_options: Record<string, unknown>
+}
+
+interface TrialCreatePayload {
+  name?: string
+  description?: string
+  schema_id: number
+  prompt_id: number
+  document_ids: number[]
+  llm_model?: string | null
+  api_key?: string
+  base_url?: string
+  advanced_options?: Record<string, unknown>
+}
 
 const toast = useToast()
 
 const props = defineProps({
   open: { type: Boolean, required: true },
-  documents: { type: Array, required: true }, // kept for compatibility; Individual tab now uses backend pagination
-  schemas: { type: Array, required: true },
-  prompts: { type: Array, default: () => [] },
-  projectId: { type: [String, Number], required: true },
+  documents: { type: Array as PropType<DocumentListItem[]>, required: true }, // kept for compatibility; Individual tab now uses backend pagination
+  schemas: { type: Array as PropType<Schema[]>, required: true },
+  prompts: { type: Array as PropType<Prompt[]>, default: () => [] },
+  projectId: { type: [String, Number] as PropType<string | number>, required: true },
 })
 
-const emit = defineEmits(['close', 'create', 'create-group'])
+const emit = defineEmits<{
+  close: []
+  create: [payload: TrialCreatePayload]
+  'create-group': []
+}>()
 
 const trialHelpText =
   'A trial runs an AI model over your documents to extract structured data. You need a Schema, a Prompt, a Model, and the Documents to process. The schema is automatically included with the prompt.'
@@ -244,7 +275,7 @@ const trialHelpText =
 /* -------------------------------------------------------
  * General trial state
  * -----------------------------------------------------*/
-const trialData = ref({
+const trialData = ref<CreateTrialFormData>({
   name: '',
   description: '',
   schema_id: '',
@@ -259,7 +290,7 @@ const trialData = ref({
 const simpleMode = ref(true)
 const submitting = ref(false)
 const metadataVisible = ref(false)
-const documentSelectionMode = ref('individual')
+const documentSelectionMode = ref<'individual' | 'groups' | 'smart'>('individual')
 
 // Advanced options
 const maxCompletionTokens = ref('')
@@ -309,7 +340,7 @@ const canSubmit = computed(() => {
   return (
     trialData.value.schema_id &&
     trialData.value.prompt_id &&
-    trialData.value.document_ids.length > 0 &&
+    (trialData.value.document_ids?.length ?? 0) > 0 &&
     trialData.value.llm_model &&
     availableModels.value.length > 0 &&
     hasValidConfig.value
@@ -324,7 +355,7 @@ const statusMessage = computed(() => {
   if (isTestingModel.value) return modelTestStatus.value.message
   if (!trialData.value.llm_model) return 'Choose a model to continue.'
   if (!hasValidConfig.value) return configStatus.value.message
-  if (trialData.value.document_ids.length === 0) return 'Select documents to continue.'
+  if ((trialData.value.document_ids?.length ?? 0) === 0) return 'Select documents to continue.'
   if (modelTested.value && modelValid.value)
     return 'Model verified with this schema — ready to start.'
   if (modelTested.value && !modelValid.value)
@@ -332,7 +363,7 @@ const statusMessage = computed(() => {
   return 'Model will be checked when you start the trial.'
 })
 
-const statusIcon = computed(() => {
+const statusIcon = computed<Component | null>(() => {
   if (submitting.value || isTestingModel.value) return Loader2
   if (modelTested.value && modelValid.value && canSubmit.value) return CheckCircle2
   if (modelTested.value && !modelValid.value) return CircleAlert
@@ -356,7 +387,7 @@ const statusTextClass = computed(() => {
 /* -------------------------------------------------------
  * Initialize form on open
  * -----------------------------------------------------*/
-const initializeForm = () => {
+const initializeForm = (): void => {
   trialData.value = {
     name: '',
     description: '',
@@ -393,20 +424,20 @@ const initializeForm = () => {
 /* -------------------------------------------------------
  * Submission (guided: verify model, then create)
  * -----------------------------------------------------*/
-const buildFormData = () => {
-  const formData = {
+const buildFormData = (): TrialCreatePayload => {
+  const formData: TrialCreatePayload = {
     name: (trialData.value.name || '').trim() || undefined,
     description: (trialData.value.description || '').trim() || undefined,
-    schema_id: parseInt(trialData.value.schema_id),
-    prompt_id: parseInt(trialData.value.prompt_id),
-    document_ids: trialData.value.document_ids,
+    schema_id: parseInt(String(trialData.value.schema_id)),
+    prompt_id: parseInt(String(trialData.value.prompt_id)),
+    document_ids: trialData.value.document_ids || [],
     llm_model: trialData.value.llm_model,
   }
 
-  if ((trialData.value.api_key || '').trim()) formData.api_key = trialData.value.api_key.trim()
-  if ((trialData.value.base_url || '').trim()) formData.base_url = trialData.value.base_url.trim()
+  if ((trialData.value.api_key || '').trim()) formData.api_key = trialData.value.api_key!.trim()
+  if ((trialData.value.base_url || '').trim()) formData.base_url = trialData.value.base_url!.trim()
 
-  const advancedOptions = {}
+  const advancedOptions: Record<string, unknown> = {}
   if (maxCompletionTokens.value && parseInt(maxCompletionTokens.value) > 0) {
     advancedOptions.max_completion_tokens = parseInt(maxCompletionTokens.value)
   }
@@ -423,7 +454,7 @@ const buildFormData = () => {
   return formData
 }
 
-const handleStartTrial = async () => {
+const handleStartTrial = async (): Promise<void> => {
   if (!canSubmit.value || submitting.value) return
 
   submitting.value = true
@@ -451,7 +482,16 @@ const handleStartTrial = async () => {
 // schema_id/prompt_id are pre-selected on open, comparing against an empty
 // baseline would always mark the form dirty and prompt "Discard changes?" on a
 // no-op open/close. Comparing against this baseline only flags *user* edits.
-const initialValues = ref({
+const initialValues = ref<{
+  name: string
+  description: string
+  schema_id: string
+  prompt_id: string
+  document_ids: number[]
+  llm_model: string
+  api_key: string
+  base_url: string
+}>({
   name: '',
   description: '',
   schema_id: '',
@@ -462,13 +502,13 @@ const initialValues = ref({
   base_url: '',
 })
 
-const snapshotInitialValues = () => {
+const snapshotInitialValues = (): void => {
   initialValues.value = {
     name: trialData.value.name,
     description: trialData.value.description,
     schema_id: trialData.value.schema_id,
     prompt_id: trialData.value.prompt_id,
-    document_ids: [...trialData.value.document_ids],
+    document_ids: [...(trialData.value.document_ids || [])],
     llm_model: trialData.value.llm_model,
     api_key: trialData.value.api_key,
     base_url: trialData.value.base_url,
@@ -492,7 +532,7 @@ const isDirty = computed(() => {
 })
 
 const showConfirm = ref(false)
-const tryClose = () => {
+const tryClose = (): void => {
   if (submitting.value) return
   if (isDirty.value) {
     showConfirm.value = true
@@ -500,7 +540,7 @@ const tryClose = () => {
     emit('close')
   }
 }
-const confirmDiscard = () => {
+const confirmDiscard = (): void => {
   showConfirm.value = false
   emit('close')
 }
@@ -518,6 +558,7 @@ watch(
   { immediate: true },
 )
 
+let customSettingsTimeout: ReturnType<typeof setTimeout> | undefined
 watch([() => trialData.value.api_key, () => trialData.value.base_url], () => {
   connectionTested.value = false
   connectionValid.value = false
@@ -527,9 +568,9 @@ watch([() => trialData.value.api_key, () => trialData.value.base_url], () => {
   availableModels.value = []
 
   if (hasCustomApiSettings.value) {
-    clearTimeout(window.customSettingsTimeout)
-    window.customSettingsTimeout = setTimeout(() => {
-      testAndLoadModels(trialData.value.api_key, trialData.value.base_url)
+    if (customSettingsTimeout) clearTimeout(customSettingsTimeout)
+    customSettingsTimeout = setTimeout(() => {
+      testAndLoadModels(trialData.value.api_key || '', trialData.value.base_url || '')
     }, 1000)
   } else {
     testAndLoadModels()

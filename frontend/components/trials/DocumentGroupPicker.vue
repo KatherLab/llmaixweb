@@ -54,29 +54,26 @@
   </div>
 </template>
 
-<script setup>
-import { formatDate } from '@/utils/formatters.js'
+<script setup lang="ts">
+import { formatDate } from '@/utils/formatters'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import type { DocumentSetSummary } from '@/types'
 
-defineProps({
-  documentGroups: {
-    type: Array,
-    default: () => [],
+withDefaults(
+  defineProps<{
+    documentGroups?: DocumentSetSummary[]
+    loadingGroups?: boolean
+    loadingGroupDocs?: boolean
+    selectedGroupId?: number | null
+  }>(),
+  {
+    documentGroups: () => [],
+    loadingGroups: false,
+    loadingGroupDocs: false,
+    selectedGroupId: null,
   },
-  loadingGroups: {
-    type: Boolean,
-    default: false,
-  },
-  loadingGroupDocs: {
-    type: Boolean,
-    default: false,
-  },
-  selectedGroupId: {
-    type: [Number, null],
-    default: null,
-  },
-})
+)
 
-const emit = defineEmits(['toggle-group'])
+const emit = defineEmits<{ 'toggle-group': [group: DocumentSetSummary] }>()
 </script>

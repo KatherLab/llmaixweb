@@ -218,20 +218,28 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { AlertTriangle, Check, CircleCheckBig, Info } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
 import { checkboxClass } from '@/utils/formStyles'
+import type { PreprocessingDuplicatePreview } from '@/types'
 
-const props = defineProps({
-  open: { type: Boolean, required: true },
-  duplicatePreview: { type: Object, default: null },
+interface Props {
+  open: boolean
+  duplicatePreview?: PreprocessingDuplicatePreview | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  duplicatePreview: null,
 })
 
-const emit = defineEmits(['confirm', 'cancel'])
+const emit = defineEmits<{
+  confirm: [payload: { skipExisting: boolean }]
+  cancel: []
+}>()
 
 // Owned UI state — reset to unchecked each time the modal opens.
 const skipExisting = ref(false)
@@ -244,14 +252,14 @@ watch(
 
 const hasSameConfigDuplicates = computed(() => {
   return (
-    props.duplicatePreview?.same_config_duplicates &&
+    !!props.duplicatePreview?.same_config_duplicates &&
     props.duplicatePreview.same_config_duplicates.length > 0
   )
 })
 
 const hasPdfsWithEmbeddedText = computed(() => {
   return (
-    props.duplicatePreview?.pdfs_with_embedded_text &&
+    !!props.duplicatePreview?.pdfs_with_embedded_text &&
     props.duplicatePreview.pdfs_with_embedded_text.length > 0
   )
 })

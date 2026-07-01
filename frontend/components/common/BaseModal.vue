@@ -71,69 +71,45 @@
   </Teleport>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted, nextTick, useId } from 'vue'
 import { X } from '@lucide/vue'
 import { useScrollLock } from '@/composables/useScrollLock'
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  title: {
-    type: String,
-    default: '',
-  },
+interface Props {
+  open: boolean
+  title?: string
   // Accessible role: 'dialog' (default) or 'alertdialog' (for confirmations).
-  role: {
-    type: String,
-    default: 'dialog',
-    validator: (v) => ['dialog', 'alertdialog'].includes(v),
-  },
-  size: {
-    type: String,
-    default: 'md',
-    // 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
-  },
-  placement: {
-    type: String,
-    default: 'center',
-    // 'center' (modal dialog) | 'right' (slide-in drawer) | 'fullscreen' (near-fullscreen panel)
-  },
-  closeable: {
-    type: Boolean,
-    default: true,
-  },
-  closeOnBackdrop: {
-    type: Boolean,
-    default: true,
-  },
-  closeOnEsc: {
-    type: Boolean,
-    default: true,
-  },
-  panelClass: {
-    type: String,
-    default: '',
-  },
-  headerClass: {
-    type: String,
-    default: '',
-  },
-  bodyClass: {
-    type: String,
-    default: 'p-6',
-  },
-  footerClass: {
-    type: String,
-    default: '',
-  },
+  role?: 'dialog' | 'alertdialog'
+  size?: string
+  // 'center' (modal dialog) | 'right' (slide-in drawer) | 'fullscreen' (near-fullscreen panel)
+  placement?: 'center' | 'right' | 'fullscreen'
+  closeable?: boolean
+  closeOnBackdrop?: boolean
+  closeOnEsc?: boolean
+  panelClass?: string
+  headerClass?: string
+  bodyClass?: string
+  footerClass?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  title: '',
+  role: 'dialog',
+  size: 'md',
+  placement: 'center',
+  closeable: true,
+  closeOnBackdrop: true,
+  closeOnEsc: true,
+  panelClass: '',
+  headerClass: '',
+  bodyClass: 'p-6',
+  footerClass: '',
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ (e: 'close'): void }>()
 
-const panelRef = ref(null)
+const panelRef = ref<HTMLElement | null>(null)
 const titleId = useId()
 
 const transitionName = computed(() =>
@@ -147,7 +123,7 @@ const transitionName = computed(() =>
 const sizeClass = computed(() => {
   // Drawers and fullscreen ignore the centered-dialog max-width map.
   if (props.placement === 'right' || props.placement === 'fullscreen') return ''
-  const sizes = {
+  const sizes: Record<string, string> = {
     sm: 'max-w-md',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
@@ -167,7 +143,7 @@ function onBackdropClick() {
   }
 }
 
-function onKeydown(e) {
+function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && props.open && props.closeOnEsc) {
     emit('close')
   }

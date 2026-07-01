@@ -55,7 +55,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ArrowRight, LogIn } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 

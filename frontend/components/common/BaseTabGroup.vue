@@ -46,21 +46,26 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  modelValue: {
-    type: [String, Number],
-    required: true,
-  },
-  tabs: {
-    type: Array,
-    default: () => [],
-    // each: { label?: String, value: String|Number, icon?: String, badge?: String|Number, to?: String }
-    // When `to` is set, the tab renders as a <router-link> (URL-driven tabs).
-  },
+<script setup lang="ts">
+export interface TabItem {
+  label?: string
+  value: string | number
+  icon?: string
+  badge?: string | number | null
+  // When `to` is set, the tab renders as a <router-link> (URL-driven tabs).
+  to?: string
+}
+
+interface Props {
+  modelValue: string | number
+  tabs?: TabItem[]
+}
+
+withDefaults(defineProps<Props>(), {
+  tabs: () => [],
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{ (e: 'update:modelValue', value: string | number): void }>()
 
 const activeClass = 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
 

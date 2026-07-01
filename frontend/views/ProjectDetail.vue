@@ -100,8 +100,8 @@
     <ProjectSettingsModal
       v-if="showSettingsModal"
       :open="showSettingsModal"
-      :initial-name="project.name"
-      :initial-description="project.description"
+      :initial-name="project.name || undefined"
+      :initial-description="project.description || undefined"
       :is-saving="isSaving"
       @save="saveProjectEdits"
       @close="showSettingsModal = false"
@@ -122,11 +122,12 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, provide, watch, defineAsyncComponent } from 'vue'
 import { ChevronLeft, Settings } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { projectsApi } from '@/services/projectsApi'
+import type { Project, ProjectUpdate } from '@/types'
 // Tab components are lazy-loaded so each workflow step is code-split into its
 // own chunk (only one tab is rendered at a time, see the v-if chain below).
 const FilesAndProcessing = defineAsyncComponent(
@@ -156,13 +157,13 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 
-const projectId = computed(() => route.params.projectId)
-const project = ref({})
-const isLoading = ref(true)
-const error = ref('')
-const isSaving = ref(false)
-const showSettingsModal = ref(false)
-const showDeleteConfirmation = ref(false)
+const projectId = computed<string | number>(() => route.params.projectId as string | number)
+const project = ref<Project>({} as Project)
+const isLoading = ref<boolean>(true)
+const error = ref<string>('')
+const isSaving = ref<boolean>(false)
+const showSettingsModal = ref<boolean>(false)
+const showDeleteConfirmation = ref<boolean>(false)
 
 // Workflow step management with tab workspace
 const validSteps = ['files', 'documents', 'schemas', 'trials', 'evaluation']
@@ -177,9 +178,9 @@ const defaultStep = 'files'
 
 // Tabs (persisted in localStorage for true SaaS "workspace" vibes)
 // Current step is managed via URL query param
-const currentStep = computed(() => {
+const currentStep = computed<string>(() => {
   const tab = route.query.tab
-  return validSteps.includes(tab) ? tab : defaultStep
+  return typeof tab === 'string' && validSteps.includes(tab) ? tab : defaultStep
 })
 
 // --- LIFECYCLE ---
@@ -199,19 +200,20 @@ watch(
 )
 
 // Handle query parameters for tab and expand parameters
-function handleQueryParams() {
+function handleQueryParams(): void {
   const queryTab = route.query.tab
   const expandTask = route.query.expandTask
   const expandTrial = route.query.expandTrial
 
   // Handle tab switch from query
-  if (queryTab && validSteps.includes(queryTab)) {
+  if (queryTab && typeof queryTab === 'string' && validSteps.includes(queryTab)) {
     handleStepChange(queryTab)
   }
 
   // Pass expand parameters to child components via custom events
   // Need to wait for tab change to render the component first
   if (expandTask) {
+    const taskId = String(expandTask)
     // Ensure we're on the files tab
     if (currentStep.value !== 'files') {
       handleStepChange('files')
@@ -219,29 +221,34 @@ function handleQueryParams() {
     // Wait for component to render and then dispatch event
     setTimeout(() => {
       document.dispatchEvent(
-        new CustomEvent('expand-preprocessing-task', { detail: { id: expandTask } }),
+        new CustomEvent('expand-preprocessing-task', { detail: { id: taskId } }),
       )
       // Clean up query params after handling
-      router.replace({ query: { ...route.query, expandTask: undefined } })
+      const { expandTask: _omit, ...rest } = route.query
+      void _omit
+      router.replace({ query: { ...rest, expandTask: undefined } })
     }, 300)
   }
 
   if (expandTrial) {
+    const trialId = String(expandTrial)
     // Ensure we're on the trials tab
     if (currentStep.value !== 'trials') {
       handleStepChange('trials')
     }
     // Wait for component to render and then dispatch event
     setTimeout(() => {
-      document.dispatchEvent(new CustomEvent('expand-trial', { detail: { id: expandTrial } }))
+      document.dispatchEvent(new CustomEvent('expand-trial', { detail: { id: trialId } }))
       // Clean up query params after handling
-      router.replace({ query: { ...route.query, expandTrial: undefined } })
+      const { expandTrial: _omit, ...rest } = route.query
+      void _omit
+      router.replace({ query: { ...rest, expandTrial: undefined } })
     }, 300)
   }
 }
 
 // --- API ---
-const fetchProject = async () => {
+const fetchProject = async (): Promise<void> => {
   isLoading.value = true
   try {
     const response = await projectsApi.get(projectId.value)
@@ -253,21 +260,20 @@ const fetchProject = async () => {
     isLoading.value = false
   }
 }
-const refreshProject = () => fetchProject()
+const refreshProject = (): Promise<void> => fetchProject()
 
 // --- WORKFLOW & TAB LOGIC ---
-function handleStepChange(stepId) {
+function handleStepChange(stepId: string): void {
   if (!validSteps.includes(stepId)) return // Ignore invalid steps
-  currentStep.value = stepId
-  // Update URL without adding history entry
+  // currentStep is a computed (read-only); update via the URL query param.
   router.replace({ query: { ...route.query, tab: stepId } })
 }
 
 // --- PROJECT EDIT LOGIC ---
-const saveProjectEdits = async ({ name, description }) => {
+const saveProjectEdits = async (payload: ProjectUpdate): Promise<void> => {
   isSaving.value = true
   try {
-    const response = await projectsApi.update(projectId.value, { name, description })
+    const response = await projectsApi.update(projectId.value, payload)
     project.value = response.data
     toast.success('Project updated successfully')
     showSettingsModal.value = false
@@ -280,7 +286,7 @@ const saveProjectEdits = async ({ name, description }) => {
 }
 
 // --- DELETE LOGIC ---
-const deleteProject = async () => {
+const deleteProject = async (): Promise<void> => {
   try {
     await projectsApi.delete(projectId.value)
     toast.success('Project deleted successfully')

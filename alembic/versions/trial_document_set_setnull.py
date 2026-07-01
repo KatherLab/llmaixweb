@@ -34,9 +34,7 @@ def upgrade() -> None:
     # portable to the SQLite dev backend (which can't ALTER a constraint
     # in-place and needs the table rebuild).
     with op.batch_alter_table("trials", schema=None) as batch_op:
-        batch_op.drop_constraint(
-            "trials_document_set_id_fkey", type_="foreignkey"
-        )
+        batch_op.drop_constraint("trials_document_set_id_fkey", type_="foreignkey")
         batch_op.create_foreign_key(
             "trials_document_set_id_fkey",
             "document_sets",
@@ -48,9 +46,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     with op.batch_alter_table("trials", schema=None) as batch_op:
-        batch_op.drop_constraint(
-            "trials_document_set_id_fkey", type_="foreignkey"
-        )
+        batch_op.drop_constraint("trials_document_set_id_fkey", type_="foreignkey")
         batch_op.create_foreign_key(
             "trials_document_set_id_fkey",
             "document_sets",

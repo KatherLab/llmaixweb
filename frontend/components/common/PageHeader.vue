@@ -1,14 +1,18 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Sticky page header bar: icon badge + title + actions slot.
  *
  * Collapses the near-identical header markup that was duplicated across
  * ProjectOverview, AdminUserManagement, etc.
  */
-defineProps({
-  title: { type: String, required: true },
+interface Props {
+  title: string
   // Max width container: 'sm'|'md'|'lg'|'xl'|'2xl'|'3xl'|'7xl'
-  maxWidth: { type: String, default: '7xl' },
+  maxWidth?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  maxWidth: '7xl',
 })
 </script>
 

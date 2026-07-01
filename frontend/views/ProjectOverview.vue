@@ -22,7 +22,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { CircleCheckBig } from '@lucide/vue'
 import ProjectGrid from '@/components/projects/ProjectGrid.vue'
 import CreateProjectButton from '@/components/projects/CreateProjectButton.vue'

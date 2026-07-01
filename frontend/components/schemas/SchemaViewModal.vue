@@ -31,33 +31,30 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import SchemaFieldList from './SchemaFieldList.vue'
 import { getPillClass } from '@/utils/statusStyles'
+import type { Schema } from '@/types'
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  schema: {
-    type: Object,
-    default: null,
-  },
-  isSnapshot: {
-    type: Boolean,
-    default: false,
-  },
-  copyable: {
-    type: Boolean,
-    default: true,
-  },
+interface Props {
+  open: boolean
+  schema?: Schema | null
+  isSnapshot?: boolean
+  copyable?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  schema: null,
+  isSnapshot: false,
+  copyable: true,
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{
+  close: []
+}>()
 
 const toast = useToast()
 

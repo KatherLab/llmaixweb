@@ -35,10 +35,10 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Info } from '@lucide/vue'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 
-const name = defineModel('name', { type: String, default: '' })
-const description = defineModel('description', { type: String, default: '' })
+const name = defineModel<string>('name', { default: '' })
+const description = defineModel<string>('description', { default: '' })
 </script>

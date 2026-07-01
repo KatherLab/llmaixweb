@@ -54,7 +54,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { TriangleAlert, Check } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -66,13 +66,13 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
-const loading = ref(true)
-const error = ref(null)
-const invitedEmail = ref('')
-const token = ref('')
+const loading = ref<boolean>(true)
+const error = ref<string | null>(null)
+const invitedEmail = ref<string>('')
+const token = ref<string>('')
 
 onMounted(async () => {
-  token.value = route.params.token
+  token.value = String(route.params.token ?? '')
 
   if (!token.value) {
     error.value = 'No invitation token provided'
@@ -83,7 +83,7 @@ onMounted(async () => {
   await validateInvitation()
 })
 
-async function validateInvitation() {
+async function validateInvitation(): Promise<void> {
   try {
     const response = await usersApi.validateInvitation(token.value)
 
@@ -91,7 +91,7 @@ async function validateInvitation() {
       error.value = 'This invitation is invalid or has already been used'
       toast.error(error.value)
     } else {
-      invitedEmail.value = response.data.email
+      invitedEmail.value = response.data.email ?? ''
     }
   } catch (err) {
     error.value = 'This invitation link is invalid or has expired'
@@ -102,7 +102,7 @@ async function validateInvitation() {
   }
 }
 
-function goToRegister() {
+function goToRegister(): void {
   router.push({
     path: '/register',
     query: {

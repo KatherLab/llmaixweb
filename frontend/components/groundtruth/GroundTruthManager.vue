@@ -155,7 +155,7 @@
   />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { Pencil, Settings, Trash2 } from '@lucide/vue'
 import { groundtruthApi } from '@/services/groundtruthApi'
@@ -168,26 +168,20 @@ import GroundTruthPreviewModal from './GroundTruthPreviewModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import type { GroundTruth } from '@/types'
 
-const props = defineProps({
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-  groundTruthFiles: {
-    type: Array,
-    required: true,
-  },
-  open: {
-    type: Boolean,
-    required: true,
-  },
-})
-const emit = defineEmits(['close', 'updated'])
+interface Props {
+  projectId: string | number
+  groundTruthFiles: GroundTruth[]
+  open: boolean
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<{ close: []; updated: [] }>()
 
 const toast = useToast()
-const editingGroundTruth = ref(null)
-const previewingGroundTruth = ref(null)
+const editingGroundTruth = ref<GroundTruth | null>(null)
+const previewingGroundTruth = ref<GroundTruth | null>(null)
 const showPreview = ref(false)
 const editName = ref('')
 const isSaving = ref(false)
@@ -198,7 +192,7 @@ function emitClose() {
 }
 
 // Edit ground truth
-function editGroundTruth(gt) {
+function editGroundTruth(gt: GroundTruth) {
   editingGroundTruth.value = gt
   editName.value = gt.name || ''
 }
@@ -218,7 +212,7 @@ async function saveEdit() {
     emit('updated')
     cancelEdit()
   } catch (err) {
-    toast.error(`Failed to update ground truth: ${err.message}`)
+    toast.error(`Failed to update ground truth: ${(err as Error).message}`)
     console.error(err)
   } finally {
     isSaving.value = false
@@ -226,7 +220,7 @@ async function saveEdit() {
 }
 
 // Preview ground truth
-function previewGroundTruth(gt) {
+function previewGroundTruth(gt: GroundTruth) {
   previewingGroundTruth.value = gt
   showPreview.value = true
 }
@@ -236,8 +230,8 @@ function closePreview() {
 
 // Delete ground truth (confirmed via ConfirmationDialog)
 const showDeleteConfirm = ref(false)
-const pendingDelete = ref(null)
-function deleteGroundTruth(gt) {
+const pendingDelete = ref<GroundTruth | null>(null)
+function deleteGroundTruth(gt: GroundTruth) {
   pendingDelete.value = gt
   showDeleteConfirm.value = true
 }
@@ -251,7 +245,7 @@ async function confirmDelete() {
     toast.success('Ground truth deleted successfully')
     emit('updated')
   } catch (err) {
-    toast.error(`Failed to delete ground truth: ${err.message}`)
+    toast.error(`Failed to delete ground truth: ${(err as Error).message}`)
     console.error(err)
   }
 }

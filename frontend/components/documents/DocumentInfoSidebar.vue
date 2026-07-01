@@ -68,7 +68,7 @@
               {{
                 getEngineLabelWithKey(
                   (selectedVersion?.preprocessing_config || document.preprocessing_config)
-                    ?.additional_settings?.ocr_engine,
+                    ?.additional_settings?.ocr_engine as string | null | undefined,
                 )
               }}
             </dd>
@@ -85,7 +85,7 @@
       <div
         v-if="
           (selectedVersion?.meta_data || document.meta_data) &&
-          Object.keys(selectedVersion?.meta_data || document.meta_data).length > 0
+          Object.keys(selectedVersion?.meta_data || document.meta_data || {}).length > 0
         "
       >
         <h4 class="font-medium text-slate-900 dark:text-white mb-2">Metadata</h4>
@@ -114,29 +114,42 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { RefreshCw } from '@lucide/vue'
 import JsonViewer from '@/components/common/JsonViewer.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { getEngineLabelWithKey } from '@/utils/ocrLabels'
 import { formatDateFull, formatFileSize } from '@/utils/formatters'
+import type { DocumentListItem, DocumentMetaData } from '@/types'
 
-defineProps({
-  document: { type: Object, required: true },
-  selectedVersion: { type: Object, default: null },
-  fullText: { type: String, default: null },
+interface Props {
+  document: DocumentListItem
+  selectedVersion?: DocumentListItem | null
+  fullText?: string | null
+}
+
+withDefaults(defineProps<Props>(), {
+  selectedVersion: null,
+  fullText: null,
 })
 
-defineEmits(['restore-version', 'reprocess'])
+defineEmits<{
+  'restore-version': [version: DocumentListItem]
+  reprocess: [document: DocumentListItem]
+}>()
 
-const getModelName = (doc) => {
+interface DocWithMetaData {
+  meta_data?: DocumentMetaData | null
+}
+
+const getModelName = (doc: DocWithMetaData | null | undefined): string => {
   if (!doc) return ''
   const metaData = doc.meta_data || {}
   // Check for specific model fields first
-  if (metaData.mistral_model) return metaData.mistral_model
-  if (metaData.vision_model) return metaData.vision_model
+  if (metaData.mistral_model) return String(metaData.mistral_model)
+  if (metaData.vision_model) return String(metaData.vision_model)
   // Fallback to generic model field
-  if (metaData.model) return metaData.model
+  if (metaData.model) return String(metaData.model)
   // No model for local OCR
   return ''
 }

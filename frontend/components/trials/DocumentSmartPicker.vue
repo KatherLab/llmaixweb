@@ -87,33 +87,50 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, type PropType } from 'vue'
 import { ChevronDown } from '@lucide/vue'
-import { formatDate } from '@/utils/formatters.js'
+import { formatDate } from '@/utils/formatters'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { inputClass, selectClass } from '@/utils/formStyles'
+import type { TrialSummary } from '@/types'
+
+/** A previous trial with a guaranteed non-null document_ids list (the parent
+ *  only forwards completed trials that have documents). */
+interface PreviousTrial extends TrialSummary {
+  document_ids: number[]
+}
+
+interface DateRangePayload {
+  start: string
+  end: string
+}
 
 defineProps({
   previousTrials: {
-    type: Array,
+    type: Array as PropType<PreviousTrial[]>,
     default: () => [],
   },
   selectedIds: {
-    type: Array,
+    type: Array as PropType<number[]>,
     default: () => [],
   },
   getDocLabel: {
-    type: Function,
+    type: Function as PropType<(docId: number) => string>,
     required: true,
   },
 })
 
-const emit = defineEmits(['load-from-trial', 'select-recent', 'apply-date-range', 'clear'])
+const emit = defineEmits<{
+  'load-from-trial': [trialId: string | number]
+  'select-recent': [days: number]
+  'apply-date-range': [range: DateRangePayload]
+  clear: []
+}>()
 
 // Local UI state (not reset by initializeForm in the original, so safe to localise)
-const selectedTrialId = ref('')
-const dateRange = ref({ start: '', end: '' })
+const selectedTrialId = ref<string>('')
+const dateRange = ref<DateRangePayload>({ start: '', end: '' })
 const showSelectedDocs = ref(false)
 </script>
 

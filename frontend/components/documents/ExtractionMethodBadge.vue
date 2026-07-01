@@ -13,25 +13,35 @@
   </span>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { computed, type Component } from 'vue'
 import { FileText, Globe, Zap } from '@lucide/vue'
 import { getPillClass } from '@/utils/statusStyles'
+import type { DocumentListItem } from '@/types'
 
-const props = defineProps({
-  document: { type: Object, required: true },
-})
+interface Props {
+  document: DocumentListItem
+}
+
+const props = defineProps<Props>()
+
+interface ExtractionMethodInfo {
+  label: string
+  color: string
+  description: string
+  icon: Component
+}
 
 // Extraction method info for display badges. `color` keys into the shared
 // getPillClass map (dark-mode aware) instead of hard-coded bg/text classes.
 // `icon` is a Lucide component (FileText = embedded text, Zap = local OCR,
 // Globe = remote API OCR).
-const extractionMethodInfo = computed(() => {
+const extractionMethodInfo = computed<ExtractionMethodInfo | null>(() => {
   const metaData = props.document.meta_data || {}
   const extractionMethod = metaData.extraction_method
   const ocrEngine = metaData.ocr_engine
-  const engineUsed = metaData.engine_used
-  const ocrApplied = metaData.ocr_applied
+  const engineUsed = metaData.engine_used as string | undefined
+  const ocrApplied = metaData.ocr_applied as boolean | undefined
   // embeddedText is available if needed for future logic
 
   // Determine extraction method label and styling

@@ -53,7 +53,14 @@ depends_on: Union[str, Sequence[str], None] = None
 #  so downstream is deterministic regardless of the original name.
 _FKS = [
     ("projects", "owner_id", "users", "id", "projects_owner_id_fkey", "CASCADE"),
-    ("documents", "version_of", "documents", "id", "documents_version_of_fkey", "SET NULL"),
+    (
+        "documents",
+        "version_of",
+        "documents",
+        "id",
+        "documents_version_of_fkey",
+        "SET NULL",
+    ),
     (
         "trial_results",
         "document_id",
@@ -84,7 +91,10 @@ def _find_fk(inspector, table: str, column: str, ref_table: str) -> dict | None:
     for fk in inspector.get_foreign_keys(table):
         if not fk.get("constrained_columns"):
             continue
-        if column in fk["constrained_columns"] and fk.get("referred_table") == ref_table:
+        if (
+            column in fk["constrained_columns"]
+            and fk.get("referred_table") == ref_table
+        ):
             return fk
     return None
 

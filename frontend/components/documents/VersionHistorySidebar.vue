@@ -68,33 +68,44 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { FileText, X } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { formatRelativeTime as sharedFormatRelativeTime } from '@/utils/formatters'
+import type { DocumentListItem } from '@/types'
 
-defineProps({
-  loadingVersions: { type: Boolean, default: false },
-  versions: { type: Array, default: () => [] },
-  selectedVersion: { type: Object, default: null },
-  versionCount: { type: Number, default: 0 },
+interface Props {
+  loadingVersions?: boolean
+  versions?: DocumentListItem[]
+  selectedVersion?: DocumentListItem | null
+  versionCount?: number
+}
+
+withDefaults(defineProps<Props>(), {
+  loadingVersions: false,
+  versions: () => [],
+  selectedVersion: null,
+  versionCount: 0,
 })
 
-defineEmits(['close', 'select-version'])
+defineEmits<{
+  close: []
+  'select-version': [version: DocumentListItem]
+}>()
 
 // Format relative time (e.g., "2 hours ago"). Delegates the just-now/m/h/d
 // tiers to the shared formatter; versions older than a week fall back to a
 // locale date (preserves the original 7-day cutoff vs the shared 30-day one).
-const formatRelativeTime = (dateString) => {
+const formatRelativeTime = (dateString: string | null | undefined): string => {
   if (!dateString) return ''
   const date = new Date(dateString)
-  if (isNaN(date)) return ''
+  if (isNaN(date.getTime())) return ''
   if (Date.now() - date.getTime() >= 604800000) return date.toLocaleDateString()
   return sharedFormatRelativeTime(dateString)
 }
 
 // Get short extraction method label
-const getShortExtractionMethod = (method) => {
+const getShortExtractionMethod = (method: string | null | undefined): string => {
   if (!method) return ''
   if (method.includes('no_ocr')) return 'Text Extraction'
   if (method.includes('tesseract')) return 'Local OCR'

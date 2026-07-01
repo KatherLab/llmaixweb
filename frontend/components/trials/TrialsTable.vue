@@ -36,11 +36,15 @@
     </template>
 
     <template #cell-schema="{ row: trial }">
-      <span class="text-sm text-slate-700 dark:text-slate-300">{{ schemaName(trial) }}</span>
+      <span class="text-sm text-slate-700 dark:text-slate-300">{{
+        schemaName(trial as unknown as TrialSummary)
+      }}</span>
     </template>
 
     <template #cell-prompt="{ row: trial }">
-      <span class="text-sm text-slate-700 dark:text-slate-300">{{ promptName(trial) || '—' }}</span>
+      <span class="text-sm text-slate-700 dark:text-slate-300">{{
+        promptName(trial as unknown as TrialSummary) || '—'
+      }}</span>
     </template>
 
     <template #cell-llm_model="{ row: trial }">
@@ -65,15 +69,17 @@
 
     <template #cell-progress="{ row: trial }">
       <!-- Active: compact inline progress -->
-      <div v-if="isActive(trial)" class="flex items-center gap-2">
+      <div v-if="isActive(trial as unknown as TrialSummary)" class="flex items-center gap-2">
         <div class="w-16 h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
           <div
             class="h-full bg-blue-500 transition-all duration-500"
-            :style="{ width: progressPercent(trial) + '%' }"
+            :style="{ width: progressPercent(trial as unknown as TrialSummary) + '%' }"
           ></div>
         </div>
         <span class="text-xs text-slate-500 dark:text-slate-400"
-          >{{ docsDone(trial) }}/{{ totalDocs(trial) }}</span
+          >{{ docsDone(trial as unknown as TrialSummary) }}/{{
+            totalDocs(trial as unknown as TrialSummary)
+          }}</span
         >
       </div>
       <!-- End states -->
@@ -101,14 +107,18 @@
     </template>
 
     <template #row-actions="{ row: trial }">
-      <BaseButton variant="secondary" size="sm" @click.stop="$emit('view-results', trial)">
+      <BaseButton
+        variant="secondary"
+        size="sm"
+        @click.stop="$emit('view-results', trial as unknown as TrialSummary)"
+      >
         Results
       </BaseButton>
     </template>
 
     <template #expanded="{ row: trial }">
       <TrialDetailPanel
-        :trial="trial"
+        :trial="trial as unknown as TrialSummary"
         :schemas="schemas"
         :prompts="prompts"
         @rename="$emit('rename', $event)"
@@ -124,46 +134,54 @@
   </DataTable>
 </template>
 
-<script setup>
-import { computed, ref } from 'vue'
+<script setup lang="ts">
+import { computed, ref, type PropType } from 'vue'
 import { AlertCircle, CircleCheckBig } from '@lucide/vue'
 import DataTable from '@/components/common/DataTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import TrialDetailPanel from './TrialDetailPanel.vue'
 import { formatDateSmart } from '@/utils/formatters'
+import type { TrialSummary, Schema, Prompt } from '@/types'
+
+interface TablePagination {
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+}
 
 const props = defineProps({
-  trials: { type: Array, required: true },
-  schemas: { type: Array, required: true },
-  prompts: { type: Array, required: true },
-  selectedTrials: { type: Array, default: () => [] },
-  highlightedTrialId: { type: [Number, String], default: null },
-  pagination: { type: Object, default: null },
+  trials: { type: Array as PropType<TrialSummary[]>, required: true },
+  schemas: { type: Array as PropType<Schema[]>, required: true },
+  prompts: { type: Array as PropType<Prompt[]>, required: true },
+  selectedTrials: { type: Array as PropType<number[]>, default: () => [] },
+  highlightedTrialId: { type: [Number, String] as PropType<number | string | null>, default: null },
+  pagination: { type: Object as PropType<TablePagination | null>, default: null },
 })
 
-defineEmits([
-  'toggle-selection',
-  'toggle-all',
-  'page-change',
-  'page-size-change',
-  'rename',
-  'delete',
-  'retry',
-  'download',
-  'view-results',
-  'view-schema',
-  'view-prompt',
-  'cancel',
-])
+defineEmits<{
+  'toggle-selection': [id: number]
+  'toggle-all': []
+  'page-change': [page: number]
+  'page-size-change': [size: number]
+  rename: [trial: TrialSummary]
+  delete: [trial: TrialSummary]
+  retry: [trial: TrialSummary]
+  download: [trial: TrialSummary]
+  'view-results': [trial: TrialSummary]
+  'view-schema': [trial: TrialSummary]
+  'view-prompt': [trial: TrialSummary]
+  cancel: [trial: TrialSummary]
+}>()
 
 const allSelected = computed(
   () => props.trials.length > 0 && props.selectedTrials.length === props.trials.length,
 )
 
-const expandedKeys = ref([])
+const expandedKeys = ref<number[]>([])
 
-const toggleExpand = (id) => {
+const toggleExpand = (id: number): void => {
   const idx = expandedKeys.value.indexOf(id)
   if (idx > -1) {
     expandedKeys.value.splice(idx, 1)
@@ -182,19 +200,21 @@ const columns = [
   { key: 'created_at', label: 'Started' },
 ]
 
-function schemaName(trial) {
-  return trial.schema_snapshot?.schema_name || '-'
+function schemaName(trial: TrialSummary): string {
+  const name = trial.schema_snapshot?.schema_name
+  return (typeof name === 'string' && name) || '-'
 }
 
-function promptName(trial) {
-  return trial.prompt_snapshot?.name
+function promptName(trial: TrialSummary): string | undefined {
+  const name = trial.prompt_snapshot?.name
+  return typeof name === 'string' ? name : undefined
 }
 
-function isActive(trial) {
+function isActive(trial: TrialSummary): boolean {
   return !['completed', 'failed', 'cancelled'].includes(trial.status)
 }
 
-function docsDone(trial) {
+function docsDone(trial: TrialSummary): number {
   if (trial.docs_done != null) return trial.docs_done
   if (trial.progress != null) {
     const total = trial.document_ids?.length ?? 0
@@ -203,11 +223,11 @@ function docsDone(trial) {
   return 0
 }
 
-function totalDocs(trial) {
+function totalDocs(trial: TrialSummary): number {
   return trial.document_ids?.length ?? 0
 }
 
-function progressPercent(trial) {
+function progressPercent(trial: TrialSummary): number {
   return trial.progress != null ? Math.round((trial.progress || 0) * 100) : 0
 }
 </script>

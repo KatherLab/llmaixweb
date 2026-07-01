@@ -25,31 +25,25 @@
   ></div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps({
-  size: {
-    type: String,
-    default: 'medium',
-    validator: (value) => ['small', 'medium', 'large'].includes(value),
-  },
-  color: {
-    type: String,
-    default: 'blue',
-    // 'blue' | 'white' | 'gray' | 'current'
-  },
-  inline: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  size?: 'small' | 'medium' | 'large'
+  // 'blue' | 'white' | 'gray' | 'current'
+  color?: string
+  inline?: boolean
   // Accessible label announced to screen readers. Pass an empty string ('')
   // to mark the spinner decorative (aria-hidden) when it sits next to visible
   // text that already conveys the loading state.
-  label: {
-    type: String,
-    default: 'Loading',
-  },
+  label?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  size: 'medium',
+  color: 'blue',
+  inline: false,
+  label: 'Loading',
 })
 
 const decorative = computed(() => props.label === '')

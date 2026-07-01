@@ -79,35 +79,28 @@
   </li>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang="ts">
+import { ref, computed, type Component } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import { getTypeIcon, getTypeColor } from '@/utils/schemaTypeIcons'
+import type { SchemaProperty } from '@/types'
 
-const props = defineProps({
-  nodeKey: {
-    type: String,
-    required: true,
-  },
-  nodeSchema: {
-    type: Object,
-    required: true,
-  },
-  path: {
-    type: Array,
-    required: true,
-  },
-  currentPath: {
-    type: Array,
-    default: () => [],
-  },
-  isArrayItem: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  nodeKey: string
+  nodeSchema: SchemaProperty
+  path: string[]
+  currentPath?: string[]
+  isArrayItem?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  currentPath: () => [],
+  isArrayItem: false,
 })
 
-const emit = defineEmits(['navigate'])
+const emit = defineEmits<{
+  navigate: [path: string[]]
+}>()
 
 const isExpanded = ref(true)
 
@@ -127,7 +120,7 @@ const isActive = computed(() => {
 const typeColorClass = computed(() => getTypeColor(props.nodeSchema.type))
 
 // Type Icons: shared via @/utils/schemaTypeIcons
-const typeIcon = computed(() => getTypeIcon(props.nodeSchema.type))
+const typeIcon = computed<Component>(() => getTypeIcon(props.nodeSchema.type))
 
 const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value

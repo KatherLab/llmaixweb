@@ -18,13 +18,13 @@
   </ErrorBanner>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { computed, type PropType } from 'vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 
 const props = defineProps({
   failures: {
-    type: Object,
+    type: Object as PropType<Record<string, string>>,
     default: () => ({}),
   },
 })

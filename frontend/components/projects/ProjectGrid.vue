@@ -79,7 +79,7 @@
         </template>
 
         <template #row-actions="{ row: project }">
-          <BaseButton variant="primary" size="sm" @click.stop="goToProject(project)">
+          <BaseButton variant="primary" size="sm" @click.stop="goToProject(project as ProjectRow)">
             View
           </BaseButton>
         </template>
@@ -88,8 +88,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, type ComputedRef } from 'vue'
 import { projectsApi } from '@/services/projectsApi'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
@@ -98,6 +98,30 @@ import DataTable from '@/components/common/DataTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { formatDate } from '@/utils/formatters'
 import { usePagination } from '@/composables/usePagination'
+import type { Project, QueryParams } from '@/types'
+
+interface ProjectRowUser {
+  full_name: string
+  email: string
+  initials: string
+}
+
+interface ProjectRow extends Project {
+  user: ProjectRowUser
+}
+
+interface TableColumn {
+  key: string
+  label: string
+  sortable: boolean
+}
+
+interface TablePagination {
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+}
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -106,7 +130,7 @@ const isAdmin = computed(() => authStore.user?.role === 'admin')
 const showAllProjects = ref(false)
 const isLoading = ref(true)
 
-const projects = ref([])
+const projects = ref<ProjectRow[]>([])
 const currentPage = ref(1)
 const pageSize = ref(20)
 
@@ -120,28 +144,28 @@ watch(totalCount, () => {
   }
 })
 
-const pagedProjects = computed(() => {
+const pagedProjects: ComputedRef<ProjectRow[]> = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   return projects.value.slice(start, start + pageSize.value)
 })
 
-const tablePagination = computed(() => ({
+const tablePagination: ComputedRef<TablePagination> = computed(() => ({
   page: currentPage.value,
   page_size: pageSize.value,
   total: totalCount.value,
   total_pages: pagination.totalPages.value,
 }))
 
-function handlePageChange(page) {
+function handlePageChange(page: number): void {
   currentPage.value = page
 }
-function handlePageSizeChange(size) {
+function handlePageSizeChange(size: number): void {
   pageSize.value = size
   currentPage.value = 1
 }
 
-const columns = computed(() => {
-  const cols = [
+const columns: ComputedRef<TableColumn[]> = computed(() => {
+  const cols: TableColumn[] = [
     { key: 'name', label: 'Project', sortable: true },
     { key: 'document_count', label: 'Documents', sortable: true },
   ]
@@ -152,16 +176,16 @@ const columns = computed(() => {
   return cols
 })
 
-function goToProject(project) {
+function goToProject(project: ProjectRow): void {
   router.push(`/projects/${project.id}`)
 }
 
-const loadProjects = async () => {
+const loadProjects = async (): Promise<void> => {
   isLoading.value = true
   try {
-    const params = isAdmin.value && showAllProjects.value ? { all: true } : {}
+    const params: QueryParams = isAdmin.value && showAllProjects.value ? { all: true } : {}
     const response = await projectsApi.list(params)
-    projects.value = response.data.map((project) => {
+    projects.value = response.data.map((project: Project): ProjectRow => {
       const fullName = project.owner?.full_name || 'N/A'
       return {
         ...project,
@@ -188,12 +212,12 @@ const loadProjects = async () => {
 // reset to page 1 + reload when admin toggle changes
 watch(isAdmin, () => {
   showAllProjects.value = false
-  loadProjects()
+  void loadProjects()
 })
 
 // reload when "show all projects" toggle changes
 watch(showAllProjects, () => {
-  loadProjects()
+  void loadProjects()
 })
 
 onMounted(async () => {

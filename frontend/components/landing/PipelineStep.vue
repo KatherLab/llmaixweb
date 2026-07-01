@@ -17,23 +17,30 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, type Component } from 'vue'
 
-defineProps({
-  step: {
-    type: Object,
-    required: true,
-  },
-  active: {
-    type: Boolean,
-    default: false,
-  },
+interface Step {
+  id: number
+  title: string
+  subtitle: string
+  gradient: string
+  shadow: string
+  icon: Component
+}
+
+interface Props {
+  step: Step
+  active?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  active: false,
 })
 
-defineEmits(['toggle'])
+defineEmits<{ toggle: [] }>()
 
-const stepEl = ref(null)
+const stepEl = ref<HTMLElement | null>(null)
 
 onMounted(() => {
   if (!stepEl.value) return

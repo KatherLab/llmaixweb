@@ -180,9 +180,10 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch } from 'vue'
 import { AlertTriangle } from '@lucide/vue'
+import type { UserResponse, UserUpdateAdmin, UserRole } from '@/types'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -190,17 +191,33 @@ import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 
-const props = defineProps({
-  open: { type: Boolean, required: true },
-  user: { type: Object, default: null },
-  currentUserId: { type: Number, default: null },
+interface Props {
+  open: boolean
+  user?: UserResponse | null
+  currentUserId?: number | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  user: null,
+  currentUserId: null,
 })
 
-const emit = defineEmits(['close', 'saved', 'delete-requested'])
+const emit = defineEmits<{
+  (e: 'close'): void
+  (e: 'saved', user: UserResponse): void
+  (e: 'delete-requested', user: UserResponse): void
+}>()
 
 const toast = useToast()
 
-const editForm = ref({ full_name: '', email: '', role: 'user', is_active: true })
+interface EditForm {
+  full_name: string
+  email: string
+  role: UserRole
+  is_active: boolean
+}
+
+const editForm = ref<EditForm>({ full_name: '', email: '', role: 'user', is_active: true })
 const editPassword = ref('')
 const editError = ref('')
 const editSuccess = ref(false)
@@ -208,7 +225,7 @@ const isSavingEdit = ref(false)
 const isSettingPassword = ref(false)
 const setPasswordSuccessMsg = ref(false)
 
-function initForm() {
+function initForm(): void {
   if (!props.user) return
   editForm.value = {
     full_name: props.user.full_name,
@@ -234,19 +251,19 @@ watch(
   },
 )
 
-function toggleEditUserActive() {
+function toggleEditUserActive(): void {
   if (props.user && props.user.id !== props.currentUserId) {
     editForm.value.is_active = !editForm.value.is_active
   }
 }
 
-async function saveEditUser() {
+async function saveEditUser(): Promise<void> {
   if (!props.user) return
   isSavingEdit.value = true
   editError.value = ''
   editSuccess.value = false
   try {
-    const payload = {}
+    const payload: UserUpdateAdmin = {}
     if (editForm.value.full_name !== props.user.full_name)
       payload.full_name = editForm.value.full_name
     if (editForm.value.email !== props.user.email) payload.email = editForm.value.email
@@ -271,7 +288,7 @@ async function saveEditUser() {
   }
 }
 
-async function setPasswordForEditUser() {
+async function setPasswordForEditUser(): Promise<void> {
   if (!props.user || !editPassword.value) return
   isSettingPassword.value = true
   setPasswordSuccessMsg.value = false
@@ -287,7 +304,7 @@ async function setPasswordForEditUser() {
   }
 }
 
-function confirmDeleteFromModal() {
+function confirmDeleteFromModal(): void {
   if (!props.user) return
   emit('delete-requested', props.user)
 }

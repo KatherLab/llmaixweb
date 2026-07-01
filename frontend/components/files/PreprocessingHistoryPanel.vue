@@ -91,8 +91,11 @@
                 class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300"
               >
                 <span>Processing...</span>
-                <span v-if="task.meta?.eta_seconds > 0" class="text-slate-500 dark:text-slate-400">
-                  ≈ {{ formatDuration(task.meta.eta_seconds) }} left
+                <span
+                  v-if="(task.meta?.eta_seconds ?? 0) > 0"
+                  class="text-slate-500 dark:text-slate-400"
+                >
+                  ≈ {{ formatDuration(task.meta?.eta_seconds) }} left
                 </span>
               </div>
               <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
@@ -169,8 +172,8 @@
                   <!-- Warnings (nested accordion for skipped rows) -->
                   <div
                     v-if="
-                      fileTask.warnings &&
-                      (fileTask.warnings.messages || fileTask.warnings.skipped_rows)
+                      getWarnings(fileTask) &&
+                      (getWarnings(fileTask)?.messages || getWarnings(fileTask)?.skipped_rows)
                     "
                     class="mt-2"
                   >
@@ -180,17 +183,16 @@
                       >
                         <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
                         <AlertTriangle class="w-3 h-3 inline" />
-                        {{ fileTask.warnings.skipped_rows?.count || 0 }} skipped rows
+                        {{ getWarnings(fileTask)?.skipped_rows?.count || 0 }} skipped rows
                       </summary>
                       <div
                         class="mt-1 text-xs text-amber-600 dark:text-amber-300 dark:bg-amber-900/30 bg-amber-100 rounded p-2 max-h-32 overflow-y-auto"
                       >
-                        <div v-if="fileTask.warnings.skipped_rows?.details" class="space-y-1">
+                        <div v-if="getWarnings(fileTask)?.skipped_rows?.details" class="space-y-1">
                           <div
-                            v-for="(row, idx) in fileTask.warnings.skipped_rows.details.slice(
-                              0,
-                              10,
-                            )"
+                            v-for="(row, idx) in getWarnings(
+                              fileTask,
+                            )?.skipped_rows?.details?.slice(0, 10)"
                             :key="idx"
                             class="flex justify-between"
                           >
@@ -198,15 +200,16 @@
                             <span class="truncate max-w-[150px]">{{ row.reason }}</span>
                           </div>
                           <p
-                            v-if="fileTask.warnings.skipped_rows.details.length > 10"
+                            v-if="(getWarnings(fileTask)?.skipped_rows?.details?.length ?? 0) > 10"
                             class="text-amber-500 dark:text-amber-400"
                           >
                             ...and
-                            {{ fileTask.warnings.skipped_rows.details.length - 10 }} more
+                            {{ (getWarnings(fileTask)?.skipped_rows?.details?.length ?? 0) - 10 }}
+                            more
                           </p>
                         </div>
                         <div v-else>
-                          <p v-for="(msg, idx) in fileTask.warnings.messages" :key="idx">
+                          <p v-for="(msg, idx) in getWarnings(fileTask)?.messages" :key="idx">
                             {{ msg }}
                           </p>
                         </div>
@@ -344,7 +347,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch } from 'vue'
 import {
   AlertTriangle,
@@ -362,20 +365,34 @@ import { getStatusDotClass, getStatusBadgeClass, getStatusBannerClass } from '@/
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import type { FilePreprocessingTask, PreprocessingTask } from '@/types'
+import type { FileWithTasks } from '@/composables/usePreprocessingUpdates'
 
-const props = defineProps({
-  open: { type: Boolean, required: true },
-  historyFile: { type: Object, default: null },
+interface Props {
+  open: boolean
+  historyFile?: FileWithTasks | null
   // Task id to auto-expand when the panel opens (used by ActivityBell "expand task" events).
-  highlightTaskId: { type: [String, Number], default: null },
+  highlightTaskId?: string | number | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  historyFile: null,
+  highlightTaskId: null,
 })
 
-const emit = defineEmits(['close', 'navigate', 'retry', 'cancel', 'process', 'process-panel'])
+const emit = defineEmits<{
+  close: []
+  navigate: [documentId: number]
+  retry: [taskId: number]
+  cancel: [task: PreprocessingTask]
+  process: [file: FileWithTasks]
+  'process-panel': [file: FileWithTasks]
+}>()
 
 // Multi-expand accordion state
-const expandedTasks = ref(new Set())
+const expandedTasks = ref(new Set<number>())
 
-const toggleTaskAccordion = (taskId) => {
+const toggleTaskAccordion = (taskId: number): void => {
   if (expandedTasks.value.has(taskId)) {
     expandedTasks.value.delete(taskId)
   } else {
@@ -395,8 +412,8 @@ watch(
 )
 
 // Get engine name from task
-const getEngineName = (task) => {
-  const settings = task.configuration?.additional_settings || {}
+const getEngineName = (task: PreprocessingTask): string => {
+  const settings = (task.configuration?.additional_settings || {}) as Record<string, unknown>
   const engine = settings.ocr_engine || 'local'
 
   if (engine === 'mistral_ocr') return 'Mistral OCR'
@@ -406,17 +423,18 @@ const getEngineName = (task) => {
 }
 
 // Helper to check task status (handles enum or string)
-const isTaskStatus = (task, expectedStatus) => {
+const isTaskStatus = (task: PreprocessingTask | null, expectedStatus: string): boolean => {
   if (!task || !task.status) return false
   return String(task.status).toLowerCase() === String(expectedStatus).toLowerCase()
 }
 
 // Whether a task is actively running (processing / in_progress). Used to pulse
 // the status dot and show the progress % in the mini badge.
-const isTaskActive = (task) => isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress')
+const isTaskActive = (task: PreprocessingTask): boolean =>
+  isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress')
 
 // Mini badge label for a task's current status.
-const taskStatusLabel = (task) => {
+const taskStatusLabel = (task: PreprocessingTask): string => {
   if (isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress'))
     return `${Math.round(task.meta?.progress || 0)}%`
   if (isTaskStatus(task, 'completed')) return 'Done'
@@ -425,19 +443,39 @@ const taskStatusLabel = (task) => {
   return 'Pending'
 }
 
+// Typed accessors for the warnings payload (typed loosely as Record<string,
+// unknown> on the model). Keep the shape the template expects.
+interface SkippedRowDetail {
+  row_index: number | string
+  reason: string
+}
+interface SkippedRows {
+  count?: number
+  details?: SkippedRowDetail[]
+}
+interface FileTaskWarnings {
+  messages?: string[]
+  skipped_rows?: SkippedRows
+}
+
+function getWarnings(fileTask: FilePreprocessingTask): FileTaskWarnings | null {
+  if (!fileTask.warnings) return null
+  return fileTask.warnings as unknown as FileTaskWarnings
+}
+
 // Format relative time. Delegates the just-now/m/h tiers to the shared
 // formatter; runs older than 24h fall back to a locale date (preserves the
 // original 24h cutoff vs the shared 30-day "Xd ago" tier).
-const formatRelativeTime = (dateString) => {
+const formatRelativeTime = (dateString: string | null | undefined): string => {
   if (!dateString) return ''
   const date = new Date(dateString)
-  if (isNaN(date)) return ''
+  if (isNaN(date.getTime())) return ''
   if (Date.now() - date.getTime() >= 86400000) return date.toLocaleDateString()
   return sharedFormatRelativeTime(dateString)
 }
 
 // Format processing time in seconds to human readable
-const formatProcessingTime = (seconds) => {
+const formatProcessingTime = (seconds: number | null): string => {
   if (!seconds && seconds !== 0) return ''
   if (seconds < 1) return `${(seconds * 1000).toFixed(0)}ms`
   if (seconds < 60) return `${seconds.toFixed(1)}s`

@@ -23,10 +23,15 @@
   </div>
 </template>
 
-<script setup>
-defineProps({
-  viewMode: { type: String, required: true },
-  originalPdfUrl: { type: String, default: '' },
-  originalImageUrl: { type: String, default: '' },
+<script setup lang="ts">
+interface Props {
+  viewMode: string
+  originalPdfUrl?: string
+  originalImageUrl?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  originalPdfUrl: '',
+  originalImageUrl: '',
 })
 </script>

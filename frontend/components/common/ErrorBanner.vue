@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { AlertTriangle, X } from '@lucide/vue'
 /**
  * Shared error banner: icon + message + optional retry/dismiss actions.
@@ -12,26 +12,21 @@ import { AlertTriangle, X } from '@lucide/vue'
  * Slots:
  *  - default : rich message content (overrides the `message` prop text)
  */
-defineProps({
-  message: {
-    type: String,
-    default: '',
-  },
-  dismissable: {
-    type: Boolean,
-    default: false,
-  },
-  retryText: {
-    type: String,
-    default: '',
-  },
-  retryLoading: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  message?: string
+  dismissable?: boolean
+  retryText?: string
+  retryLoading?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  message: '',
+  dismissable: false,
+  retryText: '',
+  retryLoading: false,
 })
 
-const emit = defineEmits(['dismiss', 'retry'])
+const emit = defineEmits<{ (e: 'dismiss'): void; (e: 'retry'): void }>()
 </script>
 
 <template>

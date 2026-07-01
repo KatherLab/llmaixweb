@@ -88,21 +88,37 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch } from 'vue'
 import { CircleAlert, FileText, Key } from '@lucide/vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { selectClass } from '@/utils/formStyles'
-const props = defineProps({
-  isJson: Boolean,
-  isTabular: Boolean,
-  idColumn: { type: String, default: '' },
-  jsonIdField: { type: String, default: '' },
-  availableColumns: { type: Array, default: () => [] },
-  idCandidates: { type: Array, default: () => [] },
-  currentIdColumn: { type: String, default: '' },
+
+interface Props {
+  isJson?: boolean
+  isTabular?: boolean
+  idColumn?: string
+  jsonIdField?: string
+  availableColumns?: string[]
+  idCandidates?: string[]
+  currentIdColumn?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isJson: false,
+  isTabular: false,
+  idColumn: '',
+  jsonIdField: '',
+  availableColumns: () => [],
+  idCandidates: () => [],
+  currentIdColumn: '',
 })
-const emit = defineEmits(['update:id-column', 'update:json-id-field'])
+
+const emit = defineEmits<{
+  'update:id-column': [value: string]
+  'update:json-id-field': [value: string]
+}>()
+
 const innerIdColumn = ref(props.idColumn || '')
 const innerJsonIdField = ref(props.jsonIdField || '')
 watch(

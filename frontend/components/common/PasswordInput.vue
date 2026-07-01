@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Shared password input with a show/hide toggle and a strength meter.
  *
@@ -14,24 +14,39 @@ import { Eye, EyeOff } from '@lucide/vue'
 import { inputClass, labelClass } from '@/utils/formStyles'
 import { useId } from 'vue'
 
-const props = defineProps({
-  modelValue: { type: String, default: '' },
-  label: { type: String, default: 'Password' },
-  placeholder: { type: String, default: '' },
-  autocomplete: { type: String, default: 'new-password' },
-  required: { type: Boolean, default: false },
-  disabled: { type: Boolean, default: false },
-  minlength: { type: [String, Number], default: 8 },
-  maxlength: { type: [String, Number], default: 128 },
+interface Props {
+  modelValue?: string
+  label?: string
+  placeholder?: string
+  autocomplete?: string
+  required?: boolean
+  disabled?: boolean
+  minlength?: string | number
+  maxlength?: string | number
   // Hide the strength meter (e.g. admin set-password, where guidance is noise).
-  showStrength: { type: Boolean, default: true },
+  showStrength?: boolean
   // Render with an error border.
-  invalid: { type: Boolean, default: false },
-  hint: { type: String, default: '' },
-  error: { type: String, default: '' },
+  invalid?: boolean
+  hint?: string
+  error?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: '',
+  label: 'Password',
+  placeholder: '',
+  autocomplete: 'new-password',
+  required: false,
+  disabled: false,
+  minlength: 8,
+  maxlength: 128,
+  showStrength: true,
+  invalid: false,
+  hint: '',
+  error: '',
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{ (e: 'update:modelValue', value: string): void }>()
 
 const inputId = useId()
 const show = ref(false)
@@ -91,7 +106,7 @@ const segments = computed(() => {
         :minlength="minlength"
         :maxlength="maxlength"
         :class="inputClasses"
-        @input="emit('update:modelValue', $event.target.value)"
+        @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
       <button
         type="button"

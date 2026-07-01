@@ -9,11 +9,11 @@
     <template #header>
       <div class="flex items-center justify-between flex-1">
         <div class="flex items-center gap-4">
-          <FileIcon :file-type="file.file_type" :size="32" />
+          <FileIcon :file-type="file?.file_type" :size="32" />
           <div>
-            <h3 class="text-xl font-bold text-slate-900 dark:text-white">{{ file.file_name }}</h3>
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white">{{ file?.file_name }}</h3>
             <p class="text-xs text-slate-500 dark:text-slate-400">
-              {{ formatFileSize(file.file_size, 'Unknown') }} &middot; {{ file.file_type }}
+              {{ formatFileSize(file?.file_size, 'Unknown') }} &middot; {{ file?.file_type }}
             </p>
           </div>
         </div>
@@ -46,7 +46,7 @@
 
     <!-- PDF Preview -->
     <iframe
-      v-else-if="previewUrl && file.file_type === 'application/pdf'"
+      v-else-if="previewUrl && file?.file_type === 'application/pdf'"
       :src="previewUrl"
       class="w-full h-full rounded-b-2xl border-none"
       title="PDF preview"
@@ -54,12 +54,12 @@
 
     <!-- Image Preview -->
     <div
-      v-else-if="previewUrl && file.file_type?.startsWith('image/')"
+      v-else-if="previewUrl && file?.file_type?.startsWith('image/')"
       class="flex items-center justify-center h-full p-10 bg-white dark:bg-slate-900 rounded-b-2xl"
     >
       <img
         :src="previewUrl"
-        :alt="file.file_name"
+        :alt="file?.file_name || ''"
         class="max-w-full max-h-[70vh] object-contain rounded-xl border"
       />
     </div>
@@ -146,7 +146,7 @@
 
     <!-- Text File Preview -->
     <div
-      v-else-if="previewContent && file.file_type === 'text/plain'"
+      v-else-if="previewContent && file?.file_type === 'text/plain'"
       class="h-full overflow-auto p-8"
     >
       <pre
@@ -157,7 +157,7 @@
     <!-- Fallback -->
     <div v-else class="flex items-center justify-center h-full">
       <div class="text-center">
-        <FileIcon :file-type="file.file_type" :size="64" />
+        <FileIcon :file-type="file?.file_type" :size="64" />
         <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
           Preview not available for this file type.
         </p>
@@ -190,12 +190,12 @@
     <template #footer>
       <div class="flex items-center justify-between text-xs w-full">
         <div class="flex items-center gap-6 text-slate-500 dark:text-slate-400">
-          <span>Created: {{ formatDateFull(file.created_at) }}</span>
-          <span v-if="file.file_hash" class="font-mono text-xs">
+          <span>Created: {{ formatDateFull(file?.created_at) }}</span>
+          <span v-if="file?.file_hash" class="font-mono text-xs">
             Hash: {{ file.file_hash.substring(0, 8) }}...
           </span>
         </div>
-        <div v-if="file.description" class="text-slate-600 dark:text-slate-300 truncate">
+        <div v-if="file?.description" class="text-slate-600 dark:text-slate-300 truncate">
           {{ file.description }}
         </div>
       </div>
@@ -203,7 +203,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onUnmounted, watch } from 'vue'
 import { AlertTriangle, CloudDownload } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
@@ -213,26 +213,36 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { formatFileSize, formatDateFull } from '@/utils/formatters'
+import type { File } from '@/types'
 
-const props = defineProps({
-  open: { type: Boolean, required: true },
-  file: { type: Object, required: true },
-  projectId: { type: [String, Number], required: true },
-})
+interface Props {
+  open: boolean
+  file: File | null
+  projectId: string | number
+}
+
+const props = defineProps<Props>()
 const toast = useToast()
-defineEmits(['close'])
+defineEmits<{
+  close: []
+}>()
+
+interface TabularData {
+  headers: (string | null)[]
+  rows: (string | null)[][]
+}
 
 const isLoading = ref(true)
 const error = ref('')
 const previewUrl = ref('')
 const previewContent = ref('')
 
-const tabularData = ref(null)
+const tabularData = ref<TabularData | null>(null)
 const truncated = ref(false)
 const totalRows = ref(0)
 
 const idColumn = ref('')
-const textColumns = ref([])
+const textColumns = ref<string[]>([])
 
 // ⬇️ ADD: use settings saved by FileImportConfigModal (from file.file_metadata)
 const delimiter = ref(',')
@@ -242,7 +252,7 @@ const sheetFromMeta = ref('')
 
 // (Re)initialize CSV/XLSX parse settings from the current file's saved metadata.
 // Called on each open since the component stays mounted to enable the close transition.
-function syncConfigFromMeta() {
+function syncConfigFromMeta(): void {
   const meta = props.file?.file_metadata || {}
   delimiter.value = meta.delimiter || ','
   encoding.value = meta.encoding || 'utf-8'
@@ -253,6 +263,7 @@ syncConfigFromMeta()
 
 // Robust format checks (extension + MIME)
 const isCSV = computed(() => {
+  if (!props.file) return false
   const t = (props.file.file_type || '').toLowerCase()
   const n = (props.file.file_name || '').toLowerCase()
   return (
@@ -262,6 +273,7 @@ const isCSV = computed(() => {
   )
 })
 const isXLSX = computed(() => {
+  if (!props.file) return false
   const t = (props.file.file_type || '').toLowerCase()
   const n = (props.file.file_name || '').toLowerCase()
   return (
@@ -285,19 +297,19 @@ const headerLabels = computed(() =>
   }),
 )
 
-function showFullCell(cell, header) {
+function showFullCell(cell: string, header: string | null): void {
   modalContent.value = cell
   modalHeader.value = header ? `${header}` : ''
   showModal.value = true
   copied.value = false
 }
-function closeModal() {
+function closeModal(): void {
   showModal.value = false
   modalContent.value = ''
   modalHeader.value = ''
   copied.value = false
 }
-function copyToClipboard() {
+function copyToClipboard(): void {
   navigator.clipboard.writeText(modalContent.value || '').then(() => {
     copied.value = true
     setTimeout(() => (copied.value = false), 1500)
@@ -305,8 +317,9 @@ function copyToClipboard() {
 }
 
 const normalizedHeaders = computed(() => {
-  const headers = [...(tabularData.value?.headers || [])]
-  const maxLen = Math.max(headers.length, ...(tabularData.value?.rows || []).map((r) => r.length))
+  const headers: (string | null)[] = [...(tabularData.value?.headers || [])]
+  const rows = tabularData.value?.rows || []
+  const maxLen = Math.max(headers.length, ...rows.map((r) => r.length))
   while (headers.length < maxLen) {
     headers.push(`Column ${headers.length + 1}`)
   }
@@ -318,7 +331,9 @@ const normalizedHeaders = computed(() => {
   })
 })
 
-const loadPreview = async () => {
+const loadPreview = async (): Promise<void> => {
+  if (!props.file) return
+  const file = props.file
   isLoading.value = true
   error.value = ''
   previewUrl.value = ''
@@ -329,39 +344,59 @@ const loadPreview = async () => {
 
   try {
     if (isCSV.value || isXLSX.value) {
-      const params = new URLSearchParams({ max_rows: 50 })
+      const params = new URLSearchParams({ max_rows: '50' })
 
-      // ⬇️ NEW: pass saved parse hints (identical to the second modal’s behavior)
+      // ⬇️ NEW: pass saved parse hints (identical to the second modal's behavior)
       params.append('encoding', encoding.value)
-      params.append('has_header', hasHeader.value)
+      params.append('has_header', String(hasHeader.value))
       if (isCSV.value && delimiter.value) params.append('delimiter', delimiter.value)
       if (isXLSX.value && sheetFromMeta.value) params.append('sheet', sheetFromMeta.value)
 
-      const { data } = await filesApi.getPreviewRows(props.projectId, props.file.id, params)
+      const { data } = await filesApi.getPreviewRows(
+        props.projectId,
+        file.id,
+        params as unknown as Record<string, unknown>,
+      )
+
+      // The API response shape (headers/rows 2D array, sheets, truncated,
+      // total_rows, id/text columns) differs from the declared FilePreviewRows
+      // type; cast to the shape this component actually consumes.
+      const preview = data as unknown as {
+        headers?: (string | null)[]
+        rows?: (string | null)[][]
+        sheets?: string[]
+        truncated?: boolean
+        total_rows?: number
+        totalRows?: number
+        idColumn?: string
+        id_column?: string
+        textColumns?: string[]
+        text_columns?: string[]
+      }
 
       tabularData.value = {
-        headers: data.headers || [],
-        rows: data.rows || [],
+        headers: preview.headers || [],
+        rows: preview.rows || [],
       }
-      truncated.value = !!data.truncated
-      totalRows.value = data.total_rows || data.totalRows || 0
+      truncated.value = !!preview.truncated
+      totalRows.value = preview.total_rows || preview.totalRows || 0
 
       idColumn.value =
-        data.idColumn || data.id_column || props.file.file_metadata?.case_id_column || ''
+        preview.idColumn || preview.id_column || file.file_metadata?.case_id_column || ''
       textColumns.value =
-        data.textColumns || data.text_columns || props.file.file_metadata?.text_columns || []
-    } else if (props.file.file_type === 'text/plain') {
-      const response = await filesApi.getContent(props.projectId, props.file.id, {
+        preview.textColumns || preview.text_columns || file.file_metadata?.text_columns || []
+    } else if (file.file_type === 'text/plain') {
+      const response = await filesApi.getContent(props.projectId, file.id, {
         preview: true,
       })
       previewContent.value = await response.data.text()
-    } else if (props.file.file_type.startsWith('image/')) {
-      const response = await filesApi.getContent(props.projectId, props.file.id, {
+    } else if (file.file_type?.startsWith('image/')) {
+      const response = await filesApi.getContent(props.projectId, file.id, {
         preview: true,
       })
       previewUrl.value = URL.createObjectURL(response.data)
-    } else if (props.file.file_type === 'application/pdf') {
-      const response = await filesApi.getContent(props.projectId, props.file.id, {
+    } else if (file.file_type === 'application/pdf') {
+      const response = await filesApi.getContent(props.projectId, file.id, {
         preview: true,
       })
       previewUrl.value = URL.createObjectURL(response.data)
@@ -376,13 +411,15 @@ const loadPreview = async () => {
   }
 }
 
-const downloadFile = async () => {
+const downloadFile = async (): Promise<void> => {
+  if (!props.file) return
+  const file = props.file
   try {
-    const response = await filesApi.getContent(props.projectId, props.file.id)
+    const response = await filesApi.getContent(props.projectId, file.id)
     const url = window.URL.createObjectURL(new Blob([response.data]))
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', props.file.file_name)
+    link.setAttribute('download', file.file_name || 'download')
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -415,22 +452,22 @@ onUnmounted(() => {
   }
 })
 
-function cellClasses(headerLabel) {
+function cellClasses(headerLabel: string | null): string {
   if (headerLabel === idColumn.value && idColumn.value) {
     return 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold border-blue-200 dark:border-blue-800 shadow-sm'
   }
-  if (textColumns.value && textColumns.value.includes(headerLabel)) {
+  if (headerLabel != null && textColumns.value && textColumns.value.includes(headerLabel)) {
     return 'bg-green-50 dark:bg-green-900/30 text-green-900 dark:text-green-300 font-medium border-green-200 dark:border-green-800'
   }
   return ''
 }
-function headerLabel(headerLabel) {
+function headerLabel(headerLabel: string | null): string {
   if (!headerLabel) return ''
   if (headerLabel === idColumn.value) return `${headerLabel} (ID)`
   if (textColumns.value && textColumns.value.includes(headerLabel)) return `${headerLabel} (Text)`
   return headerLabel
 }
-function isTextColumn(headerLabel) {
-  return textColumns.value && textColumns.value.includes(headerLabel)
+function isTextColumn(headerLabel: string | null): boolean {
+  return headerLabel != null && !!textColumns.value && textColumns.value.includes(headerLabel)
 }
 </script>

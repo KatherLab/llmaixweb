@@ -17,7 +17,7 @@
           :class="[inputClass, 'font-mono']"
           placeholder="property_name"
           pattern="^[a-zA-Z_][a-zA-Z0-9_]*$"
-          @input="$emit('update-key', $event.target.value)"
+          @input="$emit('update-key', ($event.target as HTMLInputElement).value)"
         />
         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Use lowercase with underscores (e.g., patient_name)
@@ -174,7 +174,7 @@
         <label :class="labelClass"> Allowed Values (Options) </label>
         <div class="space-y-2">
           <div
-            v-for="(value, index) in enumValues"
+            v-for="(_value, index) in enumValues"
             :key="index"
             class="flex items-center space-x-2"
           >
@@ -449,8 +449,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch, type Component } from 'vue'
 import {
   CircleCheckBig,
   CircleHelp,
@@ -464,37 +464,38 @@ import {
 import { getTypeIcon, getTypeColor } from '@/utils/schemaTypeIcons'
 import { inputClass, textareaClass, selectClass, labelClass } from '@/utils/formStyles'
 import BaseButton from '@/components/common/BaseButton.vue'
+import type { SchemaDefinition, SchemaProperty } from '@/types'
 
-const props = defineProps({
-  property: {
-    type: Object,
-    required: true,
-  },
-  propertyKey: {
-    type: String,
-    required: true,
-  },
-  advancedMode: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  property: SchemaDefinition | SchemaProperty
+  propertyKey: string
+  advancedMode?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  advancedMode: false,
 })
 
-const emit = defineEmits(['update', 'update-key'])
+const emit = defineEmits<{
+  update: [schema: SchemaProperty]
+  'update-key': [key: string]
+}>()
 
-const localProperty = ref(JSON.parse(JSON.stringify(props.property)))
+const localProperty = ref<SchemaProperty>(JSON.parse(JSON.stringify(props.property)))
 const showPatternHelp = ref(false)
-const enumValues = ref(props.property.enum ? [...props.property.enum] : [])
-const examplesText = ref(props.property.examples ? props.property.examples.join('\n') : '')
+const enumValues = ref<string[]>(props.property.enum ? [...(props.property.enum as string[])] : [])
+const examplesText = ref(
+  (props.property.examples as string[]) ? (props.property.examples as string[]).join('\n') : '',
+)
 
 // Type Icons + colors: shared via @/utils/schemaTypeIcons
 
 // Computed properties
-const typeIcon = computed(() => getTypeIcon(localProperty.value.type))
+const typeIcon = computed<Component>(() => getTypeIcon(localProperty.value.type))
 
 const typeColorClass = computed(() => getTypeColor(localProperty.value.type))
 
-const isInteger = computed({
+const isInteger = computed<boolean>({
   get: () => localProperty.value.type === 'integer',
   set: (value) => {
     localProperty.value.type = value ? 'integer' : 'number'
@@ -506,10 +507,9 @@ watch(
   localProperty,
   (newValue) => {
     // Clean up the property before emitting
-    const cleaned = {}
-
-    // Always include type
-    cleaned.type = newValue.type
+    const cleaned: SchemaProperty = {
+      type: newValue.type,
+    }
 
     // Add other properties based on type
     for (const [key, value] of Object.entries(newValue)) {
@@ -573,7 +573,7 @@ const addEnumValue = () => {
   enumValues.value.push('')
 }
 
-const removeEnumValue = (index) => {
+const removeEnumValue = (index: number) => {
   enumValues.value.splice(index, 1)
 }
 
@@ -588,11 +588,11 @@ watch(examplesText, (newText) => {
 })
 
 // Required fields management
-const isRequired = (propKey) => {
-  return localProperty.value.required && localProperty.value.required.includes(propKey)
+const isRequired = (propKey: string): boolean => {
+  return !!localProperty.value.required && localProperty.value.required.includes(propKey)
 }
 
-const toggleRequired = (propKey) => {
+const toggleRequired = (propKey: string) => {
   if (!localProperty.value.required) {
     localProperty.value.required = []
   }
@@ -617,7 +617,7 @@ const onTypeChange = () => {
   const newType = localProperty.value.type
 
   // Create a completely new object with only the type and preserved values
-  const newProperty = {
+  const newProperty: SchemaProperty = {
     type: newType,
   }
 

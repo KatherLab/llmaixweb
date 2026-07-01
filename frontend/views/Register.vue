@@ -78,7 +78,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authApi } from '@/services/authApi'
@@ -98,18 +98,20 @@ const toast = useToast()
 const authStore = useAuthStore()
 const firstAdminStore = useFirstAdminStore()
 
-const fullName = ref('')
-const email = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const isLoading = ref(false)
-const error = ref(null)
-const invitationToken = ref('')
-const isEmailFromInvitation = ref(false)
+const fullName = ref<string>('')
+const email = ref<string>('')
+const password = ref<string>('')
+const confirmPassword = ref<string>('')
+const isLoading = ref<boolean>(false)
+const error = ref<string | null>(null)
+const invitationToken = ref<string>('')
+const isEmailFromInvitation = ref<boolean>(false)
 
-const requireInvitation = ref(true)
-const isLoadingSettings = ref(true)
-const allowRegister = computed(() => !requireInvitation.value || isEmailFromInvitation.value)
+const requireInvitation = ref<boolean>(true)
+const isLoadingSettings = ref<boolean>(true)
+const allowRegister = computed<boolean>(
+  () => !requireInvitation.value || isEmailFromInvitation.value,
+)
 
 onMounted(async () => {
   // If first-admin flow is needed, redirect to it (extra safe)
@@ -133,11 +135,11 @@ onMounted(async () => {
   // Handle invitation logic: validate token and fetch email from backend
   const token = route.query.token
   if (token) {
-    invitationToken.value = token
+    invitationToken.value = String(token)
     try {
-      const response = await usersApi.validateInvitation(token)
+      const response = await usersApi.validateInvitation(String(token))
       if (response.data && response.data.valid) {
-        email.value = response.data.email
+        email.value = response.data.email ?? ''
         isEmailFromInvitation.value = true
       } else {
         error.value = 'Invitation is invalid or has already been used'
@@ -148,7 +150,7 @@ onMounted(async () => {
   }
 })
 
-const isFormValid = computed(
+const isFormValid = computed<boolean>(
   () =>
     fullName.value.length >= 2 &&
     email.value.includes('@') &&
@@ -156,21 +158,22 @@ const isFormValid = computed(
     password.value === confirmPassword.value,
 )
 
-async function handleSubmit() {
+async function handleSubmit(): Promise<void> {
   if (isLoading.value || !isFormValid.value) return
 
   isLoading.value = true
   error.value = null
 
   try {
-    // Registration payload
+    // Registration payload (includes `role` which the backend accepts but
+    // UserCreate type doesn't declare — cast to satisfy the call signature).
     const payload = {
       full_name: fullName.value,
       email: email.value,
       password: password.value,
       role: 'user',
+      ...(invitationToken.value ? { invitation_token: invitationToken.value } : {}),
     }
-    if (invitationToken.value) payload.invitation_token = invitationToken.value
 
     await usersApi.create(payload)
 

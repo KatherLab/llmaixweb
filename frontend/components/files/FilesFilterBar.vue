@@ -123,7 +123,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { X } from '@lucide/vue'
 import { getDateRangeLabel } from '@/utils/dateRange'
@@ -132,22 +132,29 @@ import FilterChip from '@/components/common/FilterChip.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 
-defineProps({
-  totalCount: { type: Number, default: 0 },
+interface Props {
+  totalCount?: number
+}
+
+withDefaults(defineProps<Props>(), {
+  totalCount: 0,
 })
 
-const emit = defineEmits(['fetch', 'clear-filters'])
+const emit = defineEmits<{
+  fetch: []
+  'clear-filters': []
+}>()
 
 // Filter state — each is a v-model on the parent so fetchFiles/selectAllFiles can read it.
-const search = defineModel('search', { type: String, default: '' })
-const status = defineModel('status', { type: String, default: '' })
-const fileType = defineModel('fileType', { type: String, default: '' })
-const dateRange = defineModel('dateRange', { type: String, default: '' })
-const customFrom = defineModel('customFrom', { type: String, default: '' })
-const customTo = defineModel('customTo', { type: String, default: '' })
+const search = defineModel<string>('search', { default: '' })
+const status = defineModel<string>('status', { default: '' })
+const fileType = defineModel<string>('fileType', { default: '' })
+const dateRange = defineModel<string>('dateRange', { default: '' })
+const customFrom = defineModel<string>('customFrom', { default: '' })
+const customTo = defineModel<string>('customTo', { default: '' })
 
 // File type labels mapping
-const fileTypeLabels = {
+const fileTypeLabels: Record<string, string> = {
   'application/pdf': 'PDF',
   'image/png': 'PNG',
   'image/jpeg': 'JPEG',
@@ -159,7 +166,7 @@ const fileTypeLabels = {
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
 }
 
-const getFileTypeLabel = (type) => fileTypeLabels[type] || type
+const getFileTypeLabel = (type: string): string => fileTypeLabels[type] || type
 
 // Any of the filters being set counts as "active" (drives the clear-X button,
 // the active-filters summary, and the parent's empty/upload-state switching).
@@ -168,9 +175,9 @@ const hasActiveFilters = computed(
 )
 
 // Debounce timer for search input
-let searchDebounceTimer = null
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
-const onSearchInput = () => {
+const onSearchInput = (): void => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   searchDebounceTimer = setTimeout(() => {
     emit('fetch')
@@ -178,25 +185,27 @@ const onSearchInput = () => {
 }
 
 // Handle date range change — 'custom' waits for date selection, others fetch immediately.
-const onDateRangeChange = () => {
+const onDateRangeChange = (): void => {
   if (dateRange.value === 'custom') return
   emit('fetch')
 }
 
-const clearSearch = () => {
+const clearSearch = (): void => {
   search.value = ''
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   emit('fetch')
 }
 
-const clearField = (field) => {
+type FilterableField = 'status' | 'fileType' | 'dateRange'
+
+const clearField = (field: FilterableField): void => {
   if (field === 'status') status.value = ''
   else if (field === 'fileType') fileType.value = ''
   else if (field === 'dateRange') dateRange.value = ''
   emit('fetch')
 }
 
-const clearCustomDateRange = () => {
+const clearCustomDateRange = (): void => {
   customFrom.value = ''
   customTo.value = ''
   dateRange.value = ''

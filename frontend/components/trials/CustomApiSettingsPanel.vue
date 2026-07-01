@@ -21,9 +21,9 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import FormField from '@/components/common/FormField.vue'
 
-const apiKey = defineModel('apiKey', { type: String, default: '' })
-const baseUrl = defineModel('baseUrl', { type: String, default: '' })
+const apiKey = defineModel<string>('apiKey', { default: '' })
+const baseUrl = defineModel<string>('baseUrl', { default: '' })
 </script>

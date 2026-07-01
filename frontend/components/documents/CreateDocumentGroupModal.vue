@@ -184,7 +184,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { X } from '@lucide/vue'
 import { documentsApi } from '@/services/documentsApi'
@@ -195,62 +195,78 @@ import SearchInput from '@/components/common/SearchInput.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { inputClass, textareaClass, labelClass, checkboxClass } from '@/utils/formStyles'
+import type { DocumentListItem, DocumentSetSummary, DocumentSetCreate } from '@/types'
 
-const props = defineProps({
-  group: { type: Object, default: null },
-  projectId: { type: [String, Number], required: true },
-  open: { type: Boolean, default: true }, // allow parent to show/hide
-  selectedDocumentIds: { type: Array, default: null }, // optional pre-selected documents
+interface Props {
+  group?: DocumentSetSummary | null
+  projectId: string | number
+  open?: boolean
+  selectedDocumentIds?: number[] | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  group: null,
+  open: true,
+  selectedDocumentIds: null,
 })
 
-const emit = defineEmits(['close', 'save'])
+const emit = defineEmits<{
+  close: []
+  save: [payload: DocumentSetCreate]
+}>()
 
-const formData = ref({
+interface FormData {
+  name: string
+  description: string
+  tags: string[]
+}
+
+const formData = ref<FormData>({
   name: '',
   description: '',
   tags: [],
 })
 
-const initialFormState = ref('')
-const newTag = ref('')
+const initialFormState = ref<string>('')
+const newTag = ref<string>('')
 
 // Selection is held as a Set of document ids so it persists across search pages.
-const selectedIds = ref(new Set())
+const selectedIds = ref<Set<number>>(new Set())
 const selectedCount = computed(() => selectedIds.value.size)
 
 // Server-side paginated search (replaces loading every document into memory).
-const searchTerm = ref('')
-const searchResults = ref([])
-const searchTotal = ref(0)
-const searchPage = ref(1)
-const searchPageSize = ref(50)
-const searchLoading = ref(false)
-const loadingExisting = ref(false)
+const searchTerm = ref<string>('')
+const searchResults = ref<DocumentListItem[]>([])
+const searchTotal = ref<number>(0)
+const searchPage = ref<number>(1)
+const searchPageSize = ref<number>(50)
+const searchLoading = ref<boolean>(false)
+const loadingExisting = ref<boolean>(false)
 
-const searchTotalPages = computed(() =>
+const searchTotalPages = computed<number>(() =>
   searchPageSize.value ? Math.ceil(searchTotal.value / searchPageSize.value) : 1,
 )
 
 // Serialize form for dirty check
-function serializeForm(data) {
+function serializeForm(data: FormData): string {
   return JSON.stringify({
     name: data.name,
     description: data.description,
     tags: [...data.tags].sort(),
-    document_ids: [...selectedIds.value].sort(),
+    document_ids: [...selectedIds.value].sort((a, b) => a - b),
   })
 }
 
-let searchDebounce = null
-const onSearchInput = () => {
-  clearTimeout(searchDebounce)
+let searchDebounce: ReturnType<typeof setTimeout> | null = null
+const onSearchInput = (): void => {
+  if (searchDebounce) clearTimeout(searchDebounce)
   searchDebounce = setTimeout(() => {
     searchPage.value = 1
     fetchSearch()
   }, 300)
 }
 
-const fetchSearch = async () => {
+const fetchSearch = async (): Promise<void> => {
   searchLoading.value = true
   try {
     const { data } = await documentsApi.list(props.projectId, {
@@ -269,14 +285,14 @@ const fetchSearch = async () => {
   }
 }
 
-const prevSearchPage = () => {
+const prevSearchPage = (): void => {
   if (searchPage.value > 1) {
     searchPage.value--
     fetchSearch()
   }
 }
 
-const nextSearchPage = () => {
+const nextSearchPage = (): void => {
   if (searchPage.value < searchTotalPages.value) {
     searchPage.value++
     fetchSearch()
@@ -286,7 +302,7 @@ const nextSearchPage = () => {
 // In edit mode, pre-select the documents already in this set. Fetched by
 // document_set_id (ids only — list items carry no `text`), accumulated across
 // pages so selection survives regardless of set size.
-const loadExistingSelection = async () => {
+const loadExistingSelection = async (): Promise<void> => {
   if (!props.group) return
   loadingExisting.value = true
   try {
@@ -333,28 +349,28 @@ onMounted(async () => {
 })
 
 // Computed
-const isFormValid = computed(() => {
-  return formData.value.name.trim() && selectedIds.value.size > 0
+const isFormValid = computed<boolean>(() => {
+  return !!formData.value.name.trim() && selectedIds.value.size > 0
 })
 
-const isDirty = computed(() => {
+const isDirty = computed<boolean>(() => {
   return serializeForm(formData.value) !== initialFormState.value
 })
 
-const isSelected = (id) => selectedIds.value.has(id)
+const isSelected = (id: number): boolean => selectedIds.value.has(id)
 
 // Methods
-const addTag = () => {
+const addTag = (): void => {
   const tag = newTag.value.trim()
   if (tag && !formData.value.tags.includes(tag)) {
     formData.value.tags.push(tag)
     newTag.value = ''
   }
 }
-const removeTag = (index) => {
+const removeTag = (index: number): void => {
   formData.value.tags.splice(index, 1)
 }
-const toggleDocument = (docId) => {
+const toggleDocument = (docId: number): void => {
   const next = new Set(selectedIds.value)
   if (next.has(docId)) {
     next.delete(docId)
@@ -363,29 +379,29 @@ const toggleDocument = (docId) => {
   }
   selectedIds.value = next
 }
-const selectAll = () => {
+const selectAll = (): void => {
   const next = new Set(selectedIds.value)
   searchResults.value.forEach((d) => next.add(d.id))
   selectedIds.value = next
 }
-const clearSelection = () => {
+const clearSelection = (): void => {
   selectedIds.value = new Set()
 }
 
 // Close handlers with confirmation if dirty
-const showConfirm = ref(false)
-const tryClose = () => {
+const showConfirm = ref<boolean>(false)
+const tryClose = (): void => {
   if (isDirty.value) {
     showConfirm.value = true
   } else {
     emit('close')
   }
 }
-const confirmDiscard = () => {
+const confirmDiscard = (): void => {
   showConfirm.value = false
   emit('close')
 }
-const handleSave = () => {
+const handleSave = (): void => {
   emit('save', {
     name: formData.value.name.trim(),
     description: formData.value.description.trim(),

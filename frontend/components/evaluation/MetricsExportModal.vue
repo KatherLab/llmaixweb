@@ -231,7 +231,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Upload } from '@lucide/vue'
 import { evaluationsApi } from '@/services/evaluationsApi'
@@ -242,29 +242,25 @@ import { useToast } from '@/composables/useToast'
 import { useFileDownload } from '@/composables/useFileDownload'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import type { Evaluation } from '@/types'
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-  evaluations: {
-    type: Array,
-    required: true,
-  },
-})
+type ExportFormat = 'csv' | 'xlsx' | 'zip'
 
-const emit = defineEmits(['close'])
+interface Props {
+  open: boolean
+  projectId: string | number
+  evaluations: Evaluation[]
+}
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<{ close: [] }>()
 const toast = useToast()
 const { downloadFromApi } = useFileDownload()
 const isExporting = ref(false)
 
-const exportFormat = ref('csv')
-const selectedEvaluations = ref([])
+const exportFormat = ref<ExportFormat>('csv')
+const selectedEvaluations = ref<number[]>([])
 const includeDetails = ref(true)
 const includeFieldDetails = ref(false)
 const includeErrors = ref(false)
@@ -311,7 +307,7 @@ const includesLargeContent = computed(
     (includeDocumentContent.value || includeGroundTruthContent.value),
 )
 
-const toggleSelectAll = () => {
+const toggleSelectAll = (): void => {
   if (allSelected.value) {
     selectedEvaluations.value = []
   } else {
@@ -319,7 +315,7 @@ const toggleSelectAll = () => {
   }
 }
 
-const exportReport = async () => {
+const exportReport = async (): Promise<void> => {
   if (selectedEvaluations.value.length === 0) {
     toast.warning('Please select at least one evaluation to export')
     return
@@ -347,12 +343,15 @@ const exportReport = async () => {
     const extension = exportFormat.value === 'zip' ? 'zip' : exportFormat.value
     const filename = `evaluation_report_${timestamp}.${extension}`
 
-    await downloadFromApi(() => evaluationsApi.download(props.projectId, params), filename)
+    await downloadFromApi(
+      () => evaluationsApi.download(props.projectId, params as unknown as Record<string, unknown>),
+      filename,
+    )
 
     toast.success('Report exported successfully')
     emit('close')
-  } catch (err) {
-    toast.error(`Failed to export report: ${err.message}`)
+  } catch (err: unknown) {
+    toast.error(`Failed to export report: ${(err as Error)?.message}`)
     console.error(err)
   } finally {
     isExporting.value = false

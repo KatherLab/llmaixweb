@@ -18,26 +18,25 @@
   </span>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { X } from '@lucide/vue'
 import { getPillClass } from '@/utils/statusStyles'
 
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({
-  label: {
-    type: String,
-    default: '',
-  },
-  color: {
-    type: String,
-    default: 'blue',
-    // 'blue' | 'green' | 'yellow' | 'red' | 'gray' | 'purple' | 'teal' | 'cyan' | 'orange'
-  },
+interface Props {
+  label?: string
+  // 'blue' | 'green' | 'yellow' | 'red' | 'gray' | 'purple' | 'teal' | 'cyan' | 'orange'
+  color?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  label: '',
+  color: 'blue',
 })
 
-defineEmits(['remove'])
+defineEmits<{ (e: 'remove'): void }>()
 
 const colorClass = computed(() => getPillClass(props.color))
 </script>

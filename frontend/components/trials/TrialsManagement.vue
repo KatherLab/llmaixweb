@@ -163,7 +163,7 @@
       v-if="showTrialResultsModal"
       :is-modal="true"
       :project-id="props.projectId"
-      :trial-id="selectedTrialId"
+      :trial-id="selectedTrialId ?? 0"
       @close="showTrialResultsModal = false"
     />
     <RenameTrialModal
@@ -207,8 +207,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, type PropType } from 'vue'
 import { debounce } from 'perfect-debounce'
 import { useToast } from '@/composables/useToast'
 import { ClipboardList, SearchX } from '@lucide/vue'
@@ -235,63 +235,107 @@ import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import Tooltip from '@/components/common/Tooltip.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { extractErrorMessage } from '@/utils/errors'
+import type {
+  DocumentListItem,
+  DocumentSetSummary,
+  Schema,
+  Prompt,
+  TrialSummary,
+  TrialCreate,
+} from '@/types'
+
+interface ConfirmAction {
+  title: string
+  message: string
+  confirmText: string
+  variant: 'danger' | 'warning' | 'primary'
+  handler: () => void
+}
+
+interface ConfirmConfig {
+  title: string
+  message: string
+  confirmText?: string
+  variant?: 'danger' | 'warning' | 'primary'
+  handler: () => void
+}
+
+interface RenamePayload {
+  id: number
+  name: string
+  description: string
+}
+
+interface TrialFilters {
+  search: string
+  status: string
+  schema_id: string | number
+  prompt_id: string | number
+  document_set_id: string | number
+  llm_model: string
+  has_failures: string
+  dateRange: string
+  [key: string]: unknown
+}
 
 const props = defineProps({
-  projectId: { type: [String, Number], required: true },
+  projectId: { type: [String, Number] as PropType<string | number>, required: true },
 })
 
 const toast = useToast()
 
-const documents = ref([])
-const schemas = ref([])
-const prompts = ref([])
-const documentGroups = ref([])
-const trials = ref([])
+const documents = ref<DocumentListItem[]>([])
+
+const schemas = ref<Schema[]>([])
+const prompts = ref<Prompt[]>([])
+const documentGroups = ref<DocumentSetSummary[]>([])
+const trials = ref<TrialSummary[]>([])
 const totalTrials = ref(0)
 const limit = ref(20)
 const currentPage = ref(1)
 const isLoading = ref(true)
-const error = ref(null)
+const error = ref<string | null>(null)
 const isModalOpen = ref(false)
 const isConfirmDialogOpen = ref(false)
 // Generic confirmation dialog: { title, message, confirmText, variant, handler }
-const confirmAction = ref({
+const confirmAction = ref<ConfirmAction>({
   title: '',
   message: '',
   confirmText: 'Confirm',
   variant: 'danger',
   handler: () => {},
 })
-const openConfirm = (config) => {
+const openConfirm = (config: ConfirmConfig): void => {
   confirmAction.value = { confirmText: 'Confirm', variant: 'danger', ...config }
   isConfirmDialogOpen.value = true
 }
 const showRenameModal = ref(false)
-const editingTrial = ref(null)
-const selectedTrials = ref([])
+const editingTrial = ref<TrialSummary | null>(null)
+const selectedTrials = ref<number[]>([])
 const showBatchModal = ref(false)
 const batchAction = ref('')
 const showTrialResultsModal = ref(false)
-const selectedTrialId = ref(null)
+const selectedTrialId = ref<number | null>(null)
 const showSchemaModal = ref(false)
-const selectedSchema = ref(null)
+const selectedSchema = ref<Schema | null>(null)
 const schemaIsSnapshot = ref(false)
 const showPromptModal = ref(false)
-const selectedPrompt = ref(null)
+const selectedPrompt = ref<Prompt | null>(null)
 const promptIsSnapshot = ref(false)
 const showDownloadModal = ref(false)
-const trialToDownload = ref(null)
-const highlightedTrialId = ref(null)
+const trialToDownload = ref<TrialSummary | null>(null)
+const highlightedTrialId = ref<number | null>(null)
 
 // Handle expand-trial event from ActivityBell
-const handleExpandTrial = (event) => {
-  const trialId = event.detail?.id
+const handleExpandTrial = (event: Event): void => {
+  const customEvent = event as CustomEvent<{ id?: string | number }>
+  const trialId = customEvent.detail?.id
   if (!trialId) return
 
   highlightedTrialId.value = Number(trialId)
 
   // Try to scroll to the trial card, retrying if it's not found yet
-  const tryScrollToTrial = (attempts = 0) => {
+  const tryScrollToTrial = (attempts = 0): void => {
     const card = document.getElementById(`trial-card-${trialId}`)
     if (card) {
       card.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -337,7 +381,7 @@ const hasActiveFilters = computed(() => {
   )
 })
 
-const filters = ref({
+const filters = ref<TrialFilters>({
   search: '',
   status: '',
   schema_id: '',
@@ -353,16 +397,16 @@ const customDateFrom = ref('')
 const customDateTo = ref('')
 
 const availableTrialModels = computed(() => {
-  const allModels = trials.value.map((t) => t.llm_model).filter(Boolean)
+  const allModels = trials.value.map((t) => t.llm_model).filter((m): m is string => Boolean(m))
   return [...new Set(allModels)]
 })
 
 // Compute date bounds for date range filter
-const getDateBounds = (range) => {
+const getDateBounds = (range: string): { date_from?: string; date_to?: string } => {
   return getDateRangeBounds(range, customDateFrom.value, customDateTo.value)
 }
 
-function clearFilters() {
+function clearFilters(): void {
   filters.value = {
     search: '',
     status: '',
@@ -383,7 +427,7 @@ function clearFilters() {
 // custom-range case), then refetch. The panel owns the chip wiring and emits
 // `clear-filter(key)`; the parent still owns the refetch so page-reset is
 // consistent with the originals.
-function clearFilter(key) {
+function clearFilter(key: string): void {
   if (key === 'customDateRange') {
     customDateFrom.value = ''
     customDateTo.value = ''
@@ -394,8 +438,8 @@ function clearFilter(key) {
   applyFilters()
 }
 
-function paramsFromFilters() {
-  const params = {}
+function paramsFromFilters(): Record<string, unknown> {
+  const params: Record<string, unknown> = {}
   if (filters.value.search) params.search = filters.value.search
   if (filters.value.status) params.status = filters.value.status
   if (filters.value.schema_id) params.schema_id = filters.value.schema_id
@@ -410,13 +454,19 @@ function paramsFromFilters() {
   return params
 }
 
-async function fetchTrialsPage({ limitParam, offsetParam }) {
+async function fetchTrialsPage({
+  limitParam,
+  offsetParam,
+}: {
+  limitParam: number
+  offsetParam: number
+}) {
   const params = { ...paramsFromFilters(), limit: limitParam, offset: offsetParam }
   const res = await trialsApi.list(props.projectId, params)
   return res.data
 }
 
-async function fetchTrials() {
+async function fetchTrials(): Promise<void> {
   try {
     isLoading.value = true
     const offsetParam = (currentPage.value - 1) * limit.value
@@ -438,27 +488,27 @@ const tablePagination = computed(() => ({
   total_pages: Math.max(1, Math.ceil(totalTrials.value / limit.value)),
 }))
 
-function handlePageChange(page) {
+function handlePageChange(page: number): void {
   currentPage.value = page
   fetchTrials()
 }
 
-function handlePageSizeChange(size) {
+function handlePageSizeChange(size: number): void {
   limit.value = size
   currentPage.value = 1
   fetchTrials()
 }
 
-function resetAndFetch() {
+function resetAndFetch(): void {
   currentPage.value = 1
   fetchTrials()
 }
 
-function applyFilters() {
+function applyFilters(): void {
   resetAndFetch()
 }
 
-function toggleSelectAll() {
+function toggleSelectAll(): void {
   if (selectedTrials.value.length > 0 && selectedTrials.value.length >= trials.value.length) {
     // Deselect all on current page
     const pageIds = trials.value.map((t) => t.id)
@@ -476,13 +526,13 @@ const debouncedFetchTrials = debounce(() => {
   applyFilters()
 }, 300)
 
-function openCreateTrialModal() {
+function openCreateTrialModal(): void {
   isModalOpen.value = true
 }
-async function handleCreateTrial(trialData) {
+async function handleCreateTrial(trialData: TrialCreate): Promise<void> {
   try {
     const response = await trialsApi.create(props.projectId, trialData)
-    trials.value.unshift(response.data)
+    trials.value.unshift(response.data as unknown as TrialSummary)
     totalTrials.value += 1
     isModalOpen.value = false
     toast.success('Trial created!')
@@ -491,11 +541,11 @@ async function handleCreateTrial(trialData) {
   }
 }
 
-function openRenameModal(trial) {
+function openRenameModal(trial: TrialSummary): void {
   editingTrial.value = trial
   showRenameModal.value = true
 }
-async function submitRename({ id, name, description }) {
+async function submitRename({ id, name, description }: RenamePayload): Promise<void> {
   try {
     await trialsApi.update(props.projectId, id, { name, description })
     const idx = trials.value.findIndex((t) => t.id === id)
@@ -510,37 +560,37 @@ async function submitRename({ id, name, description }) {
   }
 }
 
-function toggleTrialSelection(id) {
+function toggleTrialSelection(id: number): void {
   if (selectedTrials.value.includes(id))
     selectedTrials.value = selectedTrials.value.filter((tid) => tid !== id)
   else selectedTrials.value.push(id)
 }
 
-function performBatchAction(action) {
+function performBatchAction(action: string): void {
   if (selectedTrials.value.length === 0) return
   batchAction.value = action
   showBatchModal.value = true
 }
 
-function handleTrialsDeleted(deletedIds = []) {
+function handleTrialsDeleted(deletedIds: number[] = []): void {
   if (deletedIds.length === 0) return
   const idSet = new Set(deletedIds)
   trials.value = trials.value.filter((t) => !idSet.has(t.id))
   totalTrials.value = Math.max(0, totalTrials.value - deletedIds.length)
 }
 
-function handleBatchActionComplete() {
+function handleBatchActionComplete(): void {
   selectedTrials.value = []
   showBatchModal.value = false
 }
 
-async function cancelTrial(trial) {
+async function cancelTrial(trial: TrialSummary): Promise<void> {
   try {
     await trialsApi.cancel(props.projectId, trial.id)
     const idx = trials.value.findIndex((t) => t.id === trial.id)
     if (idx !== -1) {
       trials.value[idx].status = 'cancelled'
-      trials.value[idx].is_cancelled = true
+      ;(trials.value[idx] as TrialSummary & { is_cancelled?: boolean }).is_cancelled = true
     }
     toast.success('Trial cancelled')
   } catch {
@@ -548,7 +598,7 @@ async function cancelTrial(trial) {
   }
 }
 
-function confirmCancelTrial(trial) {
+function confirmCancelTrial(trial: TrialSummary): void {
   openConfirm({
     title: 'Cancel Trial',
     message: 'Cancel this running trial? In-progress work will be discarded and cannot be resumed.',
@@ -561,7 +611,7 @@ function confirmCancelTrial(trial) {
   })
 }
 
-function confirmDeleteTrial(trial) {
+function confirmDeleteTrial(trial: TrialSummary): void {
   openConfirm({
     title: 'Delete Trial',
     message: 'Are you sure you want to delete this trial? This action cannot be undone.',
@@ -570,7 +620,7 @@ function confirmDeleteTrial(trial) {
     handler: () => deleteTrial(trial),
   })
 }
-async function deleteTrial(trial) {
+async function deleteTrial(trial: TrialSummary | null): Promise<void> {
   if (!trial) return
   try {
     await trialsApi.delete(props.projectId, trial.id)
@@ -584,19 +634,17 @@ async function deleteTrial(trial) {
   }
 }
 
-async function retryTrial(trial) {
+async function retryTrial(trial: TrialSummary): Promise<void> {
   try {
-    const data = {
+    const data: TrialCreate = {
       schema_id: trial.schema_id,
       prompt_id: trial.prompt_id,
-      document_ids: trial.document_ids,
+      document_ids: trial.document_ids || [],
       llm_model: trial.llm_model,
-      api_key: trial.api_key,
-      base_url: trial.base_url,
       advanced_options: trial.advanced_options || {},
     }
     const response = await trialsApi.create(props.projectId, data)
-    trials.value.unshift(response.data)
+    trials.value.unshift(response.data as unknown as TrialSummary)
     totalTrials.value += 1
     toast.success('Trial restarted')
   } catch {
@@ -604,7 +652,7 @@ async function retryTrial(trial) {
   }
 }
 
-function confirmRetryTrial(trial) {
+function confirmRetryTrial(trial: TrialSummary): void {
   openConfirm({
     title: 'Retry Trial',
     message:
@@ -617,26 +665,30 @@ function confirmRetryTrial(trial) {
     },
   })
 }
-function openDownloadModal(trial) {
+function openDownloadModal(trial: TrialSummary): void {
   trialToDownload.value = trial
   showDownloadModal.value = true
 }
 
-function viewTrialResults(trial) {
+function viewTrialResults(trial: TrialSummary): void {
   selectedTrialId.value = trial.id
   showTrialResultsModal.value = true
 }
-function viewTrialSchema(trial) {
+function viewTrialSchema(trial: TrialSummary): void {
   // Prefer the frozen snapshot captured at trial run; fall back to the live
   // schema for trials created before snapshots existed.
   selectedSchema.value =
-    trial.schema_snapshot || schemas.value.find((s) => s.id === trial.schema_id) || null
+    (trial.schema_snapshot as Schema | null) ||
+    schemas.value.find((s) => s.id === trial.schema_id) ||
+    null
   schemaIsSnapshot.value = !!trial.schema_snapshot
   showSchemaModal.value = true
 }
-function viewTrialPrompt(trial) {
+function viewTrialPrompt(trial: TrialSummary): void {
   selectedPrompt.value =
-    trial.prompt_snapshot || prompts.value.find((p) => p.id === trial.prompt_id) || null
+    (trial.prompt_snapshot as Prompt | null) ||
+    prompts.value.find((p) => p.id === trial.prompt_id) ||
+    null
   promptIsSnapshot.value = !!trial.prompt_snapshot
   showPromptModal.value = true
 }
@@ -677,10 +729,10 @@ onMounted(async () => {
     startWebSocket()
   }
   // Listen for expand event from ActivityBell
-  document.addEventListener('expand-trial', handleExpandTrial)
+  document.addEventListener('expand-trial', handleExpandTrial as EventListener)
 })
 onUnmounted(() => {
   stopWebSocket()
-  document.removeEventListener('expand-trial', handleExpandTrial)
+  document.removeEventListener('expand-trial', handleExpandTrial as EventListener)
 })
 </script>

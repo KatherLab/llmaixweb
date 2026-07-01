@@ -72,30 +72,22 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { AlertCircle, AlertTriangle, CircleCheckBig, Info } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
-defineProps({
-  status: {
-    type: Object,
-    required: true,
-    // { type: 'none'|'loading'|'warning'|'error'|'success', message: string }
-  },
-  isTesting: {
-    type: Boolean,
-    default: false,
-  },
-  llmModel: {
-    type: String,
-    default: '',
-  },
-  schemaId: {
-    type: [String, Number],
-    default: '',
-  },
-})
+interface StatusDescriptor {
+  type: 'loading' | 'warning' | 'error' | 'success' | 'none'
+  message: string
+}
 
-const emit = defineEmits(['test'])
+defineProps<{
+  status: StatusDescriptor
+  isTesting?: boolean
+  llmModel?: string
+  schemaId?: string | number
+}>()
+
+const emit = defineEmits<{ test: [] }>()
 </script>

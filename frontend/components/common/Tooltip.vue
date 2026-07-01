@@ -1,17 +1,21 @@
 <!-- src/components/Tooltip.vue -->
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watchEffect, useId } from 'vue'
 import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/vue'
 
-const props = defineProps({
-  text: { type: String, required: true },
+interface Props {
+  text: string
   // Optional bold headline rendered above the body.
-  title: { type: String, default: '' },
+  title?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  title: '',
 })
 
 // refs for the trigger and tooltip
-const reference = ref(null)
-const floating = ref(null)
+const reference = ref<HTMLElement | null>(null)
+const floating = ref<HTMLElement | null>(null)
 const show = ref(false)
 const tooltipId = useId()
 

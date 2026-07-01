@@ -141,7 +141,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus } from '@lucide/vue'
 import { ssoApi } from '@/services/ssoApi'
@@ -154,19 +154,27 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
+import type { IdentityProviderResponse } from '@/types'
 
 const toast = useToast()
 
-const ssoEnabled = ref(false)
-const providers = ref([])
-const loading = ref(true)
-const error = ref(null)
+const ssoEnabled = ref<boolean>(false)
+const providers = ref<IdentityProviderResponse[]>([])
+const loading = ref<boolean>(true)
+const error = ref<string | null>(null)
 
-const showModal = ref(false)
-const editing = ref(null)
-const saving = ref(false)
-const formError = ref('')
-const form = reactive({
+const showModal = ref<boolean>(false)
+const editing = ref<IdentityProviderResponse | null>(null)
+const saving = ref<boolean>(false)
+const formError = ref<string>('')
+const form = reactive<{
+  name: string
+  issuer_url: string
+  client_id: string
+  client_secret: string
+  scopes: string
+  enabled: boolean
+}>({
   name: '',
   issuer_url: '',
   client_id: '',
@@ -175,10 +183,10 @@ const form = reactive({
   enabled: true,
 })
 
-const toDelete = ref(null)
-const deleting = ref(false)
+const toDelete = ref<IdentityProviderResponse | null>(null)
+const deleting = ref<boolean>(false)
 
-const deleteMessage = computed(() =>
+const deleteMessage = computed<string>(() =>
   toDelete.value
     ? `Delete the "${toDelete.value.name}" provider? Linked users keep their accounts but can no longer sign in via this provider.`
     : '',
@@ -194,7 +202,7 @@ onMounted(async () => {
   await load()
 })
 
-async function load() {
+async function load(): Promise<void> {
   loading.value = true
   error.value = null
   try {
@@ -207,7 +215,7 @@ async function load() {
   }
 }
 
-function resetForm() {
+function resetForm(): void {
   form.name = ''
   form.issuer_url = ''
   form.client_id = ''
@@ -217,13 +225,13 @@ function resetForm() {
   formError.value = ''
 }
 
-function openCreate() {
+function openCreate(): void {
   editing.value = null
   resetForm()
   showModal.value = true
 }
 
-function openEdit(p) {
+function openEdit(p: IdentityProviderResponse): void {
   editing.value = p
   form.name = p.name
   form.issuer_url = p.issuer_url
@@ -235,15 +243,22 @@ function openEdit(p) {
   showModal.value = true
 }
 
-function closeModal() {
+function closeModal(): void {
   showModal.value = false
 }
 
-async function saveProvider() {
+async function saveProvider(): Promise<void> {
   saving.value = true
   formError.value = ''
   try {
-    const payload = {
+    const payload: {
+      name: string
+      issuer_url: string
+      client_id: string
+      scopes: string
+      enabled: boolean
+      client_secret?: string
+    } = {
       name: form.name,
       issuer_url: form.issuer_url,
       client_id: form.client_id,
@@ -257,7 +272,7 @@ async function saveProvider() {
     } else {
       if (!form.client_secret)
         throw { response: { data: { detail: 'Client secret is required.' } } }
-      await ssoApi.createProvider(payload)
+      await ssoApi.createProvider({ ...payload, client_secret: form.client_secret })
       toast.success('Provider created.')
     }
     showModal.value = false
@@ -269,11 +284,11 @@ async function saveProvider() {
   }
 }
 
-function confirmDelete(p) {
+function confirmDelete(p: IdentityProviderResponse): void {
   toDelete.value = p
 }
 
-async function deleteProvider() {
+async function deleteProvider(): Promise<void> {
   if (!toDelete.value) return
   deleting.value = true
   try {

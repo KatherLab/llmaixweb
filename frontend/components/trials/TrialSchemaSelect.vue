@@ -23,25 +23,26 @@
   </div>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { computed, type PropType } from 'vue'
 import { summarizeSchema } from '@/utils/schemaFieldList'
 import SchemaFieldList from '@/components/schemas/SchemaFieldList.vue'
 import { selectClass, labelClass } from '@/utils/formStyles'
+import type { Schema } from '@/types'
 
 const props = defineProps({
   schemas: {
-    type: Array,
+    type: Array as PropType<Schema[]>,
     default: () => [],
   },
 })
 
-const emit = defineEmits(['change'])
+const emit = defineEmits<{ change: [] }>()
 
-const model = defineModel({ type: String, default: '' })
+const model = defineModel<string>({ default: '' })
 
 const selectedSchema = computed(() => {
   if (!model.value) return null
-  return props.schemas.find((schema) => schema.id.toString() === model.value)
+  return props.schemas.find((schema) => schema.id.toString() === model.value) ?? null
 })
 </script>

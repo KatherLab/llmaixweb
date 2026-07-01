@@ -121,7 +121,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Database, MessageSquare } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
@@ -136,26 +136,26 @@ import PromptViewModal from './PromptViewModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { extractErrorMessage } from '@/utils/errors'
+import type { Schema, Prompt } from '@/types'
 
-const props = defineProps({
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-})
+interface Props {
+  projectId: string | number
+}
+
+const props = defineProps<Props>()
 
 const toast = useToast()
 
 // Tab state
-const activeSection = ref('schemas')
+const activeSection = ref<'schemas' | 'prompts'>('schemas')
 
 // Schema list state
-const schemas = ref([])
+const schemas = ref<Schema[]>([])
 const isLoading = ref(true)
 const error = ref('')
 
 // Prompt list state
-const prompts = ref([])
+const prompts = ref<Prompt[]>([])
 const isLoadingPrompts = ref(false)
 
 // Modal visibility
@@ -169,10 +169,10 @@ const showViewPromptModal = ref(false)
 const showDeletePromptModal = ref(false)
 
 // Current items
-const currentSchema = ref(null)
-const currentPrompt = ref(null)
-const schemaToDelete = ref(null)
-const promptToDelete = ref(null)
+const currentSchema = ref<Schema | null>(null)
+const currentPrompt = ref<Prompt | null>(null)
+const schemaToDelete = ref<Schema | null>(null)
+const promptToDelete = ref<Prompt | null>(null)
 
 // Delete state
 const isDeleting = ref(false)
@@ -208,12 +208,12 @@ const fetchPrompts = async () => {
 
 // --- Schema handlers ---
 
-const viewSchema = (schema) => {
+const viewSchema = (schema: Schema) => {
   currentSchema.value = schema
   showViewModal.value = true
 }
 
-const editSchema = (schema) => {
+const editSchema = (schema: Schema) => {
   currentSchema.value = schema
   showEditModal.value = true
 }
@@ -223,30 +223,31 @@ const closeSchemaModal = () => {
   showEditModal.value = false
 }
 
-const onSchemaCreated = (schema) => {
+const onSchemaCreated = (schema: Schema) => {
   schemas.value.push(schema)
 }
 
-const onSchemaUpdated = (schema) => {
+const onSchemaUpdated = (schema: Schema) => {
   const index = schemas.value.findIndex((s) => s.id === schema.id)
   if (index !== -1) {
     schemas.value[index] = schema
   }
 }
 
-const confirmDelete = (schema) => {
+const confirmDelete = (schema: Schema) => {
   schemaToDelete.value = schema
   showDeleteModal.value = true
 }
 
 const deleteSchema = async () => {
-  if (!schemaToDelete.value) return
+  const toDelete = schemaToDelete.value
+  if (!toDelete) return
   isDeleting.value = true
   try {
-    await schemasApi.delete(props.projectId, schemaToDelete.value.id)
-    schemas.value = schemas.value.filter((s) => s.id !== schemaToDelete.value.id)
+    await schemasApi.delete(props.projectId, toDelete.id)
+    schemas.value = schemas.value.filter((s) => s.id !== toDelete.id)
     showDeleteModal.value = false
-    toast.success(`Schema "${schemaToDelete.value.schema_name}" deleted successfully`)
+    toast.success(`Schema "${toDelete.schema_name}" deleted successfully`)
   } catch (err) {
     const errorMessage = extractErrorMessage(err, 'Failed to delete schema')
     toast.error(errorMessage)
@@ -259,12 +260,12 @@ const deleteSchema = async () => {
 
 // --- Prompt handlers ---
 
-const viewPrompt = (prompt) => {
+const viewPrompt = (prompt: Prompt) => {
   currentPrompt.value = prompt
   showViewPromptModal.value = true
 }
 
-const editPrompt = (prompt) => {
+const editPrompt = (prompt: Prompt) => {
   currentPrompt.value = prompt
   showEditPromptModal.value = true
 }
@@ -274,30 +275,31 @@ const closePromptModal = () => {
   showEditPromptModal.value = false
 }
 
-const onPromptCreated = (prompt) => {
+const onPromptCreated = (prompt: Prompt) => {
   prompts.value.push(prompt)
 }
 
-const onPromptUpdated = (prompt) => {
+const onPromptUpdated = (prompt: Prompt) => {
   const index = prompts.value.findIndex((p) => p.id === prompt.id)
   if (index !== -1) {
     prompts.value[index] = prompt
   }
 }
 
-const confirmDeletePrompt = (prompt) => {
+const confirmDeletePrompt = (prompt: Prompt) => {
   promptToDelete.value = prompt
   showDeletePromptModal.value = true
 }
 
 const deletePrompt = async () => {
-  if (!promptToDelete.value) return
+  const toDelete = promptToDelete.value
+  if (!toDelete) return
   isDeleting.value = true
   try {
-    await promptsApi.delete(props.projectId, promptToDelete.value.id)
-    prompts.value = prompts.value.filter((p) => p.id !== promptToDelete.value.id)
+    await promptsApi.delete(props.projectId, toDelete.id)
+    prompts.value = prompts.value.filter((p) => p.id !== toDelete.id)
     showDeletePromptModal.value = false
-    toast.success(`Prompt "${promptToDelete.value.name}" deleted successfully`)
+    toast.success(`Prompt "${toDelete.name}" deleted successfully`)
   } catch (err) {
     console.error('Failed to delete prompt:', err)
     const errorMessage = extractErrorMessage(err, 'Failed to delete prompt')

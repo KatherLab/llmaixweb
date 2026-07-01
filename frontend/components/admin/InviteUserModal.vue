@@ -82,7 +82,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch } from 'vue'
 import { ClipboardCopy } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -92,13 +92,18 @@ import { extractErrorMessage } from '@/utils/errors'
 import { useToast } from '@/composables/useToast'
 import { inputClass, labelClass, checkboxClass } from '@/utils/formStyles'
 
+interface Props {
+  open: boolean
+}
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  (e: 'close'): void
+  (e: 'invited'): void
+}>()
+
 const toast = useToast()
-
-const props = defineProps({
-  open: { type: Boolean, required: true },
-})
-
-const emit = defineEmits(['close', 'invited'])
 
 const inviteEmail = ref('')
 const isInviting = ref(false)
@@ -125,7 +130,7 @@ watch(
   },
 )
 
-async function sendInvitation() {
+async function sendInvitation(): Promise<void> {
   if (!inviteEmail.value) return
   isInviting.value = true
   inviteError.value = ''
@@ -148,8 +153,8 @@ async function sendInvitation() {
   }
 }
 
-function copyGeneratedLink() {
-  const copyTextFallback = (text) => {
+function copyGeneratedLink(): void {
+  const copyTextFallback = (text: string): boolean => {
     const textArea = document.createElement('textarea')
     textArea.value = text
     textArea.style.position = 'fixed'

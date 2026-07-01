@@ -9,7 +9,7 @@ export const frontendVersion = '${packageJson.version}'
 // Git commit hash - injected at build time via VITE_GIT_COMMIT_HASH
 export const frontendGitCommit = import.meta.env.VITE_GIT_COMMIT_HASH || 'unknown'
 `
-const versionJsPath = path.join(process.cwd(), 'frontend', 'version.js')
+const versionJsPath = path.join(process.cwd(), 'frontend', 'version.ts')
 
 try {
   await fs.writeFile(versionJsPath, versionJs)

@@ -179,29 +179,29 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { AlertTriangle, ArrowLeft, FileText } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import type { DocumentEvaluationDetail } from '@/types'
 
-defineProps({
-  document: {
-    type: Object,
-    required: true,
-  },
-  documentContent: {
-    type: String,
-    default: null,
-  },
-  loadingContent: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  document: DocumentEvaluationDetail
+  documentContent?: string | null
+  loadingContent?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  documentContent: null,
+  loadingContent: false,
 })
 
-defineEmits(['load-content', 'back-to-documents'])
+defineEmits<{
+  'load-content': [documentId: number]
+  'back-to-documents': []
+}>()
 
-const formatFieldValue = (value) => {
+const formatFieldValue = (value: unknown): string => {
   if (value === null || value === undefined) return 'null'
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)

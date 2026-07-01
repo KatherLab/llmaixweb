@@ -37,27 +37,24 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { X } from '@lucide/vue'
 import { getToastVisual } from '@/utils/toastIcons'
+import type { ToastType } from '@/stores/toast'
 
-const props = defineProps({
-  message: {
-    type: String,
-    required: true,
-  },
-  type: {
-    type: String,
-    default: 'info',
-  },
-  timeout: {
-    type: Number,
-    default: 4000,
-  },
+interface Props {
+  message: string
+  type?: ToastType | string
+  timeout?: number
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  type: 'info',
+  timeout: 4000,
 })
 
-const emit = defineEmits(['dismiss'])
+const emit = defineEmits<{ (e: 'dismiss'): void }>()
 
 const visual = computed(() => getToastVisual(props.type))
 </script>

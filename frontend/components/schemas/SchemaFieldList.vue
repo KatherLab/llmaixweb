@@ -60,27 +60,27 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { flattenSchemaFields } from '@/utils/schemaFieldList'
 import { formatJSON } from '@/utils/schemaTemplates'
 import { getTypeIcon, getTypePillClass } from '@/utils/schemaTypeIcons'
+import type { SchemaDefinition } from '@/types'
 
-const props = defineProps({
-  schemaDefinition: {
-    type: [Object, String],
-    default: null,
-  },
-  showRawJsonToggle: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  schemaDefinition?: SchemaDefinition | string | null
+  showRawJsonToggle?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  schemaDefinition: null,
+  showRawJsonToggle: false,
 })
 
 const fields = computed(() => flattenSchemaFields(props.schemaDefinition))
 
-const typeLabel = (type) => {
-  const labels = {
+const typeLabel = (type: string): string => {
+  const labels: Record<string, string> = {
     string: 'Text',
     number: 'Number',
     integer: 'Integer',

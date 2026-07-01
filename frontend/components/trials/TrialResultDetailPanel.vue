@@ -123,8 +123,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, type PropType } from 'vue'
 import { AlignLeft, Check, Copy, Eye, EyeOff, FileJson, FileText } from '@lucide/vue'
 import JsonViewer from '@/components/common/JsonViewer.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -134,27 +134,44 @@ import ResultReasoningPanel from './ResultReasoningPanel.vue'
 import { documentsApi } from '@/services/documentsApi'
 import { filesApi } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
-import { renderMarkdown, isMarkdown } from '@/utils/markdown.js'
+import { renderMarkdown, isMarkdown } from '@/utils/markdown'
+import type { TrialResultItem } from '@/types'
+
+interface AdditionalContent {
+  reasoning_content?: string
+  usage?: Record<string, unknown>
+  finish_reason?: string
+  json_error?: string
+  user_guidance?: { user_message?: string }
+  tuning_advice?: {
+    recommendations: Array<{
+      action: string
+      suggested_value?: string
+      rationale?: string
+    }>
+  }
+  [key: string]: unknown
+}
 
 const props = defineProps({
-  result: { type: Object, required: true },
-  projectId: { type: [String, Number], required: true },
+  result: { type: Object as PropType<TrialResultItem>, required: true },
+  projectId: { type: [String, Number] as PropType<string | number>, required: true },
 })
 
 const toast = useToast()
 
 const documentContent = ref('')
 const docLoading = ref(false)
-const viewMode = ref('horizontal')
+const viewMode = ref<'horizontal' | 'vertical'>('horizontal')
 const showDocumentPanel = ref(false)
 const documentPdfUrl = ref('')
 const documentPdfLoading = ref(false)
 const showReasoningPanel = ref(false)
 const documentPreviewable = ref(false)
-const documentFileId = ref(null)
+const documentFileId = ref<number | null>(null)
 const copied = ref(false)
 
-async function copyResult() {
+async function copyResult(): Promise<void> {
   if (!props.result.result) return
   try {
     await navigator.clipboard.writeText(JSON.stringify(props.result.result, null, 2))
@@ -165,27 +182,27 @@ async function copyResult() {
   }
 }
 
-const additionalContent = computed(() => {
+const additionalContent = computed<AdditionalContent | null>(() => {
   const ac = props.result.additional_content
   if (!ac) return null
   if (typeof ac === 'string') {
     try {
-      return JSON.parse(ac)
+      return JSON.parse(ac) as AdditionalContent
     } catch {
       return null
     }
   }
-  return ac
+  return ac as AdditionalContent
 })
 
 const reasoningContent = computed(() => additionalContent.value?.reasoning_content || null)
 
-const analyzeOriginalFile = (fileType) => {
+const analyzeOriginalFile = (fileType: string | undefined | null): boolean => {
   if (!fileType) return false
   return fileType === 'application/pdf' || fileType.startsWith('image/')
 }
 
-async function loadDocumentTextAndMeta() {
+async function loadDocumentTextAndMeta(): Promise<void> {
   const docId = props.result.document_id
   if (!docId) return
   docLoading.value = true
@@ -208,11 +225,11 @@ async function loadDocumentTextAndMeta() {
   }
 }
 
-function toggleViewMode() {
+function toggleViewMode(): void {
   viewMode.value = viewMode.value === 'vertical' ? 'horizontal' : 'vertical'
 }
 
-async function toggleDocumentPanel() {
+async function toggleDocumentPanel(): Promise<void> {
   showDocumentPanel.value = !showDocumentPanel.value
   if (!showDocumentPanel.value) return
   if (documentPdfUrl.value || documentPdfLoading.value) return
@@ -220,7 +237,9 @@ async function toggleDocumentPanel() {
   documentPdfLoading.value = true
   try {
     const fr = await filesApi.getContent(props.projectId, documentFileId.value, { preview: true })
-    const blob = new Blob([fr.data], { type: fr.headers['content-type'] })
+    const blob = new Blob([fr.data], {
+      type: (fr.headers['content-type'] as string) || undefined,
+    })
     documentPdfUrl.value = URL.createObjectURL(blob)
   } catch (err) {
     console.error(err)

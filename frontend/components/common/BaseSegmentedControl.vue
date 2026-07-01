@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Shared pill-style segmented control (mutually-exclusive single-select).
  *
@@ -16,17 +16,23 @@
  */
 import { computed } from 'vue'
 
-const props = defineProps({
-  modelValue: { type: [String, Number, Boolean], default: '' },
-  options: { type: Array, required: true },
-  size: {
-    type: String,
-    default: 'md',
-    validator: (v) => ['sm', 'md'].includes(v),
-  },
+export interface SegmentedOption {
+  label: string
+  value: string | number | boolean
+}
+
+interface Props {
+  modelValue?: string | number | boolean
+  options: SegmentedOption[]
+  size?: 'sm' | 'md'
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: '',
+  size: 'md',
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{ (e: 'update:modelValue', value: string | number | boolean): void }>()
 
 const padClass = computed(() =>
   props.size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',

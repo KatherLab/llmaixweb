@@ -122,7 +122,7 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ImageIcon, X } from '@lucide/vue'
 import { groundtruthApi } from '@/services/groundtruthApi'
@@ -131,24 +131,25 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 import { extractErrorMessage } from '@/utils/errors'
+import type { GroundTruth } from '@/types'
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-})
+interface Props {
+  open: boolean
+  projectId: string | number
+}
 
-const emit = defineEmits(['close', 'uploaded'])
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  close: []
+  uploaded: [groundTruth: GroundTruth]
+}>()
+
 const toast = useToast()
 
 const groundTruthName = ref('')
 const groundTruthFormat = ref('csv')
-const selectedFiles = ref([])
+const selectedFiles = ref<File[]>([])
 const isUploading = ref(false)
 
 // Reset transient form state whenever the modal is closed so a reopen starts fresh
@@ -180,8 +181,8 @@ const acceptedFileTypes = computed(() => {
   }
 })
 
-const handleFileSelect = (event) => {
-  const files = Array.from(event.target.files)
+const handleFileSelect = (event: Event) => {
+  const files = Array.from((event.target as HTMLInputElement).files ?? [])
   if (groundTruthFormat.value === 'json') {
     // For JSON, allow multiple files
     selectedFiles.value = files
@@ -191,8 +192,8 @@ const handleFileSelect = (event) => {
   }
 }
 
-const handleFileDrop = (event) => {
-  const files = Array.from(event.dataTransfer.files)
+const handleFileDrop = (event: DragEvent) => {
+  const files = Array.from(event.dataTransfer?.files ?? [])
   if (groundTruthFormat.value === 'json') {
     const jsonFiles = files.filter((f) => f.name.toLowerCase().endsWith('.json'))
     selectedFiles.value = jsonFiles
@@ -212,7 +213,7 @@ const handleFileDrop = (event) => {
   }
 }
 
-const removeFile = (index) => {
+const removeFile = (index: number) => {
   selectedFiles.value.splice(index, 1)
 }
 

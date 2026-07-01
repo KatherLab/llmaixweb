@@ -105,11 +105,31 @@
   </FilterBar>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { computed, type PropType } from 'vue'
 import { getDateRangeLabel } from '@/utils/dateRange'
 import FilterBar from '@/components/common/FilterBar.vue'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
+import type { Schema, Prompt, DocumentSetSummary } from '@/types'
+
+/** Two-way bound filter state shared with the parent (TrialsManagement). */
+interface TrialFilters {
+  search: string
+  status: string
+  schema_id: string | number
+  prompt_id: string | number
+  document_set_id: string | number
+  llm_model: string
+  has_failures: string
+  dateRange: string
+  [key: string]: unknown
+}
+
+interface FilterChip {
+  key: string
+  label: string
+  color: string
+}
 
 // `selectClass` carries `w-full`, which inside FilterBar's `flex flex-wrap` row
 // forces every dropdown onto its own line at 100% width. Drop `w-full` (and
@@ -117,22 +137,27 @@ import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 const inlineSelectClass = selectClass.replace('w-full', 'w-auto min-w-[9rem]')
 
 const props = defineProps({
-  schemas: { type: Array, default: () => [] },
-  prompts: { type: Array, default: () => [] },
-  documentGroups: { type: Array, default: () => [] },
-  availableTrialModels: { type: Array, default: () => [] },
+  schemas: { type: Array as PropType<Schema[]>, default: () => [] },
+  prompts: { type: Array as PropType<Prompt[]>, default: () => [] },
+  documentGroups: { type: Array as PropType<DocumentSetSummary[]>, default: () => [] },
+  availableTrialModels: { type: Array as PropType<string[]>, default: () => [] },
   totalTrials: { type: Number, default: 0 },
 })
 
-const emit = defineEmits(['apply', 'input', 'clear-all', 'clear-filter'])
+const emit = defineEmits<{
+  apply: []
+  input: []
+  'clear-all': []
+  'clear-filter': [key: string]
+}>()
 
 // Two-way bound filter state (parent owns the source of truth via defineModel).
-const filters = defineModel('filters', { type: Object, required: true })
-const customDateFrom = defineModel('customDateFrom', { type: String, default: '' })
-const customDateTo = defineModel('customDateTo', { type: String, default: '' })
+const filters = defineModel<TrialFilters>('filters', { required: true })
+const customDateFrom = defineModel<string>('customDateFrom', { default: '' })
+const customDateTo = defineModel<string>('customDateTo', { default: '' })
 
 // Label maps for chips
-const statusLabels = {
+const statusLabels: Record<string, string> = {
   pending: 'Pending',
   processing: 'Processing',
   completed: 'Completed',
@@ -140,15 +165,18 @@ const statusLabels = {
   cancelled: 'Cancelled',
 }
 
-const dateRangeLabel = (range) => getDateRangeLabel(range)
-const statusLabel = (status) => statusLabels[status] || status
-const schemaName = (id) => props.schemas.find((s) => s.id === id)?.schema_name || `#${id}`
-const promptName = (id) => props.prompts.find((p) => p.id === id)?.name || `#${id}`
-const groupName = (id) => props.documentGroups.find((g) => g.id === id)?.name || `#${id}`
+const dateRangeLabel = (range: string): string => getDateRangeLabel(range)
+const statusLabel = (status: string): string => statusLabels[status] || status
+const schemaName = (id: string | number): string =>
+  props.schemas.find((s) => s.id === id)?.schema_name || `#${id}`
+const promptName = (id: string | number): string =>
+  props.prompts.find((p) => p.id === id)?.name || `#${id}`
+const groupName = (id: string | number): string =>
+  props.documentGroups.find((g) => g.id === id)?.name || `#${id}`
 
 // Active filter chips (unified rendering via FilterBar's activeFilters prop)
-const activeFilters = computed(() => {
-  const chips = []
+const activeFilters = computed<FilterChip[]>(() => {
+  const chips: FilterChip[] = []
   if (filters.value.search)
     chips.push({ key: 'search', label: `Search: "${filters.value.search}"`, color: 'blue' })
   if (filters.value.status)
@@ -199,13 +227,13 @@ const activeFilters = computed(() => {
 })
 
 // Don't fetch yet when "Custom Range" is selected — wait for date inputs
-const handleDateRangeChange = () => {
+const handleDateRangeChange = (): void => {
   if (filters.value.dateRange === 'custom') return
   emit('apply')
 }
 
 // Consolidated clear: a single entry point for removing one filter.
-const clearFilter = (key) => {
+const clearFilter = (key: string): void => {
   if (key === 'customDateRange') {
     customDateFrom.value = ''
     customDateTo.value = ''

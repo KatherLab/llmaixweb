@@ -58,8 +58,8 @@
   </div>
 </template>
 
-<script setup>
-import { onMounted, ref, watch } from 'vue'
+<script setup lang="ts">
+import { onMounted, ref, watch, type PropType } from 'vue'
 import { useToast } from '@/composables/useToast'
 import { trialsApi } from '@/services/trialsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
@@ -68,16 +68,30 @@ import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import DocumentIndividualPicker from './DocumentIndividualPicker.vue'
 import DocumentGroupPicker from './DocumentGroupPicker.vue'
 import DocumentSmartPicker from './DocumentSmartPicker.vue'
+import type { DocumentSetSummary, TrialSummary } from '@/types'
+
+/** A previous trial with a guaranteed non-null document_ids list (only
+ *  completed trials with documents are forwarded to the Smart picker). */
+interface PreviousTrial extends TrialSummary {
+  document_ids: number[]
+}
+
+type SelectionMode = 'individual' | 'groups' | 'smart'
+
+interface DateRangePayload {
+  start: string
+  end: string
+}
 
 const props = defineProps({
   projectId: {
-    type: [String, Number],
+    type: [String, Number] as PropType<string | number>,
     required: true,
   },
 })
 
-const mode = defineModel('mode', { type: String, default: 'individual' })
-const selectedIds = defineModel('selectedIds', { type: Array, default: () => [] })
+const mode = defineModel<SelectionMode>('mode', { default: 'individual' })
+const selectedIds = defineModel<number[]>('selectedIds', { default: () => [] })
 
 // Tab config for BaseTabGroup
 const tabs = [
@@ -91,14 +105,14 @@ const toast = useToast()
 /* -------------------------------------------------------
  * Document groups / previous trials
  * -----------------------------------------------------*/
-const documentGroups = ref([])
+const documentGroups = ref<DocumentSetSummary[]>([])
 const loadingGroups = ref(false)
 const loadingGroupDocs = ref(false)
-const selectedGroupId = ref(null)
-const previousTrials = ref([])
+const selectedGroupId = ref<number | null>(null)
+const previousTrials = ref<PreviousTrial[]>([])
 const isSelectingAll = ref(false)
 
-const loadDocumentGroups = async () => {
+const loadDocumentGroups = async (): Promise<void> => {
   loadingGroups.value = true
   try {
     const response = await documentSetsApi.list(props.projectId)
@@ -111,18 +125,19 @@ const loadDocumentGroups = async () => {
   }
 }
 
-const loadPreviousTrials = async () => {
+const loadPreviousTrials = async (): Promise<void> => {
   try {
     const response = await trialsApi.list(props.projectId)
-    previousTrials.value = response.data.filter(
-      (trial) => trial.status === 'completed' && trial.document_ids.length > 0,
-    )
+    previousTrials.value = response.data.items.filter(
+      (trial: TrialSummary) =>
+        trial.status === 'completed' && (trial.document_ids?.length ?? 0) > 0,
+    ) as PreviousTrial[]
   } catch (error) {
     console.error('Failed to load previous trials:', error)
   }
 }
 
-const toggleGroupSelection = async (group) => {
+const toggleGroupSelection = async (group: DocumentSetSummary): Promise<void> => {
   if (selectedGroupId.value === group.id) {
     selectedGroupId.value = null
     selectedIds.value = []
@@ -147,10 +162,10 @@ const toggleGroupSelection = async (group) => {
   }
 }
 
-const loadDocumentsFromTrial = (trialId) => {
+const loadDocumentsFromTrial = (trialId: string | number): void => {
   if (!trialId) return
-  const trial = previousTrials.value.find((t) => t.id === parseInt(trialId))
-  if (trial) {
+  const trial = previousTrials.value.find((t) => t.id === Number(trialId))
+  if (trial && trial.document_ids) {
     selectedIds.value = [...trial.document_ids]
     toast.success(`Loaded ${trial.document_ids.length} documents from previous trial`)
   }
@@ -179,13 +194,13 @@ const {
 
 const searchTerm = ref('')
 
-const toggleDocumentSelection = (docId) => {
+const toggleDocumentSelection = (docId: number): void => {
   const i = selectedIds.value.indexOf(docId)
   if (i === -1) selectedIds.value.push(docId)
   else selectedIds.value.splice(i, 1)
 }
 
-const selectAllDocuments = async () => {
+const selectAllDocuments = async (): Promise<void> => {
   if (isSelectingAll.value) return
   isSelectingAll.value = true
   try {
@@ -201,11 +216,11 @@ const selectAllDocuments = async () => {
   }
 }
 
-const clearDocumentSelection = () => {
+const clearDocumentSelection = (): void => {
   selectedIds.value = []
 }
 
-const selectRecentDocuments = async (days) => {
+const selectRecentDocuments = async (days: number): Promise<void> => {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - days)
   const ids = await fetchAllDocumentIds({ date_from: cutoff.toISOString() })
@@ -213,10 +228,13 @@ const selectRecentDocuments = async (days) => {
   toast.success(`Selected ${ids.length} documents from the last ${days} days`)
 }
 
-const applySmartDateRange = async ({ start, end }) => {
+const applySmartDateRange = async ({ start, end }: DateRangePayload): Promise<void> => {
   const fromISO = toISODateStart(start)
   const toISO = toISODateEndExclusive(end)
-  const ids = await fetchAllDocumentIds({ date_from: fromISO, date_to: toISO })
+  const ids = await fetchAllDocumentIds({
+    date_from: fromISO,
+    date_to: toISO,
+  })
   selectedIds.value = ids
   toast.success(`Selected ${ids.length} documents in date range`)
 }
@@ -224,12 +242,12 @@ const applySmartDateRange = async ({ start, end }) => {
 /* -------------------------------------------------------
  * Debounced search + watchers
  * -----------------------------------------------------*/
-let debounceTimer
-const debounce = (fn, ms = 350) => {
-  return (...args) => {
-    if (debounceTimer) window.clearTimeout(debounceTimer)
-    debounceTimer = window.setTimeout(() => fn(...args), ms)
-  }
+let debounceTimer: ReturnType<typeof setTimeout> | undefined
+const debounce = <T extends (...args: never[]) => void>(fn: T, ms = 350): T => {
+  return ((...args: never[]) => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => fn(...args), ms)
+  }) as T
 }
 
 // when switching tabs

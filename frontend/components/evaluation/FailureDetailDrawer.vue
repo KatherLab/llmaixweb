@@ -189,8 +189,8 @@
   </BaseModal>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch, type PropType } from 'vue'
 import { Bot, Check, ChevronLeft, ChevronRight, FileText, Scale, X } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -211,27 +211,35 @@ import {
   prettifyErrorType,
   ACCURACY_THRESHOLDS,
 } from '@/utils/evaluationHelpers'
+import type { DocumentEvaluationDetail, TrialResultItem } from '@/types'
+
+/** Original file attached to a document (subset used here). */
+interface OriginalFile {
+  id?: number
+  file_type?: string
+  [key: string]: unknown
+}
 
 // `Scale` is exported as `Scale` by lucide; alias for template clarity.
 const ScaleIcon = Scale
 
 const props = defineProps({
   open: { type: Boolean, required: true },
-  documentId: { type: [String, Number], default: null },
+  documentId: { type: [String, Number] as PropType<string | number | null>, default: null },
   documentName: { type: String, default: '' },
-  docEval: { type: Object, default: null }, // DocumentEvaluationDetail
-  trialResult: { type: Object, default: null }, // TrialResultItem (result + additional_content)
+  docEval: { type: Object as PropType<DocumentEvaluationDetail | null>, default: null },
+  trialResult: { type: Object as PropType<TrialResultItem | null>, default: null },
   loadingDocument: { type: Boolean, default: false },
   loadingResult: { type: Boolean, default: false },
   documentText: { type: String, default: '' },
-  originalFile: { type: Object, default: null }, // Document.original_file
-  originalFileUrl: { type: String, default: '' }, // pre-built object URL for PDF/image
-  originalFileType: { type: String, default: '' }, // 'pdf' | 'image' | 'other'
+  originalFile: { type: Object as PropType<OriginalFile | null>, default: null },
+  originalFileUrl: { type: String, default: '' },
+  originalFileType: { type: String, default: '' },
   hasPrev: { type: Boolean, default: false },
   hasNext: { type: Boolean, default: false },
 })
 
-defineEmits(['close', 'prev', 'next'])
+defineEmits<{ close: []; prev: []; next: [] }>()
 
 const showReasoning = ref(false)
 const showOriginal = ref(true) // show original file when available, else text
@@ -239,7 +247,7 @@ const showOriginal = ref(true) // show original file when available, else text
 const fieldDetails = computed(() => props.docEval?.field_details || {})
 
 const reasoningContent = computed(
-  () => props.trialResult?.additional_content?.reasoning_content || '',
+  () => (props.trialResult?.additional_content?.reasoning_content as string | undefined) || '',
 )
 
 const hasPreviewableFile = computed(
@@ -267,17 +275,22 @@ const statusClass = computed(() => {
   return `${accuracyColor(props.docEval?.accuracy)} font-medium`
 })
 
-const toggleOriginalView = () => {
+// Template aliases for the pre-built object URL, named by preview kind.
+// (Keeps the template's originalPdfUrl / originalImageUrl references valid.)
+const originalPdfUrl = computed(() => props.originalFileUrl)
+const originalImageUrl = computed(() => props.originalFileUrl)
+
+const toggleOriginalView = (): void => {
   showOriginal.value = !showOriginal.value
 }
 
-const formatValue = (value) => {
+const formatValue = (value: unknown): string => {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
 
-const errorTooltip = (errorType) => {
+const errorTooltip = (errorType: string | null | undefined): string => {
   return `${getErrorTypeDescription(errorType)} — ${getErrorSuggestion(errorType)}`
 }
 

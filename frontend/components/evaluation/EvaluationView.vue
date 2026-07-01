@@ -343,7 +343,7 @@
     <TrialSelectorModal
       :open="showTrialSelector"
       :project-id="projectId"
-      :ground-truth="selectedGroundTruth"
+      :ground-truth="selectedGroundTruth!"
       @close="showTrialSelector = false"
       @evaluate="onTrialEvaluate"
     />
@@ -373,7 +373,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -410,15 +410,38 @@ import MetricsExportModal from '@/components/evaluation/MetricsExportModal.vue'
 import EvaluationAnalysisPage from '@/components/evaluation/EvaluationAnalysisPage.vue'
 import { describeHttpError } from '@/utils/errors'
 import { useTableClasses } from '@/composables/useTableClasses'
+import type { GroundTruth, Evaluation, EvaluationSummary, DocumentEvaluationDetail } from '@/types'
+
+/** Trial cache entry — either a TrialSummary (list) or full Trial (get). */
+type TrialLike = {
+  id: number
+  name?: string | null
+  llm_model?: string | null
+  results?: unknown
+}
+
+/** Evaluation-like row used by the table (Evaluation or the optimistic row). */
+type EvaluationRow = Evaluation & {
+  overall_metrics?: Record<string, unknown>
+  document_summaries?: DocumentEvaluationDetail[]
+}
+
+/** Described HTTP error shape produced by describeHttpError (string or object). */
+type DescribedError =
+  | string
+  | {
+      message: string
+      errors?: string[]
+      suggestions?: string[]
+    }
+
+interface Props {
+  projectId: string | number
+}
+
+const props = defineProps<Props>()
 
 const t = useTableClasses()
-
-const props = defineProps({
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-})
 
 const toast = useToast()
 const route = useRoute()
@@ -427,11 +450,11 @@ const router = useRouter()
 // Deep-linked analysis view: ?tab=evaluation&evaluationId=42 shows the full
 // failure-examiner page instead of the list. Matches the existing query-param
 // sub-view pattern used for expandTrial/expandTask in ProjectDetail.
-const analysisEvaluationId = computed(() => route.query.evaluationId || null)
-const analysisTrialName = computed(() => route.query.trialName || '')
-const analysisGroundTruthName = computed(() => route.query.gtName || '')
+const analysisEvaluationId = computed(() => (route.query.evaluationId as string) || null)
+const analysisTrialName = computed(() => (route.query.trialName as string) || '')
+const analysisGroundTruthName = computed(() => (route.query.gtName as string) || '')
 
-const clearAnalysisView = () => {
+const clearAnalysisView = (): void => {
   const query = { ...route.query }
   delete query.evaluationId
   delete query.trialName
@@ -447,24 +470,29 @@ const loadingStates = ref({
 })
 
 // Error handling
-const error = ref(null)
-const lastFailedOperation = ref(null)
+const error = ref<DescribedError | null>(null)
+const lastFailedOperation = ref<(() => Promise<void>) | null>(null)
 const isRetrying = ref(false)
 
 // Data
-const groundTruthFiles = ref([])
-const selectedGroundTruth = ref(null)
-const evaluations = ref([])
+const groundTruthFiles = ref<GroundTruth[]>([])
+const selectedGroundTruth = ref<GroundTruth | null>(null)
+const evaluations = ref<EvaluationRow[]>([])
 
 // Trials pagination + cache for model lookup
-const trials = ref({
+const trials = ref<{
+  items: TrialLike[]
+  total: number
+  limit: number
+  offset: number
+}>({
   items: [],
   total: 0,
   limit: 20,
   offset: 0,
 })
-const trialCache = ref({}) // { [id]: TrialSummary | Trial (full) }
-const pendingTrialFetches = new Set()
+const trialCache = ref<Record<number, TrialLike>>({}) // { [id]: TrialSummary | Trial (full) }
+const pendingTrialFetches = new Set<number>()
 
 // Modal states
 const showUploadModal = ref(false)
@@ -477,14 +505,14 @@ const showExportModal = ref(false)
 const showConcepts = ref(false)
 
 // Delete-evaluation flow
-const evaluationToDelete = ref(null)
+const evaluationToDelete = ref<EvaluationRow | null>(null)
 const deletingEvaluation = ref(false)
 
 // Computed properties
 const canStartEvaluation = computed(() => {
   return (
-    selectedGroundTruth.value &&
-    selectedGroundTruth.value.field_mappings?.length > 0 &&
+    !!selectedGroundTruth.value &&
+    (selectedGroundTruth.value.field_mappings?.length || 0) > 0 &&
     !loadingStates.value.groundTruthFiles &&
     !loadingStates.value.evaluations &&
     !error.value
@@ -535,12 +563,12 @@ const errorMessage = computed(() => {
 })
 
 // Utility functions
-const clearError = () => {
+const clearError = (): void => {
   error.value = null
   lastFailedOperation.value = null
 }
 
-const handleApiError = (err, operation) => {
+const handleApiError = (err: unknown, operation: string): void => {
   console.error(`${operation} failed:`, err)
 
   // Surface in the ErrorBanner (which has a retry action). Don't also fire a
@@ -548,7 +576,7 @@ const handleApiError = (err, operation) => {
   error.value = describeHttpError(err, operation)
 }
 
-const retryLastOperation = async () => {
+const retryLastOperation = async (): Promise<void> => {
   if (!lastFailedOperation.value) return
 
   isRetrying.value = true
@@ -566,14 +594,14 @@ const retryLastOperation = async () => {
 }
 
 // Data fetching functions
-const fetchGroundTruthFiles = async () => {
+const fetchGroundTruthFiles = async (): Promise<void> => {
   lastFailedOperation.value = fetchGroundTruthFiles
   loadingStates.value.groundTruthFiles = true
   error.value = null
 
   try {
     const response = await groundtruthApi.list(props.projectId)
-    groundTruthFiles.value = response.data
+    groundTruthFiles.value = response.data as GroundTruth[]
 
     if (groundTruthFiles.value.length > 0 && !selectedGroundTruth.value) {
       await selectGroundTruth(groundTruthFiles.value[0])
@@ -587,13 +615,15 @@ const fetchGroundTruthFiles = async () => {
   }
 }
 
-const fetchGroundTruthFilesWithRetry = async () => {
+const fetchGroundTruthFilesWithRetry = async (): Promise<void> => {
   lastFailedOperation.value = fetchGroundTruthFiles
   await fetchGroundTruthFiles()
 }
 
 // Paginated trial summaries
-const fetchTrials = async (opts = {}) => {
+const fetchTrials = async (
+  opts: { limit?: number; offset?: number; [k: string]: unknown } = {},
+): Promise<void> => {
   lastFailedOperation.value = () => fetchTrials(opts)
   loadingStates.value.trials = true
 
@@ -601,12 +631,12 @@ const fetchTrials = async (opts = {}) => {
     const { limit = trials.value.limit, offset = trials.value.offset, ...filters } = opts
     const { data } = await trialsApi.list(props.projectId, { limit, offset, ...filters })
 
-    trials.value.items = data.items || []
+    trials.value.items = (data.items || []) as TrialLike[]
     trials.value.total = data.total || 0
     trials.value.limit = limit
     trials.value.offset = offset
 
-    for (const t of trials.value.items) trialCache.value[t.id] = t
+    for (const tr of trials.value.items) trialCache.value[tr.id] = tr
 
     lastFailedOperation.value = null
   } catch (err) {
@@ -617,12 +647,12 @@ const fetchTrials = async (opts = {}) => {
 }
 
 // Lazy fetch full trial (only if a view ever needs more than the summary)
-const fetchTrialIfMissing = async (id) => {
+const fetchTrialIfMissing = async (id: number): Promise<void> => {
   if (trialCache.value[id]?.results || pendingTrialFetches.has(id)) return
   pendingTrialFetches.add(id)
   try {
     const { data } = await trialsApi.get(props.projectId, id)
-    trialCache.value[id] = data
+    trialCache.value[id] = data as TrialLike
   } catch {
     /* no-op */
   } finally {
@@ -631,22 +661,22 @@ const fetchTrialIfMissing = async (id) => {
 }
 
 // Utility functions for evaluation display
-const getTrialModel = (trialId) => {
-  const t = trialCache.value[trialId]
-  if (t?.llm_model) return t.llm_model
+const getTrialModel = (trialId: number): string => {
+  const tr = trialCache.value[trialId]
+  if (tr?.llm_model) return tr.llm_model
   fetchTrialIfMissing(trialId)
   return 'Unknown'
 }
 
-const getTrialName = (trialId) => {
-  const t = trialCache.value[trialId]
-  if (t && typeof t.name === 'string' && t.name.trim().length > 0) {
-    return t.name
+const getTrialName = (trialId: number): string => {
+  const tr = trialCache.value[trialId]
+  if (tr && typeof tr.name === 'string' && tr.name.trim().length > 0) {
+    return tr.name
   }
 
   // If not in the current page cache, try to warm it with the full Trial.
   // (This may update reactively; until then, show a deterministic fallback.)
-  if (!t) fetchTrialIfMissing(trialId)
+  if (!tr) fetchTrialIfMissing(trialId)
 
   return `Trial #${trialId}`
 }
@@ -654,23 +684,27 @@ const getTrialName = (trialId) => {
 // Returns the bare numeric percentage (0–100, rounded to 1 decimal); callers
 // append the `%` sign themselves. Using getEvaluationAccuracyPct here would
 // double the `%`.
-const getAccuracyPercentage = (evaluation) =>
+const getAccuracyPercentage = (evaluation: EvaluationRow): number =>
   Math.round(getEvaluationAccuracy(evaluation) * 1000) / 10
 
-const getDocumentCount = (evaluation) => getEvaluationDocumentCount(evaluation)
+const getDocumentCount = (evaluation: EvaluationRow): number =>
+  getEvaluationDocumentCount(evaluation)
 
 // Matched vs total documents. Accuracy is computed over matched docs only,
 // so when some documents couldn't be matched to ground truth we surface it
 // in the list row — otherwise a half-unmatched trial hides behind a number
 // computed only over the surviving half.
-const getOverallMetrics = (evaluation) => evaluation?.overall_metrics || evaluation?.metrics || {}
+const getOverallMetrics = (evaluation: EvaluationRow): Record<string, number | null> =>
+  (evaluation?.overall_metrics as Record<string, number | null>) ||
+  (evaluation?.metrics as Record<string, number | null>) ||
+  {}
 
-const getMatchedDocCount = (evaluation) => {
+const getMatchedDocCount = (evaluation: EvaluationRow): number => {
   const m = getOverallMetrics(evaluation)
   return m.matched_document_count ?? m.total_documents ?? getDocumentCount(evaluation)
 }
 
-const getUnmatchedDocCount = (evaluation) => {
+const getUnmatchedDocCount = (evaluation: EvaluationRow): number => {
   const m = getOverallMetrics(evaluation)
   if (m.error_document_count != null) return m.error_document_count
   // Fall back to total - matched when the backend didn't split it out.
@@ -680,17 +714,17 @@ const getUnmatchedDocCount = (evaluation) => {
   return 0
 }
 
-const hasEvaluationErrors = (evaluation) => {
-  return getEvaluationDocuments(evaluation).some((doc) => doc.error || doc.has_error)
+const hasEvaluationErrors = (evaluation: EvaluationRow): boolean => {
+  return getEvaluationDocuments(evaluation).some((doc) => !!doc.error || doc.has_error)
 }
 
-const getErrorCount = (evaluation) => {
-  return getEvaluationDocuments(evaluation).filter((doc) => doc.error || doc.has_error).length
+const getErrorCount = (evaluation: EvaluationRow): number => {
+  return getEvaluationDocuments(evaluation).filter((doc) => !!doc.error || doc.has_error).length
 }
 
 // Validation functions
-const validateEvaluationPrerequisites = () => {
-  const errors = []
+const validateEvaluationPrerequisites = (): string[] => {
+  const errors: string[] = []
 
   if (!selectedGroundTruth.value) {
     errors.push('Please select a ground truth file')
@@ -703,7 +737,7 @@ const validateEvaluationPrerequisites = () => {
   return errors
 }
 
-const showTrialSelectorWithValidation = () => {
+const showTrialSelectorWithValidation = (): void => {
   const validationErrors = validateEvaluationPrerequisites()
 
   if (validationErrors.length > 0) {
@@ -715,7 +749,7 @@ const showTrialSelectorWithValidation = () => {
 }
 
 // Event handlers
-const selectGroundTruth = async (groundTruth) => {
+const selectGroundTruth = async (groundTruth: GroundTruth): Promise<void> => {
   try {
     error.value = null
     selectedGroundTruth.value = groundTruth
@@ -725,7 +759,7 @@ const selectGroundTruth = async (groundTruth) => {
   }
 }
 
-const selectGroundTruthWithValidation = async (groundTruth) => {
+const selectGroundTruthWithValidation = async (groundTruth: GroundTruth | null): Promise<void> => {
   if (!groundTruth) {
     error.value = 'Invalid ground truth file selected'
     return
@@ -733,7 +767,7 @@ const selectGroundTruthWithValidation = async (groundTruth) => {
   await selectGroundTruth(groundTruth)
 }
 
-const fetchEvaluations = async () => {
+const fetchEvaluations = async (): Promise<void> => {
   if (!selectedGroundTruth.value) return
 
   lastFailedOperation.value = fetchEvaluations
@@ -746,7 +780,8 @@ const fetchEvaluations = async () => {
     })
 
     // 1) store the evaluations
-    evaluations.value = Array.isArray(data) ? data : (data?.items ?? [])
+    const list = data as Evaluation[] | { items?: Evaluation[] }
+    evaluations.value = (Array.isArray(list) ? list : (list.items ?? [])) as EvaluationRow[]
 
     // 2) warm trial names/models for rows we’ll render
     for (const ev of evaluations.value) {
@@ -763,7 +798,7 @@ const fetchEvaluations = async () => {
   }
 }
 
-const onGroundTruthUploaded = async (groundTruth) => {
+const onGroundTruthUploaded = async (groundTruth: GroundTruth): Promise<void> => {
   try {
     groundTruthFiles.value.push(groundTruth)
     await selectGroundTruth(groundTruth)
@@ -776,22 +811,28 @@ const onGroundTruthUploaded = async (groundTruth) => {
   }
 }
 
-const onTrialEvaluate = async (evaluationSummary) => {
+const onTrialEvaluate = async (evaluation: Evaluation): Promise<void> => {
   try {
+    // The backend's evaluate endpoint actually returns an EvaluationSummary;
+    // TrialSelectorModal's emit is typed as Evaluation, so cast at the boundary.
+    const evaluationSummary = evaluation as unknown as EvaluationSummary
     // Normalize to evaluation-like object for table
-    const evaluation = {
+    const row: EvaluationRow = {
       id: evaluationSummary.id,
       trial_id: evaluationSummary.trial_id,
       groundtruth_id: evaluationSummary.groundtruth_id,
       metrics: evaluationSummary.overall_metrics,
       overall_metrics: evaluationSummary.overall_metrics,
       field_metrics: {},
-      document_metrics: evaluationSummary.document_summaries || [],
+      document_metrics: (evaluationSummary.document_summaries || []) as unknown as Record<
+        string,
+        unknown
+      >[],
       document_summaries: evaluationSummary.document_summaries,
       created_at: evaluationSummary.created_at,
     }
 
-    evaluations.value.push(evaluation)
+    evaluations.value.push(row)
     showTrialSelector.value = false
     toast.success(`Trial #${evaluationSummary.trial_id} evaluation completed successfully`)
     // Surface non-blocking validation warnings (e.g. low document↔GT match
@@ -805,14 +846,14 @@ const onTrialEvaluate = async (evaluationSummary) => {
   }
 }
 
-const onMappingConfigured = async () => {
+const onMappingConfigured = async (): Promise<void> => {
   try {
     showGroundTruthPreview.value = false
     await fetchGroundTruthFiles()
 
     if (selectedGroundTruth.value) {
       const updatedGroundTruth = groundTruthFiles.value.find(
-        (gt) => gt.id === selectedGroundTruth.value.id,
+        (gt) => gt.id === selectedGroundTruth.value!.id,
       )
       if (updatedGroundTruth) {
         selectedGroundTruth.value = updatedGroundTruth
@@ -826,7 +867,7 @@ const onMappingConfigured = async () => {
 }
 
 // Modal actions
-const previewGroundTruth = () => {
+const previewGroundTruth = (): void => {
   if (!selectedGroundTruth.value) {
     error.value = 'No ground truth file selected'
     return
@@ -834,7 +875,7 @@ const previewGroundTruth = () => {
   showGroundTruthPreview.value = true
 }
 
-const viewEvaluationAnalysis = (evaluation) => {
+const viewEvaluationAnalysis = (evaluation: EvaluationRow): void => {
   // Navigate into the deep-linked analysis page via query params.
   const query = {
     ...route.query,
@@ -846,11 +887,11 @@ const viewEvaluationAnalysis = (evaluation) => {
   router.push({ query })
 }
 
-const confirmDeleteEvaluation = (evaluation) => {
+const confirmDeleteEvaluation = (evaluation: EvaluationRow): void => {
   evaluationToDelete.value = evaluation
 }
 
-const deleteEvaluation = async () => {
+const deleteEvaluation = async (): Promise<void> => {
   const evaluation = evaluationToDelete.value
   if (!evaluation) return
   deletingEvaluation.value = true

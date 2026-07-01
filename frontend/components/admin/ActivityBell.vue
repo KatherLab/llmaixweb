@@ -278,14 +278,21 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Bell, CircleCheckBig, CircleStop, Clipboard, FlaskConical, X } from '@lucide/vue'
+import type {
+  PreprocessingTask,
+  TrialSummary,
+  WsMessage,
+  WsPreprocessingUpdate,
+  WsTrialUpdate,
+} from '@/types'
 import { projectsApi } from '@/services/projectsApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { useToast } from '@/composables/useToast'
-import { websocketService } from '@/services/websocket.js'
+import { websocketService } from '@/services/websocket'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { formatRelativeTime } from '@/utils/formatters'
 import { mergeWsEntity } from '@/composables/useWsEntityUpdates'
@@ -293,24 +300,32 @@ import { mergeWsEntity } from '@/composables/useWsEntityUpdates'
 const router = useRouter()
 const toast = useToast()
 
+interface DismissedTasks {
+  preprocess: Set<number>
+  trial: Set<number>
+}
+
 // State
 const showDropdown = ref(false)
-const preprocessingTasks = ref([])
-const trialTasks = ref([])
+const preprocessingTasks = ref<PreprocessingTask[]>([])
+const trialTasks = ref<TrialSummary[]>([])
 const isLoading = ref(false)
 const hasLoadedOnce = ref(false)
-const dismissedTasks = ref({ preprocess: new Set(), trial: new Set() })
-const scrollContainer = ref(null)
-const wsUnsubscribe = ref(null)
+const dismissedTasks = ref<DismissedTasks>({
+  preprocess: new Set<number>(),
+  trial: new Set<number>(),
+})
+const scrollContainer = ref<HTMLElement | null>(null)
+const wsUnsubscribe = ref<(() => void) | null>(null)
 
 // Load dismissed tasks from localStorage
-const loadDismissedTasks = () => {
+const loadDismissedTasks = (): void => {
   try {
     const stored = localStorage.getItem('dismissedActivityTasks')
     if (stored) {
-      const parsed = JSON.parse(stored)
-      dismissedTasks.value.preprocess = new Set(parsed.preprocess || [])
-      dismissedTasks.value.trial = new Set(parsed.trial || [])
+      const parsed = JSON.parse(stored) as { preprocess?: number[]; trial?: number[] }
+      dismissedTasks.value.preprocess = new Set<number>(parsed.preprocess || [])
+      dismissedTasks.value.trial = new Set<number>(parsed.trial || [])
     }
   } catch (e) {
     console.error('Failed to load dismissed tasks:', e)
@@ -318,7 +333,7 @@ const loadDismissedTasks = () => {
 }
 
 // Save dismissed tasks to localStorage
-const saveDismissedTasks = () => {
+const saveDismissedTasks = (): void => {
   try {
     const toStore = {
       preprocess: Array.from(dismissedTasks.value.preprocess),
@@ -352,26 +367,26 @@ const displayTasks = computed(() => {
 })
 
 // Methods
-const toggleDropdown = () => {
+const toggleDropdown = (): void => {
   showDropdown.value = !showDropdown.value
   if (showDropdown.value && displayTasks.value.length === 0) {
     fetchAllTasks(false)
   }
 }
 
-const closeDropdown = () => {
+const closeDropdown = (): void => {
   showDropdown.value = false
 }
 
-const isTaskActive = (task) => {
+const isTaskActive = (task: PreprocessingTask): boolean => {
   return ['pending', 'in_progress', 'processing'].includes(task.status)
 }
 
-const isTrialActive = (task) => {
+const isTrialActive = (task: TrialSummary): boolean => {
   return ['pending', 'processing'].includes(task.status)
 }
 
-const getPreprocessingSummary = (task) => {
+const getPreprocessingSummary = (task: PreprocessingTask): string => {
   const total = task.meta?.total_files || task.total_files || 0
   const completed = task.meta?.completed_files || task.processed_files || 0
   const failed = task.meta?.failed_files || task.failed_files || 0
@@ -388,7 +403,7 @@ const getPreprocessingSummary = (task) => {
   return `${total} files`
 }
 
-const getTrialSummary = (task) => {
+const getTrialSummary = (task: TrialSummary): string => {
   const total = task.documents_count || 0
   const completed = task.results_count || task.docs_done || 0
   const errors = task.error_count || 0
@@ -408,16 +423,16 @@ const getTrialSummary = (task) => {
   return `${total} docs`
 }
 
-const getProgressPercent = (task) => {
+const getProgressPercent = (task: PreprocessingTask): number => {
   const total = task.meta?.total_files || task.total_files || 1
   const completed = task.meta?.completed_files || task.processed_files || 0
   return Math.min(Math.round((completed / total) * 100), 100)
 }
 
-const formatTaskTime = (task) => {
+const formatTaskTime = (task: PreprocessingTask | TrialSummary): string => {
   if (!task?.created_at) return ''
   const taskDate = new Date(task.created_at)
-  if (isNaN(taskDate)) return ''
+  if (isNaN(taskDate.getTime())) return ''
   // Tasks older than 24h fall back to a locale date (matches the original
   // behavior; displayed tasks are fetched with a 24h window anyway).
   if (Date.now() - taskDate.getTime() >= 86400000) return taskDate.toLocaleDateString()
@@ -427,7 +442,7 @@ const formatTaskTime = (task) => {
   return result === 'just now' ? 'Just now' : result
 }
 
-const dismissTask = (type, id) => {
+const dismissTask = (type: 'preprocess' | 'trial', id: number): void => {
   dismissedTasks.value[type].add(id)
   saveDismissedTasks()
 
@@ -439,7 +454,7 @@ const dismissTask = (type, id) => {
   }
 }
 
-const dismissAll = () => {
+const dismissAll = (): void => {
   // Get all task IDs
   const preprocessIds = preprocessingTasks.value.map((t) => t.id)
   const trialIds = trialTasks.value.map((t) => t.id)
@@ -454,7 +469,7 @@ const dismissAll = () => {
   trialTasks.value = []
 }
 
-const fetchAllTasks = async (isPolling = false) => {
+const fetchAllTasks = async (isPolling = false): Promise<void> => {
   // Only show loading on initial load, not during polling
   if (!isPolling) {
     isLoading.value = true
@@ -485,7 +500,7 @@ const fetchAllTasks = async (isPolling = false) => {
   }
 }
 
-const startWebSocket = () => {
+const startWebSocket = (): (() => void) => {
   // Subscribe to preprocessing updates
   wsUnsubscribe.value = websocketService.onPreprocessingUpdate((data) => {
     handlePreprocessingUpdate(data)
@@ -503,10 +518,13 @@ const startWebSocket = () => {
   }
 }
 
-const handlePreprocessingUpdate = (data) => {
+const handlePreprocessingUpdate = (data: WsMessage): void => {
+  const update = data as WsPreprocessingUpdate
   // Backend sends task_id, but we need to merge it properly
   // The data structure from backend: { task_id, project_id, status, meta, configuration, ... }
-  const taskId = data.task_id || data.id
+  const taskId = update.task_id || (update.id as number | undefined)
+
+  if (taskId === undefined) return
 
   // Find existing task by ID
   const existingIndex = preprocessingTasks.value.findIndex((t) => t.id === taskId)
@@ -514,32 +532,45 @@ const handlePreprocessingUpdate = (data) => {
   if (existingIndex >= 0) {
     // Merge incoming data into the existing task (shared WS merge helper).
     const task = preprocessingTasks.value[existingIndex]
-    preprocessingTasks.value[existingIndex] = mergeWsEntity(task, data, taskId, 'task_id')
+    preprocessingTasks.value[existingIndex] = mergeWsEntity(
+      task as unknown as Record<string, unknown>,
+      update as Record<string, unknown>,
+      taskId,
+      'task_id',
+    ) as unknown as PreprocessingTask
   } else {
     // New task - fetch full data from server
     fetchAllTasks(true)
   }
 }
 
-const handleTrialUpdate = (data) => {
-  const trialId = data.trial_id || data.id
+const handleTrialUpdate = (data: WsMessage): void => {
+  const update = data as WsTrialUpdate
+  const trialId = update.trial_id || (update.id as number | undefined)
+  if (trialId === undefined) return
+
   const existingIndex = trialTasks.value.findIndex((t) => t.id === trialId)
 
   if (existingIndex >= 0) {
     const task = trialTasks.value[existingIndex]
-    trialTasks.value[existingIndex] = mergeWsEntity(task, data, trialId, 'trial_id')
+    trialTasks.value[existingIndex] = mergeWsEntity(
+      task as unknown as Record<string, unknown>,
+      update as Record<string, unknown>,
+      trialId,
+      'trial_id',
+    ) as unknown as TrialSummary
   } else {
     // New trial - fetch full data from server
     fetchAllTasks(true)
   }
 }
 
-const stopWebSocket = () => {
+const stopWebSocket = (): void => {
   wsUnsubscribe.value?.()
   wsUnsubscribe.value = null
 }
 
-const navigateToPreprocessing = (task) => {
+const navigateToPreprocessing = (task: PreprocessingTask): void => {
   if (!task.project_id) {
     console.error('Preprocessing task missing project_id:', task)
     toast.error('Cannot navigate: missing project info')
@@ -552,7 +583,7 @@ const navigateToPreprocessing = (task) => {
   closeDropdown()
 }
 
-const cancelPreprocessing = async (task) => {
+const cancelPreprocessing = async (task: PreprocessingTask): Promise<void> => {
   if (!task.project_id) {
     toast.error('Cannot cancel: missing project info')
     return
@@ -572,7 +603,7 @@ const cancelPreprocessing = async (task) => {
   }
 }
 
-const navigateToTrial = (task) => {
+const navigateToTrial = (task: TrialSummary): void => {
   if (!task.project_id) {
     console.error('Trial missing project_id:', task)
     toast.error('Cannot navigate: missing project info')
@@ -585,13 +616,13 @@ const navigateToTrial = (task) => {
   closeDropdown()
 }
 
-const viewAllActivity = () => {
+const viewAllActivity = (): void => {
   router.push('/admin/celery')
   closeDropdown()
 }
 
 // Lifecycle
-let wsCleanup = null
+let wsCleanup: (() => void) | null = null
 
 onMounted(() => {
   loadDismissedTasks()

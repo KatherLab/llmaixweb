@@ -44,32 +44,29 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { getPillClass } from '@/utils/statusStyles'
+import type { Prompt } from '@/types'
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  prompt: {
-    type: Object,
-    default: null,
-  },
-  isSnapshot: {
-    type: Boolean,
-    default: false,
-  },
-  copyable: {
-    type: Boolean,
-    default: true,
-  },
+interface Props {
+  open: boolean
+  prompt?: Prompt | null
+  isSnapshot?: boolean
+  copyable?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  prompt: null,
+  isSnapshot: false,
+  copyable: true,
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{
+  close: []
+}>()
 
 const toast = useToast()
 

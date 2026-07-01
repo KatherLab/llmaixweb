@@ -125,7 +125,7 @@
           tone="blue"
           title="View"
           aria-label="View"
-          @click.stop="viewGroup(group)"
+          @click.stop="viewGroup(group as DocumentSetSummary)"
         >
           <Eye class="w-5 h-5" aria-hidden="true" />
         </BaseButton>
@@ -135,7 +135,7 @@
           tone="gray"
           title="Edit"
           aria-label="Edit"
-          @click.stop="editGroup(group)"
+          @click.stop="editGroup(group as DocumentSetSummary)"
         >
           <SquarePen class="w-5 h-5" aria-hidden="true" />
         </BaseButton>
@@ -145,7 +145,7 @@
           :title="group.trials_count > 0 ? 'Cannot delete - used by trial' : 'Delete'"
           :aria-label="group.trials_count > 0 ? 'Cannot delete - used by trial' : 'Delete'"
           :disabled="group.trials_count > 0"
-          @click.stop="deleteGroup(group)"
+          @click.stop="deleteGroup(group as DocumentSetSummary)"
         >
           <Trash2 class="w-5 h-5" aria-hidden="true" />
         </BaseButton>
@@ -165,7 +165,7 @@
     <!-- View Group Modal -->
     <ViewDocumentGroupModal
       :open="showViewGroup"
-      :group="viewingGroup"
+      :group="viewingGroup!"
       :project-id="projectId"
       @close="showViewGroup = false"
       @edit="editGroup"
@@ -182,7 +182,7 @@
       @confirm="confirmDeleteGroupAction"
       @cancel="showDeleteModal = false"
     >
-      <div v-if="groupToDelete?.document_count > 0" class="flex items-center -mt-3 mb-2">
+      <div v-if="(groupToDelete?.document_count ?? 0) > 0" class="flex items-center -mt-3 mb-2">
         <input
           v-model="deleteDocumentsToo"
           type="checkbox"
@@ -196,7 +196,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { Eye, Layers, Plus, SquarePen, Trash2 } from '@lucide/vue'
 import { documentSetsApi } from '@/services/documentSetsApi'
@@ -212,32 +212,33 @@ import SearchInput from '@/components/common/SearchInput.vue'
 import { usePagination } from '@/composables/usePagination'
 import { extractErrorMessage } from '@/utils/errors'
 import { checkboxClass } from '@/utils/formStyles'
+import type { DocumentListItem, DocumentSetCreate, DocumentSetSummary } from '@/types'
 
-const props = defineProps({
-  projectId: {
-    type: [String, Number],
-    required: true,
-  },
-  documentSets: {
-    type: Array,
-    required: true,
-  },
-})
+interface Props {
+  projectId: string | number
+  // Declared for API parity but unused — the component fetches its own sets.
+  documentSets?: DocumentSetSummary[]
+}
 
-const emit = defineEmits(['refresh', 'view-document'])
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  refresh: []
+  'view-document': [doc: DocumentListItem]
+}>()
 
 const toast = useToast()
 
 // State
-const searchQuery = ref('')
-const showCreateModal = ref(false)
-const editingGroup = ref(null)
-const viewingGroup = ref(null)
-const showViewGroup = ref(false)
-const isLoading = ref(true)
-const serverItems = ref([])
-const totalCount = ref(0)
-const itemsPerPage = ref(20)
+const searchQuery = ref<string>('')
+const showCreateModal = ref<boolean>(false)
+const editingGroup = ref<DocumentSetSummary | null>(null)
+const viewingGroup = ref<DocumentSetSummary | null>(null)
+const showViewGroup = ref<boolean>(false)
+const isLoading = ref<boolean>(true)
+const serverItems = ref<DocumentSetSummary[]>([])
+const totalCount = ref<number>(0)
+const itemsPerPage = ref<number>(20)
 const pagination = usePagination({
   getTotal: () => totalCount.value,
   pageSize: itemsPerPage.value,
@@ -245,10 +246,10 @@ const pagination = usePagination({
 const currentPage = pagination.currentPage
 
 // Delete modal state
-const showDeleteModal = ref(false)
-const groupToDelete = ref(null)
-const deleteDocumentsToo = ref(false)
-const isDeleting = ref(false)
+const showDeleteModal = ref<boolean>(false)
+const groupToDelete = ref<DocumentSetSummary | null>(null)
+const deleteDocumentsToo = ref<boolean>(false)
+const isDeleting = ref<boolean>(false)
 
 // Server-side pagination
 const totalPages = pagination.totalPages
@@ -261,7 +262,7 @@ const tablePagination = computed(() => ({
   total_pages: totalPages.value,
 }))
 
-const handlePageChange = (page) => {
+const handlePageChange = (page: number): void => {
   currentPage.value = page
 }
 
@@ -274,10 +275,10 @@ const columns = [
   { key: 'created_at', label: 'Created' },
 ]
 
-const canDeleteGroup = computed(() => !isDeleting.value)
+const canDeleteGroup = computed<boolean>(() => !isDeleting.value)
 
 // Message for the delete confirmation dialog (includes document count warning)
-const deleteMessage = computed(() => {
+const deleteMessage = computed<string>(() => {
   if (!groupToDelete.value) return ''
   let msg = `Are you sure you want to delete "${groupToDelete.value.name}"?`
   if (groupToDelete.value.document_count > 0) {
@@ -287,7 +288,7 @@ const deleteMessage = computed(() => {
 })
 
 // Fetch document sets with server-side pagination + search
-const fetchDocumentSets = async () => {
+const fetchDocumentSets = async (): Promise<void> => {
   isLoading.value = true
   try {
     const { data } = await documentSetsApi.list(props.projectId, {
@@ -318,21 +319,21 @@ const fetchDocumentSets = async () => {
 }
 
 // Methods
-const editGroup = (group) => {
+const editGroup = (group: DocumentSetSummary): void => {
   editingGroup.value = group
   showCreateModal.value = false
 }
 
-const viewGroup = (group) => {
+const viewGroup = (group: DocumentSetSummary): void => {
   viewingGroup.value = group
   showViewGroup.value = true
 }
 
-const viewDocumentFromGroup = (doc) => {
+const viewDocumentFromGroup = (doc: DocumentListItem): void => {
   emit('view-document', doc)
 }
 
-const deleteGroup = (group) => {
+const deleteGroup = (group: DocumentSetSummary): void => {
   if (group.trials_count > 0) {
     toast.warning('Cannot delete group - it is used by a trial')
     return
@@ -343,7 +344,7 @@ const deleteGroup = (group) => {
   showDeleteModal.value = true
 }
 
-const confirmDeleteGroupAction = async () => {
+const confirmDeleteGroupAction = async (): Promise<void> => {
   if (!canDeleteGroup.value || !groupToDelete.value) return
 
   isDeleting.value = true
@@ -384,12 +385,12 @@ const confirmDeleteGroupAction = async () => {
   }
 }
 
-const closeModal = () => {
+const closeModal = (): void => {
   showCreateModal.value = false
   editingGroup.value = null
 }
 
-const handleSaveGroup = async (groupData) => {
+const handleSaveGroup = async (groupData: DocumentSetCreate): Promise<void> => {
   try {
     if (editingGroup.value) {
       await documentSetsApi.update(props.projectId, editingGroup.value.id, groupData)
@@ -409,9 +410,9 @@ const handleSaveGroup = async (groupData) => {
 }
 
 // Watch for search query changes (debounced → server-side search)
-let searchDebounce = null
+let searchDebounce: ReturnType<typeof setTimeout> | null = null
 watch(searchQuery, () => {
-  clearTimeout(searchDebounce)
+  if (searchDebounce) clearTimeout(searchDebounce)
   searchDebounce = setTimeout(() => {
     currentPage.value = 1
     fetchDocumentSets()

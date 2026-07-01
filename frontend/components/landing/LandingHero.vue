@@ -24,7 +24,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // Static hero section — no script logic needed
 </script>
 

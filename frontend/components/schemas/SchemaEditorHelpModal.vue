@@ -45,20 +45,27 @@
   </BaseModal>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { Component } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
-defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  availableTypes: {
-    type: Array,
-    required: true,
-  },
-})
+interface AvailableType {
+  value: string
+  label: string
+  color: string
+  icon: Component
+  description: string
+}
 
-defineEmits(['close'])
+interface Props {
+  open: boolean
+  availableTypes: AvailableType[]
+}
+
+defineProps<Props>()
+
+defineEmits<{
+  close: []
+}>()
 </script>

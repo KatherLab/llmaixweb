@@ -26,7 +26,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import LandingBackground from '@/components/landing/LandingBackground.vue'
 import LandingHero from '@/components/landing/LandingHero.vue'
 import PipelineVisualization from '@/components/landing/PipelineVisualization.vue'

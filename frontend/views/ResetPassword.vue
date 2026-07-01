@@ -104,7 +104,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { TriangleAlert, Lock } from '@lucide/vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -117,17 +117,19 @@ import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
+type ResetState = 'loading' | 'invalid' | 'form' | 'success'
+
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 
-const state = ref('loading') // loading | invalid | form | success
-const newPassword = ref('')
-const confirmPassword = ref('')
-const isLoading = ref(false)
-const error = ref(null)
+const state = ref<ResetState>('loading')
+const newPassword = ref<string>('')
+const confirmPassword = ref<string>('')
+const isLoading = ref<boolean>(false)
+const error = ref<string | null>(null)
 
-const passwordsMismatch = computed(() => {
+const passwordsMismatch = computed<boolean>(() => {
   if (!confirmPassword.value) return false
   return newPassword.value !== confirmPassword.value
 })
@@ -140,14 +142,14 @@ onMounted(async () => {
   }
 
   try {
-    await usersApi.validateResetToken(token)
+    await usersApi.validateResetToken(String(token))
     state.value = 'form'
   } catch {
     state.value = 'invalid'
   }
 })
 
-async function handleResetPassword() {
+async function handleResetPassword(): Promise<void> {
   if (isLoading.value || passwordsMismatch.value) return
   isLoading.value = true
   error.value = null
@@ -155,18 +157,22 @@ async function handleResetPassword() {
   const token = route.params.token
 
   try {
-    await usersApi.resetPassword(token, {
-      token: token,
+    // The backend's reset endpoint accepts `token` in the body as well as the
+    // URL path; the typed payload omits it, so build the body loosely.
+    const body = {
+      token: String(token),
       new_password: newPassword.value,
-    })
+    }
+    await usersApi.resetPassword(String(token), body)
     toast.success('Password reset successfully!', {
       timeout: 3000,
     })
     setTimeout(() => {
       router.push('/login')
     }, 2000)
-  } catch (err) {
-    if (err.response?.status === 404) {
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number } }
+    if (axiosErr.response?.status === 404) {
       state.value = 'invalid'
     } else {
       error.value = extractErrorMessage(err, 'An unexpected error occurred. Please try again.')

@@ -15,11 +15,16 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
-defineProps({
-  textLoading: { type: Boolean, default: false },
-  safeMarkdown: { type: String, default: '' },
+interface Props {
+  textLoading?: boolean
+  safeMarkdown?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  textLoading: false,
+  safeMarkdown: '',
 })
 </script>

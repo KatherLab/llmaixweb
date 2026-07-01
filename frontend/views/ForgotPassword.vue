@@ -78,7 +78,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { Mail, Check } from '@lucide/vue'
 import { usersApi } from '@/services/usersApi'
@@ -88,23 +88,24 @@ import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { getBannerClass } from '@/utils/statusStyles'
 import { extractErrorMessage } from '@/utils/errors'
 
-const step = ref(1)
-const email = ref('')
-const isLoading = ref(false)
-const error = ref(null)
-const emailWarning = ref(null)
+const step = ref<number>(1)
+const email = ref<string>('')
+const isLoading = ref<boolean>(false)
+const error = ref<string | null>(null)
+const emailWarning = ref<string | null>(null)
 
-async function handleForgotPassword() {
+async function handleForgotPassword(): Promise<void> {
   if (isLoading.value) return
   isLoading.value = true
   error.value = null
 
   try {
     const response = await usersApi.forgotPassword(email.value)
-    emailWarning.value = response.data.warning || null
+    emailWarning.value = (response.data as { warning?: string | null }).warning || null
     step.value = 2
-  } catch (err) {
-    if (err.response?.status === 429) {
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number } }
+    if (axiosErr.response?.status === 429) {
       error.value = 'Too many requests. Please try again later.'
     } else {
       error.value = extractErrorMessage(err, 'An unexpected error occurred. Please try again.')

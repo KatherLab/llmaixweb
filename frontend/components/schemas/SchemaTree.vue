@@ -46,22 +46,23 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Home } from '@lucide/vue'
 import TreeNode from './TreeNode.vue'
+import type { SchemaDefinition } from '@/types'
 
-defineProps({
-  schema: {
-    type: Object,
-    required: true,
-  },
-  currentPath: {
-    type: Array,
-    default: () => [],
-  },
+interface Props {
+  schema: SchemaDefinition
+  currentPath?: string[]
+}
+
+withDefaults(defineProps<Props>(), {
+  currentPath: () => [],
 })
 
-defineEmits(['navigate'])
+defineEmits<{
+  navigate: [path: string[]]
+}>()
 </script>
 
 <style scoped>

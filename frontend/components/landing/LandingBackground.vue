@@ -59,12 +59,12 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onMounted } from 'vue'
 
 onMounted(() => {
   // Animate floating elements
-  const floatingElements = document.querySelectorAll('.floating-element')
+  const floatingElements = document.querySelectorAll<HTMLElement>('.floating-element')
   floatingElements.forEach((el, index) => {
     el.style.animation = `float ${15 + index * 2}s ease-in-out infinite`
     el.style.animationDelay = `${index * 0.5}s`

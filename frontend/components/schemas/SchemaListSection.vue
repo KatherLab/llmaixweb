@@ -66,7 +66,7 @@
             tone="blue"
             title="View Schema"
             aria-label="View Schema"
-            @click.stop="emit('view', schema)"
+            @click.stop="emit('view', schema as Schema)"
           >
             <Eye class="w-5 h-5" aria-hidden="true" />
           </BaseButton>
@@ -75,7 +75,7 @@
             tone="gray"
             title="Edit Schema"
             aria-label="Edit Schema"
-            @click.stop="emit('edit', schema)"
+            @click.stop="emit('edit', schema as Schema)"
           >
             <Pencil class="w-5 h-5" aria-hidden="true" />
           </BaseButton>
@@ -84,7 +84,7 @@
             tone="red"
             title="Delete Schema"
             aria-label="Delete Schema"
-            @click.stop="emit('delete', schema)"
+            @click.stop="emit('delete', schema as Schema)"
           >
             <Trash2 class="w-5 h-5" aria-hidden="true" />
           </BaseButton>
@@ -100,7 +100,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { formatDate } from '@/utils/formatters'
 import { summarizeSchema } from '@/utils/schemaFieldList'
@@ -111,21 +111,25 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import FilterBar from '@/components/common/FilterBar.vue'
 import SchemaFieldList from './SchemaFieldList.vue'
+import type { Schema } from '@/types'
 
-const props = defineProps({
-  schemas: {
-    type: Array,
-    required: true,
-  },
-  isLoading: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  schemas: Schema[]
+  isLoading?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isLoading: false,
 })
 
-const emit = defineEmits(['create', 'view', 'edit', 'delete'])
+const emit = defineEmits<{
+  create: []
+  view: [schema: Schema]
+  edit: [schema: Schema]
+  delete: [schema: Schema]
+}>()
 
-const expandedKeys = ref([])
+const expandedKeys = ref<number[]>([])
 const searchQuery = ref('')
 
 const filteredSchemas = computed(() => {
@@ -144,7 +148,7 @@ const clearSearch = () => {
   searchQuery.value = ''
 }
 
-const toggleExpand = (id) => {
+const toggleExpand = (id: number) => {
   const idx = expandedKeys.value.indexOf(id)
   if (idx > -1) {
     expandedKeys.value.splice(idx, 1)

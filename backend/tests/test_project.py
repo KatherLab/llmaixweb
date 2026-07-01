@@ -672,7 +672,9 @@ Document 3,This is the third document,Contains additional data,A"""
     full_doc1 = client.get(
         f"{api_url}/project/{project_id}/document/{doc1['id']}", headers=headers
     ).json()
-    assert full_doc1["text"] == "This is the first document Contains important information"
+    assert (
+        full_doc1["text"] == "This is the first document Contains important information"
+    )
     assert doc1["meta_data"]["row_index"] == 0
     assert doc1["meta_data"]["source_columns"] == ["description", "details"]
 

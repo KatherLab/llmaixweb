@@ -130,7 +130,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { X } from '@lucide/vue'
 import SearchInput from '@/components/common/SearchInput.vue'
@@ -138,38 +138,39 @@ import FilterChip from '@/components/common/FilterChip.vue'
 import { getDateRangeLabel } from '@/utils/dateRange'
 import { inputClass, selectClass, labelClass, checkboxClass } from '@/utils/formStyles'
 
-defineProps({
-  totalCount: {
-    type: Number,
-    default: 0,
-  },
+interface Props {
+  totalCount?: number
+}
+
+withDefaults(defineProps<Props>(), {
+  totalCount: 0,
 })
 
-const emit = defineEmits([
-  'fetch',
-  'date-range-change',
-  'apply-custom-range',
-  'clear-filters',
-  'clear-filter',
-])
+const emit = defineEmits<{
+  fetch: []
+  'date-range-change': []
+  'apply-custom-range': []
+  'clear-filters': []
+  'clear-filter': [field: string]
+}>()
 
 // Filter state — each is a v-model on the parent so fetchDocuments/watchers can read it.
-const search = defineModel('search', { type: String, default: '' })
-const ocrEngine = defineModel('ocrEngine', { type: String, default: '' })
-const dateRange = defineModel('dateRange', { type: String, default: '' })
-const includeArchived = defineModel('includeArchived', { type: Boolean, default: false })
-const customDateFrom = defineModel('customDateFrom', { type: String, default: '' })
-const customDateTo = defineModel('customDateTo', { type: String, default: '' })
+const search = defineModel<string>('search', { default: '' })
+const ocrEngine = defineModel<string>('ocrEngine', { default: '' })
+const dateRange = defineModel<string>('dateRange', { default: '' })
+const includeArchived = defineModel<boolean>('includeArchived', { default: false })
+const customDateFrom = defineModel<string>('customDateFrom', { default: '' })
+const customDateTo = defineModel<string>('customDateTo', { default: '' })
 
 // OCR engine labels mapping (for filter chip display)
-const ocrEngineLabels = {
+const ocrEngineLabels: Record<string, string> = {
   pypdf: 'Embedded Text',
   tesseract: 'Local OCR',
   mistral_ocr: 'Mistral OCR',
   llm_vision: 'Vision LLM',
 }
 
-const getOcrEngineLabel = (engine) => ocrEngineLabels[engine] || engine
+const getOcrEngineLabel = (engine: string): string => ocrEngineLabels[engine] || engine
 
 // Matches the original hasActiveFilters computed (includes custom date + archived)
 const hasActiveFilters = computed(
