@@ -25,7 +25,7 @@
       </div>
 
       <div
-        v-else-if="docsPage.length === 0"
+        v-else-if="(docsPage ?? []).length === 0"
         class="p-4 text-center text-slate-500 dark:text-slate-400"
       >
         No documents match your criteria
@@ -33,16 +33,16 @@
 
       <div v-else class="max-h-[400px] overflow-y-auto">
         <div
-          v-for="doc in docsPage"
+          v-for="doc in docsPage ?? []"
           :key="doc.id"
           :class="[
             'p-3 border-b last:border-b-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center',
-            { 'bg-blue-50 dark:bg-blue-900/20': selectedIds.includes(doc.id) },
+            { 'bg-blue-50 dark:bg-blue-900/20': (selectedIds ?? []).includes(doc.id) },
           ]"
           @click="emit('toggle', doc.id)"
         >
           <input
-            :checked="selectedIds.includes(doc.id)"
+            :checked="(selectedIds ?? []).includes(doc.id)"
             class="mr-3"
             type="checkbox"
             @click.stop
@@ -80,20 +80,22 @@
           <span class="text-slate-400 dark:text-slate-500">•</span>
           page <span class="font-medium">{{ page }}</span>
           /
-          {{ Math.max(1, Math.ceil(totalDocs / pageSize)) }}
+          {{ Math.max(1, Math.ceil((totalDocs ?? 0) / (pageSize ?? 1))) }}
         </div>
         <div class="flex items-center gap-2">
           <BaseButton
             variant="secondary"
             size="sm"
-            :disabled="page <= 1 || isLoadingDocs"
+            :disabled="(page ?? 1) <= 1 || isLoadingDocs"
             @click="emit('prev-page')"
             >Prev</BaseButton
           >
           <BaseButton
             variant="secondary"
             size="sm"
-            :disabled="page >= Math.ceil(totalDocs / pageSize) || isLoadingDocs"
+            :disabled="
+              (page ?? 1) >= Math.ceil((totalDocs ?? 0) / (pageSize ?? 1)) || isLoadingDocs
+            "
             @click="emit('next-page')"
             >Next</BaseButton
           >

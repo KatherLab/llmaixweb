@@ -237,7 +237,7 @@
                       variant="ghost"
                       size="sm"
                       class="text-xs font-medium underline"
-                      @click.stop="emit('navigate', fileTask.document_ids[0])"
+                      @click.stop="emit('navigate', fileTask.document_ids[0]!)"
                     >
                       <ExternalLink class="w-3 h-3" />
                       Go to Document
@@ -247,7 +247,7 @@
                       variant="ghost"
                       size="sm"
                       class="text-xs font-medium underline"
-                      @click.stop="emit('navigate', fileTask.document_ids[0])"
+                      @click.stop="emit('navigate', fileTask.document_ids[0]!)"
                     >
                       <ExternalLink class="w-3 h-3" />
                       Go to Documents ({{ fileTask.document_ids.length }})

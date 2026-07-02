@@ -433,7 +433,8 @@ const buildSchema = (): SchemaDefinition => {
       continue
     }
 
-    const mapping = typeMapping[field.type] || typeMapping.String
+    const mapping = typeMapping[field.type] ?? typeMapping.String
+    if (!mapping) continue
     const propSchema: SchemaProperty = {
       type: mapping.type,
       title: field.name
@@ -589,7 +590,7 @@ const handleDrop = (e: DragEvent) => {
   if (fromIndex !== toIndex && fromIndex >= 0 && toIndex >= 0) {
     const newFields = [...fields.value]
     const [removed] = newFields.splice(fromIndex, 1)
-    newFields.splice(toIndex, 0, removed)
+    if (removed) newFields.splice(toIndex, 0, removed)
     fields.value = newFields
     emitChange()
   }

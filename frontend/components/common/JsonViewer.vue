@@ -36,7 +36,7 @@
           v-if="isExpandable(value) && expanded[key]"
           class="json-children ml-3 pl-2 border-l border-slate-200 dark:border-slate-700"
         >
-          <JsonViewer :data="value as JsonValue" :max-depth="maxDepth - 1" />
+          <JsonViewer :data="value as JsonValue" :max-depth="(maxDepth ?? 0) - 1" />
         </div>
       </div>
     </div>

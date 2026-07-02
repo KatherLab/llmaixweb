@@ -3,7 +3,10 @@
     <div v-if="loadingGroups" class="text-center py-8">
       <LoadingSpinner />
     </div>
-    <EmptyState v-else-if="documentGroups.length === 0" title="No document groups available" />
+    <EmptyState
+      v-else-if="!documentGroups || documentGroups.length === 0"
+      title="No document groups available"
+    />
     <div v-else class="space-y-2">
       <div
         v-for="group in documentGroups"

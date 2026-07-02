@@ -209,8 +209,8 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ item.label }}</p>
               </div>
               <div v-if="index < extractionFlow.length - 1" class="flex-1 flex items-center">
-                <div class="w-full h-0.5" :class="flowArrows[index].line"></div>
-                <ChevronRight class="w-6 h-6 -ml-1" :class="flowArrows[index].arrowClass" />
+                <div class="w-full h-0.5" :class="flowArrows[index]?.line"></div>
+                <ChevronRight class="w-6 h-6 -ml-1" :class="flowArrows[index]?.arrowClass" />
               </div>
             </template>
           </div>

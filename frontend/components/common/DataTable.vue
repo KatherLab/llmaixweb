@@ -11,14 +11,14 @@
           {{ itemLabelSingular }}
           {{ totalSelected !== 1 ? 's' : '' }} selected
           <span
-            v-if="totalSelected < (pagination?.total ?? 0)"
+            v-if="(totalSelected ?? 0) < (pagination?.total ?? 0)"
             class="text-blue-600 dark:text-blue-400"
           >
             out of {{ pagination?.total }} total
           </span>
         </p>
         <BaseButton
-          v-if="totalSelected < (pagination?.total ?? 0)"
+          v-if="(totalSelected ?? 0) < (pagination?.total ?? 0)"
           variant="ghost"
           size="sm"
           class="font-medium underline"
@@ -146,7 +146,7 @@
     <!-- Empty State -->
     <EmptyState
       v-if="items.length === 0 && !loading"
-      :title="emptyTitle"
+      :title="emptyTitle ?? ''"
       :description="emptyDescription"
     >
       <template v-if="$slots['empty-icon']" #icon>

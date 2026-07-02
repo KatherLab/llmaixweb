@@ -391,8 +391,8 @@ const initializeForm = (): void => {
   trialData.value = {
     name: '',
     description: '',
-    schema_id: props.schemas.length > 0 ? props.schemas[0].id.toString() : '',
-    prompt_id: props.prompts.length > 0 ? props.prompts[0].id.toString() : '',
+    schema_id: props.schemas.length > 0 ? (props.schemas[0]?.id.toString() ?? '') : '',
+    prompt_id: props.prompts.length > 0 ? (props.prompts[0]?.id.toString() ?? '') : '',
     document_ids: [],
     llm_model: '',
     api_key: '',

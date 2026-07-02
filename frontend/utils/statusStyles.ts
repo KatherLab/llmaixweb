@@ -114,7 +114,7 @@ const PILL_COLORS: Record<string, string> = {
   gray: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
 }
 
-const DEFAULT_PILL_COLOR = PILL_COLORS.gray
+const DEFAULT_PILL_COLOR: string = PILL_COLORS.gray ?? ''
 
 export function getPillClass(color: string | null | undefined): string {
   return (color && PILL_COLORS[color]) || DEFAULT_PILL_COLOR
@@ -147,7 +147,7 @@ const BANNER_COLORS: Record<string, string> = {
   gray: 'bg-slate-50 border border-slate-200 text-slate-700 dark:bg-slate-700/40 dark:border-slate-600 dark:text-slate-300',
 }
 
-const DEFAULT_BANNER_COLOR = BANNER_COLORS.gray
+const DEFAULT_BANNER_COLOR: string = BANNER_COLORS.gray ?? ''
 
 export function getBannerClass(color: string | null | undefined): string {
   return (color && BANNER_COLORS[color]) || DEFAULT_BANNER_COLOR

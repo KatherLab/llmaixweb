@@ -247,9 +247,14 @@ const uploadGroundTruth = async () => {
 
       response = await groundtruthApi.upload(props.projectId, formData)
     } else {
+      const firstFile = selectedFiles.value[0]
+      if (!firstFile) {
+        toast.error('No file selected')
+        return
+      }
       const formData = new FormData()
-      formData.append('file', selectedFiles.value[0])
-      formData.append('name', groundTruthName.value || selectedFiles.value[0].name)
+      formData.append('file', firstFile)
+      formData.append('name', groundTruthName.value || firstFile.name)
       formData.append('format', groundTruthFormat.value)
 
       response = await groundtruthApi.upload(props.projectId, formData)

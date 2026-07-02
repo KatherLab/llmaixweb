@@ -15,7 +15,7 @@
         ></iframe>
         <!-- Image Viewer -->
         <div
-          v-else-if="originalImageUrl && ['image'].includes(originalFileType)"
+          v-else-if="originalImageUrl && ['image'].includes(originalFileType ?? '')"
           class="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg p-4"
         >
           <img

@@ -484,6 +484,7 @@ const togglePreview = (type: 'system' | 'user') => {
 
 const useTemplate = () => {
   const template = promptTemplates.medical
+  if (!template) return
   promptForm.value = {
     name: template.name,
     description: template.description,

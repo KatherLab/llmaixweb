@@ -20,9 +20,9 @@
       </div>
 
       <!-- Versions List -->
-      <div v-else-if="versions.length > 0" class="space-y-2">
+      <div v-else-if="(versions ?? []).length > 0" class="space-y-2">
         <div
-          v-for="version in versions"
+          v-for="version in versions ?? []"
           :key="version.id"
           :class="[
             'p-3 rounded-lg border cursor-pointer transition-all',
@@ -44,7 +44,7 @@
               {{ version.is_latest ? 'Current' : 'Archived' }}
             </span>
             <span class="text-xs text-slate-500 dark:text-slate-400"
-              >v{{ versionCount - versions.indexOf(version) }}</span
+              >v{{ (versionCount ?? 0) - (versions ?? []).indexOf(version) }}</span
             >
           </div>
           <p class="text-xs text-slate-600 dark:text-slate-400">

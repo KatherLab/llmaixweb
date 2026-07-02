@@ -497,6 +497,7 @@ function extractRequiredFields(schema: SchemaDefinition | null, prefix = ''): st
   if (schema?.properties) {
     for (const prop in schema.properties) {
       const propDef = schema.properties[prop]
+      if (!propDef) continue
       const full = prefix ? `${prefix}.${prop}` : prop
       if ((schema.required || []).includes(prop)) req.push(full)
       if (propDef.type === 'object' && propDef.properties) {
@@ -552,7 +553,8 @@ function defaultMethodFor(fieldType: string): ComparisonMethod {
 /** Update a mapping's comparison method from the MappingList selector. */
 function updateMethod({ index, method }: { index: number; method: string }) {
   if (index < 0 || index >= mappings.value.length) return
-  mappings.value[index].comparison_method = method as ComparisonMethod
+  const mapping = mappings.value[index]
+  if (mapping) mapping.comparison_method = method as ComparisonMethod
 }
 
 /** Update a mapping's comparison options (e.g. fuzzy threshold, numeric tolerance). */
@@ -564,7 +566,8 @@ function updateMappingOptions({
   options: Record<string, unknown>
 }) {
   if (index < 0 || index >= mappings.value.length) return
-  mappings.value[index].comparison_options = options
+  const mapping = mappings.value[index]
+  if (mapping) mapping.comparison_options = options
 }
 function clearMappings() {
   mappings.value = []

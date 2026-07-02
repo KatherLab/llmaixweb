@@ -45,9 +45,9 @@
         <span
           v-if="isLeaf(key)"
           class="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold font-mono"
-          :class="typeBadgeClass(types[path(key)])"
+          :class="typeBadgeClass((types ?? {})[path(key)])"
         >
-          {{ badgeLabel(types[path(key)]) }}
+          {{ badgeLabel((types ?? {})[path(key)]) }}
         </span>
 
         <!-- mapped badge -->

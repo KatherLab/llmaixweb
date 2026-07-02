@@ -49,7 +49,12 @@ export const TOAST_VISUALS: Record<string, ToastVisual> = {
 }
 
 /** Fallback visual for unknown types. */
-const DEFAULT_VISUAL: ToastVisual = TOAST_VISUALS.info
+const DEFAULT_VISUAL: ToastVisual = TOAST_VISUALS.info ?? {
+  icon: Info,
+  iconClass: 'text-blue-600 dark:text-blue-400',
+  chipClass: 'bg-blue-100 dark:bg-blue-500/15',
+  accentClass: 'bg-blue-500',
+}
 
 /**
  * Look up the visual metadata for a toast type.

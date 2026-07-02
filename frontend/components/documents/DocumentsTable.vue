@@ -1,7 +1,7 @@
 <template>
   <DataTable
     :columns="columns"
-    :items="documents"
+    :items="documents ?? []"
     row-key="id"
     selectable
     :selected-keys="selectedDocuments"

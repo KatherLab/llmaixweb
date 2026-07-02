@@ -8,19 +8,19 @@
     </div>
     <select
       v-model="model"
-      :disabled="isLoadingModels || isTestingConnection || availableModels.length === 0"
+      :disabled="isLoadingModels || isTestingConnection || (availableModels ?? []).length === 0"
       :class="[selectClass, 'disabled:opacity-60 disabled:cursor-not-allowed']"
     >
       <option disabled value="">
         {{
           isLoadingModels || isTestingConnection
             ? 'Loading models...'
-            : availableModels.length === 0
+            : (availableModels ?? []).length === 0
               ? 'No models available'
               : 'Select a model'
         }}
       </option>
-      <option v-for="mdl in availableModels" :key="mdl" :value="mdl">
+      <option v-for="mdl in availableModels ?? []" :key="mdl" :value="mdl">
         {{ mdl }}
       </option>
     </select>

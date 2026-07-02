@@ -7,10 +7,10 @@
     <!-- Colored accent + progress bar at the bottom edge. -->
     <div class="absolute inset-y-0 left-0 w-1" :class="visual.accentClass" aria-hidden="true" />
     <div
-      v-if="timeout > 0"
+      v-if="(timeout ?? 0) > 0"
       class="absolute bottom-0 left-0 h-0.5 origin-left"
       :class="visual.accentClass"
-      :style="{ animation: `toast-shrink ${timeout}ms linear forwards` }"
+      :style="{ animation: `toast-shrink ${timeout ?? 0}ms linear forwards` }"
       aria-hidden="true"
     />
 

@@ -327,12 +327,15 @@ const loadPreview = async (): Promise<void> => {
       (!textColumns.value.length || textColumns.value.some((tc) => !labels.includes(tc))) &&
       labels.length
     ) {
-      textColumns.value = [labels[0]]
+      const firstLabel = labels[0]
+      if (firstLabel) textColumns.value = [firstLabel]
     }
 
     // XLSX sheet default
-    if (isXLSX.value && !sheet.value && data.sheets && data.sheets.length)
-      sheet.value = data.sheets[0]
+    if (isXLSX.value && !sheet.value && data.sheets && data.sheets.length) {
+      const firstSheet = data.sheets[0]
+      if (firstSheet) sheet.value = firstSheet
+    }
   } catch {
     toast.error('Failed to load preview')
     preview.value = { headers: [], rows: [] }

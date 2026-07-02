@@ -549,9 +549,10 @@ async function submitRename({ id, name, description }: RenamePayload): Promise<v
   try {
     await trialsApi.update(props.projectId, id, { name, description })
     const idx = trials.value.findIndex((t) => t.id === id)
-    if (idx !== -1) {
-      trials.value[idx].name = name
-      trials.value[idx].description = description
+    const target = idx !== -1 ? trials.value[idx] : undefined
+    if (target) {
+      target.name = name
+      target.description = description
     }
     toast.success('Trial renamed')
     showRenameModal.value = false
@@ -588,9 +589,10 @@ async function cancelTrial(trial: TrialSummary): Promise<void> {
   try {
     await trialsApi.cancel(props.projectId, trial.id)
     const idx = trials.value.findIndex((t) => t.id === trial.id)
-    if (idx !== -1) {
-      trials.value[idx].status = 'cancelled'
-      ;(trials.value[idx] as TrialSummary & { is_cancelled?: boolean }).is_cancelled = true
+    const target = idx !== -1 ? trials.value[idx] : undefined
+    if (target) {
+      target.status = 'cancelled'
+      ;(target as TrialSummary & { is_cancelled?: boolean }).is_cancelled = true
     }
     toast.success('Trial cancelled')
   } catch {

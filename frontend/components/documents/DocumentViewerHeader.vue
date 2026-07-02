@@ -33,7 +33,7 @@
         @click="$emit('toggle-version-history')"
       >
         <Clock class="h-4 w-4" />
-        <StatusBadge v-if="versionCount > 0" color="blue">{{ versionCount }}</StatusBadge>
+        <StatusBadge v-if="(versionCount ?? 0) > 0" color="blue">{{ versionCount }}</StatusBadge>
         History
       </BaseButton>
       <BaseButton

@@ -36,18 +36,24 @@ export function getEngineSubtitle(engineKey: string | null | undefined): string 
 
 export function setEngineLabels(settings: Partial<PublicAuthSettings>): void {
   if (settings.mistral_ocr_display_name) {
-    ocrEngineLabels.mistral_ocr.name = settings.mistral_ocr_display_name
-    ocrEngineLabels.mistral_ocr.subtitle =
-      settings.mistral_ocr_display_subtitle || ocrEngineLabels.mistral_ocr.subtitle
+    const entry = ocrEngineLabels.mistral_ocr
+    if (entry) {
+      entry.name = settings.mistral_ocr_display_name
+      entry.subtitle = settings.mistral_ocr_display_subtitle || entry.subtitle
+    }
   }
   if (settings.vision_ocr_display_name) {
-    ocrEngineLabels.llm_vision.name = settings.vision_ocr_display_name
-    ocrEngineLabels.llm_vision.subtitle =
-      settings.vision_ocr_display_subtitle || ocrEngineLabels.llm_vision.subtitle
+    const entry = ocrEngineLabels.llm_vision
+    if (entry) {
+      entry.name = settings.vision_ocr_display_name
+      entry.subtitle = settings.vision_ocr_display_subtitle || entry.subtitle
+    }
   }
   if (settings.docling_serve_display_name) {
-    ocrEngineLabels.docling_tesseract.name = settings.docling_serve_display_name
-    ocrEngineLabels.docling_tesseract.subtitle =
-      settings.docling_serve_display_subtitle || ocrEngineLabels.docling_tesseract.subtitle
+    const entry = ocrEngineLabels.docling_tesseract
+    if (entry) {
+      entry.name = settings.docling_serve_display_name
+      entry.subtitle = settings.docling_serve_display_subtitle || entry.subtitle
+    }
   }
 }

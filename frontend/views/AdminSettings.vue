@@ -217,11 +217,15 @@ async function saveSecret(key: string): Promise<void> {
   saving.value = true
   error.value = ''
   try {
-    await adminApi.setSecret(key, secretDraft[key])
+    const draftValue = secretDraft[key] ?? ''
+    await adminApi.setSecret(key, draftValue)
     // Mark as set in local state (don't show value)
-    settings[key].is_set = !!secretDraft[key]
-    settings[key].override = null
-    settings[key].effective = null
+    const entry = settings[key]
+    if (entry) {
+      entry.is_set = !!draftValue
+      entry.override = null
+      entry.effective = null
+    }
     showSecretInput[key] = false
     secretDraft[key] = ''
     success.value = true
@@ -240,9 +244,12 @@ async function clearSecret(key: string): Promise<void> {
   error.value = ''
   try {
     await adminApi.clearSecret(key) // Backend should treat empty string as unset
-    settings[key].is_set = false
-    settings[key].override = null
-    settings[key].effective = null
+    const entry = settings[key]
+    if (entry) {
+      entry.is_set = false
+      entry.override = null
+      entry.effective = null
+    }
     secretDraft[key] = ''
     success.value = true
     setTimeout(() => {
@@ -259,26 +266,25 @@ async function clearSecret(key: string): Promise<void> {
 
 function resetDraft(): void {
   Object.keys(settings).forEach((k) => {
-    const entry: AdminSettingEntry = settings[k]
-    if (!entry.readonly && !entry.secret) {
-      if (entry.type === 'bool') {
-        // Backend may return booleans or their string representations for
-        // bool-typed settings; the AdminSettingEntry types override/original
-        // as `string | null`, so cast broadly to match runtime values.
-        const overrideBool = entry.override as string | boolean | null
-        const originalBool = entry.original as string | boolean | null
-        draft[k] =
-          overrideBool !== undefined && overrideBool !== null
-            ? overrideBool === true || overrideBool === 'true'
-            : originalBool === true || originalBool === 'true'
-      } else if (entry.type === 'int') {
-        draft[k] =
-          entry.override !== undefined && entry.override !== null
-            ? Number(entry.override)
-            : Number(entry.original)
-      } else {
-        draft[k] = entry.override ?? entry.original ?? ''
-      }
+    const entry: AdminSettingEntry | undefined = settings[k]
+    if (!entry || entry.readonly || entry.secret) return
+    if (entry.type === 'bool') {
+      // Backend may return booleans or their string representations for
+      // bool-typed settings; the AdminSettingEntry types override/original
+      // as `string | null`, so cast broadly to match runtime values.
+      const overrideBool = entry.override as string | boolean | null
+      const originalBool = entry.original as string | boolean | null
+      draft[k] =
+        overrideBool !== undefined && overrideBool !== null
+          ? overrideBool === true || overrideBool === 'true'
+          : originalBool === true || originalBool === 'true'
+    } else if (entry.type === 'int') {
+      draft[k] =
+        entry.override !== undefined && entry.override !== null
+          ? Number(entry.override)
+          : Number(entry.original)
+    } else {
+      draft[k] = entry.override ?? entry.original ?? ''
     }
   })
 }
@@ -302,13 +308,15 @@ async function save(): Promise<void> {
   success.value = false
   try {
     const payload = Object.fromEntries(
-      Object.entries(draft).filter(([k]) => !settings[k].readonly && !settings[k].secret),
+      Object.entries(draft).filter(([k]) => !(settings[k]?.readonly || settings[k]?.secret)),
     )
     await adminApi.updateSettings(payload)
     Object.entries(payload).forEach(([k, v]) => {
-      settings[k].override = String(v)
-      settings[k].effective = String(v)
-      settings[k].overridden = true
+      const entry = settings[k]
+      if (!entry) return
+      entry.override = String(v)
+      entry.effective = String(v)
+      entry.overridden = true
     })
     success.value = true
     setTimeout(() => {
@@ -324,10 +332,13 @@ async function save(): Promise<void> {
 async function deleteOverride(key: string): Promise<void> {
   try {
     await adminApi.deleteSetting(key)
-    settings[key].override = null
-    settings[key].effective = settings[key].original
-    settings[key].overridden = false
-    draft[key] = settings[key].original ?? ''
+    const entry = settings[key]
+    if (entry) {
+      entry.override = null
+      entry.effective = entry.original
+      entry.overridden = false
+      draft[key] = entry.original ?? ''
+    }
   } catch (e) {
     error.value = extractErrorMessage(e, 'Failed to remove override')
   }

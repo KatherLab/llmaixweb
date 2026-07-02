@@ -23,9 +23,11 @@
       <div>
         <p class="text-sm text-slate-700 dark:text-slate-300">
           Showing
-          <span class="font-medium">{{ (modelValue - 1) * pageSize + 1 }}</span>
+          <span class="font-medium">{{ (modelValue - 1) * (pageSize ?? 1) + 1 }}</span>
           to
-          <span class="font-medium">{{ Math.min(modelValue * pageSize, totalItems) }}</span>
+          <span class="font-medium">{{
+            Math.min(modelValue * (pageSize ?? 1), totalItems ?? 0)
+          }}</span>
           of
           <span class="font-medium">{{ totalItems }}</span>
           {{ itemLabel }}

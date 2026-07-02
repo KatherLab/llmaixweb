@@ -27,7 +27,7 @@
         <div class="min-w-0">
           <p
             class="text-sm font-medium text-slate-900 dark:text-white truncate max-w-xs"
-            :title="file.file_name"
+            :title="file.file_name ?? undefined"
           >
             {{ file.file_name }}
           </p>

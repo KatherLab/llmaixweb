@@ -94,7 +94,7 @@
                 v-for="(cell, cidx) in row"
                 :key="cidx"
                 class="px-4 py-2 border-b border-slate-50 dark:border-slate-800 max-w-[260px] align-top text-slate-700 dark:text-slate-300"
-                :class="cellClasses(normalizedHeaders[cidx])"
+                :class="cellClasses(normalizedHeaders[cidx] ?? null)"
               >
                 <span
                   v-if="cell === '' || cell == null"
@@ -102,12 +102,14 @@
                   >empty</span
                 >
                 <template
-                  v-else-if="isTextColumn(normalizedHeaders[cidx]) && String(cell).length > 80"
+                  v-else-if="
+                    isTextColumn(normalizedHeaders[cidx] ?? null) && String(cell).length > 80
+                  "
                 >
                   <span
                     class="truncate cursor-pointer text-green-900 dark:text-green-300"
                     :title="String(cell)"
-                    @click="showFullCell(String(cell), headerLabels[cidx])"
+                    @click="showFullCell(String(cell), headerLabels[cidx] ?? null)"
                     >{{ String(cell).slice(0, 80)
                     }}<span class="font-semibold text-blue-600 dark:text-blue-400 ml-1"
                       >…more</span

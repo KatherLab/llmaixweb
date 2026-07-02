@@ -200,13 +200,12 @@ import type { DocumentListItem, DocumentSetSummary, DocumentSetCreate } from '@/
 interface Props {
   group?: DocumentSetSummary | null
   projectId: string | number
-  open?: boolean
+  open: boolean
   selectedDocumentIds?: number[] | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   group: null,
-  open: true,
   selectedDocumentIds: null,
 })
 

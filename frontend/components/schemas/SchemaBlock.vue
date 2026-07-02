@@ -20,7 +20,7 @@
             <!-- Schema Info -->
             <div>
               <h3 class="text-white font-medium">
-                {{ schema.title || formatTitle(path[path.length - 1]) || 'Root Schema' }}
+                {{ schema.title || formatTitle((path ?? []).at(-1)) || 'Root Schema' }}
               </h3>
               <p class="text-white/80 text-sm">
                 {{ typeLabel }}
@@ -395,7 +395,7 @@ const getCurrentKey = (): string => {
     return '__root__'
   }
   // Return the last segment of the path
-  return props.path[props.path.length - 1]
+  return props.path[props.path.length - 1] ?? ''
 }
 
 onMounted(() => {

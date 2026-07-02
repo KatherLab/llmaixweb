@@ -1,14 +1,14 @@
 <template>
   <div class="w-full">
     <div
-      v-if="mappings.length === 0"
+      v-if="(mappings ?? []).length === 0"
       class="text-xs text-slate-400 dark:text-slate-500 text-center py-4"
     >
       No mappings yet.<br />Select a schema field and a GT field and click <b>Map</b>.
     </div>
     <ul v-else class="flex flex-col gap-2">
       <li
-        v-for="(m, i) in mappings"
+        v-for="(m, i) in mappings ?? []"
         :key="i"
         class="bg-gradient-to-r from-blue-50/70 to-purple-50/60 dark:from-slate-800 dark:to-slate-700/80 px-2 py-1.5 rounded-lg shadow-sm border border-blue-100 dark:border-slate-600 group relative"
       >

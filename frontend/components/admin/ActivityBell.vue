@@ -593,9 +593,10 @@ const cancelPreprocessing = async (task: PreprocessingTask): Promise<void> => {
     toast.success('Preprocessing cancelled')
     // Update local state
     const idx = preprocessingTasks.value.findIndex((t) => t.id === task.id)
-    if (idx >= 0) {
-      preprocessingTasks.value[idx].status = 'cancelled'
-      preprocessingTasks.value[idx].is_cancelled = true
+    const target = idx >= 0 ? preprocessingTasks.value[idx] : undefined
+    if (target) {
+      target.status = 'cancelled'
+      target.is_cancelled = true
     }
   } catch (err) {
     console.error('Failed to cancel preprocessing:', err)

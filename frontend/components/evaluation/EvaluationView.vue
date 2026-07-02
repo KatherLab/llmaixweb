@@ -604,7 +604,8 @@ const fetchGroundTruthFiles = async (): Promise<void> => {
     groundTruthFiles.value = response.data as GroundTruth[]
 
     if (groundTruthFiles.value.length > 0 && !selectedGroundTruth.value) {
-      await selectGroundTruth(groundTruthFiles.value[0])
+      const first = groundTruthFiles.value[0]
+      if (first) await selectGroundTruth(first)
     }
 
     lastFailedOperation.value = null

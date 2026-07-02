@@ -110,6 +110,7 @@ export function usePreprocessingUpdates({
 
     if (fileIndex >= 0) {
       const file = files.value[fileIndex]
+      if (!file) return
 
       // Update historyFile first if this file is currently being shown
       const isHistoryFile = historyFile.value?.id === file.id

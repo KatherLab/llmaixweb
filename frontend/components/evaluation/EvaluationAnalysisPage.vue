@@ -348,7 +348,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Tooltip from '@/components/common/Tooltip.vue'
-import DataTable from '@/components/common/DataTable.vue'
+import DataTable, { type DataTableColumn } from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import FilterChip from '@/components/common/FilterChip.vue'
@@ -721,6 +721,7 @@ const moveDoc = (delta: number): void => {
   const next = currentDocIndex.value + delta
   if (next < 0 || next >= filteredDocs.value.length) return
   const doc = filteredDocs.value[next]
+  if (!doc) return
   selectedDocId.value = doc.document_id
   loadDocDetail(doc.document_id)
 }
@@ -854,7 +855,7 @@ const documentStatusLabel = (row: unknown): string =>
 const documentStatusColor = (row: unknown): 'red' | 'green' | 'yellow' =>
   _documentStatusColor(row as DocumentEvaluationDetail | null | undefined)
 
-const columns = [
+const columns: DataTableColumn[] = [
   { key: 'document_name', label: 'Document', sortable: true },
   { key: 'accuracy', label: 'Accuracy', sortable: true, align: 'right' },
   { key: 'incorrect_fields', label: 'Wrong of Total', align: 'right' },
