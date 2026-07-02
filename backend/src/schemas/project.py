@@ -641,6 +641,12 @@ class PreprocessingTask(PreprocessingTaskBase):
     skipped_files: int = 0
     task_metadata: dict | None = None
 
+    # Runtime progress meta written by the pipeline (eta_seconds, progress,
+    # total_files, completed_files, failed_files). Distinct from
+    # `task_metadata` (config/skip info). The ORM column is non-nullable with a
+    # dict default, but this is exposed as `dict | None` for safety.
+    meta: dict | None = None
+
     # Computed fields for document counts
     @computed_field
     @property

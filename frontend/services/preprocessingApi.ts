@@ -40,9 +40,11 @@ export const preprocessingApi = {
       { params: { keep_processed: keepProcessed } },
     ) as Promise<ApiBody<unknown>>
   },
-  // GET-triggered action (not a pure read) — requeues failed subtasks.
+  // POST (not GET) — requeues failed subtasks, i.e. mutates state. The
+  // backend route is POST deliberately: a GET would be unsafe (browser/crawler
+  // prefetch could silently trigger retries).
   retryFailed(projectId: number | string, taskId: number | string) {
-    return api.get(`/project/${projectId}/preprocess/${taskId}/retry-failed`) as Promise<
+    return api.post(`/project/${projectId}/preprocess/${taskId}/retry-failed`) as Promise<
       ApiBody<unknown>
     >
   },

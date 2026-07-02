@@ -17,18 +17,18 @@ Files & Preprocessing → Documents → Schemas & Prompts → Run Trials → Eva
 
 The file `backend/tests/files/reports_with_groundtruth.csv` contains 8 fictitious discharge letters (the `report` column) plus an `id` column and **one column per label** holding the ground-truth value:
 
-| Column | Type | Values |
-|---|---|---|
-| `id` | string | e.g. `9874562.pdf` |
-| `shortness of breath` | boolean | `True` / `False` |
-| `chest pain` | boolean | `True` / `False` |
-| `leg pain or swelling` | boolean | `True` / `False` |
-| `heart palpitations` | boolean | `True` / `False` |
-| `cough` | boolean | `True` / `False` |
-| `dizziness` | boolean | `True` / `False` |
-| `location` | enum | `main` / `segmental` / `unknown` |
-| `side` | enum | `left` / `right` / `bilateral` |
-| `report` | text | the full report |
+| Column                 | Type    | Values                           |
+|------------------------|---------|----------------------------------|
+| `id`                   | string  | e.g. `9874562.pdf`               |
+| `shortness of breath`  | boolean | `True` / `False`                 |
+| `chest pain`           | boolean | `True` / `False`                 |
+| `leg pain or swelling` | boolean | `True` / `False`                 |
+| `heart palpitations`   | boolean | `True` / `False`                 |
+| `cough`                | boolean | `True` / `False`                 |
+| `dizziness`            | boolean | `True` / `False`                 |
+| `location`             | enum    | `main` / `segmental` / `unknown` |
+| `side`                 | enum    | `left` / `right` / `bilateral`   |
+| `report`               | text    | the full report                  |
 
 We will use this single CSV **twice**:
 

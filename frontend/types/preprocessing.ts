@@ -27,11 +27,12 @@ export interface PreprocessingConfigurationUpdate {
 /**
  * Progress/meta payload carried on `PreprocessingTask.meta`.
  *
- * Note: the backend ORM column is `meta` (read by the WS broadcaster), but the
- * Pydantic `PreprocessingTask` response schema exposes it as `task_metadata`.
- * The frontend's WS merge (`useWsEntityUpdates.mergeWsEntity`) writes a
- * computed `meta` object onto the task at runtime with `progress` etc., and
- * the UI reads `task.meta`. We model both fields here.
+ * `meta` and `task_metadata` are two distinct ORM columns: `meta` holds runtime
+ * progress (eta_seconds, progress, total_files, completed_files, failed_files)
+ * written by the pipeline and broadcast over WebSocket; `task_metadata` holds
+ * config/skip info. Both are serialized on the REST response. The WS merge
+ * layer also writes a computed `meta` object onto the task at runtime, and the
+ * UI reads `task.meta`. We model both fields here.
  */
 export interface PreprocessingTaskMeta {
   progress?: number
@@ -79,7 +80,8 @@ export interface PreprocessingTask {
   file_tasks: FilePreprocessingTask[]
   configuration: PreprocessingConfiguration | null
   task_metadata: Record<string, unknown> | null
-  /** Runtime-computed progress meta (written by the WS merge layer). */
+  /** Runtime progress meta (REST-serialized from the ORM `meta` column; also
+   * updated at runtime by the WS merge layer). */
   meta?: PreprocessingTaskMeta | null
   /** Computed: sum of file_tasks[].document_count. */
   documents_count: number
