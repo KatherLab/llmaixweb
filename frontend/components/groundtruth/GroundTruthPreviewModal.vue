@@ -276,17 +276,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { schemasApi } from '@/services/schemasApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
-import type { GroundTruth, Schema, SchemaDefinition, ComparisonMethod, FieldType } from '@/types'
-
-/** Actual shape returned by `GET /groundtruth/{id}/preview` (richer than the
- * shared `GroundTruthPreview` type, which only models the list-view summary). */
-interface GroundTruthPreviewData {
-  fields?: string[]
-  field_types?: Record<string, string>
-  preview_data?: Record<string, unknown>
-  available_columns?: string[]
-  current_id_column?: string | null
-}
+import type { ComparisonMethod, FieldType, GroundTruth, Schema, SchemaDefinition } from '@/types'
 
 interface MappingItem {
   schema_id: number
@@ -420,7 +410,7 @@ async function loadSchemas() {
 
 async function loadGroundTruthPreview() {
   const previewRes = await groundtruthApi.preview(props.projectId!, props.groundTruth!.id)
-  const data = previewRes.data as GroundTruthPreviewData
+  const data = previewRes.data
 
   groundTruthFieldPaths.value = data.fields || []
   groundTruthFieldTypes.value = data.field_types || {}

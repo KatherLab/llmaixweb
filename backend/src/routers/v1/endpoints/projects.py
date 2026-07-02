@@ -3,7 +3,7 @@ import datetime
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, load_only, noload, selectinload
 
 from .... import models, schemas
@@ -272,8 +272,6 @@ def get_projects(
     limit: int = Query(1000, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ) -> list[schemas.Project]:
-    from sqlalchemy import func
-
     stmt = select(models.Project)
 
     if current_user.role == "admin":
@@ -332,18 +330,50 @@ def get_project(
     project_id: int,
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.Project:
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-    if not project:
+    # Mirror the list endpoint: join a document-count subquery and load the
+    # owner minimally, so the detail response carries a real document_count
+    # (the ORM has no such column — without this the schema default of 0 is
+    # always returned) without hydrating the project's full document set.
+    doc_count_subq = (
+        select(func.count(models.Document.id))
+        .where(models.Document.project_id == models.Project.id)
+        .where(models.Document.is_latest)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
+
+    row = db.execute(
+        select(models.Project, doc_count_subq.label("document_count"))
+        .where(models.Project.id == project_id)
+        .options(
+            selectinload(models.Project.owner).options(
+                load_only(models.User.id, models.User.full_name, models.User.email)
+            ),
+            noload(models.Project.documents),
+        )
+    ).first()
+
+    if row is None:
         raise HTTPException(status_code=404, detail="Project not found")
+    project, doc_count = row
 
     if current_user.role != "admin" and project.owner_id != current_user.id:
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project"
         )
 
-    return schemas.Project.model_validate(project)
+    project_dict = {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "status": project.status,
+        "owner_id": project.owner_id,
+        "owner": project.owner,
+        "document_count": doc_count or 0,
+        "created_at": project.created_at,
+        "updated_at": project.updated_at,
+    }
+    return schemas.Project.model_validate(project_dict)
 
 
 @router.post("", response_model=schemas.Project)

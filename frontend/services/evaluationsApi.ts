@@ -9,7 +9,7 @@ import type {
   DocumentEvaluationDetail,
   Evaluation,
   EvaluationDetail,
-  EvaluationErrorSummary,
+  EvaluationError,
 } from '@/types'
 
 export const evaluationsApi = {
@@ -37,6 +37,8 @@ export const evaluationsApi = {
       `/project/${projectId}/evaluation/${evaluationId}/document/${documentId}`,
     ) as Promise<ApiBody<DocumentEvaluationDetail>>
   },
+  // `GET /errors` returns a bare array of error-detail objects (not a wrapped
+  // summary), so the response body is `EvaluationError[]`.
   getErrors(
     projectId: number | string,
     evaluationId: number | string,
@@ -44,7 +46,7 @@ export const evaluationsApi = {
   ) {
     return api.get(`/project/${projectId}/evaluation/${evaluationId}/errors`, {
       params,
-    }) as Promise<ApiBody<EvaluationErrorSummary>>
+    }) as Promise<ApiBody<EvaluationError[]>>
   },
   // Bulk export. `params` carries format + flags + repeated `evaluation_ids[]`.
   download(projectId: number | string, params: EvaluationFilter = {}) {

@@ -73,11 +73,11 @@ export interface EvaluationSummary {
 export interface EvaluationError {
   document_id: number
   document_name: string | null
-  error_message: string
   error_type: string
   field_name: string | null
   ground_truth_value: string | null
   predicted_value: string | null
+  confidence_score: number | null
   context: string | null
 }
 

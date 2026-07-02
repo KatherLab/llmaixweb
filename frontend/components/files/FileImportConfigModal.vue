@@ -212,7 +212,7 @@ const isXLSX = computed(() => {
 
 interface PreviewData {
   headers: (string | null)[]
-  rows: (string | null)[][]
+  rows: (string | number | boolean | null)[][]
   sheets?: string[]
 }
 
@@ -308,19 +308,13 @@ const loadPreview = async (): Promise<void> => {
       params as unknown as Record<string, unknown>,
     )
 
-    // The API response shape (headers/rows 2D array, sheets) differs from the
-    // declared FilePreviewRows type; cast to the shape this component uses.
-    const previewData = data as unknown as PreviewData & {
-      sheets?: string[]
-    }
-
-    preview.value = previewData
-    if (previewData.sheets) sheets.value = previewData.sheets
+    preview.value = data
+    if (data.sheets) sheets.value = data.sheets
 
     const labels = headerLabels.value
 
     // Case ID
-    let guessed = guessIdColumn(previewData.headers || [])
+    let guessed = guessIdColumn(data.headers || [])
     if (!guessed || !labels.includes(guessed)) {
       guessed = guessIdColumn(labels) || ''
     }
@@ -337,8 +331,8 @@ const loadPreview = async (): Promise<void> => {
     }
 
     // XLSX sheet default
-    if (isXLSX.value && !sheet.value && previewData.sheets && previewData.sheets.length)
-      sheet.value = previewData.sheets[0]
+    if (isXLSX.value && !sheet.value && data.sheets && data.sheets.length)
+      sheet.value = data.sheets[0]
   } catch {
     toast.error('Failed to load preview')
     preview.value = { headers: [], rows: [] }

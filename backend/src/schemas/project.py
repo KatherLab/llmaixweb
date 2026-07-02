@@ -4,9 +4,15 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, List
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
-from ..core.config import settings
 from ..models import ProjectStatus
 from ..utils.enums import (
     ComparisonMethod,
@@ -441,7 +447,7 @@ class TrialSummary(UTCModel):
     prompt_id: int
     document_ids: list[int] | None = None
     document_set_id: int | None = None
-    llm_model: str | None = settings.OPENAI_API_MODEL
+    llm_model: str | None = None
     api_key: str | None = Field(default=None, exclude=True)
     base_url: str | None = Field(default=None, exclude=True)
     bypass_celery: bool = False
@@ -636,6 +642,7 @@ class PreprocessingTask(PreprocessingTaskBase):
     task_metadata: dict | None = None
 
     # Computed fields for document counts
+    @computed_field
     @property
     def documents_count(self) -> int:
         """Total documents produced across all file tasks"""

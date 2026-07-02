@@ -7,12 +7,21 @@ import type { File, FileFilter, PaginatedFiles } from '@/types'
 
 const MULTIPART = { 'Content-Type': 'multipart/form-data' }
 
-/** Tabular preview rows (CSV/XLSX). */
+/** Tabular preview rows (CSV/XLSX) returned by `GET /file/{id}/preview-rows`.
+ *
+ * `rows` is a 2D array (row → cell values), not an array of row objects.
+ * `sheets` and `detected_*` keys are only present for XLSX / CSV respectively.
+ */
 export interface FilePreviewRows {
-  columns: string[]
-  rows: Record<string, unknown>[]
-  row_count: number
-  [key: string]: unknown
+  headers: (string | null)[]
+  rows: (string | number | boolean | null)[][]
+  total_rows: number
+  truncated: boolean
+  /** CSV only. */
+  detected_delimiter?: string
+  detected_encoding?: string
+  /** XLSX only. */
+  sheets?: string[]
 }
 
 export const filesApi = {

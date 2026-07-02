@@ -46,15 +46,24 @@ export interface GroundTruthUpdate {
 
 /** Response for `GET /groundtruth/{id}/preview`. */
 export interface GroundTruthPreview {
-  columns: string[]
-  rows: Record<string, unknown>[]
-  row_count: number
-  format: string | null
+  /** Dotted field paths discovered in the ground-truth data. */
+  fields: string[]
+  /** `{ "path": "type" }` for each discovered field. */
+  field_types: Record<string, string>
+  /** Up to 3 sample ground-truth records. */
+  preview_data: Record<string, unknown>
+  /** File columns available as the ID column (CSV/XLSX only). */
+  available_columns: string[]
+  /** Currently configured ID column (may be null). */
+  current_id_column: string | null
 }
 
+/** Response for `GET /groundtruth/{id}/schema/{schemaId}/mapping/status`. */
 export interface FieldMappingStatus {
-  is_configured: boolean
-  mappings: FieldMapping[]
-  schema_fields: string[]
-  ground_truth_fields: string[]
+  has_mappings: boolean
+  mapping_count: number
+  schema_field_count: number
+  mapping_complete: boolean
+  groundtruth_name: string | null
+  schema_name: string | null
 }

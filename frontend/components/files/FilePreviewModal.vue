@@ -229,7 +229,7 @@ defineEmits<{
 
 interface TabularData {
   headers: (string | null)[]
-  rows: (string | null)[][]
+  rows: (string | number | boolean | null)[][]
 }
 
 const isLoading = ref(true)
@@ -358,33 +358,17 @@ const loadPreview = async (): Promise<void> => {
         params as unknown as Record<string, unknown>,
       )
 
-      // The API response shape (headers/rows 2D array, sheets, truncated,
-      // total_rows, id/text columns) differs from the declared FilePreviewRows
-      // type; cast to the shape this component actually consumes.
-      const preview = data as unknown as {
-        headers?: (string | null)[]
-        rows?: (string | null)[][]
-        sheets?: string[]
-        truncated?: boolean
-        total_rows?: number
-        totalRows?: number
-        idColumn?: string
-        id_column?: string
-        textColumns?: string[]
-        text_columns?: string[]
-      }
-
       tabularData.value = {
-        headers: preview.headers || [],
-        rows: preview.rows || [],
+        headers: data.headers || [],
+        rows: data.rows || [],
       }
-      truncated.value = !!preview.truncated
-      totalRows.value = preview.total_rows || preview.totalRows || 0
+      truncated.value = !!data.truncated
+      totalRows.value = data.total_rows || 0
 
-      idColumn.value =
-        preview.idColumn || preview.id_column || file.file_metadata?.case_id_column || ''
-      textColumns.value =
-        preview.textColumns || preview.text_columns || file.file_metadata?.text_columns || []
+      // ID / text columns are sourced from the file import config, not the
+      // preview-rows response.
+      idColumn.value = file.file_metadata?.case_id_column || ''
+      textColumns.value = file.file_metadata?.text_columns || []
     } else if (file.file_type === 'text/plain') {
       const response = await filesApi.getContent(props.projectId, file.id, {
         preview: true,

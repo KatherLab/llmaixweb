@@ -146,7 +146,11 @@ def login(
         token_version=user.token_version,
     )
     refresh_token = create_refresh_token(db, user)
-    # Return token and user info
+    # Return token and user info. `is_active` / `last_login_at` are included so
+    # the response matches `AuthTokenUser` on the frontend — the auth store
+    # re-fetches `/user/me` right after, but the token response must still be
+    # well-typed on its own (callers that read it directly must not get
+    # undefined for fields the type declares as required).
     return schemas.Token(
         access_token=access_token,
         token_type="bearer",
@@ -155,6 +159,8 @@ def login(
             "email": user.email,
             "full_name": user.full_name,
             "role": user.role,
+            "is_active": user.is_active,
+            "last_login_at": user.last_login_at,
         },
         refresh_token=refresh_token,
     )
@@ -193,6 +199,8 @@ def refresh_token(
             "email": user.email,
             "full_name": user.full_name,
             "role": user.role,
+            "is_active": user.is_active,
+            "last_login_at": user.last_login_at,
         },
         refresh_token=new_refresh,
     )

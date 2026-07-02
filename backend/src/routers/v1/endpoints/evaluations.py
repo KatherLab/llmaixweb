@@ -706,7 +706,7 @@ def download_evaluations_report(
     )
 
 
-@router.post("/evaluation/batch", response_model=list[schemas.EvaluationSummary])
+@router.post("/evaluation/batch", response_model=list[schemas.Evaluation])
 def batch_evaluate_trials(
     *,
     db: Session = Depends(get_db),
@@ -715,7 +715,7 @@ def batch_evaluate_trials(
     groundtruth_id: int = Body(...),
     force_recalculate: bool = Body(False),
     current_user: models.User = Depends(get_current_user),
-) -> list[models.Evaluation]:
+) -> list[schemas.Evaluation]:
     """Evaluate multiple trials against ground truth."""
     # Cap the batch to bound work (each trial evaluation recomputes metrics
     # across all its documents).

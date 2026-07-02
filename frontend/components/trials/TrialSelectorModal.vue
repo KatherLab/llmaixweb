@@ -469,9 +469,7 @@ const checkMappingStatus = async (trial: TrialSummary): Promise<boolean> => {
       props.groundTruth.id,
       trial.schema_id,
     )
-    // Backend returns `has_mappings` (not the typed `is_configured`); the
-    // shared FieldMappingStatus type is out of sync with the API response.
-    return (response.data as unknown as { has_mappings?: boolean }).has_mappings || false
+    return response.data.has_mappings || false
   } catch (err) {
     console.error(`Failed to check mapping status for trial ${trial.id}:`, err)
     return false
