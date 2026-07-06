@@ -340,7 +340,14 @@ def get_projects(
 
     # Build projects with aggregate counts
     projects = []
-    for project, doc_count, schema_count, prompt_count, trial_count, eval_count in results:
+    for (
+        project,
+        doc_count,
+        schema_count,
+        prompt_count,
+        trial_count,
+        eval_count,
+    ) in results:
         project_dict = {
             "id": project.id,
             "name": project.name,
