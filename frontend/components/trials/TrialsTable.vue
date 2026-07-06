@@ -15,7 +15,7 @@
     empty-title="No trials found"
     expandable
     :expanded-keys="expandedKeys"
-    @toggle-selection="$emit('toggle-selection', $event)"
+    @toggle-selection="$emit('toggle-selection', $event as number)"
     @toggle-all="$emit('toggle-all')"
     @page-change="$emit('page-change', $event)"
     @page-size-change="$emit('page-size-change', $event)"
@@ -181,12 +181,12 @@ const allSelected = computed(
 
 const expandedKeys = ref<number[]>([])
 
-const toggleExpand = (id: number): void => {
-  const idx = expandedKeys.value.indexOf(id)
+const toggleExpand = (id: string | number): void => {
+  const idx = expandedKeys.value.indexOf(id as number)
   if (idx > -1) {
     expandedKeys.value.splice(idx, 1)
   } else {
-    expandedKeys.value.push(id)
+    expandedKeys.value.push(id as number)
   }
 }
 

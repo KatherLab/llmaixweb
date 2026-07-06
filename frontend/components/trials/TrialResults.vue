@@ -110,10 +110,10 @@
             <span
               :class="[
                 'text-[10px] uppercase tracking-wide px-2 py-0.5 rounded',
-                statusPillClass(row.status),
+                statusPillClass(row.status as string),
               ]"
             >
-              {{ statusLabel(row.status) }}
+              {{ statusLabel(row.status as string) }}
             </span>
           </template>
 
@@ -135,7 +135,7 @@
 
           <template #cell-tokens="{ row }">
             <span class="text-sm text-slate-600 dark:text-slate-400">
-              {{ row.additional_content?.usage?.total_tokens ?? '—' }}
+              {{ getTokenUsage(row as unknown as TrialResultItem) }}
             </span>
           </template>
 
@@ -341,6 +341,13 @@ const resultIndex = (row: TrialResultItem): string => {
   return String((currentPage.value - 1) * pageSize.value + idxInPage + 1)
 }
 
+// Token usage for the "Tokens" column — additional_content.usage is loosely typed
+// on the backend, so narrow it here.
+const getTokenUsage = (row: TrialResultItem): string | number => {
+  const usage = row.additional_content?.usage as TokenUsage | undefined
+  return usage?.total_tokens ?? '—'
+}
+
 // --- Fetch ---
 
 const fetchTrial = async (): Promise<void> => {
@@ -410,12 +417,12 @@ function handlePageSizeChange(size: number): void {
   fetchResults()
 }
 
-function toggleExpand(id: number): void {
-  const idx = expandedKeys.value.indexOf(id)
+function toggleExpand(id: string | number): void {
+  const idx = expandedKeys.value.indexOf(id as number)
   if (idx > -1) {
     expandedKeys.value.splice(idx, 1)
   } else {
-    expandedKeys.value.push(id)
+    expandedKeys.value.push(id as number)
   }
 }
 

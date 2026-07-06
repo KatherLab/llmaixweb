@@ -148,12 +148,12 @@ const clearSearch = () => {
   searchQuery.value = ''
 }
 
-const toggleExpand = (id: number) => {
-  const idx = expandedKeys.value.indexOf(id)
+const toggleExpand = (id: string | number) => {
+  const idx = expandedKeys.value.indexOf(id as number)
   if (idx > -1) {
     expandedKeys.value.splice(idx, 1)
   } else {
-    expandedKeys.value.push(id)
+    expandedKeys.value.push(id as number)
   }
 }
 

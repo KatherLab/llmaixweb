@@ -1,6 +1,4 @@
-# .github/workflows/test.yml
-
-name: Backend Tests
+name: CI
 
 on:
   push:
@@ -9,8 +7,54 @@ on:
     branches: [main]
 
 jobs:
-  uv-example:
-    name: Run tests with uv
+  backend-lint:
+    name: Backend lint & format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Ruff check
+        run: uv run ruff check backend/src/
+
+      - name: Ruff format check
+        run: uv run ruff format --check backend/src/
+
+  frontend-check:
+    name: Frontend lint, types & build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Format, lint & type-check
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+
+  backend-test:
+    name: Backend tests
     runs-on: ubuntu-latest
 
     steps:

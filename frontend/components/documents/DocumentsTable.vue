@@ -10,7 +10,7 @@
     :show-page-size-selector="false"
     item-label="documents"
     empty-title="No documents found"
-    @toggle-selection="$emit('toggle-selection', $event)"
+    @toggle-selection="$emit('toggle-selection', $event as number)"
     @toggle-all="$emit('toggle-select-all')"
     @page-change="$emit('page-change', $event)"
     @page-size-change="$emit('page-size-change', $event)"
