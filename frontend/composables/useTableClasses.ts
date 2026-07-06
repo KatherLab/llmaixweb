@@ -49,13 +49,13 @@ export function useTableClasses({
     /** Card wrapper around a table (with overflow clipping for sticky headers). */
     wrapper: 'bg-surface rounded-card border border-default shadow-sm overflow-hidden',
     /** The `<table>` element. */
-    table: 'min-w-full divide-y divide-default',
+    table: 'min-w-full divide-y divide-default-border',
     /** `<thead>` — header row background. */
     thead: 'bg-surface-muted',
     /** `<th>` — header cell. */
     th: `${cellPadding} text-left text-xs font-semibold text-content-muted uppercase tracking-wider`,
     /** `<tbody>` — body rows. */
-    tbody: 'bg-surface divide-y divide-default',
+    tbody: 'bg-surface divide-y divide-default-border',
     /** `<tr>` — body row (hover highlight). */
     tr: 'hover:bg-surface-muted transition-colors',
     /** `<td>` — body cell. */

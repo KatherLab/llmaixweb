@@ -7,14 +7,14 @@
           :class="[
             'w-full text-left px-3 py-1.5 rounded-card text-sm transition-colors flex items-center space-x-2',
             (currentPath ?? []).length === 0
-              ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
-              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300',
+              ? 'bg-primary-soft text-primary font-medium'
+              : 'hover:bg-surface-muted text-content-muted',
           ]"
           @click="$emit('navigate', [])"
         >
           <Home class="h-4 w-4" />
           <span>Root</span>
-          <span class="text-xs text-slate-500 dark:text-slate-400">{{ schema.type }}</span>
+          <span class="text-xs text-content-muted">{{ schema.type }}</span>
         </button>
 
         <!-- Root properties -->

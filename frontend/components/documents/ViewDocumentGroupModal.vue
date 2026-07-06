@@ -3,7 +3,7 @@
   <BaseModal :open="open" size="xl" @close="$emit('close')">
     <template #header>
       <div class="flex items-center gap-3">
-        <h3 class="text-xl font-semibold text-slate-900 dark:text-white">{{ group.name }}</h3>
+        <h3 class="text-xl font-semibold text-content">{{ group.name }}</h3>
         <BaseButton variant="primary" size="sm" @click="$emit('edit', group)">
           Edit Group
         </BaseButton>
@@ -14,25 +14,25 @@
       <!-- Group Info -->
       <div class="mb-6 space-y-4">
         <div>
-          <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">Description</h4>
-          <p class="mt-1 text-slate-900 dark:text-white">
+          <h4 class="text-sm font-medium text-content-muted">Description</h4>
+          <p class="mt-1 text-content">
             {{ group.description || 'No description provided' }}
           </p>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">Created</h4>
-            <p class="mt-1 text-slate-900 dark:text-white">{{ formatDate(group.created_at) }}</p>
+            <h4 class="text-sm font-medium text-content-muted">Created</h4>
+            <p class="mt-1 text-content">{{ formatDate(group.created_at) }}</p>
           </div>
           <div>
-            <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">Last Updated</h4>
-            <p class="mt-1 text-slate-900 dark:text-white">{{ formatDate(group.updated_at) }}</p>
+            <h4 class="text-sm font-medium text-content-muted">Last Updated</h4>
+            <p class="mt-1 text-content">{{ formatDate(group.updated_at) }}</p>
           </div>
         </div>
 
         <div v-if="group.tags && group.tags.length > 0">
-          <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tags</h4>
+          <h4 class="text-sm font-medium text-content-muted mb-2">Tags</h4>
           <div class="flex flex-wrap gap-2">
             <StatusBadge
               v-for="tag in group.tags"
@@ -46,22 +46,20 @@
         </div>
 
         <div v-if="group.preprocessing_config">
-          <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Preprocessing Configuration
-          </h4>
-          <p class="mt-1 text-slate-900 dark:text-white">{{ group.preprocessing_config.name }}</p>
+          <h4 class="text-sm font-medium text-content-muted">Preprocessing Configuration</h4>
+          <p class="mt-1 text-content">{{ group.preprocessing_config.name }}</p>
         </div>
 
         <div v-if="group.trial_id">
-          <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">Source Trial</h4>
-          <p class="mt-1 text-slate-900 dark:text-white">Trial #{{ group.trial_id }}</p>
+          <h4 class="text-sm font-medium text-content-muted">Source Trial</h4>
+          <p class="mt-1 text-content">Trial #{{ group.trial_id }}</p>
         </div>
       </div>
 
       <!-- Documents List -->
       <div>
         <div class="flex justify-between items-center mb-4">
-          <h4 class="font-medium text-slate-900 dark:text-white">Documents ({{ docTotal }})</h4>
+          <h4 class="font-medium text-content">Documents ({{ docTotal }})</h4>
           <div class="flex items-center gap-2">
             <BaseButton variant="link" tone="blue" class="text-sm" @click="exportDocumentList">
               Export List
@@ -86,12 +84,12 @@
             </thead>
             <tbody :class="t.tbody">
               <tr v-if="docLoading">
-                <td colspan="4" class="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                <td colspan="4" class="px-4 py-8 text-center text-content-subtle">
                   Loading documents…
                 </td>
               </tr>
               <tr v-else-if="documents.length === 0">
-                <td colspan="4" class="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                <td colspan="4" class="px-4 py-8 text-center text-content-subtle">
                   No documents in this set
                 </td>
               </tr>
@@ -100,7 +98,7 @@
                   <div class="flex items-center">
                     <FileIcon :file-type="doc.original_file?.file_type ?? ''" :size="32" />
                     <div class="ml-3">
-                      <p class="text-sm font-medium text-slate-900 dark:text-white">
+                      <p class="text-sm font-medium text-content">
                         {{
                           doc.document_name || doc.original_file?.file_name || `Document #${doc.id}`
                         }}
@@ -111,27 +109,24 @@
                           doc.original_file?.file_name &&
                           doc.document_name !== doc.original_file?.file_name
                         "
-                        class="text-xs text-slate-500 dark:text-slate-400"
+                        class="text-xs text-content-muted"
                       >
                         {{ doc.original_file?.file_name }}
                       </p>
-                      <p v-else class="text-xs text-slate-500 dark:text-slate-400">
+                      <p v-else class="text-xs text-content-muted">
                         {{ formatFileSize(doc.original_file?.file_size) }}
                       </p>
                     </div>
                   </div>
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900 dark:text-white">
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-content">
                   {{ doc.preprocessing_config?.name || 'N/A' }}
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-content-muted">
                   {{ formatDate(doc.created_at) }}
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                    @click="viewDocument(doc)"
-                  >
+                  <button class="text-primary hover:text-primary" @click="viewDocument(doc)">
                     View
                   </button>
                 </td>
@@ -152,24 +147,24 @@
       </div>
 
       <!-- Usage Statistics -->
-      <div class="mt-6 bg-slate-50 dark:bg-slate-800 rounded-card p-4">
-        <h4 class="font-medium text-slate-900 dark:text-white mb-3">Usage Statistics</h4>
+      <div class="mt-6 bg-surface-muted rounded-card p-4">
+        <h4 class="font-medium text-content mb-3">Usage Statistics</h4>
         <div class="grid grid-cols-3 gap-4">
           <div>
-            <p class="text-sm text-slate-600 dark:text-slate-400">Used in Trials</p>
-            <p class="text-2xl font-semibold text-slate-900 dark:text-white">
+            <p class="text-sm text-content-muted">Used in Trials</p>
+            <p class="text-2xl font-semibold text-content">
               {{ usageStats.trialsCount }}
             </p>
           </div>
           <div>
-            <p class="text-sm text-slate-600 dark:text-slate-400">Total Extractions</p>
-            <p class="text-2xl font-semibold text-slate-900 dark:text-white">
+            <p class="text-sm text-content-muted">Total Extractions</p>
+            <p class="text-2xl font-semibold text-content">
               {{ usageStats.extractionsCount }}
             </p>
           </div>
           <div>
-            <p class="text-sm text-slate-600 dark:text-slate-400">Last Used</p>
-            <p class="text-sm font-medium text-slate-900 dark:text-white">
+            <p class="text-sm text-content-muted">Last Used</p>
+            <p class="text-sm font-medium text-content">
               {{ usageStats.lastUsed ? formatDate(usageStats.lastUsed) : 'Never' }}
             </p>
           </div>

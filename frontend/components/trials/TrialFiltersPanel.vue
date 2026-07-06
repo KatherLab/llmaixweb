@@ -95,7 +95,7 @@
         />
       </div>
       <button
-        class="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+        class="px-3 py-1.5 text-sm text-primary hover:text-primary transition-colors"
         type="button"
         @click="emit('apply')"
       >

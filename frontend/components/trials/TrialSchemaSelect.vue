@@ -8,14 +8,14 @@
       </option>
     </select>
     <div v-if="selectedSchema" class="mt-1 text-xs">
-      <p class="text-slate-500 dark:text-slate-400">
+      <p class="text-content-muted">
         {{ summarizeSchema(selectedSchema.schema_definition) }}
       </p>
       <details>
-        <summary class="text-blue-700 dark:text-blue-400 cursor-pointer hover:underline">
-          Preview fields
-        </summary>
-        <div class="bg-slate-50 dark:bg-slate-800 border rounded p-2 mt-1 max-h-48 overflow-auto">
+        <summary class="text-primary cursor-pointer hover:underline">Preview fields</summary>
+        <div
+          class="bg-surface-muted border border-default rounded-card p-2 mt-1 max-h-48 overflow-auto"
+        >
           <SchemaFieldList :schema-definition="selectedSchema.schema_definition" />
         </div>
       </details>

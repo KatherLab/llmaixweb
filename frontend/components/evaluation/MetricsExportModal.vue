@@ -13,53 +13,41 @@
         <div class="grid grid-cols-3 gap-3">
           <div
             class="relative flex cursor-pointer rounded-card border p-4 focus:outline-none"
-            :class="
-              exportFormat === 'csv'
-                ? 'border-blue-600 ring-2 ring-blue-600 dark:border-blue-500 dark:ring-blue-500'
-                : 'border-slate-300 dark:border-slate-600'
-            "
+            :class="exportFormat === 'csv' ? 'border-primary ring-2 ring-ring' : 'border-strong'"
             @click="exportFormat = 'csv'"
           >
             <div class="flex h-5 items-center">
               <input v-model="exportFormat" type="radio" value="csv" :class="radioClass" />
             </div>
             <div class="ml-3">
-              <div class="text-sm font-medium text-slate-900 dark:text-white">CSV</div>
-              <div class="text-sm text-slate-500 dark:text-slate-400">Comma-separated values</div>
+              <div class="text-sm font-medium text-content">CSV</div>
+              <div class="text-sm text-content-subtle">Comma-separated values</div>
             </div>
           </div>
           <div
             class="relative flex cursor-pointer rounded-card border p-4 focus:outline-none"
-            :class="
-              exportFormat === 'xlsx'
-                ? 'border-blue-600 ring-2 ring-blue-600 dark:border-blue-500 dark:ring-blue-500'
-                : 'border-slate-300 dark:border-slate-600'
-            "
+            :class="exportFormat === 'xlsx' ? 'border-primary ring-2 ring-ring' : 'border-strong'"
             @click="exportFormat = 'xlsx'"
           >
             <div class="flex h-5 items-center">
               <input v-model="exportFormat" type="radio" value="xlsx" :class="radioClass" />
             </div>
             <div class="ml-3">
-              <div class="text-sm font-medium text-slate-900 dark:text-white">Excel</div>
-              <div class="text-sm text-slate-500 dark:text-slate-400">Excel spreadsheet</div>
+              <div class="text-sm font-medium text-content">Excel</div>
+              <div class="text-sm text-content-subtle">Excel spreadsheet</div>
             </div>
           </div>
           <div
             class="relative flex cursor-pointer rounded-card border p-4 focus:outline-none"
-            :class="
-              exportFormat === 'zip'
-                ? 'border-blue-600 ring-2 ring-blue-600 dark:border-blue-500 dark:ring-blue-500'
-                : 'border-slate-300 dark:border-slate-600'
-            "
+            :class="exportFormat === 'zip' ? 'border-primary ring-2 ring-ring' : 'border-strong'"
             @click="exportFormat = 'zip'"
           >
             <div class="flex h-5 items-center">
               <input v-model="exportFormat" type="radio" value="zip" :class="radioClass" />
             </div>
             <div class="ml-3">
-              <div class="text-sm font-medium text-slate-900 dark:text-white">ZIP</div>
-              <div class="text-sm text-slate-500 dark:text-slate-400">ZIP archive (advanced)</div>
+              <div class="text-sm font-medium text-content">ZIP</div>
+              <div class="text-sm text-content-subtle">ZIP archive (advanced)</div>
             </div>
           </div>
         </div>
@@ -68,12 +56,8 @@
       <!-- Evaluation selection -->
       <div>
         <label :class="labelClass">Select Evaluations</label>
-        <div
-          class="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-card"
-        >
-          <div
-            class="p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-          >
+        <div class="max-h-64 overflow-y-auto border border-default rounded-card">
+          <div class="p-3 border-b border-default bg-surface-muted">
             <label class="flex items-center">
               <input
                 type="checkbox"
@@ -81,16 +65,14 @@
                 :class="checkboxClass"
                 @change="toggleSelectAll"
               />
-              <span class="ml-2 text-sm font-medium text-slate-700 dark:text-slate-200"
-                >Select All</span
-              >
+              <span class="ml-2 text-sm font-medium text-content-muted">Select All</span>
             </label>
           </div>
-          <div class="divide-y divide-slate-200 dark:divide-slate-700">
+          <div class="divide-y divide-default">
             <div
               v-for="evaluation in evaluations"
               :key="evaluation.id"
-              class="p-3 hover:bg-slate-50 dark:hover:bg-slate-800"
+              class="p-3 hover:bg-surface-muted"
             >
               <label class="flex items-center">
                 <input
@@ -100,10 +82,10 @@
                   :class="checkboxClass"
                 />
                 <div class="ml-3 flex-1">
-                  <div class="text-sm font-medium text-slate-900 dark:text-white">
+                  <div class="text-sm font-medium text-content">
                     Trial #{{ evaluation.trial_id }}
                   </div>
-                  <div class="text-sm text-slate-500 dark:text-slate-400">
+                  <div class="text-sm text-content-subtle">
                     {{ getEvaluationAccuracyPct(evaluation) }} accuracy •
                     {{ getEvaluationDocumentCount(evaluation) }} documents •
                     {{ formatDate(evaluation.created_at) }}
@@ -132,7 +114,7 @@
               type="checkbox"
               :class="checkboxClass"
             />
-            <label for="include-details" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
+            <label for="include-details" class="ml-2 text-sm text-content-muted">
               Include detailed document-level metrics
             </label>
           </div>
@@ -143,10 +125,7 @@
               type="checkbox"
               :class="checkboxClass"
             />
-            <label
-              for="include-field-details"
-              class="ml-2 text-sm text-slate-700 dark:text-slate-300"
-            >
+            <label for="include-field-details" class="ml-2 text-sm text-content-muted">
               Include field-by-field comparison data
             </label>
           </div>
@@ -157,7 +136,7 @@
               type="checkbox"
               :class="checkboxClass"
             />
-            <label for="include-errors" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
+            <label for="include-errors" class="ml-2 text-sm text-content-muted">
               Include error analysis and examples
             </label>
           </div>
@@ -168,10 +147,7 @@
               type="checkbox"
               :class="checkboxClass"
             />
-            <label
-              for="include-document-content"
-              class="ml-2 text-sm text-slate-700 dark:text-slate-300"
-            >
+            <label for="include-document-content" class="ml-2 text-sm text-content-muted">
               Include document content (in docs/)
             </label>
           </div>
@@ -182,7 +158,7 @@
               type="checkbox"
               :class="checkboxClass"
             />
-            <label for="include-gt-content" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
+            <label for="include-gt-content" class="ml-2 text-sm text-content-muted">
               Include ground truth content (in docs/)
             </label>
           </div>
@@ -190,12 +166,9 @@
       </div>
 
       <!-- Preview of export content -->
-      <div
-        v-if="selectedEvaluations.length > 0"
-        class="bg-slate-50 dark:bg-slate-800 rounded-card p-4"
-      >
-        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Export Preview</h4>
-        <div class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+      <div v-if="selectedEvaluations.length > 0" class="bg-surface-muted rounded-card p-4">
+        <h4 class="text-sm font-medium text-content-muted mb-2">Export Preview</h4>
+        <div class="text-sm text-content-muted space-y-1">
           <div>• {{ selectedEvaluations.length }} evaluation(s) selected</div>
           <div>• {{ totalDocuments }} total documents</div>
           <div v-if="includeDetails">• Document-level metrics included</div>

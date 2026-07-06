@@ -3,7 +3,7 @@
     <template #header>
       <div>
         <div class="flex items-center gap-2">
-          <h3 class="text-lg font-medium text-slate-900 dark:text-white">
+          <h3 class="text-lg font-medium text-content">
             {{ prompt?.name }}
           </h3>
           <span
@@ -16,24 +16,20 @@
             >Snapshot</span
           >
         </div>
-        <p v-if="prompt?.description" class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <p v-if="prompt?.description" class="mt-1 text-sm text-content-muted">
           {{ prompt.description }}
         </p>
       </div>
     </template>
 
     <div class="space-y-4">
-      <div v-if="prompt?.system_prompt" class="bg-slate-50 dark:bg-slate-800 rounded-card p-4">
-        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">System Prompt</h4>
-        <pre class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{
-          prompt.system_prompt
-        }}</pre>
+      <div v-if="prompt?.system_prompt" class="bg-surface-muted rounded-card p-4">
+        <h4 class="text-sm font-medium text-content-muted mb-2">System Prompt</h4>
+        <pre class="text-sm text-content-muted whitespace-pre-wrap">{{ prompt.system_prompt }}</pre>
       </div>
-      <div v-if="prompt?.user_prompt" class="bg-blue-50 dark:bg-blue-900/20 rounded-card p-4">
-        <h4 class="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">User Prompt</h4>
-        <pre class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{
-          prompt.user_prompt
-        }}</pre>
+      <div v-if="prompt?.user_prompt" class="bg-primary-soft rounded-card p-4">
+        <h4 class="text-sm font-medium text-primary mb-2">User Prompt</h4>
+        <pre class="text-sm text-content-muted whitespace-pre-wrap">{{ prompt.user_prompt }}</pre>
       </div>
     </div>
 

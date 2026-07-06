@@ -1,42 +1,40 @@
 <template>
-  <ul class="pl-4">
+  <ul class="pl-3">
     <li v-for="(child, key) in fields" :key="path(key)">
       <div
-        class="flex items-center gap-2 py-0.5 rounded-card group cursor-pointer select-none transition"
+        class="flex items-center gap-2 py-1 px-2 -mx-2 rounded-card cursor-pointer select-none transition-colors"
         :class="{
-          // selected states (win over dimming)
-          'bg-gradient-to-r from-blue-100/70 to-blue-50/80 dark:from-blue-900/40 dark:to-blue-800/30 shadow border border-blue-300 dark:border-blue-500':
-            selected === path(key) && isLeaf(key) && nodeColor === 'text-blue-700',
-          'bg-gradient-to-r from-purple-100/80 to-blue-50/60 dark:from-blue-900/40 dark:to-blue-800/30 border border-purple-300 dark:border-purple-500':
-            selected === path(key) && isLeaf(key) && nodeColor === 'text-purple-700',
+          // selected: tinted background, accent left bar, ring — clear in both themes
+          'bg-primary-soft ring-1 ring-inset ring-primary': isSelected(key) && variant === 'schema',
+          'bg-purple-100/70 dark:bg-purple-500/15 ring-1 ring-inset ring-purple-400 dark:ring-purple-500':
+            isSelected(key) && variant === 'groundtruth',
 
-          // normal hover (only when not dimmed)
-          'hover:bg-blue-50/60 dark:hover:bg-slate-700/40':
-            !disabled && isLeaf(key) && !(dimMapped && isMapped(path(key))),
+          // hover (only on selectable, unselected leaves)
+          'hover:bg-surface-muted':
+            !disabled && isLeaf(key) && !isSelected(key) && !(dimMapped && isMapped(path(key))),
 
-          // dim mapped leaves unless selected
-          'opacity-50': dimMapped && isLeaf(key) && isMapped(path(key)) && selected !== path(key),
+          // dim already-mapped leaves unless they're the current selection
+          'opacity-50': dimMapped && isLeaf(key) && isMapped(path(key)) && !isSelected(key),
 
-          // disabled whole tree
           'pointer-events-none': disabled,
         }"
-        :title="isLeaf(key) && isMapped(path(key)) ? 'Already mapped' : ''"
+        :title="isLeaf(key) && isMapped(path(key)) ? 'Already mapped — click to reselect' : ''"
         @click="!disabled && isLeaf(key) && $emit('select', path(key))"
       >
         <!-- Expand/collapse indicator for objects -->
         <span v-if="isObject(child)" class="inline-flex items-center mr-0.5">
-          <Folder class="w-3 h-3 text-slate-300 dark:text-slate-600" />
+          <Folder class="w-3 h-3 text-content-subtle" />
         </span>
 
         <!-- Key label -->
         <span
-          class="font-mono font-medium text-slate-900 dark:text-slate-100"
+          class="font-mono font-medium"
           :class="[
-            nodeColor === 'text-purple-700'
-              ? 'text-purple-700 dark:text-purple-400'
-              : 'text-blue-700 dark:text-blue-400',
-            dimMapped && isLeaf(key) && isMapped(path(key)) && selected !== path(key)
-              ? 'text-slate-400'
+            variant === 'groundtruth'
+              ? 'text-purple-700 dark:text-purple-300'
+              : 'text-primary dark:text-blue-300',
+            dimMapped && isLeaf(key) && isMapped(path(key)) && !isSelected(key)
+              ? 'text-content-subtle'
               : '',
           ]"
         >
@@ -52,22 +50,39 @@
           {{ badgeLabel((types ?? {})[path(key)]) }}
         </span>
 
+        <!-- required-but-unmapped marker -->
+        <span
+          v-if="highlight && highlight(path(key))"
+          class="ml-auto text-pink-700 dark:text-pink-300 font-bold"
+          title="Required and not mapped"
+          >*</span
+        >
+
         <!-- mapped badge -->
         <span
-          v-if="isLeaf(key) && isMapped(path(key))"
-          class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+          v-if="isLeaf(key) && isMapped(path(key)) && !isSelected(key)"
+          :class="[
+            'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+            highlight && highlight(path(key)) ? '' : 'ml-auto',
+          ]"
         >
           <Check class="w-2.5 h-2.5" />
           <span class="sr-only">Mapped</span>
         </span>
-
-        <!-- required-but-unmapped marker -->
+        <!-- selected badge -->
         <span
-          v-if="highlight && highlight(path(key))"
-          class="ml-1 text-pink-700 dark:text-pink-300 font-bold"
-          title="Required and not mapped"
-          >*</span
+          v-if="isSelected(key)"
+          :class="[
+            'inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold',
+            highlight && highlight(path(key)) ? '' : 'ml-auto',
+            variant === 'groundtruth'
+              ? 'text-purple-700 dark:text-purple-300'
+              : 'text-primary dark:text-blue-300',
+          ]"
         >
+          <ArrowRight class="w-3 h-3" />
+          <span class="sr-only">Selected</span>
+        </span>
       </div>
 
       <!-- Recurse: show children only for object nodes -->
@@ -77,7 +92,7 @@
         :types="types"
         :selected="selected"
         :highlight="highlight"
-        :node-color="nodeColor"
+        :variant="variant"
         :disabled="disabled"
         :prefix="path(key)"
         :mapped="mapped"
@@ -89,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { Check, Folder } from '@lucide/vue'
+import { ArrowRight, Check, Folder } from '@lucide/vue'
 import { getTypePillClass } from '@/utils/schemaTypeIcons'
 import { getPillClass } from '@/utils/statusStyles'
 
@@ -99,7 +114,8 @@ interface Props {
   required?: string[]
   selected?: string
   highlight?: ((path: string) => boolean) | undefined
-  nodeColor?: string
+  /** Which side of the mapping this tree represents — drives selection colors. */
+  variant?: 'schema' | 'groundtruth'
   disabled?: boolean
   prefix?: string
   mapped?: string[]
@@ -112,7 +128,7 @@ const props = withDefaults(defineProps<Props>(), {
   required: () => [],
   selected: '',
   highlight: undefined,
-  nodeColor: 'text-blue-700',
+  variant: 'schema',
   disabled: false,
   prefix: '',
   mapped: () => [],
@@ -122,6 +138,8 @@ const props = withDefaults(defineProps<Props>(), {
 defineEmits<{ select: [path: string] }>()
 
 const path = (key: string): string => (props.prefix ? `${props.prefix}.${key}` : key)
+/** A leaf is selected when its path matches the active selection. */
+const isSelected = (key: string): boolean => props.selected === path(key) && isLeaf(key)
 
 function isObject(val: unknown): val is Record<string, unknown> {
   return !!val && typeof val === 'object' && !Array.isArray(val) && Object.keys(val).length > 0

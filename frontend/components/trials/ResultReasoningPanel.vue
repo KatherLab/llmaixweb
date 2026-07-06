@@ -11,32 +11,27 @@
       <span>{{ show ? 'Hide' : 'Show' }} LLM Reasoning & Metadata</span>
       <span
         v-if="!show"
-        class="ml-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+        class="ml-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-card bg-surface-sunken text-content-muted"
       >
         {{ hiddenCount }}
       </span>
     </BaseButton>
-    <div
-      v-if="show"
-      class="bg-blue-50/60 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-card mt-3 p-5"
-    >
+    <div v-if="show" class="bg-primary-soft border border-default rounded-card mt-3 p-5">
       <div v-if="reasoningContent" class="mb-4">
-        <h5 class="font-semibold text-blue-800 dark:text-blue-300 mb-2">Reasoning</h5>
+        <h5 class="font-semibold text-primary mb-2">Reasoning</h5>
         <div class="markdown-content" v-html="renderMarkdown(reasoningContent)"></div>
       </div>
       <div v-if="additionalContent?.usage" class="mb-2">
-        <h5 class="font-semibold text-blue-800 dark:text-blue-300 mb-1">Token Usage</h5>
-        <ul class="text-xs text-blue-900 dark:text-blue-200 ml-2">
+        <h5 class="font-semibold text-primary mb-1">Token Usage</h5>
+        <ul class="text-xs text-primary ml-2">
           <li v-for="(v, k) in additionalContent.usage" :key="k">
             <span class="font-medium">{{ k.replace(/_/g, ' ') }}:</span> {{ v }}
           </li>
         </ul>
       </div>
       <div v-if="additionalContent?.finish_reason">
-        <h5 class="font-semibold text-blue-800 dark:text-blue-300 mb-1">Finish Reason</h5>
-        <span class="text-xs text-blue-900 dark:text-blue-200">{{
-          additionalContent.finish_reason
-        }}</span>
+        <h5 class="font-semibold text-primary mb-1">Finish Reason</h5>
+        <span class="text-xs text-primary">{{ additionalContent.finish_reason }}</span>
       </div>
     </div>
   </div>

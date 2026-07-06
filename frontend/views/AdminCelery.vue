@@ -75,7 +75,7 @@
                 <th class="text-left px-4 py-2 font-semibold">Reserved</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-default">
+            <tbody class="divide-y divide-default-border">
               <tr v-for="row in queueRows" :key="row.name" class="hover:bg-surface-muted">
                 <td class="px-4 py-2 font-medium text-content">{{ row.name }}</td>
                 <td class="px-4 py-2 text-content-muted">{{ row.active }}</td>

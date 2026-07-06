@@ -1,7 +1,7 @@
 <template>
   <BaseModal :open="open" size="sm" :close-on-backdrop="!isInviting" @close="emit('close')">
     <template #header>
-      <h3 class="text-lg font-bold text-slate-900 dark:text-white">Invite New User</h3>
+      <h3 class="text-lg font-bold text-content">Invite New User</h3>
     </template>
     <form @submit.prevent="sendInvitation">
       <div class="mb-5">
@@ -19,7 +19,7 @@
       <div class="mb-5">
         <label class="flex items-center gap-2 cursor-pointer">
           <input v-model="sendInviteEmail" type="checkbox" :class="checkboxClass" />
-          <span class="text-sm text-slate-700 dark:text-slate-300">Send invitation via email</span>
+          <span class="text-sm text-content-muted">Send invitation via email</span>
         </label>
       </div>
       <Callout v-if="inviteError" variant="danger" class="mb-4 text-xs">
@@ -42,12 +42,12 @@
           <button
             type="button"
             aria-label="Copy invitation link"
-            class="p-1.5 rounded-card border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all relative"
+            class="p-1.5 rounded-card border border-default text-primary hover:bg-primary-soft transition-all relative"
             @click="copyGeneratedLink"
           >
             <span
               v-if="copySuccess"
-              class="absolute bg-slate-800 dark:bg-slate-700 text-white text-xs px-2 py-1 rounded -top-8 left-1/2 -translate-x-1/2 z-10"
+              class="absolute bg-surface text-white text-xs px-2 py-1 rounded -top-8 left-1/2 -translate-x-1/2 z-10"
             >
               Copied!
             </span>

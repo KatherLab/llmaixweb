@@ -1,44 +1,36 @@
 <template>
   <div class="mb-24">
-    <h2 class="text-center text-3xl font-bold mb-12 text-slate-900 dark:text-white">
-      See It In Action
-    </h2>
+    <h2 class="text-center text-3xl font-bold mb-12 text-content">See It In Action</h2>
 
     <div class="grid lg:grid-cols-2 gap-8 items-start">
       <!-- Input Document Preview -->
       <div class="space-y-4">
-        <h3
-          class="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2 dark:text-white"
-        >
-          <FileText class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <h3 class="text-xl font-semibold text-content mb-4 flex items-center gap-2">
+          <FileText class="w-6 h-6 text-primary" />
           Medical Document
         </h3>
         <div
-          class="rounded-card border border-slate-200 bg-white/80 backdrop-blur-sm p-6 font-mono text-sm text-slate-600 leading-relaxed overflow-hidden relative dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300"
+          class="rounded-card border border-default bg-surface/80 backdrop-blur-sm p-6 font-mono text-sm text-content-muted leading-relaxed overflow-hidden relative"
         >
           <!-- Animated highlight effect -->
           <div
-            class="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/10 to-transparent -skew-x-12 animate-shimmer"
+            class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -skew-x-12 animate-shimmer"
           ></div>
 
           <div class="relative z-10">
-            <div class="mb-4 text-blue-600 dark:text-blue-400">## Clinical Letter</div>
+            <div class="mb-4 text-primary">## Clinical Letter</div>
             <div class="mb-2">
-              <span class="text-slate-400 dark:text-slate-500">Patient:</span>
+              <span class="text-content-subtle">Patient:</span>
               <span class="highlight-patient">Sarah Lee</span>, DOB:
               <span class="highlight-dob">03/04/1961</span>
             </div>
             <div class="mb-2">
-              <span class="text-slate-400 dark:text-slate-500">MRN:</span>
+              <span class="text-content-subtle">MRN:</span>
               <span class="highlight-mrn">2123242</span>
             </div>
-            <div class="mb-4">
-              <span class="text-slate-400 dark:text-slate-500">Date:</span> August 7, 2025
-            </div>
+            <div class="mb-4"><span class="text-content-subtle">Date:</span> August 7, 2025</div>
 
-            <div class="mb-2 text-slate-500 dark:text-slate-400">
-              Dear Dr. General Practitioner,
-            </div>
+            <div class="mb-2 text-content-muted">Dear Dr. General Practitioner,</div>
 
             <div class="mb-4">
               I am writing regarding our patient who was recently diagnosed with a
@@ -51,13 +43,11 @@
             <div class="mb-2 font-semibold">Presenting Symptoms:</div>
             <div class="mb-4 ml-4">
               •
-              <span
-                class="highlight-symptom bg-blue-100 text-blue-800 px-1 rounded dark:bg-blue-500/20 dark:text-blue-300"
+              <span class="highlight-symptom bg-primary-soft text-primary px-1 rounded"
                 >Shortness of breath</span
               ><br />
               •
-              <span
-                class="highlight-symptom bg-blue-100 text-blue-800 px-1 rounded dark:bg-blue-500/20 dark:text-blue-300"
+              <span class="highlight-symptom bg-primary-soft text-primary px-1 rounded"
                 >Chest pain</span
               ><br />
               • No leg swelling observed
@@ -76,19 +66,17 @@
 
       <!-- Extracted JSON Output -->
       <div class="space-y-4">
-        <h3
-          class="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2 dark:text-white"
-        >
+        <h3 class="text-xl font-semibold text-content mb-4 flex items-center gap-2">
           <span class="text-2xl font-mono text-emerald-600 dark:text-emerald-400">{}</span>
           Extracted Structured Data
         </h3>
 
         <!-- LLM Extracted Data -->
         <div
-          class="rounded-card border border-slate-200 bg-white/80 backdrop-blur-sm overflow-hidden dark:border-slate-700 dark:bg-slate-900/50"
+          class="rounded-card border border-default bg-surface/80 backdrop-blur-sm overflow-hidden"
         >
           <div
-            class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-800/50"
+            class="flex items-center justify-between border-b border-default bg-surface-muted px-4 py-2"
           >
             <div class="flex items-center space-x-2">
               <div class="h-3 w-3 rounded-full bg-red-500"></div>
@@ -99,7 +87,7 @@
               <span class="text-xs text-emerald-600 font-medium dark:text-emerald-400"
                 >LLM Output</span
               >
-              <div class="text-sm text-slate-500 dark:text-slate-400">output.json</div>
+              <div class="text-sm text-content-muted">output.json</div>
             </div>
             <button
               class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200 transition-colors dark:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30"
@@ -116,7 +104,7 @@
               or reproduce the dark syntax-highlighted flat layout without a risky extension.
               See deviation note in the refactor report.
             -->
-            <pre class="font-mono text-xs text-slate-600 dark:text-slate-300"><code>{
+            <pre class="font-mono text-xs text-content-muted"><code>{
   <span class="text-emerald-600 dark:text-emerald-400">"patient"</span>: {
     <span class="text-emerald-600 dark:text-emerald-400">"name"</span>: <span class="text-yellow-700 dark:text-yellow-300 highlight-target-patient">"Sarah Lee"</span>,
     <span class="text-emerald-600 dark:text-emerald-400">"date_of_birth"</span>: <span class="text-yellow-700 dark:text-yellow-300 highlight-target-dob">"1961-04-03"</span>,
@@ -127,9 +115,9 @@
     <span class="text-emerald-600 dark:text-emerald-400">"location"</span>: <span class="text-yellow-700 dark:text-yellow-300 highlight-target-location">"bilateral"</span>
   },
   <span class="text-emerald-600 dark:text-emerald-400">"symptoms"</span>: {
-    <span class="text-emerald-600 dark:text-emerald-400">"shortness_of_breath"</span>: <span class="text-blue-600 dark:text-blue-300">true</span>,
-    <span class="text-emerald-600 dark:text-emerald-400">"chest_pain"</span>: <span class="text-blue-600 dark:text-blue-300">true</span>,
-    <span class="text-emerald-600 dark:text-emerald-400">"leg_pain_or_swelling"</span>: <span class="text-blue-600 dark:text-blue-300">false</span>
+    <span class="text-emerald-600 dark:text-emerald-400">"shortness_of_breath"</span>: <span class="text-primary">true</span>,
+    <span class="text-emerald-600 dark:text-emerald-400">"chest_pain"</span>: <span class="text-primary">true</span>,
+    <span class="text-emerald-600 dark:text-emerald-400">"leg_pain_or_swelling"</span>: <span class="text-primary">false</span>
   }
 }</code></pre>
           </div>
@@ -138,69 +126,59 @@
         <!-- Extraction Metadata -->
         <div class="mt-4 grid grid-cols-2 gap-4">
           <!-- Processing Info Card -->
-          <div
-            class="rounded-card bg-slate-50 border border-slate-200 p-4 dark:bg-slate-800/50 dark:border-slate-700"
-          >
+          <div class="rounded-card bg-surface-muted border border-default p-4">
             <div class="flex items-center gap-2 mb-2">
-              <Zap class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              <h4 class="text-sm font-semibold text-slate-900 dark:text-white">
-                Processing Details
-              </h4>
+              <Zap class="w-5 h-5 text-primary" />
+              <h4 class="text-sm font-semibold text-content">Processing Details</h4>
             </div>
             <div class="space-y-1">
               <div class="flex justify-between items-center">
-                <span class="text-xs text-slate-500 dark:text-slate-400">Model</span>
-                <span class="text-xs text-blue-600 font-mono dark:text-blue-300">gpt-4o</span>
+                <span class="text-xs text-content-muted">Model</span>
+                <span class="text-xs text-primary font-mono">gpt-4o</span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-xs text-slate-500 dark:text-slate-400">Processing Time</span>
-                <span class="text-xs text-blue-600 font-mono dark:text-blue-300">1.2s</span>
+                <span class="text-xs text-content-muted">Processing Time</span>
+                <span class="text-xs text-primary font-mono">1.2s</span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-xs text-slate-500 dark:text-slate-400">Tokens Used</span>
-                <span class="text-xs text-blue-600 font-mono dark:text-blue-300">2,769</span>
+                <span class="text-xs text-content-muted">Tokens Used</span>
+                <span class="text-xs text-primary font-mono">2,769</span>
               </div>
             </div>
           </div>
 
           <!-- Accuracy Card -->
-          <div
-            class="rounded-card bg-slate-50 border border-slate-200 p-4 dark:bg-slate-800/50 dark:border-slate-700"
-          >
+          <div class="rounded-card bg-surface-muted border border-default p-4">
             <div class="flex items-center gap-2 mb-2">
               <BarChart3 class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Accuracy Metrics</h4>
+              <h4 class="text-sm font-semibold text-content">Accuracy Metrics</h4>
             </div>
             <div class="space-y-2">
               <div>
                 <div class="flex justify-between items-center mb-1">
-                  <span class="text-xs text-slate-500 dark:text-slate-400">Overall Accuracy</span>
+                  <span class="text-xs text-content-muted">Overall Accuracy</span>
                   <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400"
                     >92.2%</span
                   >
                 </div>
-                <div class="w-full bg-slate-200 rounded-full h-1.5 dark:bg-slate-700">
+                <div class="w-full bg-surface-sunken rounded-full h-1.5">
                   <div
                     class="bg-gradient-to-r from-emerald-500 to-teal-500 h-1.5 rounded-full transition-all duration-1000"
                     style="width: 92.2%"
                   ></div>
                 </div>
               </div>
-              <div class="text-xs text-slate-400 italic dark:text-slate-500">
-                Based on 8 documents evaluated
-              </div>
+              <div class="text-xs text-content-subtle italic">Based on 8 documents evaluated</div>
             </div>
           </div>
         </div>
 
         <!-- Visual Flow Indicator -->
-        <div
-          class="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400"
-        >
-          <FileText class="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <div class="mt-4 flex items-center justify-center gap-2 text-xs text-content-muted">
+          <FileText class="w-4 h-4 text-primary" />
           <span>Document</span>
           <ChevronRight class="w-4 h-4" />
-          <Zap class="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <Zap class="w-4 h-4 text-primary" />
           <span>LLM Processing</span>
           <ChevronRight class="w-4 h-4" />
           <CircleCheckBig class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />

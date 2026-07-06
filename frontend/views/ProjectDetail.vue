@@ -72,7 +72,7 @@
       <!-- Loading, Error, Main Content -->
       <div v-if="isLoading" class="flex flex-col items-center py-24">
         <LoadingSpinner size="large" />
-        <span class="mt-4 text-slate-400 dark:text-slate-500 text-lg">Loading project...</span>
+        <span class="mt-4 text-content-subtle text-lg">Loading project...</span>
       </div>
 
       <ErrorBanner v-else-if="error" :message="error" class="mb-4 rounded-modal" />

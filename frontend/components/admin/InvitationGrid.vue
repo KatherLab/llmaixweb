@@ -11,13 +11,13 @@
     @page-size-change="handlePageSizeChange"
   >
     <template #cell-email="{ row: invitation }">
-      <span class="text-sm font-medium text-slate-900 dark:text-white">{{ invitation.email }}</span>
+      <span class="text-sm font-medium text-content">{{ invitation.email }}</span>
     </template>
 
     <template #cell-is_used="{ row: invitation }">
       <span
         v-if="invitation.is_used"
-        class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs"
+        class="bg-surface-sunken text-content-muted px-2 py-0.5 rounded-full text-xs"
       >
         Yes
       </span>

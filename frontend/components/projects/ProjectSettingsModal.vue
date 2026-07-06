@@ -3,11 +3,7 @@
   <BaseModal :open="open" title="Project Settings" size="md" body-class="p-8" @close="emitClose">
     <!-- General Settings Section -->
     <div class="mb-6">
-      <h3
-        class="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-3"
-      >
-        General
-      </h3>
+      <h3 class="text-sm font-semibold text-content-muted uppercase tracking-wide mb-3">General</h3>
       <input
         v-model="name"
         :class="[inputClass, 'text-lg font-semibold mb-3']"
@@ -25,7 +21,7 @@
     </div>
 
     <!-- Danger Zone Section -->
-    <div class="border-t border-slate-200 dark:border-slate-700 pt-6 mt-6">
+    <div class="border-t border-default pt-6 mt-6">
       <h3 class="text-sm font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide mb-3">
         Danger Zone
       </h3>

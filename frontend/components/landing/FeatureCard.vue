@@ -1,7 +1,7 @@
 <template>
   <div
     ref="cardEl"
-    class="feature-card group relative overflow-hidden rounded-modal border border-slate-200 bg-white p-6 transition-all dark:border-slate-700 dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-800"
+    class="feature-card group relative overflow-hidden rounded-modal border border-default bg-surface p-6 transition-all"
     :class="[feature.borderHover, feature.shadowHover]"
   >
     <div
@@ -15,8 +15,8 @@
       >
         <component :is="feature.icon" class="h-6 w-6" />
       </div>
-      <h3 class="mb-2 text-lg font-bold text-slate-900 dark:text-white">{{ feature.title }}</h3>
-      <p class="text-sm text-slate-600 dark:text-slate-300">{{ feature.description }}</p>
+      <h3 class="mb-2 text-lg font-bold text-content">{{ feature.title }}</h3>
+      <p class="text-sm text-content-muted">{{ feature.description }}</p>
     </div>
   </div>
 </template>

@@ -1,15 +1,11 @@
 <template>
   <div class="space-y-6">
     <!-- Header with document info -->
-    <div
-      class="bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-card p-6 border dark:border-slate-700"
-    >
+    <div class="bg-surface-muted rounded-card p-6 border border-default">
       <div class="flex justify-between items-start mb-4">
         <div>
-          <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-100">
-            Document #{{ document.document_id }}
-          </h2>
-          <p class="text-slate-600 dark:text-slate-300">Individual field-by-field analysis</p>
+          <h2 class="text-xl font-semibold text-content">Document #{{ document.document_id }}</h2>
+          <p class="text-content-muted">Individual field-by-field analysis</p>
           <BaseButton
             variant="link"
             tone="blue"
@@ -21,10 +17,10 @@
           </BaseButton>
         </div>
         <div class="text-right">
-          <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+          <div class="text-2xl font-bold text-primary">
             {{ (document.accuracy * 100).toFixed(1) }}%
           </div>
-          <div class="text-sm text-slate-500 dark:text-slate-400">Accuracy</div>
+          <div class="text-sm text-content-muted">Accuracy</div>
         </div>
       </div>
 
@@ -39,29 +35,23 @@
 
       <!-- Summary stats -->
       <div v-if="!document.error" class="grid grid-cols-3 gap-4">
-        <div
-          class="bg-white dark:bg-slate-800 rounded-card p-4 text-center border dark:border-slate-700 shadow-sm"
-        >
+        <div class="bg-surface rounded-card p-4 text-center border dark:border-default shadow-sm">
           <div class="text-lg font-semibold text-green-600 dark:text-green-400">
             {{ document.correct_fields }}
           </div>
-          <div class="text-sm text-slate-500 dark:text-slate-400">Correct Fields</div>
+          <div class="text-sm text-content-muted">Correct Fields</div>
         </div>
-        <div
-          class="bg-white dark:bg-slate-800 rounded-card p-4 text-center border dark:border-slate-700 shadow-sm"
-        >
+        <div class="bg-surface rounded-card p-4 text-center border dark:border-default shadow-sm">
           <div class="text-lg font-semibold text-red-600 dark:text-red-400">
             {{ document.total_fields - document.correct_fields }}
           </div>
-          <div class="text-sm text-slate-500 dark:text-slate-400">Incorrect Fields</div>
+          <div class="text-sm text-content-muted">Incorrect Fields</div>
         </div>
-        <div
-          class="bg-white dark:bg-slate-800 rounded-card p-4 text-center border dark:border-slate-700 shadow-sm"
-        >
-          <div class="text-lg font-semibold text-slate-800 dark:text-slate-100">
+        <div class="bg-surface rounded-card p-4 text-center border dark:border-default shadow-sm">
+          <div class="text-lg font-semibold text-content">
             {{ document.total_fields }}
           </div>
-          <div class="text-sm text-slate-500 dark:text-slate-400">Total Fields</div>
+          <div class="text-sm text-content-muted">Total Fields</div>
         </div>
       </div>
     </div>
@@ -69,11 +59,9 @@
     <!-- Field-by-field analysis -->
     <div
       v-if="!document.error"
-      class="bg-white dark:bg-slate-800 rounded-card border dark:border-slate-700 p-6 shadow-sm"
+      class="bg-surface rounded-card border dark:border-default p-6 shadow-sm"
     >
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">
-        Field-by-Field Analysis
-      </h3>
+      <h3 class="text-lg font-semibold text-content mb-4">Field-by-Field Analysis</h3>
       <div class="space-y-4">
         <div
           v-for="(fieldDetail, fieldName) in document.field_details"
@@ -87,7 +75,7 @@
           }"
         >
           <div class="flex justify-between items-start mb-3">
-            <h4 class="font-medium text-slate-900 dark:text-white">{{ fieldName }}</h4>
+            <h4 class="font-medium text-content">{{ fieldName }}</h4>
             <span
               class="px-2 py-1 rounded-full text-xs font-medium"
               :class="{
@@ -102,30 +90,26 @@
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <div class="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded p-3">
-              <h5 class="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Ground Truth
-              </h5>
-              <p class="text-sm text-slate-800 dark:text-slate-100">
+            <div class="bg-surface border dark:border-default rounded p-3">
+              <h5 class="text-xs font-medium text-content-muted mb-1">Ground Truth</h5>
+              <p class="text-sm text-content">
                 {{ formatFieldValue(fieldDetail.ground_truth_value) }}
               </p>
             </div>
-            <div class="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded p-3">
-              <h5 class="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Predicted</h5>
-              <p class="text-sm text-slate-800 dark:text-slate-100">
+            <div class="bg-surface border dark:border-default rounded p-3">
+              <h5 class="text-xs font-medium text-content-muted mb-1">Predicted</h5>
+              <p class="text-sm text-content">
                 {{ formatFieldValue(fieldDetail.predicted_value) }}
               </p>
             </div>
           </div>
 
           <div v-if="fieldDetail.confidence_score !== null" class="mt-3">
-            <div
-              class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 mb-1"
-            >
+            <div class="flex items-center justify-between text-xs text-content-muted mb-1">
               <span>Confidence Score</span>
               <span>{{ (fieldDetail.confidence_score * 100).toFixed(1) }}%</span>
             </div>
-            <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+            <div class="w-full bg-surface-sunken rounded-full h-2">
               <div
                 class="h-2 rounded-full"
                 :class="{
@@ -143,9 +127,9 @@
     </div>
 
     <!-- Document content -->
-    <div class="bg-white dark:bg-slate-800 rounded-card border dark:border-slate-700 p-6 shadow-sm">
+    <div class="bg-surface rounded-card border dark:border-default p-6 shadow-sm">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Document Content</h3>
+        <h3 class="text-lg font-semibold text-content">Document Content</h3>
         <BaseButton
           v-if="!documentContent && !loadingContent"
           variant="link"
@@ -159,21 +143,19 @@
 
       <div
         v-if="documentContent"
-        class="bg-slate-50 dark:bg-slate-800 p-4 rounded-card overflow-auto max-h-96 border border-slate-200 dark:border-slate-700"
+        class="bg-surface-muted p-4 rounded-card overflow-auto max-h-96 border border-default"
       >
-        <div class="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
+        <div class="text-sm text-content whitespace-pre-wrap">
           {{ documentContent }}
         </div>
       </div>
       <div v-else-if="loadingContent" class="text-center py-8">
         <LoadingSpinner size="small" />
-        <p class="mt-2 text-slate-500 dark:text-slate-400 text-sm">Loading document content...</p>
+        <p class="mt-2 text-content-muted text-sm">Loading document content...</p>
       </div>
       <div v-else class="text-center py-8">
-        <FileText class="h-10 w-10 mx-auto text-slate-400 mb-2" />
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-          Click "Load Content" to view document text
-        </p>
+        <FileText class="h-10 w-10 mx-auto text-content-subtle mb-2" />
+        <p class="text-sm text-content-muted">Click "Load Content" to view document text</p>
       </div>
     </div>
   </div>

@@ -1,10 +1,8 @@
 <template>
-  <div
-    class="mt-2 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-card p-4 grid gap-6"
-  >
+  <div class="mt-2 bg-surface-muted border border-default rounded-card p-4 grid gap-6">
     <div>
       <label :class="labelClass">
-        Max Completion Tokens <span class="text-slate-400 font-normal">(optional)</span>
+        Max Completion Tokens <span class="text-content-subtle font-normal">(optional)</span>
       </label>
       <input
         v-model="maxCompletionTokens"
@@ -13,13 +11,13 @@
         placeholder="e.g., 4096"
         type="number"
       />
-      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      <p class="mt-1 text-xs text-content-muted">
         Limit the maximum tokens for model responses. Leave empty to use model defaults.
       </p>
     </div>
     <div>
       <label :class="labelClass">
-        Temperature <span class="text-slate-400 font-normal">(optional)</span>
+        Temperature <span class="text-content-subtle font-normal">(optional)</span>
       </label>
       <input
         v-model="temperature"
@@ -30,14 +28,14 @@
         placeholder="e.g., 0.7"
         type="number"
       />
-      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      <p class="mt-1 text-xs text-content-muted">
         Controls randomness. Lower values make outputs more focused; higher values make them more
         random. Typical: 0.0–1.0
       </p>
     </div>
     <div>
       <label :class="labelClass">
-        Reasoning Effort <span class="text-slate-400 font-normal">(optional)</span>
+        Reasoning Effort <span class="text-content-subtle font-normal">(optional)</span>
       </label>
       <select v-model="reasoningEffort" :class="selectClass">
         <option value="">Use model default</option>
@@ -45,7 +43,7 @@
         <option value="medium">Medium</option>
         <option value="high">High</option>
       </select>
-      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      <p class="mt-1 text-xs text-content-muted">
         Hints the model how much compute to spend on chain-of-thought/reasoning. Not all models/APIs
         support this.
       </p>

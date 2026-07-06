@@ -3,11 +3,9 @@
     <template #header>
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-2">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Start New Trial</h3>
+          <h3 class="text-lg font-semibold text-content">Start New Trial</h3>
           <Tooltip :text="trialHelpText">
-            <Info
-              class="h-4 w-4 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-            />
+            <Info class="h-4 w-4 text-content-subtle hover:text-content-muted" />
           </Tooltip>
         </div>
         <!-- Simple/Advanced Mode Toggle -->
@@ -65,9 +63,7 @@
         </div>
 
         <!-- Prompt / Schema / Model -->
-        <div
-          class="mb-8 bg-white dark:bg-slate-800/40 border dark:border-slate-700 rounded-modal p-6 shadow"
-        >
+        <div class="mb-8 bg-surface border border-default rounded-modal p-6 shadow">
           <TrialPromptSelect
             v-model="trialData.prompt_id"
             :prompts="prompts"
@@ -370,17 +366,17 @@ const statusIcon = computed<Component | null>(() => {
 })
 
 const statusIconClass = computed(() => {
-  if (submitting.value || isTestingModel.value) return 'text-blue-500 animate-spin'
+  if (submitting.value || isTestingModel.value) return 'text-primary animate-spin'
   if (modelTested.value && modelValid.value && canSubmit.value) return 'text-green-500'
   if (modelTested.value && !modelValid.value) return 'text-red-500'
-  return 'text-slate-400'
+  return 'text-content-subtle'
 })
 
 const statusTextClass = computed(() => {
   if (modelTested.value && modelValid.value && canSubmit.value)
     return 'text-green-700 dark:text-green-400'
   if (modelTested.value && !modelValid.value) return 'text-red-700 dark:text-red-400'
-  return 'text-slate-600 dark:text-slate-400'
+  return 'text-content-muted'
 })
 
 /* -------------------------------------------------------

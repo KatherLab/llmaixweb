@@ -12,7 +12,7 @@
           <BaseButton
             variant="primary"
             size="lg"
-            class="font-semibold shadow dark:hover:bg-blue-800"
+            class="font-semibold shadow dark:hover:bg-primary-hover"
             :disabled="trialDisabled"
             type="button"
             @click="openCreateTrialModal"
@@ -23,7 +23,7 @@
           v-else
           variant="primary"
           size="lg"
-          class="font-semibold shadow dark:hover:bg-blue-800"
+          class="font-semibold shadow dark:hover:bg-primary-hover"
           :disabled="trialDisabled"
           type="button"
           @click="openCreateTrialModal"
@@ -63,7 +63,7 @@
       @action="openCreateTrialModal"
     >
       <template #icon>
-        <ClipboardList class="h-12 w-12 text-slate-400 dark:text-slate-500" />
+        <ClipboardList class="h-12 w-12 text-content-subtle" />
       </template>
     </EmptyState>
 
@@ -74,7 +74,7 @@
       description="Try adjusting or clearing your filters to see more trials."
     >
       <template #icon>
-        <SearchX class="h-12 w-12 text-slate-400 dark:text-slate-500" />
+        <SearchX class="h-12 w-12 text-content-subtle" />
       </template>
       <template #action>
         <BaseButton variant="secondary" @click="clearFilters">Clear All Filters</BaseButton>
@@ -85,7 +85,7 @@
     <div v-else class="space-y-4">
       <!-- Batch Actions -->
       <div class="flex justify-between items-center">
-        <span class="text-sm text-slate-500 dark:text-slate-400">
+        <span class="text-sm text-content-muted">
           {{ totalTrials }} trial{{ totalTrials !== 1 ? 's' : '' }}
         </span>
       </div>

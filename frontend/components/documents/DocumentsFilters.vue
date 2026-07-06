@@ -38,9 +38,9 @@
           :class="checkboxClass"
           @change="emit('fetch')"
         />
-        <span class="text-sm text-slate-700 dark:text-slate-300">
+        <span class="text-sm text-content-muted">
           Include archived versions
-          <span v-if="includeArchived" class="text-xs text-slate-500 dark:text-slate-400 ml-1">
+          <span v-if="includeArchived" class="text-xs text-content-muted ml-1">
             (showing document history)
           </span>
         </span>
@@ -67,7 +67,7 @@
         />
       </div>
       <button
-        class="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+        class="px-3 py-1.5 text-sm text-primary hover:text-primary transition-colors"
         @click="emit('apply-custom-range')"
       >
         Apply

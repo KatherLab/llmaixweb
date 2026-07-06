@@ -6,10 +6,10 @@
         <!-- Dynamic icon based on situation -->
         <Info
           v-if="hasPdfsWithEmbeddedText && !hasSameConfigDuplicates"
-          class="w-6 h-6 text-blue-600 dark:text-blue-400"
+          class="w-6 h-6 text-primary"
         />
         <AlertTriangle v-else class="w-6 h-6 text-amber-600 dark:text-amber-400" />
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
+        <h3 class="text-lg font-semibold text-content">
           <template v-if="hasPdfsWithEmbeddedText && !hasSameConfigDuplicates">
             PDF Embedded Text Detected
           </template>
@@ -25,7 +25,7 @@
     <div class="space-y-4">
       <!-- Different messages based on situation -->
       <template v-if="hasPdfsWithEmbeddedText && !hasSameConfigDuplicates">
-        <p class="text-sm text-slate-600 dark:text-slate-300">
+        <p class="text-sm text-content-muted">
           The following PDF file(s) have embedded text. Since "Force OCR" is not enabled, the
           embedded text will be extracted directly regardless of the selected OCR engine. The result
           will be identical to previous extractions.
@@ -33,14 +33,14 @@
         <Callout :icon="CircleCheckBig" variant="info">
           <p class="text-xs">
             <strong>Tip:</strong> Enable
-            <code class="bg-blue-100 px-1 rounded dark:bg-blue-900/40">Force OCR for PDFs</code>
+            <code class="bg-primary-soft px-1 rounded">Force OCR for PDFs</code>
             in Advanced Options to force OCR on all pages, ignoring embedded text.
           </p>
         </Callout>
       </template>
 
       <template v-else-if="hasSameConfigDuplicates">
-        <p class="text-sm text-slate-600 dark:text-slate-300">
+        <p class="text-sm text-content-muted">
           The following files have existing documents with the
           <strong>same OCR configuration</strong>. Running preprocessing will create new versions
           and archive the old ones. Archived documents are hidden by default but can be viewed in
@@ -49,14 +49,14 @@
 
         <!-- Option to skip existing -->
         <label
-          class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-card cursor-pointer hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:hover:bg-blue-900/30 transition-colors"
+          class="flex items-start gap-3 p-3 bg-primary-soft border border-default rounded-card cursor-pointer hover:bg-primary-soft transition-colors"
         >
           <input v-model="skipExisting" type="checkbox" :class="[checkboxClass, 'mt-0.5']" />
           <div class="flex-1">
-            <p class="text-sm font-medium text-blue-900 dark:text-blue-200">
+            <p class="text-sm font-medium text-primary">
               Only process files without existing documents
             </p>
-            <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">
+            <p class="text-xs text-primary mt-1">
               Skip files that already have documents for this OCR configuration. Useful if you want
               to process only new files or re-process files where OCR quality was poor.
             </p>
@@ -65,7 +65,7 @@
       </template>
 
       <template v-else>
-        <p class="text-sm text-slate-600 dark:text-slate-300">
+        <p class="text-sm text-content-muted">
           The following files have existing documents with a different OCR configuration. Running
           preprocessing will create additional documents (not replace existing ones). Both versions
           will be preserved.
@@ -73,19 +73,17 @@
       </template>
 
       <!-- Files with duplicates list -->
-      <div
-        class="max-h-80 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-card"
-      >
+      <div class="max-h-80 overflow-y-auto border border-default rounded-card">
         <!-- Show same-config duplicates first (if any) -->
         <template v-if="hasSameConfigDuplicates">
           <div
             v-for="item in duplicatePreview?.same_config_duplicates"
             :key="item.file_id"
-            class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+            class="px-4 py-3 border-b border-default hover:bg-amber-50 dark:hover:bg-amber-900/20"
           >
             <div class="flex items-start justify-between">
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-slate-900 dark:text-white truncate">
+                <p class="text-sm font-medium text-content truncate">
                   {{ item.file_name }}
                 </p>
                 <p
@@ -112,28 +110,23 @@
           <div
             v-for="pdf in duplicatePreview?.pdfs_with_embedded_text"
             :key="pdf.file_id"
-            class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            class="px-4 py-3 border-b border-default hover:bg-primary-soft"
           >
             <div class="flex items-start justify-between">
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-slate-900 dark:text-white truncate">
+                <p class="text-sm font-medium text-content truncate">
                   {{ pdf.file_name }}
                 </p>
-                <p
-                  class="text-xs text-blue-700 dark:text-blue-300 mt-1 inline-flex items-center gap-1"
-                >
+                <p class="text-xs text-primary mt-1 inline-flex items-center gap-1">
                   <Info class="w-3 h-3 inline" />
                   Has embedded text
-                  <span
-                    v-if="pdf.existing_document_ocr_method"
-                    class="text-slate-500 dark:text-slate-400"
-                  >
+                  <span v-if="pdf.existing_document_ocr_method" class="text-content-muted">
                     • Previously extracted with: {{ pdf.existing_document_ocr_method }}
                   </span>
                 </p>
               </div>
               <span
-                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 text-blue-700 flex-shrink-0 ml-3"
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-primary-soft text-primary flex-shrink-0 ml-3"
               >
                 Embedded text
               </span>
@@ -146,25 +139,25 @@
           <div
             v-for="item in duplicatePreview?.files_with_duplicates"
             :key="item.file_id"
-            class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-800"
+            class="px-4 py-3 border-b border-default last:border-b-0 hover:bg-surface-muted"
           >
             <div class="flex items-start justify-between">
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-slate-900 dark:text-white truncate">
+                <p class="text-sm font-medium text-content truncate">
                   {{ item.file_name }}
                 </p>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <p class="text-xs text-content-muted mt-1">
                   {{ item.existing_document_count }} existing document{{
                     item.existing_document_count !== 1 ? 's' : ''
                   }}
                   with different config
-                  <span v-if="item.config_name" class="text-slate-400 dark:text-slate-500">
+                  <span v-if="item.config_name" class="text-content-subtle">
                     • Config: {{ item.config_name }}
                   </span>
                 </p>
               </div>
               <span
-                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 dark:bg-slate-800 dark:text-slate-300 text-slate-700 flex-shrink-0 ml-3"
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-surface-sunken text-content-muted flex-shrink-0 ml-3"
               >
                 Different config
               </span>
@@ -174,18 +167,16 @@
       </div>
 
       <!-- Summary -->
-      <div
-        class="bg-slate-50 dark:bg-slate-800/50 rounded-card p-3 flex items-center justify-between text-sm"
-      >
-        <span class="text-slate-600 dark:text-slate-300">
-          <span class="font-semibold text-slate-900 dark:text-white">{{
+      <div class="bg-surface-muted rounded-card p-3 flex items-center justify-between text-sm">
+        <span class="text-content-muted">
+          <span class="font-semibold text-content">{{
             duplicatePreview?.files_with_duplicates?.length || 0
           }}</span>
           file{{ (duplicatePreview?.files_with_duplicates?.length || 0) !== 1 ? 's' : '' }}
           with existing documents
         </span>
-        <span class="text-slate-600 dark:text-slate-300">
-          <span class="font-semibold text-slate-900 dark:text-white">{{
+        <span class="text-content-muted">
+          <span class="font-semibold text-content">{{
             duplicatePreview?.files_without_duplicates
           }}</span>
           new file{{ duplicatePreview?.files_without_duplicates !== 1 ? 's' : '' }}
@@ -196,8 +187,8 @@
       <Callout v-if="hasSameConfigDuplicates" variant="info">
         <p class="text-xs">
           <strong>Document versioning:</strong> Previous versions are preserved with
-          <code class="bg-blue-100 px-1 rounded dark:bg-blue-900/40">is_latest=false</code> and can
-          be restored if needed. Only the latest version is shown in the document list by default.
+          <code class="bg-primary-soft px-1 rounded">is_latest=false</code> and can be restored if
+          needed. Only the latest version is shown in the document list by default.
         </p>
       </Callout>
     </div>

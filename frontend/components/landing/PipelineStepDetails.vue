@@ -1,35 +1,23 @@
 <template>
-  <div
-    class="rounded-modal border border-slate-200 bg-white p-8 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/50"
-  >
+  <div class="relative rounded-modal border border-default bg-surface p-8 backdrop-blur-sm">
     <!-- Step 1 Details -->
     <div v-if="step === 1" class="space-y-4">
-      <h3 class="text-2xl font-bold text-slate-900 mb-4 dark:text-white">
-        Upload Medical Documents
-      </h3>
+      <h3 class="text-2xl font-bold text-content mb-4">Upload Medical Documents</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
-          <h4 class="text-lg font-semibold text-blue-600 mb-3 dark:text-blue-400">
-            Supported Formats
-          </h4>
+          <h4 class="text-lg font-semibold text-primary mb-3">Supported Formats</h4>
           <div class="space-y-2">
             <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 rounded-card bg-blue-100 flex items-center justify-center dark:bg-blue-500/10"
-              >
-                <span class="text-xs font-bold text-blue-600 dark:text-blue-400">PDF</span>
+              <div class="w-10 h-10 rounded-card bg-primary-soft flex items-center justify-center">
+                <span class="text-xs font-bold text-primary">PDF</span>
               </div>
-              <span class="text-slate-600 dark:text-slate-300"
-                >PDF documents with text or scanned images</span
-              >
+              <span class="text-content-muted">PDF documents with text or scanned images</span>
             </div>
             <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 rounded-card bg-blue-100 flex items-center justify-center dark:bg-blue-500/10"
-              >
-                <span class="text-xs font-bold text-blue-600 dark:text-blue-400">DOC</span>
+              <div class="w-10 h-10 rounded-card bg-primary-soft flex items-center justify-center">
+                <span class="text-xs font-bold text-primary">DOC</span>
               </div>
-              <span class="text-slate-600 dark:text-slate-300">Word documents (DOCX, DOC)</span>
+              <span class="text-content-muted">Word documents (DOCX, DOC)</span>
             </div>
             <div class="flex items-center gap-3">
               <div
@@ -37,9 +25,7 @@
               >
                 <span class="text-xs font-bold text-purple-600 dark:text-purple-400">IMG</span>
               </div>
-              <span class="text-slate-600 dark:text-slate-300"
-                >Images (PNG, JPEG) with OCR support</span
-              >
+              <span class="text-content-muted">Images (PNG, JPEG) with OCR support</span>
             </div>
             <div class="flex items-center gap-3">
               <div
@@ -47,13 +33,13 @@
               >
                 <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">CSV</span>
               </div>
-              <span class="text-slate-600 dark:text-slate-300">Structured data (CSV, XLSX)</span>
+              <span class="text-content-muted">Structured data (CSV, XLSX)</span>
             </div>
           </div>
         </div>
         <div>
-          <h4 class="text-lg font-semibold text-blue-600 mb-3 dark:text-blue-400">Features</h4>
-          <ul class="space-y-2 text-slate-600 dark:text-slate-300">
+          <h4 class="text-lg font-semibold text-primary mb-3">Features</h4>
+          <ul class="space-y-2 text-content-muted">
             <li v-for="feature in uploadFeatures" :key="feature" class="flex items-start gap-2">
               <CheckIcon />
               {{ feature }}
@@ -65,33 +51,31 @@
 
     <!-- Step 2 Details -->
     <div v-if="step === 2" class="space-y-4">
-      <h3 class="text-2xl font-bold text-slate-900 mb-4 dark:text-white">Text Extraction & OCR</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">Text Extraction & OCR</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
-          <h4 class="text-lg font-semibold text-blue-600 mb-3 dark:text-blue-400">OCR Engines</h4>
+          <h4 class="text-lg font-semibold text-primary mb-3">OCR Engines</h4>
           <div class="space-y-3">
             <div
               v-for="method in ocrMethods"
               :key="method.name"
-              class="p-3 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+              class="p-3 rounded-card bg-surface-muted border border-default"
             >
-              <h5 class="font-semibold text-slate-900 mb-1 dark:text-white">{{ method.name }}</h5>
-              <p class="text-sm text-slate-500 dark:text-slate-400">{{ method.description }}</p>
+              <h5 class="font-semibold text-content mb-1">{{ method.name }}</h5>
+              <p class="text-sm text-content-muted">{{ method.description }}</p>
             </div>
           </div>
         </div>
         <div>
-          <h4 class="text-lg font-semibold text-blue-600 mb-3 dark:text-blue-400">
-            Document Parsers
-          </h4>
+          <h4 class="text-lg font-semibold text-primary mb-3">Document Parsers</h4>
           <div class="space-y-3">
             <div
               v-for="parser in documentParsers"
               :key="parser.name"
-              class="p-3 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+              class="p-3 rounded-card bg-surface-muted border border-default"
             >
-              <h5 class="font-semibold text-slate-900 mb-1 dark:text-white">{{ parser.name }}</h5>
-              <p class="text-sm text-slate-500 dark:text-slate-400">{{ parser.description }}</p>
+              <h5 class="font-semibold text-content mb-1">{{ parser.name }}</h5>
+              <p class="text-sm text-content-muted">{{ parser.description }}</p>
             </div>
           </div>
         </div>
@@ -100,13 +84,13 @@
 
     <!-- Step 3 Details -->
     <div v-if="step === 3" class="space-y-4">
-      <h3 class="text-2xl font-bold text-slate-900 mb-4 dark:text-white">Document Management</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">Document Management</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
           <h4 class="text-lg font-semibold text-purple-600 mb-3 dark:text-purple-400">
             Organization
           </h4>
-          <ul class="space-y-2 text-slate-600 dark:text-slate-300">
+          <ul class="space-y-2 text-content-muted">
             <li v-for="feature in documentFeatures" :key="feature" class="flex items-start gap-2">
               <CheckIcon />
               {{ feature }}
@@ -117,17 +101,15 @@
           <h4 class="text-lg font-semibold text-purple-600 mb-3 dark:text-purple-400">
             Selection for Trials
           </h4>
-          <p class="text-slate-600 dark:text-slate-300 mb-3">
-            Choose documents for a trial in two ways:
-          </p>
+          <p class="text-content-muted mb-3">Choose documents for a trial in two ways:</p>
           <div class="space-y-3">
             <div
               v-for="option in selectionOptions"
               :key="option.name"
               class="p-3 rounded-card bg-purple-50 border border-purple-200 dark:bg-purple-500/10 dark:border-purple-500/30"
             >
-              <h5 class="font-semibold text-slate-900 mb-1 dark:text-white">{{ option.name }}</h5>
-              <p class="text-sm text-slate-500 dark:text-slate-400">{{ option.description }}</p>
+              <h5 class="font-semibold text-content mb-1">{{ option.name }}</h5>
+              <p class="text-sm text-content-muted">{{ option.description }}</p>
             </div>
           </div>
         </div>
@@ -136,21 +118,19 @@
 
     <!-- Step 4 Details -->
     <div v-if="step === 4" class="space-y-4">
-      <h3 class="text-2xl font-bold text-slate-900 mb-4 dark:text-white">Visual Schema Editor</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">Visual Schema Editor</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
           <h4 class="text-lg font-semibold text-pink-600 mb-3 dark:text-pink-400">
             Tree-Based Editor
           </h4>
-          <div
-            class="p-4 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
-          >
+          <div class="p-4 rounded-card bg-surface-muted border border-default">
             <div class="font-mono text-sm space-y-2">
               <div class="flex items-center gap-2">
-                <span class="text-slate-400 dark:text-slate-500">▼</span>
+                <span class="text-content-subtle">▼</span>
                 <span class="text-orange-500 dark:text-orange-400">patient</span>
-                <span class="text-slate-400 dark:text-slate-500">:</span>
-                <span class="text-blue-500 dark:text-blue-400">object</span>
+                <span class="text-content-subtle">:</span>
+                <span class="text-primary">object</span>
               </div>
               <div class="ml-6 space-y-2">
                 <div
@@ -159,21 +139,19 @@
                   class="flex items-center gap-2"
                 >
                   <span class="text-emerald-600 dark:text-emerald-400">{{ field.name }}</span>
-                  <span class="text-slate-400 dark:text-slate-500">:</span>
+                  <span class="text-content-subtle">:</span>
                   <span :class="field.typeClass">{{ field.type }}</span>
                 </div>
               </div>
             </div>
           </div>
-          <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
-            Build nested structures visually
-          </p>
+          <p class="text-sm text-content-muted mt-3">Build nested structures visually</p>
         </div>
         <div>
           <h4 class="text-lg font-semibold text-pink-600 mb-3 dark:text-pink-400">
             Schema Features
           </h4>
-          <ul class="space-y-2 text-slate-600 dark:text-slate-300">
+          <ul class="space-y-2 text-content-muted">
             <li v-for="feature in schemaFeatures" :key="feature" class="flex items-start gap-2">
               <CheckIcon />
               {{ feature }}
@@ -185,12 +163,10 @@
 
     <!-- Step 5 Details -->
     <div v-if="step === 5" class="space-y-4">
-      <h3 class="text-2xl font-bold text-slate-900 mb-4 dark:text-white">LLM-Powered Extraction</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">LLM-Powered Extraction</h3>
       <div class="space-y-6">
         <!-- Visual Flow -->
-        <div
-          class="p-6 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/30 dark:border-slate-700"
-        >
+        <div class="p-6 rounded-card bg-surface-muted border border-default">
           <div class="flex items-center justify-between gap-4">
             <template v-for="(item, index) in extractionFlow" :key="item.label">
               <div class="text-center">
@@ -206,7 +182,7 @@
                   />
                   <span v-else class="text-2xl font-mono" :class="item.iconClass">{}</span>
                 </div>
-                <p class="text-sm text-slate-500 dark:text-slate-400">{{ item.label }}</p>
+                <p class="text-sm text-content-muted">{{ item.label }}</p>
               </div>
               <div v-if="index < extractionFlow.length - 1" class="flex-1 flex items-center">
                 <div class="w-full h-0.5" :class="flowArrows[index]?.line"></div>
@@ -225,12 +201,12 @@
               <div
                 v-for="provider in llmProviders"
                 :key="provider.name"
-                class="p-3 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+                class="p-3 rounded-card bg-surface-muted border border-default"
               >
-                <h5 class="font-semibold text-slate-900 mb-1 dark:text-white">
+                <h5 class="font-semibold text-content mb-1">
                   {{ provider.name }}
                 </h5>
-                <p class="text-sm text-slate-500 dark:text-slate-400">{{ provider.description }}</p>
+                <p class="text-sm text-content-muted">{{ provider.description }}</p>
               </div>
             </div>
           </div>
@@ -238,7 +214,7 @@
             <h4 class="text-lg font-semibold text-emerald-600 mb-3 dark:text-emerald-400">
               Trial Configuration
             </h4>
-            <ul class="space-y-2 text-slate-600 dark:text-slate-300">
+            <ul class="space-y-2 text-content-muted">
               <li v-for="feature in trialConfig" :key="feature" class="flex items-start gap-2">
                 <CheckIcon />
                 {{ feature }}
@@ -251,7 +227,7 @@
 
     <!-- Step 6 Details -->
     <div v-if="step === 6" class="space-y-4">
-      <h3 class="text-2xl font-bold text-slate-900 mb-4 dark:text-white">Accuracy Evaluation</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">Accuracy Evaluation</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
           <h4 class="text-lg font-semibold text-teal-600 mb-3 dark:text-teal-400">
@@ -267,8 +243,8 @@
                 }}</span>
               </div>
               <div>
-                <h5 class="font-semibold text-slate-900 dark:text-white">{{ item.title }}</h5>
-                <p class="text-sm text-slate-500 dark:text-slate-400">{{ item.description }}</p>
+                <h5 class="font-semibold text-content">{{ item.title }}</h5>
+                <p class="text-sm text-content-muted">{{ item.description }}</p>
               </div>
             </div>
           </div>
@@ -277,28 +253,26 @@
           <h4 class="text-lg font-semibold text-teal-600 mb-3 dark:text-teal-400">
             Metrics Dashboard
           </h4>
-          <div
-            class="p-4 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
-          >
+          <div class="p-4 rounded-card bg-surface-muted border border-default">
             <div class="space-y-3">
               <div class="flex justify-between items-center">
-                <span class="text-slate-600 dark:text-slate-300">Overall Accuracy</span>
+                <span class="text-content-muted">Overall Accuracy</span>
                 <span class="text-2xl font-bold text-teal-600 dark:text-teal-400">92.2%</span>
               </div>
-              <div class="w-full bg-slate-200 rounded-full h-2 dark:bg-slate-700">
+              <div class="w-full bg-surface-sunken rounded-full h-2">
                 <div
                   class="bg-gradient-to-r from-teal-500 to-emerald-500 h-2 rounded-full"
                   style="width: 92.2%"
                 ></div>
               </div>
               <div class="grid grid-cols-2 gap-2 mt-4">
-                <div class="text-center p-2 rounded bg-slate-100 dark:bg-slate-800">
-                  <p class="text-xs text-slate-500 dark:text-slate-400">Documents</p>
-                  <p class="text-lg font-bold text-slate-900 dark:text-white">8</p>
+                <div class="text-center p-2 rounded-card bg-surface-sunken">
+                  <p class="text-xs text-content-muted">Documents</p>
+                  <p class="text-lg font-bold text-content">8</p>
                 </div>
-                <div class="text-center p-2 rounded bg-slate-100 dark:bg-slate-800">
-                  <p class="text-xs text-slate-500 dark:text-slate-400">Field Errors</p>
-                  <p class="text-lg font-bold text-slate-900 dark:text-white">5</p>
+                <div class="text-center p-2 rounded-card bg-surface-sunken">
+                  <p class="text-xs text-content-muted">Field Errors</p>
+                  <p class="text-lg font-bold text-content">5</p>
                 </div>
               </div>
             </div>
@@ -309,7 +283,7 @@
 
     <!-- Close button -->
     <button
-      class="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition-colors dark:hover:text-white"
+      class="absolute top-4 right-4 text-content-subtle hover:text-content transition-colors"
       @click="$emit('close')"
     >
       <X class="w-6 h-6" />
@@ -406,15 +380,15 @@ const extractionFlow: {
 }[] = [
   {
     label: 'Document',
-    bg: 'bg-blue-100 dark:bg-blue-500/20',
+    bg: 'bg-primary-soft',
     icon: FileText,
-    iconClass: 'text-blue-600 dark:text-blue-400',
+    iconClass: 'text-primary',
   },
   {
     label: 'Prompt',
-    bg: 'bg-blue-100 dark:bg-blue-500/20',
+    bg: 'bg-primary-soft',
     icon: MessageSquare,
-    iconClass: 'text-blue-600 dark:text-blue-400',
+    iconClass: 'text-primary',
   },
   {
     label: 'Schema',
@@ -437,8 +411,8 @@ const extractionFlow: {
 ]
 
 const flowArrows: { line: string; arrowClass: string }[] = [
-  { line: 'bg-gradient-to-r from-blue-500 to-blue-500', arrowClass: 'text-blue-500' },
-  { line: 'bg-gradient-to-r from-blue-500 to-purple-500', arrowClass: 'text-purple-500' },
+  { line: 'bg-gradient-to-r from-primary to-primary', arrowClass: 'text-primary' },
+  { line: 'bg-gradient-to-r from-primary to-purple-500', arrowClass: 'text-purple-500' },
   { line: 'bg-gradient-to-r from-purple-500 to-emerald-500', arrowClass: 'text-emerald-500' },
   { line: 'bg-gradient-to-r from-emerald-500 to-teal-500', arrowClass: 'text-teal-500' },
 ]
@@ -471,40 +445,3 @@ const evaluationProcess: { step: number; title: string; description: string }[] 
   },
 ]
 </script>
-
-<style scoped>
-/* Code syntax highlighting colors for schema tree preview — light + dark */
-.text-emerald-400 {
-  color: #34d399;
-}
-.text-emerald-600 {
-  color: #059669;
-}
-.text-yellow-400 {
-  color: #fcd34d;
-}
-.text-yellow-600 {
-  color: #ca8a04;
-}
-.text-blue-400 {
-  color: #60a5fa;
-}
-.text-blue-600 {
-  color: #2563eb;
-}
-.text-purple-400 {
-  color: #c084fc;
-}
-.text-purple-600 {
-  color: #9333ea;
-}
-.text-orange-400 {
-  color: #fb923c;
-}
-.text-orange-500 {
-  color: #f97316;
-}
-.text-slate-500 {
-  color: #64748b;
-}
-</style>

@@ -1,9 +1,7 @@
 <template>
   <div class="flex flex-col gap-1 min-w-[220px]">
-    <div
-      class="font-semibold text-blue-900 dark:text-blue-300 mb-0.5 text-base flex items-center gap-2"
-    >
-      <span class="text-xs text-blue-500 dark:text-blue-400">
+    <div class="font-semibold text-primary mb-0.5 text-base flex items-center gap-2">
+      <span class="text-xs text-primary">
         <!-- File SVG -->
         <FileText class="w-4 h-4 inline-block" />
       </span>
@@ -19,7 +17,7 @@
           'min-w-[140px]',
           !innerIdColumn
             ? 'border-red-300 dark:border-red-500 focus:border-red-400 dark:focus:border-red-400'
-            : 'border-blue-200 dark:border-blue-500',
+            : 'border-primary',
         ]"
         required
         @change="updateId"
@@ -44,7 +42,7 @@
             @change="updateId"
           />
           <span
-            class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-100 dark:border-blue-800"
+            class="inline-flex items-center px-2 py-0.5 rounded-full bg-primary-soft text-primary text-xs font-semibold border border-default"
           >
             Use document filename
           </span>
@@ -58,7 +56,7 @@
             @change="updateId"
           />
           <span
-            class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-100 dark:border-blue-800"
+            class="inline-flex items-center px-2 py-0.5 rounded-full bg-primary-soft text-primary text-xs font-semibold border border-default"
           >
             Use field:
           </span>
@@ -84,7 +82,7 @@
         </StatusBadge>
       </div>
     </template>
-    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+    <div class="text-xs text-content-muted mt-1">
       Controls how documents are matched to trial results for evaluation.
     </div>
   </div>

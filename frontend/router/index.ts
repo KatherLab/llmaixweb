@@ -59,7 +59,7 @@ const routes: RouteRecordRaw[] = [
           { path: 'settings', component: AdminSettings },
           { path: 'sso', component: AdminSSO },
           { path: 'celery', component: AdminCelery },
-          { path: '', redirect: '/admin/settings' },
+          { path: '', redirect: '/admin/user-management' },
         ],
       },
     ],

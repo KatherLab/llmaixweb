@@ -15,17 +15,15 @@
     <template #cell-full_name="{ row: user }">
       <div class="flex items-center">
         <div
-          class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 dark:bg-slate-700 flex items-center justify-center"
+          class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-soft flex items-center justify-center"
         >
-          <span class="text-blue-800 dark:text-blue-300 font-medium">{{
-            initials(user as UserResponse)
-          }}</span>
+          <span class="text-primary font-medium">{{ initials(user as UserResponse) }}</span>
         </div>
         <div class="ml-3">
-          <div class="text-sm font-medium text-slate-900 dark:text-white">
+          <div class="text-sm font-medium text-content">
             {{ user.full_name || 'N/A' }}
           </div>
-          <div class="text-sm text-slate-500 dark:text-slate-400">{{ user.email }}</div>
+          <div class="text-sm text-content-subtle">{{ user.email }}</div>
         </div>
       </div>
     </template>
@@ -44,7 +42,7 @@
     </template>
 
     <template #cell-role="{ row: user }">
-      <span class="text-slate-900 dark:text-white capitalize">{{ user.role }}</span>
+      <span class="text-content capitalize">{{ user.role }}</span>
     </template>
 
     <template #row-actions="{ row: user }">

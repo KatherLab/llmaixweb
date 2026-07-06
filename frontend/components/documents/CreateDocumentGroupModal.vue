@@ -1,7 +1,7 @@
 <template>
   <BaseModal :open="open" size="lg" @close="tryClose">
     <template #header>
-      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
+      <h3 class="text-lg font-semibold text-content">
         {{ group ? 'Edit Document Group' : 'Create Document Group' }}
       </h3>
     </template>
@@ -69,11 +69,9 @@
     <div class="mb-4">
       <div class="flex justify-between items-center mb-2">
         <label :class="labelClass"> Select Documents <span class="text-red-500">*</span> </label>
-        <span class="text-sm text-slate-500 dark:text-slate-400">
+        <span class="text-sm text-content-muted">
           {{ selectedCount }} selected
-          <span v-if="loadingExisting" class="text-slate-400 dark:text-slate-500"
-            >(loading existing…)</span
-          >
+          <span v-if="loadingExisting" class="text-content-subtle">(loading existing…)</span>
         </span>
       </div>
 
@@ -87,16 +85,9 @@
       </div>
 
       <!-- Document List -->
-      <div
-        class="border border-slate-200 dark:border-slate-700 rounded-card overflow-hidden max-h-64 overflow-y-auto"
-      >
-        <div v-if="searchLoading" class="p-4 text-center text-slate-500 dark:text-slate-400">
-          Searching…
-        </div>
-        <div
-          v-else-if="searchResults.length === 0"
-          class="p-4 text-center text-slate-500 dark:text-slate-400"
-        >
+      <div class="border border-default rounded-card overflow-hidden max-h-64 overflow-y-auto">
+        <div v-if="searchLoading" class="p-4 text-center text-content-muted">Searching…</div>
+        <div v-else-if="searchResults.length === 0" class="p-4 text-center text-content-muted">
           No documents found
         </div>
         <div v-else>
@@ -104,8 +95,8 @@
             v-for="doc in searchResults"
             :key="doc.id"
             :class="[
-              'p-3 border-b border-slate-200 dark:border-slate-700 last:border-b-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center',
-              { 'bg-blue-50 dark:bg-blue-900/30': isSelected(doc.id) },
+              'p-3 border-b border-default last:border-b-0 cursor-pointer hover:bg-surface-muted flex items-center',
+              { 'bg-primary-soft': isSelected(doc.id) },
             ]"
             @click="toggleDocument(doc.id)"
           >
@@ -120,7 +111,7 @@
               <div class="font-medium text-sm">
                 {{ doc.original_file?.file_name || `Document #${doc.id}` }}
               </div>
-              <div class="text-xs text-slate-500 dark:text-slate-400">
+              <div class="text-xs text-content-muted">
                 Config: {{ doc.preprocessing_config?.name || 'N/A' }} • Created:
                 {{ formatDate(doc.created_at) }}
               </div>
@@ -135,24 +126,22 @@
           <BaseButton variant="link" tone="blue" class="text-sm" @click="selectAll">
             Select All Visible
           </BaseButton>
-          <span class="text-slate-300">|</span>
+          <span class="text-content-subtle">|</span>
           <BaseButton variant="link" tone="blue" class="text-sm" @click="clearSelection">
             Clear Selection
           </BaseButton>
         </div>
         <div v-if="searchTotalPages > 1" class="flex items-center gap-2">
-          <span class="text-xs text-slate-500 dark:text-slate-400">
-            {{ searchPage }}/{{ searchTotalPages }}
-          </span>
+          <span class="text-xs text-content-muted"> {{ searchPage }}/{{ searchTotalPages }} </span>
           <button
-            class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 dark:text-slate-200 rounded disabled:opacity-50"
+            class="px-2 py-1 text-sm border border-strong text-content rounded-card disabled:opacity-50"
             :disabled="searchPage <= 1"
             @click="prevSearchPage"
           >
             Prev
           </button>
           <button
-            class="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 dark:text-slate-200 rounded disabled:opacity-50"
+            class="px-2 py-1 text-sm border border-strong text-content rounded-card disabled:opacity-50"
             :disabled="searchPage >= searchTotalPages"
             @click="nextSearchPage"
           >

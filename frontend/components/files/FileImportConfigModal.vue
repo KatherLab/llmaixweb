@@ -9,19 +9,15 @@
   >
     <!-- Content -->
     <!-- Preview -->
-    <h3 class="font-semibold text-slate-800 dark:text-slate-200 text-sm mb-3">
-      Preview (first 10 rows)
-    </h3>
-    <div
-      class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800/60 p-2 max-h-72 mb-5"
-    >
+    <h3 class="font-semibold text-content text-sm mb-3">Preview (first 10 rows)</h3>
+    <div class="overflow-x-auto border border-default rounded bg-surface-muted p-2 max-h-72 mb-5">
       <table v-if="headerLabels.length" class="min-w-full text-sm">
         <thead>
           <tr>
             <th
               v-for="(col, idx) in headerLabels"
               :key="col || idx"
-              class="px-2 py-1 bg-slate-200 dark:bg-slate-700 font-normal text-slate-700 dark:text-slate-200 text-xs"
+              class="px-2 py-1 bg-surface-sunken font-normal text-content text-xs"
             >
               {{ col }}
             </th>
@@ -29,14 +25,8 @@
         </thead>
         <tbody>
           <tr v-for="(row, ridx) in preview.rows" :key="ridx">
-            <td
-              v-for="(cell, cidx) in row"
-              :key="cidx"
-              class="px-2 py-1 text-slate-700 dark:text-slate-300"
-            >
-              <span
-                v-if="cell === '' || cell == null"
-                class="text-slate-300 dark:text-slate-600 italic"
+            <td v-for="(cell, cidx) in row" :key="cidx" class="px-2 py-1 text-content-muted">
+              <span v-if="cell === '' || cell == null" class="text-content-subtle italic"
                 >empty</span
               >
               <span v-else>{{ cell }}</span>
@@ -44,11 +34,11 @@
           </tr>
         </tbody>
       </table>
-      <div v-else class="text-xs text-slate-500 dark:text-slate-400 py-3 text-center">
+      <div v-else class="text-xs text-content-muted py-3 text-center">
         No preview data available.
       </div>
     </div>
-    <div class="text-xs text-slate-400 dark:text-slate-500 mb-4">
+    <div class="text-xs text-content-subtle mb-4">
       Previewing first {{ preview.rows.length }} rows
     </div>
 
@@ -76,7 +66,7 @@
         <div v-if="isCSV || isXLSX">
           <label :class="labelClass">Header Row</label>
           <input v-model="hasHeader" type="checkbox" />
-          <span class="text-sm text-slate-700 dark:text-slate-300">File contains header row</span>
+          <span class="text-sm text-content-muted">File contains header row</span>
         </div>
 
         <div v-if="isXLSX && sheets.length">
@@ -90,11 +80,11 @@
       <div>
         <label :class="labelClass">Import Strategy</label>
         <div class="flex items-center gap-4">
-          <label class="text-slate-700 dark:text-slate-300">
+          <label class="text-content-muted">
             <input v-model="preprocessingStrategy" type="radio" value="row_by_row" />
             <span class="ml-1 text-sm">One document per row</span>
           </label>
-          <label class="text-slate-700 dark:text-slate-300">
+          <label class="text-content-muted">
             <input v-model="preprocessingStrategy" type="radio" value="full_document" />
             <span class="ml-1 text-sm">Treat whole file as one document</span>
           </label>
@@ -108,7 +98,7 @@
           <select
             v-model="textColumns"
             multiple
-            :class="[selectClass, 'focus:ring-2 focus:ring-blue-500 focus:border-transparent py-2']"
+            :class="[selectClass, 'focus:ring-2 focus:ring-ring focus:border-transparent py-2']"
           >
             <option v-for="(col, idx) in headerLabels" :key="idx" :value="col">
               {{ col }}
@@ -130,9 +120,7 @@
               {{ col }}<span v-if="isRecommendedId(col)"> (Recommended)</span>
             </option>
           </select>
-          <div class="text-xs text-slate-400 dark:text-slate-500 mt-1">
-            Optional: Used for document naming
-          </div>
+          <div class="text-xs text-content-subtle mt-1">Optional: Used for document naming</div>
         </div>
       </div>
     </div>

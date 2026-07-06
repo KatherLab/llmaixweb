@@ -100,7 +100,7 @@
               <transition name="fade-slide">
                 <div
                   v-if="showUserMenu"
-                  class="absolute right-0 mt-3 w-64 rounded-modal shadow-xl bg-surface ring-1 ring-default z-50 animate-dropdown"
+                  class="absolute right-0 mt-3 w-64 rounded-modal shadow-xl bg-surface ring-1 ring-default-border z-50 animate-dropdown"
                   @click.outside="showUserMenu = false"
                 >
                   <div class="px-5 py-3 border-b border-default">

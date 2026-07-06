@@ -19,7 +19,7 @@
       <div class="flex items-center">
         <FileIcon :file-type="doc.original_file?.file_type" :size="40" />
         <div class="ml-3">
-          <p class="text-sm font-medium text-slate-900 dark:text-white truncate max-w-xs">
+          <p class="text-sm font-medium text-content truncate max-w-xs">
             {{ doc.document_name || doc.original_file?.file_name || `Document #${doc.id}` }}
           </p>
           <p
@@ -28,11 +28,11 @@
               doc.original_file?.file_name &&
               doc.document_name !== doc.original_file?.file_name
             "
-            class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs"
+            class="text-xs text-content-muted truncate max-w-xs"
           >
             {{ doc.original_file?.file_name }}
           </p>
-          <p v-else class="text-xs text-slate-500 dark:text-slate-400">
+          <p v-else class="text-xs text-content-muted">
             {{ formatFileSize(doc.original_file?.file_size) }}
           </p>
         </div>
@@ -40,25 +40,22 @@
     </template>
 
     <template #cell-configuration="{ row: doc }">
-      <div class="text-sm text-slate-900 dark:text-white">
+      <div class="text-sm text-content">
         {{ doc.preprocessing_config?.name || 'Custom Config' }}
       </div>
-      <div
-        v-if="getOcrDisplay(doc as DocumentListItem)"
-        class="text-xs text-slate-500 dark:text-slate-400"
-      >
+      <div v-if="getOcrDisplay(doc as DocumentListItem)" class="text-xs text-content-muted">
         {{ getOcrDisplay(doc as DocumentListItem) }}
       </div>
     </template>
 
     <template #cell-model="{ row: doc }">
-      <div class="text-sm text-slate-900 dark:text-white">
+      <div class="text-sm text-content">
         {{ getModelName(doc as DocumentListItem) }}
       </div>
     </template>
 
     <template #cell-created_at="{ row: doc }">
-      <span class="text-sm text-slate-500 dark:text-slate-400">
+      <span class="text-sm text-content-muted">
         {{ formatDate(doc.created_at) }}
       </span>
     </template>

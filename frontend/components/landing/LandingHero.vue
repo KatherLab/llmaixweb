@@ -1,22 +1,20 @@
 <template>
   <div class="mb-20 text-center">
     <div
-      class="mb-6 inline-block rounded-card border border-blue-200 bg-blue-50 p-3 backdrop-blur-sm dark:border-blue-500/30 dark:bg-blue-600/20"
+      class="mb-6 inline-block rounded-card border border-default bg-primary-soft p-3 backdrop-blur-sm"
     >
-      <span
-        class="text-sm font-semibold tracking-wider uppercase text-blue-700 dark:bg-gradient-to-r dark:from-blue-400 dark:to-blue-400 dark:bg-clip-text dark:text-transparent"
-      >
+      <span class="text-sm font-semibold tracking-wider uppercase text-primary">
         Document-to-JSON Extraction Platform
       </span>
     </div>
-    <h1 class="mb-6 text-5xl font-extrabold text-slate-900 sm:text-7xl dark:text-white">
+    <h1 class="mb-6 text-5xl font-extrabold text-content sm:text-7xl">
       <span
-        class="bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent dark:from-blue-400 dark:via-blue-400 dark:to-purple-400"
+        class="bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent dark:from-primary dark:to-primary-hover"
       >
         LLMAIx-v2
       </span>
     </h1>
-    <p class="mx-auto max-w-3xl text-xl leading-relaxed text-slate-600 dark:text-slate-300">
+    <p class="mx-auto max-w-3xl text-xl leading-relaxed text-content-muted">
       Turn unstructured medical and lab documents into validated structured JSON. Define your
       schema, run LLM extraction trials, and measure accuracy against ground-truth data — with any
       OpenAI-compatible model, local or hosted.

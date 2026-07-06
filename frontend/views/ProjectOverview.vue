@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="h-screen bg-gradient-to-br from-slate-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex flex-col"
-  >
+  <div class="h-screen bg-surface flex flex-col">
     <PageHeader
       title="Projects"
       subtitle="Create and manage your extraction projects."

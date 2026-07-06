@@ -1,15 +1,15 @@
 <template>
   <div
-    class="mb-8 bg-gradient-to-br from-blue-50 to-slate-50 dark:from-slate-800 dark:to-slate-800 rounded-modal border border-blue-100 dark:border-slate-700 shadow flex items-center px-6 py-5 gap-4"
+    class="mb-8 bg-surface rounded-modal border border-default shadow flex items-center px-6 py-5 gap-4"
   >
     <div class="flex-shrink-0">
-      <Info class="w-8 h-8 text-blue-400" />
+      <Info class="w-8 h-8 text-primary" />
     </div>
     <div class="w-full">
       <div class="grid grid-cols-1 gap-4">
         <div>
           <label :class="[labelClass, 'tracking-wide']"
-            >Trial Name <span class="text-slate-400 font-normal">(optional)</span></label
+            >Trial Name <span class="text-content-subtle font-normal">(optional)</span></label
           >
           <input
             v-model="name"
@@ -20,7 +20,7 @@
         </div>
         <div>
           <label :class="[labelClass, 'tracking-wide']"
-            >Description <span class="text-slate-400 font-normal">(optional)</span></label
+            >Description <span class="text-content-subtle font-normal">(optional)</span></label
           >
           <textarea
             v-model="description"

@@ -2,10 +2,10 @@
   <BaseModal :open="open" size="lg" @close="$emit('close')">
     <template #header>
       <div>
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
+        <h3 class="text-lg font-semibold text-content">
           {{ actionTitle }}
         </h3>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <p class="mt-1 text-sm text-content-muted">
           {{ documents.length }} {{ entityLabel }}{{ documents.length !== 1 ? 's' : '' }} selected
         </p>
       </div>
@@ -15,7 +15,7 @@
     <div v-if="action === 'reprocess'" class="space-y-4">
       <div class="flex items-center">
         <input v-model="forceReprocess" type="checkbox" :class="checkboxClass" />
-        <label class="ml-2 text-sm text-slate-700 dark:text-slate-300">
+        <label class="ml-2 text-sm text-content-muted">
           Force reprocess (ignore existing results)
         </label>
       </div>
@@ -23,7 +23,7 @@
 
     <!-- Export Action -->
     <div v-else-if="action === 'export'" class="space-y-4">
-      <p class="text-sm text-slate-600 dark:text-slate-400">Choose export format and options:</p>
+      <p class="text-sm text-content-muted">Choose export format and options:</p>
       <div>
         <label :class="labelClass"> Export Format </label>
         <select v-model="exportFormat" :class="selectClass">
@@ -36,13 +36,11 @@
       <div class="space-y-2">
         <label class="flex items-center">
           <input v-model="includeMetadata" type="checkbox" :class="checkboxClass" />
-          <span class="ml-2 text-sm text-slate-700 dark:text-slate-300">Include metadata</span>
+          <span class="ml-2 text-sm text-content-muted">Include metadata</span>
         </label>
         <label class="flex items-center">
           <input v-model="includePreprocessingInfo" type="checkbox" :class="checkboxClass" />
-          <span class="ml-2 text-sm text-slate-700 dark:text-slate-300"
-            >Include preprocessing information</span
-          >
+          <span class="ml-2 text-sm text-content-muted">Include preprocessing information</span>
         </label>
       </div>
     </div>
@@ -58,7 +56,7 @@
           type="checkbox"
           :class="[checkboxClass, 'text-red-600 focus:ring-red-500']"
         />
-        <label class="ml-2 text-sm text-slate-700 dark:text-slate-300">
+        <label class="ml-2 text-sm text-content-muted">
           I understand that this action is permanent
         </label>
       </div>

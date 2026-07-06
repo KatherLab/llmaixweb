@@ -9,7 +9,7 @@
     >
       <template #actions>
         <BaseButton variant="secondary" @click="showUploadModal = true">
-          <Upload class="w-5 h-5 mr-2 text-slate-500 dark:text-slate-400" />
+          <Upload class="w-5 h-5 mr-2 text-content-muted" />
           Upload Files
         </BaseButton>
       </template>
@@ -106,7 +106,7 @@
       @action="clearFilters"
     >
       <template #icon>
-        <Search class="h-16 w-16 mx-auto text-slate-300 dark:text-slate-600" aria-hidden="true" />
+        <Search class="h-16 w-16 mx-auto text-content-subtle" aria-hidden="true" />
       </template>
     </EmptyState>
 

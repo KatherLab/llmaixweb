@@ -2,7 +2,7 @@
   <div class="w-full max-w-md">
     <div class="flex flex-col items-center justify-center py-16">
       <LoadingSpinner size="large" />
-      <p class="mt-4 text-slate-500 dark:text-slate-400">{{ statusMessage }}</p>
+      <p class="mt-4 text-content-subtle">{{ statusMessage }}</p>
     </div>
   </div>
 </template>

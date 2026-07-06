@@ -1,14 +1,11 @@
 <template>
   <div
-    class="absolute right-80 top-0 bottom-0 w-64 bg-white dark:bg-slate-900 border-l dark:border-slate-700 shadow-lg z-10 overflow-auto"
+    class="absolute right-80 top-0 bottom-0 w-64 bg-surface border-l dark:border-default shadow-lg z-10 overflow-auto"
   >
     <div class="p-4">
       <div class="flex items-center justify-between mb-4">
-        <h4 class="font-semibold text-slate-900 dark:text-white">Version History</h4>
-        <button
-          class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-          @click="$emit('close')"
-        >
+        <h4 class="font-semibold text-content">Version History</h4>
+        <button class="text-content-subtle hover:text-content" @click="$emit('close')">
           <X class="w-5 h-5" />
         </button>
       </div>
@@ -16,7 +13,7 @@
       <!-- Loading State -->
       <div v-if="loadingVersions" class="text-center py-8">
         <LoadingSpinner size="small" />
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Loading versions...</p>
+        <p class="text-xs text-content-muted mt-2">Loading versions...</p>
       </div>
 
       <!-- Versions List -->
@@ -27,8 +24,8 @@
           :class="[
             'p-3 rounded-card border cursor-pointer transition-all',
             selectedVersion?.id === version.id
-              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-800',
+              ? 'border-primary bg-primary-soft'
+              : 'border-default hover:border-strong hover:bg-surface-muted',
           ]"
           @click="$emit('select-version', version)"
         >
@@ -38,21 +35,21 @@
                 'text-xs font-medium px-1.5 py-0.5 rounded',
                 version.is_latest
                   ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                  : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+                  : 'bg-surface-sunken text-content-muted',
               ]"
             >
               {{ version.is_latest ? 'Current' : 'Archived' }}
             </span>
-            <span class="text-xs text-slate-500 dark:text-slate-400"
+            <span class="text-xs text-content-muted"
               >v{{ (versionCount ?? 0) - (versions ?? []).indexOf(version) }}</span
             >
           </div>
-          <p class="text-xs text-slate-600 dark:text-slate-400">
+          <p class="text-xs text-content-muted">
             {{ formatRelativeTime(version.created_at) }}
           </p>
           <p
             v-if="version.meta_data?.extraction_method"
-            class="text-xs text-slate-400 dark:text-slate-400 truncate mt-1"
+            class="text-xs text-content-subtle truncate mt-1"
           >
             {{ getShortExtractionMethod(version.meta_data.extraction_method) }}
           </p>
@@ -61,8 +58,8 @@
 
       <!-- No Versions -->
       <div v-else class="text-center py-8">
-        <FileText class="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">Only one version exists</p>
+        <FileText class="w-10 h-10 text-content-subtle mx-auto" />
+        <p class="text-sm text-content-muted mt-2">Only one version exists</p>
       </div>
     </div>
   </div>

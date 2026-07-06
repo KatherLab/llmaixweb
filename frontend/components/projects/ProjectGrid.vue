@@ -1,18 +1,16 @@
 <template>
   <div class="h-full flex flex-col min-h-0">
     <!-- Header with title and admin toggle -->
-    <div
-      class="flex items-center justify-between mb-3 pb-3 border-b border-slate-200 dark:border-slate-700"
-    >
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Your Projects</h2>
+    <div class="flex items-center justify-between mb-3 pb-3 border-b border-default">
+      <h2 class="text-lg font-semibold text-content">Your Projects</h2>
       <div v-if="isAdmin" class="flex items-center">
         <label class="inline-flex items-center gap-2 cursor-pointer select-none">
           <input
             v-model="showAllProjects"
             type="checkbox"
-            class="rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 shadow-sm focus:ring-blue-500"
+            class="rounded border-strong text-primary shadow-sm focus:ring-ring"
           />
-          <span class="text-sm text-slate-700 dark:text-slate-300">Show all users' projects</span>
+          <span class="text-sm text-content-muted">Show all users' projects</span>
         </label>
       </div>
     </div>
@@ -39,16 +37,14 @@
         @page-size-change="handlePageSizeChange"
       >
         <template #cell-name="{ row: project }">
-          <span
-            class="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 cursor-pointer"
-          >
+          <span class="font-medium text-primary hover:text-primary cursor-pointer">
             {{ project.name }}
           </span>
         </template>
 
         <template #cell-document_count="{ row: project }">
           <span
-            class="px-2.5 py-1 inline-flex text-xs leading-4 font-medium rounded-full bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-slate-600"
+            class="px-2.5 py-1 inline-flex text-xs leading-4 font-medium rounded-full bg-primary-soft text-primary border border-default"
           >
             {{ project.document_count }} document{{ project.document_count !== 1 ? 's' : '' }}
           </span>
@@ -57,23 +53,21 @@
         <template #cell-user="{ row: project }">
           <div class="flex items-center">
             <div
-              class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-slate-700 flex items-center justify-center"
+              class="flex-shrink-0 h-8 w-8 rounded-full bg-primary-soft flex items-center justify-center"
             >
-              <span class="text-blue-800 dark:text-blue-300 font-medium text-xs">{{
-                project.user.initials
-              }}</span>
+              <span class="text-primary font-medium text-xs">{{ project.user.initials }}</span>
             </div>
             <div class="ml-2">
-              <div class="text-sm font-medium text-slate-900 dark:text-white">
+              <div class="text-sm font-medium text-content">
                 {{ project.user.full_name }}
               </div>
-              <div class="text-xs text-slate-500 dark:text-slate-400">{{ project.user.email }}</div>
+              <div class="text-xs text-content-subtle">{{ project.user.email }}</div>
             </div>
           </div>
         </template>
 
         <template #cell-created_at="{ row: project }">
-          <span class="text-sm text-slate-500 dark:text-slate-400">
+          <span class="text-sm text-content-subtle">
             {{ project.created_at ? formatDate(project.created_at) : '' }}
           </span>
         </template>

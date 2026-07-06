@@ -2,8 +2,8 @@
   <BaseModal :open="open" size="xl" body-class="p-6" @close="emit('close')">
     <template #header>
       <div>
-        <h3 class="text-lg font-medium text-slate-900 dark:text-white">Schema Templates</h3>
-        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+        <h3 class="text-lg font-medium text-content">Schema Templates</h3>
+        <p class="text-sm text-content-muted mt-1">
           Select a template for common medical document structures
         </p>
       </div>
@@ -13,11 +13,11 @@
       <button
         v-for="template in templates"
         :key="template.name"
-        class="p-4 border rounded-card hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors"
+        class="p-4 border rounded-card hover:border-primary hover:bg-primary-soft text-left transition-colors"
         @click="emit('apply', template)"
       >
-        <h4 class="font-medium text-slate-900 dark:text-white">{{ template.name }}</h4>
-        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">{{ template.description }}</p>
+        <h4 class="font-medium text-content">{{ template.name }}</h4>
+        <p class="text-sm text-content-muted mt-1">{{ template.description }}</p>
       </button>
     </div>
 

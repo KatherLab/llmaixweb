@@ -1,25 +1,19 @@
 <template>
   <div
-    class="border-2 border-dashed rounded-modal text-center hover:border-blue-400 transition-colors"
+    class="border-2 border-dashed rounded-modal text-center hover:border-primary transition-colors"
     :class="[
-      compact
-        ? 'border-slate-300 dark:border-slate-600 p-10 bg-slate-50 dark:bg-slate-800/50'
-        : 'border-slate-300 dark:border-slate-600 p-12 bg-slate-50 dark:bg-slate-800/50',
-      { 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-slate-800': dragging },
+      compact ? 'border-strong p-10 bg-surface-muted' : 'border-strong p-12 bg-surface-muted',
+      { 'border-primary bg-primary-soft': dragging },
     ]"
     @dragover.prevent="dragging = true"
     @dragleave="dragging = false"
     @drop.prevent="onDrop"
   >
-    <UploadCloud class="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500" />
-    <p
-      :class="['mt-4 font-medium text-slate-900 dark:text-white', compact ? 'text-sm' : 'text-lg']"
-    >
+    <UploadCloud class="mx-auto h-12 w-12 text-content-subtle" />
+    <p :class="['mt-4 font-medium text-content', compact ? 'text-sm' : 'text-lg']">
       Drop files here or click to upload
     </p>
-    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-      PDF, PNG, JPG, DOCX, CSV, XLSX, TXT
-    </p>
+    <p class="mt-2 text-sm text-content-muted">PDF, PNG, JPG, DOCX, CSV, XLSX, TXT</p>
     <BaseButton
       :class="['mt-6', compact ? 'px-6 py-2.5 text-sm' : 'px-6 py-2']"
       @click="inputRef?.click()"

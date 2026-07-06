@@ -1,7 +1,7 @@
 <template>
   <div v-if="count > 0" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
     <div
-      class="bg-slate-900 dark:bg-slate-800 text-white rounded-modal shadow-2xl px-6 py-3 flex items-center space-x-4"
+      class="bg-inverse-surface text-inverse-content border border-inverse-border rounded-modal shadow-2xl px-6 py-3 flex items-center space-x-4"
     >
       <span class="font-medium"
         >{{ count }} {{ countLabel || 'item' }}{{ count !== 1 ? 's' : '' }} selected</span
@@ -11,11 +11,16 @@
       <slot name="warning" />
 
       <!-- Close / clear affordance -->
-      <BaseButton variant="icon" tone="gray" aria-label="Clear selection" @click="emit('clear')">
+      <button
+        type="button"
+        aria-label="Clear selection"
+        class="p-1.5 rounded-card text-inverse-muted hover:text-inverse-content hover:bg-inverse-border/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+        @click="emit('clear')"
+      >
         <X class="w-4 h-4" />
-      </BaseButton>
+      </button>
 
-      <div class="w-px h-5 bg-slate-700 dark:bg-slate-600" />
+      <div class="w-px h-5 bg-inverse-border" />
 
       <!-- Action buttons -->
       <slot />
@@ -25,7 +30,6 @@
 
 <script setup lang="ts">
 import { X } from '@lucide/vue'
-import BaseButton from '@/components/common/BaseButton.vue'
 
 interface Props {
   /** Number of selected items. The bar only renders when > 0. */

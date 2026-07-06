@@ -2,8 +2,8 @@
   <div>
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="text-lg font-medium text-slate-900 dark:text-white">Extraction Prompts</h2>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h2 class="text-lg font-medium text-content">Extraction Prompts</h2>
+        <p class="mt-1 text-sm text-content-muted">
           Configure how the LLM extracts information from documents
         </p>
       </div>
@@ -47,10 +47,8 @@
       >
         <template #cell-name="{ row: prompt }">
           <div class="min-w-0">
-            <span class="text-sm font-medium text-slate-900 dark:text-white">{{
-              prompt.name
-            }}</span>
-            <p v-if="prompt.description" class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            <span class="text-sm font-medium text-content">{{ prompt.name }}</span>
+            <p v-if="prompt.description" class="mt-0.5 text-xs text-content-muted">
               {{ prompt.description }}
             </p>
           </div>
@@ -60,11 +58,11 @@
           <StatusBadge v-if="hasPlaceholder(prompt as Prompt)" color="green" class="font-medium">
             Contains placeholder
           </StatusBadge>
-          <span v-else class="text-sm text-slate-400 dark:text-slate-500">—</span>
+          <span v-else class="text-sm text-content-subtle">—</span>
         </template>
 
         <template #cell-created_at="{ row: prompt }">
-          <span class="text-sm text-slate-500 dark:text-slate-400">
+          <span class="text-sm text-content-muted">
             {{ formatDate(prompt.created_at) }}
           </span>
         </template>
@@ -101,10 +99,9 @@
 
         <template #expanded="{ row: prompt }">
           <div class="p-4 space-y-3">
-            <div v-if="prompt.system_prompt" class="bg-slate-50 dark:bg-slate-800 rounded-card p-4">
+            <div v-if="prompt.system_prompt" class="bg-surface-muted rounded-card p-4">
               <div class="flex items-center mb-2">
-                <span
-                  class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                <span class="text-xs font-medium text-content-muted uppercase tracking-wider"
                   >System Prompt</span
                 >
                 <StatusBadge
@@ -114,14 +111,13 @@
                   class="ml-2"
                 />
               </div>
-              <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+              <p class="text-sm text-content-muted whitespace-pre-wrap">
                 {{ truncateText(prompt.system_prompt, 200) }}
               </p>
             </div>
-            <div v-if="prompt.user_prompt" class="bg-blue-50 dark:bg-blue-900/20 rounded-card p-4">
+            <div v-if="prompt.user_prompt" class="bg-primary-soft rounded-card p-4">
               <div class="flex items-center mb-2">
-                <span
-                  class="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider"
+                <span class="text-xs font-medium text-primary uppercase tracking-wider"
                   >User Prompt</span
                 >
                 <StatusBadge
@@ -131,7 +127,7 @@
                   class="ml-2"
                 />
               </div>
-              <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+              <p class="text-sm text-content-muted whitespace-pre-wrap">
                 {{ truncateText(prompt.user_prompt, 200) }}
               </p>
             </div>

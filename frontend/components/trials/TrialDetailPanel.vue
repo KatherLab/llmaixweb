@@ -1,17 +1,17 @@
 <template>
   <div class="p-4 space-y-3">
     <!-- Description -->
-    <div v-if="trial.description" class="text-sm text-slate-600 dark:text-slate-400">
+    <div v-if="trial.description" class="text-sm text-content-muted">
       {{ trial.description }}
     </div>
 
     <!-- Metadata -->
-    <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+    <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-content-muted">
       <span class="inline-flex items-center gap-1">
-        <strong class="text-slate-700 dark:text-slate-300">Schema:</strong>
+        <strong class="text-content-muted">Schema:</strong>
         <button
           type="button"
-          class="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+          class="text-primary hover:underline cursor-pointer"
           title="View schema"
           @click.stop="emit('view-schema', trial)"
         >
@@ -19,50 +19,42 @@
         </button>
       </span>
       <span v-if="promptName" class="inline-flex items-center gap-1">
-        <strong class="text-slate-700 dark:text-slate-300">Prompt:</strong>
+        <strong class="text-content-muted">Prompt:</strong>
         <button
           type="button"
-          class="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+          class="text-primary hover:underline cursor-pointer"
           title="View prompt"
           @click.stop="emit('view-prompt', trial)"
         >
           {{ promptName }}
         </button>
       </span>
+      <span><strong class="text-content-muted">LLM:</strong> {{ trial.llm_model }}</span>
       <span
-        ><strong class="text-slate-700 dark:text-slate-300">LLM:</strong>
-        {{ trial.llm_model }}</span
-      >
-      <span
-        ><strong class="text-slate-700 dark:text-slate-300">Started:</strong>
+        ><strong class="text-content-muted">Started:</strong>
         {{ formatDateFull(trial.created_at) }}</span
       >
       <span v-if="trial.last_result_at"
-        ><strong class="text-slate-700 dark:text-slate-300">Last result:</strong>
+        ><strong class="text-content-muted">Last result:</strong>
         {{ formatDateFull(trial.last_result_at) }}</span
       >
       <span v-if="trial.documents_count != null"
-        ><strong class="text-slate-700 dark:text-slate-300">Docs:</strong>
-        {{ trial.documents_count }}</span
+        ><strong class="text-content-muted">Docs:</strong> {{ trial.documents_count }}</span
       >
     </div>
 
     <!-- Progress (active) -->
     <div v-if="isActive" class="flex flex-col gap-1">
       <div class="flex items-center gap-2 text-xs">
-        <span class="font-medium text-blue-600 dark:text-blue-400"
-          >{{ docsDone }}/{{ totalDocs }} docs</span
-        >
-        <span class="text-slate-500 dark:text-slate-400"
-          >{{ formatDuration(elapsedSeconds) }} elapsed</span
-        >
-        <span v-if="etaSeconds && etaSeconds > 0" class="text-slate-500 dark:text-slate-400"
+        <span class="font-medium text-primary">{{ docsDone }}/{{ totalDocs }} docs</span>
+        <span class="text-content-muted">{{ formatDuration(elapsedSeconds) }} elapsed</span>
+        <span v-if="etaSeconds && etaSeconds > 0" class="text-content-muted"
           >• ≈ {{ formatDuration(etaSeconds) }} left</span
         >
       </div>
-      <div class="w-full h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+      <div class="w-full h-1 bg-surface-sunken rounded-full overflow-hidden">
         <div
-          class="h-full bg-blue-500 transition-all duration-500"
+          class="h-full bg-primary transition-all duration-500"
           :style="{ width: progressPercent + '%' }"
         ></div>
       </div>
@@ -85,9 +77,7 @@
     </div>
 
     <!-- Actions -->
-    <div
-      class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-700"
-    >
+    <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-default">
       <div class="flex gap-2 flex-wrap">
         <BaseButton
           v-if="isActive && trial.status !== 'cancelled'"

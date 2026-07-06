@@ -52,7 +52,7 @@
       <!-- Loading States -->
       <div v-if="loadingStates.groundTruthFiles" class="text-center py-8">
         <LoadingSpinner size="medium" />
-        <p class="mt-2 text-slate-500 dark:text-slate-400">Loading ground truth files...</p>
+        <p class="mt-2 text-content-subtle">Loading ground truth files...</p>
       </div>
 
       <!-- No ground truth files yet -->
@@ -64,18 +64,18 @@
         @action="showUploadModal = true"
       >
         <template #icon>
-          <ClipboardList class="h-16 w-16 mx-auto text-slate-400" />
+          <ClipboardList class="h-16 w-16 mx-auto text-content-subtle" />
         </template>
       </EmptyState>
 
       <!-- Main evaluation interface -->
       <div v-else class="grid grid-cols-1 xl:grid-cols-4 gap-6">
         <!-- Ground truth files panel -->
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4">
+        <div class="bg-surface shadow-sm rounded-card p-4">
           <div class="flex justify-between items-center mb-3">
-            <h2 class="font-medium text-slate-900 dark:text-white">Ground Truth Files</h2>
+            <h2 class="font-medium text-content">Ground Truth Files</h2>
             <button
-              class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm"
+              class="text-primary hover:text-primary-hover text-sm"
               @click="showGroundTruthManager = true"
             >
               Manage
@@ -85,16 +85,16 @@
             <div
               v-for="(gt, index) in groundTruthFiles"
               :key="gt.id"
-              class="border dark:border-slate-700 rounded-card p-3 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+              class="border border-default rounded-card p-3 hover:bg-surface-muted cursor-pointer transition-colors"
               :class="{
-                'border-blue-500 bg-blue-50 dark:bg-blue-900/20': selectedGroundTruth?.id === gt.id,
+                'border-primary bg-primary-soft': selectedGroundTruth?.id === gt.id,
               }"
               @click="selectGroundTruthWithValidation(gt)"
             >
-              <div class="font-medium text-sm text-slate-900 dark:text-white">
+              <div class="font-medium text-sm text-content">
                 {{ gt.name || `Ground Truth #${index + 1}` }}
               </div>
-              <div class="text-xs text-slate-500 dark:text-slate-400">
+              <div class="text-xs text-content-subtle">
                 {{ gt.format?.toUpperCase() }} • {{ formatDate(gt.created_at) }}
               </div>
               <div
@@ -111,22 +111,17 @@
         </div>
 
         <!-- Trial selection and evaluation panel -->
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4 xl:col-span-3">
-          <div
-            v-if="!selectedGroundTruth"
-            class="text-center py-12 text-slate-500 dark:text-slate-400"
-          >
-            <ClipboardList class="h-16 w-16 mx-auto text-slate-400 mb-3 block" />
-            <p class="text-slate-700 dark:text-slate-300">
-              Select a ground truth file to start evaluation
-            </p>
+        <div class="bg-surface shadow-sm rounded-card p-4 xl:col-span-3">
+          <div v-if="!selectedGroundTruth" class="text-center py-12 text-content-subtle">
+            <ClipboardList class="h-16 w-16 mx-auto text-content-subtle mb-3 block" />
+            <p class="text-content-muted">Select a ground truth file to start evaluation</p>
           </div>
           <div v-else>
             <div class="flex justify-between items-center mb-4">
               <div class="flex items-center gap-2">
-                <h2 class="font-medium text-slate-900 dark:text-white">Evaluation Dashboard</h2>
+                <h2 class="font-medium text-content">Evaluation Dashboard</h2>
                 <button
-                  class="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                  class="inline-flex items-center gap-1 text-xs text-content-subtle hover:text-content-muted"
                   :title="showConcepts ? 'Hide the quick explainer' : 'Show how evaluation works'"
                   @click="showConcepts = !showConcepts"
                 >
@@ -157,7 +152,7 @@
                  recallable via the "How it works" link next to the heading. -->
             <Callout v-if="showConcepts" variant="info" class="mb-4 relative">
               <button
-                class="absolute top-2 right-2 text-blue-400 hover:text-blue-700 dark:hover:text-blue-200"
+                class="absolute top-2 right-2 text-primary hover:text-primary-hover"
                 title="Hide"
                 @click="showConcepts = false"
               >
@@ -212,7 +207,7 @@
             <!-- Loading evaluations -->
             <div v-if="loadingStates.evaluations" class="text-center py-8">
               <LoadingSpinner size="medium" />
-              <p class="mt-2 text-slate-500 dark:text-slate-400">Loading evaluations...</p>
+              <p class="mt-2 text-content-subtle">Loading evaluations...</p>
             </div>
 
             <!-- Evaluation results table -->
@@ -221,7 +216,7 @@
               title="No evaluations yet. Select a trial to evaluate."
             >
               <template #icon>
-                <BarChart3 class="h-12 w-12 mx-auto text-slate-400" />
+                <BarChart3 class="h-12 w-12 mx-auto text-content-subtle" />
               </template>
             </EmptyState>
             <div v-else class="overflow-x-auto">
@@ -237,37 +232,33 @@
               >
                 <template #cell-trial="{ row: evaluation }">
                   <div
-                    class="font-medium text-slate-900 dark:text-white truncate"
+                    class="font-medium text-content truncate"
                     :title="getTrialName(evaluation.trial_id)"
                   >
                     {{ getTrialName(evaluation.trial_id) }}
                   </div>
-                  <div class="text-xs text-slate-500 dark:text-slate-400">
+                  <div class="text-xs text-content-subtle">
                     ID: {{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}
                   </div>
                 </template>
                 <template #cell-model="{ row: evaluation }">
-                  <span class="text-sm text-slate-900 dark:text-white">
+                  <span class="text-sm text-content">
                     {{ getTrialModel(evaluation.trial_id) }}
                   </span>
                 </template>
                 <template #cell-accuracy="{ row: evaluation }">
                   <div class="flex items-center">
-                    <div class="mr-2 text-slate-900 dark:text-white">
-                      {{ getAccuracyPercentage(evaluation) }}%
-                    </div>
-                    <div class="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                    <div class="mr-2 text-content">{{ getAccuracyPercentage(evaluation) }}%</div>
+                    <div class="w-16 bg-surface-sunken rounded-full h-2">
                       <div
-                        class="bg-blue-600 h-2 rounded-full"
+                        class="bg-primary h-2 rounded-full"
                         :style="{ width: `${getAccuracyPercentage(evaluation)}%` }"
                       ></div>
                     </div>
                   </div>
                 </template>
                 <template #cell-documents="{ row: evaluation }">
-                  <div class="text-sm text-slate-900 dark:text-white">
-                    {{ getDocumentCount(evaluation) }} docs
-                  </div>
+                  <div class="text-sm text-content">{{ getDocumentCount(evaluation) }} docs</div>
                   <div
                     v-if="getUnmatchedDocCount(evaluation) > 0"
                     class="text-xs text-yellow-600 dark:text-yellow-400"
@@ -288,7 +279,7 @@
                 </template>
                 <template #row-actions="{ row: evaluation }">
                   <button
-                    class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm underline"
+                    class="text-primary hover:text-primary-hover text-sm underline"
                     @click.stop="viewEvaluationAnalysis(evaluation)"
                   >
                     Analysis

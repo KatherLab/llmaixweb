@@ -47,16 +47,16 @@
         <div>
           <label for="file-upload" :class="labelClass">File(s)</label>
           <div
-            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 dark:border-slate-600 border-dashed rounded-card"
+            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-strong border-dashed rounded-card"
             @dragover.prevent
             @drop.prevent="handleFileDrop"
           >
             <div class="space-y-1 text-center">
-              <ImageIcon class="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500" />
-              <div class="flex text-sm text-slate-600 dark:text-slate-300 justify-center">
+              <ImageIcon class="mx-auto h-12 w-12 text-content-subtle" />
+              <div class="flex text-sm text-content-muted justify-center">
                 <label
                   for="file-upload"
-                  class="relative cursor-pointer bg-white dark:bg-slate-800 rounded-card font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
+                  class="relative cursor-pointer bg-surface rounded-card font-medium text-primary hover:text-primary focus-within:outline-none"
                 >
                   <span>Upload file(s)</span>
                   <input
@@ -71,7 +71,7 @@
                 </label>
                 <p class="pl-1">or drag and drop</p>
               </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
+              <p class="text-xs text-content-muted">
                 <template v-if="groundTruthFormat === 'csv'"
                   >CSV file with flattened fields (dots for nesting)</template
                 >
@@ -85,10 +85,8 @@
             </div>
           </div>
           <div v-if="selectedFiles.length > 0" class="mt-2">
-            <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Selected files:
-            </p>
-            <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+            <p class="text-sm font-medium text-content-muted mb-1">Selected files:</p>
+            <ul class="text-sm text-content-muted space-y-1">
               <li
                 v-for="(file, index) in selectedFiles"
                 :key="index"

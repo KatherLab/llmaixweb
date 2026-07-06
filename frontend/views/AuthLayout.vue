@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900"
-  >
+  <div class="min-h-screen flex items-center justify-center bg-surface">
     <router-view />
   </div>
 </template>

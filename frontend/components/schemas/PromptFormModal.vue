@@ -7,7 +7,7 @@
   >
     <template #header>
       <div class="flex items-center gap-4">
-        <h3 class="text-lg font-medium text-slate-900 dark:text-white">
+        <h3 class="text-lg font-medium text-content">
           {{ isEdit ? 'Edit Prompt' : 'Create New Prompt' }}
         </h3>
         <!-- Simple/Advanced Mode Toggle -->
@@ -75,7 +75,7 @@
               placeholder="Based on the document content, extract these fields:"
               @input="validatePromptPlaceholder"
             />
-            <p class="mt-2 text-xs text-slate-600 dark:text-slate-400">
+            <p class="mt-2 text-xs text-content-muted">
               This will be used as the user prompt. The schema is automatically included.
             </p>
           </div>
@@ -90,8 +90,7 @@
                 <p>
                   <strong>System prompt</strong> — the AI's role and rules (applies to every
                   document). <strong>User prompt</strong> — per-document instructions, where
-                  <code
-                    class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded font-mono text-xs"
+                  <code class="px-1.5 py-0.5 bg-primary-soft text-primary rounded font-mono text-xs"
                     >{document_content}</code
                   >
                   is replaced with the document text.
@@ -119,7 +118,7 @@
               <button
                 v-if="!hasDocumentContentPlaceholder"
                 type="button"
-                class="ml-2 px-2 py-0.5 text-xs bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition"
+                class="ml-2 px-2 py-0.5 text-xs bg-primary-soft hover:bg-primary-soft rounded text-primary border border-default transition"
                 title="Insert {document_content} at cursor"
                 @click="insertPlaceholder('system')"
               >
@@ -148,7 +147,7 @@
               <button
                 v-if="promptForm.system_prompt"
                 type="button"
-                class="px-3 py-1 text-xs font-medium bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-400"
+                class="px-3 py-1 text-xs font-medium bg-surface border border-strong rounded hover:bg-surface-muted text-primary"
                 @click="togglePreview('system')"
               >
                 {{ showPreviewSystem ? 'Hide' : 'Preview' }}
@@ -170,7 +169,7 @@
               <button
                 v-if="!hasDocumentContentPlaceholder"
                 type="button"
-                class="ml-2 px-2 py-0.5 text-xs bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition"
+                class="ml-2 px-2 py-0.5 text-xs bg-primary-soft hover:bg-primary-soft rounded text-primary border border-default transition"
                 title="Insert {document_content} at cursor"
                 @click="insertPlaceholder('user')"
               >
@@ -190,7 +189,7 @@
               <button
                 v-if="promptForm.user_prompt"
                 type="button"
-                class="px-3 py-1 text-xs font-medium bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-400"
+                class="px-3 py-1 text-xs font-medium bg-surface border border-strong rounded hover:bg-surface-muted text-primary"
                 @click="togglePreview('user')"
               >
                 {{ showPreviewUser ? 'Hide' : 'Preview' }}
@@ -201,35 +200,27 @@
 
         <!-- Preview Section -->
         <div v-if="showPreviewSystem || showPreviewUser" class="mt-4 space-y-4">
-          <h4 class="text-sm font-medium text-slate-800 dark:text-slate-200">
-            Preview with Sample Document
-          </h4>
+          <h4 class="text-sm font-medium text-content">Preview with Sample Document</h4>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div
               v-if="showPreviewSystem && promptForm.system_prompt"
-              class="bg-slate-50 dark:bg-slate-800 rounded-card p-4 border border-slate-200 dark:border-slate-700"
+              class="bg-surface-muted rounded-card p-4 border border-default"
             >
-              <span
-                class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+              <span class="text-xs font-semibold text-content-muted uppercase tracking-wider"
                 >System Message Preview</span
               >
-              <div
-                class="mt-2 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300 font-mono"
-              >
+              <div class="mt-2 whitespace-pre-wrap text-sm text-content-muted font-mono">
                 {{ promptForm.system_prompt.replace('{document_content}', sampleDocument) }}
               </div>
             </div>
             <div
               v-if="showPreviewUser && promptForm.user_prompt"
-              class="bg-blue-50 dark:bg-blue-900/20 rounded-card p-4 border border-blue-200 dark:border-blue-800"
+              class="bg-primary-soft rounded-card p-4 border border-default"
             >
-              <span
-                class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider"
+              <span class="text-xs font-semibold text-primary uppercase tracking-wider"
                 >User Message Preview</span
               >
-              <div
-                class="mt-2 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300 font-mono"
-              >
+              <div class="mt-2 whitespace-pre-wrap text-sm text-content-muted font-mono">
                 {{ promptForm.user_prompt.replace('{document_content}', sampleDocument) }}
               </div>
             </div>

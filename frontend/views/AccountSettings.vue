@@ -11,7 +11,7 @@
       <!-- Profile -->
       <GlassCard>
         <div class="p-6">
-          <h2 class="text-base font-semibold text-slate-900 dark:text-white mb-4">Profile</h2>
+          <h2 class="text-base font-semibold text-content mb-4">Profile</h2>
           <div class="space-y-4">
             <FormField
               v-model="profileForm.full_name"
@@ -44,10 +44,8 @@
       <!-- Change password -->
       <GlassCard>
         <div class="p-6">
-          <h2 class="text-base font-semibold text-slate-900 dark:text-white mb-1">
-            Change password
-          </h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          <h2 class="text-base font-semibold text-content mb-1">Change password</h2>
+          <p class="text-xs text-content-subtle mb-4">
             Leave blank if you sign in exclusively via SSO — you can still set a password as a
             fallback.
           </p>
@@ -105,32 +103,27 @@
       <!-- Connected accounts (SSO) -->
       <GlassCard v-if="ssoEnabled !== false">
         <div class="p-6">
-          <h2 class="text-base font-semibold text-slate-900 dark:text-white mb-1">
-            Connected accounts
-          </h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          <h2 class="text-base font-semibold text-content mb-1">Connected accounts</h2>
+          <p class="text-xs text-content-subtle mb-4">
             External identity providers linked to your account.
           </p>
           <div v-if="loadingIdentities" class="flex justify-center py-6">
             <LoadingSpinner size="medium" />
           </div>
-          <div
-            v-else-if="identities.length === 0"
-            class="text-sm text-slate-500 dark:text-slate-400"
-          >
+          <div v-else-if="identities.length === 0" class="text-sm text-content-subtle">
             No external accounts connected.
           </div>
-          <ul v-else class="divide-y divide-slate-200 dark:divide-slate-700">
+          <ul v-else class="divide-y divide-default">
             <li
               v-for="ident in identities"
               :key="ident.id"
               class="flex items-center justify-between py-3"
             >
               <div>
-                <p class="text-sm font-medium text-slate-900 dark:text-white">
+                <p class="text-sm font-medium text-content">
                   {{ ident.provider_name }}
                 </p>
-                <p class="text-xs text-slate-500 dark:text-slate-400">
+                <p class="text-xs text-content-subtle">
                   {{ ident.external_subject }}
                   <span v-if="ident.last_login_at">
                     · last login {{ formatDate(ident.last_login_at) }}</span
@@ -155,8 +148,8 @@
       <GlassCard>
         <div class="p-6 flex items-center justify-between">
           <div>
-            <h2 class="text-base font-semibold text-slate-900 dark:text-white">Sign out</h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <h2 class="text-base font-semibold text-content">Sign out</h2>
+            <p class="text-xs text-content-subtle mt-1">
               Sign out of this device, or all sessions.
             </p>
           </div>

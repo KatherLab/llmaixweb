@@ -42,6 +42,13 @@
   --color-primary-hover: #1d4ed8; /* blue-700 */
   --color-primary-soft: #dbeafe; /* blue-100 — tinted backgrounds */
   --color-ring: #3b82f6; /* blue-500 — focus rings */
+
+  /* Inverse surfaces — high-contrast floating panels (tooltips, batch action
+     bars) that invert against the page: dark in light mode, light in dark. */
+  --color-inverse-surface: #1e293b; /* slate-800 */
+  --color-inverse-content: #f1f5f9; /* slate-100 */
+  --color-inverse-muted: #cbd5e1; /* slate-300 */
+  --color-inverse-border: #334155; /* slate-700 */
 }
 
 /*
@@ -54,12 +61,28 @@
  * would otherwise match nothing and leave borders falling back to
  * `currentColor` (i.e. the text color → heavy black borders). These
  * `@utility` rules bridge that gap so the short names resolve to the tokens.
+ *
+ * The same gap affects `divide-*` and `ring-*` (e.g. `divide-default`,
+ * `ring-default`), which likewise fall back to `currentColor` when the short
+ * form matches nothing — so they are shimmed here too.
  */
 @utility border-default {
   border-color: var(--color-default-border);
 }
 @utility border-strong {
   border-color: var(--color-strong-border);
+}
+@utility divide-default {
+  border-color: var(--color-default-border);
+}
+@utility divide-strong {
+  border-color: var(--color-strong-border);
+}
+@utility ring-default {
+  --tw-ring-color: var(--color-default-border);
+}
+@utility ring-strong {
+  --tw-ring-color: var(--color-strong-border);
 }
 
 /* Dark-mode overrides — AppLayout toggles `.dark` on <html>. */
@@ -79,6 +102,12 @@
   --color-primary-hover: #60a5fa; /* blue-400 */
   --color-primary-soft: rgba(59, 130, 246, 0.15); /* blue-500 @ 15% */
   --color-ring: #60a5fa; /* blue-400 */
+
+  /* Inverse surfaces flip to a light panel in dark mode. */
+  --color-inverse-surface: #f1f5f9; /* slate-100 */
+  --color-inverse-content: #0f172a; /* slate-900 */
+  --color-inverse-muted: #475569; /* slate-600 */
+  --color-inverse-border: #cbd5e1; /* slate-300 */
 }
 
 /* Base element styles (moved here from the deleted Vue-scaffold base.css).

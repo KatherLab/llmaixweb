@@ -11,14 +11,14 @@
         <div class="flex items-center gap-4">
           <FileIcon :file-type="file?.file_type" :size="32" />
           <div>
-            <h3 class="text-xl font-bold text-slate-900 dark:text-white">{{ file?.file_name }}</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
+            <h3 class="text-xl font-bold text-content">{{ file?.file_name }}</h3>
+            <p class="text-xs text-content-muted">
               {{ formatFileSize(file?.file_size, 'Unknown') }} &middot; {{ file?.file_type }}
             </p>
           </div>
         </div>
         <button
-          class="p-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-modal transition"
+          class="p-2 text-content-muted hover:text-content hover:bg-surface-sunken rounded-modal transition"
           title="Download"
           @click="downloadFile"
         >
@@ -36,8 +36,8 @@
     <!-- Error State -->
     <div v-else-if="error" class="flex items-center justify-center h-full">
       <div class="text-center max-w-sm mx-auto">
-        <AlertTriangle class="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" />
-        <p class="mt-3 text-base text-slate-500 dark:text-slate-400">{{ error }}</p>
+        <AlertTriangle class="mx-auto h-12 w-12 text-content-subtle" />
+        <p class="mt-3 text-base text-content-muted">{{ error }}</p>
         <BaseButton variant="ghost" size="sm" class="mt-5" @click="loadPreview">
           Try Again
         </BaseButton>
@@ -48,14 +48,14 @@
     <iframe
       v-else-if="previewUrl && file?.file_type === 'application/pdf'"
       :src="previewUrl"
-      class="w-full h-full rounded-b-2xl border-none"
+      class="w-full h-full rounded-b-modal border-none"
       title="PDF preview"
     ></iframe>
 
     <!-- Image Preview -->
     <div
       v-else-if="previewUrl && file?.file_type?.startsWith('image/')"
-      class="flex items-center justify-center h-full p-10 bg-white dark:bg-slate-900 rounded-b-2xl"
+      class="flex items-center justify-center h-full p-10 bg-surface rounded-b-modal"
     >
       <img
         :src="previewUrl"
@@ -66,39 +66,33 @@
 
     <!-- CSV/XLSX Table Preview -->
     <div v-else-if="tabularData && headerLabels.length" class="h-full overflow-auto p-6">
-      <div
-        class="bg-white dark:bg-slate-900 rounded-modal shadow border border-slate-100 dark:border-slate-700 overflow-x-auto"
-      >
-        <table
-          class="min-w-full divide-y divide-slate-100 dark:divide-slate-700 rounded-modal text-sm table-auto"
-        >
-          <thead class="bg-slate-50 dark:bg-slate-800 sticky top-0 z-10">
+      <div class="bg-surface rounded-modal shadow border border-default overflow-x-auto">
+        <table class="min-w-full divide-y divide-default-border rounded-modal text-sm table-auto">
+          <thead class="bg-surface-muted sticky top-0 z-10">
             <tr>
               <th
                 v-for="(header, idx) in normalizedHeaders"
                 :key="header || idx"
-                class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 whitespace-nowrap sticky top-0 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider border-b border-default whitespace-nowrap sticky top-0 bg-surface-muted text-content-muted"
                 :class="cellClasses(header)"
               >
                 {{ headerLabel(header) }}
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
+          <tbody class="divide-y divide-default-border">
             <tr
               v-for="(row, ridx) in tabularData.rows"
               :key="ridx"
-              class="hover:bg-blue-50 dark:hover:bg-slate-800 transition"
+              class="hover:bg-primary-soft transition"
             >
               <td
                 v-for="(cell, cidx) in row"
                 :key="cidx"
-                class="px-4 py-2 border-b border-slate-50 dark:border-slate-800 max-w-[260px] align-top text-slate-700 dark:text-slate-300"
+                class="px-4 py-2 border-b border-default max-w-[260px] align-top text-content-muted"
                 :class="cellClasses(normalizedHeaders[cidx] ?? null)"
               >
-                <span
-                  v-if="cell === '' || cell == null"
-                  class="text-slate-300 dark:text-slate-600 italic"
+                <span v-if="cell === '' || cell == null" class="text-content-subtle italic"
                   >empty</span
                 >
                 <template
@@ -111,9 +105,7 @@
                     :title="String(cell)"
                     @click="showFullCell(String(cell), headerLabels[cidx] ?? null)"
                     >{{ String(cell).slice(0, 80)
-                    }}<span class="font-semibold text-blue-600 dark:text-blue-400 ml-1"
-                      >…more</span
-                    ></span
+                    }}<span class="font-semibold text-primary ml-1">…more</span></span
                   >
                 </template>
                 <template v-else>
@@ -125,7 +117,7 @@
         </table>
         <div
           v-if="truncated"
-          class="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 dark:text-slate-400 rounded-b-2xl text-center"
+          class="px-4 py-2 bg-surface-muted text-xs text-content-muted rounded-b-modal text-center"
         >
           Showing first {{ tabularData.rows.length }} of {{ totalRows }} rows
         </div>
@@ -133,7 +125,7 @@
       <div class="flex flex-wrap gap-2 mt-4">
         <span
           v-if="idColumn"
-          class="inline-flex items-center px-3 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs font-medium"
+          class="inline-flex items-center px-3 py-1 rounded bg-primary-soft text-primary text-xs font-medium"
         >
           <span class="mr-1 font-bold">ID column:</span> {{ idColumn }}
         </span>
@@ -152,7 +144,7 @@
       class="h-full overflow-auto p-8"
     >
       <pre
-        class="text-sm font-mono whitespace-pre-wrap bg-white dark:bg-slate-900 rounded-card shadow p-6 border border-slate-100 dark:border-slate-700"
+        class="text-sm font-mono whitespace-pre-wrap bg-surface rounded-card shadow p-6 border border-default"
         >{{ previewContent }}</pre>
     </div>
 
@@ -160,9 +152,7 @@
     <div v-else class="flex items-center justify-center h-full">
       <div class="text-center">
         <FileIcon :file-type="file?.file_type" :size="64" />
-        <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
-          Preview not available for this file type.
-        </p>
+        <p class="mt-4 text-sm text-content-muted">Preview not available for this file type.</p>
         <BaseButton class="mt-4" @click="downloadFile">
           <CloudDownload class="mr-2 h-4 w-4" />
           Download File
@@ -179,7 +169,7 @@
       @close="closeModal"
     >
       <pre
-        class="whitespace-pre-wrap text-sm text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-900 rounded p-4 max-h-[60vh] overflow-auto"
+        class="whitespace-pre-wrap text-sm text-content bg-surface-muted rounded p-4 max-h-[60vh] overflow-auto"
         >{{ modalContent }}</pre>
       <div class="mt-4 flex items-center gap-2">
         <BaseButton variant="link" tone="blue" class="text-xs underline" @click="copyToClipboard">
@@ -191,13 +181,13 @@
 
     <template #footer>
       <div class="flex items-center justify-between text-xs w-full">
-        <div class="flex items-center gap-6 text-slate-500 dark:text-slate-400">
+        <div class="flex items-center gap-6 text-content-muted">
           <span>Created: {{ formatDateFull(file?.created_at) }}</span>
           <span v-if="file?.file_hash" class="font-mono text-xs">
             Hash: {{ file.file_hash.substring(0, 8) }}...
           </span>
         </div>
-        <div v-if="file?.description" class="text-slate-600 dark:text-slate-300 truncate">
+        <div v-if="file?.description" class="text-content-muted truncate">
           {{ file.description }}
         </div>
       </div>
@@ -440,7 +430,7 @@ onUnmounted(() => {
 
 function cellClasses(headerLabel: string | null): string {
   if (headerLabel === idColumn.value && idColumn.value) {
-    return 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold border-blue-200 dark:border-blue-800 shadow-sm'
+    return 'bg-primary-soft text-primary font-semibold border-default shadow-sm'
   }
   if (headerLabel != null && textColumns.value && textColumns.value.includes(headerLabel)) {
     return 'bg-green-50 dark:bg-green-900/30 text-green-900 dark:text-green-300 font-medium border-green-200 dark:border-green-800'

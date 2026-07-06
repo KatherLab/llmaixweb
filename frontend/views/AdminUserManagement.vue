@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="h-screen bg-gradient-to-br from-slate-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex flex-col"
-  >
+  <div class="h-screen bg-surface flex flex-col">
     <PageHeader
       title="User Management"
       subtitle="Manage user accounts, roles, and invitations."
@@ -11,12 +9,7 @@
         <Users class="w-5 h-5" aria-hidden="true" />
       </template>
       <template #actions>
-        <BaseButton
-          variant="primary"
-          size="sm"
-          class="dark:bg-blue-500 dark:hover:bg-blue-600"
-          @click="showInviteModal = true"
-        >
+        <BaseButton variant="primary" size="sm" @click="showInviteModal = true">
           + Invite User
         </BaseButton>
       </template>
@@ -27,13 +20,11 @@
         <!-- Users Section -->
         <GlassCard>
           <div class="h-full flex flex-col min-h-0">
-            <div
-              class="flex items-center justify-between mb-3 pb-3 border-b border-slate-200 dark:border-slate-700"
-            >
-              <h2 class="text-base font-semibold text-slate-900 dark:text-white">
+            <div class="flex items-center justify-between mb-3 pb-3 border-b border-default">
+              <h2 class="text-base font-semibold text-content">
                 Users
                 <span
-                  class="ml-2 text-xs bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-100 dark:border-slate-600"
+                  class="ml-2 text-xs bg-primary-soft text-primary px-2 py-0.5 rounded-full border border-default"
                   >{{ users.length }} total</span
                 >
               </h2>
@@ -64,22 +55,20 @@
         <!-- Invitations Section -->
         <GlassCard>
           <div class="h-full flex flex-col min-h-0">
-            <div
-              class="flex items-center justify-between mb-3 pb-3 border-b border-slate-200 dark:border-slate-700"
-            >
-              <h2 class="text-base font-semibold text-slate-900 dark:text-white">
+            <div class="flex items-center justify-between mb-3 pb-3 border-b border-default">
+              <h2 class="text-base font-semibold text-content">
                 Invitations
-                <label class="ml-4 text-xs font-medium text-slate-600 dark:text-slate-400">
+                <label class="ml-4 text-xs font-medium text-content-subtle">
                   <input
                     v-model="showUsedInvitations"
                     type="checkbox"
-                    class="mr-2 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400"
+                    class="mr-2 rounded border-strong text-primary"
                   />Show used
                 </label>
               </h2>
               <div class="flex items-center gap-4">
                 <span
-                  class="text-xs bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-100 dark:border-slate-600"
+                  class="text-xs bg-primary-soft text-primary px-2 py-0.5 rounded-full border border-default"
                   >{{ activeInvitations }} active</span
                 >
                 <SearchInput v-model="invitationSearch" placeholder="Search invitations…" />

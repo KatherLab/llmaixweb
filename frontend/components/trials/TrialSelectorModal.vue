@@ -36,9 +36,7 @@
       <!-- Loading State -->
       <div v-if="loadingStates.trials" class="text-center py-8">
         <LoadingSpinner size="medium" />
-        <p class="mt-2 text-slate-500 dark:text-slate-400">
-          Loading trials and checking mappings...
-        </p>
+        <p class="mt-2 text-content-muted">Loading trials and checking mappings...</p>
       </div>
 
       <!-- No Trials State -->
@@ -51,14 +49,12 @@
       <!-- Trials List -->
       <div v-else>
         <div class="mb-4">
-          <h4 class="font-medium text-slate-900 dark:text-white mb-2">
-            Select a trial to evaluate
-          </h4>
-          <p class="text-sm text-slate-600 dark:text-slate-400">
+          <h4 class="font-medium text-content mb-2">Select a trial to evaluate</h4>
+          <p class="text-sm text-content-muted">
             Choose from completed trials to compare against your ground truth data.
           </p>
           <div class="mt-3 flex gap-4 text-sm">
-            <span class="text-slate-600 dark:text-slate-400">
+            <span class="text-content-muted">
               Total trials: <span class="font-medium">{{ trials.total }}</span>
             </span>
             <span class="text-green-600 dark:text-green-400">
@@ -79,7 +75,7 @@
         <!-- Mapping Status Loading -->
         <div v-if="loadingStates.mappings" class="text-center py-4">
           <LoadingSpinner size="small" />
-          <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Checking field mappings...</p>
+          <p class="mt-2 text-sm text-content-muted">Checking field mappings...</p>
         </div>
 
         <div class="space-y-3">
@@ -88,25 +84,21 @@
             :key="trial.id"
             class="border rounded-card p-4 transition-colors"
             :class="{
-              'border-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30':
+              'border-primary bg-primary-soft cursor-pointer hover:bg-primary-soft':
                 trial.hasMappings && selectedTrial?.id === trial.id,
-              'border-slate-300 dark:border-slate-600 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40':
+              'border-strong cursor-pointer hover:bg-surface-muted':
                 trial.hasMappings && selectedTrial?.id !== trial.id,
-              'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 cursor-not-allowed opacity-60':
-                !trial.hasMappings,
+              'border-default bg-surface-muted cursor-not-allowed opacity-60': !trial.hasMappings,
             }"
             @click="trial.hasMappings ? selectTrial(trial) : showMappingRequiredTooltip(trial)"
           >
             <div class="flex justify-between items-start">
               <div class="flex-1">
                 <div class="flex items-center gap-3 mb-2">
-                  <h5
-                    class="font-medium text-slate-900 dark:text-white truncate"
-                    :title="trialDisplayName(trial)"
-                  >
+                  <h5 class="font-medium text-content truncate" :title="trialDisplayName(trial)">
                     {{ trialDisplayName(trial) }}
                   </h5>
-                  <div class="text-xs text-slate-500 dark:text-slate-400">ID: {{ trial.id }}</div>
+                  <div class="text-xs text-content-muted">ID: {{ trial.id }}</div>
                   <StatusBadge :status="trial.status" class="px-2 py-1 font-medium" />
                   <StatusBadge
                     v-if="trial.hasMappings"
@@ -127,9 +119,7 @@
                     class="px-2 py-1 font-medium"
                   />
                 </div>
-                <div
-                  class="text-sm text-slate-600 dark:text-slate-400 grid grid-cols-2 gap-y-1 gap-x-4"
-                >
+                <div class="text-sm text-content-muted grid grid-cols-2 gap-y-1 gap-x-4">
                   <div><span class="font-medium">Model:</span> {{ trial.llm_model }}</div>
                   <div>
                     <span class="font-medium">Schema:</span>
@@ -166,13 +156,11 @@
               <div class="flex flex-col items-end gap-2">
                 <div
                   v-if="isAlreadyEvaluated(trial)"
-                  class="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded"
+                  class="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-card"
                 >
                   Already evaluated
                 </div>
-                <div class="text-xs text-slate-500 dark:text-slate-400">
-                  {{ trial.results_count }} results
-                </div>
+                <div class="text-xs text-content-muted">{{ trial.results_count }} results</div>
               </div>
             </div>
           </div>
@@ -186,7 +174,7 @@
             :total-items="trials.total"
             :page-size="trials.limit"
             item-label="trials"
-            class="-mx-4 sm:-mx-0 rounded-none border-t border-slate-200 dark:border-slate-700 sm:rounded-card mt-2"
+            class="-mx-4 sm:-mx-0 rounded-none border-t border-default sm:rounded-card mt-2"
             @update:model-value="goToPage"
           />
         </div>

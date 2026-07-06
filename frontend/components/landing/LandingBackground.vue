@@ -2,10 +2,10 @@
   <div class="absolute inset-0 z-0">
     <!-- Gradient orbs with medical theme colors -->
     <div
-      class="absolute top-0 left-0 h-96 w-96 rounded-full bg-blue-500 opacity-10 blur-3xl animate-pulse dark:opacity-10"
+      class="absolute top-0 left-0 h-96 w-96 rounded-full bg-primary opacity-10 blur-3xl animate-pulse dark:opacity-10"
     ></div>
     <div
-      class="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-blue-500 opacity-10 blur-3xl animate-pulse dark:opacity-10"
+      class="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-primary opacity-10 blur-3xl animate-pulse dark:opacity-10"
       style="animation-delay: 2s"
     ></div>
     <div
@@ -37,7 +37,7 @@
     <!-- Floating elements -->
     <div
       ref="floatingRoot"
-      class="floating-element absolute top-20 left-10 font-mono text-xs text-blue-600 opacity-20 dark:text-blue-300 dark:opacity-20"
+      class="floating-element absolute top-20 left-10 font-mono text-xs text-primary opacity-20 dark:opacity-20"
     >
       {"patient_id": "MED-2023-11"}
     </div>
@@ -47,7 +47,7 @@
       [extraction_complete]
     </div>
     <div
-      class="floating-element absolute bottom-40 left-40 font-mono text-xs text-blue-600 opacity-20 dark:text-blue-300 dark:opacity-20"
+      class="floating-element absolute bottom-40 left-40 font-mono text-xs text-primary opacity-20 dark:opacity-20"
     >
       schema.json
     </div>

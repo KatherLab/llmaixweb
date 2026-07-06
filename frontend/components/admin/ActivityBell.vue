@@ -4,12 +4,12 @@
     <button
       ref="bellButton"
       aria-label="View activity"
-      class="relative p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-      :class="{ 'text-blue-600 dark:text-blue-400': hasActiveTasks }"
+      class="relative p-2 rounded-full hover:bg-surface-sunken transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+      :class="{ 'text-primary': hasActiveTasks }"
       @click="toggleDropdown"
     >
       <!-- Bell icon -->
-      <Bell class="w-6 h-6 text-slate-600 dark:text-slate-400" />
+      <Bell class="w-6 h-6 text-content-subtle" />
 
       <!-- Active tasks badge -->
       <span
@@ -22,7 +22,7 @@
       <!-- Recent activity indicator (no active but has recent) -->
       <span
         v-else-if="recentCompletedCount > 0"
-        class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900"
+        class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-surface"
       />
     </button>
 
@@ -31,24 +31,19 @@
       <div
         v-if="showDropdown"
         ref="dropdown"
-        class="absolute right-0 mt-2 w-[420px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-modal shadow-2xl z-50 max-h-[500px] flex flex-col"
+        class="absolute right-0 mt-2 w-[420px] bg-surface border border-default rounded-modal shadow-2xl z-50 max-h-[500px] flex flex-col"
         @click.outside="closeDropdown"
       >
         <!-- Header -->
-        <div
-          class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between"
-        >
-          <h3 class="font-semibold text-slate-900 dark:text-white">Activity</h3>
+        <div class="px-4 py-3 border-b border-default flex items-center justify-between">
+          <h3 class="font-semibold text-content">Activity</h3>
           <div class="flex items-center gap-2">
-            <span
-              v-if="hasActiveTasks"
-              class="text-xs text-blue-600 dark:text-blue-400 font-medium"
-            >
+            <span v-if="hasActiveTasks" class="text-xs text-primary font-medium">
               {{ activeCount }} running
             </span>
             <button
               v-if="displayTasks.length > 0"
-              class="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              class="text-xs text-content-subtle hover:text-content-muted"
               title="Dismiss all"
               @click="dismissAll"
             >
@@ -66,22 +61,18 @@
 
           <!-- Empty state -->
           <div v-else-if="displayTasks.length === 0" class="text-center py-12">
-            <CircleCheckBig class="mx-auto h-12 w-12 text-slate-300 dark:text-slate-700" />
-            <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">No recent activity</p>
+            <CircleCheckBig class="mx-auto h-12 w-12 text-content-subtle" />
+            <p class="mt-3 text-sm text-content-subtle">No recent activity</p>
           </div>
 
           <!-- Task list grouped by type -->
-          <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+          <div v-else class="divide-y divide-default">
             <!-- Preprocessing Tasks Section -->
             <div v-if="preprocessingTasks.length > 0">
-              <div
-                class="px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800"
-              >
+              <div class="px-3 py-2 bg-surface-muted border-b border-default">
                 <div class="flex items-center gap-2">
                   <Clipboard class="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  <h4
-                    class="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide"
-                  >
+                  <h4 class="text-xs font-semibold text-content-muted uppercase tracking-wide">
                     Preprocessing ({{ preprocessingTasks.length }})
                   </h4>
                 </div>
@@ -90,7 +81,7 @@
                 <div
                   v-for="task in preprocessingTasks"
                   :key="`preprocess-${task.id}`"
-                  class="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                  class="px-4 py-3 hover:bg-surface-muted transition-colors cursor-pointer group"
                   @click="navigateToPreprocessing(task)"
                 >
                   <div class="flex items-start gap-3">
@@ -98,7 +89,7 @@
                     <div class="flex-shrink-0 mt-0.5">
                       <div
                         v-if="isTaskActive(task)"
-                        class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"
+                        class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"
                       />
                       <div
                         v-else-if="task.status === 'completed'"
@@ -117,7 +108,7 @@
                     <!-- Task info -->
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2">
-                        <p class="text-sm font-medium text-slate-900 dark:text-white truncate">
+                        <p class="text-sm font-medium text-content truncate">
                           {{ task.configuration?.name || `Task #${task.id}` }}
                         </p>
                         <!-- Cancel button (visible on hover, active tasks only) -->
@@ -131,37 +122,35 @@
                         </button>
                         <!-- Dismiss button (visible on hover) -->
                         <button
-                          class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                          class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-surface-sunken rounded"
                           title="Dismiss"
                           @click.stop="dismissTask('preprocess', task.id)"
                         >
-                          <X class="w-3.5 h-3.5 text-slate-400" />
+                          <X class="w-3.5 h-3.5 text-content-subtle" />
                         </button>
                       </div>
-                      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      <p class="text-xs text-content-subtle mt-0.5">
                         {{ getPreprocessingSummary(task) }}
                       </p>
 
                       <!-- Progress bar for active tasks -->
                       <div v-if="isTaskActive(task) && task.meta" class="mt-2">
                         <div
-                          class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1"
+                          class="flex items-center justify-between text-xs text-content-subtle mb-1"
                         >
                           <span>Processing...</span>
                           <span>{{ getProgressPercent(task) }}%</span>
                         </div>
-                        <div
-                          class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden"
-                        >
+                        <div class="w-full bg-surface-sunken rounded-full h-1.5 overflow-hidden">
                           <div
-                            class="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                            class="bg-primary h-1.5 rounded-full transition-all duration-300"
                             :style="{ width: `${getProgressPercent(task)}%` }"
                           />
                         </div>
                       </div>
 
                       <!-- Time info -->
-                      <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                      <p class="text-xs text-content-subtle mt-1.5">
                         {{ formatTaskTime(task) }}
                       </p>
                     </div>
@@ -172,14 +161,10 @@
 
             <!-- Trials Section -->
             <div v-if="trialTasks.length > 0">
-              <div
-                class="px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800"
-              >
+              <div class="px-3 py-2 bg-surface-muted border-b border-default">
                 <div class="flex items-center gap-2">
                   <FlaskConical class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <h4
-                    class="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide"
-                  >
+                  <h4 class="text-xs font-semibold text-content-muted uppercase tracking-wide">
                     Trials ({{ trialTasks.length }})
                   </h4>
                 </div>
@@ -188,7 +173,7 @@
                 <div
                   v-for="task in trialTasks"
                   :key="`trial-${task.id}`"
-                  class="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                  class="px-4 py-3 hover:bg-surface-muted transition-colors cursor-pointer group"
                   @click="navigateToTrial(task)"
                 >
                   <div class="flex items-start gap-3">
@@ -196,7 +181,7 @@
                     <div class="flex-shrink-0 mt-0.5">
                       <div
                         v-if="isTrialActive(task)"
-                        class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"
+                        class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"
                       />
                       <div
                         v-else-if="task.status === 'completed'"
@@ -215,33 +200,31 @@
                     <!-- Task info -->
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2">
-                        <p class="text-sm font-medium text-slate-900 dark:text-white truncate">
+                        <p class="text-sm font-medium text-content truncate">
                           {{ task.name || `Trial #${task.id}` }}
                         </p>
                         <!-- Dismiss button (visible on hover) -->
                         <button
-                          class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                          class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-surface-sunken rounded"
                           title="Dismiss"
                           @click.stop="dismissTask('trial', task.id)"
                         >
-                          <X class="w-3.5 h-3.5 text-slate-400" />
+                          <X class="w-3.5 h-3.5 text-content-subtle" />
                         </button>
                       </div>
-                      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      <p class="text-xs text-content-subtle mt-0.5">
                         {{ getTrialSummary(task) }}
                       </p>
 
                       <!-- Progress bar for active tasks -->
                       <div v-if="isTrialActive(task)" class="mt-2">
                         <div
-                          class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1"
+                          class="flex items-center justify-between text-xs text-content-subtle mb-1"
                         >
                           <span>{{ task.docs_done || 0 }}/{{ task.documents_count }} docs</span>
                           <span>{{ Math.round((task.progress || 0) * 100) }}%</span>
                         </div>
-                        <div
-                          class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden"
-                        >
+                        <div class="w-full bg-surface-sunken rounded-full h-1.5 overflow-hidden">
                           <div
                             class="bg-emerald-600 h-1.5 rounded-full transition-all duration-300"
                             :style="{ width: `${Math.round((task.progress || 0) * 100)}%` }"
@@ -250,7 +233,7 @@
                       </div>
 
                       <!-- Time info -->
-                      <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                      <p class="text-xs text-content-subtle mt-1.5">
                         {{ formatTaskTime(task) }}
                       </p>
                     </div>
@@ -264,10 +247,10 @@
         <!-- Footer -->
         <div
           v-if="displayTasks.length > 0"
-          class="px-4 py-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-b-xl"
+          class="px-4 py-2 border-t border-default bg-surface-muted rounded-b-xl"
         >
           <button
-            class="w-full text-center text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline"
+            class="w-full text-center text-sm text-primary font-medium hover:underline"
             @click="viewAllActivity"
           >
             View all activity

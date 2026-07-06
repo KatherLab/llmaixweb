@@ -1,63 +1,60 @@
 <template>
   <div class="w-full">
-    <div
-      v-if="(mappings ?? []).length === 0"
-      class="text-xs text-slate-400 dark:text-slate-500 text-center py-4"
-    >
+    <div v-if="(mappings ?? []).length === 0" class="text-xs text-content-subtle text-center py-4">
       No mappings yet.<br />Select a schema field and a GT field and click <b>Map</b>.
     </div>
     <ul v-else class="flex flex-col gap-2">
       <li
         v-for="(m, i) in mappings ?? []"
         :key="i"
-        class="bg-gradient-to-r from-blue-50/70 to-purple-50/60 dark:from-slate-800 dark:to-slate-700/80 px-2 py-1.5 rounded-card shadow-sm border border-blue-100 dark:border-slate-600 group relative"
+        class="bg-surface-muted border border-default px-2 py-1.5 rounded-card shadow-sm group relative"
       >
         <div class="flex items-center gap-2">
           <!-- Schema Field -->
           <span
-            class="bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded font-mono text-xs font-semibold text-blue-800 dark:text-blue-300 overflow-hidden text-ellipsis whitespace-nowrap max-w-[45%] inline-block cursor-pointer"
+            class="bg-primary-soft px-2 py-0.5 rounded-card font-mono text-xs font-semibold text-primary overflow-hidden text-ellipsis whitespace-nowrap max-w-[45%] inline-block cursor-pointer"
             @mouseenter="hoverIdx = i"
             @mouseleave="hoverIdx = -1"
           >
             {{ m.schema_field }}
-            <span v-if="schemaFieldTypes?.[m.schema_field]" class="text-slate-400"
+            <span v-if="schemaFieldTypes?.[m.schema_field]" class="text-content-subtle"
               >({{ schemaFieldTypes[m.schema_field] }})</span
             >
             <!-- Tooltip (shows on hover) -->
             <span
               v-if="hoverIdx === i"
-              class="absolute z-40 left-2 top-9 w-max max-w-[300px] bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-200 rounded-modal px-4 py-2 border border-blue-200 dark:border-slate-600 shadow-xl font-mono text-xs pointer-events-none"
+              class="absolute z-40 left-2 top-9 w-max max-w-[300px] bg-surface text-primary rounded-modal px-4 py-2 border border-default shadow-xl font-mono text-xs pointer-events-none"
               style="white-space: pre-line"
             >
               <strong>Schema field:</strong><br />
               {{ m.schema_field }}
               <template v-if="schemaFieldTypes?.[m.schema_field]">
-                <span class="text-slate-400">({{ schemaFieldTypes[m.schema_field] }})</span>
+                <span class="text-content-subtle">({{ schemaFieldTypes[m.schema_field] }})</span>
               </template>
             </span>
           </span>
           <!-- Arrow Icon -->
-          <ArrowRight class="w-4 h-4 text-slate-400 flex-shrink-0" />
+          <ArrowRight class="w-4 h-4 text-content-subtle flex-shrink-0" />
           <!-- Ground Truth Field -->
           <span
-            class="bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded font-mono text-xs font-semibold text-purple-800 dark:text-purple-300 overflow-hidden text-ellipsis whitespace-nowrap max-w-[45%] inline-block cursor-pointer"
+            class="bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded-card font-mono text-xs font-semibold text-purple-800 dark:text-purple-300 overflow-hidden text-ellipsis whitespace-nowrap max-w-[45%] inline-block cursor-pointer"
             @mouseenter="hoverIdx2 = i"
             @mouseleave="hoverIdx2 = -1"
           >
             {{ m.ground_truth_field }}
-            <span v-if="groundTruthFieldTypes?.[m.ground_truth_field]" class="text-slate-400"
+            <span v-if="groundTruthFieldTypes?.[m.ground_truth_field]" class="text-content-subtle"
               >({{ groundTruthFieldTypes[m.ground_truth_field] }})</span
             >
             <!-- Tooltip (shows on hover) -->
             <span
               v-if="hoverIdx2 === i"
-              class="absolute z-40 left-2 top-9 w-max max-w-[300px] bg-white dark:bg-slate-800 text-purple-900 dark:text-purple-200 rounded-modal px-4 py-2 border border-purple-200 dark:border-slate-600 shadow-xl font-mono text-xs pointer-events-none"
+              class="absolute z-40 left-2 top-9 w-max max-w-[300px] bg-surface text-purple-700 dark:text-purple-300 rounded-modal px-4 py-2 border border-default shadow-xl font-mono text-xs pointer-events-none"
               style="white-space: pre-line"
             >
               <strong>GT field:</strong><br />
               {{ m.ground_truth_field }}
               <template v-if="groundTruthFieldTypes?.[m.ground_truth_field]">
-                <span class="text-slate-400"
+                <span class="text-content-subtle"
                   >({{ groundTruthFieldTypes[m.ground_truth_field] }})</span
                 >
               </template>
@@ -85,8 +82,8 @@
           <!-- Options toggle (only for methods with tunable options) -->
           <button
             v-if="hasOptions(m.comparison_method)"
-            class="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
-            :class="{ 'text-blue-600 dark:text-blue-400': optionsOpen[i] }"
+            class="text-content-subtle hover:text-primary"
+            :class="{ 'text-primary': optionsOpen[i] }"
             :title="`Comparison options for ${m.schema_field}`"
             type="button"
             @click="toggleOptions(i)"
@@ -104,7 +101,7 @@
         </div>
         <!-- Method description -->
         <p
-          class="mt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-snug"
+          class="mt-1 text-[10px] text-content-muted leading-snug"
           :title="getComparisonMethodDescription(m.comparison_method || 'exact')"
         >
           {{ getComparisonMethodDescription(m.comparison_method || 'exact') }}
@@ -112,7 +109,7 @@
         <!-- Tunable options for fuzzy / numeric -->
         <div
           v-if="hasOptions(m.comparison_method) && optionsOpen[i]"
-          class="mt-1.5 pt-1.5 border-t border-slate-200 dark:border-slate-600 flex flex-wrap items-center gap-3 text-[11px] text-slate-600 dark:text-slate-300"
+          class="mt-1.5 pt-1.5 border-t border-default flex flex-wrap items-center gap-3 text-[11px] text-content-muted"
         >
           <template v-if="m.comparison_method === 'fuzzy'">
             <label class="flex items-center gap-1">
@@ -129,7 +126,7 @@
                 "
               />
             </label>
-            <span class="text-slate-400 dark:text-slate-500">higher = stricter match</span>
+            <span class="text-content-subtle">higher = stricter match</span>
             <label
               class="flex items-center gap-1"
               title="Off by default. Substring matching can invert meaning in medical text (e.g. 'cancer' vs 'non-cancer'), so it is opt-in."

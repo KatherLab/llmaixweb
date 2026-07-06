@@ -2,8 +2,8 @@
   <div>
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="text-lg font-medium text-slate-900 dark:text-white">JSON Schemas</h2>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h2 class="text-lg font-medium text-content">JSON Schemas</h2>
+        <p class="mt-1 text-sm text-content-muted">
           Define the structure for information extraction
         </p>
       </div>
@@ -44,16 +44,14 @@
         @expand="toggleExpand"
       >
         <template #cell-schema_name="{ row: schema }">
-          <span class="text-sm font-medium text-slate-900 dark:text-white">{{
-            schema.schema_name
-          }}</span>
-          <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{
+          <span class="text-sm font-medium text-content">{{ schema.schema_name }}</span>
+          <span class="block text-xs text-content-muted mt-0.5">{{
             summarizeSchema(schema.schema_definition)
           }}</span>
         </template>
 
         <template #cell-created_at="{ row: schema }">
-          <span class="text-sm text-slate-500 dark:text-slate-400">
+          <span class="text-sm text-content-muted">
             {{ formatDate(schema.created_at) }}
           </span>
         </template>

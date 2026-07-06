@@ -2,7 +2,7 @@
 <template>
   <!-- Compact button matching Invite User style -->
   <button
-    class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-card shadow transition"
+    class="px-3 py-1.5 text-sm bg-primary hover:bg-primary-hover text-white rounded-card shadow transition"
     @click="isModalOpen = true"
   >
     + Create Project
@@ -15,8 +15,8 @@
     body-class="p-6 flex flex-col gap-6"
     @close="closeModal"
   >
-    <h3 class="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-      <CirclePlus class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+    <h3 class="text-lg font-semibold text-content flex items-center gap-2 mb-2">
+      <CirclePlus class="w-5 h-5 text-primary" />
       Create New Project
     </h3>
     <form class="flex flex-col gap-4" @submit.prevent="createProject">

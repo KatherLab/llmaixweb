@@ -2,8 +2,8 @@
   <div class="space-y-6">
     <!-- Basic Information -->
     <div class="space-y-4">
-      <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100 flex items-center">
-        <Info class="h-4 w-4 mr-2 text-slate-500 dark:text-slate-400" />
+      <h4 class="text-sm font-medium text-content flex items-center">
+        <Info class="h-4 w-4 mr-2 text-content-muted" />
         Basic Information
       </h4>
 
@@ -19,7 +19,7 @@
           pattern="^[a-zA-Z_][a-zA-Z0-9_]*$"
           @input="$emit('update-key', ($event.target as HTMLInputElement).value)"
         />
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p class="mt-1 text-xs text-content-muted">
           Use lowercase with underscores (e.g., patient_name)
         </p>
       </div>
@@ -58,7 +58,9 @@
             </div>
             <!-- Type description tooltip -->
             <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-10 w-full">
-              <div class="bg-slate-900 text-white text-xs rounded-card p-2 shadow-lg">
+              <div
+                class="bg-inverse-surface text-inverse-content text-xs rounded-card p-2 shadow-lg"
+              >
                 <p v-if="localProperty.type === 'string'">
                   Text field for names, descriptions, etc.
                 </p>
@@ -87,7 +89,7 @@
 
     <!-- Type-specific Settings -->
     <div v-if="localProperty.type === 'string'" class="space-y-4">
-      <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100 flex items-center">
+      <h4 class="text-sm font-medium text-content flex items-center">
         <SquarePen class="h-4 w-4 mr-2 text-green-500" />
         Text Settings
       </h4>
@@ -137,7 +139,7 @@
         <label :class="labelClass">
           Pattern (Regular Expression)
           <button
-            class="ml-1 text-slate-400 dark:text-slate-500 dark:hover:text-slate-300 hover:text-slate-600"
+            class="ml-1 text-content-subtle hover:text-content-muted"
             @click="showPatternHelp = !showPatternHelp"
           >
             <CircleHelp class="h-4 w-4 inline" />
@@ -151,15 +153,10 @@
         <Callout v-if="showPatternHelp" variant="info" class="mt-2 text-xs">
           <p class="font-medium mb-1">Common patterns:</p>
           <ul class="space-y-1">
+            <li><code class="bg-surface-muted px-1 rounded">^[0-9]+$</code> - Numbers only</li>
+            <li><code class="bg-surface-muted px-1 rounded">^[A-Za-z]+$</code> - Letters only</li>
             <li>
-              <code class="bg-white dark:bg-slate-800 px-1 rounded">^[0-9]+$</code> - Numbers only
-            </li>
-            <li>
-              <code class="bg-white dark:bg-slate-800 px-1 rounded">^[A-Za-z]+$</code> - Letters
-              only
-            </li>
-            <li>
-              <code class="bg-white dark:bg-slate-800 px-1 rounded">^[A-Z]{2}[0-9]{4}$</code>
+              <code class="bg-surface-muted px-1 rounded">^[A-Z]{2}[0-9]{4}$</code>
               - 2 uppercase letters + 4 digits
             </li>
           </ul>
@@ -191,7 +188,7 @@
             </BaseButton>
           </div>
           <button
-            class="w-full py-2 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-card text-sm text-slate-600 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
+            class="w-full py-2 border-2 border-dashed border-strong rounded-card text-sm text-content-muted hover:border-strong hover:text-content"
             @click="addEnumValue"
           >
             + Add Option
@@ -202,8 +199,8 @@
 
     <!-- Number Settings -->
     <div v-else-if="localProperty.type === 'number'" class="space-y-4">
-      <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100 flex items-center">
-        <Hash class="h-4 w-4 mr-2 text-blue-500" />
+      <h4 class="text-sm font-medium text-content flex items-center">
+        <Hash class="h-4 w-4 mr-2 text-primary" />
         Number Settings
       </h4>
 
@@ -246,9 +243,9 @@
             <input
               v-model="isInteger"
               type="checkbox"
-              class="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
+              class="rounded border-strong text-primary focus:ring-ring"
             />
-            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Integer only</span>
+            <span class="text-sm font-medium text-content-muted">Integer only</span>
           </label>
         </div>
       </div>
@@ -256,12 +253,12 @@
 
     <!-- Boolean Settings -->
     <div v-else-if="localProperty.type === 'boolean'" class="space-y-4">
-      <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100 flex items-center">
+      <h4 class="text-sm font-medium text-content flex items-center">
         <CircleCheckBig class="h-4 w-4 mr-2 text-purple-500" />
         Yes/No Settings
       </h4>
 
-      <p class="text-sm text-slate-600 dark:text-slate-400">
+      <p class="text-sm text-content-muted">
         This field will capture true/false values. The user interface will show this as a checkbox
         or toggle switch.
       </p>
@@ -269,7 +266,7 @@
 
     <!-- Array Settings -->
     <div v-else-if="localProperty.type === 'array'" class="space-y-4">
-      <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100 flex items-center">
+      <h4 class="text-sm font-medium text-content flex items-center">
         <List class="h-4 w-4 mr-2 text-pink-500" />
         List Settings
       </h4>
@@ -303,18 +300,16 @@
           <input
             v-model="localProperty.uniqueItems"
             type="checkbox"
-            class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
+            class="rounded border-strong text-primary focus:ring-ring"
           />
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >Items must be unique</span
-          >
+          <span class="text-sm font-medium text-content-muted">Items must be unique</span>
         </label>
       </div>
     </div>
 
     <!-- Object Settings -->
     <div v-else-if="localProperty.type === 'object'" class="space-y-4">
-      <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100 flex items-center">
+      <h4 class="text-sm font-medium text-content flex items-center">
         <Layers class="h-4 w-4 mr-2 text-orange-500" />
         Group Settings
       </h4>
@@ -331,16 +326,16 @@
             <input
               type="checkbox"
               :checked="isRequired(propKey)"
-              class="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
+              class="rounded border-strong text-primary focus:ring-ring"
               @change="toggleRequired(propKey)"
             />
-            <span class="text-sm text-slate-700 dark:text-slate-300">{{ propKey }}</span>
-            <span class="text-xs text-slate-500 dark:text-slate-400">({{ propSchema.type }})</span>
+            <span class="text-sm text-content-muted">{{ propKey }}</span>
+            <span class="text-xs text-content-muted">({{ propSchema.type }})</span>
           </label>
         </div>
         <p
           v-if="!localProperty.properties || Object.keys(localProperty.properties).length === 0"
-          class="text-sm text-slate-500 dark:text-slate-400"
+          class="text-sm text-content-muted"
         >
           Add properties to this group first
         </p>
@@ -351,18 +346,16 @@
           <input
             v-model="localProperty.additionalProperties"
             type="checkbox"
-            class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
+            class="rounded border-strong text-primary focus:ring-ring"
           />
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >Allow additional properties</span
-          >
+          <span class="text-sm font-medium text-content-muted">Allow additional properties</span>
         </label>
       </div>
     </div>
 
     <!-- Common Settings -->
     <div class="space-y-4 pt-4 border-t">
-      <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100">Additional Settings</h4>
+      <h4 class="text-sm font-medium text-content">Additional Settings</h4>
 
       <div>
         <label :class="labelClass"> Default Value </label>
@@ -372,28 +365,28 @@
               type="radio"
               :value="undefined"
               :checked="localProperty.default === undefined"
-              class="border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
+              class="border-strong text-primary focus:ring-ring"
               @change="localProperty.default = undefined"
             />
-            <span class="text-sm dark:text-slate-300">No default</span>
+            <span class="text-sm text-content-muted">No default</span>
           </label>
           <label class="flex items-center space-x-2">
             <input
               v-model="localProperty.default"
               type="radio"
               :value="true"
-              class="border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
+              class="border-strong text-primary focus:ring-ring"
             />
-            <span class="text-sm dark:text-slate-300">True</span>
+            <span class="text-sm text-content-muted">True</span>
           </label>
           <label class="flex items-center space-x-2">
             <input
               v-model="localProperty.default"
               type="radio"
               :value="false"
-              class="border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
+              class="border-strong text-primary focus:ring-ring"
             />
-            <span class="text-sm dark:text-slate-300">False</span>
+            <span class="text-sm text-content-muted">False</span>
           </label>
         </div>
         <input
@@ -410,25 +403,23 @@
           :class="inputClass"
           placeholder="No default value"
         />
-        <p v-else class="text-sm text-slate-500 dark:text-slate-400">
+        <p v-else class="text-sm text-content-muted">
           Default values for {{ localProperty.type }} must be set in raw JSON mode
         </p>
       </div>
 
       <!-- Advanced Features -->
       <div v-if="advancedMode" class="space-y-4 pt-4 border-t">
-        <h4 class="text-sm font-medium text-slate-900 dark:text-slate-100">Advanced Features</h4>
+        <h4 class="text-sm font-medium text-content">Advanced Features</h4>
 
         <!-- Read Only -->
         <label class="flex items-center space-x-2">
           <input
             v-model="localProperty.readOnly"
             type="checkbox"
-            class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500"
+            class="rounded border-strong text-primary focus:ring-ring"
           />
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >Read-only field</span
-          >
+          <span class="text-sm font-medium text-content-muted">Read-only field</span>
         </label>
 
         <!-- Examples -->

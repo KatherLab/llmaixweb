@@ -3,12 +3,12 @@
     :open="open"
     size="lg"
     body-class="p-6"
-    footer-class="dark:bg-slate-800"
+    footer-class="bg-surface-muted"
     @close="emit('close')"
   >
     <template #header>
       <div class="flex items-center gap-2">
-        <h3 class="text-lg font-medium text-slate-900 dark:text-white">
+        <h3 class="text-lg font-medium text-content">
           {{ schema?.schema_name }}
         </h3>
         <span
@@ -20,7 +20,7 @@
       </div>
     </template>
 
-    <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-card overflow-auto max-h-96">
+    <div class="bg-surface-muted p-4 rounded-card overflow-auto max-h-96">
       <SchemaFieldList :schema-definition="schema?.schema_definition" show-raw-json-toggle />
     </div>
 

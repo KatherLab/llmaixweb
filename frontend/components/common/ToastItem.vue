@@ -2,7 +2,7 @@
   <div
     :role="type === 'error' ? 'alert' : 'status'"
     :aria-live="type === 'error' ? 'assertive' : 'polite'"
-    class="relative flex items-center gap-3 w-80 max-w-[calc(100vw-2rem)] py-2.5 pl-3 pr-2 rounded-modal border border-default bg-surface/90 backdrop-blur-md shadow-lg shadow-slate-900/5 overflow-hidden"
+    class="relative flex items-center gap-3 w-80 max-w-[calc(100vw-2rem)] py-2.5 pl-3 pr-2 rounded-modal border border-default bg-surface/90 backdrop-blur-md shadow-lg overflow-hidden"
   >
     <!-- Colored accent + progress bar at the bottom edge. -->
     <div class="absolute inset-y-0 left-0 w-1" :class="visual.accentClass" aria-hidden="true" />

@@ -3,14 +3,14 @@
     :open="open"
     placement="right"
     panel-class="w-screen max-w-md"
-    header-class="bg-slate-50 dark:bg-slate-800"
+    header-class="bg-surface-muted"
     body-class="p-6"
     @close="emit('close')"
   >
     <template #header>
       <div class="min-w-0">
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Preprocessing History</h3>
-        <p v-if="historyFile" class="text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">
+        <h3 class="text-lg font-semibold text-content">Preprocessing History</h3>
+        <p v-if="historyFile" class="text-sm text-content-muted truncate mt-0.5">
           {{ historyFile.file_name }}
         </p>
       </div>
@@ -24,15 +24,15 @@
           v-for="task in historyFile.preprocessing_tasks"
           :key="task.id"
           :class="[
-            'bg-white dark:bg-slate-800 dark:border-slate-700 rounded-card border transition-all overflow-hidden',
+            'bg-surface rounded-card border transition-all overflow-hidden',
             expandedTasks.has(task.id)
-              ? 'border-blue-300 dark:border-blue-500 shadow-md'
-              : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500',
+              ? 'border-primary shadow-md'
+              : 'border-default hover:border-primary',
           ]"
         >
           <!-- Accordion Header (clickable) -->
           <div
-            class="px-4 py-3 cursor-pointer flex items-center justify-between bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800/50"
+            class="px-4 py-3 cursor-pointer flex items-center justify-between bg-surface-muted"
             @click="toggleTaskAccordion(task.id)"
           >
             <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -47,18 +47,18 @@
               <!-- Task info -->
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
-                  <p class="text-sm font-medium text-slate-900 dark:text-white truncate">
+                  <p class="text-sm font-medium text-content truncate">
                     Run #{{ task.id }} • {{ getEngineName(task) }}
                   </p>
                   <!-- Expand/collapse chevron -->
                   <ChevronRight
                     :class="[
-                      'w-4 h-4 text-slate-400 transition-transform flex-shrink-0',
+                      'w-4 h-4 text-content-subtle transition-transform flex-shrink-0',
                       expandedTasks.has(task.id) ? 'rotate-90' : '',
                     ]"
                   />
                 </div>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                <p class="text-xs text-content-muted mt-0.5 truncate">
                   {{ formatRelativeTime(task.created_at) }}
                   <span v-if="task.completed_at">
                     • {{ formatRelativeTime(task.completed_at) }}
@@ -69,7 +69,7 @@
             <!-- Mini status badge -->
             <span
               :class="[
-                'inline-flex items-center px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2',
+                'inline-flex items-center px-2 py-1 rounded-card text-xs font-medium flex-shrink-0 ml-2',
                 getStatusBadgeClass(task.status),
               ]"
             >
@@ -80,33 +80,28 @@
           <!-- Accordion Content (expanded) -->
           <div
             v-show="expandedTasks.has(task.id)"
-            class="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-4 py-3 space-y-3"
+            class="border-t border-default bg-surface-muted px-4 py-3 space-y-3"
           >
             <!-- Progress bar for active tasks -->
             <div
               v-if="isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress')"
               class="space-y-1"
             >
-              <div
-                class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300"
-              >
+              <div class="flex items-center justify-between text-xs text-content-muted">
                 <span>Processing...</span>
-                <span
-                  v-if="(task.meta?.eta_seconds ?? 0) > 0"
-                  class="text-slate-500 dark:text-slate-400"
-                >
+                <span v-if="(task.meta?.eta_seconds ?? 0) > 0" class="text-content-muted">
                   ≈ {{ formatDuration(task.meta?.eta_seconds) }} left
                 </span>
               </div>
-              <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+              <div class="w-full bg-surface-sunken rounded-full h-2 overflow-hidden">
                 <div
                   :style="{
                     width: `${Math.min((task.processed_files / task.total_files) * 100, 100)}%`,
                   }"
-                  class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  class="bg-primary h-2 rounded-full transition-all duration-300"
                 />
               </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
+              <p class="text-xs text-content-muted">
                 {{ task.processed_files }} of {{ task.total_files }} files processed
                 <span v-if="task.failed_files > 0" class="text-red-600 dark:text-red-400">
                   • {{ task.failed_files }} failed
@@ -141,15 +136,15 @@
                         v-else-if="fileTask.status === 'cancelled'"
                         class="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"
                       />
-                      <Clock v-else class="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                      <span class="font-medium text-slate-900 dark:text-white truncate">
+                      <Clock v-else class="w-4 h-4 text-content-subtle flex-shrink-0 mt-0.5" />
+                      <span class="font-medium text-content truncate">
                         {{ fileTask.file_name || 'Unknown file' }}
                       </span>
                     </div>
                     <!-- Processing time -->
                     <span
                       v-if="fileTask.processing_time"
-                      class="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap"
+                      class="text-xs text-content-muted whitespace-nowrap"
                     >
                       {{ formatProcessingTime(fileTask.processing_time) }}
                     </span>
@@ -260,7 +255,7 @@
                   </div>
                 </div>
               </template>
-              <div v-else class="text-center text-slate-400 dark:text-slate-500 py-4 text-sm">
+              <div v-else class="text-center text-content-subtle py-4 text-sm">
                 No file tasks recorded
               </div>
             </div>
@@ -275,9 +270,7 @@
             </Callout>
 
             <!-- Actions -->
-            <div
-              class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700"
-            >
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-default">
               <BaseButton
                 v-if="isTaskStatus(task, 'failed')"
                 variant="ghost"
@@ -317,10 +310,7 @@
       <!-- No Runs Yet -->
       <EmptyState v-else title="No preprocessing runs yet">
         <template #icon>
-          <FilePlus
-            class="h-12 w-12 mx-auto text-slate-300 dark:text-slate-600"
-            aria-hidden="true"
-          />
+          <FilePlus class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
         </template>
         <template v-if="historyFile" #action>
           <BaseButton class="shadow-sm" @click="emit('process', historyFile)">
@@ -332,9 +322,7 @@
     </div>
 
     <!-- Panel Footer -->
-    <div
-      class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex-shrink-0"
-    >
+    <div class="px-6 py-4 border-t border-default bg-surface-muted flex-shrink-0">
       <div class="flex items-center justify-between">
         <BaseButton
           v-if="historyFile"

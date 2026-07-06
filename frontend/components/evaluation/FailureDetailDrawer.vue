@@ -3,10 +3,10 @@
     <template #header>
       <div class="flex items-center justify-between gap-4 pr-8">
         <div class="min-w-0">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white truncate">
+          <h3 class="text-lg font-semibold text-content truncate">
             {{ documentName || `Document #${documentId}` }}
           </h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p class="text-xs text-content-subtle mt-0.5">
             <span :class="statusClass">{{ statusLabel }}</span>
             <span v-if="docEval">
               · {{ docEval.correct_fields }}/{{ docEval.total_fields }} fields correct</span
@@ -37,13 +37,11 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Column 1: Original document -->
         <section class="flex flex-col min-h-0">
-          <h4
-            class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2"
-          >
+          <h4 class="flex items-center gap-2 text-sm font-semibold text-content-muted mb-2">
             <FileText class="h-4 w-4" /> Original Document
           </h4>
           <div
-            class="flex-1 min-h-[300px] border border-slate-200 dark:border-slate-700 rounded-card overflow-hidden bg-slate-50 dark:bg-slate-800"
+            class="flex-1 min-h-[300px] border border-default rounded-card overflow-hidden bg-surface-muted"
           >
             <div v-if="loadingDocument" class="flex items-center justify-center h-full p-6">
               <LoadingSpinner size="medium" />
@@ -59,11 +57,10 @@
               :original-image-url="originalImageUrl"
             />
             <div v-else class="p-4 h-full overflow-auto">
-              <pre
-                v-if="documentText"
-                class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap"
-                >{{ documentText }}</pre>
-              <p v-else class="text-xs text-slate-500 dark:text-slate-400 italic">
+              <pre v-if="documentText" class="text-xs text-content-muted whitespace-pre-wrap">{{
+                documentText
+              }}</pre>
+              <p v-else class="text-xs text-content-subtle italic">
                 No preview available for this file type. Showing extracted text instead — but none
                 was extracted during preprocessing.
               </p>
@@ -71,7 +68,7 @@
           </div>
           <button
             v-if="hasPreviewableFile"
-            class="mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline text-left"
+            class="mt-1 text-xs text-primary hover:underline text-left"
             @click="toggleOriginalView"
           >
             {{ viewMode === 'text' ? 'Show original file' : 'Show extracted text' }}
@@ -80,19 +77,17 @@
 
         <!-- Column 2: Model output + reasoning -->
         <section class="flex flex-col min-h-0">
-          <h4
-            class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2"
-          >
+          <h4 class="flex items-center gap-2 text-sm font-semibold text-content-muted mb-2">
             <Bot class="h-4 w-4" /> Model Output
           </h4>
           <div
-            class="flex-1 min-h-[300px] border border-slate-200 dark:border-slate-700 rounded-card overflow-auto bg-slate-50 dark:bg-slate-800 p-3"
+            class="flex-1 min-h-[300px] border border-default rounded-card overflow-auto bg-surface-muted p-3"
           >
             <div v-if="loadingResult" class="flex items-center justify-center h-full">
               <LoadingSpinner size="medium" />
             </div>
             <JsonViewer v-else-if="trialResult?.result" :data="trialResult.result" />
-            <p v-else class="text-xs text-slate-500 dark:text-slate-400 italic">
+            <p v-else class="text-xs text-content-subtle italic">
               No structured result was produced for this document.
             </p>
           </div>
@@ -107,24 +102,18 @@
 
         <!-- Column 3: Ground truth vs prediction -->
         <section class="flex flex-col min-h-0">
-          <h4
-            class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2"
-          >
+          <h4 class="flex items-center gap-2 text-sm font-semibold text-content-muted mb-2">
             <ScaleIcon class="h-4 w-4" /> Ground Truth vs Prediction
           </h4>
           <div
-            class="flex-1 min-h-[300px] border border-slate-200 dark:border-slate-700 rounded-card overflow-auto bg-white dark:bg-slate-800"
+            class="flex-1 min-h-[300px] border border-default rounded-card overflow-auto bg-surface"
           >
             <table class="w-full text-xs">
-              <thead class="sticky top-0 bg-slate-50 dark:bg-slate-700">
+              <thead class="sticky top-0 bg-surface-muted">
                 <tr>
-                  <th class="p-2 text-left font-medium text-slate-600 dark:text-slate-300">
-                    Field
-                  </th>
-                  <th class="p-2 text-left font-medium text-slate-600 dark:text-slate-300">
-                    Expected
-                  </th>
-                  <th class="p-2 text-left font-medium text-slate-600 dark:text-slate-300">Got</th>
+                  <th class="p-2 text-left font-medium text-content-muted">Field</th>
+                  <th class="p-2 text-left font-medium text-content-muted">Expected</th>
+                  <th class="p-2 text-left font-medium text-content-muted">Got</th>
                 </tr>
               </thead>
               <tbody>
@@ -138,7 +127,7 @@
                   "
                 >
                   <td class="p-2 align-top">
-                    <div class="font-medium text-slate-800 dark:text-slate-200">
+                    <div class="font-medium text-content-muted">
                       {{ prettifyField(fieldName) }}
                     </div>
                     <Tooltip v-if="!detail.is_correct" :text="errorTooltip(detail.error_type)">
@@ -148,7 +137,7 @@
                       >
                     </Tooltip>
                   </td>
-                  <td class="p-2 align-top text-slate-700 dark:text-slate-300 break-words">
+                  <td class="p-2 align-top text-content-muted break-words">
                     {{ formatValue(detail.ground_truth_value) }}
                   </td>
                   <td class="p-2 align-top">
@@ -162,14 +151,14 @@
                         "
                         class="h-3.5 w-3.5 mt-0.5 shrink-0"
                       />
-                      <span class="text-slate-700 dark:text-slate-300 break-words">{{
+                      <span class="text-content-muted break-words">{{
                         formatValue(detail.predicted_value)
                       }}</span>
                     </div>
                   </td>
                 </tr>
                 <tr v-if="!Object.keys(fieldDetails).length">
-                  <td colspan="3" class="p-4 text-center text-slate-500 dark:text-slate-400 italic">
+                  <td colspan="3" class="p-4 text-center text-content-subtle italic">
                     No field-level comparison available.
                   </td>
                 </tr>
@@ -182,10 +171,9 @@
 
     <template #footer>
       <div class="flex items-center justify-between w-full">
-        <p class="text-xs text-slate-500 dark:text-slate-400">
-          Tip: use <kbd class="px-1 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">J</kbd> /
-          <kbd class="px-1 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">K</kbd> to move between
-          documents.
+        <p class="text-xs text-content-subtle">
+          Tip: use <kbd class="px-1 py-0.5 bg-surface-sunken rounded">J</kbd> /
+          <kbd class="px-1 py-0.5 bg-surface-sunken rounded">K</kbd> to move between documents.
         </p>
         <BaseButton variant="secondary" @click="$emit('close')">Close</BaseButton>
       </div>

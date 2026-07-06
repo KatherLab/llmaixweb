@@ -2,99 +2,97 @@
   <BaseModal
     :open="open"
     size="full"
-    panel-class="bg-white/90 dark:bg-slate-900/95 max-w-none min-h-[420px]"
-    header-class="bg-gradient-to-r from-white/80 to-blue-50/70 dark:from-slate-900/80 dark:to-slate-800/70 sticky top-0 z-10 rounded-t-2xl"
+    panel-class="max-w-none min-h-[420px]"
+    header-class="bg-surface-muted sticky top-0 z-10"
     body-class="flex flex-col"
-    footer-class="bg-white/90 dark:bg-slate-900/95 flex-col md:flex-row md:items-center justify-between! sticky bottom-0 z-10 rounded-b-2xl shadow text-[15px]"
+    footer-class="bg-surface-muted flex-col md:flex-row md:items-center justify-between! sticky bottom-0 z-10 shadow text-[15px]"
     @close="close"
   >
     <template #header>
       <div>
-        <h2 class="text-xl font-bold tracking-tight mb-0.5 dark:text-white">
+        <h2 class="text-lg font-bold tracking-tight text-content">
           Configure Ground Truth Mapping
         </h2>
-        <div class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-          <span class="font-mono text-blue-700 dark:text-blue-400">Project {{ projectId }}</span>
+        <div class="flex items-center gap-2 mt-1 text-[11px] text-content-muted">
+          <span class="font-mono text-primary">Project {{ projectId }}</span>
           <span
             v-if="selectedSchemaId"
-            class="inline-block px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300"
-            >{{ schemaDisplayName }}</span
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-card bg-primary-soft text-primary font-medium"
           >
+            <FileText class="w-3 h-3" />
+            {{ schemaDisplayName }}
+          </span>
         </div>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          For each schema field (left), pick the ground-truth column (right) that holds the matching
-          value. The ID field links each document's extraction to its correct row.
+        <p class="mt-1.5 text-[13px] text-content-muted leading-snug">
+          Pick a schema field (left) and its matching ground-truth column (right), then
+          <span class="font-medium text-content">Create mapping</span>. Set the ID field to link
+          each document to its correct row.
         </p>
       </div>
     </template>
 
     <!-- TOP CONTROLS -->
     <section
-      class="flex flex-wrap md:flex-nowrap items-center gap-3 px-6 py-3 border-b bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-t-none z-10 text-[15px] dark:border-slate-700"
+      class="flex flex-wrap md:flex-nowrap items-center gap-x-6 gap-y-3 px-6 py-3 border-b border-default bg-surface z-10 text-sm"
     >
-      <div>
-        <label class="text-[15px] font-medium mr-2 dark:text-slate-200">Schema</label>
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium text-content">Schema</label>
         <select
           v-model="selectedSchemaId"
-          class="px-2 py-1.5 rounded-card border border-blue-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800 text-[15px] dark:text-slate-100 shadow focus:ring-2 focus:ring-blue-400 transition"
+          class="px-2.5 py-1.5 rounded-card border border-strong bg-surface text-sm text-content shadow-sm focus:ring-2 focus:ring-ring transition min-w-[180px]"
           @change="onSchemaChange"
         >
-          <option value="" disabled>Select schema...</option>
+          <option value="" disabled>Select schema…</option>
           <option v-for="s in schemas" :key="s.id" :value="s.id">
             {{ s.schema_name }} ({{ s.id }})
           </option>
         </select>
       </div>
-      <div v-if="schemaFieldPaths.length" class="text-xs text-slate-400 dark:text-slate-500">
-        <span class="font-mono text-blue-600 dark:text-blue-400">{{
-          schemaFieldPaths.length
-        }}</span>
-        fields
+      <div v-if="schemaFieldPaths.length" class="text-xs text-content-subtle">
+        <span class="font-mono text-primary">{{ schemaFieldPaths.length }}</span>
+        schema fields
       </div>
       <div class="flex-1"></div>
-      <div>
-        <IdFieldSelector
-          v-if="showIdSelector"
-          :is-json="isJsonFormat"
-          :is-tabular="isTabularFormat"
-          :id-column="idColumn"
-          :json-id-field="jsonIdField"
-          :available-columns="displayedColumns"
-          :id-candidates="idCandidates"
-          :current-id-column="currentIdColumn"
-          class="ml-2"
-          @update:id-column="updateIdColumn"
-          @update:json-id-field="updateJsonIdField"
-        />
-      </div>
+      <IdFieldSelector
+        v-if="showIdSelector"
+        :is-json="isJsonFormat"
+        :is-tabular="isTabularFormat"
+        :id-column="idColumn"
+        :json-id-field="jsonIdField"
+        :available-columns="displayedColumns"
+        :id-candidates="idCandidates"
+        :current-id-column="currentIdColumn"
+        @update:id-column="updateIdColumn"
+        @update:json-id-field="updateJsonIdField"
+      />
     </section>
 
     <!-- MAIN CONTENT: EVEN 3 COLUMNS, SCROLLS IF NEEDED -->
-    <div
-      class="flex-1 flex flex-col md:flex-row min-h-0 bg-gradient-to-br from-white/95 to-blue-50/80 dark:from-slate-900/95 dark:to-slate-800/80 overflow-y-auto"
-    >
+    <div class="flex-1 flex flex-col md:flex-row min-h-0 bg-surface overflow-y-auto">
       <!-- LEFT: SCHEMA FIELDS -->
-      <section
-        class="w-full md:w-1/3 flex flex-col border-r bg-white/80 dark:bg-slate-900/60 dark:border-slate-700 p-4 min-w-0"
-      >
-        <div
-          class="mb-2 text-base font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2"
-        >
-          <span>Schema Fields</span>
+      <section class="w-full md:w-1/3 flex flex-col border-r border-default bg-surface p-4 min-w-0">
+        <div class="mb-2 flex items-center justify-between">
+          <div class="text-sm font-semibold text-primary flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-primary"></span>
+            Schema Fields
+          </div>
           <span
             v-if="requiredFields.length"
-            class="ml-2 px-2 py-0.5 rounded-full text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-900/30 text-xs"
-            >required: {{ requiredFields.length }}</span
+            class="px-2 py-0.5 rounded-full text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-900/30 text-xs font-medium"
+            >{{ requiredFields.length }} required</span
           >
         </div>
-        <div class="flex-1 overflow-auto custom-scrollbar pr-1.5 min-w-0 text-[13px]">
+        <p v-if="!selectedSchemaId" class="text-xs text-content-muted mb-2">
+          Select a schema above to load its fields.
+        </p>
+        <div class="flex-1 overflow-auto pr-1.5 min-w-0 text-[13px]">
           <FieldTree
             :fields="schemaFieldTree"
             :types="schemaFieldTypes"
             :required="requiredFields"
             :selected="selectedSchemaField"
             :disabled="!selectedSchemaId"
-            node-color="text-blue-700 dark:text-blue-400"
+            variant="schema"
             :mapped="mappedSchemaPaths"
             :highlight="highlightRequiredUnmapped"
             @select="onSchemaFieldSelect"
@@ -104,28 +102,55 @@
 
       <!-- CENTER: MAPPING PANEL -->
       <section
-        class="w-full md:w-1/3 flex flex-col border-r bg-gradient-to-b from-blue-50/80 to-blue-100/80 dark:from-slate-800/80 dark:to-slate-800/60 dark:border-slate-700 px-3 pt-6 pb-2 min-w-0"
+        class="w-full md:w-1/3 flex flex-col border-r border-default bg-surface-muted px-3 pt-4 pb-2 min-w-0"
       >
-        <div class="flex flex-col gap-3 mb-3">
+        <!-- Live mapping preview: shows the pairing the Map button will commit -->
+        <div
+          v-if="selectedSchemaField || selectedGroundTruthField"
+          class="mb-3 p-2.5 rounded-card border border-primary/40 dark:border-primary/40 bg-surface text-[12px]"
+        >
+          <div class="flex items-center gap-2 flex-wrap">
+            <span
+              class="px-2 py-0.5 rounded-card font-mono text-xs font-semibold"
+              :class="
+                selectedSchemaField
+                  ? 'bg-primary-soft text-primary'
+                  : 'bg-surface-muted text-content-subtle italic'
+              "
+              >{{ selectedSchemaField || 'pick schema field' }}</span
+            >
+            <ArrowRight class="w-4 h-4 text-content-subtle flex-shrink-0" />
+            <span
+              class="px-2 py-0.5 rounded-card font-mono text-xs font-semibold"
+              :class="
+                selectedGroundTruthField
+                  ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300'
+                  : 'bg-surface-muted text-content-subtle italic'
+              "
+              >{{ selectedGroundTruthField || 'pick GT field' }}</span
+            >
+          </div>
+        </div>
+        <div class="flex flex-col gap-2 mb-3">
           <BaseButton
             :disabled="!canAddMapping"
-            class="w-full py-1.5 font-semibold text-[15px] active:scale-95"
+            class="w-full py-2 font-semibold text-sm"
             @click="addMapping"
           >
             <span class="flex items-center justify-center gap-2">
-              <ArrowUpRight class="w-5 h-5" />
-              Map
+              <Plus class="w-4 h-4" />
+              {{ canAddMapping ? 'Create mapping' : 'Map' }}
             </span>
           </BaseButton>
           <BaseButton
             variant="secondary"
             :disabled="!selectedSchemaId"
-            class="w-full py-1.5 text-xs font-bold"
+            class="w-full py-1.5 text-xs font-semibold"
             @click="autoMap"
           >
             <span class="flex items-center justify-center gap-2">
-              <Sun class="w-5 h-5" />
-              Auto-map all fields
+              <Sparkles class="w-4 h-4" />
+              Auto-map matching names
             </span>
           </BaseButton>
         </div>
@@ -152,24 +177,25 @@
       </section>
 
       <!-- RIGHT: GT FIELDS + SAMPLE (SAMPLE ALWAYS AT BOTTOM) -->
-      <section class="w-full md:w-1/3 flex flex-col bg-white/90 dark:bg-slate-900/60 p-4 min-w-0">
-        <div
-          class="mb-2 text-base font-semibold text-purple-900 dark:text-purple-300 flex items-center gap-2"
-        >
-          Ground Truth Fields
-          <span
-            v-if="groundTruthFieldPaths.length"
-            class="ml-2 text-slate-400 dark:text-slate-500 text-xs"
+      <section class="w-full md:w-1/3 flex flex-col bg-surface p-4 min-w-0">
+        <div class="mb-2 flex items-center justify-between">
+          <div
+            class="text-sm font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-2"
+          >
+            <span class="inline-block w-2 h-2 rounded-full bg-purple-500"></span>
+            Ground Truth Fields
+          </div>
+          <span v-if="groundTruthFieldPaths.length" class="text-content-subtle text-xs font-medium"
             >{{ groundTruthFieldPaths.length }} fields</span
           >
         </div>
-        <div class="flex-1 overflow-auto custom-scrollbar pr-1.5 min-w-0 text-[13px]">
+        <div class="flex-1 overflow-auto pr-1.5 min-w-0 text-[13px]">
           <FieldTree
             :fields="groundTruthFieldTree"
             :types="groundTruthFieldTypes"
             :selected="selectedGroundTruthField"
             :disabled="!selectedSchemaId"
-            node-color="text-purple-700 dark:text-purple-400"
+            variant="groundtruth"
             :mapped="mappedGtPaths"
             @select="onGroundTruthFieldSelect"
           />
@@ -188,15 +214,15 @@
     <!-- Loading Overlay -->
     <div
       v-if="loading"
-      class="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex flex-col items-center justify-center z-20 rounded-modal"
+      class="absolute inset-0 bg-surface/80 backdrop-blur-sm flex flex-col items-center justify-center z-20 rounded-modal"
     >
       <LoadingSpinner size="large" />
-      <div class="mt-3 text-blue-600 dark:text-blue-400 font-bold text-lg">Loading...</div>
+      <div class="mt-3 text-primary font-bold text-lg">Loading...</div>
     </div>
 
     <template #footer>
       <div>
-        <span v-if="!selectedSchemaId" class="text-slate-500 dark:text-slate-400">
+        <span v-if="!selectedSchemaId" class="text-content-muted">
           Please select a schema to start mapping fields.
         </span>
         <span
@@ -215,48 +241,32 @@
         </span>
       </div>
       <div class="flex items-center gap-5">
-        <BaseButton
-          variant="secondary"
-          class="px-5 py-2 rounded-full font-semibold text-sm"
-          @click="close"
-        >
+        <BaseButton variant="secondary" class="px-5 py-2 font-semibold text-sm" @click="close">
           Cancel
         </BaseButton>
 
-        <!-- Tooltip-Enabled Save Button -->
-        <div class="relative">
-          <button
-            ref="saveBtnRef"
-            :disabled="saveDisabled"
-            :class="[
-              'ml-2 px-7 py-2 rounded-full font-bold text-base transition shadow-xl',
-              saveDisabled
-                ? 'bg-slate-300 text-slate-500 dark:bg-slate-700 dark:text-slate-400 cursor-not-allowed opacity-60'
-                : 'bg-gradient-to-r from-blue-600 via-purple-500 to-pink-400 text-white hover:scale-105 hover:shadow-2xl',
-            ]"
-            style="pointer-events: auto !important"
-            @mouseenter="showTooltip = saveDisabled"
-            @mouseleave="showTooltip = false"
-            @focus="showTooltip = saveDisabled"
-            @blur="showTooltip = false"
-            @click="!saveDisabled && saveMappings()"
-          >
+        <!-- Save button — uses BaseButton; disabled state shows a tooltip with the reason. -->
+        <Tooltip v-if="saveDisabled" :text="saveDisabledReason">
+          <BaseButton :disabled="true" class="px-7 py-2 font-bold text-base">
             <span v-if="!justSaved">Save Mappings</span>
             <span v-else class="flex items-center gap-2">
               <Check class="w-5 h-5 text-green-300" />
               Saved!
             </span>
-          </button>
-          <!-- Tooltip -->
-          <div
-            v-if="saveDisabled && showTooltip"
-            ref="tooltipRef"
-            :style="floatingStyles"
-            class="z-50 bg-slate-800 text-white text-xs rounded px-3 py-2 absolute shadow-lg"
-          >
-            {{ saveDisabledReason }}
-          </div>
-        </div>
+          </BaseButton>
+        </Tooltip>
+        <BaseButton
+          v-else
+          class="px-7 py-2 font-bold text-base"
+          :loading="justSaved"
+          @click="saveMappings"
+        >
+          <span v-if="!justSaved">Save Mappings</span>
+          <span v-else class="flex items-center gap-2">
+            <Check class="w-5 h-5 text-green-300" />
+            Saved!
+          </span>
+        </BaseButton>
       </div>
     </template>
   </BaseModal>
@@ -265,9 +275,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useToast } from '@/composables/useToast'
-import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/vue'
-import { ArrowUpRight, Check, CircleAlert, Sun } from '@lucide/vue'
+import { ArrowRight, Check, CircleAlert, FileText, Plus, Sparkles } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import Tooltip from '@/components/common/Tooltip.vue'
 import FieldTree from '@/components/groundtruth/FieldTree.vue'
 import MappingList from '@/components/groundtruth/MappingList.vue'
 import GroundTruthSample from '@/components/groundtruth/GroundTruthSample.vue'
@@ -321,16 +331,6 @@ const mappings = ref<MappingItem[]>([])
 const loading = ref(false)
 const justSaved = ref(false)
 const saveDisabled = computed(() => !canSave.value || justSaved.value)
-
-const saveBtnRef = ref<HTMLElement | null>(null)
-const tooltipRef = ref<HTMLElement | null>(null)
-const showTooltip = ref(false)
-
-const { floatingStyles } = useFloating(saveBtnRef, tooltipRef, {
-  placement: 'top',
-  middleware: [offset(10), flip(), shift()],
-  whileElementsMounted: autoUpdate,
-})
 
 function normStr(v: unknown): string {
   return (v ?? '').toString().trim()

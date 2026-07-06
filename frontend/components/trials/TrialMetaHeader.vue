@@ -1,19 +1,17 @@
 <template>
-  <div
-    class="bg-gradient-to-br from-white via-blue-50 to-white dark:from-slate-800 dark:to-slate-800 shadow-inner rounded-modal p-6 mb-7 border border-slate-100 dark:border-slate-700"
-  >
+  <div class="bg-surface shadow-inner rounded-modal p-6 mb-7 border border-default">
     <div class="flex flex-col md:flex-row md:justify-between gap-6">
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 mb-1">
-          <h2 class="text-xl font-bold text-blue-900 dark:text-blue-100 truncate">
+          <h2 class="text-xl font-bold text-primary truncate">
             {{ trial.name || `Trial #${trial.id}` }}
           </h2>
           <StatusBadge v-if="trial.status" :status="trial.status" class="ml-2 shadow" />
         </div>
-        <div v-if="trial.description" class="text-slate-700 dark:text-slate-300 text-sm mb-1">
+        <div v-if="trial.description" class="text-content-muted text-sm mb-1">
           {{ trial.description }}
         </div>
-        <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600 dark:text-slate-400 mt-1">
+        <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-content-muted mt-1">
           <span
             ><span class="font-semibold">Started:</span>
             {{ formatDate(trial.created_at, true) }}</span
@@ -21,13 +19,11 @@
           <span><span class="font-semibold">Model:</span> {{ trial.llm_model }}</span>
           <span v-if="trial.prompt"
             ><span class="font-semibold">Prompt:</span>
-            <span class="text-slate-800 dark:text-slate-200">{{
-              trial.prompt.name || '[unnamed prompt]'
-            }}</span></span
+            <span class="text-content">{{ trial.prompt.name || '[unnamed prompt]' }}</span></span
           >
           <span v-if="trial.document_set"
             ><span class="font-semibold">Document Set:</span>
-            <span class="text-slate-800 dark:text-slate-200">{{
+            <span class="text-content">{{
               trial.document_set.name || 'Set #' + trial.document_set.id
             }}</span></span
           >
@@ -49,13 +45,13 @@
           </BaseButton>
         </div>
         <span
-          class="text-sm bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-card font-medium text-blue-800 dark:text-blue-200 shadow-sm"
+          class="text-sm bg-primary-soft px-4 py-2 rounded-card font-medium text-primary shadow-sm"
         >
           {{ resultsCount || 0 }} documents processed
         </span>
         <span
           v-if="totalUsage.total_tokens !== undefined"
-          class="text-xs bg-blue-100 dark:bg-blue-900/40 px-3 py-1 rounded-card font-semibold text-blue-800 dark:text-blue-200 mt-1"
+          class="text-xs bg-primary-soft px-3 py-1 rounded-card font-semibold text-primary mt-1"
           title="Sum of prompt and completion tokens across all results"
         >
           Usage: {{ totalUsage.prompt_tokens || 0 }} prompt /
@@ -64,21 +60,19 @@
         </span>
         <div
           v-if="trial.advanced_options && Object.keys(trial.advanced_options).length"
-          class="mt-2 bg-white dark:bg-slate-700/40 rounded-card border border-blue-100 dark:border-slate-600 px-4 py-2 shadow text-xs max-w-xs"
+          class="mt-2 bg-surface rounded-card border border-default px-4 py-2 shadow text-xs max-w-xs"
         >
-          <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">
-            LLM Advanced Options
-          </div>
+          <div class="text-xs font-semibold text-primary mb-1">LLM Advanced Options</div>
           <ul>
             <li
               v-for="(value, key) in trial.advanced_options"
               :key="key"
               class="flex items-center gap-1 mb-0.5"
             >
-              <span class="font-medium capitalize text-slate-700 dark:text-slate-300"
+              <span class="font-medium capitalize text-content-muted"
                 >{{ key.replace(/_/g, ' ') }}:</span
               >
-              <span class="text-blue-900 dark:text-blue-200">{{ value }}</span>
+              <span class="text-primary">{{ value }}</span>
             </li>
           </ul>
         </div>

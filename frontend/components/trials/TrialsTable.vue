@@ -24,31 +24,31 @@
     <template #cell-name="{ row: trial }">
       <div class="min-w-0">
         <div class="flex items-center gap-2">
-          <span class="text-sm font-medium text-slate-900 dark:text-white truncate">{{
+          <span class="text-sm font-medium text-content truncate">{{
             trial.name || `Trial #${trial.id}`
           }}</span>
           <StatusBadge :status="trial.status" class="font-medium" />
         </div>
-        <div v-if="trial.description" class="text-xs text-slate-500 dark:text-slate-400 truncate">
+        <div v-if="trial.description" class="text-xs text-content-muted truncate">
           {{ trial.description }}
         </div>
       </div>
     </template>
 
     <template #cell-schema="{ row: trial }">
-      <span class="text-sm text-slate-700 dark:text-slate-300">{{
+      <span class="text-sm text-content-muted">{{
         schemaName(trial as unknown as TrialSummary)
       }}</span>
     </template>
 
     <template #cell-prompt="{ row: trial }">
-      <span class="text-sm text-slate-700 dark:text-slate-300">{{
+      <span class="text-sm text-content-muted">{{
         promptName(trial as unknown as TrialSummary) || '—'
       }}</span>
     </template>
 
     <template #cell-llm_model="{ row: trial }">
-      <span class="text-sm text-slate-700 dark:text-slate-300 truncate">{{ trial.llm_model }}</span>
+      <span class="text-sm text-content-muted truncate">{{ trial.llm_model }}</span>
     </template>
 
     <template #cell-results="{ row: trial }">
@@ -70,13 +70,13 @@
     <template #cell-progress="{ row: trial }">
       <!-- Active: compact inline progress -->
       <div v-if="isActive(trial as unknown as TrialSummary)" class="flex items-center gap-2">
-        <div class="w-16 h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+        <div class="w-16 h-1 bg-surface-sunken rounded-full overflow-hidden">
           <div
-            class="h-full bg-blue-500 transition-all duration-500"
+            class="h-full bg-primary transition-all duration-500"
             :style="{ width: progressPercent(trial as unknown as TrialSummary) + '%' }"
           ></div>
         </div>
-        <span class="text-xs text-slate-500 dark:text-slate-400"
+        <span class="text-xs text-content-muted"
           >{{ docsDone(trial as unknown as TrialSummary) }}/{{
             totalDocs(trial as unknown as TrialSummary)
           }}</span
@@ -97,11 +97,11 @@
         <AlertCircle class="w-4 h-4" />
         Failed
       </div>
-      <span v-else class="text-xs text-slate-400 dark:text-slate-500">{{ trial.status }}</span>
+      <span v-else class="text-xs text-content-subtle">{{ trial.status }}</span>
     </template>
 
     <template #cell-created_at="{ row: trial }">
-      <span class="text-sm text-slate-500 dark:text-slate-400">
+      <span class="text-sm text-content-muted">
         {{ formatDateSmart(trial.created_at) }}
       </span>
     </template>

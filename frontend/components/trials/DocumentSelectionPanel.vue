@@ -1,14 +1,10 @@
 <template>
-  <div
-    class="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-modal p-6 shadow flex flex-col h-full"
-  >
+  <div class="bg-surface border border-default rounded-modal p-6 shadow flex flex-col h-full">
     <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-      <span class="block text-sm font-semibold text-slate-700 dark:text-slate-200"
+      <span class="block text-sm font-semibold text-content-muted"
         >Select Documents <span class="text-red-500">*</span></span
       >
-      <span class="text-xs text-slate-500 dark:text-slate-400"
-        >{{ selectedIds.length }} selected</span
-      >
+      <span class="text-xs text-content-muted">{{ selectedIds.length }} selected</span>
     </div>
 
     <div class="mb-4">

@@ -13,7 +13,7 @@
       </div>
 
       <div class="flex items-center space-x-2">
-        <span class="text-sm text-slate-500 dark:text-slate-400">
+        <span class="text-sm text-content-muted">
           {{ totalCount }} group{{ totalCount !== 1 ? 's' : '' }}
         </span>
       </div>
@@ -26,11 +26,11 @@
 
     <div
       v-else-if="serverItems.length === 0"
-      class="bg-slate-50 dark:bg-slate-800 rounded-card p-12 text-center"
+      class="bg-surface-muted rounded-card p-12 text-center"
     >
-      <Layers class="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500" />
-      <h3 class="mt-2 text-sm font-medium text-slate-900 dark:text-white">No document groups</h3>
-      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <Layers class="mx-auto h-12 w-12 text-content-subtle" />
+      <h3 class="mt-2 text-sm font-medium text-content">No document groups</h3>
+      <p class="mt-1 text-sm text-content-muted">
         {{
           searchQuery
             ? 'Try adjusting your search'
@@ -53,33 +53,30 @@
       <template #cell-name="{ row: group }">
         <div>
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-slate-900 dark:text-white">{{ group.name }}</span>
+            <span class="text-sm font-medium text-content">{{ group.name }}</span>
             <span
               v-if="group.is_auto_generated"
-              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+              class="inline-flex items-center px-2 py-0.5 rounded-card text-xs font-medium bg-primary-soft text-primary"
               title="Auto-generated during preprocessing"
             >
               Auto
             </span>
           </div>
-          <div
-            v-if="group.description"
-            class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-md"
-          >
+          <div v-if="group.description" class="text-xs text-content-muted truncate max-w-md">
             {{ group.description }}
           </div>
         </div>
       </template>
 
       <template #cell-document_count="{ row: group }">
-        <span class="text-sm text-slate-900 dark:text-white">{{ group.document_count ?? 0 }}</span>
+        <span class="text-sm text-content">{{ group.document_count ?? 0 }}</span>
       </template>
 
       <template #cell-configuration="{ row: group }">
-        <span v-if="group.preprocessing_config" class="text-sm text-slate-900 dark:text-white">
+        <span v-if="group.preprocessing_config" class="text-sm text-content">
           {{ group.preprocessing_config.name }}
         </span>
-        <span v-else class="text-sm text-slate-500 dark:text-slate-400">Mixed</span>
+        <span v-else class="text-sm text-content-muted">Mixed</span>
       </template>
 
       <template #cell-tags="{ row: group }">
@@ -87,13 +84,13 @@
           <span
             v-for="tag in (group.tags || []).slice(0, 5)"
             :key="tag"
-            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+            class="inline-flex items-center px-2 py-0.5 rounded-card text-xs font-medium bg-primary-soft text-primary"
           >
             {{ tag }}
           </span>
           <span
             v-if="(group.tags || []).length > 5"
-            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
+            class="inline-flex items-center px-2 py-0.5 rounded-card text-xs font-medium bg-surface-sunken text-content-muted"
           >
             +{{ group.tags.length - 5 }}
           </span>
@@ -105,8 +102,8 @@
           :class="[
             'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
             group.is_auto_generated
-              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-              : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300',
+              ? 'bg-primary-soft text-primary'
+              : 'bg-surface-sunken text-content-muted',
           ]"
         >
           {{ group.is_auto_generated ? 'Auto-generated' : 'Manual' }}
@@ -114,7 +111,7 @@
       </template>
 
       <template #cell-created_at="{ row: group }">
-        <span class="text-sm text-slate-500 dark:text-slate-400">
+        <span class="text-sm text-content-muted">
           {{ formatDate(group.created_at) }}
         </span>
       </template>
@@ -188,7 +185,7 @@
           type="checkbox"
           :class="[checkboxClass, 'text-red-600 focus:ring-red-500']"
         />
-        <label class="ml-2 text-sm text-slate-700 dark:text-slate-300">
+        <label class="ml-2 text-sm text-content-muted">
           Also delete all documents in this group (if not referenced elsewhere)
         </label>
       </div>

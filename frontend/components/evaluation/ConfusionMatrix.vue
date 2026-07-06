@@ -4,21 +4,21 @@
       <table class="border-collapse text-xs">
         <thead>
           <tr>
-            <th class="sticky left-0 z-20 bg-white dark:bg-slate-900">
+            <th class="sticky left-0 z-20 bg-surface">
               <!-- Axis legend -->
               <div
                 class="flex flex-col items-center justify-center gap-0.5 w-[120px] min-h-[64px] p-2"
               >
-                <span class="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500"
+                <span class="text-[10px] uppercase tracking-wide text-content-subtle"
                   >Predicted →</span
                 >
-                <span class="text-[10px] text-slate-400 dark:text-slate-500">Ground truth ↓</span>
+                <span class="text-[10px] text-content-subtle">Ground truth ↓</span>
               </div>
             </th>
             <th
               v-for="col in labels"
               :key="`col-${col}`"
-              class="p-2 font-medium text-slate-600 dark:text-slate-300 align-bottom max-w-[140px] border-b border-slate-200 dark:border-slate-700"
+              class="p-2 font-medium text-content-muted align-bottom max-w-[140px] border-b border-default"
               :title="col"
             >
               <div class="whitespace-normal break-words text-center leading-tight">
@@ -30,7 +30,7 @@
         <tbody>
           <tr v-for="row in labels" :key="`row-${row}`">
             <th
-              class="sticky left-0 z-10 bg-white dark:bg-slate-900 p-2 font-medium text-slate-600 dark:text-slate-300 whitespace-normal break-words max-w-[140px] text-left border-r border-slate-200 dark:border-slate-700 align-middle"
+              class="sticky left-0 z-10 bg-surface p-2 font-medium text-content-muted whitespace-normal break-words max-w-[140px] text-left border-r border-default align-middle"
               :title="row"
             >
               {{ row }}
@@ -38,11 +38,11 @@
             <td
               v-for="col in labels"
               :key="`cell-${row}-${col}`"
-              class="p-1.5 text-center border border-slate-200 dark:border-slate-700 transition-all duration-150 select-none"
+              class="p-1.5 text-center border border-default transition-all duration-150 select-none"
               :class="
                 count(row, col) > 0
                   ? [
-                      'cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500',
+                      'cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring',
                       cellClass(row, col),
                     ]
                   : ['cursor-default', cellClass(row, col)]
@@ -68,10 +68,10 @@
         </tbody>
       </table>
     </div>
-    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+    <p class="mt-2 text-xs text-content-subtle">
       Each cell shows the document count and its share of the ground-truth row. The diagonal
       (correct predictions) is green, errors are red — intensity scales with count.
-      <span class="font-medium text-slate-600 dark:text-slate-300"
+      <span class="font-medium text-content-muted"
         >Click a cell (or focus it with Tab and press Enter)</span
       >
       to filter the document table; the selected cell is outlined in blue.
@@ -201,7 +201,7 @@ const cellStyle = (gt: string, pred: string): Record<string, string> => {
 const cellClass = (gt: string, pred: string): string => {
   const classes: string[] = []
   if (count(gt, pred) === 0) {
-    classes.push('text-slate-300 dark:text-slate-700')
+    classes.push('text-content-subtle')
   } else if (gt === pred) {
     classes.push('text-green-800 dark:text-green-300')
   } else {
@@ -213,9 +213,7 @@ const cellClass = (gt: string, pred: string): string => {
   }
   // Active-filter highlight — strong blue ring + lift, drawn above neighbors.
   if (isActive(gt, pred)) {
-    classes.push(
-      'ring-2 ring-inset ring-blue-500 dark:ring-blue-400 relative z-10 shadow-[0_0_0_3px_rgba(59,130,246,0.25)] scale-[1.04]',
-    )
+    classes.push('ring-2 ring-inset ring-ring relative z-10 shadow-lg scale-[1.04]')
   }
   return classes.join(' ')
 }

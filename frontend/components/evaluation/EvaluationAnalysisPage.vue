@@ -6,10 +6,10 @@
         <BaseButton variant="link" size="sm" tone="gray" class="-ml-1 mb-2" @click="$emit('back')">
           <ChevronLeft class="h-4 w-4" /> Back to evaluations
         </BaseButton>
-        <h1 class="text-2xl font-bold text-slate-900 dark:text-white truncate">
+        <h1 class="text-2xl font-bold text-content truncate">
           {{ trialName || loadedTrialName || `Trial #${evaluationDetail?.trial_id}` }}
         </h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+        <p class="text-sm text-content-subtle mt-0.5">
           <span v-if="evaluationDetail?.model || loadedTrialModel">{{
             evaluationDetail?.model || loadedTrialModel
           }}</span>
@@ -33,14 +33,12 @@
       <!-- Left rail: metrics + field list -->
       <aside class="lg:col-span-1 space-y-4">
         <!-- Overall metrics -->
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4">
+        <div class="bg-surface shadow-sm rounded-card p-4">
           <div class="flex items-baseline justify-between mb-3">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Overall Metrics
-            </h2>
+            <h2 class="text-sm font-semibold text-content-muted">Overall Metrics</h2>
             <span
               v-if="matchedDocInfo"
-              class="text-[11px] text-slate-500 dark:text-slate-400"
+              class="text-[11px] text-content-subtle"
               :title="
                 errorDocCount > 0
                   ? 'Accuracy is computed over matched documents only. Unmatched documents are listed in the table below.'
@@ -51,26 +49,17 @@
             </span>
           </div>
           <div class="grid grid-cols-2 gap-3">
-            <div
-              v-for="m in overallMetrics"
-              :key="m.key"
-              class="bg-slate-50 dark:bg-slate-800 rounded-card p-3"
-            >
+            <div v-for="m in overallMetrics" :key="m.key" class="bg-surface-muted rounded-card p-3">
               <div class="flex items-center gap-1">
-                <span class="text-xs text-slate-500 dark:text-slate-400">{{ m.label }}</span>
+                <span class="text-xs text-content-subtle">{{ m.label }}</span>
                 <Tooltip :text="m.tooltip" :title="m.tooltipTitle">
-                  <Info
-                    class="h-3.5 w-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                  />
+                  <Info class="h-3.5 w-3.5 text-content-subtle hover:text-content-muted" />
                 </Tooltip>
               </div>
-              <div class="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
+              <div class="text-lg font-bold text-content mt-0.5">
                 {{ m.value }}
               </div>
-              <div
-                v-if="m.sub"
-                class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate"
-              >
+              <div v-if="m.sub" class="text-[10px] text-content-subtle mt-0.5 truncate">
                 {{ m.sub }}
               </div>
             </div>
@@ -82,12 +71,12 @@
         </div>
 
         <!-- Field list -->
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4">
+        <div class="bg-surface shadow-sm rounded-card p-4">
           <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Fields</h2>
+            <h2 class="text-sm font-semibold text-content-muted">Fields</h2>
             <div class="flex items-center gap-3">
               <button
-                class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 inline-flex items-center gap-1"
+                class="text-xs text-content-subtle hover:text-content-muted inline-flex items-center gap-1"
                 :title="fieldSort === 'accuracy' ? 'Sorted worst-first' : 'Sorted alphabetically'"
                 @click="toggleFieldSort"
               >
@@ -96,7 +85,7 @@
               </button>
               <button
                 v-if="selectedFieldFilter"
-                class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                class="text-xs text-primary hover:underline"
                 @click="selectedFieldFilter = ''"
               >
                 Clear filter
@@ -110,14 +99,14 @@
               :class="[
                 'flex items-center justify-between gap-2 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors',
                 selectedFieldFilter === field.name
-                  ? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-300'
-                  : 'hover:bg-slate-50 dark:hover:bg-slate-800',
+                  ? 'bg-primary-soft ring-1 ring-ring'
+                  : 'hover:bg-surface-muted',
               ]"
               @click="toggleFieldFilter(field.name)"
             >
               <div class="min-w-0 flex items-center gap-2">
                 <component :is="field.icon" class="h-3.5 w-3.5 shrink-0" :class="field.iconColor" />
-                <span class="text-slate-800 dark:text-slate-200 truncate">{{ field.label }}</span>
+                <span class="text-content-muted truncate">{{ field.label }}</span>
               </div>
               <div class="flex items-center gap-2 shrink-0">
                 <span
@@ -138,10 +127,7 @@
                 }}</span>
               </div>
             </li>
-            <li
-              v-if="!fieldList.length"
-              class="text-xs text-slate-500 dark:text-slate-400 italic px-2 py-1"
-            >
+            <li v-if="!fieldList.length" class="text-xs text-content-subtle italic px-2 py-1">
               No fields.
             </li>
           </ul>
@@ -151,9 +137,7 @@
       <!-- Main: filters + document table -->
       <section class="lg:col-span-3 flex flex-col min-h-0">
         <!-- Filter bar -->
-        <div
-          class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-3 mb-4 flex flex-wrap items-center gap-3"
-        >
+        <div class="bg-surface shadow-sm rounded-card p-3 mb-4 flex flex-wrap items-center gap-3">
           <SearchInput
             v-model="search"
             placeholder="Search documents..."
@@ -184,15 +168,12 @@
         </div>
 
         <!-- Per-field metrics for the selected field -->
-        <div
-          v-if="selectedFieldMetrics"
-          class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4 mb-4"
-        >
+        <div v-if="selectedFieldMetrics" class="bg-surface shadow-sm rounded-card p-4 mb-4">
           <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            <h3 class="text-sm font-semibold text-content-muted">
               Field metrics — {{ prettifyField(selectedFieldFilter) }}
             </h3>
-            <span class="text-xs text-slate-500 dark:text-slate-400">
+            <span class="text-xs text-content-subtle">
               {{ selectedFieldMetrics.correct_count }}/{{ selectedFieldMetrics.total_count }}
               correct
             </span>
@@ -201,14 +182,12 @@
             <div
               v-for="m in selectedFieldMetricCards"
               :key="m.key"
-              class="bg-slate-50 dark:bg-slate-800 rounded-card p-2.5"
+              class="bg-surface-muted rounded-card p-2.5"
             >
               <div class="flex items-center gap-1">
-                <span class="text-[11px] text-slate-500 dark:text-slate-400">{{ m.label }}</span>
+                <span class="text-[11px] text-content-subtle">{{ m.label }}</span>
                 <Tooltip :text="m.tooltip" :title="m.tooltipTitle">
-                  <Info
-                    class="h-3 w-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                  />
+                  <Info class="h-3 w-3 text-content-subtle hover:text-content-muted" />
                 </Tooltip>
               </div>
               <div class="text-base font-bold" :class="accuracyColor(m.value)">
@@ -220,7 +199,7 @@
             v-if="Object.keys(selectedFieldMetrics.error_distribution).length"
             class="mt-3 flex flex-wrap items-center gap-1.5"
           >
-            <span class="text-xs text-slate-500 dark:text-slate-400 mr-1">Errors:</span>
+            <span class="text-xs text-content-subtle mr-1">Errors:</span>
             <span
               v-for="(count, type) in selectedFieldMetrics.error_distribution"
               :key="type"
@@ -233,11 +212,8 @@
         </div>
 
         <!-- Confusion matrix for the selected categorical field -->
-        <div
-          v-if="confusionMatrixForField"
-          class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4 mb-4"
-        >
-          <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
+        <div v-if="confusionMatrixForField" class="bg-surface shadow-sm rounded-card p-4 mb-4">
+          <h3 class="text-sm font-semibold text-content-muted mb-2">
             Confusion matrix — {{ prettifyField(selectedFieldFilter) }}
           </h3>
           <ConfusionMatrix
@@ -248,9 +224,7 @@
         </div>
 
         <!-- Document table -->
-        <div
-          class="bg-white dark:bg-slate-900 shadow-sm rounded-card flex-1 min-h-0 overflow-hidden"
-        >
+        <div class="bg-surface shadow-sm rounded-card flex-1 min-h-0 overflow-hidden">
           <DataTable
             :columns="columns"
             :items="pagedDocs"
@@ -262,7 +236,7 @@
             @row-click="openDoc"
           >
             <template #cell-document_name="{ row }">
-              <span class="text-sm font-medium text-slate-900 dark:text-white">
+              <span class="text-sm font-medium text-content">
                 {{ row.document_name || `Document #${row.document_id}` }}
               </span>
             </template>
@@ -272,9 +246,9 @@
               }}</span>
             </template>
             <template #cell-incorrect_fields="{ row }">
-              <span class="text-sm text-slate-700 dark:text-slate-300">
+              <span class="text-sm text-content-muted">
                 {{ (row.incorrect_fields?.length || 0) + (row.missing_fields?.length || 0) }}
-                <span class="text-slate-400">/ {{ row.total_fields }}</span>
+                <span class="text-content-subtle">/ {{ row.total_fields }}</span>
               </span>
             </template>
             <template #cell-status="{ row }">
@@ -543,14 +517,14 @@ const toggleFieldSort = (): void => {
 const iconTextColor = (type: string): string => {
   const map: Record<string, string> = {
     string: 'text-green-600 dark:text-green-400',
-    number: 'text-blue-600 dark:text-blue-400',
+    number: 'text-primary',
     boolean: 'text-purple-600 dark:text-purple-400',
     date: 'text-amber-600 dark:text-amber-400',
     category: 'text-purple-600 dark:text-purple-400',
     object: 'text-orange-600 dark:text-orange-400',
     array: 'text-pink-600 dark:text-pink-400',
   }
-  return map[type] || 'text-slate-500 dark:text-slate-400'
+  return map[type] || 'text-content-subtle'
 }
 
 // ---- Computed: confusion matrix for the selected categorical field ----

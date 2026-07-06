@@ -1,10 +1,8 @@
 <template>
   <div class="text-center">
     <div class="mb-8">
-      <h2 class="text-3xl font-bold text-slate-900 mb-4 dark:text-white">
-        Start extracting structured data
-      </h2>
-      <p class="text-xl text-slate-600 dark:text-slate-300">
+      <h2 class="text-3xl font-bold text-content mb-4">Start extracting structured data</h2>
+      <p class="text-xl text-content-muted">
         Upload your documents, define a schema, and run your first extraction trial.
       </p>
     </div>
@@ -12,7 +10,7 @@
     <div v-if="authStore.isAuthenticated" class="mb-8">
       <router-link
         to="/projects"
-        class="inline-flex items-center gap-2 transform rounded-full bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-4 text-lg font-medium text-white shadow-lg transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:from-blue-600 hover:to-blue-700"
+        class="inline-flex items-center gap-2 transform rounded-full bg-gradient-to-r from-primary to-primary-hover px-8 py-4 text-lg font-medium text-white shadow-lg transition duration-300 hover:-translate-y-1 hover:shadow-xl"
       >
         Go to Projects
         <ArrowRight class="h-5 w-5" />
@@ -22,14 +20,14 @@
     <div v-else class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center mb-8">
       <router-link
         to="/register"
-        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-4 text-lg font-medium text-white shadow-lg transition hover:from-blue-600 hover:to-blue-700 hover:shadow-xl"
+        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-primary-hover px-8 py-4 text-lg font-medium text-white shadow-lg transition hover:shadow-xl"
       >
         Get Started
         <ArrowRight class="h-5 w-5" />
       </router-link>
       <router-link
         to="/login"
-        class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 text-slate-700 px-8 py-4 text-lg font-medium backdrop-blur-sm transition hover:bg-slate-100 hover:border-slate-400 dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:hover:border-white/30"
+        class="inline-flex items-center gap-2 rounded-full border border-strong bg-surface/80 text-content-muted px-8 py-4 text-lg font-medium backdrop-blur-sm transition hover:bg-surface-muted hover:border-strong"
       >
         Login
         <LogIn class="h-5 w-5" />
@@ -42,7 +40,7 @@
         href="https://github.com/KatherLab"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-2 text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+        class="inline-flex items-center gap-2 text-content-subtle transition-colors hover:text-content"
       >
         <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
           <path

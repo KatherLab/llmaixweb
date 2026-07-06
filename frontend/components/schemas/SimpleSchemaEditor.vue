@@ -1,12 +1,10 @@
 <template>
-  <div class="simple-schema-editor flex flex-col h-full bg-white dark:bg-slate-900">
+  <div class="simple-schema-editor flex flex-col h-full bg-surface">
     <!-- Header -->
     <div class="border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
       <div>
-        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Extract Fields</h3>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          Drag to reorder • Click field to edit
-        </p>
+        <h3 class="text-base font-semibold text-content">Extract Fields</h3>
+        <p class="text-sm text-content-muted mt-0.5">Drag to reorder • Click field to edit</p>
       </div>
       <BaseButton class="shadow-sm hover:shadow" @click="addField">
         <Plus class="h-4 w-4" />
@@ -57,13 +55,10 @@
 
             <!-- Field name (read-only) -->
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
+              <p class="text-sm font-medium text-content-muted truncate">
                 {{ field.name }}
               </p>
-              <p
-                v-if="field.description"
-                class="text-xs text-slate-500 dark:text-slate-400 truncate"
-              >
+              <p v-if="field.description" class="text-xs text-content-muted truncate">
                 {{ field.description }}
               </p>
             </div>
@@ -86,8 +81,8 @@
             :class="[
               'group flex flex-wrap items-center gap-3 p-3 rounded-modal border transition-all duration-200',
               draggingIndex === index
-                ? 'border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/30 shadow-md scale-[1.02]'
-                : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 hover:shadow-sm bg-slate-50/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800',
+                ? 'border-primary bg-primary-soft shadow-md scale-[1.02]'
+                : 'border-default hover:border-primary hover:shadow-sm bg-surface-muted hover:bg-surface',
             ]"
             draggable
             @dragstart="handleDragStart"
@@ -98,7 +93,7 @@
           >
             <!-- Drag Handle -->
             <div
-              class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-slate-400 hover:text-slate-600 dark:hover:bg-slate-700 rounded-card hover:bg-slate-200/50 transition-all"
+              class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-content-subtle hover:text-content-muted hover:bg-surface-sunken rounded-card transition-all"
               title="Drag to reorder"
             >
               <GripVertical class="h-5 w-5" />
@@ -109,8 +104,8 @@
               :class="[
                 'flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-card text-xs font-semibold transition-all',
                 draggingIndex === index
-                  ? 'bg-blue-200 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+                  ? 'bg-primary-soft text-primary'
+                  : 'bg-surface-sunken text-content-muted',
               ]"
             >
               {{ index + 1 }}
@@ -120,7 +115,7 @@
             <div class="flex-1 min-w-0">
               <input
                 v-model="field.name"
-                class="w-full bg-transparent border-0 border-b border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-0 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 transition-colors py-1.5"
+                class="w-full bg-transparent border-0 border-b border-strong focus:border-primary focus:ring-0 text-sm font-medium text-content placeholder-content-subtle transition-colors py-1.5"
                 placeholder="field_name (e.g., patient_name)"
                 @input="emitChange"
               />
@@ -143,7 +138,7 @@
                   <option value="Email">Email</option>
                 </select>
                 <ChevronDown
-                  class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500"
+                  class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-content-subtle"
                 />
               </div>
             </div>
@@ -152,7 +147,7 @@
             <div class="flex-1 min-w-0 hidden lg:block">
               <input
                 v-model="field.description"
-                class="w-full bg-transparent border-0 border-b border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-0 text-xs text-slate-600 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 transition-colors py-1.5"
+                class="w-full bg-transparent border-0 border-b border-strong focus:border-primary focus:ring-0 text-xs text-content-muted placeholder-content-subtle transition-colors py-1.5"
                 placeholder="What is this field? (optional)"
                 @input="emitChange"
               />
@@ -173,20 +168,18 @@
             <!-- Pre-defined options (string enum). Only for plain Text fields. -->
             <div
               v-if="field.type === 'String'"
-              class="basis-full w-full flex flex-wrap items-center gap-1.5 pt-1.5 mt-0.5 border-t border-slate-200/70 dark:border-slate-700"
+              class="basis-full w-full flex flex-wrap items-center gap-1.5 pt-1.5 mt-0.5 border-t border-default"
             >
-              <span class="text-xs font-medium text-slate-500 dark:text-slate-400 mr-0.5"
-                >Options</span
-              >
+              <span class="text-xs font-medium text-content-muted mr-0.5">Options</span>
               <span
                 v-for="(opt, i) in field.options"
                 :key="i"
-                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-card bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-medium"
+                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-card bg-primary-soft text-primary text-xs font-medium"
               >
                 {{ opt }}
                 <button
                   type="button"
-                  class="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                  class="text-primary hover:text-primary transition-colors"
                   aria-label="Remove option"
                   @click="removeOption(field, i)"
                 >
@@ -195,7 +188,7 @@
               </span>
               <input
                 :value="pendingOptions[field.id] || ''"
-                class="flex-1 min-w-[120px] bg-transparent border-0 border-b border-dashed border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-0 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 transition-colors py-0.5"
+                class="flex-1 min-w-[120px] bg-transparent border-0 border-b border-dashed border-strong focus:border-primary focus:ring-0 text-xs text-content-muted placeholder-content-subtle transition-colors py-0.5"
                 placeholder="add option — press Enter"
                 @input="setPendingOption(field.id, ($event.target as HTMLInputElement).value)"
                 @keydown="onOptionKeydown(field, $event)"
@@ -210,34 +203,34 @@
     <!-- Help Footer -->
     <div
       v-if="fields.length > 0"
-      class="border-t px-6 py-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20"
+      class="border-t border-default px-6 py-4 bg-gradient-to-r from-primary-soft to-purple-50 dark:to-purple-900/20"
     >
       <div class="flex items-start gap-3">
         <div
-          class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center mt-0.5"
+          class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-soft flex items-center justify-center mt-0.5"
         >
-          <Info class="h-3 w-3 text-blue-600 dark:text-blue-300" />
+          <Info class="h-3 w-3 text-primary" />
         </div>
-        <div class="text-sm text-blue-900 dark:text-blue-200">
+        <div class="text-sm text-primary">
           <p class="font-medium mb-1.5">Quick Tips</p>
-          <ul class="space-y-1 text-blue-700 dark:text-blue-300">
+          <ul class="space-y-1 text-primary">
             <li class="flex items-center gap-2">
-              <span class="w-1 h-1 rounded-full bg-blue-400"></span>
+              <span class="w-1 h-1 rounded-full bg-primary"></span>
               Use clear names like
-              <code class="px-1.5 py-0.5 bg-white/60 dark:bg-slate-800/60 rounded text-xs font-mono"
+              <code class="px-1.5 py-0.5 bg-surface-muted/60 rounded text-xs font-mono"
                 >patient_name</code
               >
               or
-              <code class="px-1.5 py-0.5 bg-white/60 dark:bg-slate-800/60 rounded text-xs font-mono"
+              <code class="px-1.5 py-0.5 bg-surface-muted/60 rounded text-xs font-mono"
                 >date_of_birth</code
               >
             </li>
             <li class="flex items-center gap-2">
-              <span class="w-1 h-1 rounded-full bg-blue-400"></span>
+              <span class="w-1 h-1 rounded-full bg-primary"></span>
               The schema is automatically included in the prompt sent to the LLM
             </li>
             <li class="flex items-center gap-2">
-              <span class="w-1 h-1 rounded-full bg-blue-400"></span>
+              <span class="w-1 h-1 rounded-full bg-primary"></span>
               Need nested objects or arrays? Switch to <strong>Advanced Mode</strong>
             </li>
           </ul>
@@ -639,20 +632,20 @@ select:focus {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--color-strong-border);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: var(--color-content-subtle);
 }
 
 /* Dark mode scrollbar override */
 :global(.dark) ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: var(--color-strong-border);
 }
 
 :global(.dark) ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: var(--color-content-subtle);
 }
 </style>

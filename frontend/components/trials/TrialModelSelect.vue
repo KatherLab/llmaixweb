@@ -3,7 +3,7 @@
     <div class="flex items-center gap-1 mb-1.5">
       <label :class="labelClass">LLM Model <span class="text-red-500">*</span></label>
       <Tooltip :text="modelHelpText">
-        <Info class="h-4 w-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" />
+        <Info class="h-4 w-4 text-content-subtle hover:text-content-muted" />
       </Tooltip>
     </div>
     <select
@@ -24,7 +24,7 @@
         {{ mdl }}
       </option>
     </select>
-    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+    <p class="mt-1 text-xs text-content-muted">
       Models are loaded from your configured LLM provider. Not all models support structured JSON
       output — the compatibility test below verifies your chosen model works with the selected
       schema before you run the trial.

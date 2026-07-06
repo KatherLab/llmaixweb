@@ -1,15 +1,13 @@
 <template>
   <div class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <h1 class="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-        LLMAIx-v2
-      </h1>
-      <p class="text-base text-slate-500 dark:text-slate-400 mt-2">
+      <h1 class="text-4xl font-extrabold text-content tracking-tight">LLMAIx-v2</h1>
+      <p class="text-base text-content-muted mt-2">
         Extract information from documents using LLMs.
       </p>
     </div>
     <form
-      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-modal p-8 shadow-sm flex flex-col gap-5"
+      class="bg-surface border border-default rounded-modal p-8 shadow-sm flex flex-col gap-5"
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >
@@ -19,15 +17,15 @@
           v-for="provider in ssoProviders"
           :key="provider.slug"
           :href="ssoLoginUrl(provider.slug, redirectTarget)"
-          class="w-full py-2.5 px-4 rounded-card border border-slate-300 dark:border-slate-600 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 transition flex items-center justify-center gap-2"
+          class="w-full py-2.5 px-4 rounded-card border border-strong text-sm font-medium text-content-muted bg-surface hover:bg-surface-muted transition flex items-center justify-center gap-2"
         >
           <LogIn class="h-4 w-4" aria-hidden="true" />
           Continue with {{ provider.name }}
         </a>
         <div class="flex items-center gap-3 my-1">
-          <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-          <span class="text-xs text-slate-400">or</span>
-          <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+          <div class="h-px flex-1 bg-default-border" />
+          <span class="text-xs text-content-subtle">or</span>
+          <div class="h-px flex-1 bg-default-border" />
         </div>
       </div>
 
@@ -50,10 +48,7 @@
         autocomplete="current-password"
       >
         <template #trailing>
-          <router-link
-            to="/forgot-password"
-            class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-          >
+          <router-link to="/forgot-password" class="text-xs text-primary hover:underline">
             Forgot your password?
           </router-link>
         </template>
@@ -73,7 +68,7 @@
       </transition>
       <router-link
         to="/register"
-        class="block mt-3 text-center text-blue-600 dark:text-blue-400 hover:underline text-sm transition"
+        class="block mt-3 text-center text-primary hover:underline text-sm transition"
       >
         Don’t have an account? <span class="font-semibold">Register here</span>
       </router-link>

@@ -103,12 +103,12 @@ async function download(): Promise<void> {
 
     <div class="mb-4">
       <label :class="labelClass">Options</label>
-      <label class="flex items-center text-sm text-slate-700 dark:text-slate-300">
+      <label class="flex items-center text-sm text-content-muted">
         <input v-model="includeContent" type="checkbox" :class="checkboxClass" />
         <span class="ml-2"
           >Include document content
           <span
-            class="text-slate-400 dark:text-slate-500"
+            class="text-content-subtle"
             title="If checked: you will also receive the original document text and files inside the ZIP."
           >
             (adds document text and source files)
@@ -117,7 +117,7 @@ async function download(): Promise<void> {
       </label>
     </div>
 
-    <div v-if="format === 'csv'" class="mb-3 text-xs text-slate-500 dark:text-slate-400">
+    <div v-if="format === 'csv'" class="mb-3 text-xs text-content-muted">
       <span v-if="includeContent">
         Will include original files and full document text inside a ZIP.<br />
         <b>Note:</b> Download may be large if your trial contains many files.

@@ -2,10 +2,8 @@
   <BaseModal :open="open" size="md" @close="emit('close')">
     <template #header>
       <div>
-        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Edit User</h3>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          #{{ user?.id }} &middot; {{ user?.email }}
-        </p>
+        <h3 class="text-lg font-bold text-content">Edit User</h3>
+        <p class="text-sm text-content-subtle mt-0.5">#{{ user?.id }} &middot; {{ user?.email }}</p>
       </div>
     </template>
 
@@ -23,11 +21,7 @@
 
       <!-- === General Settings === -->
       <div>
-        <h4
-          class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3"
-        >
-          General
-        </h4>
+        <h4 class="text-xs font-bold text-content-subtle uppercase tracking-wider mb-3">General</h4>
         <div class="space-y-4">
           <div>
             <label :class="labelClass">Full Name</label>
@@ -66,7 +60,7 @@
                   :disabled="user?.id === currentUserId"
                   class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
                   :class="[
-                    editForm.is_active ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600',
+                    editForm.is_active ? 'bg-green-500' : 'bg-surface-sunken',
                     user?.id === currentUserId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
                   ]"
                   @click="toggleEditUserActive"
@@ -93,13 +87,11 @@
       </div>
 
       <!-- Divider -->
-      <hr class="border-slate-100 dark:border-slate-800" />
+      <hr class="border-default" />
 
       <!-- === Set Password === -->
       <div>
-        <h4
-          class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3"
-        >
+        <h4 class="text-xs font-bold text-content-subtle uppercase tracking-wider mb-3">
           Set Password
         </h4>
         <div class="flex gap-2 items-start">
@@ -125,7 +117,7 @@
       </div>
 
       <!-- Divider -->
-      <hr class="border-slate-100 dark:border-slate-800" />
+      <hr class="border-default" />
 
       <!-- === Danger Zone === -->
       <Callout variant="danger" title="Danger Zone">
@@ -144,7 +136,7 @@
     <template #footer>
       <BaseButton
         variant="secondary"
-        class="dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700"
+        class="dark:bg-surface dark:text-content-muted dark:border-strong dark:hover:bg-surface-sunken"
         @click="emit('close')"
       >
         Cancel
@@ -152,7 +144,7 @@
       <BaseButton
         variant="primary"
         :disabled="isSavingEdit"
-        class="dark:bg-blue-500 dark:hover:bg-blue-600"
+        class="dark:bg-primary dark:hover:bg-primary-hover"
         @click="saveEditUser"
       >
         {{ isSavingEdit ? 'Saving...' : 'Save Changes' }}

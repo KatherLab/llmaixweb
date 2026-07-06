@@ -35,7 +35,7 @@
 
       <!-- Batch Actions -->
       <div class="flex justify-between items-center mb-4">
-        <span class="text-sm text-slate-500 dark:text-slate-400">
+        <span class="text-sm text-content-muted">
           {{ totalCount }} document{{ totalCount !== 1 ? 's' : '' }}
         </span>
       </div>
@@ -58,7 +58,7 @@
         @action="clearFilters"
       >
         <template #icon>
-          <Search class="h-12 w-12 mx-auto text-slate-400 dark:text-slate-500" aria-hidden="true" />
+          <Search class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
         </template>
       </EmptyState>
 
@@ -69,10 +69,7 @@
         description="Process some files in the Files & Preprocessing tab to see documents here"
       >
         <template #icon>
-          <FileText
-            class="h-12 w-12 mx-auto text-slate-400 dark:text-slate-500"
-            aria-hidden="true"
-          />
+          <FileText class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
         </template>
       </EmptyState>
 

@@ -1,8 +1,6 @@
 <template>
   <div class="mb-24">
-    <h2 class="text-center text-3xl font-bold mb-12 text-slate-900 dark:text-white">
-      What you can do here
-    </h2>
+    <h2 class="text-center text-3xl font-bold mb-12 text-content">What you can do here</h2>
 
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       <FeatureCard
@@ -38,24 +36,24 @@ const features: Feature[] = [
     description:
       'Run fully local or with self-hosted LLM and OCR providers. No forced external calls — your data stays in your environment.',
     icon: Lock,
-    borderHover: 'hover:border-blue-400 dark:hover:border-blue-500/50',
-    shadowHover: 'hover:shadow-lg hover:shadow-blue-500/10',
-    gradientFrom: 'from-blue-500/5',
-    iconBg: 'bg-blue-100 dark:bg-blue-500/10',
-    iconText: 'text-blue-600 dark:text-blue-400',
-    iconHoverBg: 'group-hover:bg-blue-200 dark:group-hover:bg-blue-500/20',
+    borderHover: 'hover:border-primary',
+    shadowHover: 'hover:shadow-lg hover:shadow-primary/10',
+    gradientFrom: 'from-primary/5',
+    iconBg: 'bg-primary-soft',
+    iconText: 'text-primary',
+    iconHoverBg: 'group-hover:bg-primary-soft',
   },
   {
     title: 'Visual Schema Editor',
     description:
       'Build nested JSON schemas with a tree-based editor — objects, arrays, and all JSON types. No hand-writing JSON.',
     icon: Code,
-    borderHover: 'hover:border-blue-400 dark:hover:border-blue-500/50',
-    shadowHover: 'hover:shadow-lg hover:shadow-blue-500/10',
-    gradientFrom: 'from-blue-500/5',
-    iconBg: 'bg-blue-100 dark:bg-blue-500/10',
-    iconText: 'text-blue-600 dark:text-blue-400',
-    iconHoverBg: 'group-hover:bg-blue-200 dark:group-hover:bg-blue-500/20',
+    borderHover: 'hover:border-primary',
+    shadowHover: 'hover:shadow-lg hover:shadow-primary/10',
+    gradientFrom: 'from-primary/5',
+    iconBg: 'bg-primary-soft',
+    iconText: 'text-primary',
+    iconHoverBg: 'group-hover:bg-primary-soft',
   },
   {
     title: 'Four OCR Engines',

@@ -12,18 +12,18 @@
         v-for="group in documentGroups"
         :key="group.id"
         :class="{
-          'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30': selectedGroupId === group.id,
+          'ring-2 ring-ring bg-primary-soft': selectedGroupId === group.id,
         }"
-        class="border border-slate-200 dark:border-slate-700 rounded-card p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+        class="border border-default rounded-card p-4 hover:bg-surface-muted transition-colors cursor-pointer"
         @click="emit('toggle-group', group)"
       >
         <div class="flex items-center justify-between">
           <div class="flex-1">
-            <h4 class="font-medium text-slate-900 dark:text-white">{{ group.name }}</h4>
-            <p v-if="group.description" class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            <h4 class="font-medium text-content">{{ group.name }}</h4>
+            <p v-if="group.description" class="text-sm text-content-muted mt-1">
               {{ group.description }}
             </p>
-            <div class="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+            <div class="flex items-center gap-4 mt-2 text-xs text-content-muted">
               <span>{{ group.document_count ?? 0 }} documents</span>
               <span v-if="group.preprocessing_config">
                 Config: {{ group.preprocessing_config.name }}
@@ -34,7 +34,7 @@
               <span
                 v-for="tag in group.tags"
                 :key="tag"
-                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                class="inline-flex items-center px-2 py-0.5 rounded-card text-xs font-medium bg-surface-sunken text-content"
               >
                 {{ tag }}
               </span>
@@ -45,7 +45,7 @@
             <input
               v-else
               :checked="selectedGroupId === group.id"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded"
+              class="h-4 w-4 text-primary focus:ring-ring border-strong rounded"
               type="checkbox"
               @change="emit('toggle-group', group)"
               @click.stop

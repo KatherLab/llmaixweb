@@ -1,15 +1,12 @@
 <template>
   <div class="p-6">
-    <div
-      v-if="textLoading"
-      class="flex items-center justify-center py-12 text-slate-400 dark:text-slate-500"
-    >
+    <div v-if="textLoading" class="flex items-center justify-center py-12 text-content-subtle">
       <span class="mr-2"><LoadingSpinner size="small" color="current" inline label="" /></span>
       <span>Loading text…</span>
     </div>
     <div
       v-else
-      class="markdown-content max-w-none bg-slate-50 dark:bg-slate-800 p-4 rounded-card"
+      class="markdown-content max-w-none bg-surface-muted p-4 rounded-card"
       v-html="safeMarkdown"
     />
   </div>

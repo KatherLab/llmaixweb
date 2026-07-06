@@ -18,16 +18,16 @@
       <div
         v-for="(val, key) in filteredSettings"
         :key="key"
-        class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center py-2 border-b border-slate-100 dark:border-slate-800"
+        class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center py-2 border-b border-default"
       >
         <!-- Label & Description -->
         <div class="font-semibold flex flex-col text-content">
           <span>{{ val.label }}</span>
-          <span class="text-xs text-slate-400 dark:text-slate-500">{{ val.description }}</span>
+          <span class="text-xs text-content-subtle">{{ val.description }}</span>
         </div>
 
         <!-- Value Display -->
-        <div class="text-xs text-slate-500 dark:text-slate-400 break-all">
+        <div class="text-xs text-content-subtle break-all">
           <template v-if="val.secret">
             <span v-if="val.is_set" class="text-green-700 dark:text-green-400">Set</span>
             <span v-else class="text-red-500 dark:text-red-400">Not Set</span>
@@ -35,9 +35,7 @@
           <template v-else>
             <span v-if="val.override !== undefined && val.override !== null">
               <s>{{ val.original }}</s>
-              <span class="ml-1 text-blue-700 dark:text-blue-300 font-semibold">{{
-                val.override
-              }}</span>
+              <span class="ml-1 text-primary font-semibold">{{ val.override }}</span>
             </span>
             <span v-else>{{ val.original }}</span>
           </template>
@@ -47,9 +45,9 @@
         <div>
           <!-- Read-only: .env only -->
           <template v-if="val.readonly">
-            <div class="text-slate-400 dark:text-slate-500 flex flex-col gap-1">
+            <div class="text-content-subtle flex flex-col gap-1">
               <span class="flex items-center gap-1">
-                <Lock class="w-4 h-4 mr-1 text-slate-400 dark:text-slate-500 inline-block" />
+                <Lock class="w-4 h-4 mr-1 text-content-subtle inline-block" />
                 Set in <code>.env</code>
               </span>
               <span class="text-xs"
@@ -64,7 +62,7 @@
               <div class="flex gap-2 mt-1">
                 <button
                   type="button"
-                  class="px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                  class="px-2 py-1 rounded bg-primary-soft text-primary text-xs font-medium hover:bg-primary-soft"
                   @click="showSecretInput[key] = !showSecretInput[key]"
                 >
                   {{ val.is_set ? 'Update' : 'Set' }}
@@ -104,11 +102,7 @@
           <!-- Boolean -->
           <template v-else-if="val.type === 'bool'">
             <div class="flex items-center gap-2">
-              <input
-                v-model="draft[key]"
-                type="checkbox"
-                class="w-5 h-5 text-blue-600 dark:text-blue-400"
-              />
+              <input v-model="draft[key]" type="checkbox" class="w-5 h-5 text-primary" />
               <button
                 v-if="val.overridden"
                 type="button"
@@ -153,13 +147,7 @@
         <BaseButton type="submit" variant="primary" :loading="saving" :disabled="saving">
           {{ saving ? 'Saving...' : 'Save' }}
         </BaseButton>
-        <BaseButton
-          variant="secondary"
-          class="dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700"
-          @click="resetDraft"
-        >
-          Reset
-        </BaseButton>
+        <BaseButton variant="secondary" @click="resetDraft"> Reset </BaseButton>
       </div>
       <div v-if="success" class="mt-5 text-green-600 dark:text-green-400 font-semibold">
         Settings saved!

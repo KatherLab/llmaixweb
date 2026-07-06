@@ -8,7 +8,7 @@
       <p class="text-base text-content-muted">First-time setup: Create your admin account</p>
     </div>
     <form
-      class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-modal p-8 shadow-lg flex flex-col gap-5"
+      class="bg-surface border border-default rounded-modal p-8 shadow-lg flex flex-col gap-5"
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >
@@ -53,9 +53,7 @@
         <ErrorBanner v-if="error" :message="error" class="text-center" />
       </transition>
     </form>
-    <div class="text-center text-slate-400 dark:text-slate-500 text-xs mt-8">
-      Powered by LLMAIx (v2)
-    </div>
+    <div class="text-center text-content-subtle text-xs mt-8">Powered by LLMAIx (v2)</div>
   </div>
 </template>
 

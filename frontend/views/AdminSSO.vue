@@ -27,10 +27,7 @@
     <div v-else-if="error" class="py-4">
       <ErrorBanner :message="error" />
     </div>
-    <div
-      v-else-if="providers.length === 0"
-      class="text-center py-12 text-slate-500 dark:text-slate-400 text-sm"
-    >
+    <div v-else-if="providers.length === 0" class="text-center py-12 text-content-subtle text-sm">
       No identity providers configured.
     </div>
 
@@ -38,17 +35,17 @@
       <li
         v-for="p in providers"
         :key="p.id"
-        class="p-4 rounded-modal border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between"
+        class="p-4 rounded-modal border border-default bg-surface flex items-center justify-between"
       >
         <div>
           <div class="flex items-center gap-2">
-            <span class="font-semibold text-slate-900 dark:text-white">{{ p.name }}</span>
+            <span class="font-semibold text-content">{{ p.name }}</span>
             <span
               class="text-xs px-2 py-0.5 rounded-full"
               :class="
                 p.enabled
                   ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  : 'bg-surface-sunken text-content-muted'
               "
             >
               {{ p.enabled ? 'Enabled' : 'Disabled' }}
@@ -57,7 +54,7 @@
               no secret set
             </span>
           </div>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p class="text-xs text-content-subtle mt-1">
             {{ p.issuer_url }} · client_id: {{ p.client_id }} · scopes: {{ p.scopes }}
           </p>
         </div>
@@ -90,7 +87,7 @@
             :class="inputClass"
             placeholder="https://accounts.google.com"
           />
-          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p class="mt-1 text-xs text-content-subtle">
             The IdP base URL; discovery is fetched from
             <code>{issuer}/.well-known/openid-configuration</code>.
           </p>
@@ -113,7 +110,7 @@
           <label :class="labelClass">Scopes</label>
           <input v-model="form.scopes" type="text" :class="inputClass" />
         </div>
-        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+        <label class="flex items-center gap-2 text-sm text-content-muted">
           <input v-model="form.enabled" type="checkbox" class="rounded" />
           Enabled
         </label>

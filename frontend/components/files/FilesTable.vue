@@ -26,7 +26,7 @@
         <FileIcon :file-type="file.file_type" :size="32" />
         <div class="min-w-0">
           <p
-            class="text-sm font-medium text-slate-900 dark:text-white truncate max-w-xs"
+            class="text-sm font-medium text-content truncate max-w-xs"
             :title="file.file_name ?? undefined"
           >
             {{ file.file_name }}
@@ -65,16 +65,13 @@
     </template>
 
     <template #cell-file_size="{ row: file }">
-      <span class="text-sm text-slate-600 dark:text-slate-400">
+      <span class="text-sm text-content-muted">
         {{ formatFileSize(file.file_size, 'Unknown') }}
       </span>
     </template>
 
     <template #cell-created_at="{ row: file }">
-      <span
-        class="text-sm text-slate-600 dark:text-slate-400"
-        :title="formatDateFull(file.created_at)"
-      >
+      <span class="text-sm text-content-muted" :title="formatDateFull(file.created_at)">
         {{ formatDateSmart(file.created_at) }}
       </span>
     </template>
@@ -125,7 +122,7 @@
     </template>
 
     <template #empty-icon>
-      <FilePlus class="h-12 w-12 mx-auto text-slate-300 dark:text-slate-600" aria-hidden="true" />
+      <FilePlus class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
     </template>
   </DataTable>
 </template>

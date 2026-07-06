@@ -63,11 +63,11 @@ watchEffect(() => {
       :id="tooltipId"
       ref="floating"
       :style="{ position: strategy, top: `${y ?? 0}px`, left: `${x ?? 0}px`, zIndex: 100 }"
-      class="pointer-events-none px-3 py-2 rounded-card bg-slate-800 text-white text-xs shadow-xl transition-opacity duration-150 opacity-95 w-max max-w-[360px] max-h-[60vh] overflow-y-auto break-words leading-snug space-y-1"
+      class="pointer-events-none px-3 py-2 rounded-card bg-inverse-surface text-inverse-content border border-inverse-border text-xs shadow-xl transition-opacity duration-150 opacity-95 w-max max-w-[360px] max-h-[60vh] overflow-y-auto break-words leading-snug space-y-1"
       role="tooltip"
     >
-      <p v-if="title" class="font-semibold text-white">{{ title }}</p>
-      <p v-for="(line, i) in lines" :key="i" class="text-slate-200">{{ line }}</p>
+      <p v-if="title" class="font-semibold">{{ title }}</p>
+      <p v-for="(line, i) in lines" :key="i" class="text-inverse-muted">{{ line }}</p>
     </div>
   </span>
 </template>

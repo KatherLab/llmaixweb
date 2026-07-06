@@ -1,14 +1,12 @@
 <template>
   <div class="mb-24">
-    <h2 class="text-center text-3xl font-bold mb-12 text-slate-900 dark:text-white">
-      How It Works
-    </h2>
+    <h2 class="text-center text-3xl font-bold mb-12 text-content">How It Works</h2>
 
     <!-- Pipeline Container -->
     <div class="relative">
       <!-- Connection Lines (visible on desktop) -->
       <div
-        class="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-blue-500 to-emerald-500 -translate-y-1/2 z-0"
+        class="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-primary to-emerald-500 -translate-y-1/2 z-0"
       ></div>
 
       <!-- Pipeline Steps -->
@@ -54,16 +52,16 @@ const steps: Step[] = [
     id: 1,
     title: 'Upload Files',
     subtitle: 'Multiple formats supported',
-    gradient: 'bg-gradient-to-br from-blue-500 to-blue-600',
-    shadow: 'shadow-blue-500/30',
+    gradient: 'bg-gradient-to-br from-primary to-primary-hover',
+    shadow: 'shadow-primary/30',
     icon: UploadCloud,
   },
   {
     id: 2,
     title: 'Preprocess',
     subtitle: 'Extract & OCR text',
-    gradient: 'bg-gradient-to-br from-blue-500 to-blue-600',
-    shadow: 'shadow-blue-500/30',
+    gradient: 'bg-gradient-to-br from-primary to-primary-hover',
+    shadow: 'shadow-primary/30',
     icon: FileText,
   },
   {

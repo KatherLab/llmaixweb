@@ -11,10 +11,8 @@
             label=""
           />
           <div>
-            <h4 class="font-medium text-slate-900 dark:text-white">
-              Model &amp; Schema Compatibility
-            </h4>
-            <p class="text-sm text-slate-600 dark:text-slate-400">
+            <h4 class="font-medium text-content">Model &amp; Schema Compatibility</h4>
+            <p class="text-sm text-content-muted">
               {{ status.message }}
             </p>
           </div>

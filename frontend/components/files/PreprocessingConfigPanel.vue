@@ -12,12 +12,10 @@
     <div class="space-y-6">
       <!-- Selected Files -->
       <div>
-        <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+        <h4 class="text-sm font-medium text-content-muted mb-3">
           Files to Process ({{ selectedFiles.length }})
         </h4>
-        <div
-          class="space-y-2 max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-card p-3"
-        >
+        <div class="space-y-2 max-h-40 overflow-y-auto border border-default rounded-card p-3">
           <div
             v-for="fileId in selectedFiles"
             :key="fileId"
@@ -25,7 +23,7 @@
           >
             <span class="truncate">{{ getFileById(fileId)?.file_name || 'Unknown' }}</span>
             <button
-              class="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400"
+              class="text-content-subtle hover:text-red-500 dark:hover:text-red-400"
               @click="emit('remove-file', fileId)"
             >
               <X class="w-4 h-4" />
@@ -52,18 +50,18 @@
             :class="[
               'w-full rounded-card border-2 p-4 text-left transition-all',
               selectedEngine === 'docling_tesseract'
-                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
+                ? 'border-primary bg-primary-soft'
+                : 'border-default hover:border-strong',
             ]"
             @click="selectedEngine = 'docling_tesseract'"
           >
             <div class="flex items-center">
-              <Zap class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" />
+              <Zap class="w-6 h-6 text-primary mr-3" />
               <div>
-                <p class="font-medium text-slate-900 dark:text-white">
+                <p class="font-medium text-content">
                   {{ getEngineLabel('docling_tesseract') }}
                 </p>
-                <p class="text-xs text-slate-500 dark:text-slate-400">
+                <p class="text-xs text-content-muted">
                   {{ getEngineSubtitle('docling_tesseract') }}
                 </p>
               </div>
@@ -76,18 +74,18 @@
             :class="[
               'w-full rounded-card border-2 p-4 text-left transition-all',
               selectedEngine === 'mistral_ocr'
-                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
+                ? 'border-primary bg-primary-soft'
+                : 'border-default hover:border-strong',
             ]"
             @click="selectedEngine = 'mistral_ocr'"
           >
             <div class="flex items-center">
-              <CircleCheckBig class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" />
+              <CircleCheckBig class="w-6 h-6 text-primary mr-3" />
               <div>
-                <p class="font-medium text-slate-900 dark:text-white">
+                <p class="font-medium text-content">
                   {{ getEngineLabel('mistral_ocr') }}
                 </p>
-                <p class="text-xs text-slate-500 dark:text-slate-400">
+                <p class="text-xs text-content-muted">
                   {{ getEngineSubtitle('mistral_ocr') }}
                 </p>
               </div>
@@ -100,18 +98,18 @@
             :class="[
               'w-full rounded-card border-2 p-4 text-left transition-all',
               selectedEngine === 'llm_vision'
-                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
+                ? 'border-primary bg-primary-soft'
+                : 'border-default hover:border-strong',
             ]"
             @click="selectedEngine = 'llm_vision'"
           >
             <div class="flex items-center">
-              <Eye class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" />
+              <Eye class="w-6 h-6 text-primary mr-3" />
               <div>
-                <p class="font-medium text-slate-900 dark:text-white">
+                <p class="font-medium text-content">
                   {{ getEngineLabel('llm_vision') }}
                 </p>
-                <p class="text-xs text-slate-500 dark:text-slate-400">
+                <p class="text-xs text-content-muted">
                   {{ getEngineSubtitle('llm_vision') }}
                 </p>
               </div>
@@ -131,7 +129,7 @@
       </div>
 
       <!-- Force OCR (always visible) -->
-      <div class="border-t border-slate-200 dark:border-slate-700 pt-4">
+      <div class="border-t border-default pt-4">
         <label
           class="flex items-start space-x-3 p-3 bg-amber-50 rounded-card border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
         >
@@ -157,9 +155,9 @@
       </div>
 
       <!-- Advanced Options -->
-      <div class="border-t border-slate-200 dark:border-slate-700 pt-4">
+      <div class="border-t border-default pt-4">
         <button
-          class="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center"
+          class="text-sm font-medium text-content-muted flex items-center"
           @click="showAdvanced = !showAdvanced"
         >
           <ChevronRight
@@ -240,9 +238,7 @@
     </div>
 
     <!-- Panel Footer -->
-    <div
-      class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex-shrink-0"
-    >
+    <div class="px-6 py-4 border-t border-default bg-surface-muted flex-shrink-0">
       <!-- Warning for unconfigured CSV/XLSX files -->
       <Callout
         v-if="unconfiguredCsvXlsxFiles.length > 0"
@@ -260,7 +256,7 @@
         </p>
       </Callout>
 
-      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+      <p class="text-xs text-content-muted mb-4">
         This will create a new preprocessing run. Existing runs and documents are preserved.
       </p>
     </div>
