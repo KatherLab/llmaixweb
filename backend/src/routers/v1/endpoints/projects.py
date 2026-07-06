@@ -288,8 +288,42 @@ def get_projects(
         .correlate(models.Project)
         .scalar_subquery()
     )
+    # Subqueries for the other workflow-step counts (drives the frontend's
+    # per-step "done" check mark in the project nav bar)
+    schema_count_subq = (
+        select(func.count(models.Schema.id))
+        .where(models.Schema.project_id == models.Project.id)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
+    prompt_count_subq = (
+        select(func.count(models.Prompt.id))
+        .where(models.Prompt.project_id == models.Project.id)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
+    trial_count_subq = (
+        select(func.count(models.Trial.id))
+        .where(models.Trial.project_id == models.Project.id)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
+    # Evaluation has no direct project_id; reach the project via Trial.
+    evaluation_count_subq = (
+        select(func.count(models.Evaluation.id))
+        .join(models.Trial, models.Evaluation.trial_id == models.Trial.id)
+        .where(models.Trial.project_id == models.Project.id)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
 
-    stmt = stmt.add_columns(doc_count_subq.label("document_count"))
+    stmt = stmt.add_columns(
+        doc_count_subq.label("document_count"),
+        schema_count_subq.label("schema_count"),
+        prompt_count_subq.label("prompt_count"),
+        trial_count_subq.label("trial_count"),
+        evaluation_count_subq.label("evaluation_count"),
+    )
 
     stmt = stmt.options(
         # bring owner, but only minimal fields
@@ -304,9 +338,9 @@ def get_projects(
 
     results = list(db.execute(stmt).all())
 
-    # Build projects with document_count
+    # Build projects with aggregate counts
     projects = []
-    for project, doc_count in results:
+    for project, doc_count, schema_count, prompt_count, trial_count, eval_count in results:
         project_dict = {
             "id": project.id,
             "name": project.name,
@@ -315,6 +349,10 @@ def get_projects(
             "owner_id": project.owner_id,
             "owner": project.owner,
             "document_count": doc_count or 0,
+            "schema_count": schema_count or 0,
+            "prompt_count": prompt_count or 0,
+            "trial_count": trial_count or 0,
+            "evaluation_count": eval_count or 0,
             "created_at": project.created_at,
             "updated_at": project.updated_at,
         }
@@ -330,10 +368,10 @@ def get_project(
     project_id: int,
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.Project:
-    # Mirror the list endpoint: join a document-count subquery and load the
-    # owner minimally, so the detail response carries a real document_count
-    # (the ORM has no such column — without this the schema default of 0 is
-    # always returned) without hydrating the project's full document set.
+    # Mirror the list endpoint: join aggregate-count subqueries and load the
+    # owner minimally, so the detail response carries real counts (the ORM has
+    # no such columns — without this the schema defaults of 0 are always
+    # returned) without hydrating the project's full document set.
     doc_count_subq = (
         select(func.count(models.Document.id))
         .where(models.Document.project_id == models.Project.id)
@@ -341,9 +379,42 @@ def get_project(
         .correlate(models.Project)
         .scalar_subquery()
     )
+    schema_count_subq = (
+        select(func.count(models.Schema.id))
+        .where(models.Schema.project_id == models.Project.id)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
+    prompt_count_subq = (
+        select(func.count(models.Prompt.id))
+        .where(models.Prompt.project_id == models.Project.id)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
+    trial_count_subq = (
+        select(func.count(models.Trial.id))
+        .where(models.Trial.project_id == models.Project.id)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
+    # Evaluation has no direct project_id; reach the project via Trial.
+    evaluation_count_subq = (
+        select(func.count(models.Evaluation.id))
+        .join(models.Trial, models.Evaluation.trial_id == models.Trial.id)
+        .where(models.Trial.project_id == models.Project.id)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
 
     row = db.execute(
-        select(models.Project, doc_count_subq.label("document_count"))
+        select(
+            models.Project,
+            doc_count_subq.label("document_count"),
+            schema_count_subq.label("schema_count"),
+            prompt_count_subq.label("prompt_count"),
+            trial_count_subq.label("trial_count"),
+            evaluation_count_subq.label("evaluation_count"),
+        )
         .where(models.Project.id == project_id)
         .options(
             selectinload(models.Project.owner).options(
@@ -355,7 +426,7 @@ def get_project(
 
     if row is None:
         raise HTTPException(status_code=404, detail="Project not found")
-    project, doc_count = row
+    project, doc_count, schema_count, prompt_count, trial_count, eval_count = row
 
     if current_user.role != "admin" and project.owner_id != current_user.id:
         raise HTTPException(
@@ -370,6 +441,10 @@ def get_project(
         "owner_id": project.owner_id,
         "owner": project.owner,
         "document_count": doc_count or 0,
+        "schema_count": schema_count or 0,
+        "prompt_count": prompt_count or 0,
+        "trial_count": trial_count or 0,
+        "evaluation_count": eval_count or 0,
         "created_at": project.created_at,
         "updated_at": project.updated_at,
     }

@@ -46,6 +46,12 @@ class Project(ProjectBase):
     owner: UserPublic | None = None
     documents: list[Document] = Field(default_factory=list)
     document_count: int = 0
+    # Aggregate counts used to drive the project workflow progression cue
+    # (Files → Documents → Schemas → Trials → Evaluation check marks).
+    schema_count: int = 0
+    prompt_count: int = 0
+    trial_count: int = 0
+    evaluation_count: int = 0
     created_at: datetime
     updated_at: datetime
 

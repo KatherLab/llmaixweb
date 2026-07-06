@@ -13,6 +13,11 @@ export interface Project {
   /** Excluded on the list endpoint via response_model_exclude. */
   documents?: Document[]
   document_count: number
+  /** Aggregate counts driving the project workflow progression cue. */
+  schema_count: number
+  prompt_count: number
+  trial_count: number
+  evaluation_count: number
   created_at: ISODateString
   updated_at: ISODateString
 }

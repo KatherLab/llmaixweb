@@ -182,10 +182,9 @@ const showDeleteConfirmation = ref<boolean>(false)
 
 // Workflow step management with tab workspace
 const validSteps = ['files', 'documents', 'schemas', 'trials', 'evaluation']
-// `isComplete` drives the step-number → check-mark progression cue. We only
-// have document_count on the Project payload, so we mark Files/Documents as
-// complete once documents exist; later steps show no check (no count available
-// client-side without extra fetches). Navigation stays free (no hard gating).
+// `isComplete` drives the step-number → check-mark progression cue. Each step
+// is marked done when its corresponding aggregate count on the Project payload
+// is non-zero. Navigation stays free (no hard gating).
 const steps = computed(() => [
   {
     id: 'files',
@@ -193,9 +192,17 @@ const steps = computed(() => [
     isComplete: (project.value.document_count ?? 0) > 0,
   },
   { id: 'documents', name: 'Documents', isComplete: (project.value.document_count ?? 0) > 0 },
-  { id: 'schemas', name: 'Schemas & Prompts', isComplete: false },
-  { id: 'trials', name: 'Run Trials', isComplete: false },
-  { id: 'evaluation', name: 'Evaluation', isComplete: false },
+  {
+    id: 'schemas',
+    name: 'Schemas & Prompts',
+    isComplete: (project.value.schema_count ?? 0) > 0 && (project.value.prompt_count ?? 0) > 0,
+  },
+  { id: 'trials', name: 'Run Trials', isComplete: (project.value.trial_count ?? 0) > 0 },
+  {
+    id: 'evaluation',
+    name: 'Evaluation',
+    isComplete: (project.value.evaluation_count ?? 0) > 0,
+  },
 ])
 const defaultStep = 'files'
 
@@ -290,6 +297,11 @@ function handleStepChange(stepId: string): void {
   if (!validSteps.includes(stepId)) return // Ignore invalid steps
   // currentStep is a computed (read-only); update via the URL query param.
   router.replace({ query: { ...route.query, tab: stepId } })
+  // Refresh aggregate counts so per-step check marks reflect changes made
+  // in other tabs (schema/prompt/trial/evaluation create/delete) since the
+  // last fetch. Fire-and-forget — only FilesAndProcessing emits a dedicated
+  // refresh event, so this keeps the other steps' progression cues current.
+  void refreshProject()
 }
 
 // --- PROJECT EDIT LOGIC ---

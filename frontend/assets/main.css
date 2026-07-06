@@ -44,6 +44,24 @@
   --color-ring: #3b82f6; /* blue-500 — focus rings */
 }
 
+/*
+ * Short border-color utilities.
+ *
+ * The border tokens are declared above as `--color-default-border` and
+ * `--color-strong-border`, so Tailwind v4 only generates the long-form
+ * utilities (`border-default-border` / `border-strong-border`) from them.
+ * Components use the short `border-default` / `border-strong` form, which
+ * would otherwise match nothing and leave borders falling back to
+ * `currentColor` (i.e. the text color → heavy black borders). These
+ * `@utility` rules bridge that gap so the short names resolve to the tokens.
+ */
+@utility border-default {
+  border-color: var(--color-default-border);
+}
+@utility border-strong {
+  border-color: var(--color-strong-border);
+}
+
 /* Dark-mode overrides — AppLayout toggles `.dark` on <html>. */
 .dark {
   --color-surface: #0f172a; /* slate-900 */
