@@ -40,17 +40,17 @@ const padClass = computed(() =>
 </script>
 
 <template>
-  <div class="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+  <div class="inline-flex items-center gap-1 bg-surface-sunken rounded-card p-1">
     <button
       v-for="opt in options"
       :key="String(opt.value)"
       type="button"
       :class="[
         padClass,
-        'font-medium rounded-md transition-all',
+        'font-medium rounded-card transition-all',
         modelValue === opt.value
-          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
+          ? 'bg-surface text-content shadow-sm'
+          : 'text-content-muted hover:text-content',
       ]"
       @click="emit('update:modelValue', opt.value)"
     >

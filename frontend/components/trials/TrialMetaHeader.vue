@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-gradient-to-br from-white via-blue-50 to-white dark:from-slate-800 dark:to-slate-800 shadow-inner rounded-xl p-6 mb-7 border border-slate-100 dark:border-slate-700"
+    class="bg-gradient-to-br from-white via-blue-50 to-white dark:from-slate-800 dark:to-slate-800 shadow-inner rounded-modal p-6 mb-7 border border-slate-100 dark:border-slate-700"
   >
     <div class="flex flex-col md:flex-row md:justify-between gap-6">
       <div class="flex-1 min-w-0">
@@ -49,13 +49,13 @@
           </BaseButton>
         </div>
         <span
-          class="text-sm bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-lg font-medium text-blue-800 dark:text-blue-200 shadow-sm"
+          class="text-sm bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-card font-medium text-blue-800 dark:text-blue-200 shadow-sm"
         >
           {{ resultsCount || 0 }} documents processed
         </span>
         <span
           v-if="totalUsage.total_tokens !== undefined"
-          class="text-xs bg-blue-100 dark:bg-blue-900/40 px-3 py-1 rounded-lg font-semibold text-blue-800 dark:text-blue-200 mt-1"
+          class="text-xs bg-blue-100 dark:bg-blue-900/40 px-3 py-1 rounded-card font-semibold text-blue-800 dark:text-blue-200 mt-1"
           title="Sum of prompt and completion tokens across all results"
         >
           Usage: {{ totalUsage.prompt_tokens || 0 }} prompt /
@@ -64,7 +64,7 @@
         </span>
         <div
           v-if="trial.advanced_options && Object.keys(trial.advanced_options).length"
-          class="mt-2 bg-white dark:bg-slate-700/40 rounded-lg border border-blue-100 dark:border-slate-600 px-4 py-2 shadow text-xs max-w-xs"
+          class="mt-2 bg-white dark:bg-slate-700/40 rounded-card border border-blue-100 dark:border-slate-600 px-4 py-2 shadow text-xs max-w-xs"
         >
           <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">
             LLM Advanced Options

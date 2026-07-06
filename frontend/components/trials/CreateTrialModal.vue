@@ -66,7 +66,7 @@
 
         <!-- Prompt / Schema / Model -->
         <div
-          class="mb-8 bg-white dark:bg-slate-800/40 border dark:border-slate-700 rounded-xl p-6 shadow"
+          class="mb-8 bg-white dark:bg-slate-800/40 border dark:border-slate-700 rounded-modal p-6 shadow"
         >
           <TrialPromptSelect
             v-model="trialData.prompt_id"
@@ -159,19 +159,18 @@
     </div>
 
     <!-- Submission overlay: compatibility test running -->
-    <div
-      v-if="submitting"
-      class="mt-6 flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
-    >
-      <LoadingSpinner size="small" color="blue" inline label="" />
-      <div class="text-sm text-blue-800 dark:text-blue-300">
-        <p class="font-medium text-blue-900 dark:text-blue-200">Checking model compatibility…</p>
-        <p class="mt-0.5">
-          Verifying that {{ trialData.llm_model || 'the model' }} works with your schema before
-          starting the trial.
-        </p>
+    <Callout v-if="submitting" variant="info" class="mt-6">
+      <div class="flex items-center gap-3">
+        <LoadingSpinner size="small" color="blue" inline label="" />
+        <div class="text-sm">
+          <p class="font-medium">Checking model compatibility…</p>
+          <p class="mt-0.5">
+            Verifying that {{ trialData.llm_model || 'the model' }} works with your schema before
+            starting the trial.
+          </p>
+        </div>
       </div>
-    </div>
+    </Callout>
 
     <!-- Inline status line (hidden while submitting — the overlay above takes over) -->
     <div v-else class="mt-6 flex items-center gap-2 text-sm">

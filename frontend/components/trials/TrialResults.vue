@@ -19,7 +19,7 @@
       <span class="mt-2 text-slate-500 dark:text-slate-400">Loading trial results…</span>
     </div>
     <!-- Error -->
-    <ErrorBanner v-else-if="error" :message="error" class="mb-5 rounded-lg" />
+    <ErrorBanner v-else-if="error" :message="error" class="mb-5 rounded-card" />
 
     <!-- Content -->
     <template v-else-if="trial">

@@ -1,14 +1,18 @@
 <template>
-  <div
-    class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700"
+  <FilterBar
+    :search="search"
+    search-placeholder="Search files..."
+    :total-count="totalCount"
+    item-label="files"
+    :active-filters="activeFilters"
+    @update:search="(v) => (search = v)"
+    @search-input="onSearchInput"
+    @clear-all="emit('clear-filters')"
+    @clear-filter="clearFilter"
   >
-    <!-- Top row: Search + Status + File Type -->
-    <div class="flex items-center gap-3">
-      <!-- Search -->
-      <SearchInput v-model="search" placeholder="Search files..." @input="onSearchInput" />
-
+    <template #filters>
       <!-- Status Filter -->
-      <select v-model="status" :class="selectClass" @change="emit('fetch')">
+      <select v-model="status" :class="inlineSelectClass" @change="emit('fetch')">
         <option value="">All Status</option>
         <option value="not_preprocessed">Not Processed</option>
         <option value="processing">Processing</option>
@@ -17,7 +21,7 @@
       </select>
 
       <!-- File Type Filter -->
-      <select v-model="fileType" :class="selectClass" @change="emit('fetch')">
+      <select v-model="fileType" :class="inlineSelectClass" @change="emit('fetch')">
         <option value="">All Types</option>
         <option value="application/pdf">PDF</option>
         <option value="image/png">PNG</option>
@@ -35,7 +39,7 @@
       </select>
 
       <!-- Date Range Filter -->
-      <select v-model="dateRange" :class="selectClass" @change="onDateRangeChange">
+      <select v-model="dateRange" :class="inlineSelectClass" @change="onDateRangeChange">
         <option value="">All Time</option>
         <option value="today">Today</option>
         <option value="yesterday">Yesterday</option>
@@ -43,25 +47,9 @@
         <option value="month">Last 30 Days</option>
         <option value="custom">Custom Range...</option>
       </select>
+    </template>
 
-      <!-- Clear Filters -->
-      <button
-        v-if="hasActiveFilters"
-        class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-        title="Clear all filters"
-        @click="emit('clear-filters')"
-      >
-        <X class="w-4 h-4" />
-      </button>
-
-      <div class="ml-auto text-sm text-slate-500 dark:text-slate-400">{{ totalCount }} files</div>
-    </div>
-
-    <!-- Custom Date Range Picker (shown when "Custom Range" is selected) -->
-    <div
-      v-if="dateRange === 'custom'"
-      class="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
-    >
+    <template v-if="dateRange === 'custom'" #custom-range>
       <div class="flex items-center gap-2">
         <label :class="labelClass">From:</label>
         <input
@@ -81,54 +69,15 @@
         />
       </div>
       <BaseButton variant="ghost" size="sm" @click="emit('fetch')">Apply</BaseButton>
-    </div>
-
-    <!-- Active Filters Summary -->
-    <div
-      v-if="hasActiveFilters"
-      class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
-    >
-      <span class="text-xs text-slate-500 dark:text-slate-400">Active filters:</span>
-      <FilterChip
-        v-if="search"
-        :label="`Search: &quot;${search}&quot;`"
-        color="blue"
-        @remove="clearSearch"
-      />
-      <FilterChip
-        v-if="status"
-        :label="`Status: ${status}`"
-        color="green"
-        @remove="clearField('status')"
-      />
-      <FilterChip
-        v-if="fileType"
-        :label="`Type: ${getFileTypeLabel(fileType)}`"
-        color="purple"
-        @remove="clearField('fileType')"
-      />
-      <FilterChip
-        v-if="dateRange && dateRange !== 'custom'"
-        :label="`Date: ${getDateRangeLabel(dateRange)}`"
-        color="orange"
-        @remove="clearField('dateRange')"
-      />
-      <FilterChip
-        v-if="dateRange === 'custom' && customFrom"
-        :label="`Date: ${customFrom} → ${customTo || 'present'}`"
-        color="orange"
-        @remove="clearCustomDateRange"
-      />
-    </div>
-  </div>
+    </template>
+  </FilterBar>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { X } from '@lucide/vue'
 import { getDateRangeLabel } from '@/utils/dateRange'
-import SearchInput from '@/components/common/SearchInput.vue'
-import FilterChip from '@/components/common/FilterChip.vue'
+import FilterBar from '@/components/common/FilterBar.vue'
+import type { ActiveFilter } from '@/components/common/FilterBar.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 
@@ -153,6 +102,11 @@ const dateRange = defineModel<string>('dateRange', { default: '' })
 const customFrom = defineModel<string>('customFrom', { default: '' })
 const customTo = defineModel<string>('customTo', { default: '' })
 
+// `selectClass` carries `w-full`, which inside FilterBar's `flex flex-wrap` row
+// forces every dropdown onto its own line at 100% width. Drop `w-full` (and
+// pin a sensible auto width) so the selects sit inline and wrap naturally.
+const inlineSelectClass = selectClass.replace('w-full', 'w-auto min-w-[9rem]')
+
 // File type labels mapping
 const fileTypeLabels: Record<string, string> = {
   'application/pdf': 'PDF',
@@ -168,11 +122,31 @@ const fileTypeLabels: Record<string, string> = {
 
 const getFileTypeLabel = (type: string): string => fileTypeLabels[type] || type
 
-// Any of the filters being set counts as "active" (drives the clear-X button,
-// the active-filters summary, and the parent's empty/upload-state switching).
-const hasActiveFilters = computed(
-  () => search.value || status.value || fileType.value || dateRange.value,
-)
+// Active filter chips (unified rendering via FilterBar's activeFilters prop)
+const activeFilters = computed<ActiveFilter[]>(() => {
+  const chips: ActiveFilter[] = []
+  if (search.value) chips.push({ key: 'search', label: `Search: "${search.value}"`, color: 'blue' })
+  if (status.value) chips.push({ key: 'status', label: `Status: ${status.value}`, color: 'green' })
+  if (fileType.value)
+    chips.push({
+      key: 'fileType',
+      label: `Type: ${getFileTypeLabel(fileType.value)}`,
+      color: 'purple',
+    })
+  if (dateRange.value && dateRange.value !== 'custom')
+    chips.push({
+      key: 'dateRange',
+      label: `Date: ${getDateRangeLabel(dateRange.value)}`,
+      color: 'orange',
+    })
+  if (dateRange.value === 'custom' && customFrom.value)
+    chips.push({
+      key: 'customDateRange',
+      label: `Date: ${customFrom.value} → ${customTo.value || 'present'}`,
+      color: 'orange',
+    })
+  return chips
+})
 
 // Debounce timer for search input
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -190,25 +164,22 @@ const onDateRangeChange = (): void => {
   emit('fetch')
 }
 
-const clearSearch = (): void => {
-  search.value = ''
-  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
-  emit('fetch')
-}
-
-type FilterableField = 'status' | 'fileType' | 'dateRange'
-
-const clearField = (field: FilterableField): void => {
-  if (field === 'status') status.value = ''
-  else if (field === 'fileType') fileType.value = ''
-  else if (field === 'dateRange') dateRange.value = ''
-  emit('fetch')
-}
-
-const clearCustomDateRange = (): void => {
-  customFrom.value = ''
-  customTo.value = ''
-  dateRange.value = ''
+// Consolidated clear: a single entry point for removing one filter.
+const clearFilter = (key: string): void => {
+  if (key === 'customDateRange') {
+    customFrom.value = ''
+    customTo.value = ''
+    dateRange.value = ''
+  } else if (key === 'search') {
+    search.value = ''
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+  } else if (key === 'status') {
+    status.value = ''
+  } else if (key === 'fileType') {
+    fileType.value = ''
+  } else if (key === 'dateRange') {
+    dateRange.value = ''
+  }
   emit('fetch')
 }
 </script>

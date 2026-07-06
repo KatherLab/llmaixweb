@@ -3,7 +3,7 @@
     <!-- Inline error panel -->
     <ErrorBanner
       v-if="!result.result || additionalContent?.json_error"
-      class="mb-4 rounded-lg text-sm"
+      class="mb-4 rounded-card text-sm"
     >
       <div class="font-semibold mb-1">This document has no structured result.</div>
       <div v-if="additionalContent?.user_guidance?.user_message" class="mb-1">
@@ -29,7 +29,7 @@
     <div class="flex gap-6" :class="viewMode === 'vertical' ? 'flex-col' : 'flex-col md:flex-row'">
       <!-- Document Content -->
       <div
-        class="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-xl overflow-auto flex-1 max-h-[480px] border border-slate-100 dark:border-slate-700"
+        class="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-modal overflow-auto flex-1 max-h-[480px] border border-slate-100 dark:border-slate-700"
       >
         <h4
           class="text-sm font-semibold mb-3 text-slate-700 dark:text-slate-200 flex items-center gap-1.5"
@@ -57,7 +57,7 @@
 
       <!-- Extracted Information -->
       <div
-        class="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-xl overflow-auto flex-1 max-h-[480px] border border-slate-100 dark:border-slate-700"
+        class="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-modal overflow-auto flex-1 max-h-[480px] border border-slate-100 dark:border-slate-700"
       >
         <div class="flex items-center justify-between mb-3">
           <h4

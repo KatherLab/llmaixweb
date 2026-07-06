@@ -1,6 +1,6 @@
 <template>
   <div
-    class="rounded-xl border border-slate-200 bg-white p-8 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/50"
+    class="rounded-modal border border-slate-200 bg-white p-8 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/50"
   >
     <!-- Step 1 Details -->
     <div v-if="step === 1" class="space-y-4">
@@ -15,7 +15,7 @@
           <div class="space-y-2">
             <div class="flex items-center gap-3">
               <div
-                class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center dark:bg-blue-500/10"
+                class="w-10 h-10 rounded-card bg-blue-100 flex items-center justify-center dark:bg-blue-500/10"
               >
                 <span class="text-xs font-bold text-blue-600 dark:text-blue-400">PDF</span>
               </div>
@@ -25,7 +25,7 @@
             </div>
             <div class="flex items-center gap-3">
               <div
-                class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center dark:bg-blue-500/10"
+                class="w-10 h-10 rounded-card bg-blue-100 flex items-center justify-center dark:bg-blue-500/10"
               >
                 <span class="text-xs font-bold text-blue-600 dark:text-blue-400">DOC</span>
               </div>
@@ -33,7 +33,7 @@
             </div>
             <div class="flex items-center gap-3">
               <div
-                class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center dark:bg-purple-500/10"
+                class="w-10 h-10 rounded-card bg-purple-100 flex items-center justify-center dark:bg-purple-500/10"
               >
                 <span class="text-xs font-bold text-purple-600 dark:text-purple-400">IMG</span>
               </div>
@@ -43,7 +43,7 @@
             </div>
             <div class="flex items-center gap-3">
               <div
-                class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center dark:bg-emerald-500/10"
+                class="w-10 h-10 rounded-card bg-emerald-100 flex items-center justify-center dark:bg-emerald-500/10"
               >
                 <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">CSV</span>
               </div>
@@ -73,7 +73,7 @@
             <div
               v-for="method in ocrMethods"
               :key="method.name"
-              class="p-3 rounded-lg bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+              class="p-3 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
             >
               <h5 class="font-semibold text-slate-900 mb-1 dark:text-white">{{ method.name }}</h5>
               <p class="text-sm text-slate-500 dark:text-slate-400">{{ method.description }}</p>
@@ -88,7 +88,7 @@
             <div
               v-for="parser in documentParsers"
               :key="parser.name"
-              class="p-3 rounded-lg bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+              class="p-3 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
             >
               <h5 class="font-semibold text-slate-900 mb-1 dark:text-white">{{ parser.name }}</h5>
               <p class="text-sm text-slate-500 dark:text-slate-400">{{ parser.description }}</p>
@@ -124,7 +124,7 @@
             <div
               v-for="option in selectionOptions"
               :key="option.name"
-              class="p-3 rounded-lg bg-purple-50 border border-purple-200 dark:bg-purple-500/10 dark:border-purple-500/30"
+              class="p-3 rounded-card bg-purple-50 border border-purple-200 dark:bg-purple-500/10 dark:border-purple-500/30"
             >
               <h5 class="font-semibold text-slate-900 mb-1 dark:text-white">{{ option.name }}</h5>
               <p class="text-sm text-slate-500 dark:text-slate-400">{{ option.description }}</p>
@@ -143,7 +143,7 @@
             Tree-Based Editor
           </h4>
           <div
-            class="p-4 rounded-lg bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+            class="p-4 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
           >
             <div class="font-mono text-sm space-y-2">
               <div class="flex items-center gap-2">
@@ -189,13 +189,13 @@
       <div class="space-y-6">
         <!-- Visual Flow -->
         <div
-          class="p-6 rounded-lg bg-slate-50 border border-slate-200 dark:bg-slate-800/30 dark:border-slate-700"
+          class="p-6 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/30 dark:border-slate-700"
         >
           <div class="flex items-center justify-between gap-4">
             <template v-for="(item, index) in extractionFlow" :key="item.label">
               <div class="text-center">
                 <div
-                  class="w-16 h-16 mx-auto mb-2 rounded-lg flex items-center justify-center"
+                  class="w-16 h-16 mx-auto mb-2 rounded-card flex items-center justify-center"
                   :class="item.bg"
                 >
                   <component
@@ -225,7 +225,7 @@
               <div
                 v-for="provider in llmProviders"
                 :key="provider.name"
-                class="p-3 rounded-lg bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+                class="p-3 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
               >
                 <h5 class="font-semibold text-slate-900 mb-1 dark:text-white">
                   {{ provider.name }}
@@ -278,7 +278,7 @@
             Metrics Dashboard
           </h4>
           <div
-            class="p-4 rounded-lg bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
+            class="p-4 rounded-card bg-slate-50 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700"
           >
             <div class="space-y-3">
               <div class="flex justify-between items-center">

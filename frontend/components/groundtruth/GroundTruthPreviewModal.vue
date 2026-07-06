@@ -36,7 +36,7 @@
         <label class="text-[15px] font-medium mr-2 dark:text-slate-200">Schema</label>
         <select
           v-model="selectedSchemaId"
-          class="px-2 py-1.5 rounded-lg border border-blue-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800 text-[15px] dark:text-slate-100 shadow focus:ring-2 focus:ring-blue-400 transition"
+          class="px-2 py-1.5 rounded-card border border-blue-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800 text-[15px] dark:text-slate-100 shadow focus:ring-2 focus:ring-blue-400 transition"
           @change="onSchemaChange"
         >
           <option value="" disabled>Select schema...</option>
@@ -188,7 +188,7 @@
     <!-- Loading Overlay -->
     <div
       v-if="loading"
-      class="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex flex-col items-center justify-center z-20 rounded-2xl"
+      class="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex flex-col items-center justify-center z-20 rounded-modal"
     >
       <LoadingSpinner size="large" />
       <div class="mt-3 text-blue-600 dark:text-blue-400 font-bold text-lg">Loading...</div>

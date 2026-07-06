@@ -23,7 +23,7 @@
       <div
         v-for="(gt, index) in groundTruthFiles"
         :key="gt.id"
-        class="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+        class="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-card p-4 hover:shadow-md transition-shadow"
       >
         <div class="flex justify-between items-start">
           <div class="flex-1">
@@ -51,7 +51,7 @@
           <div class="flex items-center gap-2">
             <!-- Configure mappings -->
             <button
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-card transition-colors"
               title="Configure field mappings"
               @click="previewGroundTruth(gt)"
             >
@@ -60,7 +60,7 @@
             </button>
             <!-- Rename (pencil) -->
             <button
-              class="p-2 text-slate-600 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700 rounded-md transition-colors"
+              class="p-2 text-slate-600 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700 rounded-card transition-colors"
               title="Rename"
               @click="editGroundTruth(gt)"
             >
@@ -68,7 +68,7 @@
             </button>
             <!-- Delete (trash) -->
             <button
-              class="p-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+              class="p-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-card transition-colors"
               title="Delete"
               @click="deleteGroundTruth(gt)"
             >

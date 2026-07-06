@@ -20,7 +20,7 @@
       </div>
     </template>
 
-    <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-md overflow-auto max-h-96">
+    <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-card overflow-auto max-h-96">
       <SchemaFieldList :schema-definition="schema?.schema_definition" show-raw-json-toggle />
     </div>
 

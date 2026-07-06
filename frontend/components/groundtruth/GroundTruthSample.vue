@@ -1,6 +1,6 @@
 <template>
   <div
-    class="mt-2 p-2 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700 text-xs max-h-64 overflow-auto w-full"
+    class="mt-2 p-2 bg-slate-50 dark:bg-slate-800/60 rounded-card border border-slate-200 dark:border-slate-700 text-xs max-h-64 overflow-auto w-full"
   >
     <div class="font-bold mb-1 text-slate-700 dark:text-slate-200">Ground Truth Sample</div>
     <div v-if="format === 'json' || format === 'zip'">

@@ -29,7 +29,7 @@
     <div class="flex items-center space-x-2">
       <button
         type="button"
-        class="p-2 text-slate-500 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+        class="p-2 text-slate-500 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700 hover:text-slate-700 hover:bg-slate-100 rounded-card"
         title="Help"
         @click="$emit('show-help')"
       >

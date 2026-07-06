@@ -1,49 +1,15 @@
 <template>
   <div class="p-6">
-    <!-- Modern Tab Navigation -->
-    <div
-      class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6"
-    >
-      <div class="border-b border-slate-200 dark:border-slate-700">
-        <nav class="-mb-px flex" aria-label="Tabs">
-          <button
-            :class="[
-              activeSection === 'schemas'
-                ? 'border-blue-500 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20 dark:text-blue-400'
-                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600',
-              'group relative min-w-0 flex-1 overflow-hidden py-4 px-6 text-sm font-medium text-center border-b-2 hover:bg-slate-50 dark:hover:bg-slate-800 focus:z-10 transition-all duration-200',
-            ]"
-            @click="activeSection = 'schemas'"
-          >
-            <div class="flex items-center justify-center space-x-2">
-              <Database class="h-5 w-5" />
-              <span>JSON Schemas</span>
-              <StatusBadge v-if="schemas.length > 0" color="gray" class="ml-2">{{
-                schemas.length
-              }}</StatusBadge>
-            </div>
-          </button>
-
-          <button
-            :class="[
-              activeSection === 'prompts'
-                ? 'border-blue-500 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20 dark:text-blue-400'
-                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600',
-              'group relative min-w-0 flex-1 overflow-hidden py-4 px-6 text-sm font-medium text-center border-b-2 hover:bg-slate-50 dark:hover:bg-slate-800 focus:z-10 transition-all duration-200',
-            ]"
-            @click="activeSection = 'prompts'"
-          >
-            <div class="flex items-center justify-center space-x-2">
-              <MessageSquare class="h-5 w-5" />
-              <span>Extraction Prompts</span>
-              <StatusBadge v-if="prompts.length > 0" color="gray" class="ml-2">{{
-                prompts.length
-              }}</StatusBadge>
-            </div>
-          </button>
-        </nav>
-      </div>
-    </div>
+    <!-- Tab Navigation -->
+    <BaseTabGroup v-model="activeSection" :tabs="tabs" class="mb-6">
+      <template #tab="{ tab }">
+        <span class="flex items-center gap-2">
+          <component :is="tab.value === 'schemas' ? Database : MessageSquare" class="h-5 w-5" />
+          <span>{{ tab.label }}</span>
+          <StatusBadge v-if="tab.badge" color="gray" class="ml-2">{{ tab.badge }}</StatusBadge>
+        </span>
+      </template>
+    </BaseTabGroup>
 
     <!-- Schemas Section -->
     <SchemaListSection
@@ -122,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Database, MessageSquare } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
 import { promptsApi } from '@/services/promptsApi'
@@ -133,6 +99,7 @@ import SchemaFormModal from './SchemaFormModal.vue'
 import PromptFormModal from './PromptFormModal.vue'
 import SchemaViewModal from './SchemaViewModal.vue'
 import PromptViewModal from './PromptViewModal.vue'
+import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { extractErrorMessage } from '@/utils/errors'
@@ -148,6 +115,13 @@ const toast = useToast()
 
 // Tab state
 const activeSection = ref<'schemas' | 'prompts'>('schemas')
+
+// Tab config for BaseTabGroup (icons + count badges rendered via the #tab scoped
+// slot to keep the Database/MessageSquare icons and StatusBadge styling).
+const tabs = computed(() => [
+  { label: 'JSON Schemas', value: 'schemas', badge: schemas.value.length || null },
+  { label: 'Extraction Prompts', value: 'prompts', badge: prompts.value.length || null },
+])
 
 // Schema list state
 const schemas = ref<Schema[]>([])

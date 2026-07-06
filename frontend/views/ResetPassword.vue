@@ -10,7 +10,7 @@
     <!-- Loading: validating token -->
     <div
       v-if="state === 'loading'"
-      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm text-center"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-modal p-8 shadow-sm text-center"
     >
       <div class="mx-auto mb-4 w-12 h-12">
         <LoadingSpinner size="medium" />
@@ -21,7 +21,7 @@
     <!-- Invalid / Expired token -->
     <div
       v-else-if="state === 'invalid'"
-      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm text-center"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-modal p-8 shadow-sm text-center"
     >
       <div
         class="mx-auto mb-4 w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center"
@@ -37,7 +37,7 @@
       </p>
       <router-link
         to="/forgot-password"
-        class="inline-block px-5 py-2.5 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        class="inline-block px-5 py-2.5 rounded-card font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
       >
         Request New Reset Link
       </router-link>
@@ -53,7 +53,7 @@
     <!-- Password form -->
     <div
       v-else
-      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-modal p-8 shadow-sm"
     >
       <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Set new password</h2>
       <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Enter your new password below.</p>

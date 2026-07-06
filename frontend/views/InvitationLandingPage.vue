@@ -7,7 +7,7 @@
 
     <div
       v-else-if="error"
-      class="bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900 rounded-xl p-8 text-center shadow-sm"
+      class="bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900 rounded-modal p-8 text-center shadow-sm"
     >
       <TriangleAlert class="mx-auto h-12 w-12 text-red-500 dark:text-red-400" />
       <h3 class="mt-4 text-lg font-semibold text-red-800 dark:text-red-300">Invalid invitation</h3>
@@ -26,7 +26,7 @@
 
     <div
       v-else
-      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm text-center"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-modal p-8 shadow-sm text-center"
     >
       <div
         class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30"

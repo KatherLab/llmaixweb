@@ -1,11 +1,11 @@
 <template>
-  <div class="max-w-3xl mx-auto px-4 py-8">
-    <div class="mb-8">
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Account settings</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        Manage your profile, password, and connected sign-in methods.
-      </p>
-    </div>
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+    <PageHeader
+      title="Account settings"
+      subtitle="Manage your profile, password, and connected sign-in methods."
+      max-width="3xl"
+      class="mb-6"
+    />
 
     <div class="space-y-6">
       <!-- Profile -->
@@ -13,14 +13,19 @@
         <div class="p-6">
           <h2 class="text-base font-semibold text-slate-900 dark:text-white mb-4">Profile</h2>
           <div class="space-y-4">
-            <div>
-              <label :class="labelClass">Full Name</label>
-              <input v-model="profileForm.full_name" type="text" :class="inputClass" />
-            </div>
-            <div>
-              <label :class="labelClass">Email</label>
-              <input v-model="profileForm.email" type="email" :class="inputClass" maxlength="254" />
-            </div>
+            <FormField
+              v-model="profileForm.full_name"
+              label="Full Name"
+              type="text"
+              placeholder="Full name"
+            />
+            <FormField
+              v-model="profileForm.email"
+              label="Email"
+              type="email"
+              maxlength="254"
+              placeholder="admin@yourcompany.com"
+            />
             <div class="flex items-center gap-3">
               <BaseButton
                 variant="primary"
@@ -177,13 +182,13 @@ import { useToast } from '@/composables/useToast'
 import { authApi } from '@/services/authApi'
 import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
-import { inputClass, labelClass } from '@/utils/formStyles'
 import { formatDate } from '@/utils/formatters'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FormField from '@/components/common/FormField.vue'
 import PasswordInput from '@/components/common/PasswordInput.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import GlassCard from '@/components/common/GlassCard.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import type { UserIdentityResponse } from '@/types'
 
 const router = useRouter()

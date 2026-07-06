@@ -2,7 +2,7 @@
   <ul class="pl-4">
     <li v-for="(child, key) in fields" :key="path(key)">
       <div
-        class="flex items-center gap-2 py-0.5 rounded-lg group cursor-pointer select-none transition"
+        class="flex items-center gap-2 py-0.5 rounded-card group cursor-pointer select-none transition"
         :class="{
           // selected states (win over dimming)
           'bg-gradient-to-r from-blue-100/70 to-blue-50/80 dark:from-blue-900/40 dark:to-blue-800/30 shadow border border-blue-300 dark:border-blue-500':

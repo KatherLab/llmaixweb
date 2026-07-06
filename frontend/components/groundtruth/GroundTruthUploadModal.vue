@@ -24,28 +24,30 @@
         </div>
 
         <!-- Format-specific guidance -->
-        <div
+        <Callout
           v-if="groundTruthFormat === 'json' || groundTruthFormat === 'zip'"
-          class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md dark:bg-blue-900/20 dark:border-blue-700"
+          variant="info"
+          class="mt-2"
         >
-          <p class="text-sm text-blue-700 dark:text-blue-300">
+          <p class="text-sm">
             <strong>Important:</strong> Each document must have an 'id' field that matches your
             document identifiers.
           </p>
-        </div>
-        <div
+        </Callout>
+        <Callout
           v-else-if="groundTruthFormat === 'csv' || groundTruthFormat === 'xlsx'"
-          class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md dark:bg-blue-900/20 dark:border-blue-700"
+          variant="info"
+          class="mt-2"
         >
-          <p class="text-sm text-blue-700 dark:text-blue-300">
+          <p class="text-sm">
             You'll choose the ID column (matching your document identifiers) on the next step.
           </p>
-        </div>
+        </Callout>
 
         <div>
           <label for="file-upload" :class="labelClass">File(s)</label>
           <div
-            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 dark:border-slate-600 border-dashed rounded-md"
+            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 dark:border-slate-600 border-dashed rounded-card"
             @dragover.prevent
             @drop.prevent="handleFileDrop"
           >
@@ -54,7 +56,7 @@
               <div class="flex text-sm text-slate-600 dark:text-slate-300 justify-center">
                 <label
                   for="file-upload"
-                  class="relative cursor-pointer bg-white dark:bg-slate-800 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
+                  class="relative cursor-pointer bg-white dark:bg-slate-800 rounded-card font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
                 >
                   <span>Upload file(s)</span>
                   <input
@@ -129,6 +131,7 @@ import { groundtruthApi } from '@/services/groundtruthApi'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 import { extractErrorMessage } from '@/utils/errors'
 import type { GroundTruth } from '@/types'

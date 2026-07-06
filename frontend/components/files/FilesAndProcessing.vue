@@ -1,20 +1,19 @@
 <template>
   <div class="p-6 space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
-      <div>
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Files & Preprocessing</h2>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Upload files and run OCR preprocessing
-        </p>
-      </div>
-      <div class="flex items-center space-x-3">
+    <PageHeader
+      title="Files"
+      subtitle="Upload files and run OCR preprocessing"
+      :sticky="false"
+      class="mb-6"
+    >
+      <template #actions>
         <BaseButton variant="secondary" @click="showUploadModal = true">
           <Upload class="w-5 h-5 mr-2 text-slate-500 dark:text-slate-400" />
           Upload Files
         </BaseButton>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- Upload Zone (shown whenever there are no files and no active filters,
          including a brand-new project after its initial empty fetch) -->
@@ -40,12 +39,12 @@
     />
 
     <!-- Hint: Select files to preprocess -->
-    <div
+    <Callout
       v-if="files.length > 0 && selectedFiles.length === 0 && !hasActivePreprocessingTasks"
-      class="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg"
+      variant="info"
+      class="flex items-center gap-2"
     >
-      <Info class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-      <p class="text-sm text-blue-800 dark:text-blue-300">
+      <p class="text-sm">
         <strong>Next step:</strong> Select files from the table below, then click
         <span class="font-semibold">Configure Preprocessing</span> to extract text from your
         documents.
@@ -58,12 +57,10 @@
       >
         Select all
       </BaseButton>
-    </div>
+    </Callout>
 
     <!-- Loading Indicator -->
-    <div v-if="isLoading" class="flex justify-center py-12">
-      <LoadingSpinner size="large" />
-    </div>
+    <SkeletonTable v-if="isLoading" :columns="5" :rows="8" />
 
     <!-- Files Table -->
     <FilesTable
@@ -114,16 +111,8 @@
     </EmptyState>
 
     <!-- Floating Batch Toolbar -->
-    <div
-      v-if="selectedFiles.length > 0"
-      class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50"
-    >
-      <div
-        class="bg-slate-900 text-white rounded-xl shadow-2xl px-6 py-3 flex items-center space-x-4"
-      >
-        <span class="font-medium"
-          >{{ selectedFiles.length }} file{{ selectedFiles.length !== 1 ? 's' : '' }} selected</span
-        >
+    <BatchActionBar :count="selectedFiles.length" count-label="file" @clear="selectedFiles = []">
+      <template #warning>
         <!-- Warning indicator for unconfigured CSV/XLSX -->
         <span
           v-if="unconfiguredCsvXlsxFiles.length > 0"
@@ -136,26 +125,16 @@
           <AlertTriangle class="w-3 h-3 mr-1" />
           {{ unconfiguredCsvXlsxFiles.length }} needs config
         </span>
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          class="text-slate-300 underline"
-          @click="selectedFiles = []"
-        >
-          Clear
-        </BaseButton>
-        <div class="w-px h-5 bg-slate-700" />
-        <BaseButton :disabled="unconfiguredCsvXlsxFiles.length > 0" @click="openProcessingPanel">
-          <Settings v-if="unconfiguredCsvXlsxFiles.length === 0" class="w-4 h-4 mr-2" />
-          <AlertTriangle v-else class="w-4 h-4 mr-2" />
-          {{
-            unconfiguredCsvXlsxFiles.length > 0
-              ? 'Configure Files First'
-              : 'Configure Preprocessing'
-          }}
-        </BaseButton>
-      </div>
-    </div>
+      </template>
+
+      <BaseButton :disabled="unconfiguredCsvXlsxFiles.length > 0" @click="openProcessingPanel">
+        <Settings v-if="unconfiguredCsvXlsxFiles.length === 0" class="w-4 h-4 mr-2" />
+        <AlertTriangle v-else class="w-4 h-4 mr-2" />
+        {{
+          unconfiguredCsvXlsxFiles.length > 0 ? 'Configure Files First' : 'Configure Preprocessing'
+        }}
+      </BaseButton>
+    </BatchActionBar>
 
     <!-- Slide-in Preprocessing Config Panel -->
     <PreprocessingConfigPanel
@@ -241,7 +220,7 @@
 <script setup lang="ts">
 import { ref, computed, toRef, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { AlertTriangle, Info, Search, Settings, Upload } from '@lucide/vue'
+import { AlertTriangle, Search, Settings, Upload } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { authApi } from '@/services/authApi'
@@ -255,10 +234,13 @@ import PreprocessingHistoryPanel from '@/components/files/PreprocessingHistoryPa
 import PreprocessingConfigPanel from '@/components/files/PreprocessingConfigPanel.vue'
 import UploadFilesModal from '@/components/files/UploadFilesModal.vue'
 import DuplicatePreviewModal from '@/components/files/DuplicatePreviewModal.vue'
-import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import SkeletonTable from '@/components/common/SkeletonTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
+import BatchActionBar from '@/components/common/BatchActionBar.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { setEngineLabels } from '@/utils/ocrLabels'
 import { getDateRangeBounds } from '@/utils/dateRange'
 import { useFileDownload } from '@/composables/useFileDownload'
@@ -602,7 +584,7 @@ const selectAllFiles = async (): Promise<void> => {
       })
 
       if (searchQuery.value) params.append('search', searchQuery.value)
-      if (filterStatus.value) params.append('file_type', filterStatus.value)
+      if (filterStatus.value) params.append('status', filterStatus.value)
 
       const response = await filesApi.list(
         props.projectId,

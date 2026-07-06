@@ -14,7 +14,7 @@
           Medical Document
         </h3>
         <div
-          class="rounded-lg border border-slate-200 bg-white/80 backdrop-blur-sm p-6 font-mono text-sm text-slate-600 leading-relaxed overflow-hidden relative dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300"
+          class="rounded-card border border-slate-200 bg-white/80 backdrop-blur-sm p-6 font-mono text-sm text-slate-600 leading-relaxed overflow-hidden relative dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300"
         >
           <!-- Animated highlight effect -->
           <div
@@ -85,7 +85,7 @@
 
         <!-- LLM Extracted Data -->
         <div
-          class="rounded-lg border border-slate-200 bg-white/80 backdrop-blur-sm overflow-hidden dark:border-slate-700 dark:bg-slate-900/50"
+          class="rounded-card border border-slate-200 bg-white/80 backdrop-blur-sm overflow-hidden dark:border-slate-700 dark:bg-slate-900/50"
         >
           <div
             class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-800/50"
@@ -139,7 +139,7 @@
         <div class="mt-4 grid grid-cols-2 gap-4">
           <!-- Processing Info Card -->
           <div
-            class="rounded-lg bg-slate-50 border border-slate-200 p-4 dark:bg-slate-800/50 dark:border-slate-700"
+            class="rounded-card bg-slate-50 border border-slate-200 p-4 dark:bg-slate-800/50 dark:border-slate-700"
           >
             <div class="flex items-center gap-2 mb-2">
               <Zap class="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -165,7 +165,7 @@
 
           <!-- Accuracy Card -->
           <div
-            class="rounded-lg bg-slate-50 border border-slate-200 p-4 dark:bg-slate-800/50 dark:border-slate-700"
+            class="rounded-card bg-slate-50 border border-slate-200 p-4 dark:bg-slate-800/50 dark:border-slate-700"
           >
             <div class="flex items-center gap-2 mb-2">
               <BarChart3 class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />

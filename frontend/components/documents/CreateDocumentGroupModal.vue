@@ -88,7 +88,7 @@
 
       <!-- Document List -->
       <div
-        class="border border-slate-200 dark:border-slate-700 rounded-md overflow-hidden max-h-64 overflow-y-auto"
+        class="border border-slate-200 dark:border-slate-700 rounded-card overflow-hidden max-h-64 overflow-y-auto"
       >
         <div v-if="searchLoading" class="p-4 text-center text-slate-500 dark:text-slate-400">
           Searching…

@@ -25,7 +25,7 @@
           v-for="version in versions ?? []"
           :key="version.id"
           :class="[
-            'p-3 rounded-lg border cursor-pointer transition-all',
+            'p-3 rounded-card border cursor-pointer transition-all',
             selectedVersion?.id === version.id
               ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
               : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-800',

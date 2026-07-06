@@ -9,7 +9,7 @@
     </div>
     <div
       v-else
-      class="markdown-content max-w-none bg-slate-50 dark:bg-slate-800 p-4 rounded-lg"
+      class="markdown-content max-w-none bg-slate-50 dark:bg-slate-800 p-4 rounded-card"
       v-html="safeMarkdown"
     />
   </div>

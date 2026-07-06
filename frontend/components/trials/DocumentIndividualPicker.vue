@@ -15,7 +15,7 @@
       >
     </div>
 
-    <div class="border rounded-md overflow-hidden flex-1 min-h-[100px] flex flex-col">
+    <div class="border rounded-card overflow-hidden flex-1 min-h-[100px] flex flex-col">
       <div v-if="docsError" class="p-4 text-center text-red-600 dark:text-red-400 text-sm">
         {{ docsError }}
       </div>

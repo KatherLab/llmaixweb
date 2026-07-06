@@ -1,5 +1,5 @@
 <template>
-  <ErrorBanner v-if="failures && Object.keys(failures).length" class="rounded-xl p-5 mb-6">
+  <ErrorBanner v-if="failures && Object.keys(failures).length" class="rounded-modal p-5 mb-6">
     <div class="flex items-center gap-2 mb-2">
       <span class="font-semibold text-red-700 dark:text-red-300"
         >{{ failureCount }} document error{{ failureCount === 1 ? '' : 's' }}</span

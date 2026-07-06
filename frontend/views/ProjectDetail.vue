@@ -1,49 +1,64 @@
 <template>
-  <div
-    class="min-h-screen bg-gradient-to-br from-slate-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800"
-  >
-    <!-- Ultra-Compact Single-Row Header -->
-    <header
-      class="sticky top-0 z-30 bg-white/70 dark:bg-slate-900/70 shadow-md backdrop-blur-lg border-b border-slate-200/50 dark:border-slate-800/50 transition-all"
-    >
+  <div class="min-h-screen bg-surface-muted">
+    <!-- Compact single-row header with workflow tabs -->
+    <header class="sticky top-0 z-30 bg-surface shadow-sm border-b border-default transition-all">
       <div class="max-w-7xl mx-auto px-4 sm:px-6">
-        <div class="flex items-center justify-between h-12">
+        <div class="flex items-center h-12 gap-3">
           <!-- Left: Back + Project Name -->
-          <div class="flex items-center gap-2.5 min-w-0 flex-shrink-0">
+          <div class="flex items-center gap-2 min-w-0 flex-shrink-0">
             <RouterLink
               to="/projects"
-              class="flex-shrink-0 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+              class="flex-shrink-0 text-content-muted hover:text-content transition-colors"
               aria-label="Back to projects"
             >
               <ChevronLeft class="w-5 h-5" />
             </RouterLink>
             <h1
-              class="text-lg font-semibold text-slate-900 dark:text-white truncate max-w-[180px] sm:max-w-[220px] md:max-w-[300px]"
+              class="text-base sm:text-lg font-semibold text-content truncate max-w-[120px] sm:max-w-[200px] md:max-w-[260px]"
             >
               {{ project.name }}
             </h1>
           </div>
 
-          <!-- Center: Tab navigation (absolute centered) -->
-          <nav class="flex items-center gap-1 overflow-x-auto absolute left-1/2 -translate-x-1/2">
+          <!-- Workflow tabs — left-aligned, horizontally scrollable on narrow screens -->
+          <nav
+            class="flex items-center gap-1 overflow-x-auto min-w-0 flex-1 no-scrollbar"
+            role="tablist"
+            aria-label="Project workflow"
+          >
             <button
-              v-for="step in steps"
+              v-for="(step, idx) in steps"
               :key="step.id"
-              class="px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-md transition-all"
+              role="tab"
+              :aria-selected="currentStep === step.id"
+              class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium whitespace-nowrap rounded-card transition-all flex-shrink-0"
               :class="[
                 currentStep === step.id
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200',
+                  ? 'bg-primary-soft text-primary'
+                  : 'text-content-muted hover:bg-surface-sunken hover:text-content',
               ]"
               @click="handleStepChange(step.id)"
             >
+              <span
+                class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold flex-shrink-0"
+                :class="[
+                  currentStep === step.id
+                    ? 'bg-primary text-white'
+                    : step.isComplete
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                      : 'bg-surface-sunken text-content-subtle',
+                ]"
+              >
+                <Check v-if="step.isComplete && currentStep !== step.id" class="w-3 h-3" />
+                <span v-else>{{ idx + 1 }}</span>
+              </span>
               {{ step.name }}
             </button>
           </nav>
 
           <!-- Right: Settings button -->
           <button
-            class="flex-shrink-0 p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 rounded-lg transition-all"
+            class="flex-shrink-0 p-2 text-content-muted hover:text-content hover:bg-surface-sunken rounded-card transition-all"
             aria-label="Project Settings"
             @click="showSettingsModal = true"
           >
@@ -60,10 +75,10 @@
         <span class="mt-4 text-slate-400 dark:text-slate-500 text-lg">Loading project...</span>
       </div>
 
-      <ErrorBanner v-else-if="error" :message="error" class="mb-4 rounded-xl" />
+      <ErrorBanner v-else-if="error" :message="error" class="mb-4 rounded-modal" />
 
       <!-- Workspace with glassmorphism -->
-      <GlassCard v-else padding="lg" rounded="3xl" :blur="12" class="mb-20">
+      <GlassCard v-else padding="lg" rounded="modal" class="mb-20">
         <transition name="fade" mode="out-in">
           <!-- Show each tab as content, but only if it's currentStep -->
           <FilesAndProcessing
@@ -124,7 +139,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, provide, watch, defineAsyncComponent } from 'vue'
-import { ChevronLeft, Settings } from '@lucide/vue'
+import { ChevronLeft, Settings, Check } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { projectsApi } from '@/services/projectsApi'
 import type { Project, ProjectUpdate } from '@/types'
@@ -167,13 +182,21 @@ const showDeleteConfirmation = ref<boolean>(false)
 
 // Workflow step management with tab workspace
 const validSteps = ['files', 'documents', 'schemas', 'trials', 'evaluation']
-const steps = [
-  { id: 'files', name: 'Files & Preprocessing' },
-  { id: 'documents', name: 'Documents' },
-  { id: 'schemas', name: 'Schemas & Prompts' },
-  { id: 'trials', name: 'Run Trials' },
-  { id: 'evaluation', name: 'Evaluation' },
-]
+// `isComplete` drives the step-number → check-mark progression cue. We only
+// have document_count on the Project payload, so we mark Files/Documents as
+// complete once documents exist; later steps show no check (no count available
+// client-side without extra fetches). Navigation stays free (no hard gating).
+const steps = computed(() => [
+  {
+    id: 'files',
+    name: 'Files & Preprocessing',
+    isComplete: (project.value.document_count ?? 0) > 0,
+  },
+  { id: 'documents', name: 'Documents', isComplete: (project.value.document_count ?? 0) > 0 },
+  { id: 'schemas', name: 'Schemas & Prompts', isComplete: false },
+  { id: 'trials', name: 'Run Trials', isComplete: false },
+  { id: 'evaluation', name: 'Evaluation', isComplete: false },
+])
 const defaultStep = 'files'
 
 // Tabs (persisted in localStorage for true SaaS "workspace" vibes)

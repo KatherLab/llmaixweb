@@ -47,19 +47,18 @@ export function useTableClasses({
 
   return {
     /** Card wrapper around a table (with overflow clipping for sticky headers). */
-    wrapper:
-      'bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden',
+    wrapper: 'bg-surface rounded-card border border-default shadow-sm overflow-hidden',
     /** The `<table>` element. */
-    table: 'min-w-full divide-y divide-slate-200 dark:divide-slate-700',
+    table: 'min-w-full divide-y divide-default',
     /** `<thead>` — header row background. */
-    thead: 'bg-slate-50 dark:bg-slate-800',
+    thead: 'bg-surface-muted',
     /** `<th>` — header cell. */
-    th: `${cellPadding} text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider`,
+    th: `${cellPadding} text-left text-xs font-semibold text-content-muted uppercase tracking-wider`,
     /** `<tbody>` — body rows. */
-    tbody: 'bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-700',
+    tbody: 'bg-surface divide-y divide-default',
     /** `<tr>` — body row (hover highlight). */
-    tr: 'hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors',
+    tr: 'hover:bg-surface-muted transition-colors',
     /** `<td>` — body cell. */
-    td: `${cellPadding} text-sm text-slate-700 dark:text-slate-300`,
+    td: `${cellPadding} text-sm text-content`,
   }
 }

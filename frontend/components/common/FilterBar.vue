@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700"
-  >
+  <div class="bg-surface-muted rounded-modal p-4 border border-default">
     <!-- Top row: Search + caller-provided filter controls + count -->
     <div class="flex flex-wrap items-center gap-3">
       <!-- Search (left) -->
@@ -19,7 +17,7 @@
       <!-- Clear all (X) -->
       <button
         v-if="showClear && hasActiveFilters"
-        class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+        class="px-3 py-2 text-sm text-content-muted hover:text-red-600 dark:hover:text-red-400 transition-colors"
         title="Clear all filters"
         @click="$emit('clear-all')"
       >
@@ -27,7 +25,7 @@
       </button>
 
       <!-- Count (right) -->
-      <div v-if="showCount" class="ml-auto text-sm text-slate-500 dark:text-slate-400">
+      <div v-if="showCount" class="ml-auto text-sm text-content-muted">
         {{ totalCount }} {{ itemLabel }}
       </div>
     </div>
@@ -35,7 +33,7 @@
     <!-- Custom range row (optional, caller-provided) -->
     <div
       v-if="$slots['custom-range']"
-      class="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
+      class="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-default"
     >
       <slot name="custom-range" />
     </div>
@@ -43,9 +41,9 @@
     <!-- Active filter chips (unified) -->
     <div
       v-if="hasActiveFilters"
-      class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
+      class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-default"
     >
-      <span class="text-xs text-slate-500 dark:text-slate-400">Active filters:</span>
+      <span class="text-xs text-content-muted">Active filters:</span>
       <FilterChip
         v-for="filter in activeFilters"
         :key="filter.key"

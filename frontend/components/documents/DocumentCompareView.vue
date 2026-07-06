@@ -16,7 +16,7 @@
         <!-- Image Viewer -->
         <div
           v-else-if="originalImageUrl && ['image'].includes(originalFileType ?? '')"
-          class="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg p-4"
+          class="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-card p-4"
         >
           <img
             :src="originalImageUrl"
@@ -35,7 +35,7 @@
       <div class="w-1/2 overflow-auto p-4 flex flex-col">
         <h4 class="font-medium text-slate-700 dark:text-slate-300 mb-2">Extracted Text</h4>
         <div
-          class="markdown-content max-w-none bg-slate-50 dark:bg-slate-800 p-2 rounded-lg flex-1"
+          class="markdown-content max-w-none bg-slate-50 dark:bg-slate-800 p-2 rounded-card flex-1"
           v-html="safeMarkdown"
         />
       </div>
@@ -44,7 +44,7 @@
     <div v-else class="w-full overflow-auto p-4 flex flex-col">
       <h4 class="font-medium text-slate-700 dark:text-slate-300 mb-2">Extracted Text</h4>
       <div
-        class="markdown-content max-w-none bg-slate-50 dark:bg-slate-800 p-4 rounded-lg"
+        class="markdown-content max-w-none bg-slate-50 dark:bg-slate-800 p-4 rounded-card"
         v-html="safeMarkdown"
       />
     </div>

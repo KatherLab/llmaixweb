@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl p-6 shadow flex flex-col h-full"
+    class="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-modal p-6 shadow flex flex-col h-full"
   >
     <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
       <span class="block text-sm font-semibold text-slate-700 dark:text-slate-200"

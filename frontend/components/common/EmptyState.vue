@@ -33,15 +33,13 @@ const emit = defineEmits<{ (e: 'action'): void }>()
 </script>
 
 <template>
-  <div
-    class="text-center p-12 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-600"
-  >
+  <div class="text-center p-12 bg-surface-muted rounded-card border border-dashed border-strong">
     <slot name="icon">
       <!-- Default icon if no custom icon is provided -->
-      <Plus class="h-12 w-12 mx-auto text-slate-400 dark:text-slate-500" aria-hidden="true" />
+      <Plus class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
     </slot>
-    <h3 class="mt-4 text-lg font-medium text-slate-900 dark:text-slate-100">{{ title }}</h3>
-    <p v-if="description" class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+    <h3 class="mt-4 text-lg font-medium text-content">{{ title }}</h3>
+    <p v-if="description" class="mt-1 text-sm text-content-muted">
       {{ description }}
     </p>
     <slot />

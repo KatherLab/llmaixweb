@@ -152,7 +152,7 @@
       </div>
 
       <!-- Usage Statistics -->
-      <div class="mt-6 bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+      <div class="mt-6 bg-slate-50 dark:bg-slate-800 rounded-card p-4">
         <h4 class="font-medium text-slate-900 dark:text-white mb-3">Usage Statistics</h4>
         <div class="grid grid-cols-3 gap-4">
           <div>

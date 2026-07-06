@@ -2,7 +2,11 @@
   <div
     class="h-screen bg-gradient-to-br from-slate-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex flex-col"
   >
-    <PageHeader title="Project Overview">
+    <PageHeader
+      title="Projects"
+      subtitle="Create and manage your extraction projects."
+      class="mb-6"
+    >
       <template #icon>
         <CircleCheckBig class="w-5 h-5" aria-hidden="true" />
       </template>

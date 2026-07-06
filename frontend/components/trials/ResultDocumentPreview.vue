@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-xl overflow-auto flex-1 max-h-[480px] border border-slate-100 dark:border-slate-700"
+    class="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-modal overflow-auto flex-1 max-h-[480px] border border-slate-100 dark:border-slate-700"
   >
     <h4
       class="text-sm font-semibold mb-3 text-slate-700 dark:text-slate-200 flex items-center gap-1.5"
@@ -12,7 +12,7 @@
       v-if="pdfUrl"
       :src="pdfUrl"
       frameborder="0"
-      class="rounded-md w-full h-[400px]"
+      class="rounded-card w-full h-[400px]"
     ></iframe>
     <div v-else-if="pdfLoading" class="text-center py-10">
       <LoadingSpinner size="medium" />

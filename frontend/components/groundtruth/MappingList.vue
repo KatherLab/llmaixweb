@@ -10,7 +10,7 @@
       <li
         v-for="(m, i) in mappings ?? []"
         :key="i"
-        class="bg-gradient-to-r from-blue-50/70 to-purple-50/60 dark:from-slate-800 dark:to-slate-700/80 px-2 py-1.5 rounded-lg shadow-sm border border-blue-100 dark:border-slate-600 group relative"
+        class="bg-gradient-to-r from-blue-50/70 to-purple-50/60 dark:from-slate-800 dark:to-slate-700/80 px-2 py-1.5 rounded-card shadow-sm border border-blue-100 dark:border-slate-600 group relative"
       >
         <div class="flex items-center gap-2">
           <!-- Schema Field -->
@@ -26,7 +26,7 @@
             <!-- Tooltip (shows on hover) -->
             <span
               v-if="hoverIdx === i"
-              class="absolute z-40 left-2 top-9 w-max max-w-[300px] bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-200 rounded-xl px-4 py-2 border border-blue-200 dark:border-slate-600 shadow-xl font-mono text-xs pointer-events-none"
+              class="absolute z-40 left-2 top-9 w-max max-w-[300px] bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-200 rounded-modal px-4 py-2 border border-blue-200 dark:border-slate-600 shadow-xl font-mono text-xs pointer-events-none"
               style="white-space: pre-line"
             >
               <strong>Schema field:</strong><br />
@@ -51,7 +51,7 @@
             <!-- Tooltip (shows on hover) -->
             <span
               v-if="hoverIdx2 === i"
-              class="absolute z-40 left-2 top-9 w-max max-w-[300px] bg-white dark:bg-slate-800 text-purple-900 dark:text-purple-200 rounded-xl px-4 py-2 border border-purple-200 dark:border-slate-600 shadow-xl font-mono text-xs pointer-events-none"
+              class="absolute z-40 left-2 top-9 w-max max-w-[300px] bg-white dark:bg-slate-800 text-purple-900 dark:text-purple-200 rounded-modal px-4 py-2 border border-purple-200 dark:border-slate-600 shadow-xl font-mono text-xs pointer-events-none"
               style="white-space: pre-line"
             >
               <strong>GT field:</strong><br />

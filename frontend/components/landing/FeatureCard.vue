@@ -1,7 +1,7 @@
 <template>
   <div
     ref="cardEl"
-    class="feature-card group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-6 transition-all dark:border-slate-700 dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-800"
+    class="feature-card group relative overflow-hidden rounded-modal border border-slate-200 bg-white p-6 transition-all dark:border-slate-700 dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-800"
     :class="[feature.borderHover, feature.shadowHover]"
   >
     <div
@@ -10,7 +10,7 @@
     ></div>
     <div class="relative z-10">
       <div
-        class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg transition-colors"
+        class="mb-4 flex h-12 w-12 items-center justify-center rounded-card transition-colors"
         :class="[feature.iconBg, feature.iconText, feature.iconHoverBg]"
       >
         <component :is="feature.icon" class="h-6 w-6" />

@@ -49,7 +49,7 @@ watchEffect(() => {
 <template>
   <span
     ref="reference"
-    class="relative inline-block focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+    class="relative inline-block focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded"
     tabindex="0"
     :aria-describedby="show && text ? tooltipId : undefined"
     @mouseenter="show = !!text"
@@ -63,7 +63,7 @@ watchEffect(() => {
       :id="tooltipId"
       ref="floating"
       :style="{ position: strategy, top: `${y ?? 0}px`, left: `${x ?? 0}px`, zIndex: 100 }"
-      class="pointer-events-none px-3 py-2 rounded-lg bg-slate-800 text-white text-xs shadow-xl transition-opacity duration-150 opacity-95 w-max max-w-[360px] max-h-[60vh] overflow-y-auto break-words leading-snug space-y-1"
+      class="pointer-events-none px-3 py-2 rounded-card bg-slate-800 text-white text-xs shadow-xl transition-opacity duration-150 opacity-95 w-max max-w-[360px] max-h-[60vh] overflow-y-auto break-words leading-snug space-y-1"
       role="tooltip"
     >
       <p v-if="title" class="font-semibold text-white">{{ title }}</p>

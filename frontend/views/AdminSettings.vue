@@ -1,9 +1,14 @@
 <template>
   <div>
-    <h2 class="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
-      <CircleDot class="w-7 h-7 text-blue-600 dark:text-blue-400" />
-      App Settings
-    </h2>
+    <PageHeader
+      title="App Settings"
+      subtitle="Configure system-wide settings for the application."
+      class="mb-6"
+    >
+      <template #icon>
+        <CircleDot class="w-5 h-5" aria-hidden="true" />
+      </template>
+    </PageHeader>
 
     <!-- Category Tabs -->
     <BaseTabGroup v-model="activeTab" :tabs="categoryTabs" class="mb-6" />
@@ -161,7 +166,9 @@
       </div>
       <div v-if="error" class="mt-5 text-red-600 dark:text-red-400 font-semibold">{{ error }}</div>
     </form>
-    <div v-else class="py-12 flex justify-center">Loading...</div>
+    <div v-else class="py-12 flex justify-center">
+      <LoadingSpinner />
+    </div>
   </div>
 </template>
 
@@ -171,6 +178,8 @@ import { CircleDot, Lock } from '@lucide/vue'
 import { adminApi } from '@/services/adminApi'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { extractErrorMessage } from '@/utils/errors'
 import { inputClass } from '@/utils/formStyles'
 import type { AdminSettings, AdminSettingEntry } from '@/types'

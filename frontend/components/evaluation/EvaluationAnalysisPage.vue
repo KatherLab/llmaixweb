@@ -33,7 +33,7 @@
       <!-- Left rail: metrics + field list -->
       <aside class="lg:col-span-1 space-y-4">
         <!-- Overall metrics -->
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4">
+        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4">
           <div class="flex items-baseline justify-between mb-3">
             <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
               Overall Metrics
@@ -54,7 +54,7 @@
             <div
               v-for="m in overallMetrics"
               :key="m.key"
-              class="bg-slate-50 dark:bg-slate-800 rounded-lg p-3"
+              class="bg-slate-50 dark:bg-slate-800 rounded-card p-3"
             >
               <div class="flex items-center gap-1">
                 <span class="text-xs text-slate-500 dark:text-slate-400">{{ m.label }}</span>
@@ -82,7 +82,7 @@
         </div>
 
         <!-- Field list -->
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4">
+        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Fields</h2>
             <div class="flex items-center gap-3">
@@ -152,17 +152,14 @@
       <section class="lg:col-span-3 flex flex-col min-h-0">
         <!-- Filter bar -->
         <div
-          class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-3 mb-4 flex flex-wrap items-center gap-3"
+          class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-3 mb-4 flex flex-wrap items-center gap-3"
         >
           <SearchInput
             v-model="search"
             placeholder="Search documents..."
             class="flex-1 min-w-[200px]"
           />
-          <select
-            v-model="statusFilter"
-            class="border border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 rounded-md px-2 py-1.5 text-sm"
-          >
+          <select v-model="statusFilter" :class="selectClass">
             <option value="all">All statuses</option>
             <option value="failed">Failed</option>
             <option value="incorrect">Has wrong values</option>
@@ -189,7 +186,7 @@
         <!-- Per-field metrics for the selected field -->
         <div
           v-if="selectedFieldMetrics"
-          class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4 mb-4"
+          class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4 mb-4"
         >
           <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -204,7 +201,7 @@
             <div
               v-for="m in selectedFieldMetricCards"
               :key="m.key"
-              class="bg-slate-50 dark:bg-slate-800 rounded-lg p-2.5"
+              class="bg-slate-50 dark:bg-slate-800 rounded-card p-2.5"
             >
               <div class="flex items-center gap-1">
                 <span class="text-[11px] text-slate-500 dark:text-slate-400">{{ m.label }}</span>
@@ -238,7 +235,7 @@
         <!-- Confusion matrix for the selected categorical field -->
         <div
           v-if="confusionMatrixForField"
-          class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4 mb-4"
+          class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4 mb-4"
         >
           <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
             Confusion matrix — {{ prettifyField(selectedFieldFilter) }}
@@ -251,7 +248,9 @@
         </div>
 
         <!-- Document table -->
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg flex-1 min-h-0 overflow-hidden">
+        <div
+          class="bg-white dark:bg-slate-900 shadow-sm rounded-card flex-1 min-h-0 overflow-hidden"
+        >
           <DataTable
             :columns="columns"
             :items="pagedDocs"
@@ -343,6 +342,7 @@ import {
 } from '@/utils/evaluationHelpers'
 import { getTypeIcon } from '@/utils/schemaTypeIcons'
 import { computeVisiblePages } from '@/composables/usePagination'
+import { selectClass } from '@/utils/formStyles'
 import { describeHttpError } from '@/utils/errors'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'

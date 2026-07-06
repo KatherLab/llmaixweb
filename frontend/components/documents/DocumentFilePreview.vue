@@ -17,7 +17,7 @@
       <img
         :src="originalImageUrl"
         alt="Original document"
-        class="max-w-full max-h-full object-contain shadow-lg rounded-lg"
+        class="max-w-full max-h-full object-contain shadow-lg rounded-card"
       />
     </div>
   </div>

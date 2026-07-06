@@ -12,7 +12,7 @@
         <label :class="labelClass">Export Format</label>
         <div class="grid grid-cols-3 gap-3">
           <div
-            class="relative flex cursor-pointer rounded-lg border p-4 focus:outline-none"
+            class="relative flex cursor-pointer rounded-card border p-4 focus:outline-none"
             :class="
               exportFormat === 'csv'
                 ? 'border-blue-600 ring-2 ring-blue-600 dark:border-blue-500 dark:ring-blue-500'
@@ -29,7 +29,7 @@
             </div>
           </div>
           <div
-            class="relative flex cursor-pointer rounded-lg border p-4 focus:outline-none"
+            class="relative flex cursor-pointer rounded-card border p-4 focus:outline-none"
             :class="
               exportFormat === 'xlsx'
                 ? 'border-blue-600 ring-2 ring-blue-600 dark:border-blue-500 dark:ring-blue-500'
@@ -46,7 +46,7 @@
             </div>
           </div>
           <div
-            class="relative flex cursor-pointer rounded-lg border p-4 focus:outline-none"
+            class="relative flex cursor-pointer rounded-card border p-4 focus:outline-none"
             :class="
               exportFormat === 'zip'
                 ? 'border-blue-600 ring-2 ring-blue-600 dark:border-blue-500 dark:ring-blue-500'
@@ -69,7 +69,7 @@
       <div>
         <label :class="labelClass">Select Evaluations</label>
         <div
-          class="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-md"
+          class="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-card"
         >
           <div
             class="p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
@@ -192,7 +192,7 @@
       <!-- Preview of export content -->
       <div
         v-if="selectedEvaluations.length > 0"
-        class="bg-slate-50 dark:bg-slate-800 rounded-lg p-4"
+        class="bg-slate-50 dark:bg-slate-800 rounded-card p-4"
       >
         <h4 class="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Export Preview</h4>
         <div class="text-sm text-slate-600 dark:text-slate-300 space-y-1">

@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <!-- Header with document info -->
     <div
-      class="bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-lg p-6 border dark:border-slate-700"
+      class="bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-card p-6 border dark:border-slate-700"
     >
       <div class="flex justify-between items-start mb-4">
         <div>
@@ -40,7 +40,7 @@
       <!-- Summary stats -->
       <div v-if="!document.error" class="grid grid-cols-3 gap-4">
         <div
-          class="bg-white dark:bg-slate-800 rounded-lg p-4 text-center border dark:border-slate-700 shadow-sm"
+          class="bg-white dark:bg-slate-800 rounded-card p-4 text-center border dark:border-slate-700 shadow-sm"
         >
           <div class="text-lg font-semibold text-green-600 dark:text-green-400">
             {{ document.correct_fields }}
@@ -48,7 +48,7 @@
           <div class="text-sm text-slate-500 dark:text-slate-400">Correct Fields</div>
         </div>
         <div
-          class="bg-white dark:bg-slate-800 rounded-lg p-4 text-center border dark:border-slate-700 shadow-sm"
+          class="bg-white dark:bg-slate-800 rounded-card p-4 text-center border dark:border-slate-700 shadow-sm"
         >
           <div class="text-lg font-semibold text-red-600 dark:text-red-400">
             {{ document.total_fields - document.correct_fields }}
@@ -56,7 +56,7 @@
           <div class="text-sm text-slate-500 dark:text-slate-400">Incorrect Fields</div>
         </div>
         <div
-          class="bg-white dark:bg-slate-800 rounded-lg p-4 text-center border dark:border-slate-700 shadow-sm"
+          class="bg-white dark:bg-slate-800 rounded-card p-4 text-center border dark:border-slate-700 shadow-sm"
         >
           <div class="text-lg font-semibold text-slate-800 dark:text-slate-100">
             {{ document.total_fields }}
@@ -69,7 +69,7 @@
     <!-- Field-by-field analysis -->
     <div
       v-if="!document.error"
-      class="bg-white dark:bg-slate-800 rounded-lg border dark:border-slate-700 p-6 shadow-sm"
+      class="bg-white dark:bg-slate-800 rounded-card border dark:border-slate-700 p-6 shadow-sm"
     >
       <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">
         Field-by-Field Analysis
@@ -78,7 +78,7 @@
         <div
           v-for="(fieldDetail, fieldName) in document.field_details"
           :key="fieldName"
-          class="border rounded-lg p-4"
+          class="border rounded-card p-4"
           :class="{
             'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/20':
               fieldDetail.is_correct,
@@ -143,7 +143,7 @@
     </div>
 
     <!-- Document content -->
-    <div class="bg-white dark:bg-slate-800 rounded-lg border dark:border-slate-700 p-6 shadow-sm">
+    <div class="bg-white dark:bg-slate-800 rounded-card border dark:border-slate-700 p-6 shadow-sm">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Document Content</h3>
         <BaseButton
@@ -159,7 +159,7 @@
 
       <div
         v-if="documentContent"
-        class="bg-slate-50 dark:bg-slate-800 p-4 rounded-md overflow-auto max-h-96 border border-slate-200 dark:border-slate-700"
+        class="bg-slate-50 dark:bg-slate-800 p-4 rounded-card overflow-auto max-h-96 border border-slate-200 dark:border-slate-700"
       >
         <div class="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
           {{ documentContent }}

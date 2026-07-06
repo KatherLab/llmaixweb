@@ -10,7 +10,7 @@
     <!-- Step 1: Email input -->
     <div
       v-if="step === 1"
-      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-modal p-8 shadow-sm"
     >
       <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
         Forgot your password?
@@ -54,7 +54,7 @@
     <!-- Step 2: Success message -->
     <div
       v-else
-      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm text-center"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-modal p-8 shadow-sm text-center"
     >
       <div
         class="mx-auto mb-4 w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center"
@@ -65,7 +65,7 @@
       <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">
         If an account with that email exists, we've sent a password reset link to it.
       </p>
-      <div v-if="emailWarning" :class="['mb-4 p-3 text-sm rounded-md', getBannerClass('yellow')]">
+      <div v-if="emailWarning" :class="['mb-4 p-3 text-sm rounded-card', getBannerClass('yellow')]">
         {{ emailWarning }}
       </div>
       <router-link

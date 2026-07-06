@@ -11,7 +11,7 @@
       <button
         type="button"
         :class="[
-          'w-full text-left px-3 py-1.5 rounded-md text-sm transition-colors flex items-center justify-between group',
+          'w-full text-left px-3 py-1.5 rounded-card text-sm transition-colors flex items-center justify-between group',
           isActive
             ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
             : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300',

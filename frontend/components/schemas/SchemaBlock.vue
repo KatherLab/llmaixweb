@@ -3,7 +3,7 @@
     <!-- Main Block Container -->
     <div
       :class="[
-        'rounded-lg shadow-sm border-2 overflow-hidden transition-all',
+        'rounded-card shadow-sm border-2 overflow-hidden transition-all',
         blockColorClass,
         'hover:shadow-md',
       ]"
@@ -13,7 +13,7 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-3">
             <!-- Type Icon -->
-            <div class="bg-white/20 rounded-lg p-2">
+            <div class="bg-white/20 rounded-card p-2">
               <component :is="typeIcon" class="h-5 w-5 text-white" />
             </div>
 
@@ -36,7 +36,7 @@
             <!-- Edit Button (always show for current block) -->
             <button
               type="button"
-              class="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+              class="p-2 bg-white/20 hover:bg-white/30 rounded-card transition-colors"
               title="Edit Settings"
               @click="$emit('edit-property', { key: getCurrentKey(), schema: schema })"
             >
@@ -47,7 +47,7 @@
             <button
               v-if="schema.type === 'object'"
               type="button"
-              class="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+              class="p-2 bg-white/20 hover:bg-white/30 rounded-card transition-colors"
               title="Add Property"
               @click="$emit('add-property')"
             >
@@ -57,7 +57,7 @@
             <!-- Toggle Details Button -->
             <button
               type="button"
-              class="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+              class="p-2 bg-white/20 hover:bg-white/30 rounded-card transition-colors"
               :title="showDetails ? 'Hide Details' : 'Show Details'"
               @click="showDetails = !showDetails"
             >
@@ -128,7 +128,7 @@
             <!-- Enum values -->
             <div
               v-if="Array.isArray(schema.enum) && (schema.enum as unknown[]).length > 0"
-              class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3"
+              class="bg-blue-50 dark:bg-blue-900/20 rounded-card p-3"
             >
               <label
                 class="block text-xs font-medium text-blue-900 dark:text-blue-300 mb-2 flex items-center"
@@ -140,7 +140,7 @@
                 <div
                   v-for="(value, index) in schema.enum"
                   :key="index"
-                  class="flex items-center space-x-2 bg-white dark:bg-slate-800 rounded-md px-3 py-2 shadow-sm border border-blue-200 dark:border-blue-800"
+                  class="flex items-center space-x-2 bg-white dark:bg-slate-800 rounded-card px-3 py-2 shadow-sm border border-blue-200 dark:border-blue-800"
                 >
                   <span class="text-blue-600 dark:text-blue-400 font-medium text-lg">{{
                     index + 1
@@ -196,7 +196,7 @@
 
             <!-- Property Block -->
             <div
-              class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border dark:border-slate-700 dark:hover:border-blue-600 p-3 hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer group"
+              class="bg-white dark:bg-slate-800 rounded-card shadow-sm border dark:border-slate-700 dark:hover:border-blue-600 p-3 hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer group"
             >
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center space-x-2">
@@ -279,7 +279,7 @@
           <div class="absolute left-0 top-6 w-6 h-0.5 bg-slate-300 dark:bg-slate-600"></div>
 
           <div
-            class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border dark:border-slate-700 p-3"
+            class="bg-white dark:bg-slate-800 rounded-card shadow-sm border dark:border-slate-700 p-3"
           >
             <div class="flex items-center justify-between mb-2">
               <span class="text-sm font-medium text-slate-700 dark:text-slate-300"

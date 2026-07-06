@@ -48,17 +48,14 @@ const routes: RouteRecordRaw[] = [
         props: true,
         meta: { requiresAuth: true },
       },
-      // Admin routes
-      {
-        path: 'admin/user-management',
-        component: AdminUserManagement,
-        meta: { requiresAuth: true, adminOnly: true },
-      },
+      // Admin routes — all nested under /admin so they share the AdminDashboard
+      // tab layout (single entry point: the gear "Admin" link in the navbar).
       {
         path: 'admin',
         component: AdminDashboard,
         meta: { requiresAuth: true, adminOnly: true },
         children: [
+          { path: 'user-management', component: AdminUserManagement },
           { path: 'settings', component: AdminSettings },
           { path: 'sso', component: AdminSSO },
           { path: 'celery', component: AdminCelery },

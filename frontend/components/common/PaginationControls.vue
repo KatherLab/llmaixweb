@@ -1,19 +1,19 @@
 <template>
   <div
     v-if="totalPages > 1 || showPageSizeSelector"
-    class="bg-white dark:bg-slate-900 px-4 py-3 flex items-center justify-between border-t border-slate-200 dark:border-slate-700 sm:px-6"
+    class="bg-surface px-4 py-3 flex items-center justify-between border-t border-default sm:px-6"
   >
     <div class="flex-1 flex justify-between sm:hidden">
       <button
         :disabled="modelValue === 1"
-        class="relative inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-md text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+        class="relative inline-flex items-center px-4 py-2 border border-strong text-sm font-medium rounded-card text-content bg-surface hover:bg-surface-muted disabled:opacity-50 disabled:cursor-not-allowed"
         @click="$emit('update:modelValue', modelValue - 1)"
       >
         Previous
       </button>
       <button
         :disabled="modelValue === totalPages"
-        class="ml-3 relative inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-md text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+        class="ml-3 relative inline-flex items-center px-4 py-2 border border-strong text-sm font-medium rounded-card text-content bg-surface hover:bg-surface-muted disabled:opacity-50 disabled:cursor-not-allowed"
         @click="$emit('update:modelValue', modelValue + 1)"
       >
         Next
@@ -21,7 +21,7 @@
     </div>
     <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
       <div>
-        <p class="text-sm text-slate-700 dark:text-slate-300">
+        <p class="text-sm text-content">
           Showing
           <span class="font-medium">{{ (modelValue - 1) * (pageSize ?? 1) + 1 }}</span>
           to
@@ -34,14 +34,11 @@
         </p>
       </div>
       <div class="flex items-center gap-4">
-        <label
-          v-if="showPageSizeSelector"
-          class="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2"
-        >
+        <label v-if="showPageSizeSelector" class="text-sm text-content flex items-center gap-2">
           Rows per page:
           <select
             :value="pageSize"
-            class="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded px-2 py-1 text-sm text-slate-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+            class="border border-strong bg-surface rounded px-2 py-1 text-sm text-content focus:ring-ring focus:border-ring"
             @change="$emit('update:pageSize', Number(($event.target as HTMLSelectElement).value))"
           >
             <option v-for="size in pageSizeOptions" :key="size" :value="size">{{ size }}</option>
@@ -49,12 +46,12 @@
         </label>
         <nav
           v-if="totalPages > 1"
-          class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+          class="relative z-0 inline-flex rounded-card shadow-sm -space-x-px"
           aria-label="Pagination"
         >
           <button
             :disabled="modelValue === 1"
-            class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="relative inline-flex items-center px-2 py-2 rounded-l-card border border-strong bg-surface text-sm font-medium text-content-muted hover:bg-surface-muted disabled:opacity-50 disabled:cursor-not-allowed"
             @click="$emit('update:modelValue', 1)"
           >
             <span class="sr-only">First</span>
@@ -69,8 +66,8 @@
             :class="[
               'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
               page === modelValue
-                ? 'z-10 bg-blue-50 dark:bg-blue-900 border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800',
+                ? 'z-10 bg-primary-soft border-primary text-primary'
+                : 'bg-surface border-strong text-content-muted hover:bg-surface-muted',
               page === '...' ? 'cursor-default disabled:opacity-100' : '',
             ]"
             @click="page !== '...' && $emit('update:modelValue', page)"
@@ -79,7 +76,7 @@
           </button>
           <button
             :disabled="modelValue === totalPages"
-            class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="relative inline-flex items-center px-2 py-2 rounded-r-card border border-strong bg-surface text-sm font-medium text-content-muted hover:bg-surface-muted disabled:opacity-50 disabled:cursor-not-allowed"
             @click="$emit('update:modelValue', totalPages)"
           >
             <span class="sr-only">Last</span>

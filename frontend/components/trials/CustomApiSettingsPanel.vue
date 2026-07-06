@@ -1,6 +1,6 @@
 <template>
   <div
-    class="mt-2 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-lg p-4 grid gap-6"
+    class="mt-2 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-card p-4 grid gap-6"
   >
     <FormField
       v-model="apiKey"

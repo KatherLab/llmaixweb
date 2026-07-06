@@ -21,10 +21,10 @@
           tabindex="-1"
           :class="[
             placement === 'right'
-              ? 'relative h-full w-full flex flex-col bg-white dark:bg-slate-900 shadow-xl border-l border-slate-200 dark:border-slate-700 overflow-hidden'
+              ? 'relative h-full w-full flex flex-col bg-surface shadow-xl border-l border-default overflow-hidden'
               : placement === 'fullscreen'
-                ? 'relative bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-full h-full flex flex-col overflow-hidden'
-                : 'relative bg-white dark:bg-slate-900 rounded-modal shadow-2xl w-full flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 overflow-hidden',
+                ? 'relative bg-surface rounded-modal shadow-2xl w-full h-full flex flex-col overflow-hidden'
+                : 'relative bg-surface rounded-modal shadow-2xl w-full flex flex-col max-h-[90vh] border border-default overflow-hidden',
             sizeClass,
             panelClass,
           ]"
@@ -33,18 +33,18 @@
           <!-- Header -->
           <div
             v-if="$slots.header || title || closeable"
-            class="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-200 dark:border-slate-700"
+            class="flex items-center justify-between gap-4 px-6 py-4 border-b border-default"
             :class="headerClass"
           >
             <slot name="header">
-              <h3 :id="titleId" class="text-lg font-semibold text-slate-900 dark:text-white">
+              <h3 :id="titleId" class="text-lg font-semibold text-content">
                 {{ title }}
               </h3>
             </slot>
             <button
               v-if="closeable"
               type="button"
-              class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              class="text-content-subtle hover:text-content transition-colors"
               aria-label="Close"
               @click="emit('close')"
             >
@@ -60,7 +60,7 @@
           <!-- Footer -->
           <div
             v-if="$slots.footer"
-            class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3"
+            class="px-6 py-4 border-t border-default flex justify-end gap-3"
             :class="footerClass"
           >
             <slot name="footer" />
@@ -146,17 +146,51 @@ function onBackdropClick() {
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && props.open && props.closeOnEsc) {
     emit('close')
+    return
+  }
+  // Focus trap: keep Tab (and Shift+Tab) cycling within the dialog while open.
+  if (e.key === 'Tab' && props.open && panelRef.value) {
+    const focusable = panelRef.value.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+    )
+    if (focusable.length === 0) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    const active = document.activeElement as HTMLElement | null
+    if (e.shiftKey) {
+      if (active === first || !panelRef.value.contains(active)) {
+        e.preventDefault()
+        last.focus()
+      }
+    } else {
+      if (active === last || !panelRef.value.contains(active)) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
   }
 }
+
+// Remember the element that had focus before the dialog opened so it can be
+// restored on close — keyboard users land back on the trigger (e.g. the button
+// that opened the modal) instead of the top of the page.
+let previouslyFocused: HTMLElement | null = null
 
 watch(
   () => props.open,
   (isOpen) => {
     if (isOpen) {
+      previouslyFocused = document.activeElement as HTMLElement | null
       nextTick(() => {
-        // Focus the panel for keyboard users; safe no-op if not focusable.
-        panelRef.value?.focus?.()
+        // Focus the panel (or first focusable element) for keyboard users.
+        const focusable = panelRef.value?.querySelector<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+        )
+        ;(focusable ?? panelRef.value)?.focus?.()
       })
+    } else {
+      previouslyFocused?.focus?.()
+      previouslyFocused = null
     }
   },
 )

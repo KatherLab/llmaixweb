@@ -18,7 +18,7 @@
           </div>
         </div>
         <button
-          class="p-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition"
+          class="p-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-modal transition"
           title="Download"
           @click="downloadFile"
         >
@@ -60,17 +60,17 @@
       <img
         :src="previewUrl"
         :alt="file?.file_name || ''"
-        class="max-w-full max-h-[70vh] object-contain rounded-xl border"
+        class="max-w-full max-h-[70vh] object-contain rounded-modal border"
       />
     </div>
 
     <!-- CSV/XLSX Table Preview -->
     <div v-else-if="tabularData && headerLabels.length" class="h-full overflow-auto p-6">
       <div
-        class="bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-100 dark:border-slate-700 overflow-x-auto"
+        class="bg-white dark:bg-slate-900 rounded-modal shadow border border-slate-100 dark:border-slate-700 overflow-x-auto"
       >
         <table
-          class="min-w-full divide-y divide-slate-100 dark:divide-slate-700 rounded-xl text-sm table-auto"
+          class="min-w-full divide-y divide-slate-100 dark:divide-slate-700 rounded-modal text-sm table-auto"
         >
           <thead class="bg-slate-50 dark:bg-slate-800 sticky top-0 z-10">
             <tr>
@@ -152,7 +152,7 @@
       class="h-full overflow-auto p-8"
     >
       <pre
-        class="text-sm font-mono whitespace-pre-wrap bg-white dark:bg-slate-900 rounded-lg shadow p-6 border border-slate-100 dark:border-slate-700"
+        class="text-sm font-mono whitespace-pre-wrap bg-white dark:bg-slate-900 rounded-card shadow p-6 border border-slate-100 dark:border-slate-700"
         >{{ previewContent }}</pre>
     </div>
 

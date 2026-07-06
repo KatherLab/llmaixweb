@@ -1,9 +1,10 @@
 <template>
-  <div class="max-w-4xl mx-auto py-10 px-4">
-    <h1 class="text-3xl font-bold mb-7 flex items-center gap-3 text-content">
-      <CircleDot class="w-7 h-7 text-blue-600 dark:text-blue-400" aria-hidden="true" />
-      Admin Dashboard
-    </h1>
+  <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6">
+    <PageHeader
+      title="Admin"
+      subtitle="Manage users, system settings, SSO providers, and Celery queues."
+      class="mb-6"
+    />
     <BaseTabGroup :model-value="route.path" :tabs="tabs" class="mb-6" />
     <router-view />
     <!-- Shows the active tab content -->
@@ -13,12 +14,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { CircleDot } from '@lucide/vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 const route = useRoute()
 
 const tabs = computed(() => [
+  { label: 'User Management', value: '/admin/user-management', to: '/admin/user-management' },
   { label: 'Settings', value: '/admin/settings', to: '/admin/settings' },
   { label: 'SSO', value: '/admin/sso', to: '/admin/sso' },
   { label: 'Celery & Queues', value: '/admin/celery', to: '/admin/celery' },

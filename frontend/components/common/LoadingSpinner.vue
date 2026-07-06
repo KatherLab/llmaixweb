@@ -64,11 +64,11 @@ const colorClass = computed(() => {
     case 'white':
       return 'border-white'
     case 'gray':
-      return 'border-slate-400'
+      return 'border-content-subtle'
     case 'current':
       return 'border-current'
     default:
-      return 'border-blue-600'
+      return 'border-primary'
   }
 })
 </script>

@@ -49,7 +49,7 @@
 
         <!-- Option to skip existing -->
         <label
-          class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:hover:bg-blue-900/30 transition-colors"
+          class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-card cursor-pointer hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:hover:bg-blue-900/30 transition-colors"
         >
           <input v-model="skipExisting" type="checkbox" :class="[checkboxClass, 'mt-0.5']" />
           <div class="flex-1">
@@ -74,7 +74,7 @@
 
       <!-- Files with duplicates list -->
       <div
-        class="max-h-80 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg"
+        class="max-h-80 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-card"
       >
         <!-- Show same-config duplicates first (if any) -->
         <template v-if="hasSameConfigDuplicates">
@@ -175,7 +175,7 @@
 
       <!-- Summary -->
       <div
-        class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 flex items-center justify-between text-sm"
+        class="bg-slate-50 dark:bg-slate-800/50 rounded-card p-3 flex items-center justify-between text-sm"
       >
         <span class="text-slate-600 dark:text-slate-300">
           <span class="font-semibold text-slate-900 dark:text-white">{{

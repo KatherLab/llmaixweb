@@ -5,10 +5,9 @@
     role="alertdialog"
     :title="title"
     body-class="p-6"
-    footer-class="dark:bg-slate-800"
     @close="emit('cancel')"
   >
-    <p class="text-slate-600 dark:text-slate-400 mb-6">{{ message }}</p>
+    <p class="text-content-muted mb-6">{{ message }}</p>
     <slot />
     <template #footer>
       <BaseButton variant="secondary" :disabled="loading" @click="emit('cancel')">

@@ -2,17 +2,13 @@
   <div class="w-full max-w-md mx-auto py-10">
     <div class="mb-8 text-center">
       <div class="flex justify-center mb-2">
-        <CircleUser class="w-14 h-14 text-blue-700 dark:text-blue-400" aria-hidden="true" />
+        <CircleUser class="w-12 h-12 text-content-subtle" aria-hidden="true" />
       </div>
-      <h1 class="text-3xl font-extrabold text-blue-700 dark:text-blue-400 mb-1">
-        Welcome to LLMAIx-v2
-      </h1>
-      <p class="text-base text-slate-500 dark:text-slate-400">
-        First-time setup: Create your admin account
-      </p>
+      <h1 class="text-4xl font-extrabold text-content tracking-tight mb-1">Welcome to LLMAIx-v2</h1>
+      <p class="text-base text-content-muted">First-time setup: Create your admin account</p>
     </div>
     <form
-      class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl p-8 shadow-lg flex flex-col gap-5"
+      class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-modal p-8 shadow-lg flex flex-col gap-5"
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >

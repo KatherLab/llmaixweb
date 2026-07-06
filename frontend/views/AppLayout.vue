@@ -1,9 +1,7 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
+  <div class="min-h-screen flex flex-col bg-surface-muted">
     <!-- Navigation -->
-    <nav
-      class="w-full bg-white dark:bg-slate-900 shadow-sm border-b border-slate-100 dark:border-slate-800"
-    >
+    <nav class="w-full bg-surface shadow-sm border-b border-default sticky top-0 z-40">
       <div
         v-if="isBackendDown"
         class="bg-red-600 text-white text-center py-1.5 text-xs font-medium animate-pulse"
@@ -13,19 +11,29 @@
       <div class="w-full px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-14 items-center">
           <div class="flex items-center">
-            <div class="flex-shrink-0 flex items-center mr-8">
+            <!-- Mobile menu toggle -->
+            <button
+              v-if="authReady && isAuthenticated"
+              type="button"
+              aria-label="Open menu"
+              aria-expanded="false"
+              class="md:hidden mr-2 p-2 rounded-card text-content-muted hover:bg-surface-sunken transition-colors"
+              @click="mobileMenuOpen = !mobileMenuOpen"
+            >
+              <Menu v-if="!mobileMenuOpen" class="w-5 h-5" />
+              <X v-else class="w-5 h-5" />
+            </button>
+            <div class="flex-shrink-0 flex items-center md:mr-8">
               <router-link to="/">
-                <span class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white"
-                  >LLMAIx-v2</span
-                >
+                <span class="text-xl font-extrabold tracking-tight text-content">LLMAIx-v2</span>
               </router-link>
             </div>
-            <div v-if="authReady && isAuthenticated" class="flex space-x-1">
+            <div v-if="authReady && isAuthenticated" class="hidden md:flex space-x-1">
               <router-link
                 :class="[
                   $route.path.startsWith('/projects')
-                    ? 'text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400'
-                    : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-white',
+                    ? 'text-primary border-primary'
+                    : 'text-content-muted border-transparent hover:text-content hover:border-strong',
                 ]"
                 class="inline-flex items-center px-4 h-14 text-sm font-medium border-b-2 transition-all"
                 to="/projects"
@@ -36,16 +44,16 @@
               <router-link
                 v-if="isAdmin"
                 :class="[
-                  $route.path.includes('/admin/user-management')
-                    ? 'text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400'
-                    : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-white',
+                  $route.path.startsWith('/admin')
+                    ? 'text-primary border-primary'
+                    : 'text-content-muted border-transparent hover:text-content hover:border-strong',
                 ]"
                 class="inline-flex items-center px-4 h-14 text-sm font-medium border-b-2 transition-all"
-                to="/admin/user-management"
+                to="/admin"
               >
-                User Management
+                Admin
                 <span
-                  class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+                  class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-primary-soft text-primary border border-primary/30"
                 >
                   Admin
                 </span>
@@ -54,36 +62,6 @@
           </div>
 
           <div class="flex items-center gap-1">
-            <!-- Admin Settings (visible to admins only) -->
-            <div v-if="isAdmin" class="relative">
-              <button
-                aria-label="Admin menu"
-                class="rounded-full p-2 hover:bg-blue-50 dark:hover:bg-slate-800 transition"
-                @click="showAdminMenu = !showAdminMenu"
-              >
-                <Settings class="w-5 h-5 text-blue-600 dark:text-blue-300" />
-              </button>
-              <transition name="fade-slide">
-                <div
-                  v-if="showAdminMenu"
-                  class="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800 rounded-xl shadow-xl z-50"
-                  @click.outside="showAdminMenu = false"
-                >
-                  <router-link
-                    to="/admin/settings"
-                    class="block px-5 py-3 text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950"
-                    >Settings</router-link
-                  >
-                  <router-link
-                    to="/admin/celery"
-                    class="block px-5 py-3 text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950"
-                    >Celery & Queues</router-link
-                  >
-                  <!-- Add more as needed -->
-                </div>
-              </transition>
-            </div>
-
             <!-- Activity Bell (visible to all authenticated users) -->
             <div v-if="isAuthenticated">
               <ActivityBell />
@@ -92,46 +70,43 @@
             <!-- Dark mode toggle -->
             <button
               :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-              class="mr-3 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors focus:outline-none"
+              class="mr-1 sm:mr-3 p-2 rounded-full hover:bg-surface-sunken transition-colors focus:outline-none"
               @click="toggleDarkMode"
             >
-              <Sun v-if="!isDark" class="w-5 h-5 text-slate-500" />
-              <Moon v-else class="w-5 h-5 text-slate-400" />
+              <Sun v-if="!isDark" class="w-5 h-5 text-content-muted" />
+              <Moon v-else class="w-5 h-5 text-content-muted" />
             </button>
             <div v-if="authReady && isAuthenticated" class="relative">
               <button
                 aria-label="Open user menu"
-                class="group flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 focus:ring-blue-500"
+                class="group flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-ring"
                 @click="toggleUserMenu"
               >
                 <div
-                  class="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center shadow-sm border border-blue-200 dark:border-blue-700 group-hover:scale-105 group-hover:shadow-lg group-hover:border-blue-400 dark:group-hover:border-blue-300 transition-all duration-150 relative"
+                  class="h-10 w-10 rounded-full bg-primary-soft flex items-center justify-center shadow-sm border border-primary/30 group-hover:scale-105 group-hover:shadow-lg transition-all duration-150 relative"
                 >
-                  <span
-                    class="font-semibold text-lg text-blue-800 dark:text-blue-200 select-none"
-                    >{{ userInitials }}</span
-                  >
+                  <span class="font-semibold text-lg text-primary select-none">{{
+                    userInitials
+                  }}</span>
                   <span v-if="isAdmin" class="absolute -bottom-1 -right-1" title="Admin">
                     <ShieldCheck class="w-4 h-4 text-amber-400 drop-shadow" />
                   </span>
                 </div>
                 <ChevronDown
                   :class="{ 'rotate-180': showUserMenu }"
-                  class="ml-2 w-4 h-4 text-blue-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-transform duration-200"
+                  class="hidden sm:block ml-2 w-4 h-4 text-content-subtle group-hover:text-primary transition-transform duration-200"
                 />
               </button>
               <transition name="fade-slide">
                 <div
                   v-if="showUserMenu"
-                  class="absolute right-0 mt-3 w-64 rounded-xl shadow-xl bg-white dark:bg-slate-900 ring-1 ring-blue-100 dark:ring-blue-900 z-50 animate-dropdown"
+                  class="absolute right-0 mt-3 w-64 rounded-modal shadow-xl bg-surface ring-1 ring-default z-50 animate-dropdown"
                   @click.outside="showUserMenu = false"
                 >
-                  <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-800">
+                  <div class="px-5 py-3 border-b border-default">
                     <div class="flex items-center gap-2">
                       <ShieldCheck v-if="isAdmin" class="w-5 h-5 text-amber-400" />
-                      <span class="font-semibold text-slate-900 dark:text-white">{{
-                        userName
-                      }}</span>
+                      <span class="font-semibold text-content">{{ userName }}</span>
                       <span
                         v-if="isAdmin"
                         class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700"
@@ -139,28 +114,28 @@
                         Admin
                       </span>
                     </div>
-                    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
+                    <div class="text-xs text-content-muted mt-1 truncate">
                       {{ userEmail }}
                     </div>
                   </div>
                   <router-link
-                    class="block px-5 py-3 text-base text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+                    class="block px-5 py-3 text-base text-content-muted hover:bg-primary-soft hover:text-primary font-medium transition-colors"
                     to="/account"
                     @click="showUserMenu = false"
                   >
-                    <Settings class="inline-block w-5 h-5 mr-2 text-blue-500" />
+                    <Settings class="inline-block w-5 h-5 mr-2 text-primary" />
                     Account settings
                   </router-link>
                   <a
-                    class="block px-5 py-3 text-base text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+                    class="block px-5 py-3 text-base text-content-muted hover:bg-primary-soft hover:text-primary font-medium transition-colors"
                     href="#"
                     @click.prevent="openChangePasswordModal"
                   >
-                    <Lock class="inline-block w-5 h-5 mr-2 text-blue-500" />
+                    <Lock class="inline-block w-5 h-5 mr-2 text-primary" />
                     Change Password
                   </a>
                   <a
-                    class="block px-5 py-3 text-base text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-700 dark:hover:text-blue-300 font-medium rounded-b-xl transition-colors"
+                    class="block px-5 py-3 text-base text-content-muted hover:bg-primary-soft hover:text-primary font-medium rounded-b-modal transition-colors"
                     href="#"
                     @click.prevent="logout"
                   >
@@ -171,7 +146,7 @@
             </div>
             <div v-else-if="authReady">
               <router-link
-                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg shadow-sm transition"
+                class="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-5 rounded-card shadow-sm transition"
                 to="/login"
               >
                 Login
@@ -180,6 +155,40 @@
           </div>
         </div>
       </div>
+
+      <!-- Mobile menu (slide-down) -->
+      <transition name="fade-slide">
+        <div
+          v-if="mobileMenuOpen && authReady && isAuthenticated"
+          class="md:hidden border-t border-default bg-surface"
+        >
+          <router-link
+            :class="[
+              $route.path.startsWith('/projects')
+                ? 'text-primary bg-primary-soft'
+                : 'text-content-muted hover:bg-surface-sunken',
+            ]"
+            class="block px-4 py-3 text-sm font-medium"
+            to="/projects"
+            @click="mobileMenuOpen = false"
+          >
+            Projects
+          </router-link>
+          <router-link
+            v-if="isAdmin"
+            :class="[
+              $route.path.startsWith('/admin')
+                ? 'text-primary bg-primary-soft'
+                : 'text-content-muted hover:bg-surface-sunken',
+            ]"
+            class="block px-4 py-3 text-sm font-medium"
+            to="/admin"
+            @click="mobileMenuOpen = false"
+          >
+            Admin
+          </router-link>
+        </div>
+      </transition>
     </nav>
     <div class="flex-1">
       <main class="w-full">
@@ -191,12 +200,12 @@
       </main>
     </div>
     <footer
-      class="w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-4 text-center text-sm text-slate-500 dark:text-slate-400"
+      class="w-full bg-surface border-t border-default py-4 text-center text-sm text-content-muted"
     >
       <div>
         &copy; {{ currentYear }} KatherLab. Licensed under
         <a
-          class="underline hover:text-blue-600 dark:hover:text-blue-300"
+          class="underline hover:text-primary"
           href="https://www.gnu.org/licenses/agpl-3.0.de.html"
           rel="noopener noreferrer"
           target="_blank"
@@ -267,7 +276,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Settings, Sun, Moon, ShieldCheck, ChevronDown, Lock } from '@lucide/vue'
+import { Settings, Sun, Moon, ShieldCheck, ChevronDown, Lock, Menu, X } from '@lucide/vue'
 import { frontendVersion, frontendGitCommit } from '@/version'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -293,7 +302,7 @@ const currentYear: number = new Date().getFullYear()
 const authReady = ref<boolean>(false)
 const toast = useToast()
 
-const showAdminMenu = ref<boolean>(false)
+const mobileMenuOpen = ref<boolean>(false)
 
 // Initialize dark mode state from localStorage or system preference
 const getInitialDarkMode = (): boolean => {
@@ -381,11 +390,12 @@ function toggleUserMenu(): void {
   showUserMenu.value = !showUserMenu.value
 }
 
-// Hide user menu on route change
+// Hide user menu + mobile menu on route change
 watch(
   () => router.currentRoute.value.fullPath,
   () => {
     showUserMenu.value = false
+    mobileMenuOpen.value = false
   },
 )
 

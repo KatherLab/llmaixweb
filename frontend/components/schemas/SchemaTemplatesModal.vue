@@ -13,7 +13,7 @@
       <button
         v-for="template in templates"
         :key="template.name"
-        class="p-4 border rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors"
+        class="p-4 border rounded-card hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors"
         @click="emit('apply', template)"
       >
         <h4 class="font-medium text-slate-900 dark:text-white">{{ template.name }}</h4>

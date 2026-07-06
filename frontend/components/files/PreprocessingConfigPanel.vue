@@ -16,7 +16,7 @@
           Files to Process ({{ selectedFiles.length }})
         </h4>
         <div
-          class="space-y-2 max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg p-3"
+          class="space-y-2 max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-card p-3"
         >
           <div
             v-for="fileId in selectedFiles"
@@ -50,7 +50,7 @@
           <button
             v-if="doclingOcrEnabled"
             :class="[
-              'w-full rounded-lg border-2 p-4 text-left transition-all',
+              'w-full rounded-card border-2 p-4 text-left transition-all',
               selectedEngine === 'docling_tesseract'
                 ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
@@ -74,7 +74,7 @@
           <button
             v-if="mistralOcrEnabled"
             :class="[
-              'w-full rounded-lg border-2 p-4 text-left transition-all',
+              'w-full rounded-card border-2 p-4 text-left transition-all',
               selectedEngine === 'mistral_ocr'
                 ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
@@ -98,7 +98,7 @@
           <button
             v-if="visionOcrEnabled"
             :class="[
-              'w-full rounded-lg border-2 p-4 text-left transition-all',
+              'w-full rounded-card border-2 p-4 text-left transition-all',
               selectedEngine === 'llm_vision'
                 ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
@@ -119,27 +119,21 @@
           </button>
         </div>
         <!-- Warning: No OCR engines enabled -->
-        <div
-          v-if="noOcrEnabled"
-          class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-900/20 dark:border-amber-800"
-        >
-          <p
-            class="text-sm font-medium text-amber-900 dark:text-amber-300 inline-flex items-center gap-1.5"
-          >
-            <AlertTriangle class="w-4 h-4" />
+        <Callout v-if="noOcrEnabled" variant="warning" class="mt-3">
+          <p class="text-sm font-medium">
             All OCR engines are disabled. Only PDFs with embedded text can be processed.
           </p>
-          <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">
+          <p class="text-xs mt-1">
             Image files (PNG/JPEG) require OCR. Enable Local OCR, Mistral OCR, or Vision LLM in
             Admin Settings to process images. PDFs will use pypdf for embedded text extraction.
           </p>
-        </div>
+        </Callout>
       </div>
 
       <!-- Force OCR (always visible) -->
       <div class="border-t border-slate-200 dark:border-slate-700 pt-4">
         <label
-          class="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
+          class="flex items-start space-x-3 p-3 bg-amber-50 rounded-card border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
         >
           <input v-model="forceOcr" type="checkbox" class="mt-0.5 text-amber-600 rounded" />
           <div>
@@ -250,28 +244,21 @@
       class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex-shrink-0"
     >
       <!-- Warning for unconfigured CSV/XLSX files -->
-      <div
+      <Callout
         v-if="unconfiguredCsvXlsxFiles.length > 0"
-        class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-900/20 dark:border-amber-800"
+        variant="warning"
+        class="mb-4"
+        :title="`${unconfiguredCsvXlsxFiles.length} file(s) need import configuration`"
       >
-        <div class="flex items-start gap-2">
-          <AlertTriangle class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-          <div class="flex-1">
-            <p class="text-sm font-medium text-amber-900 dark:text-amber-300">
-              {{ unconfiguredCsvXlsxFiles.length }} file(s) need import configuration
-            </p>
-            <ul class="mt-1 text-xs text-amber-700 dark:text-amber-400 list-disc list-inside">
-              <li v-for="file in unconfiguredCsvXlsxFiles" :key="file.id" class="truncate">
-                {{ file.file_name }}
-              </li>
-            </ul>
-            <p class="mt-2 text-xs text-amber-700 dark:text-amber-400">
-              Click "Configure" next to each file above to set up import settings before
-              preprocessing.
-            </p>
-          </div>
-        </div>
-      </div>
+        <ul class="mt-1 text-xs list-disc list-inside">
+          <li v-for="file in unconfiguredCsvXlsxFiles" :key="file.id" class="truncate">
+            {{ file.file_name }}
+          </li>
+        </ul>
+        <p class="mt-2 text-xs">
+          Click "Configure" next to each file above to set up import settings before preprocessing.
+        </p>
+      </Callout>
 
       <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
         This will create a new preprocessing run. Existing runs and documents are preserved.
@@ -293,9 +280,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { AlertTriangle, ChevronRight, CircleCheckBig, Eye, X, Zap } from '@lucide/vue'
+import { ChevronRight, CircleCheckBig, Eye, X, Zap } from '@lucide/vue'
 import { getEngineLabel, getEngineSubtitle } from '@/utils/ocrLabels'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FormField from '@/components/common/FormField.vue'
 import { textareaClass, selectClass, labelClass } from '@/utils/formStyles'

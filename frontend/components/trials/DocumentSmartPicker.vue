@@ -46,7 +46,7 @@
       >
     </div>
 
-    <div v-if="selectedIds.length > 0" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+    <div v-if="selectedIds.length > 0" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-card">
       <div class="flex items-center justify-between">
         <span class="text-sm font-medium text-blue-900 dark:text-blue-200">
           {{ selectedIds.length }} document{{ selectedIds.length > 1 ? 's' : '' }} selected

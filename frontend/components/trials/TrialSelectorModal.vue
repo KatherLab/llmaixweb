@@ -86,7 +86,7 @@
           <div
             v-for="trial in availableTrials"
             :key="trial.id"
-            class="border rounded-lg p-4 transition-colors"
+            class="border rounded-card p-4 transition-colors"
             :class="{
               'border-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30':
                 trial.hasMappings && selectedTrial?.id === trial.id,
@@ -186,7 +186,7 @@
             :total-items="trials.total"
             :page-size="trials.limit"
             item-label="trials"
-            class="-mx-4 sm:-mx-0 rounded-none border-t border-slate-200 dark:border-slate-700 sm:rounded-md mt-2"
+            class="-mx-4 sm:-mx-0 rounded-none border-t border-slate-200 dark:border-slate-700 sm:rounded-card mt-2"
             @update:model-value="goToPage"
           />
         </div>

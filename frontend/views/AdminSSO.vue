@@ -1,26 +1,25 @@
 <template>
   <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <h2 class="text-xl font-bold text-slate-900 dark:text-white">Single Sign-On (OIDC)</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Configure OpenID Connect identity providers. Users can sign in with these providers in
-          addition to local passwords.
-        </p>
-      </div>
-      <BaseButton variant="primary" @click="openCreate">
-        <Plus class="w-4 h-4 inline-block mr-1" /> Add provider
-      </BaseButton>
-    </div>
-
-    <div
-      v-if="!ssoEnabled"
-      class="p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm"
+    <PageHeader
+      title="Single Sign-On (OIDC)"
+      subtitle="Configure OpenID Connect identity providers. Users can sign in with these providers in addition to local passwords."
+      class="mb-6"
     >
+      <template #icon>
+        <KeyRound class="w-5 h-5" aria-hidden="true" />
+      </template>
+      <template #actions>
+        <BaseButton variant="primary" @click="openCreate">
+          <Plus class="w-4 h-4 inline-block mr-1" /> Add provider
+        </BaseButton>
+      </template>
+    </PageHeader>
+
+    <Callout v-if="!ssoEnabled" variant="warning" class="text-sm">
       SSO is globally disabled. Enable it in
       <router-link to="/admin/settings" class="font-semibold underline">Admin Settings</router-link>
       (SSO Enabled) to activate configured providers.
-    </div>
+    </Callout>
 
     <div v-if="loading" class="flex justify-center py-12">
       <LoadingSpinner size="medium" />
@@ -39,7 +38,7 @@
       <li
         v-for="p in providers"
         :key="p.id"
-        class="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between"
+        class="p-4 rounded-modal border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between"
       >
         <div>
           <div class="flex items-center gap-2">
@@ -143,7 +142,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Plus } from '@lucide/vue'
+import { KeyRound, Plus } from '@lucide/vue'
 import { ssoApi } from '@/services/ssoApi'
 import { authApi } from '@/services/authApi'
 import { useToast } from '@/composables/useToast'
@@ -151,8 +150,10 @@ import { extractErrorMessage } from '@/utils/errors'
 import { inputClass, labelClass } from '@/utils/formStyles'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import Callout from '@/components/common/Callout.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import type { IdentityProviderResponse } from '@/types'
 

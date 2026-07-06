@@ -18,7 +18,7 @@
     </BaseButton>
     <div
       v-if="show"
-      class="bg-blue-50/60 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg mt-3 p-5"
+      class="bg-blue-50/60 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-card mt-3 p-5"
     >
       <div v-if="reasoningContent" class="mb-4">
         <h5 class="font-semibold text-blue-800 dark:text-blue-300 mb-2">Reasoning</h5>

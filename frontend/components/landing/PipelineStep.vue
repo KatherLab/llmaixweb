@@ -6,7 +6,7 @@
   >
     <div class="relative z-10 flex flex-col items-center text-center">
       <div
-        class="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl shadow-lg transition-all duration-300"
+        class="mb-4 flex h-20 w-20 items-center justify-center rounded-modal shadow-lg transition-all duration-300"
         :class="[step.gradient, step.shadow, active ? 'scale-110 shadow-xl' : '']"
       >
         <component :is="step.icon" class="h-10 w-10 text-white" />

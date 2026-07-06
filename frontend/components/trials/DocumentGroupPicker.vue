@@ -14,7 +14,7 @@
         :class="{
           'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30': selectedGroupId === group.id,
         }"
-        class="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+        class="border border-slate-200 dark:border-slate-700 rounded-card p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
         @click="emit('toggle-group', group)"
       >
         <div class="flex items-center justify-between">

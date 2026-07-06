@@ -31,7 +31,7 @@
       <div
         v-if="showDropdown"
         ref="dropdown"
-        class="absolute right-0 mt-2 w-[420px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 max-h-[500px] flex flex-col"
+        class="absolute right-0 mt-2 w-[420px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-modal shadow-2xl z-50 max-h-[500px] flex flex-col"
         @click.outside="closeDropdown"
       >
         <!-- Header -->

@@ -24,7 +24,7 @@
           v-for="task in historyFile.preprocessing_tasks"
           :key="task.id"
           :class="[
-            'bg-white dark:bg-slate-800 dark:border-slate-700 rounded-lg border transition-all overflow-hidden',
+            'bg-white dark:bg-slate-800 dark:border-slate-700 rounded-card border transition-all overflow-hidden',
             expandedTasks.has(task.id)
               ? 'border-blue-300 dark:border-blue-500 shadow-md'
               : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500',
@@ -120,7 +120,10 @@
                 <div
                   v-for="fileTask in task.file_tasks"
                   :key="fileTask.id"
-                  :class="['rounded-md border p-2 text-sm', getStatusBannerClass(fileTask.status)]"
+                  :class="[
+                    'rounded-card border p-2 text-sm',
+                    getStatusBannerClass(fileTask.status),
+                  ]"
                 >
                   <!-- File task header -->
                   <div class="flex items-start justify-between gap-2">
@@ -263,12 +266,13 @@
             </div>
 
             <!-- Task-level error message -->
-            <div
+            <Callout
               v-if="task.message && isTaskStatus(task, 'failed')"
-              class="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-300"
+              variant="danger"
+              class="text-xs"
             >
               {{ task.message }}
-            </div>
+            </Callout>
 
             <!-- Actions -->
             <div
@@ -366,6 +370,7 @@ import { formatDuration, formatRelativeTime as sharedFormatRelativeTime } from '
 import { getStatusDotClass, getStatusBadgeClass, getStatusBannerClass } from '@/utils/statusStyles'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import Callout from '@/components/common/Callout.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import type { FilePreprocessingTask, PreprocessingTask } from '@/types'
 import type { FileWithTasks } from '@/composables/usePreprocessingUpdates'

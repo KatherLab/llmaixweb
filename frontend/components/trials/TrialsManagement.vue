@@ -1,15 +1,13 @@
 <template>
   <div class="p-6 space-y-8">
     <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-      <div>
-        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Trials</h1>
-        <p class="text-slate-500 dark:text-slate-400 mt-1">
-          Run an AI model over your documents to extract structured data, then compare results
-          across trials.
-        </p>
-      </div>
-      <div class="flex items-center gap-4">
+    <PageHeader
+      title="Trials"
+      subtitle="Run an AI model over your documents to extract structured data, then compare results across trials."
+      :sticky="false"
+      class="mb-6"
+    >
+      <template #actions>
         <Tooltip v-if="trialDisabled" :text="trialDisabledReason">
           <BaseButton
             variant="primary"
@@ -31,8 +29,8 @@
           @click="openCreateTrialModal"
           >Start New Trial</BaseButton
         >
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- Filter Panel -->
     <TrialFiltersPanel
@@ -52,7 +50,7 @@
 
     <!-- Error / Loading -->
     <ErrorBanner v-if="error" :message="error" />
-    <LoadingSpinner v-if="isLoading" />
+    <SkeletonTable v-if="isLoading" :columns="7" :rows="6" />
 
     <!-- Empty: no trials have ever been created -->
     <EmptyState
@@ -87,33 +85,9 @@
     <div v-else class="space-y-4">
       <!-- Batch Actions -->
       <div class="flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-          <span class="text-sm text-slate-500 dark:text-slate-400">
-            {{ totalTrials }} trial{{ totalTrials !== 1 ? 's' : '' }}
-          </span>
-
-          <div v-if="selectedTrials.length > 0" class="flex items-center space-x-2">
-            <span class="text-sm text-slate-700 dark:text-slate-300">
-              {{ selectedTrials.length }} selected
-            </span>
-            <BaseButton
-              variant="link"
-              tone="red"
-              class="text-sm font-medium"
-              @click="performBatchAction('delete')"
-            >
-              Delete
-            </BaseButton>
-            <BaseButton
-              variant="link"
-              tone="gray"
-              class="text-sm font-medium"
-              @click="selectedTrials = []"
-            >
-              Clear
-            </BaseButton>
-          </div>
-        </div>
+        <span class="text-sm text-slate-500 dark:text-slate-400">
+          {{ totalTrials }} trial{{ totalTrials !== 1 ? 's' : '' }}
+        </span>
       </div>
 
       <TrialsTable
@@ -136,6 +110,18 @@
         @view-schema="viewTrialSchema"
         @view-prompt="viewTrialPrompt"
       />
+
+      <!-- Floating Batch Toolbar -->
+      <BatchActionBar
+        :count="selectedTrials.length"
+        count-label="trial"
+        @clear="selectedTrials = []"
+      >
+        <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
+          <Trash2 class="w-4 h-4 mr-1.5" />
+          Delete
+        </BaseButton>
+      </BatchActionBar>
     </div>
 
     <!-- Modals -->
@@ -211,7 +197,7 @@
 import { ref, computed, onMounted, onUnmounted, type PropType } from 'vue'
 import { debounce } from 'perfect-debounce'
 import { useToast } from '@/composables/useToast'
-import { ClipboardList, SearchX } from '@lucide/vue'
+import { ClipboardList, SearchX, Trash2 } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { documentsApi } from '@/services/documentsApi'
 import { schemasApi } from '@/services/schemasApi'
@@ -228,12 +214,14 @@ import TrialResults from '@/components/trials/TrialResults.vue'
 import SchemaViewModal from '@/components/schemas/SchemaViewModal.vue'
 import PromptViewModal from '@/components/schemas/PromptViewModal.vue'
 import DownloadModal from '@/components/trials/DownloadModal.vue'
-import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import SkeletonTable from '@/components/common/SkeletonTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import Tooltip from '@/components/common/Tooltip.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BatchActionBar from '@/components/common/BatchActionBar.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { extractErrorMessage } from '@/utils/errors'
 import type {
   DocumentListItem,

@@ -13,9 +13,7 @@
       </BaseButton>
     </div>
 
-    <div v-if="isLoading" class="flex justify-center py-12">
-      <LoadingSpinner size="medium" />
-    </div>
+    <SkeletonTable v-if="isLoading" :columns="2" :rows="4" />
 
     <EmptyState
       v-else-if="schemas.length === 0"
@@ -105,7 +103,7 @@ import { ref, computed } from 'vue'
 import { formatDate } from '@/utils/formatters'
 import { summarizeSchema } from '@/utils/schemaFieldList'
 import { Eye, Pencil, Plus, Trash2 } from '@lucide/vue'
-import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import SkeletonTable from '@/components/common/SkeletonTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'

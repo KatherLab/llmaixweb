@@ -2,7 +2,7 @@
 <template>
   <!-- Compact button matching Invite User style -->
   <button
-    class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg shadow transition"
+    class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-card shadow transition"
     @click="isModalOpen = true"
   >
     + Create Project

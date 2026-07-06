@@ -64,7 +64,7 @@ const inputClasses = computed(() => [
 // duplicating the rules — it's guidance, not enforcement.
 const strength = computed(() => {
   const pw = props.modelValue || ''
-  if (!pw) return { score: 0, label: '', color: 'bg-slate-200 dark:bg-slate-700' }
+  if (!pw) return { score: 0, label: '', color: 'bg-surface-sunken' }
   let classes = 0
   if (/[a-z]/.test(pw)) classes++
   if (/[A-Z]/.test(pw)) classes++
@@ -78,6 +78,7 @@ const strength = computed(() => {
   score = Math.min(4, score)
   const labels = ['Very weak', 'Weak', 'Okay', 'Good', 'Strong']
   const colors = ['bg-red-500', 'bg-red-400', 'bg-amber-400', 'bg-green-500', 'bg-green-600']
+  // (status colors are intentional semantic shades, kept as-is)
   return {
     score,
     label: pw.length < 8 ? 'Minimum 8 characters' : labels[score],
@@ -87,7 +88,7 @@ const strength = computed(() => {
 
 const segments = computed(() => {
   const s = strength.value.score
-  return [1, 2, 3, 4].map((i) => (i <= s ? strength.value.color : 'bg-slate-200 dark:bg-slate-700'))
+  return [1, 2, 3, 4].map((i) => (i <= s ? strength.value.color : 'bg-surface-sunken'))
 })
 </script>
 
@@ -110,7 +111,7 @@ const segments = computed(() => {
       />
       <button
         type="button"
-        class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+        class="absolute inset-y-0 right-0 flex items-center pr-3 text-content-subtle hover:text-content"
         :aria-label="show ? 'Hide password' : 'Show password'"
         :aria-pressed="show"
         tabindex="-1"
@@ -130,10 +131,10 @@ const segments = computed(() => {
           :class="seg"
         />
       </div>
-      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ strength.label }}</p>
+      <p class="mt-1 text-xs text-content-muted">{{ strength.label }}</p>
     </div>
 
-    <p v-if="hint" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ hint }}</p>
+    <p v-if="hint" class="mt-1 text-xs text-content-muted">{{ hint }}</p>
     <p v-if="error" class="mt-1 text-xs text-red-500 dark:text-red-400">{{ error }}</p>
   </div>
 </template>

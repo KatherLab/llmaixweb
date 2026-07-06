@@ -1,19 +1,13 @@
 <template>
   <div :class="[t.wrapper, 'h-full flex flex-col']">
     <!-- Cross-page "select all" banner -->
-    <div
-      v-if="showSelectAllBanner"
-      class="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-4 py-2"
-    >
+    <div v-if="showSelectAllBanner" class="bg-primary-soft border-b border-primary/30 px-4 py-2">
       <div class="flex items-center justify-between">
-        <p class="text-sm text-blue-800 dark:text-blue-300">
+        <p class="text-sm text-primary">
           <span class="font-medium">{{ totalSelected }}</span>
           {{ itemLabelSingular }}
           {{ totalSelected !== 1 ? 's' : '' }} selected
-          <span
-            v-if="(totalSelected ?? 0) < (pagination?.total ?? 0)"
-            class="text-blue-600 dark:text-blue-400"
-          >
+          <span v-if="(totalSelected ?? 0) < (pagination?.total ?? 0)" class="text-primary">
             out of {{ pagination?.total }} total
           </span>
         </p>
@@ -42,7 +36,7 @@
                 type="checkbox"
                 :checked="allSelected"
                 :indeterminate="someSelected"
-                class="h-4 w-4 text-blue-600 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500"
+                class="h-4 w-4 text-primary border-strong rounded focus:ring-ring"
                 @change="$emit('toggle-all')"
               />
             </th>
@@ -53,7 +47,7 @@
               :class="[
                 t.th,
                 column.sortable
-                  ? 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors select-none'
+                  ? 'cursor-pointer hover:bg-surface-muted transition-colors select-none'
                   : '',
                 column.align === 'right' ? 'text-right' : 'text-left',
               ]"
@@ -82,7 +76,7 @@
               :id="rowIdPrefix ? `${rowIdPrefix}${getRowKeyValue(row)}` : undefined"
               :class="[
                 t.tr,
-                isRowSelected(row) ? 'bg-blue-50 dark:bg-slate-800' : '',
+                isRowSelected(row) ? 'bg-primary-soft' : '',
                 isRowHighlighted(row)
                   ? 'ring-2 ring-emerald-500 ring-inset bg-emerald-50 dark:bg-emerald-900/20'
                   : '',
@@ -94,7 +88,7 @@
                 <input
                   type="checkbox"
                   :checked="isRowSelected(row)"
-                  class="h-4 w-4 text-blue-600 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500"
+                  class="h-4 w-4 text-primary border-strong rounded focus:ring-ring"
                   @click.stop="$emit('toggle-selection', getRowKeyValue(row))"
                 />
               </td>
@@ -116,7 +110,7 @@
               <td v-if="expandable" :class="t.td" class="whitespace-nowrap text-right">
                 <button
                   type="button"
-                  class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  class="p-1 rounded text-content-subtle hover:text-content hover:bg-surface-muted transition-colors"
                   :aria-label="isRowExpanded(row) ? 'Collapse' : 'Expand'"
                   @click.stop="$emit('expand', getRowKeyValue(row))"
                 >
@@ -131,9 +125,7 @@
             </tr>
             <tr v-if="expandable && isRowExpanded(row)">
               <td :colspan="totalColspan" class="p-0">
-                <div
-                  class="bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700"
-                >
+                <div class="bg-surface-muted border-t border-default">
                   <slot name="expanded" :row="row" />
                 </div>
               </td>

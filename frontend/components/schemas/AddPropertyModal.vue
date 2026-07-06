@@ -36,14 +36,14 @@
               :key="type.value"
               type="button"
               :class="[
-                'relative rounded-lg border p-4 flex flex-col items-center cursor-pointer focus:outline-none transition-all',
+                'relative rounded-card border p-4 flex flex-col items-center cursor-pointer focus:outline-none transition-all',
                 form.type === type.value
                   ? 'border-blue-500 ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400'
                   : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500',
               ]"
               @click="form.type = type.value"
             >
-              <div :class="['rounded-lg p-2 mb-2', type.color]">
+              <div :class="['rounded-card p-2 mb-2', type.color]">
                 <component :is="type.icon" class="h-6 w-6 text-white" />
               </div>
               <span class="text-sm font-medium">{{ type.label }}</span>

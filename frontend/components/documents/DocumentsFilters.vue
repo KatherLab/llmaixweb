@@ -1,14 +1,18 @@
 <template>
-  <div
-    class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-4"
+  <FilterBar
+    :search="search"
+    search-placeholder="Search documents..."
+    :total-count="totalCount"
+    item-label="documents"
+    :active-filters="activeFilters"
+    class="mb-4"
+    @update:search="(v) => (search = v)"
+    @clear-all="emit('clear-filters')"
+    @clear-filter="(key) => emit('clear-filter', key)"
   >
-    <!-- Top row: Search + Filters -->
-    <div class="flex items-center gap-3">
-      <!-- Search -->
-      <SearchInput v-model="search" placeholder="Search documents..." class="flex-1 max-w-sm" />
-
+    <template #filters>
       <!-- OCR Engine Filter -->
-      <select v-model="ocrEngine" :class="selectClass" @change="emit('fetch')">
+      <select v-model="ocrEngine" :class="inlineSelectClass" @change="emit('fetch')">
         <option value="">All OCR Engines</option>
         <option value="pypdf">Embedded Text (pypdf)</option>
         <option value="tesseract">Local OCR (Tesseract)</option>
@@ -17,7 +21,7 @@
       </select>
 
       <!-- Date Range Filter -->
-      <select v-model="dateRange" :class="selectClass" @change="emit('date-range-change')">
+      <select v-model="dateRange" :class="inlineSelectClass" @change="emit('date-range-change')">
         <option value="">All Time</option>
         <option value="today">Today</option>
         <option value="yesterday">Yesterday</option>
@@ -26,26 +30,24 @@
         <option value="custom">Custom Range...</option>
       </select>
 
-      <!-- Clear Filters -->
-      <button
-        v-if="hasActiveFilters"
-        class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-        title="Clear all filters"
-        @click="emit('clear-filters')"
-      >
-        <X class="w-4 h-4" />
-      </button>
+      <!-- Archived Toggle (inline with other filters) -->
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          v-model="includeArchived"
+          type="checkbox"
+          :class="checkboxClass"
+          @change="emit('fetch')"
+        />
+        <span class="text-sm text-slate-700 dark:text-slate-300">
+          Include archived versions
+          <span v-if="includeArchived" class="text-xs text-slate-500 dark:text-slate-400 ml-1">
+            (showing document history)
+          </span>
+        </span>
+      </label>
+    </template>
 
-      <div class="ml-auto text-sm text-slate-500 dark:text-slate-400">
-        {{ totalCount }} documents
-      </div>
-    </div>
-
-    <!-- Custom Date Range Picker (shown when "Custom Range" is selected) -->
-    <div
-      v-if="dateRange === 'custom'"
-      class="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
-    >
+    <template v-if="dateRange === 'custom'" #custom-range>
       <div class="flex items-center gap-2">
         <label :class="labelClass">From:</label>
         <input
@@ -70,72 +72,15 @@
       >
         Apply
       </button>
-    </div>
-
-    <!-- Active Filters Summary -->
-    <div
-      v-if="hasActiveFilters"
-      class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600"
-    >
-      <span class="text-xs text-slate-500 dark:text-slate-400">Active filters:</span>
-      <FilterChip
-        v-if="search"
-        :label="`Search: &quot;${search}&quot;`"
-        color="blue"
-        @remove="emit('clear-filter', 'search')"
-      />
-      <FilterChip
-        v-if="ocrEngine"
-        :label="`OCR: ${getOcrEngineLabel(ocrEngine)}`"
-        color="purple"
-        @remove="emit('clear-filter', 'ocrEngine')"
-      />
-      <FilterChip
-        v-if="dateRange && dateRange !== 'custom'"
-        :label="`Date: ${getDateRangeLabel(dateRange)}`"
-        color="orange"
-        @remove="emit('clear-filter', 'dateRange')"
-      />
-      <FilterChip
-        v-if="dateRange === 'custom' && customDateFrom"
-        :label="`Date: ${customDateFrom} → ${customDateTo || 'present'}`"
-        color="orange"
-        @remove="emit('clear-filter', 'customDate')"
-      />
-      <FilterChip
-        v-if="includeArchived"
-        label="Archived"
-        color="gray"
-        @remove="emit('clear-filter', 'includeArchived')"
-      />
-    </div>
-
-    <!-- Archived Toggle (inline with other filters) -->
-    <div class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input
-          v-model="includeArchived"
-          type="checkbox"
-          :class="checkboxClass"
-          @change="emit('fetch')"
-        />
-        <span class="text-sm text-slate-700 dark:text-slate-300">
-          Include archived versions
-          <span v-if="includeArchived" class="text-xs text-slate-500 dark:text-slate-400 ml-1">
-            (showing document history)
-          </span>
-        </span>
-      </label>
-    </div>
-  </div>
+    </template>
+  </FilterBar>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { X } from '@lucide/vue'
-import SearchInput from '@/components/common/SearchInput.vue'
-import FilterChip from '@/components/common/FilterChip.vue'
 import { getDateRangeLabel } from '@/utils/dateRange'
+import FilterBar from '@/components/common/FilterBar.vue'
+import type { ActiveFilter } from '@/components/common/FilterBar.vue'
 import { inputClass, selectClass, labelClass, checkboxClass } from '@/utils/formStyles'
 
 interface Props {
@@ -162,6 +107,11 @@ const includeArchived = defineModel<boolean>('includeArchived', { default: false
 const customDateFrom = defineModel<string>('customDateFrom', { default: '' })
 const customDateTo = defineModel<string>('customDateTo', { default: '' })
 
+// `selectClass` carries `w-full`, which inside FilterBar's `flex flex-wrap` row
+// forces every dropdown onto its own line at 100% width. Drop `w-full` (and
+// pin a sensible auto width) so the selects sit inline and wrap naturally.
+const inlineSelectClass = selectClass.replace('w-full', 'w-auto min-w-[9rem]')
+
 // OCR engine labels mapping (for filter chip display)
 const ocrEngineLabels: Record<string, string> = {
   pypdf: 'Embedded Text',
@@ -172,13 +122,30 @@ const ocrEngineLabels: Record<string, string> = {
 
 const getOcrEngineLabel = (engine: string): string => ocrEngineLabels[engine] || engine
 
-// Matches the original hasActiveFilters computed (includes custom date + archived)
-const hasActiveFilters = computed(
-  () =>
-    search.value ||
-    dateRange.value ||
-    ocrEngine.value ||
-    (dateRange.value === 'custom' && customDateFrom.value) ||
-    includeArchived.value,
-)
+// Active filter chips (unified rendering via FilterBar's activeFilters prop)
+const activeFilters = computed<ActiveFilter[]>(() => {
+  const chips: ActiveFilter[] = []
+  if (search.value) chips.push({ key: 'search', label: `Search: "${search.value}"`, color: 'blue' })
+  if (ocrEngine.value)
+    chips.push({
+      key: 'ocrEngine',
+      label: `OCR: ${getOcrEngineLabel(ocrEngine.value)}`,
+      color: 'purple',
+    })
+  if (dateRange.value && dateRange.value !== 'custom')
+    chips.push({
+      key: 'dateRange',
+      label: `Date: ${getDateRangeLabel(dateRange.value)}`,
+      color: 'orange',
+    })
+  if (dateRange.value === 'custom' && customDateFrom.value)
+    chips.push({
+      key: 'customDate',
+      label: `Date: ${customDateFrom.value} → ${customDateTo.value || 'present'}`,
+      color: 'orange',
+    })
+  if (includeArchived.value)
+    chips.push({ key: 'includeArchived', label: 'Archived', color: 'gray' })
+  return chips
+})
 </script>

@@ -1,6 +1,6 @@
 <template>
   <div class="json-viewer">
-    <div v-if="!data" class="text-slate-500 dark:text-slate-400 italic text-xs">null</div>
+    <div v-if="!data" class="text-content-muted italic text-xs">null</div>
     <div v-else-if="typeof data !== 'object'" class="json-value text-xs">
       {{ formatValue(data) }}
     </div>
@@ -16,25 +16,21 @@
           @keydown.space.prevent="toggleExpanded(key)"
         >
           <span class="toggle-icon">
-            <span
+            <ChevronRight
               v-if="isExpandable(value)"
-              class="w-3 h-3 transition-transform text-slate-400 cursor-pointer inline-block"
-              :class="{ 'transform rotate-90': expanded[key] }"
-            >
-              ▶
-            </span>
+              class="w-3 h-3 transition-transform text-content-subtle cursor-pointer inline-block"
+              :class="{ 'rotate-90': expanded[key] }"
+            />
             <span v-else class="w-3 h-3 inline-block"></span>
           </span>
-          <span class="key-name text-xs font-medium text-purple-700 dark:text-purple-300"
-            >{{ key }}:</span
-          >
+          <span class="key-name text-xs font-medium text-primary">{{ key }}:</span>
           <span v-if="!isExpandable(value) || !expanded[key]" class="json-value text-xs ml-1">
             {{ formatValue(value, !expanded[key]) }}
           </span>
         </div>
         <div
           v-if="isExpandable(value) && expanded[key]"
-          class="json-children ml-3 pl-2 border-l border-slate-200 dark:border-slate-700"
+          class="json-children ml-3 pl-2 border-l border-default"
         >
           <JsonViewer :data="value as JsonValue" :max-depth="(maxDepth ?? 0) - 1" />
         </div>
@@ -45,6 +41,7 @@
 
 <script setup lang="ts">
 import { reactive } from 'vue'
+import { ChevronRight } from '@lucide/vue'
 
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null
 
@@ -116,7 +113,7 @@ const formatValue = (value: unknown, collapsed = false): string => {
 }
 
 .json-key:hover {
-  background-color: rgba(99, 102, 241, 0.05);
+  background-color: var(--color-primary-soft);
 }
 
 .toggle-icon {
@@ -132,11 +129,7 @@ const formatValue = (value: unknown, collapsed = false): string => {
 }
 
 .json-value {
-  color: #1e40af;
+  color: var(--color-primary);
   word-break: break-word;
-}
-
-.dark .json-value {
-  color: #93c5fd;
 }
 </style>

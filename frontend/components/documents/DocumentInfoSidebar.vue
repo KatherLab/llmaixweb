@@ -4,7 +4,7 @@
       <!-- Version Badge -->
       <div
         v-if="selectedVersion"
-        class="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border dark:border-slate-700"
+        class="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-card border dark:border-slate-700"
       >
         <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Version Status</span>
         <span
@@ -89,7 +89,7 @@
         "
       >
         <h4 class="font-medium text-slate-900 dark:text-white mb-2">Metadata</h4>
-        <div class="bg-white dark:bg-slate-800 rounded-lg p-3 text-xs">
+        <div class="bg-white dark:bg-slate-800 rounded-card p-3 text-xs">
           <JsonViewer :data="selectedVersion?.meta_data || document.meta_data" />
         </div>
       </div>

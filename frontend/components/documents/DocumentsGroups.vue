@@ -26,7 +26,7 @@
 
     <div
       v-else-if="serverItems.length === 0"
-      class="bg-slate-50 dark:bg-slate-800 rounded-lg p-12 text-center"
+      class="bg-slate-50 dark:bg-slate-800 rounded-card p-12 text-center"
     >
       <Layers class="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500" />
       <h3 class="mt-2 text-sm font-medium text-slate-900 dark:text-white">No document groups</h3>

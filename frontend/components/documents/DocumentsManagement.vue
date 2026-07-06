@@ -1,14 +1,12 @@
 <template>
   <div class="p-6 space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-start">
-      <div>
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Documents</h2>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          View and manage processed documents and document groups
-        </p>
-      </div>
-    </div>
+    <PageHeader
+      title="Documents"
+      subtitle="View and manage processed documents and document groups"
+      :sticky="false"
+      class="mb-6"
+    />
 
     <BaseTabGroup v-model="activeTab" :tabs="tabs">
       <template #tab="{ tab }">
@@ -37,62 +35,13 @@
 
       <!-- Batch Actions -->
       <div class="flex justify-between items-center mb-4">
-        <div class="flex items-center space-x-3">
-          <span class="text-sm text-slate-500 dark:text-slate-400">
-            {{ totalCount }} document{{ totalCount !== 1 ? 's' : '' }}
-          </span>
-
-          <div v-if="selectedDocuments.length > 0" class="flex items-center space-x-2">
-            <span class="text-sm text-slate-700 dark:text-slate-300">
-              {{ selectedDocuments.length }} selected
-            </span>
-            <BaseButton
-              variant="link"
-              tone="green"
-              class="text-sm font-medium"
-              @click="createGroupFromSelection"
-            >
-              Create Group
-            </BaseButton>
-            <span class="text-slate-300 dark:text-slate-600">|</span>
-            <BaseButton
-              variant="link"
-              tone="blue"
-              class="text-sm font-medium"
-              @click="performBatchAction('reprocess')"
-            >
-              Reprocess
-            </BaseButton>
-            <BaseButton
-              variant="link"
-              tone="blue"
-              class="text-sm font-medium"
-              @click="performBatchAction('export')"
-            >
-              Export
-            </BaseButton>
-            <BaseButton
-              variant="link"
-              tone="red"
-              class="text-sm font-medium"
-              @click="performBatchAction('delete')"
-            >
-              Delete
-            </BaseButton>
-            <button
-              class="text-sm text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-300"
-              @click="selectedDocuments = []"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
+        <span class="text-sm text-slate-500 dark:text-slate-400">
+          {{ totalCount }} document{{ totalCount !== 1 ? 's' : '' }}
+        </span>
       </div>
 
       <!-- Documents Grid/List -->
-      <div v-if="isLoading" class="flex justify-center py-12">
-        <LoadingSpinner size="large" />
-      </div>
+      <SkeletonTable v-if="isLoading" :columns="4" :rows="8" />
 
       <!-- Empty State: No documents (either no documents exist or filters returned no results) -->
       <EmptyState
@@ -153,6 +102,30 @@
         @deleted="handleDocumentsDeleted"
       />
 
+      <!-- Floating Batch Toolbar -->
+      <BatchActionBar
+        :count="selectedDocuments.length"
+        count-label="document"
+        @clear="selectedDocuments = []"
+      >
+        <BaseButton variant="secondary" size="sm" @click="createGroupFromSelection">
+          <FolderPlus class="w-4 h-4 mr-1.5" />
+          Create Group
+        </BaseButton>
+        <BaseButton variant="secondary" size="sm" @click="performBatchAction('reprocess')">
+          <RefreshCw class="w-4 h-4 mr-1.5" />
+          Reprocess
+        </BaseButton>
+        <BaseButton variant="secondary" size="sm" @click="performBatchAction('export')">
+          <Download class="w-4 h-4 mr-1.5" />
+          Export
+        </BaseButton>
+        <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
+          <Trash2 class="w-4 h-4 mr-1.5" />
+          Delete
+        </BaseButton>
+      </BatchActionBar>
+
       <!-- Create Document Group Modal (from documents tab) -->
       <CreateDocumentGroupModal
         v-if="showCreateGroupModal"
@@ -187,7 +160,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { FileText, Search } from '@lucide/vue'
+import { Download, FileText, FolderPlus, RefreshCw, Search, Trash2 } from '@lucide/vue'
 import { documentsApi } from '@/services/documentsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { filesApi } from '@/services/filesApi'
@@ -197,11 +170,13 @@ import { useToast } from '@/composables/useToast'
 import { debounce } from 'perfect-debounce'
 import { setEngineLabels } from '@/utils/ocrLabels'
 import { getDateRangeBounds } from '@/utils/dateRange'
-import LoadingSpinner from '../common/LoadingSpinner.vue'
+import SkeletonTable from '@/components/common/SkeletonTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BatchActionBar from '@/components/common/BatchActionBar.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { usePagination } from '@/composables/usePagination'
 import DocumentViewer from './DocumentViewer.vue'

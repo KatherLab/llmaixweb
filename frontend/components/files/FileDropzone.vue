@@ -1,6 +1,6 @@
 <template>
   <div
-    class="border-2 border-dashed rounded-xl text-center hover:border-blue-400 transition-colors"
+    class="border-2 border-dashed rounded-modal text-center hover:border-blue-400 transition-colors"
     :class="[
       compact
         ? 'border-slate-300 dark:border-slate-600 p-10 bg-slate-50 dark:bg-slate-800/50'

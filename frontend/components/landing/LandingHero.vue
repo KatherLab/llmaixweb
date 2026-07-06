@@ -1,7 +1,7 @@
 <template>
   <div class="mb-20 text-center">
     <div
-      class="mb-6 inline-block rounded-lg border border-blue-200 bg-blue-50 p-3 backdrop-blur-sm dark:border-blue-500/30 dark:bg-blue-600/20"
+      class="mb-6 inline-block rounded-card border border-blue-200 bg-blue-50 p-3 backdrop-blur-sm dark:border-blue-500/30 dark:bg-blue-600/20"
     >
       <span
         class="text-sm font-semibold tracking-wider uppercase text-blue-700 dark:bg-gradient-to-r dark:from-blue-400 dark:to-blue-400 dark:bg-clip-text dark:text-transparent"

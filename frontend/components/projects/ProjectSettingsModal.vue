@@ -29,17 +29,13 @@
       <h3 class="text-sm font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide mb-3">
         Danger Zone
       </h3>
-      <div
-        class="bg-red-50 dark:bg-red-900/30 rounded-lg p-4 border border-red-200 dark:border-red-800"
-      >
-        <p class="text-sm text-red-700 dark:text-red-400 mb-3">
-          Once you delete a project, there is no going back. Please be certain.
-        </p>
+      <Callout variant="danger">
+        <p class="text-sm mb-3">Once you delete a project, there is no going back. Be certain.</p>
         <BaseButton variant="danger" class="w-full" @click="onDeleteClick">
           <Trash2 class="w-4 h-4" />
           Delete Project
         </BaseButton>
-      </div>
+      </Callout>
     </div>
 
     <template #footer>
@@ -56,6 +52,7 @@ import { ref, watch, onMounted } from 'vue'
 import { Trash2 } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
 import { inputClass, textareaClass } from '@/utils/formStyles'
 import type { ProjectUpdate } from '@/types'
 

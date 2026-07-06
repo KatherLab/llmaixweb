@@ -55,7 +55,7 @@ const iconComp = computed(() => props.icon || DEFAULT_ICON[props.variant])
 </script>
 
 <template>
-  <div :class="['flex items-start gap-2.5 rounded-lg p-3', boxClass]">
+  <div :class="['flex items-start gap-2.5 rounded-card p-3', boxClass]">
     <component
       :is="$slots.icon ? undefined : iconComp"
       v-if="!$slots.icon"

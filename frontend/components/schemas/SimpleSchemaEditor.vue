@@ -31,32 +31,26 @@
 
       <div v-else class="space-y-2">
         <!-- Read-only fields notice -->
-        <div
-          v-if="hasReadonlyFields"
-          class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300"
-        >
-          <ShieldAlert class="h-4 w-4 flex-shrink-0" />
-          <span>
-            Fields with nested groups, lists, or advanced settings are read-only here — edit them in
-            <strong>Advanced mode</strong>.
-          </span>
-        </div>
+        <Callout v-if="hasReadonlyFields" variant="warning" class="text-xs">
+          Fields with nested groups, lists, or advanced settings are read-only here — edit them in
+          <strong>Advanced mode</strong>.
+        </Callout>
 
         <div v-for="(field, index) in fields" :key="field.id">
           <!-- Read-only hint row (nested objects/arrays, enums, constraints, …) -->
           <div
             v-if="field.kind === 'readonly'"
-            class="group flex items-center gap-3 p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-900/20"
+            class="group flex items-center gap-3 p-3 rounded-modal border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-900/20"
             :title="`Read-only — edit “${field.name}” in Advanced mode`"
           >
             <!-- Lock icon (in place of the drag handle) -->
-            <div class="flex-shrink-0 p-2 text-amber-500 rounded-lg">
+            <div class="flex-shrink-0 p-2 text-amber-500 rounded-card">
               <Lock class="h-5 w-5" />
             </div>
 
             <!-- Type badge -->
             <div
-              class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-amber-200 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[10px] font-semibold"
+              class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-card bg-amber-200 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[10px] font-semibold"
             >
               {{ readonlyTypeLabel(field) }}
             </div>
@@ -90,7 +84,7 @@
             v-else
             :data-index="index"
             :class="[
-              'group flex flex-wrap items-center gap-3 p-3 rounded-xl border transition-all duration-200',
+              'group flex flex-wrap items-center gap-3 p-3 rounded-modal border transition-all duration-200',
               draggingIndex === index
                 ? 'border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/30 shadow-md scale-[1.02]'
                 : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 hover:shadow-sm bg-slate-50/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800',
@@ -104,7 +98,7 @@
           >
             <!-- Drag Handle -->
             <div
-              class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-slate-400 hover:text-slate-600 dark:hover:bg-slate-700 rounded-lg hover:bg-slate-200/50 transition-all"
+              class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-slate-400 hover:text-slate-600 dark:hover:bg-slate-700 rounded-card hover:bg-slate-200/50 transition-all"
               title="Drag to reorder"
             >
               <GripVertical class="h-5 w-5" />
@@ -113,7 +107,7 @@
             <!-- Field Number Badge -->
             <div
               :class="[
-                'flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-all',
+                'flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-card text-xs font-semibold transition-all',
                 draggingIndex === index
                   ? 'bg-blue-200 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300'
                   : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
@@ -187,7 +181,7 @@
               <span
                 v-for="(opt, i) in field.options"
                 :key="i"
-                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-medium"
+                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-card bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-medium"
               >
                 {{ opt }}
                 <button
@@ -255,8 +249,9 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { ChevronDown, GripVertical, Info, Lock, Plus, ShieldAlert, Trash2, X } from '@lucide/vue'
+import { ChevronDown, GripVertical, Info, Lock, Plus, Trash2, X } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { selectClass } from '@/utils/formStyles'
 import type { SchemaDefinition, SchemaProperty } from '@/types'

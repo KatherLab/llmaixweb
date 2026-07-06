@@ -23,13 +23,13 @@
     </template>
 
     <div class="space-y-4">
-      <div v-if="prompt?.system_prompt" class="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+      <div v-if="prompt?.system_prompt" class="bg-slate-50 dark:bg-slate-800 rounded-card p-4">
         <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">System Prompt</h4>
         <pre class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{
           prompt.system_prompt
         }}</pre>
       </div>
-      <div v-if="prompt?.user_prompt" class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+      <div v-if="prompt?.user_prompt" class="bg-blue-50 dark:bg-blue-900/20 rounded-card p-4">
         <h4 class="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">User Prompt</h4>
         <pre class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{
           prompt.user_prompt

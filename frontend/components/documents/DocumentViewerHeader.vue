@@ -36,18 +36,16 @@
         <StatusBadge v-if="(versionCount ?? 0) > 0" color="blue">{{ versionCount }}</StatusBadge>
         History
       </BaseButton>
-      <BaseButton
+      <BaseSegmentedControl
         v-if="hasDisplayableOriginalFile"
-        variant="secondary"
+        :model-value="segmentedValue"
+        :options="viewOptions"
         size="sm"
-        @click="$emit('toggle-view')"
-      >
-        <ArrowLeftRight class="h-4 w-4" />
-        {{ viewModeLabel }}
-      </BaseButton>
+        @update:model-value="onSegmentedChange"
+      />
       <span
         v-else-if="!hasDisplayableOriginalFile && hasText"
-        class="inline-flex items-center px-3 py-1.5 border border-slate-200 dark:border-slate-700 text-sm font-medium rounded-md text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800"
+        class="inline-flex items-center px-3 py-1.5 border border-slate-200 dark:border-slate-700 text-sm font-medium rounded-card text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800"
         title="Only text view is available"
       >
         <FileText class="h-4 w-4 mr-1.5" />
@@ -68,11 +66,18 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowLeftRight, Clock, CloudDownload, FileText, X } from '@lucide/vue'
+import { computed } from 'vue'
+import { Clock, CloudDownload, FileText, X } from '@lucide/vue'
 import ExtractionMethodBadge from './ExtractionMethodBadge.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import type { DocumentListItem } from '@/types'
+
+type ViewMode = 'text' | 'pdf' | 'image' | 'compare'
+
+// The segmented control emits "file" to let the parent resolve pdf vs image.
+type EmitViewMode = ViewMode | 'file'
 
 interface Props {
   document: DocumentListItem
@@ -81,22 +86,48 @@ interface Props {
   versionCount?: number
   hasDisplayableOriginalFile?: boolean
   hasText?: boolean
-  viewModeLabel?: string
+  viewMode?: ViewMode
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   hasVersionHistory: false,
   showVersionHistory: false,
   versionCount: 0,
   hasDisplayableOriginalFile: false,
   hasText: false,
-  viewModeLabel: 'Show Both',
+  viewMode: 'text',
 })
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
   'toggle-version-history': []
-  'toggle-view': []
+  'change-view': [mode: EmitViewMode]
   download: []
 }>()
+
+// Segmented control works in three logical modes: Text, File, Both (compare).
+// The internal viewMode distinguishes pdf vs image, but both map to "file".
+const viewOptions = [
+  { label: 'Text', value: 'text' },
+  { label: 'File', value: 'file' },
+  { label: 'Both', value: 'both' },
+]
+
+const segmentedValue = computed(() => {
+  if (props.viewMode === 'compare') return 'both'
+  if (props.viewMode === 'text') return 'text'
+  return 'file' // pdf or image
+})
+
+const onSegmentedChange = (value: string | number | boolean): void => {
+  const v = String(value)
+  if (v === 'text') {
+    emit('change-view', 'text')
+  } else if (v === 'both') {
+    emit('change-view', 'compare')
+  } else if (v === 'file') {
+    // Delegate to parent which knows whether to use pdf or image
+    emit('change-view', 'file')
+  }
+}
 </script>

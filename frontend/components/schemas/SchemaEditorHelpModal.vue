@@ -17,7 +17,7 @@
         <h4 class="font-medium text-slate-900 dark:text-slate-100 mb-2">Field Types</h4>
         <div class="grid grid-cols-2 gap-3">
           <div v-for="type in availableTypes" :key="type.value" class="flex items-start space-x-3">
-            <div :class="['rounded-lg p-2', type.color]">
+            <div :class="['rounded-card p-2', type.color]">
               <component :is="type.icon" class="h-5 w-5 text-white" />
             </div>
             <div>

@@ -22,14 +22,13 @@
         @retry="retryLastOperation"
       />
 
-      <div class="header flex justify-between items-center mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Evaluation</h1>
-          <p class="text-slate-600 dark:text-slate-400">
-            Compare trial results against ground truth data
-          </p>
-        </div>
-        <div class="flex gap-2">
+      <PageHeader
+        title="Evaluation"
+        subtitle="Compare trial results against ground truth data"
+        :sticky="false"
+        class="mb-6"
+      >
+        <template #actions>
           <BaseButton
             variant="secondary"
             :disabled="loadingStates.groundTruthFiles"
@@ -47,8 +46,8 @@
             <Download class="h-4 w-4" />
             Export Results
           </BaseButton>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
       <!-- Loading States -->
       <div v-if="loadingStates.groundTruthFiles" class="text-center py-8">
@@ -72,7 +71,7 @@
       <!-- Main evaluation interface -->
       <div v-else class="grid grid-cols-1 xl:grid-cols-4 gap-6">
         <!-- Ground truth files panel -->
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4">
+        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4">
           <div class="flex justify-between items-center mb-3">
             <h2 class="font-medium text-slate-900 dark:text-white">Ground Truth Files</h2>
             <button
@@ -86,7 +85,7 @@
             <div
               v-for="(gt, index) in groundTruthFiles"
               :key="gt.id"
-              class="border dark:border-slate-700 rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+              class="border dark:border-slate-700 rounded-card p-3 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
               :class="{
                 'border-blue-500 bg-blue-50 dark:bg-blue-900/20': selectedGroundTruth?.id === gt.id,
               }"
@@ -112,7 +111,7 @@
         </div>
 
         <!-- Trial selection and evaluation panel -->
-        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-lg p-4 xl:col-span-3">
+        <div class="bg-white dark:bg-slate-900 shadow-sm rounded-card p-4 xl:col-span-3">
           <div
             v-if="!selectedGroundTruth"
             class="text-center py-12 text-slate-500 dark:text-slate-400"
@@ -156,10 +155,7 @@
 
             <!-- Concepts explainer: auto-shown until mappings exist, then
                  recallable via the "How it works" link next to the heading. -->
-            <div
-              v-if="showConcepts"
-              class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm relative"
-            >
+            <Callout v-if="showConcepts" variant="info" class="mb-4 relative">
               <button
                 class="absolute top-2 right-2 text-blue-400 hover:text-blue-700 dark:hover:text-blue-200"
                 title="Hide"
@@ -167,10 +163,8 @@
               >
                 <X class="h-4 w-4" />
               </button>
-              <h3 class="font-medium text-blue-900 dark:text-blue-300 mb-1">
-                How evaluation works
-              </h3>
-              <dl class="space-y-1 text-blue-800 dark:text-blue-300 pr-6">
+              <h3 class="font-medium mb-1">How evaluation works</h3>
+              <dl class="space-y-1 pr-6">
                 <div>
                   <dt class="inline font-semibold">Ground truth</dt>
                   <dd class="inline">
@@ -192,34 +186,28 @@
                   </dd>
                 </div>
               </dl>
-            </div>
+            </Callout>
 
             <!-- Prerequisites Warning -->
-            <div
+            <Callout
               v-if="!canStartEvaluation"
-              class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md"
+              variant="warning"
+              title="Setup Required"
+              class="mb-4"
             >
-              <div class="flex">
-                <AlertTriangle class="h-5 w-5 text-yellow-400 flex-shrink-0" />
-                <div class="ml-3 flex-1">
-                  <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-                    Setup Required
-                  </h3>
-                  <p class="mt-1 text-sm text-yellow-700 dark:text-yellow-400">
-                    {{ evaluationPrerequisiteMessage }}
-                  </p>
-                  <BaseButton
-                    v-if="selectedGroundTruth && !hasMappings"
-                    variant="warning"
-                    size="sm"
-                    class="mt-2"
-                    @click="previewGroundTruth"
-                  >
-                    Configure mappings
-                  </BaseButton>
-                </div>
-              </div>
-            </div>
+              <p class="mt-1">
+                {{ evaluationPrerequisiteMessage }}
+              </p>
+              <BaseButton
+                v-if="selectedGroundTruth && !hasMappings"
+                variant="warning"
+                size="sm"
+                class="mt-2"
+                @click="previewGroundTruth"
+              >
+                Configure mappings
+              </BaseButton>
+            </Callout>
 
             <!-- Loading evaluations -->
             <div v-if="loadingStates.evaluations" class="text-center py-8">
@@ -237,89 +225,83 @@
               </template>
             </EmptyState>
             <div v-else class="overflow-x-auto">
-              <table :class="t.table">
-                <thead :class="t.thead">
-                  <tr>
-                    <th :class="t.th">Trial</th>
-                    <th :class="t.th">Model</th>
-                    <th :class="t.th">Overall Accuracy</th>
-                    <th :class="t.th">Documents</th>
-                    <th :class="t.th">Status</th>
-                    <th :class="t.th">Actions</th>
-                  </tr>
-                </thead>
-                <tbody :class="t.tbody">
-                  <tr v-for="evaluation in evaluations" :key="evaluation.id" :class="t.tr">
-                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+              <DataTable
+                :columns="columns"
+                :items="pagedEvaluations"
+                row-key="id"
+                :pagination="tablePagination"
+                item-label="evaluations"
+                empty-title="No evaluations yet. Select a trial to evaluate."
+                @page-change="onPageChange"
+                @page-size-change="onPageSizeChange"
+              >
+                <template #cell-trial="{ row: evaluation }">
+                  <div
+                    class="font-medium text-slate-900 dark:text-white truncate"
+                    :title="getTrialName(evaluation.trial_id)"
+                  >
+                    {{ getTrialName(evaluation.trial_id) }}
+                  </div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400">
+                    ID: {{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}
+                  </div>
+                </template>
+                <template #cell-model="{ row: evaluation }">
+                  <span class="text-sm text-slate-900 dark:text-white">
+                    {{ getTrialModel(evaluation.trial_id) }}
+                  </span>
+                </template>
+                <template #cell-accuracy="{ row: evaluation }">
+                  <div class="flex items-center">
+                    <div class="mr-2 text-slate-900 dark:text-white">
+                      {{ getAccuracyPercentage(evaluation) }}%
+                    </div>
+                    <div class="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                       <div
-                        class="font-medium text-slate-900 dark:text-white truncate"
-                        :title="getTrialName(evaluation.trial_id)"
-                      >
-                        {{ getTrialName(evaluation.trial_id) }}
-                      </div>
-                      <div class="text-xs text-slate-500 dark:text-slate-400">
-                        ID: {{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}
-                      </div>
-                    </td>
-
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900 dark:text-white">
-                      {{ getTrialModel(evaluation.trial_id) }}
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm">
-                      <div class="flex items-center">
-                        <div class="mr-2 text-slate-900 dark:text-white">
-                          {{ getAccuracyPercentage(evaluation) }}%
-                        </div>
-                        <div class="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                          <div
-                            class="bg-blue-600 h-2 rounded-full"
-                            :style="{ width: `${getAccuracyPercentage(evaluation)}%` }"
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-900 dark:text-white">
-                      <div>{{ getDocumentCount(evaluation) }} docs</div>
-                      <div
-                        v-if="getUnmatchedDocCount(evaluation) > 0"
-                        class="text-xs text-yellow-600 dark:text-yellow-400"
-                        :title="`${getUnmatchedDocCount(evaluation)} document(s) could not be matched to ground truth and are excluded from the accuracy.`"
-                      >
-                        {{ getMatchedDocCount(evaluation) }} matched
-                      </div>
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm">
-                      <StatusBadge
-                        v-if="hasEvaluationErrors(evaluation)"
-                        color="red"
-                        class="py-1 font-medium"
-                      >
-                        Has Errors ({{ getErrorCount(evaluation) }})
-                      </StatusBadge>
-                      <StatusBadge v-else color="green" class="py-1 font-medium">
-                        Scored
-                      </StatusBadge>
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm">
-                      <div class="flex gap-2">
-                        <button
-                          class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm underline"
-                          @click="viewEvaluationAnalysis(evaluation)"
-                        >
-                          Analysis
-                        </button>
-                        <button
-                          class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm underline"
-                          title="Delete evaluation"
-                          @click="confirmDeleteEvaluation(evaluation)"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                        class="bg-blue-600 h-2 rounded-full"
+                        :style="{ width: `${getAccuracyPercentage(evaluation)}%` }"
+                      ></div>
+                    </div>
+                  </div>
+                </template>
+                <template #cell-documents="{ row: evaluation }">
+                  <div class="text-sm text-slate-900 dark:text-white">
+                    {{ getDocumentCount(evaluation) }} docs
+                  </div>
+                  <div
+                    v-if="getUnmatchedDocCount(evaluation) > 0"
+                    class="text-xs text-yellow-600 dark:text-yellow-400"
+                    :title="`${getUnmatchedDocCount(evaluation)} document(s) could not be matched to ground truth and are excluded from the accuracy.`"
+                  >
+                    {{ getMatchedDocCount(evaluation) }} matched
+                  </div>
+                </template>
+                <template #cell-status="{ row: evaluation }">
+                  <StatusBadge
+                    v-if="hasEvaluationErrors(evaluation)"
+                    color="red"
+                    class="py-1 font-medium"
+                  >
+                    Has Errors ({{ getErrorCount(evaluation) }})
+                  </StatusBadge>
+                  <StatusBadge v-else color="green" class="py-1 font-medium"> Scored </StatusBadge>
+                </template>
+                <template #row-actions="{ row: evaluation }">
+                  <button
+                    class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm underline"
+                    @click.stop="viewEvaluationAnalysis(evaluation)"
+                  >
+                    Analysis
+                  </button>
+                  <button
+                    class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm underline"
+                    title="Delete evaluation"
+                    @click.stop="confirmDeleteEvaluation(evaluation)"
+                  >
+                    Delete
+                  </button>
+                </template>
+              </DataTable>
             </div>
           </div>
         </div>
@@ -376,15 +358,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  AlertTriangle,
-  BarChart3,
-  ClipboardList,
-  Download,
-  HelpCircle,
-  Upload,
-  X,
-} from '@lucide/vue'
+import { BarChart3, ClipboardList, Download, HelpCircle, Upload, X } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { evaluationsApi } from '@/services/evaluationsApi'
@@ -398,9 +372,12 @@ import {
 import { extractErrorMessage } from '@/utils/errors'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import Callout from '@/components/common/Callout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import DataTable, { type DataTableColumn } from '@/components/common/DataTable.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import GroundTruthUploadModal from '@/components/groundtruth/GroundTruthUploadModal.vue'
 import GroundTruthManager from '@/components/groundtruth/GroundTruthManager.vue'
@@ -409,7 +386,6 @@ import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreview
 import MetricsExportModal from '@/components/evaluation/MetricsExportModal.vue'
 import EvaluationAnalysisPage from '@/components/evaluation/EvaluationAnalysisPage.vue'
 import { describeHttpError } from '@/utils/errors'
-import { useTableClasses } from '@/composables/useTableClasses'
 import type { GroundTruth, Evaluation, EvaluationSummary, DocumentEvaluationDetail } from '@/types'
 
 /** Trial cache entry — either a TrialSummary (list) or full Trial (get). */
@@ -441,7 +417,10 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const t = useTableClasses()
+// Client-side pagination state for the evaluations list (the API returns all
+// evaluations for the selected ground truth in one shot).
+const currentPage = ref(1)
+const pageSize = ref(25)
 
 const toast = useToast()
 const route = useRoute()
@@ -518,6 +497,43 @@ const canStartEvaluation = computed(() => {
     !error.value
   )
 })
+
+// DataTable columns for the evaluations list. Cell content for trial, model,
+// accuracy, documents and status is rendered via #cell-<key> slots; the Actions
+// column is rendered via the #row-actions slot.
+const columns: DataTableColumn[] = [
+  { key: 'trial', label: 'Trial' },
+  { key: 'model', label: 'Model' },
+  { key: 'accuracy', label: 'Overall Accuracy' },
+  { key: 'documents', label: 'Documents' },
+  { key: 'status', label: 'Status' },
+]
+
+// Client-side pagination of the evaluations list.
+const totalEvaluationPages = computed(() =>
+  Math.max(1, Math.ceil(evaluations.value.length / pageSize.value)),
+)
+
+const pagedEvaluations = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return evaluations.value.slice(start, start + pageSize.value)
+})
+
+const tablePagination = computed(() => ({
+  page: currentPage.value,
+  page_size: pageSize.value,
+  total: evaluations.value.length,
+  total_pages: totalEvaluationPages.value,
+}))
+
+const onPageChange = (page: number): void => {
+  currentPage.value = page
+}
+
+const onPageSizeChange = (size: number): void => {
+  pageSize.value = size
+  currentPage.value = 1
+}
 
 const hasMappings = computed(() => {
   return (selectedGroundTruth.value?.field_mappings?.length || 0) > 0
@@ -783,6 +799,8 @@ const fetchEvaluations = async (): Promise<void> => {
     // 1) store the evaluations
     const list = data as Evaluation[] | { items?: Evaluation[] }
     evaluations.value = (Array.isArray(list) ? list : (list.items ?? [])) as EvaluationRow[]
+    // Reset to the first page whenever the list is (re)loaded.
+    currentPage.value = 1
 
     // 2) warm trial names/models for rows we’ll render
     for (const ev of evaluations.value) {

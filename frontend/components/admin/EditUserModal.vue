@@ -11,24 +11,15 @@
 
     <div class="space-y-6">
       <!-- Error / Success -->
-      <div
-        v-if="editError"
-        class="p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-md"
-      >
+      <Callout v-if="editError" variant="danger" class="text-xs">
         {{ editError }}
-      </div>
-      <div
-        v-if="editSuccess"
-        class="p-3 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-md"
-      >
+      </Callout>
+      <Callout v-if="editSuccess" variant="success" class="text-xs">
         User updated successfully!
-      </div>
-      <div
-        v-if="setPasswordSuccessMsg"
-        class="p-3 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-md"
-      >
+      </Callout>
+      <Callout v-if="setPasswordSuccessMsg" variant="success" class="text-xs">
         Password updated successfully!
-      </div>
+      </Callout>
 
       <!-- === General Settings === -->
       <div>
@@ -137,27 +128,17 @@
       <hr class="border-slate-100 dark:border-slate-800" />
 
       <!-- === Danger Zone === -->
-      <div
-        class="p-4 border border-red-200 dark:border-red-900 rounded-xl bg-red-50/50 dark:bg-red-900/20"
-      >
-        <div class="flex items-start gap-3">
-          <AlertTriangle class="w-5 h-5 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
-          <div class="flex-1">
-            <h4 class="text-sm font-bold text-red-800 dark:text-red-300">Danger Zone</h4>
-            <p class="text-xs text-red-600 dark:text-red-400 mt-1">
-              Delete this user and all associated data. This cannot be undone.
-            </p>
-            <BaseButton
-              variant="danger"
-              size="sm"
-              class="mt-3 dark:bg-red-500 dark:hover:bg-red-600"
-              @click="confirmDeleteFromModal"
-            >
-              Delete User
-            </BaseButton>
-          </div>
-        </div>
-      </div>
+      <Callout variant="danger" title="Danger Zone">
+        <p class="text-xs mt-1">Delete this user and all associated data. This cannot be undone.</p>
+        <BaseButton
+          variant="danger"
+          size="sm"
+          class="mt-3 dark:bg-red-500 dark:hover:bg-red-600"
+          @click="confirmDeleteFromModal"
+        >
+          Delete User
+        </BaseButton>
+      </Callout>
     </div>
 
     <template #footer>
@@ -182,11 +163,11 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { AlertTriangle } from '@lucide/vue'
 import type { UserResponse, UserUpdateAdmin, UserRole } from '@/types'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
 import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'

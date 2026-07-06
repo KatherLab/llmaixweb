@@ -58,7 +58,7 @@
             </div>
             <!-- Type description tooltip -->
             <div class="absolute left-0 top-full mt-1 hidden group-hover:block z-10 w-full">
-              <div class="bg-slate-900 text-white text-xs rounded-lg p-2 shadow-lg">
+              <div class="bg-slate-900 text-white text-xs rounded-card p-2 shadow-lg">
                 <p v-if="localProperty.type === 'string'">
                   Text field for names, descriptions, etc.
                 </p>
@@ -148,10 +148,7 @@
           :class="[inputClass, 'font-mono']"
           placeholder="e.g., ^[A-Z]{2}[0-9]{4}$"
         />
-        <div
-          v-if="showPatternHelp"
-          class="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md text-xs text-slate-700 dark:text-slate-300"
-        >
+        <Callout v-if="showPatternHelp" variant="info" class="mt-2 text-xs">
           <p class="font-medium mb-1">Common patterns:</p>
           <ul class="space-y-1">
             <li>
@@ -166,7 +163,7 @@
               - 2 uppercase letters + 4 digits
             </li>
           </ul>
-        </div>
+        </Callout>
       </div>
 
       <!-- Enum Values -->
@@ -194,7 +191,7 @@
             </BaseButton>
           </div>
           <button
-            class="w-full py-2 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-md text-sm text-slate-600 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
+            class="w-full py-2 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-card text-sm text-slate-600 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
             @click="addEnumValue"
           >
             + Add Option
@@ -464,6 +461,7 @@ import {
 import { getTypeIcon, getTypeColor } from '@/utils/schemaTypeIcons'
 import { inputClass, textareaClass, selectClass, labelClass } from '@/utils/formStyles'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
 import type { SchemaDefinition, SchemaProperty } from '@/types'
 
 interface Props {

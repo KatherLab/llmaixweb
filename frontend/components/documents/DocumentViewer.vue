@@ -13,10 +13,10 @@
       :version-count="versionCount"
       :has-displayable-original-file="hasDisplayableOriginalFile"
       :has-text="hasText"
-      :view-mode-label="viewModeLabel"
+      :view-mode="viewMode"
       @close="$emit('close')"
       @toggle-version-history="showVersionHistory = !showVersionHistory"
-      @toggle-view="toggleView"
+      @change-view="changeView"
       @download="downloadDocument"
     />
 
@@ -178,16 +178,6 @@ const originalFileType = computed<'pdf' | 'image' | 'other' | null>(() => {
   return 'other'
 })
 
-const viewModeLabel = computed<string>(() => {
-  // Label describes what clicking will show, not current view
-  // No displayable original file: only text view available, no toggle
-  if (!hasDisplayableOriginalFile.value) return 'Text Only'
-  if (viewMode.value === 'compare') return 'Show File' // clicking shows single file
-  if (viewMode.value === 'pdf' || viewMode.value === 'image') return 'Show Text' // clicking shows text
-  if (viewMode.value === 'text') return 'Show Both' // clicking shows compare (side-by-side)
-  return 'Show Both'
-})
-
 // Set default view mode: compare (file + text side-by-side) if both available
 const setDefaultViewMode = (): void => {
   if (hasDisplayableOriginalFile.value && hasText.value) {
@@ -200,38 +190,31 @@ const setDefaultViewMode = (): void => {
   }
 }
 
+// Handle explicit view-mode changes from the segmented control. "file" is
+// resolved to pdf or image based on the original file type.
+const changeView = (mode: 'text' | 'pdf' | 'image' | 'compare' | 'file'): void => {
+  if (mode === 'file') {
+    viewMode.value = originalFileType.value === 'image' ? 'image' : 'pdf'
+  } else if (mode === 'compare') {
+    // Only enter compare if we actually have both halves; otherwise fall back.
+    if (hasDisplayableOriginalFile.value && hasText.value) {
+      viewMode.value = 'compare'
+    } else if (hasDisplayableOriginalFile.value) {
+      viewMode.value = originalFileType.value === 'image' ? 'image' : 'pdf'
+    } else {
+      viewMode.value = 'text'
+    }
+  } else {
+    viewMode.value = mode
+  }
+}
+
 // Markdown rendering with XSS sanitizing
 const safeMarkdown = computed<string>(() => {
   const text = fullText.value
   if (!text) return '<em>No text content available</em>'
   return DOMPurify.sanitize(marked.parse(text) as string)
 })
-
-const toggleView = (): void => {
-  const isImage = originalFileType.value === 'image'
-
-  // No displayable original file: only text view is available
-  if (!hasDisplayableOriginalFile.value) {
-    viewMode.value = 'text'
-    return
-  }
-
-  // Cycle: Compare → Single File (PDF/Image) → Text → Compare
-  if (viewMode.value === 'compare') {
-    // From compare: go to single file view
-    viewMode.value = isImage ? 'image' : 'pdf'
-  } else if (viewMode.value === 'pdf' || viewMode.value === 'image') {
-    // From single file: go to text
-    viewMode.value = 'text'
-  } else if (viewMode.value === 'text') {
-    // From text: go to compare if we have file + text
-    if (hasText.value) {
-      viewMode.value = 'compare'
-    } else {
-      viewMode.value = isImage ? 'image' : 'pdf'
-    }
-  }
-}
 
 const downloadDocument = async (): Promise<void> => {
   try {

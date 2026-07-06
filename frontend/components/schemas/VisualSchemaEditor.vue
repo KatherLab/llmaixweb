@@ -109,6 +109,7 @@ import EditPropertyModal from './EditPropertyModal.vue'
 import DeletePropertyModal from './DeletePropertyModal.vue'
 import SchemaEditorHelpModal from './SchemaEditorHelpModal.vue'
 import { useSchemaKeyboard } from '@/composables/useSchemaKeyboard'
+import { useToast } from '@/composables/useToast'
 import type { SchemaDefinition, SchemaProperty } from '@/types'
 
 interface Props {
@@ -125,6 +126,7 @@ const emit = defineEmits<{
 }>()
 
 // UI State
+const toast = useToast()
 const showTreeNav = ref(true)
 const showAddPropertyModal = ref(false)
 const showEditPropertyModal = ref(false)
@@ -296,7 +298,7 @@ const onAddProperty = (formData: {
 }) => {
   const key = formData.name.trim()
   if (currentSchema.value.properties?.[key]) {
-    alert(`Property "${key}" already exists!`)
+    toast.warning(`Property "${key}" already exists!`)
     return
   }
 
@@ -395,7 +397,7 @@ const savePropertyEdits = ({
 
   // Guard-clause for duplicates when renaming
   if (oldKey !== newKey && parent.properties && parent.properties[newKey]) {
-    alert(`Property "${newKey}" already exists!`)
+    toast.warning(`Property "${newKey}" already exists!`)
     return false
   }
 

@@ -207,7 +207,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div
               v-if="showPreviewSystem && promptForm.system_prompt"
-              class="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              class="bg-slate-50 dark:bg-slate-800 rounded-card p-4 border border-slate-200 dark:border-slate-700"
             >
               <span
                 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
@@ -221,7 +221,7 @@
             </div>
             <div
               v-if="showPreviewUser && promptForm.user_prompt"
-              class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800"
+              class="bg-blue-50 dark:bg-blue-900/20 rounded-card p-4 border border-blue-200 dark:border-blue-800"
             >
               <span
                 class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider"

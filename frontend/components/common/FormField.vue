@@ -97,10 +97,10 @@ const inputClasses = computed(() => [
         <slot name="trailing" />
       </div>
     </div>
-    <p v-if="$slots.hint" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+    <p v-if="$slots.hint" class="mt-1 text-xs text-content-muted">
       <slot name="hint" />
     </p>
-    <p v-else-if="hint" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ hint }}</p>
+    <p v-else-if="hint" class="mt-1 text-xs text-content-muted">{{ hint }}</p>
     <p v-if="$slots.error" class="mt-1 text-xs text-red-500 dark:text-red-400">
       <slot name="error" />
     </p>

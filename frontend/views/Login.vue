@@ -9,7 +9,7 @@
       </p>
     </div>
     <form
-      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-8 shadow-sm flex flex-col gap-5"
+      class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-modal p-8 shadow-sm flex flex-col gap-5"
       autocomplete="on"
       @submit.prevent="handleSubmit"
     >
@@ -19,7 +19,7 @@
           v-for="provider in ssoProviders"
           :key="provider.slug"
           :href="ssoLoginUrl(provider.slug, redirectTarget)"
-          class="w-full py-2.5 px-4 rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 transition flex items-center justify-center gap-2"
+          class="w-full py-2.5 px-4 rounded-card border border-slate-300 dark:border-slate-600 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 transition flex items-center justify-center gap-2"
         >
           <LogIn class="h-4 w-4" aria-hidden="true" />
           Continue with {{ provider.name }}

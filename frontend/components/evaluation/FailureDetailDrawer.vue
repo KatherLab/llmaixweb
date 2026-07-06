@@ -43,7 +43,7 @@
             <FileText class="h-4 w-4" /> Original Document
           </h4>
           <div
-            class="flex-1 min-h-[300px] border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800"
+            class="flex-1 min-h-[300px] border border-slate-200 dark:border-slate-700 rounded-card overflow-hidden bg-slate-50 dark:bg-slate-800"
           >
             <div v-if="loadingDocument" class="flex items-center justify-center h-full p-6">
               <LoadingSpinner size="medium" />
@@ -86,7 +86,7 @@
             <Bot class="h-4 w-4" /> Model Output
           </h4>
           <div
-            class="flex-1 min-h-[300px] border border-slate-200 dark:border-slate-700 rounded-lg overflow-auto bg-slate-50 dark:bg-slate-800 p-3"
+            class="flex-1 min-h-[300px] border border-slate-200 dark:border-slate-700 rounded-card overflow-auto bg-slate-50 dark:bg-slate-800 p-3"
           >
             <div v-if="loadingResult" class="flex items-center justify-center h-full">
               <LoadingSpinner size="medium" />
@@ -113,7 +113,7 @@
             <ScaleIcon class="h-4 w-4" /> Ground Truth vs Prediction
           </h4>
           <div
-            class="flex-1 min-h-[300px] border border-slate-200 dark:border-slate-700 rounded-lg overflow-auto bg-white dark:bg-slate-800"
+            class="flex-1 min-h-[300px] border border-slate-200 dark:border-slate-700 rounded-card overflow-auto bg-white dark:bg-slate-800"
           >
             <table class="w-full text-xs">
               <thead class="sticky top-0 bg-slate-50 dark:bg-slate-700">

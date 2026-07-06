@@ -22,26 +22,16 @@
           <span class="text-sm text-slate-700 dark:text-slate-300">Send invitation via email</span>
         </label>
       </div>
-      <div
-        v-if="inviteError"
-        class="mb-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-md"
-      >
+      <Callout v-if="inviteError" variant="danger" class="mb-4 text-xs">
         {{ inviteError }}
-      </div>
+      </Callout>
       <div v-if="inviteSuccess" class="mb-4">
-        <div
-          class="p-3 text-xs rounded-md mb-2"
-          :class="
-            inviteEmailSent
-              ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-              : 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-          "
-        >
+        <Callout class="mb-2 text-xs" :variant="inviteEmailSent ? 'success' : 'warning'">
           <template v-if="inviteEmailSent"> Invitation sent to email successfully! </template>
           <template v-else>
             Invitation created but email delivery is not configured. Copy the link manually.
           </template>
-        </div>
+        </Callout>
         <div class="flex items-center mt-2 gap-2">
           <input
             type="text"
@@ -52,7 +42,7 @@
           <button
             type="button"
             aria-label="Copy invitation link"
-            class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all relative"
+            class="p-1.5 rounded-card border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all relative"
             @click="copyGeneratedLink"
           >
             <span
@@ -87,6 +77,7 @@ import { ref, watch } from 'vue'
 import { ClipboardCopy } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Callout from '@/components/common/Callout.vue'
 import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
 import { useToast } from '@/composables/useToast'

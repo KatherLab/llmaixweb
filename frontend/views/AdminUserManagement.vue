@@ -2,7 +2,11 @@
   <div
     class="h-screen bg-gradient-to-br from-slate-100 via-white to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex flex-col"
   >
-    <PageHeader title="User Management">
+    <PageHeader
+      title="User Management"
+      subtitle="Manage user accounts, roles, and invitations."
+      class="mb-6"
+    >
       <template #icon>
         <Users class="w-5 h-5" aria-hidden="true" />
       </template>

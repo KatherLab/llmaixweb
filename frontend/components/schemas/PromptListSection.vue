@@ -101,7 +101,7 @@
 
         <template #expanded="{ row: prompt }">
           <div class="p-4 space-y-3">
-            <div v-if="prompt.system_prompt" class="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+            <div v-if="prompt.system_prompt" class="bg-slate-50 dark:bg-slate-800 rounded-card p-4">
               <div class="flex items-center mb-2">
                 <span
                   class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"
@@ -118,7 +118,7 @@
                 {{ truncateText(prompt.system_prompt, 200) }}
               </p>
             </div>
-            <div v-if="prompt.user_prompt" class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+            <div v-if="prompt.user_prompt" class="bg-blue-50 dark:bg-blue-900/20 rounded-card p-4">
               <div class="flex items-center mb-2">
                 <span
                   class="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider"
