@@ -1,6 +1,6 @@
 <template>
   <div
-    class="mb-8 bg-gradient-to-br from-blue-50 to-slate-50 rounded-xl border border-blue-100 shadow flex items-center px-6 py-5 gap-4"
+    class="mb-8 bg-gradient-to-br from-blue-50 to-slate-50 dark:from-slate-800 dark:to-slate-800 rounded-xl border border-blue-100 dark:border-slate-700 shadow flex items-center px-6 py-5 gap-4"
   >
     <div class="flex-shrink-0">
       <Info class="w-8 h-8 text-blue-400" />

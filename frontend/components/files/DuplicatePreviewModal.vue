@@ -6,9 +6,9 @@
         <!-- Dynamic icon based on situation -->
         <Info
           v-if="hasPdfsWithEmbeddedText && !hasSameConfigDuplicates"
-          class="w-6 h-6 text-blue-600"
+          class="w-6 h-6 text-blue-600 dark:text-blue-400"
         />
-        <AlertTriangle v-else class="w-6 h-6 text-amber-600" />
+        <AlertTriangle v-else class="w-6 h-6 text-amber-600 dark:text-amber-400" />
         <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
           <template v-if="hasPdfsWithEmbeddedText && !hasSameConfigDuplicates">
             PDF Embedded Text Detected

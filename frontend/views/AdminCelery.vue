@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h2 class="text-xl font-bold mb-5 flex items-center gap-2">
+    <h2 class="text-xl font-bold mb-5 flex items-center gap-2 text-content">
       <CircleDot class="w-6 h-6 text-blue-500" />
       Celery Workers & Queues
     </h2>
@@ -12,13 +12,13 @@
         <BaseButton variant="primary" @click="fetchAll">Refresh</BaseButton>
       </div>
       <div>
-        <h3 class="font-semibold text-lg mb-2">Workers</h3>
+        <h3 class="font-semibold text-lg mb-2 text-content">Workers</h3>
         <pre
           class="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-800 overflow-x-auto text-sm"
           >{{ pretty(workers) }}</pre>
       </div>
       <div class="mt-8">
-        <h3 class="font-semibold text-lg mb-2">Queues & Tasks</h3>
+        <h3 class="font-semibold text-lg mb-2 text-content">Queues & Tasks</h3>
         <pre
           class="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-800 overflow-x-auto text-sm"
           >{{ pretty(queues) }}</pre>

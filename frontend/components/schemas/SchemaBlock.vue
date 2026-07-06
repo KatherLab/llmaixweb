@@ -142,7 +142,9 @@
                   :key="index"
                   class="flex items-center space-x-2 bg-white dark:bg-slate-800 rounded-md px-3 py-2 shadow-sm border border-blue-200 dark:border-blue-800"
                 >
-                  <span class="text-blue-600 font-medium text-lg">{{ index + 1 }}</span>
+                  <span class="text-blue-600 dark:text-blue-400 font-medium text-lg">{{
+                    index + 1
+                  }}</span>
                   <span class="text-sm text-slate-900 dark:text-slate-100 font-medium">{{
                     value
                   }}</span>
@@ -203,7 +205,7 @@
                   }}</code>
                   <span
                     v-if="schema.required && schema.required.includes(propKey)"
-                    class="text-xs text-red-600"
+                    class="text-xs text-red-600 dark:text-red-400"
                   >
                     *required
                   </span>

@@ -17,7 +17,9 @@
         :class="[
           selectClass,
           'min-w-[140px]',
-          !innerIdColumn ? 'border-red-300 focus:border-red-400' : 'border-blue-200',
+          !innerIdColumn
+            ? 'border-red-300 dark:border-red-500 focus:border-red-400 dark:focus:border-red-400'
+            : 'border-blue-200 dark:border-blue-500',
         ]"
         required
         @change="updateId"
@@ -73,7 +75,7 @@
       </div>
       <div
         v-if="innerIdColumn === '__field__' && innerJsonIdField"
-        class="text-xs mt-1 text-purple-700 font-mono"
+        class="text-xs mt-1 text-purple-700 dark:text-purple-400 font-mono"
       >
         <StatusBadge color="purple" class="gap-1 font-bold border border-purple-200">
           <!-- Key SVG -->

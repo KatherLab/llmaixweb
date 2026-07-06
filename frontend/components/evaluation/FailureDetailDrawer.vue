@@ -155,7 +155,11 @@
                     <div class="flex items-start gap-1">
                       <component
                         :is="detail.is_correct ? Check : X"
-                        :class="detail.is_correct ? 'text-green-600' : 'text-red-600'"
+                        :class="
+                          detail.is_correct
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+                        "
                         class="h-3.5 w-3.5 mt-0.5 shrink-0"
                       />
                       <span class="text-slate-700 dark:text-slate-300 break-words">{{

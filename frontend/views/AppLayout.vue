@@ -117,7 +117,7 @@
                 </div>
                 <ChevronDown
                   :class="{ 'rotate-180': showUserMenu }"
-                  class="ml-2 w-4 h-4 text-blue-400 group-hover:text-blue-600 transition-transform duration-200"
+                  class="ml-2 w-4 h-4 text-blue-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-transform duration-200"
                 />
               </button>
               <transition name="fade-slide">

@@ -35,7 +35,10 @@
             <input
               id="prompt-name"
               v-model="promptForm.name"
-              :class="[inputClass, { 'border-red-300': !promptForm.name && isSubmitting }]"
+              :class="[
+                inputClass,
+                { 'border-red-300 dark:border-red-500': !promptForm.name && isSubmitting },
+              ]"
               placeholder="e.g., Medical Document Extraction"
               maxlength="100"
               required
@@ -132,7 +135,7 @@
                 textareaClass,
                 'font-mono',
                 {
-                  'border-amber-300':
+                  'border-amber-300 dark:border-amber-500':
                     promptError &&
                     !promptForm.system_prompt?.includes('{document_content}') &&
                     !promptForm.user_prompt?.includes('{document_content}'),

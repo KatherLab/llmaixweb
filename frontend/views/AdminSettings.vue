@@ -1,7 +1,7 @@
 <template>
   <div>
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
-      <CircleDot class="w-7 h-7 text-blue-600" />
+      <CircleDot class="w-7 h-7 text-blue-600 dark:text-blue-400" />
       App Settings
     </h2>
 
@@ -16,7 +16,7 @@
         class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center py-2 border-b border-slate-100 dark:border-slate-800"
       >
         <!-- Label & Description -->
-        <div class="font-semibold flex flex-col">
+        <div class="font-semibold flex flex-col text-content">
           <span>{{ val.label }}</span>
           <span class="text-xs text-slate-400 dark:text-slate-500">{{ val.description }}</span>
         </div>

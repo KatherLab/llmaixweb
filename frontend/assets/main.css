@@ -9,13 +9,16 @@
  * The app standardizes on ONE neutral (slate) and ONE accent (blue). These
  * semantic tokens alias that palette so components can reference a name
  * (`bg-surface`, `text-content`, `border-default`, `bg-primary`, `rounded-card`)
- * instead of hardcoding a shade. `@theme inline` makes utilities reference the
- * CSS variable, so the `.dark` overrides below switch them at runtime.
+ * instead of hardcoding a shade. With a plain `@theme` (not `@theme inline`),
+ * Tailwind generates utilities that reference the CSS variable (e.g.
+ * `.text-content { color: var(--color-content) }`), so the `.dark` overrides
+ * below switch them at runtime. (`@theme inline` would inline the static value
+ * into each utility, freezing them on the light palette in dark mode.)
  *
  * Light values mirror the slate-50/100/200/700/900 + blue-600 palette already
  * used across the app; dark values mirror slate-800/700/600 + blue-500.
  */
-@theme inline {
+@theme {
   /* Radius scale — collapses the md/lg/xl/2xl/3xl drift to two intent-based radii. */
   --radius-card: 0.5rem; /* surfaces, tables, inputs (was rounded-lg) */
   --radius-modal: 0.75rem; /* modals, dialogs, large containers (was rounded-xl) */
@@ -61,10 +64,13 @@
 }
 
 /* Base element styles (moved here from the deleted Vue-scaffold base.css).
-   The app uses Tailwind utilities for all color; this only sets the global
-   typography baseline and the dark-mode color transition. */
+   Sets a token-backed base text/background color so any element without an
+   explicit `text-*` utility (headings, labels, bare spans) inherits a color
+   that switches with `.dark` instead of the browser default black. */
 body {
   min-height: 100vh;
+  color: var(--color-content-muted);
+  background-color: var(--color-surface);
   transition:
     color 0.5s,
     background-color 0.5s;

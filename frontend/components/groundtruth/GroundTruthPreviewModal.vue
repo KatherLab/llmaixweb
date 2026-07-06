@@ -144,7 +144,7 @@
           v-if="mappings.length"
           variant="ghost"
           size="sm"
-          class="mt-2 text-xs text-red-600 font-semibold hover:underline hover:text-red-700"
+          class="mt-2 text-xs text-red-600 dark:text-red-400 font-semibold hover:underline hover:text-red-700 dark:hover:text-red-300"
           @click="clearMappings"
         >
           Clear all mappings

@@ -58,7 +58,7 @@
             @click="selectedEngine = 'docling_tesseract'"
           >
             <div class="flex items-center">
-              <Zap class="w-6 h-6 text-blue-600 mr-3" />
+              <Zap class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" />
               <div>
                 <p class="font-medium text-slate-900 dark:text-white">
                   {{ getEngineLabel('docling_tesseract') }}
@@ -82,7 +82,7 @@
             @click="selectedEngine = 'mistral_ocr'"
           >
             <div class="flex items-center">
-              <CircleCheckBig class="w-6 h-6 text-blue-600 mr-3" />
+              <CircleCheckBig class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" />
               <div>
                 <p class="font-medium text-slate-900 dark:text-white">
                   {{ getEngineLabel('mistral_ocr') }}
@@ -106,7 +106,7 @@
             @click="selectedEngine = 'llm_vision'"
           >
             <div class="flex items-center">
-              <Eye class="w-6 h-6 text-blue-600 mr-3" />
+              <Eye class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" />
               <div>
                 <p class="font-medium text-slate-900 dark:text-white">
                   {{ getEngineLabel('llm_vision') }}
@@ -255,7 +255,7 @@
         class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-900/20 dark:border-amber-800"
       >
         <div class="flex items-start gap-2">
-          <AlertTriangle class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <AlertTriangle class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
           <div class="flex-1">
             <p class="text-sm font-medium text-amber-900 dark:text-amber-300">
               {{ unconfiguredCsvXlsxFiles.length }} file(s) need import configuration

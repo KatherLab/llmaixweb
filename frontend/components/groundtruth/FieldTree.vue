@@ -32,7 +32,9 @@
         <span
           class="font-mono font-medium text-slate-900 dark:text-slate-100"
           :class="[
-            nodeColor === 'text-purple-700' ? 'text-purple-700' : 'text-blue-700',
+            nodeColor === 'text-purple-700'
+              ? 'text-purple-700 dark:text-purple-400'
+              : 'text-blue-700 dark:text-blue-400',
             dimMapped && isLeaf(key) && isMapped(path(key)) && selected !== path(key)
               ? 'text-slate-400'
               : '',

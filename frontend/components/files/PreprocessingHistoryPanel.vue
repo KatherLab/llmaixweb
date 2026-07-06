@@ -128,15 +128,15 @@
                       <!-- Status icon -->
                       <Check
                         v-if="fileTask.status === 'completed'"
-                        class="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+                        class="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5"
                       />
                       <X
                         v-else-if="fileTask.status === 'failed'"
-                        class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5"
+                        class="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"
                       />
                       <Ban
                         v-else-if="fileTask.status === 'cancelled'"
-                        class="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5"
+                        class="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"
                       />
                       <Clock v-else class="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
                       <span class="font-medium text-slate-900 dark:text-white truncate">
@@ -156,7 +156,7 @@
                   <div v-if="fileTask.status === 'failed' && fileTask.error_message" class="mt-2">
                     <details class="group">
                       <summary
-                        class="text-xs text-red-700 cursor-pointer hover:text-red-900 flex items-center gap-1"
+                        class="text-xs text-red-700 dark:text-red-400 cursor-pointer hover:text-red-900 dark:hover:text-red-300 flex items-center gap-1"
                       >
                         <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
                         View error
@@ -179,7 +179,7 @@
                   >
                     <details class="group">
                       <summary
-                        class="text-xs text-amber-700 cursor-pointer hover:text-amber-900 flex items-center gap-1"
+                        class="text-xs text-amber-700 dark:text-amber-400 cursor-pointer hover:text-amber-900 dark:hover:text-amber-300 flex items-center gap-1"
                       >
                         <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
                         <AlertTriangle class="w-3 h-3 inline" />
@@ -226,7 +226,9 @@
                     "
                     class="mt-2 flex items-center justify-between"
                   >
-                    <span class="text-xs text-green-700 inline-flex items-center gap-1">
+                    <span
+                      class="text-xs text-green-700 dark:text-green-400 inline-flex items-center gap-1"
+                    >
                       <Check class="w-3 h-3" />
                       {{ fileTask.document_ids.length }} document{{
                         fileTask.document_ids.length !== 1 ? 's' : ''
@@ -289,7 +291,7 @@
                 "
                 variant="ghost"
                 size="sm"
-                class="text-xs text-red-600 hover:text-red-800 font-medium"
+                class="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"
                 @click.stop="emit('cancel', task)"
               >
                 <X class="w-3 h-3" />

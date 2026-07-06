@@ -192,7 +192,7 @@
                 {{ opt }}
                 <button
                   type="button"
-                  class="text-blue-500 hover:text-blue-700 transition-colors"
+                  class="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
                   aria-label="Remove option"
                   @click="removeOption(field, i)"
                 >

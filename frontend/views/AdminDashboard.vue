@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-4xl mx-auto py-10 px-4">
-    <h1 class="text-3xl font-bold mb-7 flex items-center gap-3">
-      <CircleDot class="w-7 h-7 text-blue-600" aria-hidden="true" />
+    <h1 class="text-3xl font-bold mb-7 flex items-center gap-3 text-content">
+      <CircleDot class="w-7 h-7 text-blue-600 dark:text-blue-400" aria-hidden="true" />
       Admin Dashboard
     </h1>
     <BaseTabGroup :model-value="route.path" :tabs="tabs" class="mb-6" />
