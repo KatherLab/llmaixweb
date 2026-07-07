@@ -4,7 +4,9 @@
       <div class="flex justify-center mb-2">
         <CircleUser class="w-12 h-12 text-content-subtle" aria-hidden="true" />
       </div>
-      <h1 class="text-4xl font-extrabold text-content tracking-tight mb-1">Welcome to LLMAIx-v2</h1>
+      <h1 class="text-4xl font-extrabold text-content tracking-tight mb-1">
+        Welcome to <AppBrand :as-link="false" size="md" />
+      </h1>
       <p class="text-base text-content-muted">First-time setup: Create your admin account</p>
     </div>
     <form
@@ -58,6 +60,7 @@
 </template>
 
 <script setup lang="ts">
+import AppBrand from '@/components/common/AppBrand.vue'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { CircleUser } from '@lucide/vue'

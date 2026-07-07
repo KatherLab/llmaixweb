@@ -1,7 +1,9 @@
 <template>
   <div class="w-full max-w-md mx-auto">
     <div class="mb-8 text-center">
-      <h1 class="text-4xl font-extrabold text-content tracking-tight">LLMAIx-v2</h1>
+      <h1 class="text-4xl font-extrabold text-content tracking-tight">
+        <AppBrand :as-link="false" size="md" />
+      </h1>
       <p class="text-base text-content-muted mt-2">
         Extract information from documents using LLMs.
       </p>
@@ -77,6 +79,7 @@
 </template>
 
 <script setup lang="ts">
+import AppBrand from '@/components/common/AppBrand.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authApi } from '@/services/authApi'

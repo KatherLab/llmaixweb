@@ -1,73 +1,5 @@
 <template>
   <div class="min-h-screen bg-surface-muted">
-    <!-- Compact single-row header with workflow tabs -->
-    <header class="sticky top-0 z-30 bg-surface shadow-sm border-b border-default transition-all">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6">
-        <div class="flex items-center h-12 gap-3">
-          <!-- Left: Back + Project Name -->
-          <div class="flex items-center gap-2 min-w-0 flex-shrink-0">
-            <RouterLink
-              to="/projects"
-              class="flex-shrink-0 text-content-muted hover:text-content transition-colors"
-              aria-label="Back to projects"
-            >
-              <ChevronLeft class="w-5 h-5" />
-            </RouterLink>
-            <h1
-              class="text-base sm:text-lg font-semibold text-content truncate max-w-[120px] sm:max-w-[200px] md:max-w-[260px]"
-            >
-              {{ project.name }}
-            </h1>
-          </div>
-
-          <!-- Workflow tabs — left-aligned, horizontally scrollable on narrow screens -->
-          <nav
-            class="flex items-center gap-1 overflow-x-auto min-w-0 flex-1 no-scrollbar"
-            role="tablist"
-            aria-label="Project workflow"
-          >
-            <button
-              v-for="(step, idx) in steps"
-              :key="step.id"
-              role="tab"
-              :aria-selected="currentStep === step.id"
-              class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium whitespace-nowrap rounded-card transition-all flex-shrink-0"
-              :class="[
-                currentStep === step.id
-                  ? 'bg-primary-soft text-primary'
-                  : 'text-content-muted hover:bg-surface-sunken hover:text-content',
-              ]"
-              @click="handleStepChange(step.id)"
-            >
-              <span
-                class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold flex-shrink-0"
-                :class="[
-                  currentStep === step.id
-                    ? 'bg-primary text-white'
-                    : step.isComplete
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                      : 'bg-surface-sunken text-content-subtle',
-                ]"
-              >
-                <Check v-if="step.isComplete && currentStep !== step.id" class="w-3 h-3" />
-                <span v-else>{{ idx + 1 }}</span>
-              </span>
-              {{ step.name }}
-            </button>
-          </nav>
-
-          <!-- Right: Settings button -->
-          <button
-            class="flex-shrink-0 p-2 text-content-muted hover:text-content hover:bg-surface-sunken rounded-card transition-all"
-            aria-label="Project Settings"
-            @click="showSettingsModal = true"
-          >
-            <Settings class="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-    </header>
-
     <main class="max-w-7xl mx-auto px-4 sm:px-6 py-4">
       <!-- Loading, Error, Main Content -->
       <div v-if="isLoading" class="flex flex-col items-center py-24">
@@ -156,11 +88,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, provide, watch, defineAsyncComponent } from 'vue'
-import { ChevronLeft, Settings, Check } from '@lucide/vue'
+import { ref, computed, onMounted, onUnmounted, provide, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { projectsApi } from '@/services/projectsApi'
 import type { Project, ProjectUpdate } from '@/types'
+import { setNavContext, clearNavContext } from '@/composables/useNavContext'
 // Tab components are lazy-loaded so each workflow step is code-split into its
 // own chunk (only one tab is rendered at a time, see the v-if chain below).
 const FilesAndProcessing = defineAsyncComponent(
@@ -303,6 +235,29 @@ const currentStep = computed<string>(() => {
 onMounted(() => {
   fetchProject()
   handleQueryParams()
+})
+
+// Publish the project context into the global navbar (breadcrumb + centered
+// workflow tabs + settings gear), replacing the default Projects/Admin links.
+// Re-published whenever the project name, steps, or active step change.
+watch(
+  [() => project.value.name, steps, currentStep],
+  () => {
+    setNavContext({
+      projectName: project.value.name || 'Project',
+      steps: steps.value,
+      currentStep: currentStep.value,
+      onStepChange: handleStepChange,
+      onOpenSettings: () => {
+        showSettingsModal.value = true
+      },
+    })
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  clearNavContext()
 })
 
 // Watch for route query changes (e.g., from ActivityBell navigation)

@@ -1,7 +1,9 @@
 <template>
   <div class="w-full max-w-md">
     <div class="mb-8 text-center">
-      <h1 class="text-4xl font-extrabold text-content tracking-tight">LLMAIx-v2</h1>
+      <h1 class="text-4xl font-extrabold text-content tracking-tight">
+        <AppBrand :as-link="false" size="md" />
+      </h1>
       <p class="text-base text-content-muted mt-2">Reset your password</p>
     </div>
 
@@ -63,6 +65,7 @@
 </template>
 
 <script setup lang="ts">
+import AppBrand from '@/components/common/AppBrand.vue'
 import { ref } from 'vue'
 import { Mail, Check } from '@lucide/vue'
 import { usersApi } from '@/services/usersApi'

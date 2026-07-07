@@ -30,12 +30,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
 
 const routes: RouteRecordRaw[] = [
-  // Authenticated app routes (navbar visible!)
+  // Landing page — its own clean, navbar-less layout (full-bleed marketing).
+  { path: '', component: Landing },
+
+  // Authenticated app routes (navbar visible)
   {
     path: '/',
     component: AppLayout,
     children: [
-      { path: '', component: Landing },
       { path: 'projects', component: ProjectOverview, meta: { requiresAuth: true } },
       {
         path: 'account',

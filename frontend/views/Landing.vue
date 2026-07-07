@@ -4,6 +4,38 @@
     <!-- Animated background elements -->
     <LandingBackground />
 
+    <!-- Minimal top bar (landing has its own clean header, no app navbar) -->
+    <header
+      class="relative z-20 sticky top-0 bg-surface/80 backdrop-blur-md border-b border-default"
+    >
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex h-14 items-center justify-between">
+        <AppBrand />
+        <div class="flex items-center gap-3">
+          <router-link
+            v-if="!isAuthenticated"
+            to="/login"
+            class="text-sm font-medium text-content-muted hover:text-content transition-colors"
+          >
+            Sign in
+          </router-link>
+          <router-link
+            v-if="!isAuthenticated"
+            to="/register"
+            class="bg-primary hover:bg-primary-hover text-white text-sm font-bold py-2 px-4 rounded-card shadow-sm transition"
+          >
+            Get started
+          </router-link>
+          <router-link
+            v-else
+            to="/projects"
+            class="bg-primary hover:bg-primary-hover text-white text-sm font-bold py-2 px-4 rounded-card shadow-sm transition"
+          >
+            Go to app
+          </router-link>
+        </div>
+      </div>
+    </header>
+
     <!-- Main content -->
     <div class="relative z-10 mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <!-- Hero Section -->
@@ -25,12 +57,23 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import LandingBackground from '@/components/landing/LandingBackground.vue'
 import LandingHero from '@/components/landing/LandingHero.vue'
 import PipelineVisualization from '@/components/landing/PipelineVisualization.vue'
 import InteractiveDemo from '@/components/landing/InteractiveDemo.vue'
 import FeatureGrid from '@/components/landing/FeatureGrid.vue'
 import LandingCta from '@/components/landing/LandingCta.vue'
+import AppBrand from '@/components/common/AppBrand.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
+const authReady = ref(false)
+onMounted(async () => {
+  await authStore.initialize()
+  authReady.value = true
+})
+const isAuthenticated = computed(() => authReady.value && authStore.isAuthenticated)
 </script>
 
 <style scoped>

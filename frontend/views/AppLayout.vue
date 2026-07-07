@@ -9,9 +9,9 @@
         Backend connection failed. Please check if the backend server is running.
       </div>
       <div class="w-full px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-14 items-center">
-          <div class="flex items-center">
-            <!-- Mobile menu toggle -->
+        <div class="grid grid-cols-[1fr_auto_1fr] h-14 items-center">
+          <!-- Left: mobile toggle + logo + project breadcrumb (when in a project) -->
+          <div class="flex items-center min-w-0">
             <button
               v-if="authReady && isAuthenticated"
               type="button"
@@ -24,12 +24,38 @@
               <Menu v-if="!mobileMenuOpen" class="w-5 h-5" />
               <X v-else class="w-5 h-5" />
             </button>
-            <div class="flex-shrink-0 flex items-center md:mr-8">
-              <router-link :to="isAuthenticated ? '/projects' : '/'">
-                <span class="text-xl font-extrabold tracking-tight text-content">LLMAIx-v2</span>
-              </router-link>
+            <div class="flex-shrink-0 flex items-center md:mr-6">
+              <AppBrand />
             </div>
-            <div v-if="authReady && isAuthenticated" class="hidden md:flex space-x-1">
+            <!-- Project breadcrumb: replaces ProjectDetail's second header -->
+            <div
+              v-if="authReady && isAuthenticated && projectNav"
+              class="hidden md:flex items-center gap-2 min-w-0"
+            >
+              <ChevronRight class="w-4 h-4 text-content-subtle flex-shrink-0" />
+              <router-link
+                to="/projects"
+                class="text-sm font-medium text-content-muted hover:text-content transition-colors flex-shrink-0"
+              >
+                Projects
+              </router-link>
+              <ChevronRight class="w-4 h-4 text-content-subtle flex-shrink-0" />
+              <span
+                class="text-sm font-semibold text-content truncate max-w-[140px] lg:max-w-[240px]"
+                :title="projectNav.projectName"
+              >
+                {{ projectNav.projectName }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Center: contextual workflow tabs (project) OR default nav links -->
+          <div class="flex items-center justify-center min-w-0">
+            <!-- Default: Projects / Admin -->
+            <div
+              v-if="authReady && isAuthenticated && !projectNav"
+              class="hidden md:flex space-x-1"
+            >
               <router-link
                 :class="[
                   $route.path.startsWith('/projects')
@@ -60,9 +86,59 @@
                 </span>
               </router-link>
             </div>
+            <!-- Contextual: centered workflow pill tabs (desktop; mobile uses the slide-down menu) -->
+            <nav
+              v-else-if="projectNav"
+              class="hidden md:flex items-center gap-1 overflow-x-auto max-w-full no-scrollbar"
+              role="tablist"
+              aria-label="Project workflow"
+            >
+              <button
+                v-for="(step, idx) in projectNav.steps"
+                :key="step.id"
+                role="tab"
+                :aria-selected="projectNav.currentStep === step.id"
+                class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium whitespace-nowrap rounded-card transition-all flex-shrink-0"
+                :class="[
+                  projectNav.currentStep === step.id
+                    ? 'bg-primary-soft text-primary'
+                    : 'text-content-muted hover:bg-surface-sunken hover:text-content',
+                ]"
+                @click="projectNav.onStepChange(step.id)"
+              >
+                <span
+                  class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold flex-shrink-0"
+                  :class="[
+                    projectNav.currentStep === step.id
+                      ? 'bg-primary text-white'
+                      : step.isComplete
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                        : 'bg-surface-sunken text-content-subtle',
+                  ]"
+                >
+                  <Check
+                    v-if="step.isComplete && projectNav.currentStep !== step.id"
+                    class="w-3 h-3"
+                  />
+                  <span v-else>{{ idx + 1 }}</span>
+                </span>
+                {{ step.name }}
+              </button>
+            </nav>
           </div>
 
-          <div class="flex items-center gap-1">
+          <!-- Right: project settings (contextual) + bell + dark mode + user -->
+          <div class="flex items-center gap-1 justify-end">
+            <!-- Project settings gear (only when inside a project) -->
+            <button
+              v-if="projectNav"
+              class="p-2 text-content-muted hover:text-content hover:bg-surface-sunken rounded-card transition-all"
+              aria-label="Project Settings"
+              @click="projectNav.onOpenSettings()"
+            >
+              <Settings class="w-5 h-5" />
+            </button>
+
             <!-- Activity Bell (visible to all authenticated users) -->
             <div v-if="isAuthenticated">
               <ActivityBell />
@@ -168,7 +244,48 @@
           id="mobile-menu"
           class="md:hidden border-t border-default bg-surface"
         >
+          <!-- Project workflow steps (only inside a project) -->
+          <div v-if="projectNav" class="border-b border-default">
+            <div class="px-4 py-2 text-xs text-content-subtle truncate">
+              {{ projectNav.projectName }}
+            </div>
+            <button
+              v-for="(step, idx) in projectNav.steps"
+              :key="step.id"
+              class="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium"
+              :class="[
+                projectNav.currentStep === step.id
+                  ? 'text-primary bg-primary-soft'
+                  : 'text-content-muted hover:bg-surface-sunken',
+              ]"
+              @click="
+                () => {
+                  projectNav?.onStepChange(step.id)
+                  mobileMenuOpen = false
+                }
+              "
+            >
+              <span
+                class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold flex-shrink-0"
+                :class="[
+                  projectNav.currentStep === step.id
+                    ? 'bg-primary text-white'
+                    : step.isComplete
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                      : 'bg-surface-sunken text-content-subtle',
+                ]"
+              >
+                <Check
+                  v-if="step.isComplete && projectNav.currentStep !== step.id"
+                  class="w-3 h-3"
+                />
+                <span v-else>{{ idx + 1 }}</span>
+              </span>
+              {{ step.name }}
+            </button>
+          </div>
           <router-link
+            v-if="!projectNav"
             :class="[
               $route.path.startsWith('/projects')
                 ? 'text-primary bg-primary-soft'
@@ -181,7 +298,7 @@
             Projects
           </router-link>
           <router-link
-            v-if="isAdmin"
+            v-if="!projectNav && isAdmin"
             :class="[
               $route.path.startsWith('/admin')
                 ? 'text-primary bg-primary-soft'
@@ -192,6 +309,15 @@
             @click="mobileMenuOpen = false"
           >
             Admin
+          </router-link>
+          <!-- Inside a project: show a back-to-projects link -->
+          <router-link
+            v-if="projectNav"
+            class="block px-4 py-3 text-sm font-medium text-content-muted hover:bg-surface-sunken"
+            to="/projects"
+            @click="mobileMenuOpen = false"
+          >
+            ← All Projects
           </router-link>
           <div class="border-t border-default">
             <div class="px-4 py-2 text-xs text-content-subtle truncate">
@@ -308,7 +434,18 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Settings, Sun, Moon, ShieldCheck, ChevronDown, Lock, Menu, X } from '@lucide/vue'
+import {
+  Settings,
+  Sun,
+  Moon,
+  ShieldCheck,
+  ChevronDown,
+  ChevronRight,
+  Lock,
+  Menu,
+  X,
+  Check,
+} from '@lucide/vue'
 import { frontendVersion, frontendGitCommit } from '@/version'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -316,6 +453,7 @@ import { versionApi } from '@/services/versionApi'
 import { usersApi } from '@/services/usersApi'
 import { useToast } from '@/composables/useToast'
 import ActivityBell from '@/components/admin/ActivityBell.vue'
+import AppBrand from '@/components/common/AppBrand.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FormField from '@/components/common/FormField.vue'
@@ -323,6 +461,7 @@ import PasswordInput from '@/components/common/PasswordInput.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { getBannerClass } from '@/utils/statusStyles'
 import { extractErrorMessage } from '@/utils/errors'
+import { navContext as projectNavContext } from '@/composables/useNavContext'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -401,6 +540,7 @@ onMounted(async () => {
 
 const isAuthenticated = computed<boolean>(() => authStore.isAuthenticated)
 const isAdmin = computed<boolean>(() => authStore.isAdmin)
+const projectNav = computed(() => projectNavContext.value)
 const userName = computed<string>(() => authStore.user?.full_name || '')
 const userInitials = computed<string>(() => {
   if (!authStore.user?.full_name) return ''

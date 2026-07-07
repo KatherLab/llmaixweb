@@ -8,11 +8,7 @@
       </span>
     </div>
     <h1 class="mb-6 text-5xl font-extrabold text-content sm:text-7xl">
-      <span
-        class="bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent dark:from-primary dark:to-primary-hover"
-      >
-        LLMAIx-v2
-      </span>
+      <AppBrand :as-link="false" size="lg" variant="hero" />
     </h1>
     <p class="mx-auto max-w-3xl text-xl leading-relaxed text-content-muted">
       Turn unstructured medical and lab documents into validated structured JSON. Define your
@@ -23,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-// Static hero section — no script logic needed
+import AppBrand from '@/components/common/AppBrand.vue'
 </script>
 
 <style scoped>
