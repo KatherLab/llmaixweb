@@ -106,19 +106,19 @@
         @clear="selectedDocuments = []"
       >
         <BaseButton variant="secondary" size="sm" @click="createGroupFromSelection">
-          <FolderPlus class="w-4 h-4 mr-1.5" />
+          <FolderPlus class="w-4 h-4" />
           Create Group
         </BaseButton>
         <BaseButton variant="secondary" size="sm" @click="performBatchAction('reprocess')">
-          <RefreshCw class="w-4 h-4 mr-1.5" />
+          <RefreshCw class="w-4 h-4" />
           Reprocess
         </BaseButton>
         <BaseButton variant="secondary" size="sm" @click="performBatchAction('export')">
-          <Download class="w-4 h-4 mr-1.5" />
+          <Download class="w-4 h-4" />
           Export
         </BaseButton>
         <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
-          <Trash2 class="w-4 h-4 mr-1.5" />
+          <Trash2 class="w-4 h-4" />
           Delete
         </BaseButton>
       </BatchActionBar>

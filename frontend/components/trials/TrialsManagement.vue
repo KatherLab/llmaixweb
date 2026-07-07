@@ -11,8 +11,6 @@
         <Tooltip v-if="trialDisabled" :text="trialDisabledReason">
           <BaseButton
             variant="primary"
-            size="lg"
-            class="font-semibold shadow dark:hover:bg-primary-hover"
             :disabled="trialDisabled"
             type="button"
             @click="openCreateTrialModal"
@@ -22,8 +20,6 @@
         <BaseButton
           v-else
           variant="primary"
-          size="lg"
-          class="font-semibold shadow dark:hover:bg-primary-hover"
           :disabled="trialDisabled"
           type="button"
           @click="openCreateTrialModal"
@@ -118,7 +114,7 @@
         @clear="selectedTrials = []"
       >
         <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
-          <Trash2 class="w-4 h-4 mr-1.5" />
+          <Trash2 class="w-4 h-4" />
           Delete
         </BaseButton>
       </BatchActionBar>

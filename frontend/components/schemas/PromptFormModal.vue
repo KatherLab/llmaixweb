@@ -112,7 +112,7 @@
                 v-if="promptForm.system_prompt?.includes('{document_content}')"
                 color="green"
               >
-                <Check class="h-3 w-3 mr-1" />
+                <Check class="h-3 w-3" />
                 Contains placeholder
               </StatusBadge>
               <button
@@ -163,7 +163,7 @@
                 v-if="promptForm.user_prompt?.includes('{document_content}')"
                 color="green"
               >
-                <Check class="h-3 w-3 mr-1" />
+                <Check class="h-3 w-3" />
                 Contains placeholder
               </StatusBadge>
               <button

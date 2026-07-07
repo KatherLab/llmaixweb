@@ -9,7 +9,7 @@
     >
       <template #actions>
         <BaseButton variant="secondary" @click="showUploadModal = true">
-          <Upload class="w-5 h-5 mr-2 text-content-muted" />
+          <Upload class="w-5 h-5 text-content-muted" />
           Upload Files
         </BaseButton>
       </template>
@@ -128,8 +128,8 @@
       </template>
 
       <BaseButton :disabled="unconfiguredCsvXlsxFiles.length > 0" @click="openProcessingPanel">
-        <Settings v-if="unconfiguredCsvXlsxFiles.length === 0" class="w-4 h-4 mr-2" />
-        <AlertTriangle v-else class="w-4 h-4 mr-2" />
+        <Settings v-if="unconfiguredCsvXlsxFiles.length === 0" class="w-4 h-4" />
+        <AlertTriangle v-else class="w-4 h-4" />
         {{
           unconfiguredCsvXlsxFiles.length > 0 ? 'Configure Files First' : 'Configure Preprocessing'
         }}

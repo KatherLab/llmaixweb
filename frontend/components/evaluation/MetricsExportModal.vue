@@ -194,8 +194,8 @@
         :disabled="isExporting || selectedEvaluations.length === 0"
         @click="exportReport"
       >
-        <span v-if="!isExporting" class="flex items-center">
-          <Upload class="w-4 h-4 mr-1" />
+        <span v-if="!isExporting" class="flex items-center gap-1.5">
+          <Upload class="w-4 h-4" />
           Export Report
         </span>
         <span v-else>Exporting...</span>

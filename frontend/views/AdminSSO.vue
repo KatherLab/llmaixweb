@@ -10,7 +10,7 @@
       </template>
       <template #actions>
         <BaseButton variant="primary" @click="openCreate">
-          <Plus class="w-4 h-4 inline-block mr-1" /> Add provider
+          <Plus class="w-4 h-4" /> Add provider
         </BaseButton>
       </template>
     </PageHeader>

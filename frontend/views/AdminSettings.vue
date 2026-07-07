@@ -47,7 +47,7 @@
           <template v-if="val.readonly">
             <div class="text-content-subtle flex flex-col gap-1">
               <span class="flex items-center gap-1">
-                <Lock class="w-4 h-4 mr-1 text-content-subtle inline-block" />
+                <Lock class="w-4 h-4 text-content-subtle" />
                 Set in <code>.env</code>
               </span>
               <span class="text-xs"
