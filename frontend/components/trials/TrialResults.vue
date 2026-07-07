@@ -1,67 +1,92 @@
 <template>
-  <BaseModal
+  <SlideOver
     v-if="isModal"
     :open="isModal"
-    placement="right"
-    panel-class="w-screen max-w-[95rem]"
-    header-class="bg-surface-muted"
-    body-class="!p-0 flex-1 overflow-hidden"
-    footer-class="bg-surface-muted"
+    body-class="!p-0 overflow-hidden"
     @close="$emit('close')"
   >
     <template #header>
-      <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-2 flex-wrap">
-          <h3 class="text-base font-semibold text-content truncate">
-            {{ trial?.name || `Trial #${trialId}` }}
-          </h3>
-          <StatusBadge v-if="trial?.status" :status="trial.status" class="shadow-sm" />
-          <span
+      <div class="flex items-center justify-between gap-4 flex-1 min-w-0 pr-8">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-base font-semibold text-content truncate">
+              {{ trial?.name || `Trial #${trialId}` }}
+            </h3>
+            <StatusBadge v-if="trial?.status" :status="trial.status" class="shadow-sm" />
+            <span
+              v-if="trial"
+              class="text-[11px] text-content-subtle bg-surface px-2 py-0.5 rounded-full border border-default"
+            >
+              {{ totalCount }} results
+            </span>
+          </div>
+          <div
             v-if="trial"
-            class="text-[11px] text-content-subtle bg-surface px-2 py-0.5 rounded-full border border-default"
+            class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-content-subtle mt-1"
           >
-            {{ totalCount }} results
-          </span>
+            <span v-if="trial.llm_model">
+              <span class="font-medium text-content-muted">Model:</span>
+              {{ trial.llm_model }}
+            </span>
+            <span v-if="trial.prompt">
+              <span class="font-medium text-content-muted">Prompt:</span>
+              {{ trial.prompt.name || '[unnamed]' }}
+            </span>
+            <span v-if="trial.document_set">
+              <span class="font-medium text-content-muted">Set:</span>
+              {{ trial.document_set.name || '#' + trial.document_set.id }}
+            </span>
+            <span v-if="totalUsage.total_tokens">
+              <span class="font-medium text-content-muted">Tokens:</span>
+              {{ totalUsage.total_tokens }}
+            </span>
+            <button
+              type="button"
+              class="font-medium text-primary hover:underline"
+              @click="openSchemaModal"
+            >
+              Schema
+            </button>
+            <button
+              type="button"
+              class="font-medium text-primary hover:underline"
+              @click="openPromptModal"
+            >
+              Prompt
+            </button>
+            <button
+              v-if="hasFailures"
+              type="button"
+              class="font-medium text-red-600 dark:text-red-400 hover:underline"
+              @click="showErrors = !showErrors"
+            >
+              {{ hasFailures ? `${errorCount} errors` : '' }}
+            </button>
+          </div>
         </div>
-        <div v-if="trial" class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-content-subtle mt-1">
-          <span v-if="trial.llm_model">
-            <span class="font-medium text-content-muted">Model:</span>
-            {{ trial.llm_model }}
-          </span>
-          <span v-if="trial.prompt">
-            <span class="font-medium text-content-muted">Prompt:</span>
-            {{ trial.prompt.name || '[unnamed]' }}
-          </span>
-          <span v-if="trial.document_set">
-            <span class="font-medium text-content-muted">Set:</span>
-            {{ trial.document_set.name || '#' + trial.document_set.id }}
-          </span>
-          <span v-if="totalUsage.total_tokens">
-            <span class="font-medium text-content-muted">Tokens:</span>
-            {{ totalUsage.total_tokens }}
-          </span>
-          <button
-            type="button"
-            class="font-medium text-primary hover:underline"
-            @click="openSchemaModal"
+        <!-- Document nav -->
+        <div class="flex items-center gap-1 shrink-0">
+          <BaseButton
+            variant="secondary"
+            size="sm"
+            :disabled="!hasPrev"
+            :title="hasPrev ? 'Previous document (←)' : 'First result'"
+            @click="goPrev"
           >
-            Schema
-          </button>
-          <button
-            type="button"
-            class="font-medium text-primary hover:underline"
-            @click="openPromptModal"
+            <ChevronLeft class="h-4 w-4" />
+          </BaseButton>
+          <span class="text-xs font-medium text-content-muted tabular-nums px-1 whitespace-nowrap">
+            {{ activeResult ? globalIndex + 1 : 0 }} / {{ totalCount }}
+          </span>
+          <BaseButton
+            variant="secondary"
+            size="sm"
+            :disabled="!hasNext"
+            :title="hasNext ? 'Next document (→)' : 'Last result'"
+            @click="goNext"
           >
-            Prompt
-          </button>
-          <button
-            v-if="hasFailures"
-            type="button"
-            class="font-medium text-red-600 dark:text-red-400 hover:underline"
-            @click="showErrors = !showErrors"
-          >
-            {{ hasFailures ? `${errorCount} errors` : '' }}
-          </button>
+            <ChevronRight class="h-4 w-4" />
+          </BaseButton>
         </div>
       </div>
     </template>
@@ -85,9 +110,11 @@
       </BaseButton>
     </div>
 
-    <!-- No results yet -->
+    <!-- No results yet (only when no filters are active — a genuinely empty
+         trial. When filters yield nothing, fall through to the 2-pane layout
+         so the rail (with its reset affordance) stays visible.) -->
     <div
-      v-else-if="results.length === 0 && !resultsLoading"
+      v-else-if="results.length === 0 && !resultsLoading && !hasActiveFilters"
       class="flex flex-col items-center justify-center h-full py-16"
     >
       <EmptyState title="No results available for this trial.">
@@ -100,7 +127,7 @@
       </EmptyState>
     </div>
 
-    <!-- Main 3-pane layout -->
+    <!-- Main 2-pane layout: doc list + viewer -->
     <div v-else class="flex h-full min-h-0">
       <!-- Left rail: document list -->
       <aside
@@ -169,6 +196,19 @@
             <div v-if="resultsLoading" class="flex justify-center py-4">
               <LoadingSpinner size="small" inline label="" />
             </div>
+            <div
+              v-else-if="results.length === 0"
+              class="flex flex-col items-center justify-center py-8 px-3 text-center"
+            >
+              <p class="text-xs text-content-subtle">No results match your filters.</p>
+              <button
+                type="button"
+                class="mt-2 text-xs font-medium text-primary hover:underline"
+                @click="resetFilters"
+              >
+                Reset filters
+              </button>
+            </div>
           </div>
 
           <!-- Compact pagination -->
@@ -198,7 +238,7 @@
 
       <!-- Center: main viewer -->
       <div class="flex-1 min-w-0 flex flex-col">
-        <!-- Rail toggle buttons (for narrow viewports / power users) -->
+        <!-- Rail toggle (for narrow viewports / power users) -->
         <div
           class="flex items-center justify-between px-2 py-1 border-b border-default bg-surface shrink-0"
         >
@@ -210,14 +250,6 @@
           >
             <PanelLeft class="h-4 w-4" />
           </BaseButton>
-          <BaseButton
-            variant="ghost"
-            size="sm"
-            :title="rightRailOpen ? 'Hide details' : 'Show details'"
-            @click="rightRailOpen = !rightRailOpen"
-          >
-            <PanelRight class="h-4 w-4" />
-          </BaseButton>
         </div>
 
         <div class="flex-1 min-h-0">
@@ -225,51 +257,20 @@
             v-if="activeResult"
             :result="activeResult"
             :project-id="props.projectId"
-            :index="globalIndex"
-            :total="totalCount"
-            :has-prev="hasPrev"
-            :has-next="hasNext"
-            @prev="goPrev"
-            @next="goNext"
           />
+          <div
+            v-else
+            class="flex flex-col items-center justify-center h-full py-16 text-content-subtle"
+          >
+            <FileText class="h-10 w-10 mb-2 opacity-40" />
+            <p class="text-sm">
+              {{
+                hasActiveFilters ? 'No results match your filters.' : 'Select a document to view.'
+              }}
+            </p>
+          </div>
         </div>
       </div>
-
-      <!-- Right rail: reasoning & metadata -->
-      <aside
-        :class="[
-          'flex flex-col border-l border-default bg-surface-muted/40 shrink-0',
-          rightRailOpen ? 'w-80' : 'w-0 -mr-px overflow-hidden',
-        ]"
-      >
-        <div v-show="rightRailOpen" class="flex flex-col h-full min-h-0">
-          <div class="px-4 py-3 border-b border-default shrink-0">
-            <h4 class="text-xs font-semibold uppercase tracking-wide text-content-muted">
-              Reasoning & Metadata
-            </h4>
-          </div>
-          <div class="flex-1 min-h-0 overflow-y-auto p-4">
-            <template v-if="activeResult">
-              <ResultReasoningPanel
-                :reasoning-content="activeReasoningContent"
-                :additional-content="activeAdditionalContent"
-                :show="showReasoning"
-                @toggle="showReasoning = !showReasoning"
-              />
-              <div
-                v-if="
-                  !activeReasoningContent &&
-                  !activeAdditionalContent?.usage &&
-                  !activeAdditionalContent?.finish_reason
-                "
-                class="text-sm text-content-muted italic"
-              >
-                No reasoning or metadata for this document.
-              </div>
-            </template>
-          </div>
-        </div>
-      </aside>
     </div>
 
     <!-- Collapsible error list (toggled from header) -->
@@ -282,35 +283,14 @@
 
     <template #footer>
       <div class="flex items-center justify-between gap-4 w-full">
+        <p class="text-xs text-content-subtle">
+          Use <kbd class="px-1 py-0.5 bg-surface-sunken rounded">←</kbd> /
+          <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd> to move between documents.
+        </p>
         <BaseButton variant="secondary" size="sm" @click="$emit('close')">
           <X class="h-4 w-4" />
           Close
         </BaseButton>
-        <div class="flex items-center gap-1">
-          <BaseButton
-            variant="secondary"
-            size="sm"
-            :disabled="!hasPrev"
-            :title="hasPrev ? 'Previous document (←)' : 'First result'"
-            @click="goPrev"
-          >
-            <ChevronLeft class="h-4 w-4" />
-            <span class="hidden sm:inline">Prev</span>
-          </BaseButton>
-          <span class="text-sm font-medium text-content-muted tabular-nums px-2">
-            {{ activeResult ? globalIndex + 1 : 0 }} / {{ totalCount }}
-          </span>
-          <BaseButton
-            variant="secondary"
-            size="sm"
-            :disabled="!hasNext"
-            :title="hasNext ? 'Next document (→)' : 'Last result'"
-            @click="goNext"
-          >
-            <span class="hidden sm:inline">Next</span>
-            <ChevronRight class="h-4 w-4" />
-          </BaseButton>
-        </div>
       </div>
     </template>
 
@@ -327,22 +307,21 @@
       :is-snapshot="promptIsSnapshot"
       @close="showPromptModal = false"
     />
-  </BaseModal>
+  </SlideOver>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, type PropType } from 'vue'
 import { useRoute } from 'vue-router'
 import { debounce } from 'perfect-debounce'
-import { ChevronLeft, ChevronRight, Frown, PanelLeft, PanelRight, X } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, FileText, Frown, PanelLeft, X } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { schemasApi } from '@/services/schemasApi'
 import TrialResultViewer from './TrialResultViewer.vue'
 import TrialDocumentErrors from './TrialDocumentErrors.vue'
-import ResultReasoningPanel from './ResultReasoningPanel.vue'
 import SchemaViewModal from '@/components/schemas/SchemaViewModal.vue'
 import PromptViewModal from '@/components/schemas/PromptViewModal.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
+import SlideOver from '@/components/common/SlideOver.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
@@ -357,22 +336,6 @@ interface TokenUsage {
   prompt_tokens?: number
   completion_tokens?: number
   total_tokens?: number
-  [key: string]: unknown
-}
-
-interface AdditionalContent {
-  reasoning_content?: string
-  usage?: Record<string, unknown>
-  finish_reason?: string
-  json_error?: string
-  user_guidance?: { user_message?: string }
-  tuning_advice?: {
-    recommendations: Array<{
-      action: string
-      suggested_value?: string
-      rationale?: string
-    }>
-  }
   [key: string]: unknown
 }
 
@@ -406,9 +369,7 @@ const totalUsage = ref<TokenUsage>({
 // Active document navigation
 const activeIndex = ref(0)
 const leftRailOpen = ref(true)
-const rightRailOpen = ref(true)
 const showErrors = ref(false)
-const showReasoning = ref(true)
 
 // Filters
 const search = ref('')
@@ -480,23 +441,6 @@ const hasNext = computed(
   () => !(currentPage.value >= totalPages.value && activeIndex.value >= results.value.length - 1),
 )
 
-const activeAdditionalContent = computed<AdditionalContent | null>(() => {
-  const ac = activeResult.value?.additional_content
-  if (!ac) return null
-  if (typeof ac === 'string') {
-    try {
-      return JSON.parse(ac) as AdditionalContent
-    } catch {
-      return null
-    }
-  }
-  return ac as AdditionalContent
-})
-
-const activeReasoningContent = computed(
-  () => activeAdditionalContent.value?.reasoning_content || null,
-)
-
 // --- Fetch ---
 
 const fetchTrial = async (): Promise<void> => {
@@ -554,6 +498,18 @@ const debouncedFetchResults = debounce(() => {
 }, 300)
 
 function handleFilterChange(): void {
+  currentPage.value = 1
+  activeIndex.value = 0
+  fetchResults()
+}
+
+// Whether any filter is currently active (drives the "Reset filters" CTA in
+// the empty state, so users are never stranded with no results + no way back).
+const hasActiveFilters = computed(() => !!search.value || !!statusFilter.value)
+
+function resetFilters(): void {
+  search.value = ''
+  statusFilter.value = ''
   currentPage.value = 1
   activeIndex.value = 0
   fetchResults()

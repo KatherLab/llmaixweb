@@ -2,7 +2,7 @@
   <div class="flex flex-col h-full min-h-0 bg-surface">
     <!-- Document header bar -->
     <div
-      class="flex items-center justify-between gap-3 px-5 py-3 border-b border-default bg-surface-muted/60"
+      class="flex items-center justify-between gap-3 px-5 py-3 border-b border-default bg-surface-muted/60 shrink-0"
     >
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
@@ -41,35 +41,10 @@
           </span>
         </div>
       </div>
-
-      <!-- Inline prev/next (mirrors the pinned footer control) -->
-      <div class="flex items-center gap-1 shrink-0">
-        <BaseButton
-          variant="secondary"
-          size="sm"
-          :disabled="!hasPrev"
-          :title="hasPrev ? 'Previous document (←)' : 'First result'"
-          @click="$emit('prev')"
-        >
-          <ChevronLeft class="h-4 w-4" />
-        </BaseButton>
-        <span class="text-xs font-medium text-content-muted tabular-nums px-1">
-          {{ index + 1 }} / {{ total }}
-        </span>
-        <BaseButton
-          variant="secondary"
-          size="sm"
-          :disabled="!hasNext"
-          :title="hasNext ? 'Next document (→)' : 'Last result'"
-          @click="$emit('next')"
-        >
-          <ChevronRight class="h-4 w-4" />
-        </BaseButton>
-      </div>
     </div>
 
-    <!-- Error banner (replaces the JSON tab content for failed docs) -->
-    <div v-if="!activeResult.result || additionalContent?.json_error" class="px-5 pt-4">
+    <!-- Error banner (failed docs — shown above the split, replaces Result tab) -->
+    <div v-if="!activeResult.result || additionalContent?.json_error" class="px-5 pt-4 shrink-0">
       <ErrorBanner class="rounded-card text-sm">
         <div class="font-semibold mb-1">This document has no structured result.</div>
         <div v-if="additionalContent?.user_guidance?.user_message" class="mb-1">
@@ -93,131 +68,177 @@
       </ErrorBanner>
     </div>
 
-    <!-- Tabs -->
-    <div class="flex items-center gap-1 px-5 border-b border-default bg-surface shrink-0">
-      <button
-        type="button"
-        :class="[
-          'px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-          activeTab === 'json'
-            ? 'border-primary text-content'
-            : 'border-transparent text-content-muted hover:text-content',
-        ]"
-        @click="activeTab = 'json'"
+    <!-- Panel layout: toggle chips add/remove panes (Source, Result, Reasoning, Metadata) -->
+    <div class="flex-1 min-h-0 overflow-hidden">
+      <PanelLayout
+        :panels="availablePanels"
+        :model-value="activePanels"
+        :max-visible="3"
+        @update:model-value="activePanels = $event"
       >
-        <FileJson class="h-4 w-4 inline -mt-0.5 mr-1" />
-        Extracted JSON
-      </button>
-      <button
-        type="button"
-        :class="[
-          'px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-          activeTab === 'text'
-            ? 'border-primary text-content'
-            : 'border-transparent text-content-muted hover:text-content',
-        ]"
-        @click="activeTab = 'text'"
-      >
-        <FileText class="h-4 w-4 inline -mt-0.5 mr-1" />
-        Document Text
-      </button>
-      <button
-        v-if="documentPreviewable"
-        type="button"
-        :class="[
-          'px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-          activeTab === 'file'
-            ? 'border-primary text-content'
-            : 'border-transparent text-content-muted hover:text-content',
-        ]"
-        @click="activeTab = 'file'"
-      >
-        <Eye class="h-4 w-4 inline -mt-0.5 mr-1" />
-        Original File
-      </button>
-
-      <div class="ml-auto flex items-center gap-2 py-1.5">
-        <BaseButton
-          v-if="activeResult.result && activeTab === 'json'"
-          variant="ghost"
-          size="sm"
-          class="-mr-1"
-          :title="copied ? 'Copied!' : 'Copy JSON'"
-          @click="copyResult"
-        >
-          <component :is="copied ? Check : Copy" class="h-4 w-4" />
-        </BaseButton>
-      </div>
-    </div>
-
-    <!-- Tab content (scrollable) -->
-    <div class="flex-1 min-h-0 overflow-y-auto bg-surface">
-      <transition name="doc-fade" mode="out-in">
-        <div :key="activeResult.id" class="p-5">
-          <!-- Extracted JSON -->
-          <div v-if="activeTab === 'json'">
-            <template v-if="activeResult.result">
-              <JsonViewer :data="activeResult.result as Record<string, unknown>" />
-            </template>
-            <div v-else class="text-sm text-content-muted italic">
-              No structured output for this document.
-            </div>
-          </div>
-
-          <!-- Document text -->
-          <div v-else-if="activeTab === 'text'">
-            <div v-if="docLoading" class="flex flex-col items-center justify-center py-12">
-              <LoadingSpinner size="medium" inline label="" />
-              <span class="mt-2 text-sm text-content-muted">Loading document text…</span>
-            </div>
-            <template v-else-if="documentContent">
-              <div
-                v-if="isMarkdown(documentContent)"
-                class="markdown-content"
-                v-html="renderMarkdown(documentContent)"
-              ></div>
-              <pre v-else class="text-xs text-content whitespace-pre-wrap break-words font-mono">{{
-                documentContent
-              }}</pre>
-            </template>
-            <div v-else class="text-sm text-content-muted italic">No text content available.</div>
-          </div>
-
-          <!-- Original file preview -->
-          <div v-else-if="activeTab === 'file'">
-            <iframe
-              v-if="documentPdfUrl"
-              :src="documentPdfUrl"
-              frameborder="0"
-              class="rounded-card w-full h-[70vh] border border-default"
-              :title="`Preview of ${documentLabel}`"
-            ></iframe>
+        <!-- Source document (original file or extracted text) -->
+        <template #pane-source>
+          <div class="flex flex-col h-full min-h-0">
             <div
-              v-else-if="documentPdfLoading"
-              class="flex flex-col items-center justify-center py-12"
+              class="flex items-center justify-between gap-2 px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
             >
-              <LoadingSpinner size="medium" inline label="" />
-              <span class="mt-2 text-sm text-content-muted">Loading preview…</span>
+              <h4 class="flex items-center gap-2 text-sm font-semibold text-content-muted">
+                <FileText class="h-4 w-4" /> Source Document
+              </h4>
+              <button
+                v-if="hasPreviewableFile"
+                class="text-xs text-primary hover:underline"
+                @click="toggleOriginalView"
+              >
+                {{ showOriginal ? 'Show extracted text' : 'Show original file' }}
+              </button>
             </div>
-            <div v-else class="text-sm text-content-muted italic">Failed to load preview.</div>
+            <div class="flex-1 min-h-0 bg-surface-muted">
+              <div
+                v-if="documentPdfLoading"
+                class="flex flex-col items-center justify-center h-full"
+              >
+                <LoadingSpinner size="medium" inline label="" />
+                <span class="mt-2 text-sm text-content-muted">Loading preview…</span>
+              </div>
+              <DocumentFilePreview
+                v-else-if="showOriginal && documentPdfUrl"
+                view-mode="pdf"
+                :original-pdf-url="documentPdfUrl"
+              />
+              <div v-else-if="docLoading" class="flex items-center justify-center h-full">
+                <LoadingSpinner size="medium" inline label="" />
+              </div>
+              <pre
+                v-else-if="documentContent"
+                class="text-xs text-content-muted whitespace-pre-wrap break-words font-mono p-4 overflow-auto h-full"
+                >{{ documentContent }}</pre>
+              <div
+                v-else
+                class="flex items-center justify-center h-full p-6 text-sm text-content-subtle italic"
+              >
+                No original file or extracted text for this document.
+              </div>
+            </div>
           </div>
-        </div>
-      </transition>
+        </template>
+
+        <!-- Result JSON -->
+        <template #pane-result>
+          <div class="flex flex-col h-full min-h-0">
+            <div
+              class="flex items-center justify-between gap-2 px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
+            >
+              <h4 class="flex items-center gap-2 text-sm font-semibold text-content-muted">
+                <Braces class="h-4 w-4" /> Result
+              </h4>
+            </div>
+            <div class="relative flex-1 min-h-0 overflow-y-auto bg-surface p-5">
+              <!-- Copy JSON — floats top-right so it doesn't affect header height -->
+              <BaseButton
+                v-if="activeResult.result"
+                variant="ghost"
+                size="sm"
+                class="absolute top-2 right-2 shadow-sm"
+                :title="copied ? 'Copied!' : 'Copy JSON'"
+                @click="copyResult"
+              >
+                <component :is="copied ? Check : Copy" class="h-4 w-4" />
+              </BaseButton>
+              <JsonViewer
+                v-if="activeResult.result"
+                :data="activeResult.result as Record<string, unknown>"
+              />
+              <div v-else class="text-sm text-content-muted italic">
+                No structured output for this document.
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Reasoning -->
+        <template #pane-reasoning>
+          <div class="flex flex-col h-full min-h-0">
+            <h4
+              class="flex items-center gap-2 text-sm font-semibold text-content-muted px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
+            >
+              <MessageSquare class="h-4 w-4" /> Reasoning
+            </h4>
+            <div class="flex-1 min-h-0 overflow-y-auto bg-surface p-5">
+              <div
+                v-if="reasoningContent"
+                class="markdown-content"
+                v-html="renderMarkdown(reasoningContent)"
+              ></div>
+              <div v-else class="text-sm text-content-muted italic">
+                No reasoning content was captured for this document.
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Metadata -->
+        <template #pane-metadata>
+          <div class="flex flex-col h-full min-h-0">
+            <h4
+              class="flex items-center gap-2 text-sm font-semibold text-content-muted px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
+            >
+              <Info class="h-4 w-4" /> Metadata
+            </h4>
+            <div class="flex-1 min-h-0 overflow-y-auto bg-surface p-5">
+              <dl class="space-y-3 text-sm">
+                <div v-if="additionalContent?.usage">
+                  <dt class="font-semibold text-content mb-1">Token Usage</dt>
+                  <ul class="text-xs text-content-muted ml-2 space-y-0.5">
+                    <li v-for="(v, k) in additionalContent.usage" :key="k">
+                      <span class="font-medium">{{ formatKey(k as string) }}:</span> {{ v }}
+                    </li>
+                  </ul>
+                </div>
+                <div v-if="additionalContent?.finish_reason">
+                  <dt class="font-semibold text-content">Finish Reason</dt>
+                  <dd class="text-xs text-content-muted">
+                    {{ additionalContent.finish_reason }}
+                  </dd>
+                </div>
+                <div v-if="additionalContent?.json_error">
+                  <dt class="font-semibold text-content">JSON Error</dt>
+                  <dd class="text-xs text-red-600 dark:text-red-400">
+                    {{ additionalContent.json_error }}
+                  </dd>
+                </div>
+                <div
+                  v-if="
+                    !additionalContent?.usage &&
+                    !additionalContent?.finish_reason &&
+                    !additionalContent?.json_error
+                  "
+                  class="text-sm text-content-muted italic"
+                >
+                  No metadata for this document.
+                </div>
+              </dl>
+            </div>
+          </div>
+        </template>
+      </PanelLayout>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { Check, ChevronLeft, ChevronRight, Copy, Eye, FileJson, FileText } from '@lucide/vue'
+import { Braces, Check, Copy, FileText, Info, MessageSquare } from '@lucide/vue'
 import JsonViewer from '@/components/common/JsonViewer.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import PanelLayout, { type PanelOption } from '@/components/common/PanelLayout.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import DocumentFilePreview from '@/components/documents/DocumentFilePreview.vue'
 import { documentsApi } from '@/services/documentsApi'
 import { filesApi } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
-import { renderMarkdown, isMarkdown } from '@/utils/markdown'
+import { renderMarkdown } from '@/utils/markdown'
 import { getPillClass } from '@/utils/statusStyles'
 import { formatDateSmart } from '@/utils/formatters'
 import type { TrialResultItem } from '@/types'
@@ -248,15 +269,6 @@ interface TokenUsage {
 const props = defineProps<{
   result: TrialResultItem
   projectId: string | number
-  index: number
-  total: number
-  hasPrev: boolean
-  hasNext: boolean
-}>()
-
-defineEmits<{
-  prev: []
-  next: []
 }>()
 
 const toast = useToast()
@@ -268,9 +280,45 @@ const documentFileId = ref<number | null>(null)
 const documentPdfUrl = ref('')
 const documentPdfLoading = ref(false)
 const copied = ref(false)
-const activeTab = ref<'json' | 'text' | 'file'>('json')
+// Show the original file when available, else fall back to extracted text.
+const showOriginal = ref(true)
+// Active panels in the PanelLayout (order = left-to-right). 'source' is added
+// by default when there's original content; 'result' is always present.
+const activePanels = ref<string[]>(['result'])
 
 const activeResult = computed(() => props.result)
+
+// Whether the source pane has anything to show (previewable original file OR
+// extracted text). Drives whether the Source chip appears at all.
+const hasOriginalContent = computed(
+  () => documentPreviewable.value || !!documentContent.value || docLoading.value,
+)
+const hasPreviewableFile = computed(() => documentPreviewable.value && !!documentPdfUrl.value)
+
+// The chip menu. Source is only offered when there's original content;
+// Reasoning / Metadata only when they exist. Result is always available.
+const availablePanels = computed<PanelOption[]>(() => {
+  const panels: PanelOption[] = []
+  if (hasOriginalContent.value) {
+    panels.push({ key: 'source', label: 'Source', icon: FileText })
+  }
+  panels.push({ key: 'result', label: 'Result', icon: Braces })
+  if (reasoningContent.value) {
+    panels.push({ key: 'reasoning', label: 'Reasoning', icon: MessageSquare })
+  }
+  if (
+    additionalContent.value?.usage ||
+    additionalContent.value?.finish_reason ||
+    additionalContent.value?.json_error
+  ) {
+    panels.push({ key: 'metadata', label: 'Metadata', icon: Info })
+  }
+  return panels
+})
+
+function toggleOriginalView(): void {
+  showOriginal.value = !showOriginal.value
+}
 
 const additionalContent = computed<AdditionalContent | null>(() => {
   const ac = props.result.additional_content
@@ -284,6 +332,8 @@ const additionalContent = computed<AdditionalContent | null>(() => {
   }
   return ac as AdditionalContent
 })
+
+const reasoningContent = computed(() => additionalContent.value?.reasoning_content || '')
 
 const documentLabel = computed(
   () =>
@@ -321,6 +371,8 @@ const analyzeOriginalFile = (fileType: string | undefined | null): boolean => {
   return fileType === 'application/pdf' || fileType.startsWith('image/')
 }
 
+const formatKey = (key: string): string => key.replace(/_/g, ' ')
+
 async function copyResult(): Promise<void> {
   if (!props.result.result) return
   try {
@@ -347,6 +399,10 @@ async function loadDocumentTextAndMeta(): Promise<void> {
         ? d.preprocessed_file_id
         : d.original_file_id
       : null
+    // Default to Source + Result side-by-side when there's original content.
+    if (hasOriginalContent.value && !activePanels.value.includes('source')) {
+      activePanels.value = ['source', ...activePanels.value]
+    }
   } catch (err) {
     documentContent.value = 'Error loading document content'
     console.error(err)
@@ -382,37 +438,25 @@ function resetDocState(): void {
   documentContent.value = ''
   documentPreviewable.value = false
   documentFileId.value = null
-  activeTab.value = 'json'
+  showOriginal.value = true
+  // Reset to just Result; loadDocumentTextAndMeta() will prepend Source once it
+  // confirms there's original content to show.
+  activePanels.value = ['result']
 }
 
 // When the active result changes, reset state and prefetch the new doc's text
-// (and file preview when previewable) so tab switches feel instant.
+// + file preview so pane switches feel instant.
 watch(
   () => props.result.id,
   () => {
     resetDocState()
     loadDocumentTextAndMeta()
+    loadOriginalFilePreview()
   },
   { immediate: true },
 )
-
-// Lazily load the original-file preview only when its tab is opened.
-watch(activeTab, (tab) => {
-  if (tab === 'file') loadOriginalFilePreview()
-})
 
 onUnmounted(() => {
   if (documentPdfUrl.value) URL.revokeObjectURL(documentPdfUrl.value)
 })
 </script>
-
-<style scoped>
-.doc-fade-enter-active,
-.doc-fade-leave-active {
-  transition: opacity 0.15s ease;
-}
-.doc-fade-enter-from,
-.doc-fade-leave-to {
-  opacity: 0;
-}
-</style>

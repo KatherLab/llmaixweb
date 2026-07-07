@@ -166,7 +166,6 @@
       :project-id="projectId"
       @close="showViewGroup = false"
       @edit="editGroup"
-      @view-document="viewDocumentFromGroup"
     />
 
     <!-- Delete Group Confirmation Modal -->
@@ -209,7 +208,7 @@ import SearchInput from '@/components/common/SearchInput.vue'
 import { usePagination } from '@/composables/usePagination'
 import { extractErrorMessage } from '@/utils/errors'
 import { checkboxClass } from '@/utils/formStyles'
-import type { DocumentListItem, DocumentSetCreate, DocumentSetSummary } from '@/types'
+import type { DocumentSetCreate, DocumentSetSummary } from '@/types'
 
 interface Props {
   projectId: string | number
@@ -221,7 +220,6 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   refresh: []
-  'view-document': [doc: DocumentListItem]
 }>()
 
 const toast = useToast()
@@ -324,10 +322,6 @@ const editGroup = (group: DocumentSetSummary): void => {
 const viewGroup = (group: DocumentSetSummary): void => {
   viewingGroup.value = group
   showViewGroup.value = true
-}
-
-const viewDocumentFromGroup = (doc: DocumentListItem): void => {
-  emit('view-document', doc)
 }
 
 const deleteGroup = (group: DocumentSetSummary): void => {

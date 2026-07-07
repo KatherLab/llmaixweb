@@ -1,29 +1,55 @@
 <template>
-  <BaseModal
-    :open="open"
-    size="2xl"
-    panel-class="h-[85vh]"
-    body-class="!p-0 overflow-hidden"
-    @close="$emit('close')"
-  >
+  <SlideOver :open="open" body-class="!p-0 overflow-hidden" @close="$emit('close')">
     <template #header>
-      <div class="flex items-center justify-between flex-1">
-        <div class="flex items-center gap-4">
+      <div class="flex items-center justify-between flex-1 min-w-0 pr-8">
+        <div class="flex items-center gap-4 min-w-0">
           <FileIcon :file-type="file?.file_type" :size="32" />
-          <div>
-            <h3 class="text-xl font-bold text-content">{{ file?.file_name }}</h3>
+          <div class="min-w-0">
+            <h3 class="text-xl font-bold text-content truncate">{{ file?.file_name }}</h3>
             <p class="text-xs text-content-muted">
               {{ formatFileSize(file?.file_size, 'Unknown') }} &middot; {{ file?.file_type }}
             </p>
           </div>
         </div>
-        <button
-          class="p-2 text-content-muted hover:text-content hover:bg-surface-sunken rounded-modal transition"
-          title="Download"
-          @click="downloadFile"
-        >
-          <CloudDownload class="h-5 w-5" />
-        </button>
+        <div class="flex items-center gap-2 shrink-0">
+          <!-- File navigation (prev/next) — only when a list is provided -->
+          <div
+            v-if="hasMultipleFiles"
+            class="flex items-center gap-1 mr-1"
+            :title="'Use ← / → to move between files'"
+          >
+            <BaseButton
+              variant="secondary"
+              size="sm"
+              :disabled="!hasPrev"
+              :title="hasPrev ? 'Previous file (←)' : 'First file'"
+              @click="goPrev"
+            >
+              <ChevronLeft class="h-4 w-4" />
+            </BaseButton>
+            <span
+              class="text-xs font-medium text-content-muted tabular-nums px-1 whitespace-nowrap"
+            >
+              {{ currentIndex + 1 }} / {{ files.length }}
+            </span>
+            <BaseButton
+              variant="secondary"
+              size="sm"
+              :disabled="!hasNext"
+              :title="hasNext ? 'Next file (→)' : 'Last file'"
+              @click="goNext"
+            >
+              <ChevronRight class="h-4 w-4" />
+            </BaseButton>
+          </div>
+          <button
+            class="p-2 text-content-muted hover:text-content hover:bg-surface-sunken rounded-modal transition shrink-0"
+            title="Download"
+            @click="downloadFile"
+          >
+            <CloudDownload class="h-5 w-5" />
+          </button>
+        </div>
       </div>
     </template>
 
@@ -186,38 +212,49 @@
           <span v-if="file?.file_hash" class="font-mono text-xs">
             Hash: {{ file.file_hash.substring(0, 8) }}...
           </span>
+          <span v-if="hasMultipleFiles" class="text-content-subtle">
+            <kbd class="px-1 py-0.5 bg-surface-sunken rounded">←</kbd> /
+            <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd> to browse files
+          </span>
         </div>
         <div v-if="file?.description" class="text-content-muted truncate">
           {{ file.description }}
         </div>
       </div>
     </template>
-  </BaseModal>
+  </SlideOver>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted, watch } from 'vue'
-import { AlertTriangle, CloudDownload } from '@lucide/vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { AlertTriangle, ChevronLeft, ChevronRight, CloudDownload } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
 import FileIcon from '@/components/common/FileIcon.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import SlideOver from '@/components/common/SlideOver.vue'
 import { formatFileSize, formatDateFull } from '@/utils/formatters'
 import type { File } from '@/types'
 
 interface Props {
   open: boolean
   file: File | null
+  /** Sibling files for prev/next navigation. Optional — omit for single-file preview. */
+  files?: File[]
   projectId: string | number
 }
 
-const props = defineProps<Props>()
-const toast = useToast()
-defineEmits<{
+const props = withDefaults(defineProps<Props>(), {
+  files: () => [],
+})
+const emit = defineEmits<{
   close: []
+  /** Emitted when the user navigates to a different file in the list. */
+  navigate: [file: File]
 }>()
+const toast = useToast()
 
 interface TabularData {
   headers: (string | null)[]
@@ -422,6 +459,19 @@ watch(
   },
   { immediate: true },
 )
+
+// Reload when the previewed file changes while the modal stays open (prev/next
+// navigation). Without this, the header updates but the body (table/text/PDF)
+// keeps showing the previous file's content.
+watch(
+  () => props.file?.id,
+  (newId, oldId) => {
+    if (props.open && newId != null && newId !== oldId) {
+      syncConfigFromMeta()
+      loadPreview()
+    }
+  },
+)
 onUnmounted(() => {
   if (previewUrl.value) {
     URL.revokeObjectURL(previewUrl.value)
@@ -446,4 +496,53 @@ function headerLabel(headerLabel: string | null): string {
 function isTextColumn(headerLabel: string | null): boolean {
   return headerLabel != null && !!textColumns.value && textColumns.value.includes(headerLabel)
 }
+
+// --- File navigation (prev/next + keyboard) ---
+const hasMultipleFiles = computed(() => (props.files?.length || 0) > 1)
+const currentIndex = computed(() => {
+  if (!props.file || !props.files?.length) return -1
+  return props.files.findIndex((f) => f.id === props.file!.id)
+})
+const hasPrev = computed(() => hasMultipleFiles.value && currentIndex.value > 0)
+const hasNext = computed(
+  () =>
+    hasMultipleFiles.value &&
+    currentIndex.value >= 0 &&
+    currentIndex.value < props.files.length - 1,
+)
+
+function goTo(index: number): void {
+  const target = props.files?.[index]
+  if (!target) return
+  emit('navigate', target)
+}
+
+function goPrev(): void {
+  if (hasPrev.value) goTo(currentIndex.value - 1)
+}
+function goNext(): void {
+  if (hasNext.value) goTo(currentIndex.value + 1)
+}
+
+// ← / → to move between files (ignored when focus is in an editable field).
+function onKeydown(e: KeyboardEvent): void {
+  if (!props.open || !hasMultipleFiles.value) return
+  const target = e.target as HTMLElement | null
+  const tag = target?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault()
+    goPrev()
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault()
+    goNext()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+})
 </script>

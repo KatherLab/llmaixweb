@@ -284,9 +284,13 @@
       :original-file-type="selectedOriginalFileType"
       :has-prev="hasPrevDoc"
       :has-next="hasNextDoc"
+      :doc-position="docPositionLabel"
+      :documents="filteredDocs"
+      :current-doc-index="currentDocIndex"
       @close="closeDrawer"
       @prev="moveDoc(-1)"
       @next="moveDoc(1)"
+      @select-doc="openDocById"
     />
   </div>
 </template>
@@ -675,10 +679,21 @@ const hasPrevDoc = computed(() => currentDocIndex.value > 0)
 const hasNextDoc = computed(
   () => currentDocIndex.value >= 0 && currentDocIndex.value < filteredDocs.value.length - 1,
 )
+// "x / y" position label for the drawer header (blank when no doc is open).
+const docPositionLabel = computed(() => {
+  if (currentDocIndex.value < 0) return ''
+  return `${currentDocIndex.value + 1} / ${filteredDocs.value.length}`
+})
 
 const openDoc = (row: DocumentEvaluationDetail): void => {
   selectedDocId.value = row.document_id
   loadDocDetail(row.document_id)
+}
+
+// Rail click in the drawer — load a specific doc by id.
+const openDocById = (documentId: number): void => {
+  selectedDocId.value = documentId
+  loadDocDetail(documentId)
 }
 
 const closeDrawer = (): void => {
@@ -836,15 +851,15 @@ const columns: DataTableColumn[] = [
   { key: 'status', label: 'Status' },
 ]
 
-// ---- Keyboard nav (J/K) ----
+// ---- Keyboard nav (←/→ or J/K) ----
 const onKeydown = (e: KeyboardEvent): void => {
   if (!selectedDocId.value) return
   const tag = ((e.target as HTMLElement | null)?.tagName || '').toLowerCase()
   if (tag === 'input' || tag === 'textarea' || tag === 'select') return
-  if (e.key === 'j') {
+  if (e.key === 'ArrowRight' || e.key === 'j') {
     e.preventDefault()
     moveDoc(1)
-  } else if (e.key === 'k') {
+  } else if (e.key === 'ArrowLeft' || e.key === 'k') {
     e.preventDefault()
     moveDoc(-1)
   } else if (e.key === 'Escape') {

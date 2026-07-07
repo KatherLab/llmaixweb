@@ -136,11 +136,7 @@
     </div>
 
     <div v-else-if="activeTab === 'groups'">
-      <DocumentGroups
-        :project-id="projectId"
-        @refresh="handleGroupsRefresh"
-        @view-document="viewDocument"
-      />
+      <DocumentGroups :project-id="projectId" @refresh="handleGroupsRefresh" />
     </div>
 
     <!-- Document Viewer Modal (moved outside tabs to be always available) -->
@@ -148,8 +144,14 @@
       :open="showDocumentViewer"
       :document="viewingDocument!"
       :project-id="projectId"
+      :index="viewerIndex"
+      :total="viewerTotal"
+      :has-prev="viewerHasPrev"
+      :has-next="viewerHasNext"
       @close="showDocumentViewer = false"
       @reprocess="reprocessDocument"
+      @prev="viewerPrev"
+      @next="viewerNext"
     />
   </div>
 </template>
@@ -406,6 +408,26 @@ const areAllDocumentsSelected = computed<boolean>(() => {
 const viewDocument = (doc: DocumentListItem): void => {
   viewingDocument.value = doc
   showDocumentViewer.value = true
+}
+
+// --- Document viewer prev/next (page-local within the current table page) ---
+const viewerIndex = computed(() =>
+  viewingDocument.value
+    ? serverItems.value.findIndex((d) => d.id === viewingDocument.value!.id)
+    : -1,
+)
+const viewerTotal = computed(() => serverItems.value.length)
+const viewerHasPrev = computed(() => viewerIndex.value > 0)
+const viewerHasNext = computed(
+  () => viewerIndex.value >= 0 && viewerIndex.value < serverItems.value.length - 1,
+)
+const viewerPrev = (): void => {
+  const i = viewerIndex.value
+  if (i > 0) viewingDocument.value = serverItems.value[i - 1]!
+}
+const viewerNext = (): void => {
+  const i = viewerIndex.value
+  if (i >= 0 && i < serverItems.value.length - 1) viewingDocument.value = serverItems.value[i + 1]!
 }
 
 const downloadDocument = async (doc: DocumentListItem): Promise<void> => {

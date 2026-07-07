@@ -1,14 +1,7 @@
 <template>
-  <BaseModal
-    :open="open"
-    placement="right"
-    panel-class="w-screen max-w-md"
-    header-class="bg-surface-muted"
-    body-class="p-6"
-    @close="emit('close')"
-  >
+  <SlideOver :open="open" max-width="max-w-md" @close="emit('close')">
     <template #header>
-      <div class="min-w-0">
+      <div class="min-w-0 flex-1 pr-8">
         <h3 class="text-lg font-semibold text-content">Preprocessing History</h3>
         <p v-if="historyFile" class="text-sm text-content-muted truncate mt-0.5">
           {{ historyFile.file_name }}
@@ -17,308 +10,315 @@
     </template>
 
     <!-- Panel Content -->
-    <div>
-      <!-- Preprocessing Runs (Accordion) -->
-      <div v-if="historyFile?.preprocessing_tasks?.length" class="space-y-3">
-        <div
-          v-for="task in historyFile.preprocessing_tasks"
-          :key="task.id"
-          :class="[
-            'bg-surface rounded-card border transition-all overflow-hidden',
-            expandedTasks.has(task.id)
-              ? 'border-primary shadow-md'
-              : 'border-default hover:border-primary',
-          ]"
-        >
-          <!-- Accordion Header (clickable) -->
+    <div class="flex flex-col h-full">
+      <div class="flex-1 min-h-0 overflow-y-auto p-6">
+        <!-- Preprocessing Runs (Accordion) -->
+        <div v-if="historyFile?.preprocessing_tasks?.length" class="space-y-3">
           <div
-            class="px-4 py-3 cursor-pointer flex items-center justify-between bg-surface-muted"
-            @click="toggleTaskAccordion(task.id)"
+            v-for="task in historyFile.preprocessing_tasks"
+            :key="task.id"
+            :class="[
+              'bg-surface rounded-card border transition-all overflow-hidden',
+              expandedTasks.has(task.id)
+                ? 'border-primary shadow-md'
+                : 'border-default hover:border-primary',
+            ]"
           >
-            <div class="flex items-center gap-3 flex-1 min-w-0">
-              <!-- Status indicator -->
+            <!-- Accordion Header (clickable) -->
+            <div
+              class="px-4 py-3 cursor-pointer flex items-center justify-between bg-surface-muted"
+              @click="toggleTaskAccordion(task.id)"
+            >
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <!-- Status indicator -->
+                <span
+                  :class="[
+                    'w-2.5 h-2.5 rounded-full flex-shrink-0',
+                    getStatusDotClass(task.status),
+                    isTaskActive(task) ? 'animate-pulse' : '',
+                  ]"
+                />
+                <!-- Task info -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="text-sm font-medium text-content truncate">
+                      Run #{{ task.id }} • {{ getEngineName(task) }}
+                    </p>
+                    <!-- Expand/collapse chevron -->
+                    <ChevronRight
+                      :class="[
+                        'w-4 h-4 text-content-subtle transition-transform flex-shrink-0',
+                        expandedTasks.has(task.id) ? 'rotate-90' : '',
+                      ]"
+                    />
+                  </div>
+                  <p class="text-xs text-content-muted mt-0.5 truncate">
+                    {{ formatRelativeTime(task.created_at) }}
+                    <span v-if="task.completed_at">
+                      • {{ formatRelativeTime(task.completed_at) }}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <!-- Mini status badge -->
               <span
                 :class="[
-                  'w-2.5 h-2.5 rounded-full flex-shrink-0',
-                  getStatusDotClass(task.status),
-                  isTaskActive(task) ? 'animate-pulse' : '',
+                  'inline-flex items-center px-2 py-1 rounded-card text-xs font-medium flex-shrink-0 ml-2',
+                  getStatusBadgeClass(task.status),
                 ]"
-              />
-              <!-- Task info -->
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <p class="text-sm font-medium text-content truncate">
-                    Run #{{ task.id }} • {{ getEngineName(task) }}
-                  </p>
-                  <!-- Expand/collapse chevron -->
-                  <ChevronRight
-                    :class="[
-                      'w-4 h-4 text-content-subtle transition-transform flex-shrink-0',
-                      expandedTasks.has(task.id) ? 'rotate-90' : '',
-                    ]"
+              >
+                {{ taskStatusLabel(task) }}
+              </span>
+            </div>
+
+            <!-- Accordion Content (expanded) -->
+            <div
+              v-show="expandedTasks.has(task.id)"
+              class="border-t border-default bg-surface-muted px-4 py-3 space-y-3"
+            >
+              <!-- Progress bar for active tasks -->
+              <div
+                v-if="isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress')"
+                class="space-y-1"
+              >
+                <div class="flex items-center justify-between text-xs text-content-muted">
+                  <span>Processing...</span>
+                  <span v-if="(task.meta?.eta_seconds ?? 0) > 0" class="text-content-muted">
+                    ≈ {{ formatDuration(task.meta?.eta_seconds) }} left
+                  </span>
+                </div>
+                <div class="w-full bg-surface-sunken rounded-full h-2 overflow-hidden">
+                  <div
+                    :style="{
+                      width: `${Math.min((task.processed_files / task.total_files) * 100, 100)}%`,
+                    }"
+                    class="bg-primary h-2 rounded-full transition-all duration-300"
                   />
                 </div>
-                <p class="text-xs text-content-muted mt-0.5 truncate">
-                  {{ formatRelativeTime(task.created_at) }}
-                  <span v-if="task.completed_at">
-                    • {{ formatRelativeTime(task.completed_at) }}
+                <p class="text-xs text-content-muted">
+                  {{ task.processed_files }} of {{ task.total_files }} files processed
+                  <span v-if="task.failed_files > 0" class="text-red-600 dark:text-red-400">
+                    • {{ task.failed_files }} failed
                   </span>
                 </p>
               </div>
-            </div>
-            <!-- Mini status badge -->
-            <span
-              :class="[
-                'inline-flex items-center px-2 py-1 rounded-card text-xs font-medium flex-shrink-0 ml-2',
-                getStatusBadgeClass(task.status),
-              ]"
-            >
-              {{ taskStatusLabel(task) }}
-            </span>
-          </div>
 
-          <!-- Accordion Content (expanded) -->
-          <div
-            v-show="expandedTasks.has(task.id)"
-            class="border-t border-default bg-surface-muted px-4 py-3 space-y-3"
-          >
-            <!-- Progress bar for active tasks -->
-            <div
-              v-if="isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress')"
-              class="space-y-1"
-            >
-              <div class="flex items-center justify-between text-xs text-content-muted">
-                <span>Processing...</span>
-                <span v-if="(task.meta?.eta_seconds ?? 0) > 0" class="text-content-muted">
-                  ≈ {{ formatDuration(task.meta?.eta_seconds) }} left
-                </span>
-              </div>
-              <div class="w-full bg-surface-sunken rounded-full h-2 overflow-hidden">
-                <div
-                  :style="{
-                    width: `${Math.min((task.processed_files / task.total_files) * 100, 100)}%`,
-                  }"
-                  class="bg-primary h-2 rounded-full transition-all duration-300"
-                />
-              </div>
-              <p class="text-xs text-content-muted">
-                {{ task.processed_files }} of {{ task.total_files }} files processed
-                <span v-if="task.failed_files > 0" class="text-red-600 dark:text-red-400">
-                  • {{ task.failed_files }} failed
-                </span>
-              </p>
-            </div>
-
-            <!-- File task details -->
-            <div class="space-y-2">
-              <template v-if="task.file_tasks && task.file_tasks.length > 0">
-                <div
-                  v-for="fileTask in task.file_tasks"
-                  :key="fileTask.id"
-                  :class="[
-                    'rounded-card border p-2 text-sm',
-                    getStatusBannerClass(fileTask.status),
-                  ]"
-                >
-                  <!-- File task header -->
-                  <div class="flex items-start justify-between gap-2">
-                    <div class="flex items-center gap-2 flex-1 min-w-0">
-                      <!-- Status icon -->
-                      <Check
-                        v-if="fileTask.status === 'completed'"
-                        class="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5"
-                      />
-                      <X
-                        v-else-if="fileTask.status === 'failed'"
-                        class="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"
-                      />
-                      <Ban
-                        v-else-if="fileTask.status === 'cancelled'"
-                        class="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"
-                      />
-                      <Clock v-else class="w-4 h-4 text-content-subtle flex-shrink-0 mt-0.5" />
-                      <span class="font-medium text-content truncate">
-                        {{ fileTask.file_name || 'Unknown file' }}
+              <!-- File task details -->
+              <div class="space-y-2">
+                <template v-if="task.file_tasks && task.file_tasks.length > 0">
+                  <div
+                    v-for="fileTask in task.file_tasks"
+                    :key="fileTask.id"
+                    :class="[
+                      'rounded-card border p-2 text-sm',
+                      getStatusBannerClass(fileTask.status),
+                    ]"
+                  >
+                    <!-- File task header -->
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <!-- Status icon -->
+                        <Check
+                          v-if="fileTask.status === 'completed'"
+                          class="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5"
+                        />
+                        <X
+                          v-else-if="fileTask.status === 'failed'"
+                          class="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"
+                        />
+                        <Ban
+                          v-else-if="fileTask.status === 'cancelled'"
+                          class="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"
+                        />
+                        <Clock v-else class="w-4 h-4 text-content-subtle flex-shrink-0 mt-0.5" />
+                        <span class="font-medium text-content truncate">
+                          {{ fileTask.file_name || 'Unknown file' }}
+                        </span>
+                      </div>
+                      <!-- Processing time -->
+                      <span
+                        v-if="fileTask.processing_time"
+                        class="text-xs text-content-muted whitespace-nowrap"
+                      >
+                        {{ formatProcessingTime(fileTask.processing_time) }}
                       </span>
                     </div>
-                    <!-- Processing time -->
-                    <span
-                      v-if="fileTask.processing_time"
-                      class="text-xs text-content-muted whitespace-nowrap"
+
+                    <!-- Error message (nested accordion) -->
+                    <div v-if="fileTask.status === 'failed' && fileTask.error_message" class="mt-2">
+                      <details class="group">
+                        <summary
+                          class="text-xs text-red-700 dark:text-red-400 cursor-pointer hover:text-red-900 dark:hover:text-red-300 flex items-center gap-1"
+                        >
+                          <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
+                          View error
+                        </summary>
+                        <p
+                          class="mt-1 text-xs text-red-600 dark:text-red-300 dark:bg-red-900/30 bg-red-100 rounded p-2"
+                        >
+                          {{ fileTask.error_message }}
+                        </p>
+                      </details>
+                    </div>
+
+                    <!-- Warnings (nested accordion for skipped rows) -->
+                    <div
+                      v-if="
+                        getWarnings(fileTask) &&
+                        (getWarnings(fileTask)?.messages || getWarnings(fileTask)?.skipped_rows)
+                      "
+                      class="mt-2"
                     >
-                      {{ formatProcessingTime(fileTask.processing_time) }}
-                    </span>
-                  </div>
-
-                  <!-- Error message (nested accordion) -->
-                  <div v-if="fileTask.status === 'failed' && fileTask.error_message" class="mt-2">
-                    <details class="group">
-                      <summary
-                        class="text-xs text-red-700 dark:text-red-400 cursor-pointer hover:text-red-900 dark:hover:text-red-300 flex items-center gap-1"
-                      >
-                        <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
-                        View error
-                      </summary>
-                      <p
-                        class="mt-1 text-xs text-red-600 dark:text-red-300 dark:bg-red-900/30 bg-red-100 rounded p-2"
-                      >
-                        {{ fileTask.error_message }}
-                      </p>
-                    </details>
-                  </div>
-
-                  <!-- Warnings (nested accordion for skipped rows) -->
-                  <div
-                    v-if="
-                      getWarnings(fileTask) &&
-                      (getWarnings(fileTask)?.messages || getWarnings(fileTask)?.skipped_rows)
-                    "
-                    class="mt-2"
-                  >
-                    <details class="group">
-                      <summary
-                        class="text-xs text-amber-700 dark:text-amber-400 cursor-pointer hover:text-amber-900 dark:hover:text-amber-300 flex items-center gap-1"
-                      >
-                        <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
-                        <AlertTriangle class="w-3 h-3 inline" />
-                        {{ getWarnings(fileTask)?.skipped_rows?.count || 0 }} skipped rows
-                      </summary>
-                      <div
-                        class="mt-1 text-xs text-amber-600 dark:text-amber-300 dark:bg-amber-900/30 bg-amber-100 rounded p-2 max-h-32 overflow-y-auto"
-                      >
-                        <div v-if="getWarnings(fileTask)?.skipped_rows?.details" class="space-y-1">
+                      <details class="group">
+                        <summary
+                          class="text-xs text-amber-700 dark:text-amber-400 cursor-pointer hover:text-amber-900 dark:hover:text-amber-300 flex items-center gap-1"
+                        >
+                          <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
+                          <AlertTriangle class="w-3 h-3 inline" />
+                          {{ getWarnings(fileTask)?.skipped_rows?.count || 0 }} skipped rows
+                        </summary>
+                        <div
+                          class="mt-1 text-xs text-amber-600 dark:text-amber-300 dark:bg-amber-900/30 bg-amber-100 rounded p-2 max-h-32 overflow-y-auto"
+                        >
                           <div
-                            v-for="(row, idx) in getWarnings(
-                              fileTask,
-                            )?.skipped_rows?.details?.slice(0, 10)"
-                            :key="idx"
-                            class="flex justify-between"
+                            v-if="getWarnings(fileTask)?.skipped_rows?.details"
+                            class="space-y-1"
                           >
-                            <span>Row {{ row.row_index }}</span>
-                            <span class="truncate max-w-[150px]">{{ row.reason }}</span>
+                            <div
+                              v-for="(row, idx) in getWarnings(
+                                fileTask,
+                              )?.skipped_rows?.details?.slice(0, 10)"
+                              :key="idx"
+                              class="flex justify-between"
+                            >
+                              <span>Row {{ row.row_index }}</span>
+                              <span class="truncate max-w-[150px]">{{ row.reason }}</span>
+                            </div>
+                            <p
+                              v-if="
+                                (getWarnings(fileTask)?.skipped_rows?.details?.length ?? 0) > 10
+                              "
+                              class="text-amber-500 dark:text-amber-400"
+                            >
+                              ...and
+                              {{ (getWarnings(fileTask)?.skipped_rows?.details?.length ?? 0) - 10 }}
+                              more
+                            </p>
                           </div>
-                          <p
-                            v-if="(getWarnings(fileTask)?.skipped_rows?.details?.length ?? 0) > 10"
-                            class="text-amber-500 dark:text-amber-400"
-                          >
-                            ...and
-                            {{ (getWarnings(fileTask)?.skipped_rows?.details?.length ?? 0) - 10 }}
-                            more
-                          </p>
+                          <div v-else>
+                            <p v-for="(msg, idx) in getWarnings(fileTask)?.messages" :key="idx">
+                              {{ msg }}
+                            </p>
+                          </div>
                         </div>
-                        <div v-else>
-                          <p v-for="(msg, idx) in getWarnings(fileTask)?.messages" :key="idx">
-                            {{ msg }}
-                          </p>
-                        </div>
-                      </div>
-                    </details>
-                  </div>
+                      </details>
+                    </div>
 
-                  <!-- Document link for completed tasks -->
-                  <div
-                    v-if="
-                      fileTask.status === 'completed' &&
-                      fileTask.document_ids &&
-                      fileTask.document_ids.length > 0
-                    "
-                    class="mt-2 flex items-center justify-between"
-                  >
-                    <span
-                      class="text-xs text-green-700 dark:text-green-400 inline-flex items-center gap-1"
+                    <!-- Document link for completed tasks -->
+                    <div
+                      v-if="
+                        fileTask.status === 'completed' &&
+                        fileTask.document_ids &&
+                        fileTask.document_ids.length > 0
+                      "
+                      class="mt-2 flex items-center justify-between"
                     >
-                      <Check class="w-3 h-3" />
-                      {{ fileTask.document_ids.length }} document{{
-                        fileTask.document_ids.length !== 1 ? 's' : ''
-                      }}
-                    </span>
-                    <BaseButton
-                      v-if="fileTask.document_ids.length === 1"
-                      variant="ghost"
-                      size="sm"
-                      class="text-xs font-medium underline"
-                      @click.stop="emit('navigate', fileTask.document_ids[0]!)"
-                    >
-                      <ExternalLink class="w-3 h-3" />
-                      Go to Document
-                    </BaseButton>
-                    <BaseButton
-                      v-else
-                      variant="ghost"
-                      size="sm"
-                      class="text-xs font-medium underline"
-                      @click.stop="emit('navigate', fileTask.document_ids[0]!)"
-                    >
-                      <ExternalLink class="w-3 h-3" />
-                      Go to Documents ({{ fileTask.document_ids.length }})
-                    </BaseButton>
+                      <span
+                        class="text-xs text-green-700 dark:text-green-400 inline-flex items-center gap-1"
+                      >
+                        <Check class="w-3 h-3" />
+                        {{ fileTask.document_ids.length }} document{{
+                          fileTask.document_ids.length !== 1 ? 's' : ''
+                        }}
+                      </span>
+                      <BaseButton
+                        v-if="fileTask.document_ids.length === 1"
+                        variant="ghost"
+                        size="sm"
+                        class="text-xs font-medium underline"
+                        @click.stop="emit('navigate', fileTask.document_ids[0]!)"
+                      >
+                        <ExternalLink class="w-3 h-3" />
+                        Go to Document
+                      </BaseButton>
+                      <BaseButton
+                        v-else
+                        variant="ghost"
+                        size="sm"
+                        class="text-xs font-medium underline"
+                        @click.stop="emit('navigate', fileTask.document_ids[0]!)"
+                      >
+                        <ExternalLink class="w-3 h-3" />
+                        Go to Documents ({{ fileTask.document_ids.length }})
+                      </BaseButton>
+                    </div>
                   </div>
+                </template>
+                <div v-else class="text-center text-content-subtle py-4 text-sm">
+                  No file tasks recorded
                 </div>
-              </template>
-              <div v-else class="text-center text-content-subtle py-4 text-sm">
-                No file tasks recorded
               </div>
-            </div>
 
-            <!-- Task-level error message -->
-            <Callout
-              v-if="task.message && isTaskStatus(task, 'failed')"
-              variant="danger"
-              class="text-xs"
-            >
-              {{ task.message }}
-            </Callout>
-
-            <!-- Actions -->
-            <div class="flex items-center justify-end gap-2 pt-2 border-t border-default">
-              <BaseButton
-                v-if="isTaskStatus(task, 'failed')"
-                variant="ghost"
-                size="sm"
-                class="text-xs font-medium"
-                @click.stop="emit('retry', task.id)"
-              >
-                Retry failed files
-              </BaseButton>
-              <BaseButton
-                v-if="
-                  isTaskStatus(task, 'processing') ||
-                  isTaskStatus(task, 'pending') ||
-                  isTaskStatus(task, 'in_progress')
-                "
-                variant="ghost"
-                size="sm"
-                class="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"
-                @click.stop="emit('cancel', task)"
-              >
-                <X class="w-3 h-3" />
-                Cancel
-              </BaseButton>
-              <BaseButton
-                variant="ghost"
-                size="sm"
+              <!-- Task-level error message -->
+              <Callout
+                v-if="task.message && isTaskStatus(task, 'failed')"
+                variant="danger"
                 class="text-xs"
-                @click.stop="toggleTaskAccordion(task.id)"
               >
-                Close
-              </BaseButton>
+                {{ task.message }}
+              </Callout>
+
+              <!-- Actions -->
+              <div class="flex items-center justify-end gap-2 pt-2 border-t border-default">
+                <BaseButton
+                  v-if="isTaskStatus(task, 'failed')"
+                  variant="ghost"
+                  size="sm"
+                  class="text-xs font-medium"
+                  @click.stop="emit('retry', task.id)"
+                >
+                  Retry failed files
+                </BaseButton>
+                <BaseButton
+                  v-if="
+                    isTaskStatus(task, 'processing') ||
+                    isTaskStatus(task, 'pending') ||
+                    isTaskStatus(task, 'in_progress')
+                  "
+                  variant="ghost"
+                  size="sm"
+                  class="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"
+                  @click.stop="emit('cancel', task)"
+                >
+                  <X class="w-3 h-3" />
+                  Cancel
+                </BaseButton>
+                <BaseButton
+                  variant="ghost"
+                  size="sm"
+                  class="text-xs"
+                  @click.stop="toggleTaskAccordion(task.id)"
+                >
+                  Close
+                </BaseButton>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- No Runs Yet -->
-      <EmptyState v-else title="No preprocessing runs yet">
-        <template #icon>
-          <FilePlus class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
-        </template>
-        <template v-if="historyFile" #action>
-          <BaseButton class="shadow-sm" @click="emit('process', historyFile)">
-            <Rocket class="w-4 h-4" />
-            Process this file
-          </BaseButton>
-        </template>
-      </EmptyState>
+        <!-- No Runs Yet -->
+        <EmptyState v-else title="No preprocessing runs yet">
+          <template #icon>
+            <FilePlus class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
+          </template>
+          <template v-if="historyFile" #action>
+            <BaseButton class="shadow-sm" @click="emit('process', historyFile)">
+              <Rocket class="w-4 h-4" />
+              Process this file
+            </BaseButton>
+          </template>
+        </EmptyState>
+      </div>
     </div>
 
     <!-- Panel Footer -->
@@ -338,7 +338,7 @@
         </BaseButton>
       </div>
     </div>
-  </BaseModal>
+  </SlideOver>
 </template>
 
 <script setup lang="ts">
@@ -357,7 +357,7 @@ import {
 import { formatDuration, formatRelativeTime as sharedFormatRelativeTime } from '@/utils/formatters'
 import { getStatusDotClass, getStatusBadgeClass, getStatusBannerClass } from '@/utils/statusStyles'
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
+import SlideOver from '@/components/common/SlideOver.vue'
 import Callout from '@/components/common/Callout.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import type { FilePreprocessingTask, PreprocessingTask } from '@/types'

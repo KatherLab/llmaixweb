@@ -1,177 +1,191 @@
 <!-- ViewDocumentGroupModal.vue -->
+<!--
+  Document group viewer with a side document list — mirrors the Trial Results
+  panel: a left rail of the group's documents + the existing DocumentViewer as
+  the center. Click a doc in the rail (or use ←/→) to load it; prev/next
+  crosses pages just like trial results.
+-->
 <template>
-  <BaseModal :open="open" size="xl" @close="$emit('close')">
+  <SlideOver
+    :open="open"
+    max-width="max-w-[95rem]"
+    body-class="!p-0 overflow-hidden"
+    @close="$emit('close')"
+  >
     <template #header>
-      <div class="flex items-center gap-3">
-        <h3 class="text-xl font-semibold text-content">{{ group.name }}</h3>
-        <BaseButton variant="primary" size="sm" @click="$emit('edit', group)">
-          Edit Group
-        </BaseButton>
+      <div class="flex items-center justify-between gap-4 flex-1 min-w-0 pr-8">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-base font-semibold text-content truncate">{{ group.name }}</h3>
+            <span
+              class="text-[11px] text-content-subtle bg-surface px-2 py-0.5 rounded-full border border-default"
+            >
+              {{ docTotal }} document{{ docTotal === 1 ? '' : 's' }}
+            </span>
+          </div>
+          <p v-if="group.description" class="text-xs text-content-subtle mt-0.5 truncate">
+            {{ group.description }}
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <BaseButton variant="link" tone="blue" size="sm" @click="exportDocumentList">
+            <Download class="h-4 w-4" />
+            Export
+          </BaseButton>
+          <BaseButton variant="link" tone="blue" size="sm" @click="downloadAllDocuments">
+            <Package class="h-4 w-4" />
+            Download all
+          </BaseButton>
+          <BaseButton variant="secondary" size="sm" @click="$emit('edit', group)">
+            <SquarePen class="h-4 w-4" />
+            Edit
+          </BaseButton>
+        </div>
       </div>
     </template>
 
-    <div class="p-6">
-      <!-- Group Info -->
-      <div class="mb-6 space-y-4">
-        <div>
-          <h4 class="text-sm font-medium text-content-muted">Description</h4>
-          <p class="mt-1 text-content">
-            {{ group.description || 'No description provided' }}
+    <!-- Main 2-pane layout: doc list + viewer (always rendered while open) -->
+    <div class="flex h-full min-h-0">
+      <!-- Left rail: document list -->
+      <aside
+        :class="[
+          'flex flex-col border-r border-default bg-surface-muted/40 shrink-0',
+          leftRailOpen ? 'w-64' : 'w-0 -ml-px overflow-hidden',
+        ]"
+      >
+        <div v-show="leftRailOpen" class="flex flex-col h-full min-w-0">
+          <!-- Search -->
+          <div class="p-3 border-b border-default shrink-0">
+            <SearchInput
+              v-model="search"
+              placeholder="Search documents…"
+              @input="debouncedFetchDocuments"
+            />
+          </div>
+
+          <!-- Document list -->
+          <div class="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
+            <button
+              v-for="(d, i) in documents"
+              :key="d.id"
+              type="button"
+              :class="[
+                'w-full text-left px-3 py-2 rounded-card border-l-2 transition-colors',
+                d.id === activeDocId
+                  ? 'bg-primary-soft border-primary'
+                  : 'border-transparent hover:bg-surface',
+              ]"
+              @click="selectIndex(i)"
+            >
+              <div class="flex items-center gap-2 min-w-0">
+                <FileIcon :file-type="d.original_file?.file_type ?? ''" :size="16" />
+                <span class="text-sm text-content truncate flex-1">{{
+                  d.document_name || d.original_file?.file_name || `Document #${d.id}`
+                }}</span>
+              </div>
+              <div class="flex items-center gap-2 mt-0.5 pl-6">
+                <span class="text-[10px] uppercase tracking-wide text-content-subtle truncate">
+                  {{ d.preprocessing_config?.name || 'N/A' }}
+                </span>
+              </div>
+            </button>
+            <div v-if="docLoading" class="flex justify-center py-4">
+              <LoadingSpinner size="small" inline label="" />
+            </div>
+            <div
+              v-else-if="documents.length === 0"
+              class="flex flex-col items-center justify-center py-8 px-3 text-center"
+            >
+              <p class="text-xs text-content-subtle">No documents match your search.</p>
+              <button
+                type="button"
+                class="mt-2 text-xs font-medium text-primary hover:underline"
+                @click="resetFilters"
+              >
+                Reset filters
+              </button>
+            </div>
+          </div>
+
+          <!-- Compact pagination -->
+          <div class="p-2 border-t border-default flex items-center justify-between gap-1 shrink-0">
+            <BaseButton
+              variant="ghost"
+              size="sm"
+              :disabled="docPage <= 1"
+              @click="handlePageChange(docPage - 1)"
+            >
+              <ChevronLeft class="h-4 w-4" />
+            </BaseButton>
+            <span class="text-xs text-content-muted tabular-nums">
+              {{ docPage }} / {{ docTotalPages }}
+            </span>
+            <BaseButton
+              variant="ghost"
+              size="sm"
+              :disabled="docPage >= docTotalPages"
+              @click="handlePageChange(docPage + 1)"
+            >
+              <ChevronRight class="h-4 w-4" />
+            </BaseButton>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center: main viewer -->
+      <div class="flex-1 min-w-0 flex flex-col">
+        <!-- Rail toggle -->
+        <div
+          class="flex items-center justify-between px-2 py-1 border-b border-default bg-surface shrink-0"
+        >
+          <BaseButton
+            variant="ghost"
+            size="sm"
+            :title="leftRailOpen ? 'Hide document list' : 'Show document list'"
+            @click="leftRailOpen = !leftRailOpen"
+          >
+            <PanelLeft class="h-4 w-4" />
+          </BaseButton>
+          <p class="text-xs text-content-subtle pr-2">
+            <kbd class="px-1 py-0.5 bg-surface-sunken rounded">←</kbd> /
+            <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd> to move between documents
           </p>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <h4 class="text-sm font-medium text-content-muted">Created</h4>
-            <p class="mt-1 text-content">{{ formatDate(group.created_at) }}</p>
-          </div>
-          <div>
-            <h4 class="text-sm font-medium text-content-muted">Last Updated</h4>
-            <p class="mt-1 text-content">{{ formatDate(group.updated_at) }}</p>
-          </div>
-        </div>
-
-        <div v-if="group.tags && group.tags.length > 0">
-          <h4 class="text-sm font-medium text-content-muted mb-2">Tags</h4>
-          <div class="flex flex-wrap gap-2">
-            <StatusBadge
-              v-for="tag in group.tags"
-              :key="tag"
-              color="blue"
-              class="px-3 py-1 text-sm"
-            >
-              {{ tag }}
-            </StatusBadge>
-          </div>
-        </div>
-
-        <div v-if="group.preprocessing_config">
-          <h4 class="text-sm font-medium text-content-muted">Preprocessing Configuration</h4>
-          <p class="mt-1 text-content">{{ group.preprocessing_config.name }}</p>
-        </div>
-
-        <div v-if="group.trial_id">
-          <h4 class="text-sm font-medium text-content-muted">Source Trial</h4>
-          <p class="mt-1 text-content">Trial #{{ group.trial_id }}</p>
-        </div>
-      </div>
-
-      <!-- Documents List -->
-      <div>
-        <div class="flex justify-between items-center mb-4">
-          <h4 class="font-medium text-content">Documents ({{ docTotal }})</h4>
-          <div class="flex items-center gap-2">
-            <BaseButton variant="link" tone="blue" class="text-sm" @click="exportDocumentList">
-              Export List
-            </BaseButton>
-            <BaseButton variant="link" tone="blue" class="text-sm" @click="downloadAllDocuments">
-              Download All
-            </BaseButton>
-          </div>
-        </div>
-
-        <div :class="t.wrapper">
-          <table :class="t.table">
-            <thead :class="t.thead">
-              <tr>
-                <th :class="t.th">Document</th>
-                <th :class="t.th">Configuration</th>
-                <th :class="t.th">Created</th>
-                <th :class="[t.th, 'relative']">
-                  <span class="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody :class="t.tbody">
-              <tr v-if="docLoading">
-                <td colspan="4" class="px-4 py-8 text-center text-content-subtle">
-                  Loading documents…
-                </td>
-              </tr>
-              <tr v-else-if="documents.length === 0">
-                <td colspan="4" class="px-4 py-8 text-center text-content-subtle">
-                  No documents in this set
-                </td>
-              </tr>
-              <tr v-for="doc in documents" :key="doc.id" :class="t.tr">
-                <td :class="t.td">
-                  <div class="flex items-center">
-                    <FileIcon :file-type="doc.original_file?.file_type ?? ''" :size="32" />
-                    <div class="ml-3">
-                      <p class="text-sm font-medium text-content">
-                        {{
-                          doc.document_name || doc.original_file?.file_name || `Document #${doc.id}`
-                        }}
-                      </p>
-                      <p
-                        v-if="
-                          doc.document_name &&
-                          doc.original_file?.file_name &&
-                          doc.document_name !== doc.original_file?.file_name
-                        "
-                        class="text-xs text-content-muted"
-                      >
-                        {{ doc.original_file?.file_name }}
-                      </p>
-                      <p v-else class="text-xs text-content-muted">
-                        {{ formatFileSize(doc.original_file?.file_size) }}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-content">
-                  {{ doc.preprocessing_config?.name || 'N/A' }}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-content-muted">
-                  {{ formatDate(doc.created_at) }}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                  <button class="text-primary hover:text-primary" @click="viewDocument(doc)">
-                    View
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- Pagination -->
-          <PaginationControls
-            v-if="docTotalPages > 1"
-            v-model="docPage"
-            :total-pages="docTotalPages"
-            :visible-pages="docVisiblePages"
-            :total-items="docTotal"
-            :page-size="docPageSize"
+        <div class="flex-1 min-h-0">
+          <DocumentViewerBody
+            v-if="activeDoc"
+            :document="activeDoc"
+            :project-id="projectId"
+            :open="true"
+            @update-document="onUpdateDocument"
           />
-        </div>
-      </div>
-
-      <!-- Usage Statistics -->
-      <div class="mt-6 bg-surface-muted rounded-card p-4">
-        <h4 class="font-medium text-content mb-3">Usage Statistics</h4>
-        <div class="grid grid-cols-3 gap-4">
-          <div>
-            <p class="text-sm text-content-muted">Used in Trials</p>
-            <p class="text-2xl font-semibold text-content">
-              {{ usageStats.trialsCount }}
-            </p>
+          <div
+            v-else-if="docLoading"
+            class="flex flex-col items-center justify-center h-full py-16"
+          >
+            <LoadingSpinner size="medium" inline label="" />
+            <span class="mt-2 text-content-muted">Loading documents…</span>
           </div>
-          <div>
-            <p class="text-sm text-content-muted">Total Extractions</p>
-            <p class="text-2xl font-semibold text-content">
-              {{ usageStats.extractionsCount }}
-            </p>
-          </div>
-          <div>
-            <p class="text-sm text-content-muted">Last Used</p>
-            <p class="text-sm font-medium text-content">
-              {{ usageStats.lastUsed ? formatDate(usageStats.lastUsed) : 'Never' }}
+          <!-- No active doc and not loading: quiet placeholder. The rail stays
+               visible with its own empty-list/reset UI, so we don't repeat a
+               reset CTA here. -->
+          <div
+            v-else
+            class="flex flex-col items-center justify-center h-full py-16 text-content-subtle"
+          >
+            <FileText class="h-10 w-10 mb-2 opacity-40" />
+            <p class="text-sm">
+              {{
+                hasActiveFilters ? 'No documents match your search.' : 'Select a document to view.'
+              }}
             </p>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Group details (collapsible) — metadata + usage stats, shown when rail is hidden or via a toggle -->
     <!-- Download all documents confirmation -->
     <ConfirmationDialog
       :open="showDownloadAllConfirm"
@@ -183,37 +197,38 @@
       @confirm="executeDownloadAll"
       @cancel="showDownloadAllConfirm = false"
     />
-  </BaseModal>
+  </SlideOver>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { debounce } from 'perfect-debounce'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileText,
+  Package,
+  PanelLeft,
+  SquarePen,
+} from '@lucide/vue'
 import { documentsApi } from '@/services/documentsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { useToast } from '@/composables/useToast'
-import { formatDate, formatFileSize } from '@/utils/formatters'
-import { computeVisiblePages } from '@/composables/usePagination'
+import { formatDate } from '@/utils/formatters'
 import FileIcon from '../common/FileIcon.vue'
-import PaginationControls from '../common/PaginationControls.vue'
+import LoadingSpinner from '../common/LoadingSpinner.vue'
+import SearchInput from '../common/SearchInput.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
+import SlideOver from '@/components/common/SlideOver.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
-import StatusBadge from '@/components/common/StatusBadge.vue'
+import DocumentViewerBody from './DocumentViewerBody.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
-import { useTableClasses } from '@/composables/useTableClasses'
 import type { DocumentListItem, DocumentSetSummary } from '@/types'
 
 /** DocumentSetSummary as returned by the set list, optionally with `trial_id`. */
 interface ViewGroup extends DocumentSetSummary {
   trial_id?: number | null
-}
-
-/** Local usage-stats state shape (camelCase keys, as read by the template). */
-interface UsageStats {
-  trialsCount: number
-  extractionsCount: number
-  lastUsed: string | null
-  [key: string]: unknown
 }
 
 interface Props {
@@ -224,38 +239,41 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const emit = defineEmits<{
+defineEmits<{
   close: []
   edit: [group: ViewGroup]
-  'view-document': [doc: DocumentListItem]
 }>()
-
-const t = useTableClasses()
 
 const toast = useToast()
 const { downloadBlob, downloadFromApi } = useFileDownload()
-const usageStats = ref<UsageStats>({
-  trialsCount: 0,
-  extractionsCount: 0,
-  lastUsed: null,
-})
 
 // Paginated documents of this set — fetched on demand instead of reading
 // `group.documents` (which the set list no longer carries).
-// `docTotal` is (re)set from `group.document_count` on each open in the watch
-// below; default 0 here because the component stays mounted (enabling the close
-// transition) and `group` may be null while closed.
 const documents = ref<DocumentListItem[]>([])
 const docTotal = ref<number>(0)
 const docPage = ref<number>(1)
 const docPageSize = ref<number>(25)
 const docLoading = ref<boolean>(false)
+const search = ref('')
+
+// Active document in the rail.
+const activeDocId = ref<number | null>(null)
+const leftRailOpen = ref(true)
 
 const docTotalPages = computed<number>(() =>
   docPageSize.value ? Math.ceil(docTotal.value / docPageSize.value) : 1,
 )
 
-const docVisiblePages = computed(() => computeVisiblePages(docPage.value, docTotalPages.value))
+const activeDoc = computed<DocumentListItem | null>(
+  () => documents.value.find((d) => d.id === activeDocId.value) ?? null,
+)
+
+const activeIndex = computed(() => documents.value.findIndex((d) => d.id === activeDocId.value))
+
+const hasPrev = computed(() => !(docPage.value === 1 && activeIndex.value <= 0))
+const hasNext = computed(
+  () => !(docPage.value >= docTotalPages.value && activeIndex.value >= documents.value.length - 1),
+)
 
 const fetchDocuments = async (): Promise<void> => {
   docLoading.value = true
@@ -265,9 +283,15 @@ const fetchDocuments = async (): Promise<void> => {
       limit: docPageSize.value,
       offset: (docPage.value - 1) * docPageSize.value,
       compute_stats: false,
+      ...(search.value ? { search: search.value } : {}),
     })
     documents.value = data.items || []
     docTotal.value = data.total ?? documents.value.length
+    // Keep the selection valid: pick the first doc of the new page if the
+    // active one is no longer present.
+    if (!documents.value.some((d) => d.id === activeDocId.value)) {
+      activeDocId.value = documents.value[0]?.id ?? null
+    }
   } catch (error) {
     console.error('Failed to load set documents:', error)
     documents.value = []
@@ -276,9 +300,93 @@ const fetchDocuments = async (): Promise<void> => {
   }
 }
 
-// Fetch documents when the page changes (driven by PaginationControls v-model)
-watch(docPage, () => {
+const debouncedFetchDocuments = debounce(() => {
+  docPage.value = 1
+  activeDocId.value = null
   fetchDocuments()
+}, 300)
+
+// Whether a filter is active — drives the "Reset filters" CTA so users are
+// never stranded with an empty list and no way back.
+const hasActiveFilters = computed(() => !!search.value)
+
+function resetFilters(): void {
+  search.value = ''
+  docPage.value = 1
+  activeDocId.value = null
+  fetchDocuments()
+}
+
+async function handlePageChange(page: number): Promise<void> {
+  if (page < 1 || page > docTotalPages.value || page === docPage.value) return
+  docPage.value = page
+  await fetchDocuments()
+}
+
+function selectIndex(i: number): void {
+  const doc = documents.value[i]
+  if (doc) activeDocId.value = doc.id
+}
+
+async function goPrev(): Promise<void> {
+  if (!hasPrev.value) return
+  if (activeIndex.value > 0) {
+    activeDocId.value = documents.value[activeIndex.value - 1]!.id
+    return
+  }
+  // Cross to previous page
+  if (docPage.value > 1) {
+    docPage.value--
+    await fetchDocuments()
+    activeDocId.value = documents.value[documents.value.length - 1]?.id ?? null
+  }
+}
+
+async function goNext(): Promise<void> {
+  if (!hasNext.value) return
+  if (activeIndex.value < documents.value.length - 1) {
+    activeDocId.value = documents.value[activeIndex.value + 1]!.id
+    return
+  }
+  // Cross to next page
+  if (docPage.value < docTotalPages.value) {
+    docPage.value++
+    await fetchDocuments()
+    activeDocId.value = documents.value[0]?.id ?? null
+  }
+}
+
+function onUpdateDocument(version: DocumentListItem): void {
+  const idx = documents.value.findIndex((d) => d.id === version.id)
+  if (idx >= 0) documents.value[idx] = version
+}
+
+// ←/→ keyboard navigation between documents. The body viewer doesn't own
+// prev/next (no header nav in the embedded context), so the modal drives it
+// directly — mirroring TrialResults' listener. Ignored while focus is in an
+// editable field so users can type in search.
+function onKeydown(e: KeyboardEvent): void {
+  if (!props.open) return
+  const target = e.target as HTMLElement | null
+  const tag = target?.tagName
+  const editable =
+    tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable
+  if (editable) return
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault()
+    goPrev()
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault()
+    goNext()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
 })
 
 // Load usage statistics + first page of documents whenever the modal opens
@@ -290,21 +398,16 @@ watch(
     if (isOpen) {
       docPage.value = 1
       docTotal.value = props.group.document_count ?? 0
-      try {
-        const response = await documentSetsApi.getStats(props.projectId, props.group.id)
-        usageStats.value = response.data as unknown as UsageStats
-      } catch (error) {
-        console.error('Failed to load usage stats:', error)
-      }
+      search.value = ''
+      activeDocId.value = null
+      leftRailOpen.value = true
       await fetchDocuments()
+      // Auto-select the first document.
+      if (activeDocId.value === null) activeDocId.value = documents.value[0]?.id ?? null
     }
   },
   { immediate: true },
 )
-
-const viewDocument = (doc: DocumentListItem): void => {
-  emit('view-document', doc)
-}
 
 const exportDocumentList = (): void => {
   const data = documents.value.map((doc) => ({

@@ -164,8 +164,10 @@
     <FilePreviewModal
       :open="showFilePreview"
       :file="previewingFile"
+      :files="displayFiles"
       :project-id="projectId"
       @close="showFilePreview = false"
+      @navigate="onPreviewNavigate"
     />
 
     <!-- File Import Config Modal -->
@@ -732,6 +734,11 @@ const executeCancelTask = async (): Promise<void> => {
 const previewFile = (file: FileModel): void => {
   previewingFile.value = file
   showFilePreview.value = true
+}
+
+// Navigate between files from within the preview modal (prev/next / keyboard).
+const onPreviewNavigate = (file: FileModel): void => {
+  previewingFile.value = file
 }
 
 // Download file
