@@ -122,12 +122,7 @@
       <!-- === Danger Zone === -->
       <Callout variant="danger" title="Danger Zone">
         <p class="text-xs mt-1">Delete this user and all associated data. This cannot be undone.</p>
-        <BaseButton
-          variant="danger"
-          size="sm"
-          class="mt-3 dark:bg-red-500 dark:hover:bg-red-600"
-          @click="confirmDeleteFromModal"
-        >
+        <BaseButton variant="danger" size="sm" class="mt-3" @click="confirmDeleteFromModal">
           Delete User
         </BaseButton>
       </Callout>

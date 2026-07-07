@@ -1,14 +1,16 @@
 <template>
-  <button
+  <component
+    :is="to ? 'router-link' : 'button'"
     v-bind="$attrs"
-    :type="type"
-    :disabled="disabled || loading"
+    :to="to"
+    :type="to ? undefined : type"
+    :disabled="to ? undefined : disabled || loading"
     :aria-busy="loading || undefined"
     :class="[baseClass, sizeClass, variantClass]"
   >
     <LoadingSpinner v-if="loading" size="small" :color="loadingIconColor" inline label="" />
     <slot />
-  </button>
+  </component>
 </template>
 
 <script setup lang="ts">
@@ -28,6 +30,9 @@ interface Props {
   type?: 'button' | 'submit' | 'reset'
   loading?: boolean
   disabled?: boolean
+  // When set, renders a <router-link> instead of a <button> (for navigation
+  // CTAs that need proper SPA routing + middle-click support).
+  to?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -37,6 +42,7 @@ const props = withDefaults(defineProps<Props>(), {
   type: 'button',
   loading: false,
   disabled: false,
+  to: undefined,
 })
 
 const baseClass =

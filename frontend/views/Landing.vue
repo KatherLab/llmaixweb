@@ -18,20 +18,8 @@
           >
             Sign in
           </router-link>
-          <router-link
-            v-if="!isAuthenticated"
-            to="/register"
-            class="bg-primary hover:bg-primary-hover text-white text-sm font-bold py-2 px-4 rounded-card shadow-sm transition"
-          >
-            Get started
-          </router-link>
-          <router-link
-            v-else
-            to="/projects"
-            class="bg-primary hover:bg-primary-hover text-white text-sm font-bold py-2 px-4 rounded-card shadow-sm transition"
-          >
-            Go to app
-          </router-link>
+          <BaseButton v-if="!isAuthenticated" to="/register" size="sm">Get started</BaseButton>
+          <BaseButton v-else to="/projects" size="sm">Go to app</BaseButton>
         </div>
       </div>
     </header>
@@ -65,6 +53,7 @@ import InteractiveDemo from '@/components/landing/InteractiveDemo.vue'
 import FeatureGrid from '@/components/landing/FeatureGrid.vue'
 import LandingCta from '@/components/landing/LandingCta.vue'
 import AppBrand from '@/components/common/AppBrand.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()

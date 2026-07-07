@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4">
     <PageHeader
       title="Admin"
       subtitle="Manage users, system settings, SSO providers, and Celery queues."

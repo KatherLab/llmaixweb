@@ -1,12 +1,7 @@
 <!-- src/components/CreateProjectButton.vue -->
 <template>
   <!-- Compact button matching Invite User style -->
-  <button
-    class="px-3 py-1.5 text-sm bg-primary hover:bg-primary-hover text-white rounded-card shadow transition"
-    @click="isModalOpen = true"
-  >
-    + Create Project
-  </button>
+  <BaseButton size="sm" @click="isModalOpen = true">+ Create Project</BaseButton>
 
   <BaseModal
     :open="isModalOpen"

@@ -161,6 +161,19 @@ body {
   display: none;
 }
 
+/* Edge fade for horizontally-scrollable tab strips: signals there's more
+   content off-screen without showing a scrollbar. Fades are subtle so short
+   (non-overflowing) strips aren't visibly affected. */
+.scroll-fade-x {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 16px,
+    #000 calc(100% - 16px),
+    transparent 100%
+  );
+}
+
 /* Toast auto-dismiss progress bar (used by components/common/ToastItem.vue). */
 @keyframes toast-shrink {
   from {

@@ -12,7 +12,7 @@
         <CreateProjectButton />
       </template>
     </PageHeader>
-    <main class="flex-1 max-w-7xl mx-auto w-full px-2 py-2 sm:px-6 min-h-0">
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-4 sm:px-6 min-h-0">
       <div class="h-full flex flex-col gap-4">
         <GlassCard>
           <div class="h-full flex flex-col min-h-0">

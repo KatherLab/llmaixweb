@@ -27,9 +27,15 @@
     <div v-else-if="error" class="py-4">
       <ErrorBanner :message="error" />
     </div>
-    <div v-else-if="providers.length === 0" class="text-center py-12 text-content-subtle text-sm">
-      No identity providers configured.
-    </div>
+    <EmptyState
+      v-else-if="providers.length === 0"
+      title="No identity providers configured"
+      description="Add an OIDC provider so users can sign in with SSO."
+    >
+      <template #icon>
+        <KeyRound class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
+      </template>
+    </EmptyState>
 
     <ul v-else class="space-y-3">
       <li
@@ -149,6 +155,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import Callout from '@/components/common/Callout.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'

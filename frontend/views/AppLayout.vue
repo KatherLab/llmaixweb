@@ -18,7 +18,7 @@
               aria-label="Open menu"
               :aria-expanded="mobileMenuOpen"
               aria-controls="mobile-menu"
-              class="md:hidden mr-2 p-2 rounded-card text-content-muted hover:bg-surface-sunken transition-colors"
+              class="md:hidden mr-2 p-2 rounded-card text-content-muted hover:bg-surface-sunken transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               @click="mobileMenuOpen = !mobileMenuOpen"
             >
               <Menu v-if="!mobileMenuOpen" class="w-5 h-5" />
@@ -62,8 +62,9 @@
                     ? 'text-primary border-primary'
                     : 'text-content-muted border-transparent hover:text-content hover:border-strong',
                 ]"
-                class="inline-flex items-center px-4 h-14 text-sm font-medium border-b-2 transition-all"
+                class="inline-flex items-center px-4 h-14 text-sm font-medium border-b-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                 to="/projects"
+                :aria-current="$route.path.startsWith('/projects') ? 'page' : undefined"
               >
                 Projects
               </router-link>
@@ -75,8 +76,9 @@
                     ? 'text-primary border-primary'
                     : 'text-content-muted border-transparent hover:text-content hover:border-strong',
                 ]"
-                class="inline-flex items-center px-4 h-14 text-sm font-medium border-b-2 transition-all"
+                class="inline-flex items-center px-4 h-14 text-sm font-medium border-b-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                 to="/admin"
+                :aria-current="$route.path.startsWith('/admin') ? 'page' : undefined"
               >
                 Admin
                 <span
@@ -89,7 +91,7 @@
             <!-- Contextual: centered workflow pill tabs (desktop; mobile uses the slide-down menu) -->
             <nav
               v-else-if="projectNav"
-              class="hidden md:flex items-center gap-1 overflow-x-auto max-w-full no-scrollbar"
+              class="hidden md:flex items-center gap-1 overflow-x-auto max-w-full no-scrollbar scroll-fade-x"
               role="tablist"
               aria-label="Project workflow"
             >
@@ -98,7 +100,7 @@
                 :key="step.id"
                 role="tab"
                 :aria-selected="projectNav.currentStep === step.id"
-                class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium whitespace-nowrap rounded-card transition-all flex-shrink-0"
+                class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium whitespace-nowrap rounded-card transition-all flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                 :class="[
                   projectNav.currentStep === step.id
                     ? 'bg-primary-soft text-primary'
@@ -132,7 +134,7 @@
             <!-- Project settings gear (only when inside a project) -->
             <button
               v-if="projectNav"
-              class="p-2 text-content-muted hover:text-content hover:bg-surface-sunken rounded-card transition-all"
+              class="p-2 text-content-muted hover:text-content hover:bg-surface-sunken rounded-card transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               aria-label="Project Settings"
               @click="projectNav.onOpenSettings()"
             >
@@ -147,7 +149,7 @@
             <!-- Dark mode toggle -->
             <button
               :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-              class="mr-1 sm:mr-3 p-2 rounded-full hover:bg-surface-sunken transition-colors focus:outline-none"
+              class="mr-1 sm:mr-3 p-2 rounded-full hover:bg-surface-sunken transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               @click="toggleDarkMode"
             >
               <Sun v-if="!isDark" class="w-5 h-5 text-content-muted" />
@@ -226,12 +228,7 @@
               </transition>
             </div>
             <div v-else-if="authReady">
-              <router-link
-                class="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-5 rounded-card shadow-sm transition"
-                to="/login"
-              >
-                Login
-              </router-link>
+              <BaseButton to="/login">Login</BaseButton>
             </div>
           </div>
         </div>
@@ -293,6 +290,7 @@
             ]"
             class="block px-4 py-3 text-sm font-medium"
             to="/projects"
+            :aria-current="$route.path.startsWith('/projects') ? 'page' : undefined"
             @click="mobileMenuOpen = false"
           >
             Projects
@@ -306,6 +304,7 @@
             ]"
             class="block px-4 py-3 text-sm font-medium"
             to="/admin"
+            :aria-current="$route.path.startsWith('/admin') ? 'page' : undefined"
             @click="mobileMenuOpen = false"
           >
             Admin
