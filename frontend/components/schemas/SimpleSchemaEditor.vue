@@ -143,6 +143,29 @@
               </div>
             </div>
 
+            <!-- Required toggle: marks the field as required in the JSON schema
+                 (tells the LLM the value must be present). -->
+            <button
+              type="button"
+              :class="[
+                'flex-shrink-0 p-1.5 rounded-card transition-colors',
+                field.required
+                  ? 'text-amber-500 hover:text-amber-600'
+                  : 'text-content-subtle hover:text-content-muted',
+              ]"
+              :title="
+                field.required
+                  ? 'Required — click to make optional'
+                  : 'Optional — click to make required'
+              "
+              :aria-pressed="field.required"
+              aria-label="Toggle required"
+              @click="toggleRequired(field)"
+            >
+              <Star v-if="!field.required" class="h-4 w-4" />
+              <Star v-else class="h-4 w-4 fill-current" />
+            </button>
+
             <!-- Description Input -->
             <div class="flex-1 min-w-0 hidden lg:block">
               <input
@@ -242,7 +265,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { ChevronDown, GripVertical, Info, Lock, Plus, Trash2, X } from '@lucide/vue'
+import { ChevronDown, GripVertical, Info, Lock, Plus, Star, Trash2, X } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -267,6 +290,9 @@ interface SimpleField {
   type: string
   description: string
   options: string[]
+  // Whether this field is in the root `required` array. Core to extraction
+  // (tells the LLM what must be present), so it's exposed in Simple mode.
+  required: boolean
 }
 
 interface ReadonlyField {
@@ -356,6 +382,7 @@ const hasReadonlyFields = computed(() => fields.value.some((f) => f.kind === 're
 const parseSchema = (schema: SchemaDefinition): Field[] => {
   const parsedFields: Field[] = []
   const props = schema?.properties || {}
+  const requiredList: string[] = Array.isArray(schema?.required) ? schema.required : []
 
   for (const [name, propSchema] of Object.entries(props)) {
     if (isSimpleEditable(propSchema)) {
@@ -384,6 +411,7 @@ const parseSchema = (schema: SchemaDefinition): Field[] => {
         description: propSchema.description || '',
         // Pre-defined options (string enum). Stored as a list of strings.
         options: Array.isArray(propSchema.enum) ? [...(propSchema.enum as string[])] : [],
+        required: requiredList.includes(name),
       })
     } else {
       // Nested objects/arrays and anything the simple editor can't represent
@@ -454,14 +482,35 @@ const buildSchema = (): SchemaDefinition => {
 
   schema.properties = properties
 
-  // Drop `required` entries for properties that no longer exist
+  // Rebuild `required`: carry over any required entries for read-only
+  // (advanced) properties that still exist, plus the simple fields the user
+  // marked required. This keeps required semantics editable in Simple mode
+  // without dropping required flags on nested/advanced properties.
+  const requiredSet = new Set<string>()
   if (Array.isArray(schema.required)) {
-    schema.required = schema.required.filter((name) =>
-      Object.prototype.hasOwnProperty.call(properties, name),
-    )
-    if (schema.required.length === 0) {
-      delete schema.required
+    for (const name of schema.required) {
+      if (Object.prototype.hasOwnProperty.call(properties, name)) {
+        requiredSet.add(name)
+      }
     }
+  }
+  // Read-only fields: keep their existing required state (already carried above).
+  // Simple fields: apply the user's toggle.
+  for (const field of fields.value) {
+    if (field.kind !== 'simple') continue
+    const trimmed = field.name?.trim()
+    if (trimmed && Object.prototype.hasOwnProperty.call(properties, trimmed)) {
+      if (field.required) {
+        requiredSet.add(trimmed)
+      } else {
+        requiredSet.delete(trimmed)
+      }
+    }
+  }
+  if (requiredSet.size > 0) {
+    schema.required = Array.from(requiredSet)
+  } else {
+    delete schema.required
   }
 
   return schema
@@ -483,7 +532,14 @@ const addField = () => {
     type: 'String',
     description: '',
     options: [],
+    required: false,
   })
+  emitChange()
+}
+
+// Toggle a simple field's required flag and rebuild the schema.
+const toggleRequired = (field: SimpleField) => {
+  field.required = !field.required
   emitChange()
 }
 

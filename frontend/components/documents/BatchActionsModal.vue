@@ -206,17 +206,34 @@ const performAction = async (): Promise<void> => {
 }
 
 const reprocessDocuments = async (): Promise<void> => {
-  const fileIds = props.documents
+  // `props.documents` are *document* IDs, but a preprocessing task needs the
+  // underlying *file* IDs. Resolve each selected document to its
+  // original_file_id (deduped — row-by-row CSVs share one file).
+  const fileIds = new Set<number>()
+  for (const docId of props.documents) {
+    try {
+      const { data } = await documentsApi.get(props.projectId, docId)
+      if (data?.original_file_id) fileIds.add(data.original_file_id)
+    } catch (error) {
+      console.error(`Failed to resolve document #${docId} to a file:`, error)
+    }
+  }
+  if (fileIds.size === 0) {
+    toast.error('Could not resolve the selected documents to any files.')
+    return
+  }
   const taskData: PreprocessingTaskCreate = {
     inline_config: {
       name: `Reprocess ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
       additional_settings: {},
     },
-    file_ids: fileIds,
+    file_ids: Array.from(fileIds),
     force_reprocess: forceReprocess.value,
   }
   await preprocessingApi.create(props.projectId, taskData)
-  toast.success('Reprocessing task started')
+  toast.success(
+    `Reprocessing task started for ${fileIds.size} file${fileIds.size !== 1 ? 's' : ''}`,
+  )
 }
 
 const exportDocuments = async (): Promise<void> => {

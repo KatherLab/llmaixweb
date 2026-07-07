@@ -201,13 +201,20 @@ const columns = [
 ]
 
 function schemaName(trial: TrialSummary): string {
-  const name = trial.schema_snapshot?.schema_name
-  return (typeof name === 'string' && name) || '-'
+  const snapshotName = trial.schema_snapshot?.schema_name
+  if (typeof snapshotName === 'string' && snapshotName) return snapshotName
+  // Legacy trials (created before schema snapshots): fall back to the live
+  // schema so the column isn't stuck on '-'. Matches TrialDetailPanel.
+  const live = props.schemas.find((s) => s.id === trial.schema_id)?.schema_name
+  return (typeof live === 'string' && live) || '-'
 }
 
 function promptName(trial: TrialSummary): string | undefined {
-  const name = trial.prompt_snapshot?.name
-  return typeof name === 'string' ? name : undefined
+  const snapshotName = trial.prompt_snapshot?.name
+  if (typeof snapshotName === 'string') return snapshotName
+  // Legacy trials: fall back to the live prompt. Matches TrialDetailPanel.
+  const live = props.prompts.find((p) => p.id === trial.prompt_id)?.name
+  return typeof live === 'string' ? live : undefined
 }
 
 function isActive(trial: TrialSummary): boolean {

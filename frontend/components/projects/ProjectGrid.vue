@@ -22,6 +22,40 @@
         <LoadingSpinner size="large" />
       </div>
 
+      <!-- Load error -->
+      <ErrorBanner
+        v-else-if="loadError"
+        :message="loadError"
+        retry-text="Try again"
+        @retry="loadProjects"
+      />
+
+      <!-- First-run onboarding -->
+      <div
+        v-else-if="projects.length === 0"
+        class="flex flex-col items-center justify-center text-center py-16 px-4"
+      >
+        <div class="bg-primary-soft text-primary rounded-card p-4 mb-4">
+          <FolderPlus class="h-10 w-10" aria-hidden="true" />
+        </div>
+        <h3 class="text-lg font-semibold text-content">No projects yet</h3>
+        <p class="mt-2 max-w-md text-sm text-content-muted">
+          Create your first project to start uploading documents, running OCR preprocessing, and
+          extracting structured data with LLMs.
+        </p>
+        <CreateProjectButton class="mt-6" />
+        <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 max-w-3xl text-left">
+          <div
+            v-for="step in workflowSteps"
+            :key="step.label"
+            class="flex flex-col gap-1 p-3 rounded-card border border-default bg-surface-muted"
+          >
+            <component :is="step.icon" class="h-5 w-5 text-primary" aria-hidden="true" />
+            <span class="text-xs font-semibold text-content">{{ step.label }}</span>
+          </div>
+        </div>
+      </div>
+
       <DataTable
         v-else
         :columns="columns"
@@ -84,14 +118,26 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, type ComputedRef } from 'vue'
+import {
+  FolderPlus,
+  FileUp,
+  ScanText,
+  FileText,
+  Braces,
+  FlaskConical,
+  ClipboardCheck,
+} from '@lucide/vue'
 import { projectsApi } from '@/services/projectsApi'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import CreateProjectButton from './CreateProjectButton.vue'
 import { formatDate } from '@/utils/formatters'
 import { usePagination } from '@/composables/usePagination'
+import { extractErrorMessage } from '@/utils/errors'
 import type { Project, QueryParams } from '@/types'
 
 interface ProjectRowUser {
@@ -123,6 +169,17 @@ const router = useRouter()
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 const showAllProjects = ref(false)
 const isLoading = ref(true)
+const loadError = ref<string>('')
+
+// Onboarding workflow map shown in the first-run empty state.
+const workflowSteps = [
+  { label: 'Upload files', icon: FileUp },
+  { label: 'Preprocess', icon: ScanText },
+  { label: 'Documents', icon: FileText },
+  { label: 'Schemas', icon: Braces },
+  { label: 'Run trials', icon: FlaskConical },
+  { label: 'Evaluate', icon: ClipboardCheck },
+]
 
 const projects = ref<ProjectRow[]>([])
 const currentPage = ref(1)
@@ -176,6 +233,7 @@ function goToProject(project: ProjectRow): void {
 
 const loadProjects = async (): Promise<void> => {
   isLoading.value = true
+  loadError.value = ''
   try {
     const params: QueryParams = isAdmin.value && showAllProjects.value ? { all: true } : {}
     const response = await projectsApi.list(params)
@@ -198,6 +256,7 @@ const loadProjects = async (): Promise<void> => {
     currentPage.value = 1
   } catch (err) {
     console.error('Error loading projects:', err)
+    loadError.value = extractErrorMessage(err, 'Failed to load projects.')
   } finally {
     isLoading.value = false
   }

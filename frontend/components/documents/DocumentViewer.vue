@@ -96,6 +96,7 @@
       :open="open"
       @reprocess="(payload) => emit('reprocess', payload)"
       @update-document="(version) => emit('update-document', version)"
+      @update:version-count="(count) => (versionCount = count)"
     />
   </SlideOver>
 </template>
@@ -164,7 +165,9 @@ const hasVersionHistory = computed<boolean>(() => {
   )
 })
 
-const versionCount = computed<number>(() => 1)
+// Real archived-version count, pushed up from the body once its versions
+// fetch resolves. Defaults to 1 (the current version) until then.
+const versionCount = ref<number>(1)
 
 type SegmentedView = 'text' | 'file' | 'both'
 const segmentedValue = ref<SegmentedView>('both')

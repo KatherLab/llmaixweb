@@ -9,7 +9,7 @@
   >
     <!-- Content -->
     <!-- Preview -->
-    <h3 class="font-semibold text-content text-sm mb-3">Preview (first 10 rows)</h3>
+    <h3 class="font-semibold text-content text-sm mb-3">Preview (first 25 rows)</h3>
     <div class="overflow-x-auto border border-default rounded bg-surface-muted p-2 max-h-72 mb-5">
       <table v-if="headerLabels.length" class="min-w-full text-sm">
         <thead>
@@ -92,23 +92,60 @@
       </div>
 
       <div v-if="preprocessingStrategy === 'row_by_row' && headerLabels.length" class="space-y-3">
-        <!-- Text columns -->
+        <!-- Text columns (checkbox list with sample values) -->
         <div>
-          <label :class="labelClass">Text Columns <span class="text-red-500">*</span></label>
-          <select
-            v-model="textColumns"
-            multiple
-            :class="[selectClass, 'focus:ring-2 focus:ring-ring focus:border-transparent py-2']"
+          <div class="flex items-center justify-between">
+            <label :class="labelClass">Text Columns <span class="text-red-500">*</span></label>
+            <BaseButton
+              variant="link"
+              tone="blue"
+              size="sm"
+              class="h-auto p-0"
+              :disabled="textColumns.length === headerLabels.length"
+              @click="textColumns = [...headerLabels]"
+            >
+              Select all
+            </BaseButton>
+          </div>
+          <p class="text-xs text-content-muted mb-2">
+            Pick the column(s) whose text the LLM should extract. Their contents are concatenated
+            into each document. Typically the report, notes, or findings column.
+          </p>
+          <div
+            class="grid sm:grid-cols-2 gap-1.5 max-h-64 overflow-y-auto p-2 border border-default rounded-card bg-surface-muted"
           >
-            <option v-for="(col, idx) in headerLabels" :key="idx" :value="col">
-              {{ col }}
-            </option>
-          </select>
-          <div class="flex flex-wrap gap-1 mt-2">
+            <label
+              v-for="(col, idx) in headerLabels"
+              :key="idx"
+              :class="[
+                'flex items-start gap-2 p-2 rounded-card border cursor-pointer transition-colors',
+                textColumns.includes(col)
+                  ? 'border-primary bg-primary-soft'
+                  : 'border-default bg-surface hover:bg-surface-sunken',
+              ]"
+            >
+              <input
+                :checked="textColumns.includes(col)"
+                type="checkbox"
+                class="mt-0.5 rounded border-strong text-primary focus:ring-ring"
+                @change="toggleTextColumn(col)"
+              />
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-medium text-content truncate">{{ col }}</div>
+                <div v-if="sampleValue(idx)" class="text-xs text-content-subtle truncate">
+                  e.g. {{ sampleValue(idx) }}
+                </div>
+              </div>
+            </label>
+          </div>
+          <div v-if="textColumns.length > 0" class="flex flex-wrap gap-1 mt-2">
             <StatusBadge v-for="col in textColumns" :key="col" color="blue">
               {{ col }}
             </StatusBadge>
           </div>
+          <p v-else class="text-xs text-red-600 dark:text-red-400 mt-2">
+            Select at least one text column to extract.
+          </p>
         </div>
 
         <!-- ID column -->
@@ -120,7 +157,9 @@
               {{ col }}<span v-if="isRecommendedId(col)"> (Recommended)</span>
             </option>
           </select>
-          <div class="text-xs text-content-subtle mt-1">Optional: Used for document naming</div>
+          <div class="text-xs text-content-subtle mt-1">
+            Optional: names each document (e.g. <code>CASE-001</code>). Defaults to row number.
+          </div>
         </div>
       </div>
     </div>
@@ -238,6 +277,31 @@ function displayDelimiter(d: string): string {
   return d
 }
 
+// Toggle a column in/out of the selected text-columns set.
+function toggleTextColumn(col: string): void {
+  const idx = textColumns.value.indexOf(col)
+  if (idx > -1) {
+    textColumns.value.splice(idx, 1)
+  } else {
+    textColumns.value.push(col)
+  }
+}
+
+// Sample value for a column (from the first preview row that has one), shown
+// under the column name to help the user recognize which column is which.
+function sampleValue(colIndex: number): string {
+  const rows = preview.value.rows || []
+  for (const row of rows) {
+    const cell = row[colIndex]
+    if (cell !== '' && cell != null) {
+      const s = String(cell)
+      // Keep the preview compact.
+      return s.length > 60 ? s.slice(0, 60) + '…' : s
+    }
+  }
+  return ''
+}
+
 function isRecommendedId(col: string): boolean {
   if (!col) return false
   const idCandidates = ['id', 'case_id', 'patient_id', 'identifier', 'studyid', 'record_id']
@@ -288,7 +352,7 @@ const loadPreview = async (): Promise<void> => {
     if (isCSV.value && delimiter.value) params.append('delimiter', delimiter.value)
     if (isXLSX.value && sheet.value) params.append('sheet', sheet.value)
     params.append('has_header', String(hasHeader.value))
-    params.append('max_rows', '10')
+    params.append('max_rows', '25')
 
     const { data } = await filesApi.getPreviewRows(
       props.projectId,

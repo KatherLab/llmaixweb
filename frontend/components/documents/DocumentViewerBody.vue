@@ -113,6 +113,9 @@ const emit = defineEmits<{
   reprocess: [payload: Partial<DocumentListItem>]
   'update-document': [version: DocumentListItem]
   'update:showVersionHistory': [value: boolean]
+  // Notifies the host header of the real archived-version count once the
+  // versions fetch resolves, so the History badge isn't stuck on a hardcode.
+  'update:versionCount': [count: number]
 }>()
 
 const toast = useToast()
@@ -155,6 +158,10 @@ const hasDisplayableOriginalFile = computed<boolean>(() => {
 const hasText = computed<boolean>(() => !!fullText.value)
 
 const versionCount = computed<number>(() => versions.value.length || 1)
+
+// Push the real count up to the host header so the History badge reflects
+// archived versions rather than a hardcoded 1.
+watch(versionCount, (count) => emit('update:versionCount', count), { immediate: true })
 
 const originalFileType = computed<'pdf' | 'image' | 'other' | null>(() => {
   const fileType = props.document.original_file?.file_type

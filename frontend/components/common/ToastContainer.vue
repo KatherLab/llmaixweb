@@ -3,7 +3,7 @@
     <TransitionGroup
       tag="div"
       name="toast"
-      class="fixed top-4 right-4 z-[10000] flex flex-col gap-2 pointer-events-none"
+      class="fixed top-4 right-4 z-[10100] flex flex-col gap-2 pointer-events-none"
     >
       <div v-for="t in toasts" :key="t.id" class="pointer-events-auto">
         <ToastItem

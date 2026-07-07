@@ -132,10 +132,50 @@
           />
         </div>
 
-        <!-- Model test / status indicator (Advanced mode only — Simple mode runs the
-             check transparently on submit) -->
+        <!-- Simple mode: custom-API escape hatch. Shown when there's no usable
+             system LLM config, so a scientist pointing at a self-hosted / Ollama
+             / vLLM endpoint isn't stranded with a disabled Start button. -->
+        <div v-else-if="!hasValidConfig || hasCustomApiSettings" class="mb-8">
+          <Callout
+            v-if="!hasValidConfig && !hasCustomApiSettings"
+            variant="warning"
+            title="No default model configured"
+            class="mb-3"
+          >
+            <p class="mt-1">
+              This server has no system-wide LLM configured. You can still run a trial by pointing
+              at any OpenAI-compatible API (OpenAI, Ollama, vLLM, llama.cpp…).
+            </p>
+          </Callout>
+          <BaseButton
+            variant="link"
+            tone="blue"
+            class="text-sm flex items-center"
+            @click="advancedOptionsVisible = !advancedOptionsVisible"
+          >
+            <span
+              >{{ advancedOptionsVisible ? 'Hide' : hasCustomApiSettings ? 'Edit' : 'Use' }} Custom
+              API Settings</span
+            >
+            <ChevronDown
+              :class="{ 'rotate-180': advancedOptionsVisible }"
+              class="h-4 w-4 ml-1 transition-transform"
+              aria-hidden="true"
+            />
+          </BaseButton>
+          <CustomApiSettingsPanel
+            v-if="advancedOptionsVisible"
+            v-model:api-key="trialData.api_key"
+            v-model:base-url="trialData.base_url"
+            class="mt-3"
+          />
+        </div>
+
+        <!-- Model test / status indicator. Visible in both modes once a model +
+             schema are picked and the config is valid, so users get pre-flight
+             feedback before clicking Start (not only in Advanced mode). -->
         <ModelTestCard
-          v-if="!simpleMode && trialData.llm_model && trialData.schema_id && hasValidConfig"
+          v-if="trialData.llm_model && trialData.schema_id && hasValidConfig"
           :status="modelTestStatus"
           :is-testing="isTestingModel"
           :llm-model="trialData.llm_model"

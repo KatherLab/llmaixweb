@@ -16,7 +16,8 @@
               v-if="authReady && isAuthenticated"
               type="button"
               aria-label="Open menu"
-              aria-expanded="false"
+              :aria-expanded="mobileMenuOpen"
+              aria-controls="mobile-menu"
               class="md:hidden mr-2 p-2 rounded-card text-content-muted hover:bg-surface-sunken transition-colors"
               @click="mobileMenuOpen = !mobileMenuOpen"
             >
@@ -24,7 +25,7 @@
               <X v-else class="w-5 h-5" />
             </button>
             <div class="flex-shrink-0 flex items-center md:mr-8">
-              <router-link to="/">
+              <router-link :to="isAuthenticated ? '/projects' : '/'">
                 <span class="text-xl font-extrabold tracking-tight text-content">LLMAIx-v2</span>
               </router-link>
             </div>
@@ -79,6 +80,9 @@
             <div v-if="authReady && isAuthenticated" class="relative">
               <button
                 aria-label="Open user menu"
+                :aria-expanded="showUserMenu"
+                aria-haspopup="true"
+                aria-controls="user-menu"
                 class="group flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-ring"
                 @click="toggleUserMenu"
               >
@@ -100,6 +104,7 @@
               <transition name="fade-slide">
                 <div
                   v-if="showUserMenu"
+                  id="user-menu"
                   class="absolute right-0 mt-3 w-64 rounded-modal shadow-xl bg-surface ring-1 ring-default-border z-50 animate-dropdown"
                   @click.outside="showUserMenu = false"
                 >
@@ -160,6 +165,7 @@
       <transition name="fade-slide">
         <div
           v-if="mobileMenuOpen && authReady && isAuthenticated"
+          id="mobile-menu"
           class="md:hidden border-t border-default bg-surface"
         >
           <router-link
@@ -187,6 +193,32 @@
           >
             Admin
           </router-link>
+          <div class="border-t border-default">
+            <div class="px-4 py-2 text-xs text-content-subtle truncate">
+              {{ userName }} · {{ userEmail }}
+            </div>
+            <router-link
+              class="block px-4 py-3 text-sm font-medium text-content-muted hover:bg-surface-sunken"
+              to="/account"
+              @click="mobileMenuOpen = false"
+            >
+              Account settings
+            </router-link>
+            <a
+              class="block px-4 py-3 text-sm font-medium text-content-muted hover:bg-surface-sunken"
+              href="#"
+              @click.prevent="openChangePasswordFromMobile"
+            >
+              Change Password
+            </a>
+            <a
+              class="block px-4 py-3 text-sm font-medium text-content-muted hover:bg-surface-sunken"
+              href="#"
+              @click.prevent="logout"
+            >
+              Logout
+            </a>
+          </div>
         </div>
       </transition>
     </nav>
@@ -422,6 +454,12 @@ function openChangePasswordModal(): void {
   newPassword.value = ''
   confirmPassword.value = ''
   showChangePasswordModal.value = true
+}
+
+// Mobile-menu entry: open the change-password modal and close the menu.
+function openChangePasswordFromMobile(): void {
+  openChangePasswordModal()
+  mobileMenuOpen.value = false
 }
 
 function closeChangePasswordModal(): void {

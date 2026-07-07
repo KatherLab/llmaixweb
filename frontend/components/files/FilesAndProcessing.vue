@@ -59,6 +59,60 @@
       </BaseButton>
     </Callout>
 
+    <!-- Global preprocessing progress banner: aggregates every active task so
+         a user running a 50-file batch can see progress (and cancel) without
+         opening the per-file history panel. -->
+    <div
+      v-if="activePreprocessingSummary"
+      class="mb-4 rounded-card border border-default bg-surface-muted p-4"
+    >
+      <div class="flex items-center gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-sm font-medium text-content">
+              Preprocessing
+              <span class="text-content-muted font-normal">
+                {{ activePreprocessingSummary.processed }} of
+                {{ activePreprocessingSummary.total }} files
+                <span
+                  v-if="activePreprocessingSummary.failed > 0"
+                  class="text-red-600 dark:text-red-400"
+                >
+                  · {{ activePreprocessingSummary.failed }} failed
+                </span>
+              </span>
+            </p>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-xs text-content-subtle tabular-nums"
+                >{{ activePreprocessingSummary.percent }}%</span
+              >
+              <BaseButton variant="ghost" size="sm" @click="viewActiveTaskDetails">
+                View details
+              </BaseButton>
+              <BaseButton
+                v-if="activePreprocessingSummary.cancelableTask"
+                variant="ghost"
+                size="sm"
+                class="text-red-600 dark:text-red-400 hover:text-red-700"
+                @click="cancelPreprocessingTask(activePreprocessingSummary.cancelableTask)"
+              >
+                Cancel
+              </BaseButton>
+            </div>
+          </div>
+          <div class="mt-2 h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden">
+            <div
+              class="h-full bg-primary transition-all duration-500"
+              :style="{ width: activePreprocessingSummary.percent + '%' }"
+            ></div>
+          </div>
+          <p v-if="activePreprocessingSummary.etaLabel" class="mt-1.5 text-xs text-content-subtle">
+            {{ activePreprocessingSummary.etaLabel }}
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- Loading Indicator -->
     <SkeletonTable v-if="isLoading" :columns="5" :rows="8" />
 
@@ -791,6 +845,92 @@ const hasActivePreprocessingTasks = computed(() => {
     ),
   )
 })
+
+// Aggregate view of all currently-active preprocessing tasks for the global
+// progress banner. Derived from `files` (reactive, kept fresh by the WS
+// subscription) rather than the cached task list, so the bar updates live.
+interface ActivePreprocessingSummary {
+  total: number
+  processed: number
+  failed: number
+  percent: number
+  etaLabel: string
+  cancelableTask: PreprocessingTask | null
+}
+
+const activePreprocessingSummary = computed<ActivePreprocessingSummary | null>(() => {
+  const activeStatuses = ['pending', 'processing', 'in_progress']
+  const seenTaskIds = new Set<number>()
+  let total = 0
+  let processed = 0
+  let failed = 0
+  let etaSeconds = 0
+  let cancelableTask: PreprocessingTask | null = null
+
+  for (const file of files.value) {
+    for (const task of file.preprocessing_tasks || []) {
+      if (!activeStatuses.includes(String(task.status || '').toLowerCase())) continue
+      if (seenTaskIds.has(task.id)) continue
+      seenTaskIds.add(task.id)
+      // Prefer runtime meta totals (set by the pipeline); fall back to the
+      // top-level counts which are populated for completed/in-flight tasks.
+      const meta = task.meta
+      const tTotal = meta?.total_files ?? task.total_files ?? 0
+      const tProcessed = meta?.completed_files ?? task.processed_files ?? 0
+      const tFailed = meta?.failed_files ?? task.failed_files ?? 0
+      total += tTotal
+      processed += tProcessed
+      failed += tFailed
+      if (meta?.eta_seconds && meta.eta_seconds > etaSeconds) etaSeconds = meta.eta_seconds
+      // Any non-pending active task can be cancelled.
+      if (!cancelableTask && String(task.status || '').toLowerCase() !== 'pending') {
+        cancelableTask = task
+      }
+    }
+  }
+
+  if (total === 0 && seenTaskIds.size === 0) return null
+  // When only pending (no totals yet), show an indeterminate-ish state.
+  if (total === 0) {
+    return {
+      total: 0,
+      processed: 0,
+      failed: 0,
+      percent: 0,
+      etaLabel: 'Starting…',
+      cancelableTask,
+    }
+  }
+  const percent = Math.min(100, Math.round((processed / total) * 100))
+  const etaLabel = etaSeconds > 0 ? `≈ ${formatDuration(etaSeconds)} remaining` : ''
+  return { total, processed, failed, percent, etaLabel, cancelableTask }
+})
+
+// Format seconds into a compact human duration (e.g. "4m 30s", "1h 5m").
+function formatDuration(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds))
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  const rem = s % 60
+  if (m < 60) return rem ? `${m}m ${rem}s` : `${m}m`
+  const h = Math.floor(m / 60)
+  const mm = m % 60
+  return mm ? `${h}h ${mm}m` : `${h}h`
+}
+
+// Open the history panel for the first file that has an active task.
+const viewActiveTaskDetails = (): void => {
+  const activeStatuses = ['pending', 'processing', 'in_progress']
+  const fileWithActive = files.value.find((f) =>
+    f.preprocessing_tasks?.some((t) =>
+      activeStatuses.includes(String(t.status || '').toLowerCase()),
+    ),
+  )
+  if (fileWithActive) {
+    historyFile.value = fileWithActive
+    showHistoryPanel.value = true
+  }
+}
 
 // Check for duplicates and start processing (or show confirmation).
 // Receives the built settings payload from PreprocessingConfigPanel.

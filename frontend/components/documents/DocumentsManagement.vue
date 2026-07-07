@@ -113,10 +113,12 @@
           <RefreshCw class="w-4 h-4" />
           Reprocess
         </BaseButton>
-        <BaseButton variant="secondary" size="sm" @click="performBatchAction('export')">
-          <Download class="w-4 h-4" />
-          Export
-        </BaseButton>
+        <Tooltip text="Export is coming soon">
+          <BaseButton variant="secondary" size="sm" disabled>
+            <Download class="w-4 h-4" />
+            Export
+          </BaseButton>
+        </Tooltip>
         <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
           <Trash2 class="w-4 h-4" />
           Delete
@@ -175,6 +177,7 @@ import BatchActionBar from '@/components/common/BatchActionBar.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import Tooltip from '@/components/common/Tooltip.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { usePagination } from '@/composables/usePagination'

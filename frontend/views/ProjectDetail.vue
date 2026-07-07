@@ -79,6 +79,24 @@
 
       <!-- Workspace with glassmorphism -->
       <GlassCard v-else padding="lg" rounded="modal" class="mb-20">
+        <!-- Per-step prerequisite hint: shown when the current tab's inputs
+             aren't ready yet, with a deep-link to the prior step. -->
+        <Callout
+          v-if="prerequisiteHint"
+          variant="info"
+          :title="prerequisiteHint.title"
+          class="mb-4"
+        >
+          <p class="mt-1">{{ prerequisiteHint.body }}</p>
+          <BaseButton
+            variant="link"
+            tone="blue"
+            class="mt-2 p-0 h-auto"
+            @click="goToStep(prerequisiteHint.targetStep)"
+          >
+            Go to {{ prerequisiteHint.targetLabel }} →
+          </BaseButton>
+        </Callout>
         <transition name="fade" mode="out-in">
           <!-- Show each tab as content, but only if it's currentStep -->
           <FilesAndProcessing
@@ -166,6 +184,8 @@ import { useToast } from '@/composables/useToast'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import GlassCard from '@/components/common/GlassCard.vue'
+import Callout from '@/components/common/Callout.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 // --- DATA ---
 const route = useRoute()
@@ -205,6 +225,72 @@ const steps = computed(() => [
   },
 ])
 const defaultStep = 'files'
+
+// Per-step prerequisite guidance. Returns null when the current step's inputs
+// are ready (so no hint shows). Drives the Callout above the workspace.
+const stepLabels: Record<string, string> = {
+  files: 'Files & Preprocessing',
+  documents: 'Documents',
+  schemas: 'Schemas & Prompts',
+  trials: 'Run Trials',
+  evaluation: 'Evaluation',
+}
+const prerequisiteHint = computed<{
+  title: string
+  body: string
+  targetStep: string
+  targetLabel: string
+} | null>(() => {
+  const p = project.value
+  const docCount = p.document_count ?? 0
+  const schemaCount = p.schema_count ?? 0
+  const promptCount = p.prompt_count ?? 0
+  const trialCount = p.trial_count ?? 0
+  switch (currentStep.value) {
+    case 'documents':
+      if (docCount === 0)
+        return {
+          title: 'No documents yet',
+          body: 'Preprocess your uploaded files to generate documents. Documents are the extracted text the LLM reads during a trial.',
+          targetStep: 'files',
+          targetLabel: stepLabels.files,
+        }
+      return null
+    case 'schemas':
+      return null // schemas/prompts can be authored at any time
+    case 'trials':
+      if (docCount === 0)
+        return {
+          title: 'No documents to run a trial on',
+          body: 'A trial extracts structured data from your documents. Preprocess files first to generate documents.',
+          targetStep: 'files',
+          targetLabel: stepLabels.files,
+        }
+      if (schemaCount === 0 || promptCount === 0)
+        return {
+          title: schemaCount === 0 ? 'No schema yet' : 'No prompt yet',
+          body: 'A trial needs a schema (the fields to extract) and a prompt (extraction instructions). Create both before running a trial.',
+          targetStep: 'schemas',
+          targetLabel: stepLabels.schemas,
+        }
+      return null
+    case 'evaluation':
+      if (trialCount === 0)
+        return {
+          title: 'No trials to evaluate',
+          body: 'Evaluation compares trial results against ground-truth data. Run a trial first to produce results to evaluate.',
+          targetStep: 'trials',
+          targetLabel: stepLabels.trials,
+        }
+      return null
+    default:
+      return null
+  }
+})
+
+function goToStep(stepId: string): void {
+  handleStepChange(stepId)
+}
 
 // Tabs (persisted in localStorage for true SaaS "workspace" vibes)
 // Current step is managed via URL query param
