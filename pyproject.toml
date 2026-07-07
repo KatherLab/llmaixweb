@@ -43,7 +43,7 @@ dev = [
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
     "isort==8.0.1",
-    "boto3-stubs==1.43.41",
+    "boto3-stubs==1.43.42",
     "pandas-stubs==3.0.3.260530",
     "celery-types==0.26.0",
     # Docling for local fallback during tests (when docling-serve unavailable)
