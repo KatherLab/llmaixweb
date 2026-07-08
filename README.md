@@ -11,6 +11,8 @@ A web application that turns unstructured medical/lab documents into structured 
 
 **Works with any OpenAI-compatible API:** use official services (OpenAI, Mistral OCR) for convenience, or run everything fully local with self-hosted models (DeepSeek-OCR-2 via [KatDocExtract](https://github.com/KatherLab/KatDocExtract), vision LLMs like Gemma 4 via vLLM) for sensitive environments.
 
+![eval_single_doc.png](static/eval_single_doc.png)
+
 ---
 
 ## Features
