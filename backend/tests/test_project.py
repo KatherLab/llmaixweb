@@ -2831,6 +2831,242 @@ This is the medical report:
     assert float(eval_obj["overall_metrics"]["accuracy"]) > 0.9
 
 
+def test_evaluation_full_pipeline_xlsx(client, api_url, files_base_path):
+    """
+    Same full pipeline as test_evaluation_full_pipeline but driven by an XLSX
+    ground-truth file (reports_with_groundtruth.xlsx): XLSX upload (row-by-row),
+    preprocess, schema, groundtruth, mapping, prompt, trial, and evaluation.
+    The 'report' column contains the text to extract from.
+    """
+    from backend.src.core.config import settings
+
+    if settings.OPENAI_NO_API_CHECK:
+        pytest.skip("Skipping LLM models test due to OPENAI_NO_API_CHECK setting")
+
+    import json
+
+    # --- Auth ---
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
+    r = client.post(f"{api_url}/auth/login", data=user_data)
+    assert r.status_code == 200, r.text
+    access_token = r.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # --- Create Project ---
+    r = client.post(
+        f"{api_url}/project", headers=headers, json={"name": "EvalPipelineXLSX"}
+    )
+    assert r.status_code == 200, r.text
+    project_id = r.json()["id"]
+
+    # --- Upload XLSX file with proper preprocessing metadata ---
+    xlsx_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    with open(files_base_path / "reports_with_groundtruth.xlsx", "rb") as f:
+        file_data = {
+            "file": ("reports_with_groundtruth.xlsx", f, xlsx_mime),
+        }
+        # Build file_info with XLSX settings and row_by_row preprocessing.
+        # delimiter/encoding are CSV-only and ignored for XLSX; only
+        # has_header / text_columns / case_id_column matter.
+        file_info = {
+            "file_name": "reports_with_groundtruth.xlsx",
+            "file_type": xlsx_mime,
+            "preprocessing_strategy": "row_by_row",
+            "file_metadata": {
+                "has_header": True,
+                "text_columns": ["report"],  # This is where the text is!
+                "case_id_column": "id",
+            },
+        }
+        r = client.post(
+            f"{api_url}/project/{project_id}/file",
+            headers=headers,
+            files=file_data,
+            data={"file_info": json.dumps(file_info)},
+        )
+        assert r.status_code == 200, r.text
+        file_id = r.json()["id"]
+
+    # --- Preprocess XLSX file: this should create one document per row ---
+    r = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": {
+                "name": "XLSX row-by-row",
+                "description": "Process XLSX per report",
+            },
+            "bypass_celery": True,
+        },
+    )
+    assert r.status_code == 200, r.text
+
+    # --- Get created documents (one per XLSX row/report) ---
+    r = client.get(f"{api_url}/project/{project_id}/document", headers=headers)
+    assert r.status_code == 200, r.text
+    docs = r.json()
+    assert docs["items"], "No documents created from XLSX"
+    # The XLSX has 8 data rows (one per report)
+    assert docs["total"] == 8, f"Expected 8 docs, got {docs['total']}"
+    doc_ids = [d["id"] for d in docs["items"]]
+    doc_names = [d["document_name"] for d in docs["items"]]
+    assert any(".pdf" in dn for dn in doc_names), (
+        doc_names
+    )  # Expecting id column to be the document_name
+
+    # --- Create prompt for information extraction ---
+    prompt_id = client.post(
+        f"{api_url}/project/{project_id}/prompt",
+        headers=headers,
+        json={
+            "name": "EvalPrompt",
+            "system_prompt": "",
+            "user_prompt": """From the following medical report, extract the following information and return it in JSON format:
+
+shortness of breath: true / false
+chest pain: true / false
+leg pain or swelling: true / false
+heart palpitations: true / false
+cough: true / false
+dizziness: true / false
+location: main / segmental / unknown
+side: left / right / bilateral
+
+This is the medical report:
+{document_content}
+""",
+            "project_id": project_id,
+        },
+    ).json()["id"]
+
+    # --- Create schema matching the fields ---
+    schema_def = {
+        "type": "object",
+        "properties": {
+            "shortness of breath": {"type": "boolean"},
+            "chest pain": {"type": "boolean"},
+            "leg pain or swelling": {"type": "boolean"},
+            "heart palpitations": {"type": "boolean"},
+            "cough": {"type": "boolean"},
+            "dizziness": {"type": "boolean"},
+            "location": {"type": "string", "enum": ["main", "segmental", "unknown"]},
+            "side": {"type": "string", "enum": ["left", "right", "bilateral"]},
+        },
+        "required": [
+            "shortness of breath",
+            "chest pain",
+            "leg pain or swelling",
+            "heart palpitations",
+            "cough",
+            "dizziness",
+            "location",
+            "side",
+        ],
+    }
+    r = client.post(
+        f"{api_url}/project/{project_id}/schema",
+        headers=headers,
+        json={"schema_name": "EvalSchema", "schema_definition": schema_def},
+    )
+    assert r.status_code == 200, r.text
+    schema_id = r.json()["id"]
+
+    # --- Upload ground truth XLSX (again, as required for GT) ---
+    with open(files_base_path / "reports_with_groundtruth.xlsx", "rb") as gt_file:
+        files = [("file", ("reports_with_groundtruth.xlsx", gt_file, xlsx_mime))]
+        data = {"format": "xlsx"}
+        r = client.post(
+            f"{api_url}/project/{project_id}/groundtruth",
+            headers=headers,
+            files=files,
+            data=data,
+        )
+        assert r.status_code == 200, r.text
+        groundtruth_id = r.json()["id"]
+
+    # --- Set ID column for GT (must match XLSX id col) ---
+    r = client.put(
+        f"{api_url}/project/{project_id}/groundtruth/{groundtruth_id}/id-column",
+        headers=headers,
+        json={"id_column": "id"},
+    )
+    assert r.status_code == 200, r.text
+
+    # --- Create mapping for all fields ---
+    mapping_fields = [
+        "shortness of breath",
+        "chest pain",
+        "leg pain or swelling",
+        "heart palpitations",
+        "cough",
+        "dizziness",
+        "location",
+        "side",
+    ]
+    mappings = []
+    for field in mapping_fields:
+        field_type = "string" if field in ("location", "side") else "boolean"
+        mappings.append(
+            {
+                "schema_field": field,
+                "ground_truth_field": field,
+                "schema_id": schema_id,
+                "field_type": field_type,
+            }
+        )
+    r = client.post(
+        f"{api_url}/project/{project_id}/groundtruth/{groundtruth_id}/schema/{schema_id}/mapping",
+        headers=headers,
+        json=mappings,
+    )
+    assert r.status_code == 200, r.text
+
+    # --- Create trial with all docs (LLM extraction) ---
+    r = client.post(
+        f"{api_url}/project/{project_id}/trial",
+        headers=headers,
+        json={
+            "schema_id": schema_id,
+            "prompt_id": prompt_id,
+            "document_ids": doc_ids,
+            "bypass_celery": True,
+        },
+    )
+    assert r.status_code == 200, r.text
+    trial_id = r.json()["id"]
+
+    # --- Evaluate trial vs. ground truth ---
+    r = client.post(
+        f"{api_url}/project/{project_id}/trial/{trial_id}/evaluate",
+        headers=headers,
+        params={"groundtruth_id": groundtruth_id},
+    )
+    print(r.json())
+    assert r.status_code == 200, r.text
+    eval_obj = r.json()
+
+    # --- Check structure and metrics ---
+    assert eval_obj["trial_id"] == trial_id
+    assert eval_obj["groundtruth_id"] == groundtruth_id
+    assert "overall_metrics" in eval_obj
+    assert "field_summaries" in eval_obj
+    assert "document_summaries" in eval_obj
+    assert isinstance(eval_obj["document_summaries"], list)
+    # Should include all doc IDs
+    returned_doc_ids = [doc["document_id"] for doc in eval_obj["document_summaries"]]
+    assert set(returned_doc_ids) == set(doc_ids)
+    # Check at least one field summary structure
+    for fs in eval_obj["field_summaries"]:
+        assert "field_name" in fs
+        assert "accuracy" in fs
+        assert "error_count" in fs
+        assert "sample_errors" in fs
+
+    assert int(eval_obj["overall_metrics"]["total_documents"]) == len(doc_ids)
+    assert float(eval_obj["overall_metrics"]["accuracy"]) > 0.9
+
+
 def test_llm_json_schema_enforcement():
     """Test that the LLM respects JSON schema constraints via response_format.
 

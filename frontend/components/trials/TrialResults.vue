@@ -10,7 +10,7 @@
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2 flex-wrap">
             <h3 class="text-base font-semibold text-content truncate">
-              {{ trial?.name || `Trial #${trialId}` }}
+              {{ trialLabel(trial, Number(trialId)) }}
             </h3>
             <StatusBadge v-if="trial?.status" :status="trial.status" class="shadow-sm" />
             <span
@@ -330,6 +330,7 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import { extractErrorMessage } from '@/utils/errors'
 import { selectClass } from '@/utils/formStyles'
+import { trialLabel } from '@/utils/trialLabel'
 import type { Trial, TrialResultItem, Schema, Prompt } from '@/types'
 
 interface TokenUsage {

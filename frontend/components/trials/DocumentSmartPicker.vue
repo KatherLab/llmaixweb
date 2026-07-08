@@ -9,7 +9,7 @@
       >
         <option value="">Select a previous trial...</option>
         <option v-for="trial in previousTrials" :key="trial.id" :value="trial.id">
-          Trial #{{ trial.id }} - {{ formatDate(trial.created_at) }} ({{
+          Trial #{{ trial.project_trial_number }} - {{ formatDate(trial.created_at) }} ({{
             trial.document_ids.length
           }}
           docs)

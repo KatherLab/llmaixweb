@@ -337,7 +337,7 @@
     <ConfirmationDialog
       :open="!!evaluationToDelete"
       title="Delete evaluation?"
-      :message="`This removes the computed metrics for Trial #${evaluationToDelete?.trial_id}. The trial and its results are kept; you can re-evaluate anytime.`"
+      :message="`This removes the computed metrics for ${getTrialName(evaluationToDelete?.trial_id ?? 0)}. The trial and its results are kept; you can re-evaluate anytime.`"
       confirm-text="Delete"
       :loading="deletingEvaluation"
       @confirm="deleteEvaluation"
@@ -377,12 +377,14 @@ import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreview
 import MetricsExportModal from '@/components/evaluation/MetricsExportModal.vue'
 import EvaluationAnalysisPage from '@/components/evaluation/EvaluationAnalysisPage.vue'
 import { describeHttpError } from '@/utils/errors'
+import { trialLabel } from '@/utils/trialLabel'
 import type { GroundTruth, Evaluation, EvaluationSummary, DocumentEvaluationDetail } from '@/types'
 
 /** Trial cache entry — either a TrialSummary (list) or full Trial (get). */
 type TrialLike = {
   id: number
   name?: string | null
+  project_trial_number?: number | null
   llm_model?: string | null
   results?: unknown
 }
@@ -656,6 +658,7 @@ const fetchTrials = async (
 
 // Lazy fetch full trial (only if a view ever needs more than the summary)
 const fetchTrialIfMissing = async (id: number): Promise<void> => {
+  if (!id) return
   if (trialCache.value[id]?.results || pendingTrialFetches.has(id)) return
   pendingTrialFetches.add(id)
   try {
@@ -678,15 +681,12 @@ const getTrialModel = (trialId: number): string => {
 
 const getTrialName = (trialId: number): string => {
   const tr = trialCache.value[trialId]
-  if (tr && typeof tr.name === 'string' && tr.name.trim().length > 0) {
-    return tr.name
-  }
 
   // If not in the current page cache, try to warm it with the full Trial.
   // (This may update reactively; until then, show a deterministic fallback.)
   if (!tr) fetchTrialIfMissing(trialId)
 
-  return `Trial #${trialId}`
+  return trialLabel(tr, trialId)
 }
 
 // Returns the bare numeric percentage (0–100, rounded to 1 decimal); callers
@@ -844,7 +844,7 @@ const onTrialEvaluate = async (evaluation: Evaluation): Promise<void> => {
 
     evaluations.value.push(row)
     showTrialSelector.value = false
-    toast.success(`Trial #${evaluationSummary.trial_id} evaluation completed successfully`)
+    toast.success(`${getTrialName(evaluationSummary.trial_id)} evaluation completed successfully`)
     // Surface non-blocking validation warnings (e.g. low document↔GT match
     // rate) so the researcher knows some documents could not be matched.
     const warnings = evaluationSummary.warnings
@@ -909,7 +909,7 @@ const deleteEvaluation = async (): Promise<void> => {
     await evaluationsApi.delete(props.projectId, evaluation.id)
     evaluations.value = evaluations.value.filter((e) => e.id !== evaluation.id)
     evaluationToDelete.value = null
-    toast.success(`Deleted evaluation for Trial #${evaluation.trial_id}`)
+    toast.success(`Deleted evaluation for ${getTrialName(evaluation.trial_id)}`)
   } catch (err) {
     toast.error(`Failed to delete evaluation: ${extractErrorMessage(err)}`)
   } finally {

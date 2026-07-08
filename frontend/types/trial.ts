@@ -44,6 +44,8 @@ export interface PaginatedTrialResults {
 export interface Trial {
   id: number
   project_id: number
+  /** Per-project sequence number; server-assigned. Used for the "Trial #N" fallback. */
+  project_trial_number: number
   name: string | null
   description: string | null
   schema_id: number
@@ -73,6 +75,8 @@ export interface Trial {
 export interface TrialSummary {
   id: number
   project_id: number
+  /** Per-project sequence number; server-assigned. Used for the "Trial #N" fallback. */
+  project_trial_number: number
   name: string | null
   description: string | null
   schema_id: number

@@ -339,13 +339,15 @@ watch(
   { immediate: true },
 )
 
-// Watch for document changes while open and refetch versions + text
+// Watch for document changes while open (prev/next nav). The modal stays
+// mounted, so the `open` watcher above won't fire — we must reload the full
+// document (text + original-file preview + default view + versions), not just
+// the text, otherwise the split-screen / original-file URL goes stale.
 watch(
   () => props.document?.id,
-  async (newId) => {
+  async () => {
     if (!props.open) return
-    fetchFullText(newId)
-    await fetchVersions()
+    await load()
   },
 )
 

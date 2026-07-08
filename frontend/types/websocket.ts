@@ -32,6 +32,8 @@ export interface WsTrialUpdate extends WsMessage {
   docs_done?: number
   progress?: number
   meta?: Record<string, unknown> | null
+  /** Per-project sequence number; present on created/progress broadcasts. */
+  project_trial_number?: number
   [key: string]: unknown
 }
 

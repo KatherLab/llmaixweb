@@ -25,7 +25,7 @@
       <div class="min-w-0">
         <div class="flex items-center gap-2">
           <span class="text-sm font-medium text-content truncate">{{
-            trial.name || `Trial #${trial.id}`
+            trialLabel(trial, trial.id)
           }}</span>
           <StatusBadge :status="trial.status" class="font-medium" />
         </div>
@@ -142,6 +142,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import TrialDetailPanel from './TrialDetailPanel.vue'
 import { formatDateSmart } from '@/utils/formatters'
+import { trialLabel } from '@/utils/trialLabel'
 import type { TrialSummary, Schema, Prompt } from '@/types'
 
 interface TablePagination {

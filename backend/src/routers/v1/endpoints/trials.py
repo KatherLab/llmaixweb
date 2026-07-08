@@ -58,6 +58,7 @@ def _broadcast_trial_created(trial_db: models.Trial) -> None:
                 else 0,
                 "progress": float(trial_db.progress) if trial_db.progress else 0,
                 "name": trial_db.name,
+                "project_trial_number": trial_db.project_trial_number,
                 "started_at": trial_db.started_at.isoformat()
                 if trial_db.started_at
                 else None,
@@ -224,9 +225,27 @@ def create_trial(
         raise HTTPException(status_code=403, detail="Only admins may set bypass_celery")
 
     # 4. Create trial object
+    # Per-project sequence number (MAX+1) for the "Trial #N" display fallback.
+    # Computed before the insert so the unique constraint
+    # (uq_trials_project_number) can't be violated by stale state. Two
+    # concurrent create calls in the same project could still race for the same
+    # number; the second commit then fails on the unique constraint. That's a
+    # rare edge case (trials are user-initiated, not a high-frequency path) and
+    # is preferable to renumber-on-delete or global ids; if it ever bites, wrap
+    # the commit in a retry-on-IntegrityError loop.
+    next_trial_number = (
+        db.execute(
+            select(func.coalesce(func.max(models.Trial.project_trial_number), 0)).where(
+                models.Trial.project_id == project_id
+            )
+        ).scalar_one()
+        + 1
+    )
+
     trial_db = models.Trial(
         name=trial.name,
         description=trial.description,
+        project_trial_number=next_trial_number,
         schema_id=trial.schema_id,
         prompt_id=trial.prompt_id,
         project_id=project_id,

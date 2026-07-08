@@ -1,5 +1,5 @@
 <template>
-  <div ref="containerRef" class="flex flex-col h-full">
+  <div class="flex flex-col h-full">
     <!-- Find-in-document bar -->
     <div
       v-if="!textLoading && hasText"
@@ -84,7 +84,6 @@ const props = withDefaults(defineProps<Props>(), {
   safeMarkdown: '',
 })
 
-const containerRef = ref<HTMLElement | null>(null)
 const contentRef = ref<HTMLElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
 

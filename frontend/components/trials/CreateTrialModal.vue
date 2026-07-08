@@ -171,11 +171,11 @@
           />
         </div>
 
-        <!-- Model test / status indicator. Visible in both modes once a model +
-             schema are picked and the config is valid, so users get pre-flight
-             feedback before clicking Start (not only in Advanced mode). -->
+        <!-- Model test / status indicator. Advanced mode only — in Simple mode the
+             check runs silently on Start Trial with a spinner overlay, so the card
+             would just be noise. -->
         <ModelTestCard
-          v-if="trialData.llm_model && trialData.schema_id && hasValidConfig"
+          v-if="!simpleMode && trialData.llm_model && trialData.schema_id && hasValidConfig"
           :status="modelTestStatus"
           :is-testing="isTestingModel"
           :llm-model="trialData.llm_model"

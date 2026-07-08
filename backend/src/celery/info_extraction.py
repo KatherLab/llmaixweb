@@ -47,6 +47,7 @@ def _broadcast_trial_update(trial: models.Trial, event: str = "progress"):
             "documents_count": len(trial.document_ids) if trial.document_ids else 0,
             "progress": float(trial.progress) if trial.progress else 0,
             "name": trial.name,
+            "project_trial_number": trial.project_trial_number,
             "started_at": trial.started_at.isoformat() if trial.started_at else None,
             "finished_at": trial.finished_at.isoformat() if trial.finished_at else None,
             "meta": trial.meta,

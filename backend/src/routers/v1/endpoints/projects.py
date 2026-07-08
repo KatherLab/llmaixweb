@@ -197,6 +197,7 @@ def get_recent_trials(
         summary = schemas.TrialSummary(
             id=trial.id,
             project_id=trial.project_id,
+            project_trial_number=trial.project_trial_number,
             name=trial.name,
             description=trial.description,
             schema_id=trial.schema_id,

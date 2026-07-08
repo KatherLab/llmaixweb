@@ -218,6 +218,7 @@ import { schemasApi } from '@/services/schemasApi'
 import { evaluationsApi } from '@/services/evaluationsApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
+import { trialLabel } from '@/utils/trialLabel'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import Callout from '@/components/common/Callout.vue'
@@ -364,8 +365,7 @@ const clearError = (): void => {
   lastFailedOperation.value = null
 }
 
-const trialDisplayName = (trial: AvailableTrial | null): string =>
-  trial?.name && trial.name.trim().length > 0 ? trial.name : `Trial #${trial?.id}`
+const trialDisplayName = (trial: AvailableTrial | null): string => trialLabel(trial, trial?.id)
 
 const handleApiError = (err: unknown, operation: string): void => {
   console.error(`${operation} failed:`, err)
@@ -504,7 +504,7 @@ const validateEvaluationPrerequisites = (): string[] => {
 
   if (selectedTrial.value && !selectedTrial.value.hasMappings) {
     errors.push(
-      `Trial #${selectedTrial.value.id} requires field mappings for schema "${getSchemaName(selectedTrial.value.schema_id)}"`,
+      `${trialLabel(selectedTrial.value, selectedTrial.value.id)} requires field mappings for schema "${getSchemaName(selectedTrial.value.schema_id)}"`,
     )
   }
 

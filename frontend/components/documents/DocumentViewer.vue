@@ -72,7 +72,7 @@
             <span
               class="text-xs font-medium text-content-muted tabular-nums px-1 whitespace-nowrap"
             >
-              {{ index + 1 }} / {{ total }}
+              {{ props.index + 1 }} / {{ props.total }}
             </span>
             <BaseButton
               variant="secondary"

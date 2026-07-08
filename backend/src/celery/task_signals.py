@@ -133,6 +133,7 @@ def _broadcast_trial_update(trial: models.Trial, event: str):
             "documents_count": len(trial.document_ids) if trial.document_ids else 0,
             "progress": float(trial.progress) if trial.progress else 0,
             "name": trial.name,
+            "project_trial_number": trial.project_trial_number,
             "event": event,
         }
 

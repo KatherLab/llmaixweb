@@ -44,7 +44,7 @@
               <span
                 class="text-xs font-medium text-content-muted tabular-nums px-1 whitespace-nowrap"
               >
-                {{ index + 1 }} / {{ total }}
+                {{ props.index + 1 }} / {{ props.total }}
               </span>
               <BaseButton variant="secondary" size="sm" :disabled="!hasNext" @click="emit('next')">
                 <ChevronRight class="h-4 w-4" />

@@ -30,7 +30,7 @@
             <span
               class="text-xs font-medium text-content-muted tabular-nums px-1 whitespace-nowrap"
             >
-              {{ currentIndex + 1 }} / {{ files.length }}
+              {{ currentIndex + 1 }} / {{ props.files.length }}
             </span>
             <BaseButton
               variant="secondary"

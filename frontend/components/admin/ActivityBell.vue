@@ -53,7 +53,7 @@
         </div>
 
         <!-- Content -->
-        <div ref="scrollContainer" class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto">
           <!-- Loading state (only on initial load) -->
           <div v-if="isLoading && !hasLoadedOnce" class="flex items-center justify-center py-12">
             <LoadingSpinner size="medium" />
@@ -201,7 +201,7 @@
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2">
                         <p class="text-sm font-medium text-content truncate">
-                          {{ task.name || `Trial #${task.id}` }}
+                          {{ trialLabel(task, task.id) }}
                         </p>
                         <!-- Dismiss button (visible on hover) -->
                         <button
@@ -278,6 +278,7 @@ import { useToast } from '@/composables/useToast'
 import { websocketService } from '@/services/websocket'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { formatRelativeTime } from '@/utils/formatters'
+import { trialLabel } from '@/utils/trialLabel'
 import { mergeWsEntity } from '@/composables/useWsEntityUpdates'
 
 const router = useRouter()
@@ -298,7 +299,6 @@ const dismissedTasks = ref<DismissedTasks>({
   preprocess: new Set<number>(),
   trial: new Set<number>(),
 })
-const scrollContainer = ref<HTMLElement | null>(null)
 const wsUnsubscribe = ref<(() => void) | null>(null)
 
 // Load dismissed tasks from localStorage

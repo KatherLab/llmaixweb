@@ -640,6 +640,12 @@ class Trial(Base):
     name: Mapped[str | None] = mapped_column(String(100))
     description: Mapped[str | None] = mapped_column(String(512))
 
+    # Per-project sequence number for the display fallback ("Trial #N") when no
+    # name is set. Assigned at creation as MAX(project_trial_number)+1 within the
+    # project, so it's stable across deletions (gaps, not renumbering) and
+    # meaningful to users — unlike the global autoincrement `id`.
+    project_trial_number: Mapped[int] = mapped_column(Integer, nullable=False)
+
     # ── foreign keys ────────────────────────────────────────────────────────────
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
     schema_id: Mapped[int] = mapped_column(ForeignKey("schemas.id"))
@@ -651,6 +657,9 @@ class Trial(Base):
     __table_args__ = (
         Index("ix_trials_project_created", "project_id", "created_at"),
         Index("ix_trials_project_status", "project_id", "status"),
+        UniqueConstraint(
+            "project_id", "project_trial_number", name="uq_trials_project_number"
+        ),
     )
 
     # ── config ──────────────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import { ref, watch, type PropType } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
+import { trialLabel } from '@/utils/trialLabel'
 import type { TrialSummary } from '@/types'
 
 interface RenamePayload {
@@ -39,7 +40,7 @@ const description = ref('')
 watch(
   () => props.trial,
   (t) => {
-    name.value = t?.name || (t?.id != null ? `Trial #${t.id}` : '') || ''
+    name.value = trialLabel(t, t?.id)
     description.value = t?.description || ''
   },
   { immediate: true },

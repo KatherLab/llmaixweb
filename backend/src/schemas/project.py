@@ -417,6 +417,8 @@ class TrialUpdate(BaseModel):
 class Trial(TrialBase):
     id: int
     project_id: int
+    # Per-project sequence number; server-assigned (not user-supplied), like `id`.
+    project_trial_number: int
     status: str
     created_at: datetime
     updated_at: datetime
@@ -447,6 +449,8 @@ class TrialSummary(UTCModel):
 
     id: int
     project_id: int
+    # Per-project sequence number; server-assigned (not user-supplied), like `id`.
+    project_trial_number: int
     name: str | None = None
     description: str | None = None
     schema_id: int
