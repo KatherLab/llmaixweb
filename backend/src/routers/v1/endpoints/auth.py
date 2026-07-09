@@ -77,6 +77,9 @@ def get_settings(db: Session = Depends(get_db)):
             sso_providers = []
 
     return {
+        "banner_enabled": settings.BANNER_ENABLED,
+        "banner_text": settings.BANNER_TEXT,
+        "banner_color": settings.BANNER_COLOR,
         "require_invitation": settings.REQUIRE_INVITATION,
         "sso_enabled": settings.SSO_ENABLED,
         "sso_providers": sso_providers,

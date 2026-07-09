@@ -231,6 +231,22 @@ invitation and password-reset emails. When disabled, invitations fall back to
 a manual copy-link flow and password reset surfaces a "contact your admin"
 message. See `.env.example` for the SMTP block.
 
+### Site-wide banner (optional)
+
+Show a notice bar at the very top of every page (login and landing pages
+included) — e.g. a "Research Use Only!" disclaimer. It is off by default and can
+be configured either in `.env` or at runtime in **Admin → Settings → General**.
+
+| Variable | Purpose |
+|----------|---------|
+| `BANNER_ENABLED` | `true` to show the banner |
+| `BANNER_TEXT` | Text displayed in the bar (e.g. `Research Use Only!`) |
+| `BANNER_COLOR` | Color scheme: `amber` (default), `red`, `blue`, `green`, or `gray` |
+
+The banner text is served by the unauthenticated public-settings endpoint so it
+appears before login. Runtime changes take effect for a user on their next page
+load.
+
 ---
 
 ## Image strategy: pre-built vs. build-from-source

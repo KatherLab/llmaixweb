@@ -23,6 +23,18 @@ class Settings(BaseSettings):
     INVITATION_EXPIRE_HOURS: int = 24 * 7
 
     # ─────────────────────────────────────────────────────────────
+    # Site-wide banner
+    # ─────────────────────────────────────────────────────────────
+    # An optional notice bar rendered at the very top of every page (e.g.
+    # "Research Use Only!"). Exposed via the unauthenticated /auth/settings
+    # endpoint so it shows on login/landing pages too. Configurable at runtime
+    # from the admin settings panel.
+    BANNER_ENABLED: bool = False
+    BANNER_TEXT: str = ""
+    # One of: amber, red, blue, green, gray. Controls the banner color scheme.
+    BANNER_COLOR: str = "amber"
+
+    # ─────────────────────────────────────────────────────────────
     # Password policy
     # ─────────────────────────────────────────────────────────────
     # Enforced centrally by utils.password_policy.validate_password,
@@ -575,6 +587,30 @@ SETTINGS_META = {
         "readonly": True,
         "category": "General",
         "label": "API Prefix",
+    },
+    "BANNER_ENABLED": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "General",
+        "label": "Show Banner",
+        "help": "Show a site-wide notice bar at the top of every page (e.g. 'Research Use Only!').",
+    },
+    "BANNER_TEXT": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "General",
+        "label": "Banner Text",
+        "help": "Text shown in the site-wide banner when enabled.",
+    },
+    "BANNER_COLOR": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "General",
+        "label": "Banner Color",
+        "help": "Banner color scheme: amber, red, blue, green, or gray.",
     },
     "SECRET_KEY": {
         "type": "str",

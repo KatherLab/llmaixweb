@@ -3,6 +3,9 @@ import type { UserRole } from './enums'
 
 /** Public settings returned pre-login by `GET /auth/settings` (raw dict, no Pydantic model). */
 export interface PublicAuthSettings {
+  banner_enabled: boolean
+  banner_text: string
+  banner_color: string
   require_invitation: boolean
   sso_enabled: boolean
   sso_providers: SsoProviderPublic[]
