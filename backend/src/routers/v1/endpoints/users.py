@@ -27,8 +27,9 @@ from ....core.security import (
 )
 from ....dependencies import get_db, remove_file
 from ....schemas import PasswordSet
+from ....utils.audit import record_audit
 from ....utils.email_service import send_invitation_email, send_password_reset_email
-from ....utils.enums import UserRole
+from ....utils.enums import AuditAction, AuditOutcome, UserRole
 from ....utils.password_policy import validate_password
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,14 @@ def create_first_admin(
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    # Security-relevant bootstrap event: the first admin account being created.
+    record_audit(
+        AuditAction.USER_CREATE,
+        actor=new_user,
+        resource_type="user",
+        resource_id=new_user.id,
+        detail={"first_admin": True, "role": "admin"},
+    )
     return schemas.UserResponse.model_validate(new_user)
 
 
@@ -130,6 +139,13 @@ def change_password(
     current_user.token_version += 1  # Revoke existing tokens
     db.commit()
     db.refresh(current_user)
+    record_audit(
+        AuditAction.PASSWORD_CHANGE,
+        actor=current_user,
+        resource_type="user",
+        resource_id=current_user.id,
+        detail={"self": True},
+    )
     return schemas.UserResponse.model_validate(current_user)
 
 
@@ -157,6 +173,13 @@ def admin_set_user_password(
     user.token_version += 1  # Revoke existing tokens
     db.commit()
     db.refresh(user)
+    record_audit(
+        AuditAction.PASSWORD_CHANGE,
+        actor=current_user,
+        resource_type="user",
+        resource_id=user.id,
+        detail={"self": False, "by_admin": True},
+    )
     return schemas.UserResponse.model_validate(user)
 
 
@@ -238,6 +261,13 @@ def create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+    record_audit(
+        AuditAction.USER_CREATE,
+        actor=user,
+        resource_type="user",
+        resource_id=user.id,
+        detail={"via": "invitation" if user_in.invitation_token else "open"},
+    )
     return schemas.UserResponse.model_validate(user)
 
 
@@ -370,6 +400,13 @@ def delete_user(
 
     db.delete(user)
     db.commit()
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="user",
+        resource_id=user_id,
+        detail={"deleted_email": user.email, "stored_files_removed": len(file_uuids)},
+    )
     return schemas.UserResponse.model_validate(user)
 
 
@@ -437,6 +474,27 @@ def admin_update_user(
 
     db.commit()
     db.refresh(user)
+    if update_data.role is not None:
+        record_audit(
+            AuditAction.USER_ROLE_CHANGE,
+            actor=current_user,
+            resource_type="user",
+            resource_id=user.id,
+            detail={
+                "new_role": str(
+                    user.role.value if hasattr(user.role, "value") else user.role
+                )
+            },
+        )
+    if update_data.is_active is not None:
+        record_audit(
+            AuditAction.USER_DEACTIVATE,
+            actor=current_user,
+            resource_type="user",
+            resource_id=user.id,
+            outcome=AuditOutcome.SUCCESS,
+            detail={"is_active": user.is_active},
+        )
     return schemas.UserResponse.model_validate(user)
 
 
@@ -464,6 +522,13 @@ def toggle_user_status(
     user.token_version += 1  # Revoke all existing tokens on status change
     db.commit()
     db.refresh(user)
+    record_audit(
+        AuditAction.USER_DEACTIVATE,
+        actor=current_user,
+        resource_type="user",
+        resource_id=user.id,
+        detail={"is_active": user.is_active},
+    )
     return schemas.UserResponse.model_validate(user)
 
 
@@ -516,6 +581,14 @@ def invite(
     db.add(invitation)
     db.commit()
     db.refresh(invitation)
+
+    record_audit(
+        AuditAction.INVITATION_SEND,
+        actor=current_user,
+        resource_type="invitation",
+        resource_id=invitation.id,
+        detail={"email": email, "send_email": bool(send_email)},
+    )
 
     resp = schemas.InvitationResponse.model_validate(invitation)
 
@@ -715,4 +788,10 @@ def reset_password(
     db.delete(reset_token)
     db.commit()
 
+    record_audit(
+        AuditAction.PASSWORD_RESET,
+        actor=user,
+        resource_type="user",
+        resource_id=user.id,
+    )
     return {"message": "Password has been reset successfully."}

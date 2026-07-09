@@ -25,7 +25,18 @@ from .celery.celery_config import celery_app
 from .core.dynamic_settings import get_settings
 from .core.rate_limit import limiter
 from .db.session import init_db
-from .routers.v1.endpoints import admin, admin_sso, auth, projects, sso, users
+from .middleware.error_handlers import register_exception_handlers
+from .middleware.request_context import RequestContextMiddleware
+from .middleware.security_headers import SecurityHeadersMiddleware
+from .routers.v1.endpoints import (
+    admin,
+    admin_sso,
+    audit,
+    auth,
+    projects,
+    sso,
+    users,
+)
 from .utils.logging_config import setup_logging
 from .websocket_manager import manager
 
@@ -218,7 +229,7 @@ async def _log_public_url():
 
 @asynccontextmanager
 async def lifespan(app):
-    setup_logging(level=settings.LOG_LEVEL)
+    setup_logging(level=settings.LOG_LEVEL, log_format=settings.LOG_FORMAT)
     logger.info(
         "Starting %s v%s (%s)",
         settings.PROJECT_NAME,
@@ -302,7 +313,12 @@ api_router.include_router(users.router, prefix="/user", tags=["users"])
 api_router.include_router(projects.router, prefix="/project", tags=["projects"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(admin_sso.router, prefix="/admin/sso", tags=["admin-sso"])
+api_router.include_router(audit.router, prefix="/admin", tags=["audit"])
 app.include_router(api_router)
+
+# Global exception handling: unhandled errors get a correlation id, a logged
+# traceback, an error_logs row, and a safe {error_id, message} response.
+register_exception_handlers(app)
 
 logger.info("CORS origins: %s", settings.BACKEND_CORS_ORIGINS_LIST)
 app.add_middleware(
@@ -313,6 +329,13 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# Middleware added later wraps the ones added earlier, so these two end up
+# OUTSIDE CORS: RequestContext (outermost) stamps the correlation id before any
+# handler runs, and SecurityHeaders decorates every response. HSTS is emitted
+# only over HTTPS (or X-Forwarded-Proto: https behind the reverse proxy).
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestContextMiddleware)
 
 
 @app.get("/")
@@ -348,7 +371,10 @@ async def activity_websocket(websocket: WebSocket):
     WebSocket endpoint for real-time activity updates.
     Clients connect to receive live updates on preprocessing tasks and trials.
 
-    Authentication: Token passed as query param ?token=<jwt_token>
+    Authentication: the JWT is passed via the ``Sec-WebSocket-Protocol`` header
+    as ``access_token, <jwt>`` (kept out of the URL so it doesn't leak into
+    proxy/access logs). The negotiated ``access_token`` subprotocol is echoed
+    back on accept. The legacy ``?token=`` query-string form has been removed.
     """
     from sqlalchemy import select
 
@@ -358,8 +384,18 @@ async def activity_websocket(websocket: WebSocket):
 
     settings = get_settings()
 
-    # Get token from query params
-    token = websocket.query_params.get("token")
+    # Token-in-subprotocol only: the client sends
+    # Sec-WebSocket-Protocol: access_token, <jwt>
+    token: str | None = None
+    accepted_subprotocol: str | None = None
+    protocols = [
+        p.strip()
+        for p in (websocket.headers.get("sec-websocket-protocol") or "").split(",")
+        if p.strip()
+    ]
+    if len(protocols) >= 2 and protocols[0] == "access_token":
+        token = protocols[1]
+        accepted_subprotocol = "access_token"
 
     if not token:
         await websocket.close(code=4401, reason="Missing authentication token")
@@ -418,7 +454,10 @@ async def activity_websocket(websocket: WebSocket):
     # connection cap was hit (it already closed the socket with 1013), in
     # which case there's nothing to loop on.
     connected = await manager.connect(
-        websocket, user_id=user.id, is_admin=(user.role == "admin")
+        websocket,
+        user_id=user.id,
+        is_admin=(user.role == "admin"),
+        subprotocol=accepted_subprotocol,
     )
     if not connected:
         return

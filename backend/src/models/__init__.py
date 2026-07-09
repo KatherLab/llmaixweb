@@ -1,5 +1,6 @@
 from ..db.base import Base
 from .admin import AppSetting
+from .audit import AuditLog, ErrorLog
 from .project import (
     Document,
     DocumentSet,
@@ -30,6 +31,8 @@ from .user import Invitation, PasswordResetToken, RefreshToken, User, UserRole
 
 __all__ = [
     "AppSetting",
+    "AuditLog",
+    "ErrorLog",
     "Base",
     "User",
     "UserRole",

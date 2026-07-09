@@ -132,3 +132,40 @@ def validate_user_endpoint(base_url: str | None) -> str | None:
             raise UnsafeEndpointError("Endpoint resolves to a blocked address.")
 
     return base_url
+
+
+def _parse_allowlist(allowlist: str | None) -> list[str]:
+    """Parse a comma-separated host allowlist into normalized lowercase hosts."""
+    if not allowlist:
+        return []
+    return [h.strip().lower() for h in allowlist.split(",") if h.strip()]
+
+
+def enforce_endpoint_allowlist(base_url: str | None, allowlist: str | None) -> None:
+    """Reject an endpoint whose host is not in a configured allowlist.
+
+    Complements the SSRF policy: where :func:`validate_user_endpoint` blocks
+    *dangerous* destinations, this optionally restricts egress to an explicit
+    set of *permitted* hosts (e.g. only your on-prem LLM/OCR services), which is
+    what a clinic wants so patient data can't be sent to an arbitrary endpoint.
+
+    ``allowlist`` is a comma-separated list of hostnames. When it is empty the
+    check is disabled (any host allowed, subject to the SSRF policy) so the
+    default behaviour is unchanged. Matching is exact host or a ``.suffix``
+    (so ``example.com`` also permits ``api.example.com``). Raises
+    ``UnsafeEndpointError`` on a host that isn't permitted.
+    """
+    allowed = _parse_allowlist(allowlist)
+    if not allowed:
+        return
+    if not base_url or not base_url.strip():
+        return
+    host = (urlparse(base_url.strip()).hostname or "").lower()
+    if not host:
+        raise UnsafeEndpointError("Endpoint URL is missing a host.")
+    for entry in allowed:
+        if host == entry or host.endswith("." + entry):
+            return
+    raise UnsafeEndpointError(
+        "Endpoint host is not in the configured egress allowlist."
+    )

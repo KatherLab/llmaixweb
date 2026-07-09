@@ -19,6 +19,7 @@ interface AxiosLikeError {
     data?: {
       detail?: unknown
       message?: unknown
+      error_id?: unknown
     }
   }
 }
@@ -34,6 +35,16 @@ export function extractErrorMessage(err: unknown, fallback = 'Something went wro
   if (isAxiosLike(err)) {
     const response = err.response
     if (response?.data) {
+      // Our global 500 handler returns { error_id, message, detail }. Surface
+      // the correlation id so the user can quote it to an admin — it takes
+      // precedence over the generic "Internal server error." detail string.
+      const errorId = response.data.error_id
+      if (typeof errorId === 'string' && errorId.trim()) {
+        const msg = response.data.message
+        const base = typeof msg === 'string' && msg.trim() ? msg : `An unexpected error occurred.`
+        return base.includes(errorId) ? base : `${base} (Error ID: ${errorId})`
+      }
+
       const detail = response.data.detail
       if (typeof detail === 'string' && detail.trim()) return detail
 

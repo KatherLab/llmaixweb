@@ -19,6 +19,8 @@ from ....core.security import (
     verify_refresh_token,
 )
 from ....dependencies import get_db
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction, AuditOutcome
 
 # Use dynamic settings (includes database overrides from admin UI)
 settings = get_settings()
@@ -113,6 +115,13 @@ def login(
     # window even if the attacker now has the correct password.
     if user and user.locked_until and user.locked_until > _now_utc_naive():
         time.sleep(0.5)
+        record_audit(
+            AuditAction.ACCOUNT_LOCKED,
+            actor=user,
+            outcome=AuditOutcome.DENIED,
+            resource_type="user",
+            resource_id=user.id,
+        )
         raise HTTPException(
             status_code=status.HTTP_423_LOCKED,
             detail="Account temporarily locked due to too many failed login attempts. Try again later.",
@@ -125,6 +134,13 @@ def login(
         if user:
             _register_failed_login(db, user)
         time.sleep(0.5)
+        record_audit(
+            AuditAction.LOGIN_FAILURE,
+            actor=user,
+            actor_email=form_data.username,
+            outcome=AuditOutcome.FAILURE,
+            detail={"reason": "invalid_credentials"},
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -149,6 +165,12 @@ def login(
         token_version=user.token_version,
     )
     refresh_token = create_refresh_token(db, user)
+    record_audit(
+        AuditAction.LOGIN_SUCCESS,
+        actor=user,
+        resource_type="user",
+        resource_id=user.id,
+    )
     # Return token and user info. `is_active` / `last_login_at` are included so
     # the response matches `AuthTokenUser` on the frontend — the auth store
     # re-fetches `/user/me` right after, but the token response must still be
@@ -225,4 +247,11 @@ def logout(
         db.commit()
     elif body.refresh_token:
         revoke_refresh_token(body.refresh_token, db)
+    record_audit(
+        AuditAction.LOGOUT,
+        actor=current_user,
+        resource_type="user",
+        resource_id=current_user.id,
+        detail={"everywhere": bool(body.everywhere)},
+    )
     return {"logged_out": True}

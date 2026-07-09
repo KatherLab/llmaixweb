@@ -17,6 +17,8 @@ from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db, get_file, remove_file
 from ....models.project import document_set_association
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction
 
 logger = logging.getLogger(__name__)
 
@@ -280,6 +282,13 @@ def get_document(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    record_audit(
+        AuditAction.DOCUMENT_VIEW,
+        actor=current_user,
+        resource_type="document",
+        resource_id=document.id,
+        project_id=project_id,
+    )
     return schemas.Document.model_validate(document)
 
 
@@ -444,6 +453,14 @@ def delete_document(
 
     db.delete(document)
     db.commit()
+
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="document",
+        resource_id=document_id,
+        project_id=project_id,
+    )
 
     # Clean up empty preprocessing tasks after document deletion
     cleanup_empty_preprocessing_tasks(db, file_preprocessing_task_id)
@@ -824,6 +841,18 @@ def delete_document_set(
     db.delete(doc_set)
     db.commit()
 
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="document_set",
+        resource_id=set_id,
+        project_id=project_id,
+        detail={
+            "documents_deleted": len(deleted_doc_ids),
+            "cascade_documents": bool(delete_documents),
+        },
+    )
+
     # Clean up empty preprocessing tasks after document deletion
     for task_id in file_preprocessing_task_ids:
         cleanup_empty_preprocessing_tasks(db, task_id)
@@ -941,6 +970,14 @@ def download_all_documents(
     quoted = urllib.parse.quote(f"{safe_name}_documents.zip")
     disposition = f"attachment; filename=\"{quoted}\"; filename*=UTF-8''{quoted}"
 
+    record_audit(
+        AuditAction.EXPORT,
+        actor=current_user,
+        resource_type="document_set",
+        resource_id=set_id,
+        project_id=project_id,
+        detail={"files": len(file_rows), "format": "zip"},
+    )
     return StreamingResponse(
         _stream_set_zip(file_rows),
         media_type="application/zip",

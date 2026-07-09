@@ -29,7 +29,8 @@ from ....dependencies import (
     remove_file,
     save_file,
 )
-from ....utils.enums import ComparisonMethod
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction, ComparisonMethod
 from ....utils.helpers import extract_field_types_from_schema
 
 logger = logging.getLogger(__name__)
@@ -150,6 +151,14 @@ async def upload_groundtruth(
             pass
         raise
     db.refresh(gt)
+    record_audit(
+        AuditAction.CREATE,
+        actor=current_user,
+        resource_type="ground_truth",
+        resource_id=gt.id,
+        project_id=project_id,
+        detail={"name": gt_name, "format": format},
+    )
     return schemas.GroundTruth.model_validate(gt)
 
 
@@ -242,6 +251,15 @@ def delete_groundtruth(
 
     db.delete(groundtruth)
     db.commit()
+
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="ground_truth",
+        resource_id=groundtruth_id,
+        project_id=project_id,
+        detail={"evaluations_removed": len(evaluations)},
+    )
 
     # Best-effort storage cleanup now that the DB row is gone.
     try:

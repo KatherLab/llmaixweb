@@ -25,12 +25,23 @@ class ConnectionManager:
         # Store all connections for admin broadcasts
         self._admin_connections: Set[WebSocket] = set()
 
-    async def connect(self, websocket: WebSocket, user_id: int, is_admin: bool = False):
+    async def connect(
+        self,
+        websocket: WebSocket,
+        user_id: int,
+        is_admin: bool = False,
+        subprotocol: str | None = None,
+    ):
         """Accept a new WebSocket connection.
 
         Rejects the connection with code 1013 if the user already holds
         ``MAX_CONNECTIONS_PER_USER`` open sockets, so one user can't exhaust
         server FDs/memory by opening unlimited connections.
+
+        ``subprotocol`` is echoed back in the handshake when the client
+        authenticated via the ``Sec-WebSocket-Protocol`` header (token-in-
+        subprotocol); browsers require the server to confirm the negotiated
+        subprotocol or they abort the connection.
         """
         existing = self._active_connections.get(user_id, set())
         if len(existing) >= MAX_CONNECTIONS_PER_USER:
@@ -42,7 +53,7 @@ class ConnectionManager:
             await websocket.close(code=1013, reason="Too many connections")
             return False
 
-        await websocket.accept()
+        await websocket.accept(subprotocol=subprotocol)
 
         if user_id not in self._active_connections:
             self._active_connections[user_id] = set()

@@ -15,7 +15,12 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "LLMAIx (v2) backend"
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = ""  # Must be set in .env — validated at startup
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+    # Access-token lifetime. Kept short for PHI: refresh tokens (rotated,
+    # revocable) transparently re-issue access tokens, so a short access-token
+    # window limits the blast radius of a leaked token without harming UX. The
+    # frontend silently refreshes on 401. Was 8 days historically — override
+    # via env if a longer session is genuinely required.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REQUIRE_INVITATION: bool = True
     ALLOW_FIRST_ADMIN_SETUP: bool = True
     # How long an invitation token remains valid after creation (hours).
@@ -82,6 +87,17 @@ class Settings(BaseSettings):
     # access token when the client opts in (login response includes
     # refresh_token only when this is enabled and the client requests it).
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=30, ge=1, le=365)
+
+    # ─────────────────────────────────────────────────────────────
+    # Egress allowlist (PHI destination control)
+    # ─────────────────────────────────────────────────────────────
+    # Comma-separated host allowlists for user-supplied LLM / OCR endpoints.
+    # Empty (default) = any host allowed, subject to the SSRF policy. Set these
+    # in a clinical deployment to guarantee patient data can only be sent to
+    # your approved (ideally on-prem) endpoints. Matches exact host or subdomain
+    # (e.g. "example.com" also permits "api.example.com").
+    ALLOWED_LLM_ENDPOINTS: str = ""
+    ALLOWED_OCR_ENDPOINTS: str = ""
 
     # Skip runtime validation checks (useful for Alembic migrations)
     SKIP_RUNTIME_CHECKS: bool = False
@@ -160,6 +176,10 @@ class Settings(BaseSettings):
 
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     LOG_LEVEL: str = "INFO"
+    # "text" (human-readable, default) or "json" (structured, one object per
+    # line — feed this to a SIEM/Loki in production). Every record carries the
+    # per-request correlation id.
+    LOG_FORMAT: str = "text"
 
     DISABLE_CELERY: bool = False
     INITIALIZE_CELERY: bool = True  # Whether to initialize Celery workers on startup
@@ -436,9 +456,6 @@ class Settings(BaseSettings):
         if self.LOCAL_DIRECTORY:
             path = Path(self.LOCAL_DIRECTORY)
             if not path.exists():
-                import traceback
-
-                print(traceback.format_exc())
                 print(
                     f"Local directory {self.LOCAL_DIRECTORY} does not exist. Please create it or configure S3."
                 )
@@ -759,6 +776,22 @@ SETTINGS_META = {
         "label": "Refresh Token Expiry (days)",
         "help": "Lifetime of refresh tokens (1-365 days). Refresh tokens are rotated on each use and revocable.",
     },
+    "ALLOWED_LLM_ENDPOINTS": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Allowed LLM Endpoints",
+        "help": "Comma-separated host allowlist for LLM extraction endpoints. Empty = any host (SSRF policy still applies). Set to restrict where patient data can be sent (e.g. on-prem hosts only).",
+    },
+    "ALLOWED_OCR_ENDPOINTS": {
+        "type": "str",
+        "secret": False,
+        "readonly": False,
+        "category": "Security",
+        "label": "Allowed OCR Endpoints",
+        "help": "Comma-separated host allowlist for custom OCR endpoints. Empty = any host (SSRF policy still applies).",
+    },
     "POSTGRES_SERVER": {
         "type": "str",
         "secret": False,
@@ -867,6 +900,14 @@ SETTINGS_META = {
         "readonly": False,
         "category": "General",
         "label": "Log Level",
+    },
+    "LOG_FORMAT": {
+        "type": "str",
+        "secret": False,
+        "readonly": True,
+        "category": "General",
+        "label": "Log Format",
+        "help": "Log output format: 'text' (human-readable) or 'json' (structured for a SIEM). Applied at process startup.",
     },
     "DISABLE_CELERY": {
         "type": "bool",

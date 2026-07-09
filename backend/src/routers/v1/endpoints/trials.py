@@ -19,9 +19,14 @@ from .... import models, schemas
 from ....core.config import settings
 from ....core.security import get_current_user
 from ....dependencies import get_db, get_file
-from ....utils.enums import TrialResultStatus
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction, TrialResultStatus
 from ....utils.helpers import flatten_dict
-from ....utils.url_safety import UnsafeEndpointError, validate_user_endpoint
+from ....utils.url_safety import (
+    UnsafeEndpointError,
+    enforce_endpoint_allowlist,
+    validate_user_endpoint,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +215,7 @@ def create_trial(
     # instead of a per-document failure and prevents storing a blocked URL.
     try:
         validate_user_endpoint(base_url)
+        enforce_endpoint_allowlist(base_url, settings.ALLOWED_LLM_ENDPOINTS)
     except UnsafeEndpointError:
         raise HTTPException(
             status_code=400, detail="The provided LLM endpoint URL is not allowed."
@@ -283,6 +289,32 @@ def create_trial(
     # Notify WS clients immediately so the new trial appears in the ActivityBell
     # and trials table without waiting for the first Celery heartbeat.
     _broadcast_trial_created(trial_db)
+
+    # Accountability: record the trial creation and — critically for a clinic —
+    # the PHI egress this trial represents (documents about to be sent to an
+    # LLM endpoint). Host + model + count only; never document content.
+    from urllib.parse import urlparse
+
+    record_audit(
+        AuditAction.CREATE,
+        actor=current_user,
+        resource_type="trial",
+        resource_id=trial_db.id,
+        project_id=project_id,
+    )
+    record_audit(
+        AuditAction.LLM_EXTRACTION_CALL,
+        actor=current_user,
+        resource_type="trial",
+        resource_id=trial_db.id,
+        project_id=project_id,
+        detail={
+            "endpoint_host": urlparse(base_url).hostname,
+            "model": llm_model,
+            "document_count": len(document_ids),
+            "mode": "sync" if trial.bypass_celery else "celery",
+        },
+    )
 
     if trial.bypass_celery:
         # synchronous (debug)
@@ -721,6 +753,19 @@ def list_trial_results(
         total_usage["completion_tokens"] += _to_int(usage.get("completion_tokens"))
         total_usage["total_tokens"] += _to_int(usage.get("total_tokens"))
 
+    # Audit opening a trial's results (viewing extracted PHI). Only the first
+    # page (offset 0) is recorded so paging through results doesn't flood the
+    # trail; the `total` gives the extent of what was viewed.
+    if offset == 0:
+        record_audit(
+            AuditAction.TRIAL_RESULT_VIEW,
+            actor=current_user,
+            resource_type="trial",
+            resource_id=trial_id,
+            project_id=project_id,
+            detail={"total_results": total},
+        )
+
     return schemas.PaginatedTrialResults(
         items=items, total=total, total_usage=total_usage
     )
@@ -765,6 +810,13 @@ def update_trial(
 
     db.commit()
     db.refresh(trial)
+    record_audit(
+        AuditAction.UPDATE,
+        actor=current_user,
+        resource_type="trial",
+        resource_id=trial_id,
+        project_id=project_id,
+    )
     return schemas.Trial.model_validate(trial)
 
 
@@ -849,6 +901,17 @@ def delete_trial(
             detail="Database error during deletion. See server logs for details.",
         )
 
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="trial",
+        resource_id=trial_id,
+        project_id=project_id,
+        detail={
+            "results_deleted": len(results),
+            "evaluations_deleted": len(evaluations),
+        },
+    )
     return trial_data
 
 
@@ -903,6 +966,20 @@ def download_trial_results(
     )
     if not results:
         raise HTTPException(status_code=404, detail="No results found for this trial")
+
+    # Exporting a trial's extracted results (PHI leaving the system as a file).
+    record_audit(
+        AuditAction.EXPORT,
+        actor=current_user,
+        resource_type="trial",
+        resource_id=trial_id,
+        project_id=project_id,
+        detail={
+            "format": format,
+            "results": len(results),
+            "include_content": include_content,
+        },
+    )
 
     document_cache = {}
     file_cache = {}

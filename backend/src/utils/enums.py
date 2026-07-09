@@ -80,6 +80,56 @@ class PreprocessingStrategy(str, Enum):
     CUSTOM = "custom"
 
 
+class AuditAction(str, enum.Enum):
+    """Actions recorded in the append-only audit log.
+
+    Grouped (by value prefix) into: authentication, PHI access, data
+    mutations, external egress (patient data leaving to an LLM/OCR endpoint),
+    and administrative changes. The enum is the single source of truth — the
+    frontend audit filter mirrors these values.
+    """
+
+    # ── Authentication ──
+    LOGIN_SUCCESS = "login_success"
+    LOGIN_FAILURE = "login_failure"
+    LOGOUT = "logout"
+    TOKEN_REFRESH = "token_refresh"
+    PASSWORD_CHANGE = "password_change"
+    PASSWORD_RESET = "password_reset"
+    ACCOUNT_LOCKED = "account_locked"
+    SSO_LOGIN = "sso_login"
+
+    # ── Access (reading PHI) ──
+    DOCUMENT_VIEW = "document_view"
+    DOCUMENT_DOWNLOAD = "document_download"
+    FILE_DOWNLOAD = "file_download"
+    TRIAL_RESULT_VIEW = "trial_result_view"
+    EXPORT = "export"
+
+    # ── Mutations ──
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+
+    # ── Egress (PHI leaves to an external service) ──
+    LLM_EXTRACTION_CALL = "llm_extraction_call"
+    OCR_EXTERNAL_CALL = "ocr_external_call"
+
+    # ── Administration ──
+    SETTING_CHANGE = "setting_change"
+    USER_CREATE = "user_create"
+    USER_ROLE_CHANGE = "user_role_change"
+    USER_DEACTIVATE = "user_deactivate"
+    INVITATION_SEND = "invitation_send"
+    SSO_PROVIDER_CHANGE = "sso_provider_change"
+
+
+class AuditOutcome(str, enum.Enum):
+    SUCCESS = "success"
+    FAILURE = "failure"
+    DENIED = "denied"
+
+
 class TrialResultStatus(str, enum.Enum):
     """Outcome of a single document extraction within a trial.
 

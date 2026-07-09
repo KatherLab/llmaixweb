@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session, load_only, noload, selectinload
 from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db, remove_file
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction
 from .documents import router as documents_router
 from .evaluations import router as evaluations_router
 from .files import router as files_router
@@ -481,6 +483,13 @@ def create_project(
     db.commit()
     db.refresh(new_project)
 
+    record_audit(
+        AuditAction.CREATE,
+        actor=current_user,
+        resource_type="project",
+        resource_id=new_project.id,
+        project_id=new_project.id,
+    )
     return schemas.Project.model_validate(new_project)
 
 
@@ -517,6 +526,14 @@ def update_project(
     db.commit()
     db.refresh(existing_project)
 
+    record_audit(
+        AuditAction.UPDATE,
+        actor=current_user,
+        resource_type="project",
+        resource_id=project_id,
+        project_id=project_id,
+        detail={"fields": sorted(update_data.keys())},
+    )
     return schemas.Project.model_validate(existing_project)
 
 
@@ -562,6 +579,15 @@ def delete_project(
     # so leaving an orphaned blob is the lesser evil vs. failing the delete).
     db.delete(existing_project)
     db.commit()
+
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="project",
+        resource_id=project_id,
+        project_id=project_id,
+        detail={"stored_files_removed": len(file_uuids)},
+    )
 
     for file_uuid in file_uuids:
         try:

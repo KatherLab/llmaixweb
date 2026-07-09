@@ -35,7 +35,8 @@ from ....dependencies import (
     stream_file,
 )
 from ....models.project import document_set_association
-from ....utils.enums import FileCreator
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction, FileCreator
 from ....utils.helpers import detect_structured_mime
 
 logger = logging.getLogger(__name__)
@@ -432,6 +433,18 @@ def get_project_file_content(
     }
     serve_inline = preview and (file.file_type in safe_inline_types)
     disposition = "inline" if serve_inline else "attachment"
+    # Audit actual downloads (PHI bytes leaving as an attachment). Inline
+    # previews are browser-rendered views, not exfiltration, so they're not
+    # recorded here to keep the download signal meaningful.
+    if not serve_inline:
+        record_audit(
+            AuditAction.FILE_DOWNLOAD,
+            actor=current_user,
+            resource_type="file",
+            resource_id=file.id,
+            project_id=project_id,
+            detail={"file_name": file.file_name},
+        )
     headers = {"Content-Disposition": f'{disposition}; filename="{file.file_name}"'}
     return StreamingResponse(
         stream_file(file.file_uuid),
@@ -991,6 +1004,15 @@ def delete_file(
             },
         )
 
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="file",
+        resource_id=file_id,
+        project_id=project_id,
+        detail={"forced": bool(force)},
+    )
+
     try:
         if file_uuid:
             remove_file(file_uuid)
@@ -1146,6 +1168,13 @@ def download_files_as_zip(
     zip_buffer.seek(0)
     filename = f"project_{project_id}_files_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')}.zip"
 
+    record_audit(
+        AuditAction.EXPORT,
+        actor=current_user,
+        resource_type="file",
+        project_id=project_id,
+        detail={"files": len(file_ids), "format": "zip"},
+    )
     return Response(
         content=zip_buffer.getvalue(),
         media_type="application/zip",

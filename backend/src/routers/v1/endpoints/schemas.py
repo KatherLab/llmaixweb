@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction
 from ....utils.helpers import extract_field_types_from_schema
 
 router = APIRouter()
@@ -59,6 +61,13 @@ def create_schema(
     db.add(schema_db)
     db.commit()
     db.refresh(schema_db)
+    record_audit(
+        AuditAction.CREATE,
+        actor=current_user,
+        resource_type="schema",
+        resource_id=schema_db.id,
+        project_id=project_id,
+    )
     return schemas.Schema.model_validate(schema_db)
 
 
@@ -157,6 +166,13 @@ def update_schema(
     db.commit()
     db.refresh(existing_schema)
 
+    record_audit(
+        AuditAction.UPDATE,
+        actor=current_user,
+        resource_type="schema",
+        resource_id=schema_id,
+        project_id=project_id,
+    )
     return schemas.Schema.model_validate(existing_schema)
 
 
@@ -199,6 +215,13 @@ def delete_schema(
 
     db.delete(schema)
     db.commit()
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="schema",
+        resource_id=schema_id,
+        project_id=project_id,
+    )
     return schemas.Schema.model_validate(schema)
 
 

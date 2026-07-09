@@ -12,9 +12,15 @@ from sqlalchemy.orm import Session, selectinload
 from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# OCR engines that send document images/text to an external service (PHI egress),
+# as opposed to the local Docling/Tesseract path.
+_REMOTE_OCR_ENGINES = {"mistral_ocr", "llm_vision"}
 
 
 def check_project_access(
@@ -453,6 +459,27 @@ async def preprocess_project_data(
 
     settings = get_settings()
 
+    # Validate a user-supplied custom OCR endpoint against the SSRF policy and
+    # the (optional) egress allowlist before doing any work, so patient images
+    # can't be sent to a blocked or non-approved host.
+    if getattr(preprocessing_task, "base_url", None):
+        from ....utils.url_safety import (
+            UnsafeEndpointError,
+            enforce_endpoint_allowlist,
+            validate_user_endpoint,
+        )
+
+        try:
+            validate_user_endpoint(preprocessing_task.base_url)
+            enforce_endpoint_allowlist(
+                preprocessing_task.base_url, settings.ALLOWED_OCR_ENDPOINTS
+            )
+        except UnsafeEndpointError:
+            raise HTTPException(
+                status_code=400,
+                detail="The provided OCR endpoint URL is not allowed.",
+            )
+
     image_types = {
         models.FileType.IMAGE_PNG,
         models.FileType.IMAGE_JPEG,
@@ -670,6 +697,30 @@ async def preprocess_project_data(
 
     db.commit()
     db.refresh(task)
+
+    # Accountability: record PHI egress when preprocessing uses a remote OCR
+    # engine or a custom external endpoint (document images/text leave the host).
+    # The local Docling/Tesseract path is not egress and is not recorded here.
+    ocr_engine = (new_additional_settings or {}).get("ocr_engine", "docling_tesseract")
+    custom_base = preprocessing_task.base_url or None
+    if ocr_engine in _REMOTE_OCR_ENGINES or custom_base:
+        from urllib.parse import urlparse
+
+        record_audit(
+            AuditAction.OCR_EXTERNAL_CALL,
+            actor=current_user,
+            resource_type="preprocessing_task",
+            resource_id=task.id,
+            project_id=project_id,
+            detail={
+                "ocr_engine": ocr_engine,
+                "endpoint_host": urlparse(custom_base).hostname
+                if custom_base
+                else None,
+                "file_count": len(file_tasks_to_process),
+                "mode": "sync" if bypass_celery else "celery",
+            },
+        )
     return schemas.PreprocessingTask.model_validate(task)
 
 

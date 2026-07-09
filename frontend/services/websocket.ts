@@ -33,10 +33,14 @@ class WebSocketService {
     // Both nginx (production) and Vite proxy (dev) will forward to backend
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = window.location.host
-    const wsUrl = `${protocol}//${host}/ws/activity?token=${token}`
+    const wsUrl = `${protocol}//${host}/ws/activity`
 
     try {
-      this.ws = new WebSocket(wsUrl)
+      // Pass the JWT via the WebSocket subprotocol header instead of the query
+      // string, so it never lands in proxy/access logs the way `?token=` does.
+      // The server echoes the `access_token` subprotocol to complete the
+      // handshake. Format: ['access_token', '<jwt>'].
+      this.ws = new WebSocket(wsUrl, ['access_token', token])
 
       this.ws.onopen = () => {
         console.log('[WebSocket] Connected')

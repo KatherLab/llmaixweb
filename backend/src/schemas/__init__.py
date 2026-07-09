@@ -1,3 +1,9 @@
+from .audit import (
+    AuditLogEntry,
+    ErrorLogEntry,
+    PaginatedAuditLogs,
+    PaginatedErrorLogs,
+)
 from .auth import LogoutRequest, RefreshRequest, Token, TokenPayload
 from .project import (
     Document,
@@ -82,6 +88,10 @@ from .user import (
 )
 
 __all__ = [
+    "AuditLogEntry",
+    "PaginatedAuditLogs",
+    "ErrorLogEntry",
+    "PaginatedErrorLogs",
     "Token",
     "TokenPayload",
     "RefreshRequest",

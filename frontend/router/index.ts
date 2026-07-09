@@ -23,6 +23,7 @@ const AdminDashboard = () => import('@/views/AdminDashboard.vue')
 const AdminSettings = () => import('@/views/AdminSettings.vue')
 const AdminCelery = () => import('@/views/AdminCelery.vue')
 const AdminSSO = () => import('@/views/AdminSSO.vue')
+const AdminAudit = () => import('@/views/AdminAudit.vue')
 
 const FirstAdminSetup = () => import('@/views/FirstAdminSetup.vue')
 
@@ -60,6 +61,7 @@ const routes: RouteRecordRaw[] = [
           { path: 'user-management', component: AdminUserManagement },
           { path: 'settings', component: AdminSettings },
           { path: 'sso', component: AdminSSO },
+          { path: 'audit', component: AdminAudit },
           { path: 'celery', component: AdminCelery },
           { path: '', redirect: '/admin/user-management' },
         ],

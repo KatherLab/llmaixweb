@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction
 from ....utils.helpers import validate_prompt
 
 router = APIRouter()
@@ -63,6 +65,13 @@ def create_prompt(
     db.add(prompt_db)
     db.commit()
     db.refresh(prompt_db)
+    record_audit(
+        AuditAction.CREATE,
+        actor=current_user,
+        resource_type="prompt",
+        resource_id=prompt_db.id,
+        project_id=project_id,
+    )
     return schemas.Prompt.model_validate(prompt_db)
 
 
@@ -169,6 +178,13 @@ def update_prompt(
     db.commit()
     db.refresh(existing_prompt)
 
+    record_audit(
+        AuditAction.UPDATE,
+        actor=current_user,
+        resource_type="prompt",
+        resource_id=prompt_id,
+        project_id=project_id,
+    )
     return schemas.Prompt.model_validate(existing_prompt)
 
 
@@ -210,4 +226,11 @@ def delete_prompt(
 
     db.delete(prompt)
     db.commit()
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="prompt",
+        resource_id=prompt_id,
+        project_id=project_id,
+    )
     return schemas.Prompt.model_validate(prompt)

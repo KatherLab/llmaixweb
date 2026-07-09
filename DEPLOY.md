@@ -463,6 +463,19 @@ docker compose logs -f worker_default worker_preprocess   # task logs
 - [ ] `.env` never committed (it's gitignored) and backed up securely.
 - [ ] Keep PHI on self-hosted/local providers unless you've explicitly chosen
       a remote one.
+- [ ] **Encryption at rest provided by the infrastructure** — the app stores
+      document text and uploaded files in plaintext; use an encrypted DB volume
+      and encrypted object storage (see [docs/DATA_FLOW.md](docs/DATA_FLOW.md)).
+- [ ] `ACCESS_TOKEN_EXPIRE_MINUTES` shortened for PHI (e.g. 30–60; refresh
+      rotation covers longer sessions).
+- [ ] `LOG_FORMAT=json` and container stdout shipped to your SIEM/Loki; forward
+      the audit log too (see [docs/AUDIT_LOGGING.md](docs/AUDIT_LOGGING.md)).
+- [ ] Admins know the **Audit Log** tab (Admin → Audit Log) and the
+      error-id lookup for supporting users who report an error id.
+- [ ] Reviewed the clinical hardening docs: [docs/SECURITY.md](docs/SECURITY.md),
+      [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md),
+      [docs/RISK_REGISTER.md](docs/RISK_REGISTER.md),
+      [docs/DATA_RETENTION.md](docs/DATA_RETENTION.md).
 
 ---
 

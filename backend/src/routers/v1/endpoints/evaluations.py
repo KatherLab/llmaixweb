@@ -15,6 +15,8 @@ from sqlalchemy.orm import Session, load_only, selectinload
 from .... import models, schemas
 from ....core.security import get_current_user
 from ....dependencies import get_db
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction
 from ....utils.helpers import (
     build_evaluation_zipfiles,
     collect_evaluation_field_level_details,
@@ -283,6 +285,14 @@ def delete_evaluation(
 
     db.delete(evaluation)
     db.commit()
+
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="evaluation",
+        resource_id=evaluation_id,
+        project_id=project_id,
+    )
 
 
 @router.get(
@@ -793,6 +803,17 @@ def batch_evaluate_trials(
         raise HTTPException(
             status_code=400, detail=f"All evaluations failed: {'; '.join(errors)}"
         )
+    record_audit(
+        AuditAction.CREATE,
+        actor=current_user,
+        resource_type="evaluation",
+        project_id=project_id,
+        detail={
+            "groundtruth_id": groundtruth_id,
+            "evaluated": len(results),
+            "errors": len(errors),
+        },
+    )
     return results
 
 

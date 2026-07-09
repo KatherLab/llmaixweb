@@ -21,6 +21,7 @@ const tabs = computed(() => [
   { label: 'User Management', value: '/admin/user-management', to: '/admin/user-management' },
   { label: 'Settings', value: '/admin/settings', to: '/admin/settings' },
   { label: 'SSO', value: '/admin/sso', to: '/admin/sso' },
+  { label: 'Audit Log', value: '/admin/audit', to: '/admin/audit' },
   { label: 'Celery & Queues', value: '/admin/celery', to: '/admin/celery' },
 ])
 </script>

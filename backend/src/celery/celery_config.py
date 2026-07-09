@@ -49,6 +49,18 @@ if not settings.DISABLE_CELERY:
         Queue("preprocess"),  # heavy OCR / preprocessing pipeline
     )
 
+    # Route Celery's logging through our centralized config so worker logs use
+    # the same format (and JSON option) as the web process. Connecting a
+    # receiver to ``setup_logging`` tells Celery not to install its own
+    # handlers, giving us a single, consistent logging setup across processes.
+    from celery.signals import setup_logging as _celery_setup_logging
+
+    @_celery_setup_logging.connect
+    def _configure_celery_logging(**_kwargs):
+        from ..utils.logging_config import setup_logging
+
+        setup_logging(level=settings.LOG_LEVEL)
+
     # Import signal handlers + periodic sweeper once the app is ready. This
     # must run inside the `not DISABLE_CELERY` guard: task_signals registers
     # `@celery_app.task` / `@celery_app.on_after_configure` decorators at

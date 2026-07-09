@@ -11,6 +11,8 @@ from ....core.dynamic_settings import reload_settings_cache
 from ....core.security import get_admin_user
 from ....dependencies import get_db
 from ....models import AppSetting
+from ....utils.audit import record_audit
+from ....utils.enums import AuditAction
 
 router = APIRouter()
 
@@ -114,6 +116,13 @@ def update_settings(
                 db.add(AppSetting(key=key, value=stored_value))
     db.commit()
     reload_settings_cache()
+    # Audit the keys changed (never the values — some are security-relevant).
+    record_audit(
+        AuditAction.SETTING_CHANGE,
+        actor=current_user,
+        resource_type="app_setting",
+        detail={"keys": list(updates.keys())},
+    )
     return {"updated": True}
 
 
@@ -130,6 +139,12 @@ def delete_setting(
     db.delete(row)
     db.commit()
     reload_settings_cache()
+    record_audit(
+        AuditAction.SETTING_CHANGE,
+        actor=current_user,
+        resource_type="app_setting",
+        detail={"deleted_key": key},
+    )
     return {"deleted": key}
 
 
