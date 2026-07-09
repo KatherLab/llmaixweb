@@ -429,6 +429,29 @@ if celery_app is not None:
         ).start()
 
     @signals.worker_process_init.connect
+    def _dispose_engine_on_fork(**_):
+        """Reset the SQLAlchemy connection pool in each forked worker process.
+
+        The engine (and its pooled connections) is created at import time in the
+        parent process. Celery forks worker child processes which inherit those
+        live Postgres socket FDs. If two processes ever use the same inherited
+        connection concurrently — e.g. the settings-invalidation listener thread
+        in every worker waking at once on an admin settings change — the wire
+        protocol corrupts, surfacing as "server closed the connection
+        unexpectedly" / "there is already a transaction in progress".
+
+        ``dispose(close=False)`` drops the inherited connections from this
+        child's pool WITHOUT closing the underlying sockets (which still belong
+        to the parent), so each worker lazily opens its own fresh connections.
+        """
+        try:
+            from ..db.session import engine
+
+            engine.dispose(close=False)
+        except Exception as e:  # pragma: no cover - best effort
+            logger.warning("Failed to dispose engine pool on worker init: %s", e)
+
+    @signals.worker_process_init.connect
     def _start_settings_listener(**_):
         """Start the settings-invalidation subscriber per worker process."""
         _settings_invalidation_listener()

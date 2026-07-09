@@ -268,13 +268,17 @@ function resetDraft(): void {
     if (entry.type === 'bool') {
       // Backend may return booleans or their string representations for
       // bool-typed settings; the AdminSettingEntry types override/original
-      // as `string | null`, so cast broadly to match runtime values.
+      // as `string | null`, so cast broadly to match runtime values. Parse
+      // case-insensitively so legacy Python-style "True"/"False" overrides
+      // still round-trip correctly.
+      const asBool = (v: string | boolean | null): boolean =>
+        v === true || String(v).toLowerCase() === 'true'
       const overrideBool = entry.override as string | boolean | null
       const originalBool = entry.original as string | boolean | null
       draft[k] =
         overrideBool !== undefined && overrideBool !== null
-          ? overrideBool === true || overrideBool === 'true'
-          : originalBool === true || originalBool === 'true'
+          ? asBool(overrideBool)
+          : asBool(originalBool)
     } else if (entry.type === 'int') {
       draft[k] =
         entry.override !== undefined && entry.override !== null
@@ -308,13 +312,13 @@ async function save(): Promise<void> {
       Object.entries(draft).filter(([k]) => !(settings[k]?.readonly || settings[k]?.secret)),
     )
     await adminApi.updateSettings(payload)
-    Object.entries(payload).forEach(([k, v]) => {
-      const entry = settings[k]
-      if (!entry) return
-      entry.override = String(v)
-      entry.effective = String(v)
-      entry.overridden = true
-    })
+    // Re-fetch so local state reflects exactly what the backend persisted.
+    // The backend only stores overrides that differ from their default, so
+    // marking every submitted setting as overridden here would wrongly show
+    // unchanged settings as edited until the next reload.
+    const res = await adminApi.getSettings()
+    Object.assign(settings, res.data)
+    resetDraft()
     success.value = true
     setTimeout(() => {
       success.value = false

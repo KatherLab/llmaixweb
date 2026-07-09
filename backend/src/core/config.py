@@ -496,7 +496,18 @@ class Settings(BaseSettings):
 
 # Lazy initialization - settings are validated only when first accessed
 # This avoids requiring .env file for operations like Alembic migrations
+#
+# Two instances are tracked:
+#   * ``_base_settings_instance`` — the pristine, env/.env-only config, built
+#     once. Runtime overrides are always applied ON TOP of this so that
+#     *removing* an override (admin resets a field to its default, deleting the
+#     DB row) correctly reverts the live value. Merging onto the already-
+#     overridden instance instead would make overrides purely additive and
+#     stick forever.
+#   * ``_settings_instance`` — the effective config (base + current overrides),
+#     which is what ``_get_settings()`` / the proxy return.
 _settings_instance: Settings | None = None
+_base_settings_instance: Settings | None = None
 _settings_lock = threading.Lock()
 
 
@@ -506,17 +517,19 @@ def _get_settings() -> Settings:
     Thread-safe: the first access validates the config (OpenAI/S3 checks in
     Settings.__init__). Subsequent calls return the cached instance.
     """
-    global _settings_instance
+    global _settings_instance, _base_settings_instance
     if _settings_instance is None:
         with _settings_lock:
             if _settings_instance is None:
                 try:
-                    _settings_instance = Settings()
+                    _base_settings_instance = Settings()
                 except ValidationError as e:
                     print("Configuration Error:")
                     print(e)
                     print("Please check your .env file or environment variables.")
                     sys.exit(1)
+                # No overrides applied yet: effective == pristine base.
+                _settings_instance = _base_settings_instance
     return _settings_instance
 
 
@@ -528,13 +541,22 @@ def apply_runtime_overrides(overrides: dict) -> None:
     does NOT re-run ``__init__``'s OpenAI/S3 network validation. That avoids
     latency and a potential ``sys.exit(1)`` on every admin settings save.
 
+    Overrides are always merged onto the pristine ``_base_settings_instance``
+    (NOT the currently-overridden one), so that dropping an override — i.e.
+    passing an ``overrides`` dict that no longer contains a key — reverts that
+    field to its env/.env default instead of retaining the last override.
+
     Only call this after the singleton has been initialized (e.g. from
     ``dynamic_settings`` once the DB is available).
     """
     global _settings_instance
+    # Ensure the pristine base is initialized, then merge onto it.
+    _get_settings()
+    base = _base_settings_instance
     if not overrides:
+        # No active overrides — effective settings are exactly the base.
+        _settings_instance = base
         return
-    base = _get_settings()
     merged = {**base.model_dump(), **overrides}
     _settings_instance = Settings.model_validate(merged)
 

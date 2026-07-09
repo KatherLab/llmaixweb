@@ -62,13 +62,15 @@ def get_settings() -> Settings:
 
     with SessionLocal() as db:
         overrides = get_db_overrides(db)
-    if overrides:
-        try:
-            apply_runtime_overrides(overrides)
-        except Exception as e:
-            # Don't let an invalid override value break settings access —
-            # fall back to the existing (base) instance.
-            logger.warning("Failed to apply runtime settings overrides: %s", e)
+    # Always apply (even when empty) so that removing the last override resets
+    # the live singleton back to its env/.env base instead of retaining stale
+    # values from a previous override.
+    try:
+        apply_runtime_overrides(overrides)
+    except Exception as e:
+        # Don't let an invalid override value break settings access —
+        # fall back to the existing (base) instance.
+        logger.warning("Failed to apply runtime settings overrides: %s", e)
     return cast(Settings, _settings_proxy)
 
 

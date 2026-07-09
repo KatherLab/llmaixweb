@@ -92,18 +92,26 @@ def update_settings(
                 value = str(value)
         except Exception:
             raise HTTPException(422, f"Invalid value for {key}: {value}")
-        # Only store if overridden
+        # Only store if overridden. Canonicalize bool storage to lowercase
+        # "true"/"false" so it round-trips consistently — Python's str(True) is
+        # "True", which the frontend's lowercase comparison would parse as false.
         original = _ENV_DEFAULTS.get(key)
-        if str(value) == str(original):
+        if typ == "bool":
+            stored_value = "true" if value else "false"
+            original_str = "true" if original else "false"
+        else:
+            stored_value = str(value)
+            original_str = str(original)
+        if stored_value == original_str:
             row = db.get(AppSetting, key)
             if row:
                 db.delete(row)
         else:
             row = db.get(AppSetting, key)
             if row:
-                row.value = str(value)
+                row.value = stored_value
             else:
-                db.add(AppSetting(key=key, value=str(value)))
+                db.add(AppSetting(key=key, value=stored_value))
     db.commit()
     reload_settings_cache()
     return {"updated": True}
