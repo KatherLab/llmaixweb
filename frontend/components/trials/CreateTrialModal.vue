@@ -19,8 +19,8 @@
       </div>
     </template>
 
-    <!-- Orientation (Advanced mode only) -->
-    <Callout v-if="!simpleMode" variant="info" title="What is a trial?" class="mb-6">
+    <!-- Orientation: shown in both modes so first-time users get the primer -->
+    <Callout variant="info" title="What is a trial?" class="mb-6">
       <p class="mt-1">
         A trial runs an AI model over your documents to extract structured data. You need four
         things: a <strong>Schema</strong> (the fields to extract), a

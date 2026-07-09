@@ -9,7 +9,7 @@
     @close="$emit('close')"
   >
     <template #header>
-      <h3 class="text-lg font-medium text-content">Schema Editor Help</h3>
+      <h3 class="text-lg font-semibold text-content">Schema Editor Help</h3>
     </template>
 
     <div class="space-y-4">

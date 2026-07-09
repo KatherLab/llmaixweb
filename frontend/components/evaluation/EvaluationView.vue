@@ -205,10 +205,7 @@
             </Callout>
 
             <!-- Loading evaluations -->
-            <div v-if="loadingStates.evaluations" class="text-center py-8">
-              <LoadingSpinner size="medium" />
-              <p class="mt-2 text-content-subtle">Loading evaluations...</p>
-            </div>
+            <SkeletonTable v-if="loadingStates.evaluations" :columns="columns.length" :rows="4" />
 
             <!-- Evaluation results table -->
             <EmptyState
@@ -366,6 +363,7 @@ import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import Callout from '@/components/common/Callout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import SkeletonTable from '@/components/common/SkeletonTable.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import DataTable, { type DataTableColumn } from '@/components/common/DataTable.vue'
@@ -593,7 +591,7 @@ const retryLastOperation = async (): Promise<void> => {
 
   try {
     await lastFailedOperation.value()
-    toast.success('Operation completed successfully')
+    toast.success('Operation completed')
     lastFailedOperation.value = null
   } catch (err) {
     handleApiError(err, 'Retry')
@@ -813,7 +811,7 @@ const onGroundTruthUploaded = async (groundTruth: GroundTruth): Promise<void> =>
     groundTruthFiles.value.push(groundTruth)
     await selectGroundTruth(groundTruth)
     showUploadModal.value = false
-    toast.success('Ground truth uploaded successfully')
+    toast.success('Ground truth uploaded')
     // Land the user directly in the next step: configure field mappings.
     showGroundTruthPreview.value = true
   } catch (err) {
@@ -844,7 +842,7 @@ const onTrialEvaluate = async (evaluation: Evaluation): Promise<void> => {
 
     evaluations.value.push(row)
     showTrialSelector.value = false
-    toast.success(`${getTrialName(evaluationSummary.trial_id)} evaluation completed successfully`)
+    toast.success(`${getTrialName(evaluationSummary.trial_id)} evaluation completed`)
     // Surface non-blocking validation warnings (e.g. low document↔GT match
     // rate) so the researcher knows some documents could not be matched.
     const warnings = evaluationSummary.warnings
@@ -870,7 +868,7 @@ const onMappingConfigured = async (): Promise<void> => {
       }
     }
 
-    toast.success('Field mappings configured successfully')
+    toast.success('Field mappings configured')
   } catch (err) {
     handleApiError(err, 'Refreshing after mapping configuration')
   }

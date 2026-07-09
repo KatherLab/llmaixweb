@@ -8,7 +8,7 @@
   >
     <template #header>
       <div class="flex items-center gap-4">
-        <h3 class="text-lg font-medium text-content">
+        <h3 class="text-lg font-semibold text-content">
           {{ isEdit ? 'Edit Schema' : 'Create New Schema' }}
         </h3>
         <!-- Simple/Advanced Mode Toggle -->
@@ -45,6 +45,15 @@
                 required
               />
             </div>
+            <!-- Templates: available in both Simple and Advanced modes -->
+            <button
+              type="button"
+              class="ml-auto text-sm text-primary hover:text-primary flex items-center"
+              @click="showTemplates = true"
+            >
+              <Layers class="h-4 w-4 mr-1" />
+              Templates
+            </button>
             <!-- Validation Indicator -->
             <div
               v-if="schemaForm.schema_definition"
@@ -80,16 +89,6 @@
               <input v-model="splitView" type="checkbox" :class="checkboxClass" />
               <span class="text-content-muted">Split view</span>
             </label>
-
-            <!-- Templates Button -->
-            <button
-              type="button"
-              class="text-sm text-primary hover:text-primary flex items-center"
-              @click="showTemplates = true"
-            >
-              <Layers class="h-4 w-4 mr-1" />
-              Templates
-            </button>
           </div>
         </div>
 

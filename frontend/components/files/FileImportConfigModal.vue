@@ -468,7 +468,7 @@ const saveConfig = async (): Promise<void> => {
     }
 
     await filesApi.configure(props.projectId, props.file.id, payload)
-    toast.success('Import configuration saved!')
+    toast.success('Import configuration saved')
     emit('saved')
     doClose()
   } catch {

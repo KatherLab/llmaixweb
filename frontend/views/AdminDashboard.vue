@@ -1,10 +1,9 @@
 <template>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-    <PageHeader
-      title="Admin"
-      subtitle="Manage users, system settings, SSO providers, and Celery queues."
-      class="mb-6"
-    />
+    <!-- Section eyebrow only — each child view renders its own PageHeader (the
+         page's single <h1>), so a full "Admin" PageHeader here would stack a
+         second, competing heading. -->
+    <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-2">Admin</p>
     <BaseTabGroup :model-value="route.path" :tabs="tabs" class="mb-6" />
     <router-view />
     <!-- Shows the active tab content -->
@@ -15,7 +14,6 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
-import PageHeader from '@/components/common/PageHeader.vue'
 
 const route = useRoute()
 

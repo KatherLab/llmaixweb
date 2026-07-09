@@ -7,7 +7,7 @@
     body-class="p-6"
     @close="$emit('close')"
   >
-    <h3 class="text-lg font-medium text-content mb-4">
+    <h3 class="text-lg font-semibold text-content mb-4">
       Add {{ advancedMode ? 'Property' : 'Field' }}
     </h3>
 

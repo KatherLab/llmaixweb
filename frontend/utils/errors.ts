@@ -37,6 +37,13 @@ export function extractErrorMessage(err: unknown, fallback = 'Something went wro
       const detail = response.data.detail
       if (typeof detail === 'string' && detail.trim()) return detail
 
+      // Structured detail objects (e.g. our 409 `{ message, links }`) carry the
+      // human-readable text in `detail.message`.
+      if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+        const dmsg = (detail as { message?: unknown }).message
+        if (typeof dmsg === 'string' && dmsg.trim()) return dmsg
+      }
+
       const message = response.data.message
       if (typeof message === 'string' && message.trim()) return message
 

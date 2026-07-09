@@ -38,6 +38,9 @@ export const trialsApi = {
   delete(projectId: number | string, trialId: number | string) {
     return api.delete(`/project/${projectId}/trial/${trialId}`) as Promise<ApiBody<unknown>>
   },
+  retry(projectId: number | string, trialId: number | string) {
+    return api.post(`/project/${projectId}/trial/${trialId}/retry`) as Promise<ApiBody<Trial>>
+  },
   cancel(projectId: number | string, trialId: number | string, keepProcessed = false) {
     return api.post(
       `/project/${projectId}/trial/${trialId}/cancel`,

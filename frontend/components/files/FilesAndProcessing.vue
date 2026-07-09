@@ -712,7 +712,7 @@ const deleteFile = async (file: FileModel): Promise<void> => {
     emit('files-changed')
   } catch (err) {
     console.error('Failed to delete file:', err)
-    toast.error(`Failed to delete ${file.file_name}`)
+    toast.error(extractErrorMessage(err, `Failed to delete ${file.file_name}`))
   }
 }
 

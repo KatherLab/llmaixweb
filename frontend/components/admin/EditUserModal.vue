@@ -2,7 +2,7 @@
   <BaseModal :open="open" size="md" @close="emit('close')">
     <template #header>
       <div>
-        <h3 class="text-lg font-bold text-content">Edit User</h3>
+        <h3 class="text-lg font-semibold text-content">Edit User</h3>
         <p class="text-sm text-content-subtle mt-0.5">#{{ user?.id }} &middot; {{ user?.email }}</p>
       </div>
     </template>
@@ -264,7 +264,7 @@ async function setPasswordForEditUser(): Promise<void> {
     await usersApi.setPassword(props.user.id, { new_password: editPassword.value })
     setPasswordSuccessMsg.value = true
     editPassword.value = ''
-    toast.success('Password updated.')
+    toast.success('Password updated')
   } catch (error) {
     editError.value = extractErrorMessage(error, 'Failed to set password')
   } finally {

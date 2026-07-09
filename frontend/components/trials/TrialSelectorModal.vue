@@ -384,7 +384,7 @@ const retryLastOperation = async (): Promise<void> => {
 
   try {
     await lastFailedOperation.value()
-    toast.success('Operation completed successfully')
+    toast.success('Operation completed')
     lastFailedOperation.value = null
   } catch (err) {
     handleApiError(err, 'Retry')
@@ -550,7 +550,7 @@ const evaluateTrialWithValidation = async (): Promise<void> => {
     // The evaluate endpoint returns an EvaluationSummary; the emit is typed as
     // Evaluation to match the parent (EvaluationView) which casts at the boundary.
     emit('evaluate', response.data as unknown as Evaluation)
-    toast.success(`${trialDisplayName(selectedTrial.value)} evaluation completed successfully`)
+    toast.success(`${trialDisplayName(selectedTrial.value)} evaluation completed`)
     lastFailedOperation.value = null
   } catch (err) {
     if ((err as { response?: { status?: number } })?.response?.status === 400) {
@@ -585,7 +585,7 @@ const onMappingConfigured = async (): Promise<void> => {
   showMappingModal.value = false
   try {
     await loadMappingStatusesFor(trials.value.items)
-    toast.success('Field mappings configured successfully')
+    toast.success('Field mappings configured')
   } catch (err) {
     handleApiError(err, 'Refreshing mapping status')
   }

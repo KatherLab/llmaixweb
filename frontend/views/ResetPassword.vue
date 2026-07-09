@@ -149,7 +149,7 @@ async function handleResetPassword(): Promise<void> {
       new_password: newPassword.value,
     }
     await usersApi.resetPassword(String(token), body)
-    toast.success('Password reset successfully!', {
+    toast.success('Password reset', {
       timeout: 3000,
     })
     setTimeout(() => {

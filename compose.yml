@@ -32,7 +32,9 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg://postgres:postgres@postgres/llmaixweb
+      # DB URI is derived from POSTGRES_* in .env (see core/config.py), so
+      # changing POSTGRES_PASSWORD there is enough — no hardcoded URI to keep
+      # in sync across the backend and workers.
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DISABLE_CELERY=false
       - INITIALIZE_CELERY=${INITIALIZE_CELERY:-false}
@@ -164,7 +166,6 @@ services:
           rc ls local/$${S3_BUCKET_NAME} >/dev/null 2>&1 || { echo \"Failed to create or find bucket '$${S3_BUCKET_NAME}'\" >&2; exit 1; };
           echo \"Bucket '$${S3_BUCKET_NAME}' already exists\";
         fi;
-        rc anonymous set public local/$${S3_BUCKET_NAME} || { echo \"Failed to set anonymous access for '$${S3_BUCKET_NAME}'\" >&2; exit 1; };
         echo \"Bucket '$${S3_BUCKET_NAME}' ready\";
       "
     restart: "no"

@@ -23,6 +23,7 @@
             type="button"
             class="h-3 w-3 text-content-subtle transition-transform cursor-pointer p-0 hover:text-content-muted"
             :class="{ 'rotate-90': isExpanded }"
+            :aria-label="isExpanded ? 'Collapse' : 'Expand'"
             @click.stop="toggleExpanded"
           >
             <ChevronRight />

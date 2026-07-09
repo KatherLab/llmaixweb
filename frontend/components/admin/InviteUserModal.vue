@@ -1,7 +1,7 @@
 <template>
   <BaseModal :open="open" size="sm" :close-on-backdrop="!isInviting" @close="emit('close')">
     <template #header>
-      <h3 class="text-lg font-bold text-content">Invite New User</h3>
+      <h3 class="text-lg font-semibold text-content">Invite New User</h3>
     </template>
     <form @submit.prevent="sendInvitation">
       <div class="mb-5">

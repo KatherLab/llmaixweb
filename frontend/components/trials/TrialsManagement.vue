@@ -519,7 +519,7 @@ async function handleCreateTrial(trialData: TrialCreate): Promise<void> {
     trials.value.unshift(response.data as unknown as TrialSummary)
     totalTrials.value += 1
     isModalOpen.value = false
-    toast.success('Trial created!')
+    toast.success('Trial created')
   } catch {
     toast.error('Failed to create trial.')
   }
@@ -600,7 +600,8 @@ function confirmCancelTrial(trial: TrialSummary): void {
 function confirmDeleteTrial(trial: TrialSummary): void {
   openConfirm({
     title: 'Delete Trial',
-    message: 'Are you sure you want to delete this trial? This action cannot be undone.',
+    message:
+      'Deleting this trial also removes its extraction results and any evaluations based on it. This action cannot be undone.',
     confirmText: 'Delete',
     variant: 'danger',
     handler: () => deleteTrial(trial),
@@ -622,19 +623,15 @@ async function deleteTrial(trial: TrialSummary | null): Promise<void> {
 
 async function retryTrial(trial: TrialSummary): Promise<void> {
   try {
-    const data: TrialCreate = {
-      schema_id: trial.schema_id,
-      prompt_id: trial.prompt_id,
-      document_ids: trial.document_ids || [],
-      llm_model: trial.llm_model,
-      advanced_options: trial.advanced_options || {},
-    }
-    const response = await trialsApi.create(props.projectId, data)
+    // Clone server-side so the original's custom endpoint, API key, document
+    // set, name and description are preserved (the client can't resend the key
+    // or base URL — they're never returned in API responses).
+    const response = await trialsApi.retry(props.projectId, trial.id)
     trials.value.unshift(response.data as unknown as TrialSummary)
     totalTrials.value += 1
     toast.success('Trial restarted')
-  } catch {
-    toast.error('Failed to restart trial')
+  } catch (err) {
+    toast.error(extractErrorMessage(err, 'Failed to restart trial'))
   }
 }
 

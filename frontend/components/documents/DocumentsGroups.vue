@@ -353,13 +353,13 @@ const confirmDeleteGroupAction = async (): Promise<void> => {
 
     if (deleteDocumentsToo.value) {
       if (deletedDocs.length > 0) {
-        toast.success(`Group and ${deletedDocs.length} document(s) deleted successfully`)
+        toast.success(`Group and ${deletedDocs.length} document(s) deleted`)
       } else {
         // No documents were deleted - they must all be referenced elsewhere
         toast.warning('Group deleted, but documents could not be deleted (referenced elsewhere).')
       }
     } else {
-      toast.success('Document group deleted successfully')
+      toast.success('Document group deleted')
     }
 
     showDeleteModal.value = false
@@ -385,10 +385,10 @@ const handleSaveGroup = async (groupData: DocumentSetCreate): Promise<void> => {
   try {
     if (editingGroup.value) {
       await documentSetsApi.update(props.projectId, editingGroup.value.id, groupData)
-      toast.success('Document group updated successfully')
+      toast.success('Document group updated')
     } else {
       await documentSetsApi.create(props.projectId, groupData)
-      toast.success('Document group created successfully')
+      toast.success('Document group created')
     }
     closeModal()
     emit('refresh')

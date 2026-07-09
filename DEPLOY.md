@@ -408,10 +408,10 @@ Stateful services have healthchecks in `compose.yml`:
 - **rustfs** — HTTP health probe
 - **docling-serve** — OpenAPI endpoint probe
 
-The **backend** has no healthcheck of its own but `depends_on` the above being
-healthy (plus `rustfs-init` completing) before it starts — so once the backend
-container is up, its dependencies are guaranteed ready. The **frontend** starts
-once the backend has started.
+The **backend** has its own HTTP healthcheck (probing `/`) and `depends_on` the
+above being healthy (plus `rustfs-init` completing) before it starts — so once
+the backend reports healthy, both it and its dependencies are ready. The
+**frontend** waits for the backend to be healthy before starting.
 
 ```bash
 docker compose ps                  # health column

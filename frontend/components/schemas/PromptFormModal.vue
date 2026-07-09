@@ -7,7 +7,7 @@
   >
     <template #header>
       <div class="flex items-center gap-4">
-        <h3 class="text-lg font-medium text-content">
+        <h3 class="text-lg font-semibold text-content">
           {{ isEdit ? 'Edit Prompt' : 'Create New Prompt' }}
         </h3>
         <!-- Simple/Advanced Mode Toggle -->
@@ -438,7 +438,7 @@ const createPrompt = async () => {
     emit('created', response.data)
     emit('close')
     resetPromptForm()
-    toast.success('Prompt created successfully')
+    toast.success('Prompt created')
   } catch (err) {
     console.error('Failed to create prompt:', err)
     toast.error(extractErrorMessage(err, 'Failed to create prompt'))
@@ -459,7 +459,7 @@ const updatePrompt = async () => {
     emit('updated', response.data)
     emit('close')
     resetPromptForm()
-    toast.success('Prompt updated successfully')
+    toast.success('Prompt updated')
   } catch (err) {
     console.error('Failed to update prompt:', err)
     toast.error(extractErrorMessage(err, 'Failed to update prompt'))
@@ -519,6 +519,14 @@ watch(
           system_prompt: props.prompt.system_prompt || '',
           user_prompt: props.prompt.user_prompt || '',
         }
+        // Open in Advanced mode when the prompt uses advanced features (a
+        // system prompt, or an explicit {document_content} placeholder).
+        // Simple mode clears system_prompt in validatePromptPlaceholder, so
+        // defaulting an advanced prompt to Simple would silently wipe it.
+        const usesAdvanced =
+          !!promptForm.value.system_prompt ||
+          promptForm.value.user_prompt.includes('{document_content}')
+        simplePromptMode.value = !usesAdvanced
       } else {
         // Create mode
         resetPromptForm()

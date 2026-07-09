@@ -478,7 +478,7 @@ const handleCreateGroupModalClose = (): void => {
 const handleCreateGroupModalSave = async (groupData: DocumentSetCreate): Promise<void> => {
   try {
     await documentSetsApi.create(props.projectId, groupData)
-    toast.success('Document group created successfully')
+    toast.success('Document group created')
     showCreateGroupModal.value = false
     createGroupWithDocs.value = []
     selectedDocuments.value = []
@@ -550,7 +550,7 @@ const reprocessDocument = async (doc: Partial<DocumentListItem>): Promise<void> 
       force_reprocess: true,
     }
     await preprocessingApi.create(props.projectId, payload)
-    toast.success('Document reprocessing started!')
+    toast.success('Document reprocessing started')
     fetchDocuments()
   } catch (error) {
     toast.error(extractErrorMessage(error, 'Failed to start reprocessing'))

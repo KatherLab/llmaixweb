@@ -8,7 +8,7 @@
   >
     <template #header>
       <div class="flex items-center gap-2">
-        <h3 class="text-lg font-medium text-content">
+        <h3 class="text-lg font-semibold text-content">
           {{ schema?.schema_name }}
         </h3>
         <span
@@ -61,6 +61,6 @@ const toast = useToast()
 function copyToClipboard() {
   if (!props.schema) return
   navigator.clipboard.writeText(JSON.stringify(props.schema.schema_definition, null, 2))
-  toast.success('Schema copied!')
+  toast.success('Schema copied')
 }
 </script>

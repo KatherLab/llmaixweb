@@ -10,7 +10,7 @@
   >
     <template #header>
       <div>
-        <h2 class="text-lg font-bold tracking-tight text-content">
+        <h2 class="text-lg font-semibold tracking-tight text-content">
           Configure Ground Truth Mapping
         </h2>
         <div class="flex items-center gap-2 mt-1 text-[11px] text-content-muted">
@@ -632,7 +632,7 @@ async function saveMappings() {
     selectedSchemaId.value,
     mappings.value,
   )
-  toast.success('Mappings saved successfully!')
+  toast.success('Mappings saved')
   justSaved.value = true
   setTimeout(() => {
     justSaved.value = false

@@ -688,6 +688,24 @@ class Evaluation(EvaluationBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class EvaluationListItem(UTCModel):
+    """Lightweight Evaluation for list endpoints.
+
+    Omits the heavy per-field (`field_metrics`) and per-document
+    (`document_metrics`) payloads — those can be multiple MB for a large
+    evaluation and are only needed by the detail/analysis endpoint. Keeps the
+    small overall `metrics` summary used for the list's accuracy display.
+    """
+
+    id: int
+    trial_id: int
+    groundtruth_id: int
+    metrics: dict
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class EvaluationDetail(UTCModel):
     id: int
     trial_id: int

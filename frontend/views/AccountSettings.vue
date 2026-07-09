@@ -266,7 +266,7 @@ async function saveProfile(): Promise<void> {
     const res = await usersApi.update(authStore.user!.id, payload)
     authStore.user = res.data
     profileSaved.value = true
-    toast.success('Profile updated.')
+    toast.success('Profile updated')
   } catch (e) {
     toast.error(extractErrorMessage(e, 'Failed to update profile.'))
   } finally {
@@ -288,7 +288,7 @@ async function changePassword(): Promise<void> {
     passwordForm.old_password = ''
     passwordForm.new_password = ''
     passwordForm.confirm = ''
-    toast.success('Password updated.')
+    toast.success('Password updated')
   } catch (e) {
     passwordError.value = extractErrorMessage(e, 'Failed to update password.')
   } finally {
@@ -301,7 +301,7 @@ async function disconnectIdentity(ident: UserIdentityResponse): Promise<void> {
   try {
     await usersApi.deleteMyIdentity(ident.id)
     identities.value = identities.value.filter((i) => i.id !== ident.id)
-    toast.success(`Disconnected ${ident.provider_name}.`)
+    toast.success(`Disconnected ${ident.provider_name}`)
   } catch (e) {
     toast.error(extractErrorMessage(e, 'Failed to disconnect.'))
   } finally {
@@ -313,7 +313,7 @@ async function signOut(everywhere: boolean): Promise<void> {
   signingOut.value = true
   try {
     await authStore.logout({ serverSide: true, everywhere })
-    toast.success('Signed out.')
+    toast.success('Signed out')
     router.push('/login')
   } finally {
     signingOut.value = false

@@ -10,7 +10,7 @@ import pandas as pd
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, load_only, selectinload
 
 from .... import models, schemas
 from ....core.security import get_current_user
@@ -107,7 +107,7 @@ def _enrich_document_metrics(db: Session, evaluation: models.Evaluation) -> list
     return enriched
 
 
-@router.get("/evaluation", response_model=list[schemas.Evaluation])
+@router.get("/evaluation", response_model=list[schemas.EvaluationListItem])
 def get_evaluations(
     *,
     db: Session = Depends(get_db),
@@ -116,8 +116,14 @@ def get_evaluations(
     current_user: models.User = Depends(get_current_user),
     limit: int = Query(1000, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-) -> list[schemas.Evaluation]:
-    """Get evaluation results for all trials using a specific ground truth."""
+) -> list[schemas.EvaluationListItem]:
+    """List evaluation summaries for all trials using a specific ground truth.
+
+    Returns the lightweight ``EvaluationListItem`` (overall metrics only). The
+    heavy per-field / per-document metric columns are deferred via ``load_only``
+    so they are never fetched for the list — clients read those from the
+    per-evaluation detail endpoint.
+    """
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
@@ -142,10 +148,21 @@ def get_evaluations(
     if not groundtruth:
         raise HTTPException(status_code=404, detail="Ground truth not found")
 
-    # Get all evaluations for this ground truth
+    # Get all evaluations for this ground truth. Load only the columns the
+    # summary needs; field_metrics / document_metrics / confusion_matrices
+    # (potentially multi-MB JSON each) stay deferred and are never fetched here.
     evaluations = list(
         db.execute(
             select(models.Evaluation)
+            .options(
+                load_only(
+                    models.Evaluation.id,
+                    models.Evaluation.trial_id,
+                    models.Evaluation.groundtruth_id,
+                    models.Evaluation.metrics,
+                    models.Evaluation.created_at,
+                )
+            )
             .where(models.Evaluation.groundtruth_id == groundtruth_id)
             .order_by(models.Evaluation.created_at.desc())
             .limit(limit)
@@ -155,7 +172,7 @@ def get_evaluations(
         .all()
     )
 
-    return [schemas.Evaluation.model_validate(eval) for eval in evaluations]
+    return [schemas.EvaluationListItem.model_validate(eval) for eval in evaluations]
 
 
 @router.get("/evaluation/{evaluation_id}", response_model=schemas.EvaluationDetail)

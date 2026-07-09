@@ -63,10 +63,13 @@ api.interceptors.response.use(
         })
         router.push('/login')
       }
-    } else if (status === 401 || status === 403) {
-      // 403 (authenticated but not allowed) or an unrefreshable 401: log out.
+    } else if (status === 401) {
+      // An unrefreshable 401 (the refresh endpoint itself, or an
+      // already-retried request): the session is genuinely invalid, so log
+      // out. A 403 means authenticated-but-not-allowed — leave the session
+      // intact and let the caller surface the authorization error.
       const authStore = useAuthStore()
-      await authStore.logout({ serverSide: status !== 403 })
+      await authStore.logout({ serverSide: false })
       if (router.currentRoute.value.path !== '/login') {
         const toast = useToast()
         toast.error('Session expired. Please sign in again.', {

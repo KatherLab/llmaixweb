@@ -627,7 +627,7 @@ async function handleChangePassword(): Promise<void> {
       new_password: newPassword.value,
     })
     passwordSuccess.value = 'Password updated successfully!'
-    toast.success('Your password has been updated.')
+    toast.success('Password updated')
     setTimeout(() => {
       closeChangePasswordModal()
     }, 1100)

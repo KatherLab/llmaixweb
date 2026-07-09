@@ -38,6 +38,7 @@
               type="button"
               class="p-2 bg-white/20 hover:bg-white/30 rounded-card transition-colors"
               title="Edit Settings"
+              aria-label="Edit settings"
               @click="$emit('edit-property', { key: getCurrentKey(), schema: schema })"
             >
               <SquarePen class="h-4 w-4 text-white" />
@@ -49,6 +50,7 @@
               type="button"
               class="p-2 bg-white/20 hover:bg-white/30 rounded-card transition-colors"
               title="Add Property"
+              aria-label="Add property"
               @click="$emit('add-property')"
             >
               <Plus class="h-4 w-4 text-white" />
@@ -59,6 +61,7 @@
               type="button"
               class="p-2 bg-white/20 hover:bg-white/30 rounded-card transition-colors"
               :title="showDetails ? 'Hide Details' : 'Show Details'"
+              :aria-label="showDetails ? 'Hide details' : 'Show details'"
               @click="showDetails = !showDetails"
             >
               <ChevronRight
@@ -193,6 +196,7 @@
                     type="button"
                     class="p-1 text-content-muted hover:text-content hover:bg-surface-muted rounded"
                     title="Edit Property"
+                    aria-label="Edit property"
                     @click="$emit('edit-property', { key: propKey, schema: propSchema })"
                   >
                     <SquarePen class="h-4 w-4" />
@@ -202,6 +206,7 @@
                     type="button"
                     class="p-1 text-primary hover:text-primary hover:bg-primary-soft rounded"
                     title="Navigate Into"
+                    aria-label="Navigate into"
                     @click="$emit('navigate', propKey)"
                   >
                     <ArrowRight class="h-4 w-4" />
@@ -210,6 +215,7 @@
                     type="button"
                     class="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                     title="Delete Property"
+                    aria-label="Delete property"
                     @click="$emit('delete-property', propKey)"
                   >
                     <Trash2 class="h-4 w-4" />
@@ -264,6 +270,7 @@
                   type="button"
                   class="p-1 text-content-muted hover:text-content hover:bg-surface-muted rounded"
                   title="Edit Array Items"
+                  aria-label="Edit array items"
                   @click="$emit('edit-property', { key: 'items', schema: schema.items })"
                 >
                   <SquarePen class="h-4 w-4" />
@@ -273,6 +280,7 @@
                   type="button"
                   class="p-1 text-primary hover:text-primary hover:bg-primary-soft rounded"
                   title="Navigate Into Items"
+                  aria-label="Navigate into items"
                   @click="$emit('navigate', 'items')"
                 >
                   <ArrowRight class="h-4 w-4" />

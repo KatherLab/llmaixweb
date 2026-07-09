@@ -351,7 +351,7 @@ const saveProjectEdits = async (payload: ProjectUpdate): Promise<void> => {
   try {
     const response = await projectsApi.update(projectId.value, payload)
     project.value = response.data
-    toast.success('Project updated successfully')
+    toast.success('Project updated')
     showSettingsModal.value = false
   } catch {
     error.value = 'Failed to update project'
@@ -365,7 +365,7 @@ const saveProjectEdits = async (payload: ProjectUpdate): Promise<void> => {
 const deleteProject = async (): Promise<void> => {
   try {
     await projectsApi.delete(projectId.value)
-    toast.success('Project deleted successfully')
+    toast.success('Project deleted')
     router.push('/projects')
   } catch {
     toast.error('Failed to delete project')

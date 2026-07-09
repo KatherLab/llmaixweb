@@ -143,10 +143,12 @@ Edit `.env` for your deployment. **At minimum**, configure your LLM provider and
 
 | Variable           | Description                                                                                             | Default    |
 |--------------------|---------------------------------------------------------------------------------------------------------|------------|
-| `OPENAI_API_KEY`   | API key for LLM provider                                                                                | (required) |
+| `OPENAI_API_KEY`   | API key for LLM provider                                                                                | (empty)*   |
 | `OPENAI_API_BASE`  | Base URL for OpenAI-compatible API                                                                      | (empty)    |
 | `OPENAI_API_MODEL` | Default model to use                                                                                    | (empty)    |
 | `SECRET_KEY`       | Secret key for sessions (generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`) | (required) |
+
+> \* The app **starts without an LLM key** (the shipped `.env.example` sets `OPENAI_NO_API_CHECK=true`). A key is only needed to run extraction trials, and can be provided here, in the admin panel, or per-trial. `SECRET_KEY` is the only truly mandatory value — the backend refuses to start without it.
 
 #### Storage
 
@@ -171,7 +173,7 @@ Edit `.env` for your deployment. **At minimum**, configure your LLM provider and
 |---------------------------|---------------------------------------|--------------------------------|
 | `APP_URL`                 | Public app URL (for links in emails)  | `http://localhost:5173`        |
 | `BACKEND_CORS_ORIGINS`    | Comma-separated allowed origins       | `http://localhost:5173`        |
-| `REQUIRE_INVITATION`      | Require invitation for signup         | `false`                        |
+| `REQUIRE_INVITATION`      | Require invitation for signup         | `false` (compose); code default `true` |
 | `ALLOW_FIRST_ADMIN_SETUP` | Allow first user to become admin      | `true`                         |
 | `PASSWORD_POLICY_*`       | Password complexity rules (length, upper/lower/digit/symbol) | min 8, require upper/lower/digit |
 | `LOGIN_MAX_ATTEMPTS`      | Failed logins before account lockout  | `5`                            |
@@ -201,9 +203,8 @@ Edit `.env` for your deployment. **At minimum**, configure your LLM provider and
 | `POSTGRES_PASSWORD`           | Database password            | `postgres`             |
 | `POSTGRES_DB`                 | Database name                | `llmaixweb`            |
 | `CELERY_BROKER_URL`           | Redis broker URL             | `redis://redis:6379/0` |
-| `CELERY_RESULT_BACKEND`       | Redis result backend         | `redis://redis:6379/0` |
 | `DISABLE_CELERY`              | Disable Celery workers       | `false`                |
-| `INITIALIZE_CELERY`           | Initialize Celery on startup | `false`                |
+| `INITIALIZE_CELERY`           | Spawn in-process Celery workers on startup | `false` (compose runs dedicated worker containers); code default `true` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token expiry in minutes      | `60*24*8`              |
 | `RUSTFS_ACCESS_KEY`           | RustFS access key            | `rustfsadmin`          |
 | `RUSTFS_SECRET_KEY`           | RustFS secret key            | `rustfsadmin`          |

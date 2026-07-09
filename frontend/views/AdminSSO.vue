@@ -273,12 +273,12 @@ async function saveProvider(): Promise<void> {
     if (form.client_secret) payload.client_secret = form.client_secret
     if (editing.value) {
       await ssoApi.updateProvider(editing.value.id, payload)
-      toast.success('Provider updated.')
+      toast.success('Provider updated')
     } else {
       if (!form.client_secret)
         throw { response: { data: { detail: 'Client secret is required.' } } }
       await ssoApi.createProvider({ ...payload, client_secret: form.client_secret })
-      toast.success('Provider created.')
+      toast.success('Provider created')
     }
     showModal.value = false
     await load()
@@ -298,7 +298,7 @@ async function deleteProvider(): Promise<void> {
   deleting.value = true
   try {
     await ssoApi.deleteProvider(toDelete.value.id)
-    toast.success('Provider deleted.')
+    toast.success('Provider deleted')
     toDelete.value = null
     await load()
   } catch (e) {

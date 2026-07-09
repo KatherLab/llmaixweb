@@ -321,7 +321,7 @@ const exportReport = async (): Promise<void> => {
       filename,
     )
 
-    toast.success('Report exported successfully')
+    toast.success('Report exported')
     emit('close')
   } catch (err: unknown) {
     toast.error(`Failed to export report: ${(err as Error)?.message}`)

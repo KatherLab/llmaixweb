@@ -374,12 +374,12 @@ class Settings(BaseSettings):
 
         if not self.SQLALCHEMY_DATABASE_URI:
             self.SQLALCHEMY_DATABASE_URI = (
-                f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+                f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
                 f"@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
             )
             print(
                 f"INFO: SQLALCHEMY_DATABASE_URI not explicitly set — "
-                f"derived from POSTGRES_* defaults: postgresql://{self.POSTGRES_USER}:****@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
+                f"derived from POSTGRES_* defaults: postgresql+psycopg://{self.POSTGRES_USER}:****@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
             )
 
         # Skip runtime checks for operations like Alembic migrations

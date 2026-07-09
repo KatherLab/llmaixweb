@@ -54,7 +54,7 @@ onMounted(async () => {
   }
   try {
     await authStore.setSession(accessToken, refreshToken)
-    toast.success('Signed in.')
+    toast.success('Signed in')
     // Whitelist redirect to an absolute path on this origin (open-redirect guard).
     const safe = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/'
     router.replace(safe)

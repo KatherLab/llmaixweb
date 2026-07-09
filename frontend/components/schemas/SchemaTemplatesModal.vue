@@ -2,7 +2,7 @@
   <BaseModal :open="open" size="xl" body-class="p-6" @close="emit('close')">
     <template #header>
       <div>
-        <h3 class="text-lg font-medium text-content">Schema Templates</h3>
+        <h3 class="text-lg font-semibold text-content">Schema Templates</h3>
         <p class="text-sm text-content-muted mt-1">
           Select a template for common medical document structures
         </p>

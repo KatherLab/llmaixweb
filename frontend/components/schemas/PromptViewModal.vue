@@ -3,7 +3,7 @@
     <template #header>
       <div>
         <div class="flex items-center gap-2">
-          <h3 class="text-lg font-medium text-content">
+          <h3 class="text-lg font-semibold text-content">
             {{ prompt?.name }}
           </h3>
           <span
@@ -72,6 +72,6 @@ function copyPrompt() {
     props.prompt.user_prompt || '-'
   }`
   navigator.clipboard.writeText(text)
-  toast.success('Prompt copied!')
+  toast.success('Prompt copied')
 }
 </script>

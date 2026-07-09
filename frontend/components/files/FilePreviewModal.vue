@@ -437,7 +437,7 @@ const downloadFile = async (): Promise<void> => {
     link.click()
     link.remove()
     window.URL.revokeObjectURL(url)
-    toast.success('File downloaded successfully')
+    toast.success('File downloaded')
   } catch (err) {
     toast.error('Failed to download file')
     console.error(err)

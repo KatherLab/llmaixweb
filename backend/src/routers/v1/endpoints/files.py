@@ -20,6 +20,7 @@ from fastapi import (
 from fastapi.responses import Response, StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy import and_, distinct, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from .... import models, schemas
@@ -937,16 +938,25 @@ def delete_file(
         or len(file.file_preprocessing_tasks) > 0
     )
 
+    doc_count = len(file.documents_as_original) + len(file.documents_as_preprocessed)
+    task_count = len(file.preprocessing_tasks) + len(file.file_preprocessing_tasks)
+
     if is_linked and not force:
+        linked_parts = []
+        if doc_count:
+            linked_parts.append(f"{doc_count} document(s)")
+        if task_count:
+            linked_parts.append(f"{task_count} preprocessing task(s)")
         raise HTTPException(
             status_code=409,
             detail={
-                "message": "File is linked to other resources",
+                "message": (
+                    f"This file is linked to {' and '.join(linked_parts)}. "
+                    "Delete those first before removing the file."
+                ),
                 "links": {
-                    "documents": len(file.documents_as_original)
-                    + len(file.documents_as_preprocessed),
-                    "preprocessing_tasks": len(file.preprocessing_tasks)
-                    + len(file.file_preprocessing_tasks),
+                    "documents": doc_count,
+                    "preprocessing_tasks": task_count,
                 },
             },
         )
@@ -959,7 +969,27 @@ def delete_file(
     file_response = schemas.File.model_validate(file)
     file_uuid = file.file_uuid
     db.delete(file)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Even with force=True the delete can hit a FK constraint — documents
+        # reference the file via a NOT NULL, no-cascade FK, and trial results
+        # reference documents via ON DELETE RESTRICT. Roll back and surface an
+        # actionable 409 instead of letting it bubble up as a raw 500.
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": (
+                    "This file can't be deleted while documents or results still "
+                    "reference it. Delete the dependent documents first."
+                ),
+                "links": {
+                    "documents": doc_count,
+                    "preprocessing_tasks": task_count,
+                },
+            },
+        )
 
     try:
         if file_uuid:

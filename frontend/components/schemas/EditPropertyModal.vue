@@ -9,7 +9,7 @@
     @close="handleBackdropClose"
   >
     <template #header>
-      <h3 class="text-lg font-medium text-content">
+      <h3 class="text-lg font-semibold text-content">
         Edit
         {{
           localEditingProperty?.key === '__root__'

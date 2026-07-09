@@ -1,8 +1,8 @@
 <template>
-  <BaseModal :open="open" title="Manage Ground Truth Files" size="xl" @close="emitClose">
+  <BaseModal :open="open" size="xl" @close="emitClose">
     <template #header>
       <div>
-        <h3 class="text-lg font-medium text-content">Manage Ground Truth Files</h3>
+        <h3 class="text-lg font-semibold text-content">Manage Ground Truth Files</h3>
         <p class="mt-1 text-sm text-content-muted">
           Ground truth files contain the correct extracted values you compare trial results against.
           Configure field mappings to link each ground-truth column to a schema field.
@@ -197,7 +197,7 @@ async function saveEdit() {
     formData.append('name', editName.value)
 
     await groundtruthApi.update(props.projectId, editingGroundTruth.value.id, formData)
-    toast.success('Ground truth updated successfully')
+    toast.success('Ground truth updated')
     emit('updated')
     cancelEdit()
   } catch (err) {
@@ -231,7 +231,7 @@ async function confirmDelete() {
   if (!gt) return
   try {
     await groundtruthApi.delete(props.projectId, gt.id)
-    toast.success('Ground truth deleted successfully')
+    toast.success('Ground truth deleted')
     emit('updated')
   } catch (err) {
     toast.error(`Failed to delete ground truth: ${(err as Error).message}`)
@@ -243,6 +243,6 @@ async function confirmDelete() {
 function onMappingConfigured() {
   showPreview.value = false
   emit('updated')
-  toast.success('Field mappings configured successfully')
+  toast.success('Field mappings configured')
 }
 </script>

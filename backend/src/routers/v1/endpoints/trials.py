@@ -349,6 +349,51 @@ def create_trial(
     return schemas.Trial.model_validate(trial_db)
 
 
+@router.post("/{trial_id}/retry", response_model=schemas.Trial)
+def retry_trial(
+    project_id: int,
+    trial_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Trial:
+    """Re-run an existing trial as a new trial, preserving its full config.
+
+    Cloning server-side (rather than rebuilding the payload on the client) keeps
+    the custom endpoint ``base_url`` and its encrypted ``api_key`` — which are
+    never returned in API responses — along with the document set, name, and
+    description. Reuses ``create_trial`` for all validation and dispatch.
+    """
+    source: models.Trial | None = db.execute(
+        select(models.Trial).where(
+            models.Trial.id == trial_id,
+            models.Trial.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Trial not found")
+
+    # Re-run against the same source of documents the original used: the set (so
+    # current membership is picked up) if it was set-based, otherwise the exact
+    # id list. TrialCreate requires exactly one of the two.
+    uses_set = source.document_set_id is not None
+    payload = schemas.TrialCreate(
+        name=source.name,
+        description=source.description,
+        schema_id=source.schema_id,
+        prompt_id=source.prompt_id,
+        document_ids=None if uses_set else (source.document_ids or []),
+        document_set_id=source.document_set_id if uses_set else None,
+        llm_model=source.llm_model,
+        api_key=source.api_key,  # decrypted via the model property
+        base_url=source.base_url,
+        bypass_celery=source.bypass_celery,
+        advanced_options=source.advanced_options or {},
+    )
+    return create_trial(
+        project_id=project_id, trial=payload, current_user=current_user, db=db
+    )
+
+
 @router.get("", response_model=schemas.PaginatedTrials)
 def get_trials(
     project_id: Annotated[int, Path()],

@@ -1,5 +1,12 @@
 <template>
-  <div class="p-6">
+  <div class="p-6 space-y-6">
+    <PageHeader
+      title="Schemas &amp; Prompts"
+      subtitle="Define the structure and instructions for information extraction"
+      :sticky="false"
+      class="mb-6"
+    />
+
     <!-- Tab Navigation -->
     <BaseTabGroup v-model="activeSection" :tabs="tabs" class="mb-6">
       <template #tab="{ tab }">
@@ -100,6 +107,7 @@ import PromptFormModal from './PromptFormModal.vue'
 import SchemaViewModal from './SchemaViewModal.vue'
 import PromptViewModal from './PromptViewModal.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { extractErrorMessage } from '@/utils/errors'

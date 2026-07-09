@@ -51,7 +51,7 @@ async function download(): Promise<void> {
         }),
       `trial_${props.trial!.id}_results.${fileExt.value}`,
     )
-    toast.success('Downloaded!')
+    toast.success('Downloaded')
     emit('close')
   } catch {
     toast.error('Download failed')

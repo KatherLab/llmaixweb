@@ -13,8 +13,8 @@ This project uses separate versioning for frontend and backend components.
 
 ### Current Versions
 
-- **Frontend**: `package.json` → `"version": "0.3.3"` (synced to `frontend/version.js` via `prebuild` script)
-- **Backend**: `pyproject.toml` → `version = "0.3.3"` (llmaixweb package version)
+- **Frontend**: `package.json` → `"version"` (synced to `frontend/version.js` via the `prebuild` script)
+- **Backend**: `pyproject.toml` → `version` (the `llmaixweb` package version)
 
 ### Git Commit Hash
 
@@ -407,9 +407,9 @@ source .venv/bin/activate
 # Install dependencies
 uv sync
 
-# Run backend server
-cd backend/src
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Run backend server — from the repo ROOT (the package uses relative imports,
+# so `cd backend/src && uvicorn main:app` fails to import).
+uv run uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Requirements:**
@@ -493,22 +493,24 @@ backend/src/
 ```
 frontend/
 ├── views/                # Page-level components (routed)
-│   ├── Dashboard.vue
+│   ├── Landing.vue
 │   ├── ProjectOverview.vue
 │   ├── ProjectDetail.vue
 │   └── ...
-├── components/           # Reusable UI components
-│   ├── ProjectGrid.vue
-│   ├── VisualSchemaEditor.vue
-│   ├── CreateTrialModal.vue
+├── components/           # Reusable UI components (common/ + per-domain folders)
+│   ├── common/           # BaseModal, BaseButton, StatusBadge, …
+│   ├── schemas/VisualSchemaEditor.vue
+│   ├── trials/CreateTrialModal.vue
 │   └── ...
 ├── stores/               # Pinia state management
-│   ├── auth.js
-│   └── firstAdmin.js
-├── services/             # API client
-│   └── api.js
+│   ├── auth.ts
+│   └── firstAdmin.ts
+├── services/             # Axios client + per-resource API modules
+│   ├── api.ts
+│   └── *Api.ts
 ├── router/               # Vue Router config
-│   └── index.js
+│   └── index.ts
+├── types/                # Hand-written TS domain types (@/types)
 └── utils/                # Helpers, formatters
 ```
 
@@ -551,6 +553,8 @@ SKIP_RUNTIME_CHECKS=true uv run alembic current
 
 ```bash
 # RustFS web console (default credentials: rustfsadmin/rustfsadmin)
+# Note: publish port 9001 on the rustfs service in compose.yml first —
+# it is not exposed by default.
 open http://localhost:9001
 
 # Local storage (if configured)
