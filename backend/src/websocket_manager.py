@@ -144,8 +144,10 @@ class ConnectionManager:
         the frontend to filter — a client that didn't filter could see other
         users' task progress. This filters server-side: the message is
         delivered only to the project owner's connections and to admin
-        connections (admins see all projects, matching the existing admin
-        monitoring intent). ``owner_id`` is resolved by the caller from the
+        connections. Only admins with cross-user project access
+        (``ADMIN_ALL_PROJECT_ACCESS``) join the admin bucket, so by default an
+        admin sees just their own projects' updates. ``owner_id`` is resolved
+        by the caller from the
         payload's ``project_id``; when it can't be resolved (e.g. project
         deleted), only admins receive the message.
         """

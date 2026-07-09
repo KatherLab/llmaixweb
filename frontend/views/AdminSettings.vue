@@ -180,26 +180,42 @@ const saving = ref<boolean>(false)
 const error = ref<string>('')
 const success = ref<boolean>(false)
 
-const categories: string[] = [
-  'All',
+// Preferred tab ordering. Tabs are derived from the categories actually
+// present in the settings payload (so every setting stays reachable without a
+// catch-all "All" tab); any category not listed here is appended afterwards.
+const CATEGORY_ORDER: string[] = [
   'General',
+  'Security',
+  'SSO',
   'OpenAI',
   'OCR',
+  'docling-serve',
+  'Preprocessing',
   'Storage',
   'Database',
-  'Security',
-  'Celery',
   'Email',
 ]
-const categoryTabs = computed(() => categories.map((cat) => ({ label: cat, value: cat })))
-const activeTab = ref<string>('All')
 
-const filteredSettings = computed<AdminSettings>(() => {
-  if (activeTab.value === 'All') return settings
-  return Object.fromEntries(
-    Object.entries(settings).filter(([_k, v]) => v.category === activeTab.value),
+const categoryTabs = computed(() => {
+  const present = Array.from(
+    new Set(
+      Object.values(settings)
+        .map((v) => v.category)
+        .filter((c): c is string => !!c),
+    ),
   )
+  present.sort((a, b) => {
+    const ia = CATEGORY_ORDER.indexOf(a)
+    const ib = CATEGORY_ORDER.indexOf(b)
+    return (ia === -1 ? Number.MAX_SAFE_INTEGER : ia) - (ib === -1 ? Number.MAX_SAFE_INTEGER : ib)
+  })
+  return present.map((cat) => ({ label: cat, value: cat }))
 })
+const activeTab = ref<string>('')
+
+const filteredSettings = computed<AdminSettings>(() =>
+  Object.fromEntries(Object.entries(settings).filter(([_k, v]) => v.category === activeTab.value)),
+)
 
 // --- Secrets state ---
 const showSecretInput = reactive<Record<string, boolean>>({})
@@ -296,6 +312,10 @@ async function fetchSettings(): Promise<void> {
     const res = await adminApi.getSettings()
     Object.assign(settings, res.data)
     resetDraft()
+    // Default to the first available category tab once settings are loaded.
+    if (!activeTab.value && categoryTabs.value.length) {
+      activeTab.value = categoryTabs.value[0].value
+    }
   } catch {
     error.value = 'Failed to load settings'
   } finally {

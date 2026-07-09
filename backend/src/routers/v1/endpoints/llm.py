@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from .... import models
 from ....core.config import settings
-from ....core.security import get_current_user
+from ....core.security import can_access_project, get_current_user
 from ....dependencies import get_db
 from ....schemas.other import (
     LLMConnectionRequest,
@@ -140,7 +140,7 @@ def test_model_with_schema_endpoint(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     schema = db.execute(

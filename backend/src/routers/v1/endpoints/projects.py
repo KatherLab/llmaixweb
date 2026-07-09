@@ -7,7 +7,11 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, load_only, noload, selectinload
 
 from .... import models, schemas
-from ....core.security import get_current_user
+from ....core.security import (
+    admin_has_global_project_access,
+    can_access_project,
+    get_current_user,
+)
 from ....dependencies import get_db, remove_file
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
@@ -49,8 +53,8 @@ def get_recent_preprocessing_tasks(
     # Get all projects the user has access to
     project_query = select(models.Project.id)
 
-    if current_user.role != "admin":
-        # Non-admin users only see their own projects
+    if not admin_has_global_project_access(current_user):
+        # Users without global access only see their own projects
         project_query = project_query.where(models.Project.owner_id == current_user.id)
 
     project_ids = db.execute(project_query).scalars().all()
@@ -117,8 +121,8 @@ def get_recent_trials(
     # Get all projects the user has access to
     project_query = select(models.Project.id)
 
-    if current_user.role != "admin":
-        # Non-admin users only see their own projects
+    if not admin_has_global_project_access(current_user):
+        # Users without global access only see their own projects
         project_query = project_query.where(models.Project.owner_id == current_user.id)
 
     project_ids = db.execute(project_query).scalars().all()
@@ -250,8 +254,8 @@ def check_project_access(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Admin has full access
-    if current_user.role == "admin":
+    # Admin has full access only when cross-user project access is enabled
+    if admin_has_global_project_access(current_user):
         return project
 
     # Owner has full access
@@ -277,7 +281,7 @@ def get_projects(
 ) -> list[schemas.Project]:
     stmt = select(models.Project)
 
-    if current_user.role == "admin":
+    if admin_has_global_project_access(current_user):
         if not all:
             stmt = stmt.where(models.Project.owner_id == current_user.id)
     else:
@@ -438,7 +442,7 @@ def get_project(
         raise HTTPException(status_code=404, detail="Project not found")
     project, doc_count, schema_count, prompt_count, trial_count, eval_count = row
 
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project"
         )
@@ -508,7 +512,7 @@ def update_project(
     if not existing_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and existing_project.owner_id != current_user.id:
+    if not can_access_project(current_user, existing_project):
         raise HTTPException(
             status_code=403, detail="Not authorized to update this project"
         )
@@ -551,7 +555,7 @@ def delete_project(
     if not existing_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and existing_project.owner_id != current_user.id:
+    if not can_access_project(current_user, existing_project):
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this project"
         )

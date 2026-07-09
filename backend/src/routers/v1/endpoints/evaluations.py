@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, load_only, selectinload
 
 from .... import models, schemas
-from ....core.security import get_current_user
+from ....core.security import can_access_project, get_current_user
 from ....dependencies import get_db
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
@@ -133,7 +133,7 @@ def get_evaluations(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to access this project's evaluations",
@@ -193,7 +193,7 @@ def get_evaluation_detail(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to access this project's evaluations",
@@ -257,7 +257,7 @@ def delete_evaluation(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to delete this project's evaluations",
@@ -313,7 +313,7 @@ def get_document_evaluation(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to access this project's evaluations",
@@ -417,7 +417,7 @@ def download_evaluations_report(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to access this project's evaluations",
@@ -758,7 +758,7 @@ def batch_evaluate_trials(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to evaluate trials for this project"
         )
@@ -843,7 +843,7 @@ def compare_evaluations(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to access this project's evaluations",
@@ -967,7 +967,7 @@ def get_evaluation_errors(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to access this project's evaluations",

@@ -130,7 +130,7 @@ const iconType = computed(() => {
     ['jpg', 'jpeg', 'png', 'gif', 'bmp'].some((ext) => type.includes(ext))
   )
     return 'image'
-  if (type.includes('excel') || type.includes('xls')) return 'excel'
+  if (type.includes('excel') || type.includes('spreadsheet') || type.includes('xls')) return 'excel'
   if (type.includes('csv')) return 'csv'
   if (type.includes('text/plain')) return 'txt'
 

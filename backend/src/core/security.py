@@ -24,6 +24,25 @@ def any_admin_exists(db: Session) -> bool:
     return db.query(User).filter(User.role == UserRole.admin).count() > 0
 
 
+def admin_has_global_project_access(user: User) -> bool:
+    """Whether *user* may access projects they do not own.
+
+    Admins get cross-user project visibility ONLY when the deployment enables
+    ``ADMIN_ALL_PROJECT_ACCESS`` (env-only). With the flag off (the default),
+    admins are scoped to their own projects just like any other user.
+    """
+    return user.role == "admin" and settings.ADMIN_ALL_PROJECT_ACCESS
+
+
+def can_access_project(user: User, project) -> bool:
+    """Whether *user* may read/modify *project*.
+
+    True for the project owner, or for an admin when cross-user project access
+    is enabled via ``ADMIN_ALL_PROJECT_ACCESS``.
+    """
+    return project.owner_id == user.id or admin_has_global_project_access(user)
+
+
 def create_access_token(
     subject: str | Any,
     expires_delta: datetime.timedelta | None = None,

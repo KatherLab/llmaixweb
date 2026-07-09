@@ -14,7 +14,11 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, contains_eager, defer, joinedload, selectinload
 
 from .... import models, schemas
-from ....core.security import get_current_user
+from ....core.security import (
+    admin_has_global_project_access,
+    can_access_project,
+    get_current_user,
+)
 from ....dependencies import get_db, get_file, remove_file
 from ....models.project import document_set_association
 from ....utils.audit import record_audit
@@ -36,8 +40,8 @@ def check_project_access(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Admin has full access
-    if current_user.role == "admin":
+    # Admin has full access only when cross-user project access is enabled
+    if admin_has_global_project_access(current_user):
         return project
 
     # Owner has full access
@@ -268,7 +272,7 @@ def get_document(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project's documents"
         )
@@ -484,7 +488,7 @@ def create_document_set(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to create document sets for this project",

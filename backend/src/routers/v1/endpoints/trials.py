@@ -17,7 +17,11 @@ from sqlalchemy.orm import Session, noload, selectinload
 
 from .... import models, schemas
 from ....core.config import settings
-from ....core.security import get_current_user
+from ....core.security import (
+    admin_has_global_project_access,
+    can_access_project,
+    get_current_user,
+)
 from ....dependencies import get_db, get_file
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction, TrialResultStatus
@@ -95,8 +99,8 @@ def check_project_access(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Admin has full access
-    if current_user.role == "admin":
+    # Admin has full access only when cross-user project access is enabled
+    if admin_has_global_project_access(current_user):
         return project
 
     # Owner has full access
@@ -121,7 +125,7 @@ def create_trial(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to create trials for this project"
         )
@@ -621,7 +625,7 @@ def get_trial(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project's trials"
         )
@@ -784,7 +788,7 @@ def update_trial(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to update trials for this project"
         )
@@ -853,7 +857,7 @@ def delete_trial(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to delete trials for this project"
         )
@@ -938,7 +942,7 @@ def download_trial_results(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project's trials"
         )
@@ -1383,7 +1387,7 @@ def evaluate_trial(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to evaluate trials for this project"
         )

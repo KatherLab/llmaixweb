@@ -24,6 +24,7 @@ from ._version import get_git_commit, get_version
 from .celery.celery_config import celery_app
 from .core.dynamic_settings import get_settings
 from .core.rate_limit import limiter
+from .core.security import admin_has_global_project_access
 from .db.session import init_db
 from .middleware.error_handlers import register_exception_handlers
 from .middleware.request_context import RequestContextMiddleware
@@ -456,7 +457,11 @@ async def activity_websocket(websocket: WebSocket):
     connected = await manager.connect(
         websocket,
         user_id=user.id,
-        is_admin=(user.role == "admin"),
+        # Only admins with cross-user project access join the admin broadcast
+        # bucket, which receives every project's task updates. Without global
+        # access (the default) an admin is scoped to their own projects, so
+        # they must not observe other users' task progress.
+        is_admin=admin_has_global_project_access(user),
         subprotocol=accepted_subprotocol,
     )
     if not connected:

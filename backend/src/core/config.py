@@ -99,6 +99,16 @@ class Settings(BaseSettings):
     ALLOWED_LLM_ENDPOINTS: str = ""
     ALLOWED_OCR_ENDPOINTS: str = ""
 
+    # ─────────────────────────────────────────────────────────────
+    # Admin project visibility
+    # ─────────────────────────────────────────────────────────────
+    # By default admins can only see and manage their OWN projects, exactly
+    # like a regular user. Set True to grant admins read/write access to ALL
+    # users' projects. Intentionally env-only (NOT exposed in the admin
+    # settings UI) so an admin can't grant themselves cross-user visibility at
+    # runtime — it must be a deliberate deployment-level decision.
+    ADMIN_ALL_PROJECT_ACCESS: bool = False
+
     # Skip runtime validation checks (useful for Alembic migrations)
     SKIP_RUNTIME_CHECKS: bool = False
 
@@ -909,13 +919,9 @@ SETTINGS_META = {
         "label": "Log Format",
         "help": "Log output format: 'text' (human-readable) or 'json' (structured for a SIEM). Applied at process startup.",
     },
-    "DISABLE_CELERY": {
-        "type": "bool",
-        "secret": False,
-        "readonly": False,
-        "category": "Celery",
-        "label": "Disable Celery",
-    },
+    # NOTE: DISABLE_CELERY is intentionally NOT exposed here. It runs tasks
+    # synchronously in-process (test/dev only) and is dangerous in production,
+    # so it is configurable via environment variable only — never the UI.
     "EMAIL_ENABLED": {
         "type": "bool",
         "secret": False,

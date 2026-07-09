@@ -6,7 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .... import models, schemas
-from ....core.security import get_current_user
+from ....core.security import (
+    admin_has_global_project_access,
+    can_access_project,
+    get_current_user,
+)
 from ....dependencies import get_db
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
@@ -26,8 +30,8 @@ def check_project_access(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Admin has full access
-    if current_user.role == "admin":
+    # Admin has full access only when cross-user project access is enabled
+    if admin_has_global_project_access(current_user):
         return project
 
     # Owner has full access
@@ -51,7 +55,7 @@ def create_prompt(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to create prompts for this project"
         )
@@ -88,7 +92,7 @@ def get_prompts(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project's prompts"
         )
@@ -119,7 +123,7 @@ def get_prompt(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project's prompts"
         )
@@ -147,7 +151,7 @@ def update_prompt(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to update prompts for this project"
         )
@@ -200,7 +204,7 @@ def delete_prompt(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to delete prompts from this project"
         )

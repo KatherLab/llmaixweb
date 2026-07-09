@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from thefuzz import fuzz
 
 from .... import models, schemas
-from ....core.security import get_current_user
+from ....core.security import can_access_project, get_current_user
 from ....dependencies import (
     get_db,
     read_upload_with_limit,
@@ -72,7 +72,7 @@ async def upload_groundtruth(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to upload ground truth to this project",
@@ -178,7 +178,7 @@ def get_groundtruth(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to access this project's ground truth",
@@ -213,7 +213,7 @@ def delete_groundtruth(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to delete this project's ground truth",
@@ -289,7 +289,7 @@ def get_groundtruth_files(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to access this project's ground truth files",
@@ -325,7 +325,7 @@ def update_groundtruth(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to update this project's ground truth",
@@ -415,7 +415,7 @@ def update_ground_truth_id_column(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to update this project"
         )
@@ -469,7 +469,7 @@ def preview_groundtruth(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     groundtruth: models.GroundTruth | None = db.execute(
@@ -565,7 +565,7 @@ def configure_field_mapping(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to configure field mappings"
         )
@@ -658,7 +658,7 @@ def get_field_mappings(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to access field mappings"
         )
@@ -716,7 +716,7 @@ def delete_field_mappings(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to delete field mappings"
         )
@@ -787,7 +787,7 @@ def suggest_field_mappings(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project"
         )
@@ -951,7 +951,7 @@ def validate_json_ground_truth(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Fetch by (id, project_id) — a bare-PK lookup would let a caller pass
@@ -1045,7 +1045,7 @@ def auto_map_fields(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project"
         )
@@ -1160,7 +1160,7 @@ def check_mapping_status(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to access this project"
         )
@@ -1226,7 +1226,7 @@ def configure_field_mapping_legacy(
     ).scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if current_user.role != "admin" and project.owner_id != current_user.id:
+    if not can_access_project(current_user, project):
         raise HTTPException(
             status_code=403, detail="Not authorized to configure ground truth mappings"
         )

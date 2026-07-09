@@ -54,9 +54,12 @@ do about each.
    sub-processor. Every such egress is recorded in the audit log.
 3. **No built-in data-retention automation.** Deletion is on-demand. See
    [DATA_RETENTION.md](./DATA_RETENTION.md) for the manual/operational process.
-4. **Access model is per-owner + admin.** A project is visible to its owner and
-   to admins. There is no per-field or per-cohort access control; scope projects
-   accordingly.
+4. **Access model is per-owner.** A project is visible only to its owner by
+   default — **including admins**, who are scoped to their own projects like any
+   other user. Set `ADMIN_ALL_PROJECT_ACCESS=true` (env-only, not togglable from
+   the UI) to grant admins read/write access to all users' projects and their
+   live task updates. There is no per-field or per-cohort access control; scope
+   projects accordingly.
 
 ## Hardening quick wins for production
 
@@ -68,5 +71,8 @@ do about each.
   too (see [AUDIT_LOGGING.md](./AUDIT_LOGGING.md)).
 - Keep `REMOTE_OCR_FALLBACK_ENABLED=false` unless a self-hosted OCR endpoint is
   configured.
+- Leave `ADMIN_ALL_PROJECT_ACCESS=false` (the default) unless admins genuinely
+  need cross-user project visibility; it is env-only so it can't be flipped at
+  runtime from the admin panel.
 - Restrict `BACKEND_CORS_ORIGINS` to the exact public origin.
 - Terminate TLS and set HSTS at the reverse proxy; forward `X-Forwarded-Proto`.
