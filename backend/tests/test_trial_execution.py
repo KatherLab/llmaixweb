@@ -224,3 +224,55 @@ def test_bypass_celery_trial_extracts_and_stores_result(client, api_url, monkeyp
 
     # Cleanup.
     client.delete(f"{api_url}/project/{project_id}", headers=headers)
+
+
+def test_document_set_from_explicit_ids(client, api_url):
+    """Creating a set from explicit document_ids (bulk-insert path) adds exactly
+    the valid in-project documents."""
+    headers = _admin_headers(client, api_url)
+
+    project_id = client.post(
+        f"{api_url}/project", headers=headers, json={"name": "DocSet Project"}
+    ).json()["id"]
+
+    file_id = client.post(
+        f"{api_url}/project/{project_id}/file",
+        headers=headers,
+        files={
+            "file": ("d.txt", b"hello world", "text/plain"),
+            "file_info": (
+                "",
+                '{"file_name": "d.txt", "file_type": "text/plain"}',
+                "application/json",
+            ),
+        },
+    ).json()["id"]
+
+    assert (
+        client.post(
+            f"{api_url}/project/{project_id}/preprocess",
+            headers=headers,
+            json={
+                "file_ids": [file_id],
+                "inline_config": {"name": "c", "description": "d"},
+                "bypass_celery": True,
+            },
+        ).status_code
+        == 200
+    )
+
+    doc_id = client.get(
+        f"{api_url}/project/{project_id}/document", headers=headers
+    ).json()["items"][0]["id"]
+
+    created = client.post(
+        f"{api_url}/project/{project_id}/document-set",
+        headers=headers,
+        # Include a duplicate + a bogus id to confirm dedupe + project scoping.
+        json={"name": "My Set", "document_ids": [doc_id, doc_id, 999999]},
+    )
+    assert created.status_code == 200, created.text
+    docs = created.json()["documents"]
+    assert [d["id"] for d in docs] == [doc_id]
+
+    client.delete(f"{api_url}/project/{project_id}", headers=headers)

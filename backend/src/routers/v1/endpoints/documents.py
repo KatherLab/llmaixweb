@@ -523,20 +523,29 @@ def create_document_set(
         # Use provided document IDs
         document_ids = document_set.document_ids
 
-    # Add documents to the set
-    for doc_id in document_ids:
-        # Verify document exists in project
-        doc = db.execute(
-            select(models.Document).where(
-                models.Document.id == doc_id, models.Document.project_id == project_id
-            )
-        ).scalar_one_or_none()
-
-        if doc:
+    # Validate all candidate documents belong to the project in one query, then
+    # bulk-insert the membership rows in a single statement (was one SELECT +
+    # one INSERT per document — thousands of round-trips for a large set).
+    if document_ids:
+        valid_ids = set(
             db.execute(
-                document_set_association.insert().values(
-                    document_id=doc_id, document_set_id=db_set.id
+                select(models.Document.id).where(
+                    models.Document.id.in_(document_ids),
+                    models.Document.project_id == project_id,
                 )
+            )
+            .scalars()
+            .all()
+        )
+        # Preserve input order and drop duplicates / out-of-project ids.
+        ordered_ids = [d for d in dict.fromkeys(document_ids) if d in valid_ids]
+        if ordered_ids:
+            db.execute(
+                document_set_association.insert(),
+                [
+                    {"document_id": d, "document_set_id": db_set.id}
+                    for d in ordered_ids
+                ],
             )
 
     db.commit()
