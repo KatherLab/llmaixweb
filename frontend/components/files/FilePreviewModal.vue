@@ -360,9 +360,15 @@ const normalizedHeaders = computed(() => {
   })
 })
 
+// Monotonic load counter. Paging prev/next fires loadPreview again; a slow
+// response for the previous file must not apply its content after we've moved
+// on (which would show file A's body under file B's header).
+let loadSeq = 0
+
 const loadPreview = async (): Promise<void> => {
   if (!props.file) return
   const file = props.file
+  const seq = ++loadSeq
   isLoading.value = true
   error.value = ''
   // Revoke the previous blob URL before dropping the reference — otherwise
@@ -391,6 +397,7 @@ const loadPreview = async (): Promise<void> => {
         file.id,
         params as unknown as Record<string, unknown>,
       )
+      if (seq !== loadSeq) return // superseded by a newer file selection
 
       tabularData.value = {
         headers: data.headers || [],
@@ -407,25 +414,24 @@ const loadPreview = async (): Promise<void> => {
       const response = await filesApi.getContent(props.projectId, file.id, {
         preview: true,
       })
-      previewContent.value = await response.data.text()
-    } else if (file.file_type?.startsWith('image/')) {
+      const text = await response.data.text()
+      if (seq !== loadSeq) return
+      previewContent.value = text
+    } else if (file.file_type?.startsWith('image/') || file.file_type === 'application/pdf') {
       const response = await filesApi.getContent(props.projectId, file.id, {
         preview: true,
       })
-      previewUrl.value = URL.createObjectURL(response.data)
-    } else if (file.file_type === 'application/pdf') {
-      const response = await filesApi.getContent(props.projectId, file.id, {
-        preview: true,
-      })
+      if (seq !== loadSeq) return
       previewUrl.value = URL.createObjectURL(response.data)
     } else {
       error.value = 'Preview not available for this file type.'
     }
   } catch (err) {
+    if (seq !== loadSeq) return
     error.value = 'Failed to load preview'
     console.error('Preview error:', err)
   } finally {
-    isLoading.value = false
+    if (seq === loadSeq) isLoading.value = false
   }
 }
 
