@@ -465,16 +465,18 @@ if celery_app:
                     if task.rollback_on_cancel:
                         deleted_count = 0
                         for file_task in task.file_tasks:
-                            # Include CANCELLED file_tasks: a row-by-row CSV
-                            # file_task commits documents in batches (every
-                            # BATCH_SIZE rows), so one cancelled mid-flight
-                            # can have many committed documents in the DB.
-                            # Skipping them here would leave orphaned docs
-                            # that pollute the project and can be picked up
-                            # by trials despite the "rolled back" message.
+                            # Include CANCELLED and FAILED file_tasks too: a
+                            # row-by-row CSV file_task commits documents in
+                            # batches (every BATCH_SIZE rows), so one that was
+                            # cancelled or FAILED mid-flight can still have many
+                            # committed documents in the DB. Skipping them would
+                            # leave orphaned docs that pollute the project and can
+                            # be picked up by trials despite the "rolled back"
+                            # message.
                             if file_task.status in (
                                 models.PreprocessingStatus.COMPLETED,
                                 models.PreprocessingStatus.CANCELLED,
+                                models.PreprocessingStatus.FAILED,
                             ):
                                 for doc in file_task.documents:
                                     doc.document_sets.clear()

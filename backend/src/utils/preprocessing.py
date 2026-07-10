@@ -580,7 +580,15 @@ class PreprocessingPipeline:
 
             file_task.document_count = len(documents)
             file_task.document_ids = [doc.id for doc in documents]
-            file_task.status = models.PreprocessingStatus.COMPLETED
+            # If the task was cancelled while this file was mid-flight (e.g. a
+            # row-by-row CSV broke out of its row loop early), the file is only
+            # PARTIALLY processed — mark it CANCELLED, not COMPLETED, so a partial
+            # file isn't indistinguishable from a fully processed one (and is
+            # rolled back with the rest when rollback_on_cancel is set).
+            if self.check_cancelled():
+                file_task.status = models.PreprocessingStatus.CANCELLED
+            else:
+                file_task.status = models.PreprocessingStatus.COMPLETED
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
 
             # Calculate processing time
