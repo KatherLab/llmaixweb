@@ -99,9 +99,7 @@ def upgrade() -> None:
         sa.Column("message", sa.Text(), nullable=True),
         sa.Column("traceback", sa.Text(), nullable=True),
     )
-    op.create_index(
-        "ix_error_logs_error_id", "error_logs", ["error_id"], unique=True
-    )
+    op.create_index("ix_error_logs_error_id", "error_logs", ["error_id"], unique=True)
     op.create_index("ix_error_logs_created_at", "error_logs", ["created_at"])
     op.create_index("ix_error_logs_request_id", "error_logs", ["request_id"])
 

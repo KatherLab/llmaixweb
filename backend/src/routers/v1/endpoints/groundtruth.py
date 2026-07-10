@@ -456,9 +456,7 @@ def update_ground_truth_id_column(
     groundtruth.data_cache = None
 
     # Invalidate related evaluations
-    _invalidate_evaluations(
-        db, models.Evaluation.groundtruth_id == groundtruth_id
-    )
+    _invalidate_evaluations(db, models.Evaluation.groundtruth_id == groundtruth_id)
 
     db.commit()
     db.refresh(groundtruth)
@@ -1265,9 +1263,7 @@ def configure_field_mapping_legacy(
         )
         db.add(mapping)
     # Invalidate existing evaluations
-    _invalidate_evaluations(
-        db, models.Evaluation.groundtruth_id == groundtruth_id
-    )
+    _invalidate_evaluations(db, models.Evaluation.groundtruth_id == groundtruth_id)
     db.commit()
     db.refresh(groundtruth)
     return schemas.GroundTruth.model_validate(groundtruth)

@@ -383,9 +383,7 @@ def test_reset_password(client, api_url):
 
     # The emailed plaintext isn't recoverable from the stored hash (by design),
     # so mint a token whose plaintext we control for the rest of the flow.
-    db.query(PasswordResetToken).filter(
-        PasswordResetToken.user_id == user.id
-    ).delete()
+    db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id).delete()
     token = "known-reset-token-for-test-1234567890"
     db.add(
         PasswordResetToken(

@@ -1202,7 +1202,9 @@ def download_trial_results(
                     + [f"result.{k}" for k in result_keys]
                 )
                 csv_output = io.StringIO()
-                writer = SafeDictCsvWriter(csv.DictWriter(csv_output, fieldnames=header))
+                writer = SafeDictCsvWriter(
+                    csv.DictWriter(csv_output, fieldnames=header)
+                )
                 writer.writeheader()
                 added_files = set()
                 for result in results:
