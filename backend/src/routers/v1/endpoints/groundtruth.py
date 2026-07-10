@@ -38,6 +38,25 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _invalidate_evaluations(db: Session, *where) -> None:
+    """Delete evaluations matching ``where`` together with their metric children.
+
+    These are core bulk deletes (``delete(models.Evaluation)``) which bypass the
+    ORM's ``detailed_metrics`` delete-orphan cascade. ``EvaluationMetric.
+    evaluation_id`` has no DB-level ``ON DELETE``, so deleting the parent rows
+    directly raises a FK ``IntegrityError`` on PostgreSQL (and silently orphans
+    rows on SQLite, where FKs aren't enforced). Deleting the children first,
+    scoped to the same predicate, keeps this correct on both backends.
+    """
+    eval_ids = select(models.Evaluation.id).where(*where)
+    db.execute(
+        delete(models.EvaluationMetric).where(
+            models.EvaluationMetric.evaluation_id.in_(eval_ids)
+        )
+    )
+    db.execute(delete(models.Evaluation).where(*where))
+
+
 def _gt_type_name(value) -> str:
     """Normalize a ground-truth sample value to a schema-side type label.
 
@@ -437,10 +456,8 @@ def update_ground_truth_id_column(
     groundtruth.data_cache = None
 
     # Invalidate related evaluations
-    db.execute(
-        delete(models.Evaluation).where(
-            models.Evaluation.groundtruth_id == groundtruth_id
-        )
+    _invalidate_evaluations(
+        db, models.Evaluation.groundtruth_id == groundtruth_id
     )
 
     db.commit()
@@ -626,13 +643,12 @@ def configure_field_mapping(
         db.add(mapping)
 
     # Invalidate evaluations for this specific groundtruth-schema combination
-    db.execute(
-        delete(models.Evaluation).where(
-            models.Evaluation.groundtruth_id == groundtruth_id,
-            models.Evaluation.trial_id.in_(
-                select(models.Trial.id).where(models.Trial.schema_id == schema_id)
-            ),
-        )
+    _invalidate_evaluations(
+        db,
+        models.Evaluation.groundtruth_id == groundtruth_id,
+        models.Evaluation.trial_id.in_(
+            select(models.Trial.id).where(models.Trial.schema_id == schema_id)
+        ),
     )
 
     db.commit()
@@ -755,13 +771,12 @@ def delete_field_mappings(
     ).rowcount
 
     # Invalidate related evaluations
-    db.execute(
-        delete(models.Evaluation).where(
-            models.Evaluation.groundtruth_id == groundtruth_id,
-            models.Evaluation.trial_id.in_(
-                select(models.Trial.id).where(models.Trial.schema_id == schema_id)
-            ),
-        )
+    _invalidate_evaluations(
+        db,
+        models.Evaluation.groundtruth_id == groundtruth_id,
+        models.Evaluation.trial_id.in_(
+            select(models.Trial.id).where(models.Trial.schema_id == schema_id)
+        ),
     )
 
     db.commit()
@@ -1122,13 +1137,12 @@ def auto_map_fields(
             applied_count += 1
 
     # Invalidate existing evaluations for this groundtruth-schema combination
-    db.execute(
-        delete(models.Evaluation).where(
-            models.Evaluation.groundtruth_id == groundtruth_id,
-            models.Evaluation.trial_id.in_(
-                select(models.Trial.id).where(models.Trial.schema_id == schema_id)
-            ),
-        )
+    _invalidate_evaluations(
+        db,
+        models.Evaluation.groundtruth_id == groundtruth_id,
+        models.Evaluation.trial_id.in_(
+            select(models.Trial.id).where(models.Trial.schema_id == schema_id)
+        ),
     )
 
     db.commit()
@@ -1251,10 +1265,8 @@ def configure_field_mapping_legacy(
         )
         db.add(mapping)
     # Invalidate existing evaluations
-    db.execute(
-        delete(models.Evaluation).where(
-            models.Evaluation.groundtruth_id == groundtruth_id
-        )
+    _invalidate_evaluations(
+        db, models.Evaluation.groundtruth_id == groundtruth_id
     )
     db.commit()
     db.refresh(groundtruth)

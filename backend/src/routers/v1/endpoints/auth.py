@@ -15,8 +15,8 @@ from ....core.security import (
     get_current_user,
     revoke_all_refresh_tokens,
     revoke_refresh_token,
+    rotate_refresh_token,
     verify_password,
-    verify_refresh_token,
 )
 from ....dependencies import get_db
 from ....utils.audit import record_audit
@@ -200,15 +200,12 @@ def refresh_token(
 ) -> schemas.Token:
     """Exchange a valid refresh token for a new access + refresh token (rotation).
 
-    The presented refresh token is revoked (rotated) regardless of outcome, so
-    a leaked token can be used at most once. Reuse of an already-revoked token
-    is treated as invalid (callers should re-authenticate).
+    The presented refresh token is atomically claimed (rotated) so a leaked
+    token can be used at most once and concurrent uses can't both succeed.
+    Replaying an already-rotated token revokes the user's entire token family
+    (theft signal) and forces re-authentication.
     """
-    user = verify_refresh_token(body.refresh_token, db)
-    # Revoke (rotate) the presented token whether or not it was valid — if it
-    # was valid we're about to issue a fresh one; if invalid, revoking a
-    # second time is a no-op.
-    revoke_refresh_token(body.refresh_token, db)
+    user = rotate_refresh_token(body.refresh_token, db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

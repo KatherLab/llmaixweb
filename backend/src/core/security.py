@@ -9,7 +9,7 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import PyJWTError
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from ..core.config import settings
@@ -120,6 +120,58 @@ def verify_refresh_token(token: str, db: Session) -> User | None:
     if not row or row.revoked:
         return None
     if row.expires_at < datetime.datetime.now(datetime.UTC).replace(tzinfo=None):
+        return None
+    user = db.get(User, row.user_id)
+    if not user or not user.is_active:
+        return None
+    return user
+
+
+def rotate_refresh_token(token: str, db: Session) -> User | None:
+    """Atomically claim (revoke) a refresh token and return its user.
+
+    Uses a single conditional UPDATE (``... WHERE token_hash=? AND revoked=false``)
+    so two concurrent requests presenting the same token can't both succeed —
+    exactly one wins the claim; the loser sees rowcount 0. This closes the
+    verify-then-revoke race where both callers minted fresh token pairs.
+
+    Reuse detection: if the token exists but was already revoked (rowcount 0 on
+    the claim, yet a row is present with ``revoked=true``), that's a replay of a
+    rotated token — a strong theft signal — so we revoke the user's ENTIRE token
+    family and return ``None``, forcing every session to re-authenticate.
+
+    Returns the active user on a successful claim, else ``None``.
+    """
+    if not token:
+        return None
+    token_hash = _hash_token(token)
+    now = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+
+    # Atomic claim: only succeeds if the token is currently un-revoked.
+    result = db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.token_hash == token_hash, RefreshToken.revoked.is_(False))
+        .values(revoked=True)
+    )
+    if result.rowcount == 0:
+        # Either the token never existed, or it was already revoked (reuse).
+        row = db.execute(
+            select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+        ).scalar_one_or_none()
+        db.commit()
+        if row is not None:
+            # Replay of an already-rotated token → revoke the whole family.
+            user = db.get(User, row.user_id)
+            if user:
+                revoke_all_refresh_tokens(db, user)
+        return None
+
+    # We won the claim. Load + validate the row we just revoked.
+    row = db.execute(
+        select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+    ).scalar_one_or_none()
+    db.commit()
+    if not row or row.expires_at < now:
         return None
     user = db.get(User, row.user_id)
     if not user or not user.is_active:

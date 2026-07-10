@@ -24,6 +24,7 @@ from ....core.security import (
 )
 from ....dependencies import get_db, get_file
 from ....utils.audit import record_audit
+from ....utils.csv_safety import SafeDictCsvWriter
 from ....utils.enums import AuditAction, TrialResultStatus
 from ....utils.helpers import flatten_dict
 from ....utils.url_safety import (
@@ -1201,7 +1202,7 @@ def download_trial_results(
                     + [f"result.{k}" for k in result_keys]
                 )
                 csv_output = io.StringIO()
-                writer = csv.DictWriter(csv_output, fieldnames=header)
+                writer = SafeDictCsvWriter(csv.DictWriter(csv_output, fieldnames=header))
                 writer.writeheader()
                 added_files = set()
                 for result in results:
@@ -1301,7 +1302,7 @@ def download_trial_results(
                 + [f"schema.{k}" for k in schema_keys]
                 + [f"result.{k}" for k in result_keys]
             )
-            writer = csv.DictWriter(output, fieldnames=header)
+            writer = SafeDictCsvWriter(csv.DictWriter(output, fieldnames=header))
             writer.writeheader()
             for result in results:
                 row = {

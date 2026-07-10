@@ -12,6 +12,7 @@ from ....core.security import get_admin_user
 from ....dependencies import get_db
 from ....models import AppSetting
 from ....utils.audit import record_audit
+from ....utils.crypto import encrypt
 from ....utils.enums import AuditAction
 
 router = APIRouter()
@@ -75,7 +76,22 @@ def update_settings(
         if not meta or meta.get("readonly", False):
             raise HTTPException(400, f"Cannot edit setting: {key}")
         if meta.get("secret", False):
-            raise HTTPException(400, "Cannot update secret settings here.")
+            # Secret overrides are stored ENCRYPTED at rest (Fernet) and never
+            # compared against the env default (we can't read the env secret
+            # back here, and we must not persist it in plaintext). An empty
+            # value clears the override, reverting to the env/.env value.
+            secret_value = str(value)
+            row = db.get(AppSetting, key)
+            if not secret_value:
+                if row:
+                    db.delete(row)
+            else:
+                encrypted = encrypt(secret_value)
+                if row:
+                    row.value = encrypted
+                else:
+                    db.add(AppSetting(key=key, value=encrypted))
+            continue
         # Validation
         typ = meta.get("type")
         try:

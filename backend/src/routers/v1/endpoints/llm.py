@@ -51,7 +51,9 @@ def get_available_llm_models(
     try:
         user_base_url = validate_user_endpoint(user_base_url)
     except UnsafeEndpointError:
-        return _invalid_url_response()
+        # Include an empty `models` list so the response still satisfies the
+        # frontend LlmModelsResponse contract (models: string[]).
+        return _invalid_url_response() | {"models": []}
     api_key, base_url = _resolve_creds((body.api_key if body else None), user_base_url)
     if api_key is None or base_url is None:
         return {

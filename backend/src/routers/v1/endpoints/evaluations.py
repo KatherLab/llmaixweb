@@ -16,6 +16,7 @@ from .... import models, schemas
 from ....core.security import can_access_project, get_current_user
 from ....dependencies import get_db
 from ....utils.audit import record_audit
+from ....utils.csv_safety import SafeCsvWriter
 from ....utils.enums import AuditAction
 from ....utils.helpers import (
     build_evaluation_zipfiles,
@@ -381,7 +382,7 @@ def download_evaluations_report(
     *,
     db: Session = Depends(get_db),
     project_id: int,
-    evaluation_ids: str = Query(...),
+    evaluation_ids: list[str] = Query(...),
     format: str = Query("csv", enum=["csv", "xlsx", "zip"]),
     include_details: bool = Query(True),
     include_field_details: bool = Query(False),
@@ -395,11 +396,22 @@ def download_evaluations_report(
     ZIP: includes summary, per-field, per-doc content as separate files.
     """
 
-    # Parse IDs
+    # Parse IDs. Accept both the repeated-param form
+    # (?evaluation_ids=1&evaluation_ids=2, what the frontend sends) and the
+    # legacy single comma-separated string (?evaluation_ids=1,2). Previously the
+    # param was a scalar `str`, so repeated params collapsed to the last value
+    # and a multi-evaluation export silently returned only one evaluation.
     try:
-        evaluation_ids_list = [int(i) for i in evaluation_ids.split(",")]
+        evaluation_ids_list = [
+            int(part)
+            for value in evaluation_ids
+            for part in str(value).split(",")
+            if part.strip()
+        ]
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid evaluation_ids")
+    if not evaluation_ids_list:
+        raise HTTPException(status_code=400, detail="No evaluation_ids provided")
 
     # Cap the batch: the gather loop issues two DB queries per evaluation (N+1).
     # Compare with compare_evaluations (cap = 10).
@@ -488,7 +500,7 @@ def download_evaluations_report(
     # --- CSV Export ---
     if format == "csv":
         output = io.StringIO()
-        writer = csv.writer(output)
+        writer = SafeCsvWriter(csv.writer(output))
         # Summary
         writer.writerow(
             [

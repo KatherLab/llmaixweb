@@ -1296,6 +1296,26 @@ def move_files(
     moved_count = 0
     errors = []
 
+    # Cache of source-config-id → cloned-target-config so multiple files/docs
+    # sharing a preprocessing config reuse one clone in the target project.
+    config_clone_map: dict[int, int] = {}
+
+    def _target_config_id(src_config_id: int) -> int:
+        cached = config_clone_map.get(src_config_id)
+        if cached is not None:
+            return cached
+        src = db.get(models.PreprocessingConfiguration, src_config_id)
+        clone = models.PreprocessingConfiguration(
+            project_id=target_project_id,
+            name=src.name,
+            description=src.description,
+            additional_settings=dict(src.additional_settings or {}),
+        )
+        db.add(clone)
+        db.flush()  # assign clone.id
+        config_clone_map[src_config_id] = clone.id
+        return clone.id
+
     for file_id in file_ids:
         try:
             file = db.execute(
@@ -1327,6 +1347,20 @@ def move_files(
 
             for doc in documents:
                 doc.project_id = target_project_id
+                # Sever cross-project lineage so that later deleting the SOURCE
+                # project can't cascade-delete these now-target documents:
+                #  - preprocessing_config_id is NOT NULL and its config lives in
+                #    (and is delete-orphan'd with) the source project, so repoint
+                #    it at a clone in the target project;
+                #  - file_preprocessing_task_id's relationship is
+                #    cascade="all, delete-orphan", so leaving it pointed at the
+                #    source FilePreprocessingTask would let the source project's
+                #    deletion wipe these moved documents. Null it (provenance to
+                #    the original task is dropped; the file itself has moved).
+                doc.preprocessing_config_id = _target_config_id(
+                    doc.preprocessing_config_id
+                )
+                doc.file_preprocessing_task_id = None
 
             moved_count += 1
 

@@ -32,12 +32,21 @@ logger = logging.getLogger(__name__)
 def get_db_overrides(db: Session) -> dict:
     try:
         rows = db.query(AppSetting).all()
-        # Only load overrides for non-readonly settings
-        return {
-            row.key: row.value
-            for row in rows
-            if not SETTINGS_META.get(row.key, {}).get("readonly", False)
-        }
+        overrides: dict = {}
+        for row in rows:
+            meta = SETTINGS_META.get(row.key, {})
+            # Skip readonly settings — they can't be overridden at runtime.
+            if meta.get("readonly", False):
+                continue
+            # Secret overrides are persisted encrypted (see admin.update_settings);
+            # decrypt them back to the effective plaintext value here.
+            if meta.get("secret", False) and row.value:
+                from ..utils.crypto import decrypt
+
+                overrides[row.key] = decrypt(row.value)
+            else:
+                overrides[row.key] = row.value
+        return overrides
     except SQLAlchemyError:
         # Table doesn't exist yet (e.g., during tests or first run). Postgres
         # raises ProgrammingError (not OperationalError) for a missing table,

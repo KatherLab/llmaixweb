@@ -24,6 +24,7 @@ from ....schemas.audit import (
     PaginatedAuditLogs,
     PaginatedErrorLogs,
 )
+from ....utils.csv_safety import SafeCsvWriter
 from ....utils.enums import AuditAction, AuditOutcome
 
 router = APIRouter()
@@ -142,7 +143,7 @@ def export_audit_logs(
 
     def generate():
         buf = io.StringIO()
-        writer = csv.writer(buf)
+        writer = SafeCsvWriter(csv.writer(buf))
         writer.writerow(
             [
                 "id",
