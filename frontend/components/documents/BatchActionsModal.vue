@@ -256,23 +256,10 @@ const deleteDocuments = async (): Promise<number[]> => {
       await deleteFn(props.projectId, docId)
       successDocs.push(docId)
     } catch (error) {
-      const errorMsg = extractErrorMessage(error, `Failed to delete ${label}`)
-      failedDocs.push({ docId, error: errorMsg })
-
-      // Show specific error for each failed item
-      if (errorMsg.includes('document sets')) {
-        toast.error(
-          `${label.charAt(0).toUpperCase() + label.slice(1)} #${docId}: ${errorMsg} Go to Document Groups tab to manage.`,
-        )
-      } else if (errorMsg.includes('trial')) {
-        toast.error(`${label.charAt(0).toUpperCase() + label.slice(1)} #${docId}: ${errorMsg}`)
-      } else if (errorMsg.includes('trial result')) {
-        toast.error(`${label.charAt(0).toUpperCase() + label.slice(1)} #${docId}: ${errorMsg}`)
-      } else if (errorMsg.includes('evaluation')) {
-        toast.error(`${label.charAt(0).toUpperCase() + label.slice(1)} #${docId}: ${errorMsg}`)
-      } else {
-        toast.error(`${label.charAt(0).toUpperCase() + label.slice(1)} #${docId}: ${errorMsg}`)
-      }
+      failedDocs.push({
+        docId,
+        error: extractErrorMessage(error, `Failed to delete ${label}`),
+      })
     }
   }
 
@@ -285,6 +272,18 @@ const deleteDocuments = async (): Promise<number[]> => {
 
   if (failedDocs.length > 0) {
     console.error(`Failed to delete ${label}s:`, failedDocs)
+    // One summary toast instead of one per failed item. Surface the first
+    // error verbatim, note how many more, and add the document-set hint if any
+    // failure was caused by a set membership.
+    const first = failedDocs[0]
+    const more = failedDocs.length > 1 ? ` (+${failedDocs.length - 1} more)` : ''
+    const hint = failedDocs.some((f) => f.error.includes('document sets'))
+      ? ' Go to the Document Groups tab to manage.'
+      : ''
+    toast.error(
+      `Failed to delete ${failedDocs.length} ${label}${failedDocs.length !== 1 ? 's' : ''}: ` +
+        `#${first.docId} — ${first.error}${more}.${hint}`,
+    )
     // Don't throw - close modal anyway but parent will know what was deleted
   }
 

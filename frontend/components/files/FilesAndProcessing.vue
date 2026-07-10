@@ -390,6 +390,8 @@ const isSubmitting = ref(false)
 // confirmAndStartProcessing runs), so a double-click on the duplicate-modal
 // confirm can't dispatch two identical preprocessing tasks.
 const isStartingProcessing = ref(false)
+// Re-entrancy guard for the batch upload loop (see uploadFiles).
+const isUploading = ref(false)
 
 // Cache for preprocessing tasks to avoid refetching on every file refresh
 let cachedTasks: PreprocessingTask[] | null = null
@@ -1071,8 +1073,15 @@ const confirmAndStartProcessing = async (skipExisting = false): Promise<void> =>
 // Upload files
 const uploadFiles = async (fileList: File[]): Promise<void> => {
   if (!fileList.length) return
-
+  // Re-entrancy guard: a second drop while an upload loop is running would
+  // otherwise run concurrently, and whichever finishes first would close the
+  // modal / reset state out from under the other.
+  if (isUploading.value) return
+  isUploading.value = true
   isSubmitting.value = true
+
+  let succeeded = 0
+  const failures: { name: string; message: string }[] = []
 
   for (const file of fileList) {
     try {
@@ -1088,15 +1097,28 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
       )
 
       await filesApi.upload(props.projectId, formData)
-
-      toast.success(`Uploaded ${file.name}`)
+      succeeded++
     } catch (err) {
       console.error(`Failed to upload ${file.name}:`, err)
-      toast.error(`Failed to upload ${file.name}`)
+      failures.push({ name: file.name, message: extractErrorMessage(err, 'Upload failed') })
     }
   }
 
+  // One summary toast per batch instead of one per file (50 files ≠ 50 toasts).
+  if (succeeded > 0) {
+    toast.success(`Uploaded ${succeeded} file${succeeded === 1 ? '' : 's'}`)
+  }
+  if (failures.length > 0) {
+    const first = failures[0]
+    const more = failures.length > 1 ? ` (+${failures.length - 1} more)` : ''
+    toast.error(
+      `Failed to upload ${failures.length} file${failures.length === 1 ? '' : 's'}: ` +
+        `${first.name} — ${first.message}${more}`,
+    )
+  }
+
   isSubmitting.value = false
+  isUploading.value = false
   showUploadModal.value = false
   // Invalidate task cache when files change
   invalidateTaskCache()
