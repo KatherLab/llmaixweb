@@ -465,10 +465,19 @@ async def preprocess_project_data(
 
     settings = get_settings()
 
-    # Validate a user-supplied custom OCR endpoint against the SSRF policy and
+    # Validate every user-supplied custom OCR endpoint against the SSRF policy and
     # the (optional) egress allowlist before doing any work, so patient images
-    # can't be sent to a blocked or non-approved host.
-    if getattr(preprocessing_task, "base_url", None):
+    # can't be sent to a blocked or non-approved host. This covers both the
+    # top-level task base_url AND the per-config `vision_base_url` in
+    # additional_settings — the latter is the actual Vision-OCR egress target and
+    # was previously only SSRF-checked (never allowlist-checked) in the worker,
+    # letting it bypass ALLOWED_OCR_ENDPOINTS. The worker enforces this too
+    # (defense in depth); doing it here fails fast with a clean 400.
+    _custom_ocr_endpoints = [
+        getattr(preprocessing_task, "base_url", None),
+        (new_additional_settings or {}).get("vision_base_url"),
+    ]
+    if any(_custom_ocr_endpoints):
         from ....utils.url_safety import (
             UnsafeEndpointError,
             enforce_endpoint_allowlist,
@@ -476,10 +485,12 @@ async def preprocess_project_data(
         )
 
         try:
-            validate_user_endpoint(preprocessing_task.base_url)
-            enforce_endpoint_allowlist(
-                preprocessing_task.base_url, settings.ALLOWED_OCR_ENDPOINTS
-            )
+            for _endpoint in _custom_ocr_endpoints:
+                if _endpoint:
+                    validate_user_endpoint(_endpoint)
+                    enforce_endpoint_allowlist(
+                        _endpoint, settings.ALLOWED_OCR_ENDPOINTS
+                    )
         except UnsafeEndpointError:
             raise HTTPException(
                 status_code=400,
@@ -914,11 +925,29 @@ def cancel_preprocessing_task(
     task.status = models.PreprocessingStatus.CANCELLED
     task.completed_at = datetime.datetime.now(datetime.UTC)
 
-    # Rollback logic: remove processed docs if requested
-    if not keep_processed and task.rollback_on_cancel:
-        deleted_count = 0
+    # Persist the keep-vs-rollback decision so a still-running (or about-to-run,
+    # between-chunk) worker agrees with us: the worker's finalization only checks
+    # `rollback_on_cancel`, so if the user asked to KEEP but we didn't clear the
+    # flag, the worker would delete the documents anyway. Force it off here.
+    if keep_processed:
+        task.rollback_on_cancel = False
+
+    # Rollback logic: remove processed docs if requested. Include CANCELLED and
+    # FAILED file tasks, not just COMPLETED ones: a row-by-row CSV file task
+    # commits documents in batches, so one cancelled or failed mid-flight can
+    # still have many committed docs. This mirrors the worker's finalization
+    # rollback — important because when cancel lands while a self-requeue is
+    # merely queued (no worker running), the worker's rollback never runs and
+    # this endpoint is the only rollback path.
+    deleted_count = 0
+    if task.rollback_on_cancel:
+        rollback_statuses = (
+            models.PreprocessingStatus.COMPLETED,
+            models.PreprocessingStatus.CANCELLED,
+            models.PreprocessingStatus.FAILED,
+        )
         for file_task in task.file_tasks:
-            if file_task.status == models.PreprocessingStatus.COMPLETED:
+            if file_task.status in rollback_statuses:
                 for doc in file_task.documents:
                     doc.document_sets.clear()
                     db.delete(doc)
@@ -939,6 +968,20 @@ def cancel_preprocessing_task(
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
 
     db.commit()
+
+    # Accountability: cancelling can DELETE documents (a destructive mutation),
+    # so record who did it and how many docs were rolled back.
+    record_audit(
+        AuditAction.CANCEL,
+        actor=current_user,
+        resource_type="preprocessing_task",
+        resource_id=task.id,
+        project_id=project_id,
+        detail={
+            "kept_processed": keep_processed,
+            "documents_rolled_back": deleted_count,
+        },
+    )
 
     # Refresh to ensure we get the latest data including updated file_tasks
     db.refresh(task)
@@ -1052,12 +1095,65 @@ def retry_failed_files(
 
     db.commit()
 
-    # Start processing
-    from ....celery.preprocessing import process_files_async
+    # Start processing. Guard the dispatch: if the broker is unreachable, the
+    # task + its file tasks were already committed PENDING, and the sweeper
+    # can't reap never-started rows (NULL heartbeat/started_at), so they'd sit
+    # PENDING forever. Mark them FAILED on dispatch failure — mirrors the main
+    # preprocess endpoint.
+    try:
+        from ....celery.preprocessing import process_files_async
 
-    result = process_files_async.delay(new_task.id)
+        result = process_files_async.delay(new_task.id)
+    except Exception as e:
+        new_task.status = models.PreprocessingStatus.FAILED
+        new_task.message = internal_error_message(
+            e, actor=current_user, prefix="Failed to queue preprocessing"
+        )
+        new_task.completed_at = datetime.datetime.now(datetime.UTC)
+        for ft in new_task.file_tasks:
+            ft.status = models.PreprocessingStatus.FAILED
+            ft.error_message = "Could not be queued for processing."
+        db.commit()
+        logger.error(
+            "Failed to dispatch retry preprocessing task %s: %s",
+            new_task.id,
+            e,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="Could not queue preprocessing for background processing. "
+            "Please try again later.",
+        )
     new_task.celery_task_id = result.id
     db.commit()
+
+    # Accountability: a retry re-sends the failed files to the OCR engine, so
+    # record the PHI egress just as the original dispatch did (custom endpoint
+    # or a remote OCR engine). The local Docling/Tesseract path is not egress.
+    config = db.get(models.PreprocessingConfiguration, new_task.configuration_id)
+    cfg_settings = (config.additional_settings if config else None) or {}
+    ocr_engine = cfg_settings.get("ocr_engine", "docling_tesseract")
+    custom_base = (new_task.task_metadata or {}).get("api_base_url")
+    if ocr_engine in _REMOTE_OCR_ENGINES or custom_base:
+        from urllib.parse import urlparse
+
+        record_audit(
+            AuditAction.OCR_EXTERNAL_CALL,
+            actor=current_user,
+            resource_type="preprocessing_task",
+            resource_id=new_task.id,
+            project_id=project_id,
+            detail={
+                "ocr_engine": ocr_engine,
+                "endpoint_host": urlparse(custom_base).hostname
+                if custom_base
+                else None,
+                "file_count": len(failed_file_ids),
+                "mode": "celery",
+                "retry_of": task_id,
+            },
+        )
 
     db.refresh(new_task)
     return schemas.PreprocessingTask.model_validate(new_task)

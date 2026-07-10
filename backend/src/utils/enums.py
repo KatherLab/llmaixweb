@@ -110,6 +110,7 @@ class AuditAction(str, enum.Enum):
     CREATE = "create"
     UPDATE = "update"
     DELETE = "delete"
+    CANCEL = "cancel"
 
     # ── Egress (PHI leaves to an external service) ──
     LLM_EXTRACTION_CALL = "llm_extraction_call"

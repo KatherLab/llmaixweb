@@ -378,3 +378,99 @@ def test_force_reprocess_blocked_by_trial_result(client, api_url, monkeypatch):
     assert doc_id in resp.json()["detail"]["referenced_document_ids"]
 
     client.delete(f"{api_url}/project/{project_id}", headers=headers)
+
+
+def test_celery_trial_dispatch_failure_marks_failed_not_stuck(client, api_url):
+    """A non-bypass trial whose Celery dispatch fails must end FAILED, not stuck.
+
+    The test env runs DISABLE_CELERY=True, so importing/dispatching the Celery
+    task raises → the create endpoint's dispatch guard must mark the trial FAILED
+    and return 503. Without the guard the trial would sit in the queued state
+    forever (the sweeper only reaps PROCESSING trials, and a queued trial is
+    intentionally PENDING to stay out of the sweeper).
+    """
+    headers = _admin_headers(client, api_url)
+
+    project_id = client.post(
+        f"{api_url}/project", headers=headers, json={"name": "Trial Dispatch Fail"}
+    ).json()["id"]
+
+    prompt_id = client.post(
+        f"{api_url}/project/{project_id}/prompt",
+        headers=headers,
+        json={
+            "name": "P",
+            "system_prompt": "Extract.",
+            "user_prompt": "Doc: {document_content}",
+            "project_id": project_id,
+        },
+    ).json()["id"]
+
+    schema_id = client.post(
+        f"{api_url}/project/{project_id}/schema",
+        headers=headers,
+        json={
+            "schema_name": "S",
+            "schema_definition": {
+                "type": "object",
+                "properties": {"field1": {"type": "string"}},
+                "required": ["field1"],
+            },
+        },
+    ).json()["id"]
+
+    file_id = client.post(
+        f"{api_url}/project/{project_id}/file",
+        headers=headers,
+        files={
+            "file": ("doc.txt", b"clinical text", "text/plain"),
+            "file_info": (
+                "",
+                '{"file_name": "doc.txt", "file_type": "text/plain"}',
+                "application/json",
+            ),
+        },
+    ).json()["id"]
+
+    assert (
+        client.post(
+            f"{api_url}/project/{project_id}/preprocess",
+            headers=headers,
+            json={
+                "file_ids": [file_id],
+                "inline_config": {"name": "cfg", "description": "d"},
+                "bypass_celery": True,
+            },
+        ).status_code
+        == 200
+    )
+
+    document_id = client.get(
+        f"{api_url}/project/{project_id}/document", headers=headers
+    ).json()["items"][0]["id"]
+
+    # Non-bypass trial → dispatch fails (Celery disabled) → 503, not 500.
+    resp = client.post(
+        f"{api_url}/project/{project_id}/trial",
+        headers=headers,
+        json={
+            "schema_id": schema_id,
+            "prompt_id": prompt_id,
+            "document_ids": [document_id],
+            "bypass_celery": False,
+            "llm_model": "mock",
+            "api_key": "k",
+            "base_url": "http://localhost:11434/v1",
+        },
+    )
+    assert resp.status_code == 503, resp.text
+
+    # The trial must exist and be FAILED (not PENDING/PROCESSING — which would
+    # be unrecoverable, since the sweeper never reaps a never-dispatched trial).
+    trials = client.get(
+        f"{api_url}/project/{project_id}/trial", headers=headers
+    ).json()["items"]
+    assert len(trials) == 1
+    assert trials[0]["status"] == "failed"
+
+    client.delete(f"{api_url}/project/{project_id}", headers=headers)

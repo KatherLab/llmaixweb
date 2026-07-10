@@ -198,12 +198,16 @@ if celery_app:
 
                 # Heartbeat: updates progress periodically + broadcasts via WebSocket
                 async def _progress_heartbeat():
-                    try:
-                        last_broadcast = None
-                        while True:
-                            await asyncio.sleep(
-                                3
-                            )  # Faster updates (matching preprocessing)
+                    last_broadcast = None
+                    while True:
+                        await asyncio.sleep(
+                            3
+                        )  # Faster updates (matching preprocessing)
+                        # Catch per-tick so a transient DB error does NOT exit the
+                        # loop: exiting would stop bumping `updated_at`, and the
+                        # orphan sweeper would then false-fail this live trial as
+                        # "worker lost". Log and retry next tick instead.
+                        try:
                             with db_session() as db:
                                 update_trial_progress(db, trial_id)
                                 trial = db.get(models.Trial, trial_id)
@@ -218,18 +222,26 @@ if celery_app:
                                     if last_broadcast != current_state:
                                         last_broadcast = current_state
                                         _broadcast_trial_update(trial, "progress")
+                        except asyncio.CancelledError:
+                            raise
+                        except Exception as exc:
+                            log.warning(
+                                "Trial %s: Heartbeat error (continuing): %s",
+                                trial_id,
+                                exc,
+                            )
 
-                            if all(t.done() for t in doc_tasks.values()):
-                                break
-                    except Exception as exc:
-                        # non-fatal; just log
-                        log.warning("Trial %s: Heartbeat error: %s", trial_id, exc)
+                        if all(t.done() for t in doc_tasks.values()):
+                            break
 
                 # Cancellation watcher: cancels in-flight tasks
                 async def _cancellation_watcher():
-                    try:
-                        while True:
-                            await asyncio.sleep(1)
+                    while True:
+                        await asyncio.sleep(1)
+                        # Resilient per-tick: a transient DB error must not stop
+                        # the watcher, or a cancel request would never abort the
+                        # in-flight documents.
+                        try:
                             with db_session() as db:
                                 trial = db.get(models.Trial, trial_id)
                                 if trial and trial.is_cancelled:
@@ -241,18 +253,25 @@ if celery_app:
                                         if not t.done():
                                             t.cancel()
                                     break
-                            if all(t.done() for t in doc_tasks.values()):
-                                break
-                    except Exception as exc:
-                        log.warning(
-                            "Trial %s: Cancellation watcher error: %s", trial_id, exc
-                        )
+                        except asyncio.CancelledError:
+                            raise
+                        except Exception as exc:
+                            log.warning(
+                                "Trial %s: Cancellation watcher error (continuing): %s",
+                                trial_id,
+                                exc,
+                            )
+                        if all(t.done() for t in doc_tasks.values()):
+                            break
 
-                # Run all together
+                # Run all together. return_exceptions=True on the outer gather so
+                # an unexpected raise in the heartbeat/watcher can't cancel the
+                # sibling document coroutines; finalization reads DB state.
                 await asyncio.gather(
                     asyncio.gather(*doc_tasks.values(), return_exceptions=True),
                     _progress_heartbeat(),
                     _cancellation_watcher(),
+                    return_exceptions=True,
                 )
 
             # Finalize state in a short-lived session

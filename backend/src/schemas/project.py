@@ -9,6 +9,7 @@ from pydantic import (
     ConfigDict,
     Field,
     computed_field,
+    field_serializer,
     field_validator,
     model_validator,
 )
@@ -530,6 +531,23 @@ class PaginatedTrialResults(UTCModel):
     total_usage: dict | None = None
 
 
+# Secret credential keys that may be embedded in a preprocessing
+# configuration's additional_settings JSON. These are redacted from every API
+# response and WebSocket broadcast so they never leave the server — from the
+# UI's perspective they are write-only (re-enter to change). Storage-at-rest is
+# the operator's DB-encryption responsibility (see docs/SECURITY.md).
+_OCR_SECRET_KEYS = ("mistral_api_key", "vision_api_key")
+
+
+def redact_ocr_secrets(additional_settings: dict | None) -> dict | None:
+    """Return additional_settings with OCR credential keys stripped out."""
+    if not additional_settings:
+        return additional_settings
+    if not any(k in additional_settings for k in _OCR_SECRET_KEYS):
+        return additional_settings
+    return {k: v for k, v in additional_settings.items() if k not in _OCR_SECRET_KEYS}
+
+
 class PreprocessingConfigurationBase(UTCModel):
     name: str = Field(..., max_length=100)
     description: str | None = Field(None, max_length=500)
@@ -553,6 +571,11 @@ class PreprocessingConfiguration(PreprocessingConfigurationBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("additional_settings")
+    def _redact_additional_settings(self, v: dict | None) -> dict | None:
+        # Never expose OCR credentials embedded in the config to clients.
+        return redact_ocr_secrets(v)
 
 
 class FilePreprocessingTaskBase(UTCModel):

@@ -2,17 +2,36 @@
 import asyncio
 import datetime as dt
 import logging
+import threading
 
 from sqlalchemy import func, select
 
 from .. import models
 from ..core.config import settings
 from ..dependencies import get_db
-from ..middleware.error_handlers import internal_error_message
+from ..middleware.error_handlers import (
+    internal_error_message,
+    operational_error_message,
+)
+from ..schemas.project import redact_ocr_secrets
 from ..utils.preprocessing import PreprocessingPipeline
 from .celery_config import celery_app
 
 log = logging.getLogger(__name__)
+
+# Fraction of the Celery soft time limit a single preprocessing chunk is allowed
+# to consume in the worst case (every file running to its full per-file timeout).
+# The margin below 1.0 leaves room for setup, the final commit, and the
+# re-enqueue so a chunk never actually trips SoftTimeLimitExceeded.
+_CHUNK_TIME_BUDGET_FRACTION = 0.75
+
+# On cancel-with-rollback, how long to wait for abandoned worker threads to
+# drain before deleting produced documents. asyncio's t.cancel() aborts the
+# coroutine awaiting to_thread() but the OS thread keeps running until it hits a
+# cooperative check_cancelled() point; deleting docs before it exits would let a
+# late commit survive as an orphan. Row-by-row threads drain within ~100 rows;
+# this window comfortably covers that.
+_CANCEL_THREAD_DRAIN_SECONDS = 30
 
 
 def _count_file_tasks_by_status(
@@ -65,7 +84,11 @@ def _broadcast_preprocessing_update(
             "configuration": {
                 "id": task.configuration.id,
                 "name": task.configuration.name,
-                "additional_settings": task.configuration.additional_settings,
+                # Redact OCR credentials so keys never leave the server via the
+                # WebSocket broadcast (mirrors the API-response serializer).
+                "additional_settings": redact_ocr_secrets(
+                    task.configuration.additional_settings
+                ),
             }
             if task.configuration
             else None,
@@ -172,18 +195,17 @@ if celery_app:
                     time_since_start = (now - task.started_at).total_seconds()
                     task.status = models.PreprocessingStatus.FAILED
                     task.completed_at = now
-                    if time_since_start > 300:  # More than 5 minutes
-                        task.message = (
-                            f"Preprocessing failed: worker crashed after {time_since_start:.0f}s "
-                            "(out-of-memory, process crash, or unhandled exception). "
-                            "This file may be too large. Check worker logs for details."
-                        )
-                    else:
-                        task.message = (
-                            "Preprocessing failed: detected stale/incomplete task "
-                            "(worker crash or unhandled exception). "
-                            "Check worker logs for details."
-                        )
+                    # Record the crash/stale-detection detail (timing + likely
+                    # cause) in the error log under an id; show only a generic
+                    # message + that id so no infra detail reaches the user.
+                    task.message = operational_error_message(
+                        detail=(
+                            f"PreprocessingTask {task_id} detected stale after "
+                            f"{time_since_start:.0f}s (worker crash / OOM / unhandled "
+                            "exception on re-delivery); marking FAILED."
+                        ),
+                        prefix="Preprocessing failed before it could complete. Please retry.",
+                    )
                     # Mark any pending/in-progress file tasks as failed
                     for ft in task.file_tasks:
                         if ft.status in (
@@ -215,16 +237,6 @@ if celery_app:
                     task.started_at = now
                 db.commit()
 
-                # Process at most PREPROCESS_CHUNK_SIZE PENDING files this
-                # execution; the finalization block re-enqueues the task to
-                # continue with the rest, keeping each run bounded.
-                chunk_size = settings.PREPROCESS_CHUNK_SIZE
-                file_tasks = [
-                    ft
-                    for ft in task.file_tasks
-                    if ft.status == models.PreprocessingStatus.PENDING
-                ][:chunk_size]
-
                 # Get configuration to determine appropriate concurrency
                 additional_settings = (
                     task.configuration.additional_settings if task.configuration else {}
@@ -232,31 +244,76 @@ if celery_app:
                 ocr_engine = additional_settings.get("ocr_engine", "docling_tesseract")
                 extraction_mode = additional_settings.get("extraction_mode", "auto")
 
-                # Determine concurrency limit based on OCR backend
-                # This ensures we don't overwhelm specific backends
+                # Determine concurrency limit + worst-case per-file timeout based
+                # on the OCR backend. This ensures we don't overwhelm specific
+                # backends, and lets us bound the chunk by time (below).
                 if (
                     ocr_engine == "mistral_ocr"
                     or extraction_mode == "high_accuracy_remote"
                 ):
                     max_concurrent = settings.MISTRAL_OCR_MAX_CONCURRENT_FILES
+                    engine_file_timeout = settings.MISTRAL_OCR_FILE_TIMEOUT_SECONDS
                 elif ocr_engine == "llm_vision":
                     max_concurrent = settings.VISION_OCR_MAX_CONCURRENT_FILES
+                    engine_file_timeout = settings.VISION_OCR_FILE_TIMEOUT_SECONDS
                 else:
                     # Default to docling-serve or general limit
                     max_concurrent = min(
                         settings.DOCLING_SERVE_MAX_CONCURRENT_FILES,
                         settings.PREPROCESS_MAX_CONCURRENT_FILES,
                     )
+                    engine_file_timeout = settings.DOCLING_SERVE_FILE_TIMEOUT_SECONDS
+                # A chunk may contain mixed file types; a table/text file falls
+                # back to the general timeout, so take the max as the worst case.
+                per_file_timeout = max(
+                    engine_file_timeout, settings.PREPROCESS_FILE_TIMEOUT_SECONDS
+                )
+
+                # Bound the chunk by TIME as well as count. Even at the configured
+                # PREPROCESS_CHUNK_SIZE, a chunk of slow files can blow the task's
+                # soft time limit — e.g. 200 files at docling's 900s timeout /
+                # concurrency 3 needs ~16h, far past the 6h limit — and when
+                # SoftTimeLimitExceeded fires it kills the whole *remaining* batch
+                # (mark_failed), defeating the point of chunking. Worst-case wall
+                # time for C files at concurrency N is ceil(C / N) * T, so keep
+                # C ≤ N * budget / T where budget is a safe fraction of the soft
+                # limit. Typical files finish well under T, so a fast chunk simply
+                # re-enqueues sooner (which also improves fairness).
+                time_budget = int(
+                    settings.CELERY_TASK_SOFT_TIME_LIMIT_SECONDS
+                    * _CHUNK_TIME_BUDGET_FRACTION
+                )
+                max_by_time = max(
+                    1, (max_concurrent * time_budget) // max(1, per_file_timeout)
+                )
+                chunk_size = min(settings.PREPROCESS_CHUNK_SIZE, max_by_time)
+
+                # Process at most chunk_size PENDING files this execution; the
+                # finalization block re-enqueues the task to continue the rest.
+                file_tasks = [
+                    ft
+                    for ft in task.file_tasks
+                    if ft.status == models.PreprocessingStatus.PENDING
+                ][:chunk_size]
 
                 log.info(
-                    "Starting preprocessing task %s with concurrency limit %d (OCR engine: %s)",
+                    "Starting preprocessing task %s with concurrency limit %d, "
+                    "chunk size %d (OCR engine: %s, per-file timeout %ds)",
                     task_id,
                     max_concurrent,
+                    chunk_size,
                     ocr_engine,
+                    per_file_timeout,
                 )
 
             sem = asyncio.Semaphore(max_concurrent)
             running_tasks = {}
+            # Tracks OS worker threads currently inside blocking_run. The
+            # finalization waits for this to reach 0 before a cancel rollback so
+            # an abandoned (t.cancel()'d) thread can't commit documents after we
+            # delete them. Touched from worker threads → guarded by a lock.
+            thread_tracker = {"active": 0}
+            thread_lock = threading.Lock()
 
             # --- Process one file_task coroutine ---
             async def process_file(file_task_id: int):
@@ -276,60 +333,71 @@ if celery_app:
                                 return
 
                         def blocking_run():
-                            log.debug(
-                                "blocking_run: starting for file_task_id=%s",
-                                file_task_id,
-                            )
-                            with next(get_db()) as db:
-                                try:
-                                    _ = db.get(models.PreprocessingTask, task_id)
-                                    file_task = db.get(
-                                        models.FilePreprocessingTask, file_task_id
-                                    )
-                                    log.debug(
-                                        "blocking_run: got file_task, creating pipeline"
-                                    )
-                                    pipeline = PreprocessingPipeline(
-                                        db,
-                                        task_id,
-                                        api_key=api_key,
-                                        base_url=base_url,
-                                    )
-                                    if pipeline.check_cancelled():
-                                        raise asyncio.CancelledError(
-                                            "Cancelled before processing file"
-                                        )
-                                    log.debug(
-                                        "blocking_run: calling _process_file_task"
-                                    )
-                                    pipeline._process_file_task(file_task)
-                                    log.debug(
-                                        "blocking_run: _process_file_task completed"
-                                    )
-                                except Exception as e:
-                                    # Explicit rollback before re-raising
-                                    # This ensures the connection is clean for Celery retry
-                                    log.error(
-                                        "blocking_run: exception: %s", e, exc_info=True
-                                    )
-                                    db.rollback()
-                                    raise
-                                finally:
-                                    # A fresh pipeline is built per file task in
-                                    # the async path; close its OpenAI/docling-serve
-                                    # clients so their httpx pools don't leak across
-                                    # the (potentially long-lived) Celery worker.
-                                    # ``pipeline`` may be unbound if the constructor
-                                    # itself raised, so guard before closing.
+                            with thread_lock:
+                                thread_tracker["active"] += 1
+                            try:
+                                log.debug(
+                                    "blocking_run: starting for file_task_id=%s",
+                                    file_task_id,
+                                )
+                                with next(get_db()) as db:
                                     try:
-                                        pipeline.close()
-                                    except UnboundLocalError:
-                                        pass
-                                    except Exception:
+                                        _ = db.get(models.PreprocessingTask, task_id)
+                                        file_task = db.get(
+                                            models.FilePreprocessingTask, file_task_id
+                                        )
                                         log.debug(
-                                            "blocking_run: error closing pipeline",
+                                            "blocking_run: got file_task, creating pipeline"
+                                        )
+                                        pipeline = PreprocessingPipeline(
+                                            db,
+                                            task_id,
+                                            api_key=api_key,
+                                            base_url=base_url,
+                                        )
+                                        if pipeline.check_cancelled():
+                                            raise asyncio.CancelledError(
+                                                "Cancelled before processing file"
+                                            )
+                                        log.debug(
+                                            "blocking_run: calling _process_file_task"
+                                        )
+                                        pipeline._process_file_task(file_task)
+                                        log.debug(
+                                            "blocking_run: _process_file_task completed"
+                                        )
+                                    except Exception as e:
+                                        # Explicit rollback before re-raising
+                                        # This ensures the connection is clean for Celery retry
+                                        log.error(
+                                            "blocking_run: exception: %s",
+                                            e,
                                             exc_info=True,
                                         )
+                                        db.rollback()
+                                        raise
+                                    finally:
+                                        # A fresh pipeline is built per file task in
+                                        # the async path; close its OpenAI/docling-serve
+                                        # clients so their httpx pools don't leak across
+                                        # the (potentially long-lived) Celery worker.
+                                        # ``pipeline`` may be unbound if the constructor
+                                        # itself raised, so guard before closing.
+                                        try:
+                                            pipeline.close()
+                                        except UnboundLocalError:
+                                            pass
+                                        except Exception:
+                                            log.debug(
+                                                "blocking_run: error closing pipeline",
+                                                exc_info=True,
+                                            )
+                            finally:
+                                # Decrement only after the thread has fully
+                                # finished (incl. any final commit), so the
+                                # finalization drain-wait can trust "active == 0".
+                                with thread_lock:
+                                    thread_tracker["active"] -= 1
 
                         await asyncio.to_thread(blocking_run)
 
@@ -361,99 +429,161 @@ if celery_app:
             # --- Heartbeat: update progress/meta/ETA for frontend + WebSocket broadcast ---
             async def progress_heartbeat():
                 last_broadcast = None
-                try:
-                    while True:
-                        await asyncio.sleep(3)
+                while True:
+                    await asyncio.sleep(3)
+                    # A transient failure in one tick (DB pool exhaustion, a
+                    # restart blip) must NOT fail the whole batch — the actual
+                    # work lives in running_tasks. Catch per-tick, log, and retry
+                    # next tick. The done-check below is outside the try so a
+                    # heartbeat hiccup can never strand the loop.
+                    try:
                         with next(get_db()) as db:
                             task = db.get(models.PreprocessingTask, task_id)
-                            if not task:
-                                break
+                            if task is not None:
+                                # Count file tasks by status in one GROUP BY query
+                                # instead of iterating task.file_tasks 4+ times.
+                                counts = _count_file_tasks_by_status(db, task_id)
+                                completed = counts.get(
+                                    models.PreprocessingStatus.COMPLETED, 0
+                                )
+                                failed = counts.get(
+                                    models.PreprocessingStatus.FAILED, 0
+                                )
+                                cancelled = counts.get(
+                                    models.PreprocessingStatus.CANCELLED, 0
+                                )
+                                in_progress = counts.get(
+                                    models.PreprocessingStatus.IN_PROGRESS, 0
+                                )
+                                total = sum(counts.values())
 
-                            # Count file tasks by status in one GROUP BY query
-                            # instead of iterating task.file_tasks 4+ times.
-                            counts = _count_file_tasks_by_status(db, task_id)
-                            completed = counts.get(
-                                models.PreprocessingStatus.COMPLETED, 0
-                            )
-                            failed = counts.get(models.PreprocessingStatus.FAILED, 0)
-                            cancelled = counts.get(
-                                models.PreprocessingStatus.CANCELLED, 0
-                            )
-                            in_progress = counts.get(
-                                models.PreprocessingStatus.IN_PROGRESS, 0
-                            )
-                            total = sum(counts.values())
+                                now = dt.datetime.now(dt.UTC)
+                                started = task.started_at or now
+                                # Coerce to tz-aware: Postgres returns aware
+                                # datetimes but SQLite (dev) returns naive, which
+                                # can't be subtracted from the aware `now`.
+                                if started.tzinfo is None:
+                                    started = started.replace(tzinfo=dt.UTC)
+                                elapsed = (
+                                    (now - started).total_seconds() if completed else 0
+                                )
+                                remaining = total - completed - failed - cancelled
+                                eta = (
+                                    int(elapsed / completed * remaining)
+                                    if completed > 0 and remaining > 0
+                                    else 0
+                                )
 
-                            now = dt.datetime.now(dt.UTC)
-                            started = task.started_at or now
-                            # Coerce to tz-aware: Postgres returns aware datetimes
-                            # but SQLite (dev) returns naive, which can't be
-                            # subtracted from the aware `now`.
-                            if started.tzinfo is None:
-                                started = started.replace(tzinfo=dt.UTC)
-                            elapsed = (
-                                (now - started).total_seconds() if completed else 0
-                            )
-                            remaining = total - completed - failed - cancelled
-                            eta = (
-                                int(elapsed / completed * remaining)
-                                if completed > 0 and remaining > 0
-                                else 0
-                            )
+                                task.processed_files = completed + failed + cancelled
+                                task.failed_files = failed
+                                task.skipped_files = cancelled
+                                task.meta = (task.meta or {}) | {
+                                    "eta_seconds": eta,
+                                    "in_progress": in_progress,
+                                    "total_files": total,
+                                    "completed_files": completed,
+                                    "failed_files": failed,
+                                    "cancelled_files": cancelled,
+                                }
+                                db.commit()
 
-                            task.processed_files = completed + failed + cancelled
-                            task.failed_files = failed
-                            task.skipped_files = cancelled
-                            task.meta = (task.meta or {}) | {
-                                "eta_seconds": eta,
-                                "in_progress": in_progress,
-                                "total_files": total,
-                                "completed_files": completed,
-                                "failed_files": failed,
-                                "cancelled_files": cancelled,
-                            }
-                            db.commit()
+                                # Broadcast via Redis pub/sub (FastAPI relays it
+                                # to WebSocket clients) only on state change.
+                                current_state = (
+                                    task.status,
+                                    completed,
+                                    failed,
+                                    cancelled,
+                                )
+                                if last_broadcast != current_state:
+                                    last_broadcast = current_state
+                                    _broadcast_preprocessing_update(task, "progress")
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:
+                        log.error(
+                            "Heartbeat error for task %s (continuing): %s",
+                            task_id,
+                            e,
+                            exc_info=True,
+                        )
 
-                            # Broadcast update via Redis pub/sub (FastAPI will relay to WebSocket clients)
-                            current_state = (task.status, completed, failed, cancelled)
-                            if last_broadcast != current_state:
-                                last_broadcast = current_state
-                                _broadcast_preprocessing_update(task, "progress")
-
-                            # Done once THIS chunk's file tasks have all finished.
-                            # (There may be further PENDING files belonging to
-                            # later chunks, which a subsequent resume handles —
-                            # so we key off this execution's running_tasks, not
-                            # the global PENDING count.)
-                            if all(t.done() for t in running_tasks.values()):
-                                break
-                except asyncio.CancelledError:
-                    raise
-                except Exception as e:
-                    log.error(
-                        "Heartbeat error for task %s: %s", task_id, e, exc_info=True
-                    )
-                    raise
+                    # Done once THIS chunk's file tasks have all finished. (There
+                    # may be further PENDING files belonging to later chunks that
+                    # a subsequent resume handles — so we key off this execution's
+                    # running_tasks, not the global PENDING count.)
+                    if all(t.done() for t in running_tasks.values()):
+                        break
 
             # --- Cancellation watcher: cancels all running file tasks ---
             async def cancellation_watcher():
                 while True:
                     await asyncio.sleep(1)
-                    with next(get_db()) as db:
-                        task = db.get(models.PreprocessingTask, task_id)
-                        if task.is_cancelled:
-                            for t in running_tasks.values():
-                                if not t.done():
-                                    t.cancel()
-                            break
+                    # Resilient per-tick: a transient DB error must not stop the
+                    # watcher, or a cancel request would never abort in-flight
+                    # files. Log and retry next tick.
+                    try:
+                        with next(get_db()) as db:
+                            task = db.get(models.PreprocessingTask, task_id)
+                            if task is not None and task.is_cancelled:
+                                for t in running_tasks.values():
+                                    if not t.done():
+                                        t.cancel()
+                                break
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:
+                        log.error(
+                            "Cancellation watcher error for task %s (continuing): %s",
+                            task_id,
+                            e,
+                            exc_info=True,
+                        )
                     if all(t.done() for t in running_tasks.values()):
                         break
 
+            # return_exceptions=True on the OUTER gather too: an unexpected raise
+            # in the heartbeat/watcher must not cancel the sibling file-processing
+            # coroutines (gather cancels siblings on the first exception when
+            # return_exceptions=False). Finalization reads authoritative DB state
+            # regardless of these auxiliary coroutines' return values.
             await asyncio.gather(
                 asyncio.gather(*running_tasks.values(), return_exceptions=True),
                 progress_heartbeat(),
                 cancellation_watcher(),
+                return_exceptions=True,
             )
+
+            # --- Zombie-thread drain before a cancel rollback ---
+            # asyncio.gather returns as soon as the coroutines settle, but a
+            # t.cancel()'d coroutine abandons the OS thread still running inside
+            # blocking_run; that thread keeps going until it reaches a
+            # cooperative check_cancelled() point and may commit more documents.
+            # If we rolled those back now, the late commit would survive as an
+            # orphan. So when this task is being cancelled WITH rollback, wait
+            # (bounded) for in-flight threads to exit first, making the rollback
+            # below authoritative. Only relevant on cancel; the normal completion
+            # path has no abandoned threads.
+            with next(get_db()) as db:
+                _t = db.get(models.PreprocessingTask, task_id)
+                _drain_needed = bool(_t and _t.is_cancelled and _t.rollback_on_cancel)
+            if _drain_needed:
+                for _ in range(int(_CANCEL_THREAD_DRAIN_SECONDS / 0.1)):
+                    with thread_lock:
+                        if thread_tracker["active"] == 0:
+                            break
+                    await asyncio.sleep(0.1)
+                else:
+                    with thread_lock:
+                        _still_active = thread_tracker["active"]
+                    log.warning(
+                        "PreprocessingTask %s: %d worker thread(s) still active "
+                        "after %ds drain window; proceeding with cancel rollback "
+                        "(a slow in-flight file may leave up to one orphan doc)",
+                        task_id,
+                        _still_active,
+                        _CANCEL_THREAD_DRAIN_SECONDS,
+                    )
 
             # --- Chunk boundary: continue with the next chunk, or finalize ---
             with next(get_db()) as db:

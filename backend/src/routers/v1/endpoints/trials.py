@@ -22,6 +22,7 @@ from ....core.security import (
     get_current_user,
 )
 from ....dependencies import get_db, get_file
+from ....middleware.error_handlers import internal_error_message
 from ....utils.audit import record_audit
 from ....utils.csv_safety import SafeDictCsvWriter
 from ....utils.enums import AuditAction, TrialResultStatus
@@ -284,8 +285,20 @@ def create_trial(
     )
 
     # 5. Kick-off extraction ----------------------------------------------------
-    trial_db.status = models.TrialStatus.PROCESSING
-    trial_db.started_at = datetime.datetime.now(datetime.UTC)
+    now = datetime.datetime.now(datetime.UTC)
+    if trial.bypass_celery:
+        # Synchronous debug path runs inline immediately below, so it starts now.
+        trial_db.status = models.TrialStatus.PROCESSING
+        trial_db.started_at = now
+    else:
+        # Celery path: stay PENDING until a worker actually picks the task up
+        # (mark_trial_started in task_signals.py flips it to PROCESSING and sets
+        # started_at). This keeps a trial that is merely waiting in the queue out
+        # of the orphan sweeper's "PROCESSING + stale updated_at" net — otherwise
+        # a trial queued behind busy workers for >10 min would be wrongly marked
+        # FAILED before it ever ran. started_at is left NULL so the ETA doesn't
+        # count queue-wait time.
+        trial_db.status = models.TrialStatus.PENDING
     trial_db.progress = 0.0
     db.add(trial_db)
     db.commit()
@@ -295,9 +308,11 @@ def create_trial(
     # and trials table without waiting for the first Celery heartbeat.
     _broadcast_trial_created(trial_db)
 
-    # Accountability: record the trial creation and — critically for a clinic —
-    # the PHI egress this trial represents (documents about to be sent to an
-    # LLM endpoint). Host + model + count only; never document content.
+    # Accountability: record the trial creation now; the PHI-egress audit
+    # (LLM_EXTRACTION_CALL) is deferred until the work is actually initiated —
+    # after a successful Celery dispatch, or just before the synchronous loop —
+    # so a failed dispatch never leaves an audit row claiming egress that never
+    # happened.
     from urllib.parse import urlparse
 
     record_audit(
@@ -307,22 +322,25 @@ def create_trial(
         resource_id=trial_db.id,
         project_id=project_id,
     )
-    record_audit(
-        AuditAction.LLM_EXTRACTION_CALL,
-        actor=current_user,
-        resource_type="trial",
-        resource_id=trial_db.id,
-        project_id=project_id,
-        detail={
-            "endpoint_host": urlparse(base_url).hostname,
-            "model": llm_model,
-            "document_count": len(document_ids),
-            "mode": "sync" if trial.bypass_celery else "celery",
-        },
-    )
+
+    def _record_egress(mode: str) -> None:
+        record_audit(
+            AuditAction.LLM_EXTRACTION_CALL,
+            actor=current_user,
+            resource_type="trial",
+            resource_id=trial_db.id,
+            project_id=project_id,
+            detail={
+                "endpoint_host": urlparse(base_url).hostname,
+                "model": llm_model,
+                "document_count": len(document_ids),
+                "mode": mode,
+            },
+        )
 
     if trial.bypass_celery:
         # synchronous (debug)
+        _record_egress("sync")
         from ....utils.info_extraction import (
             extract_info_single_doc,
             update_trial_progress,
@@ -366,22 +384,61 @@ def create_trial(
                 db.commit()
             raise
     else:
-        from ....celery.info_extraction import extract_info_celery
-
         # The api_key is NOT passed through the broker: it is stored encrypted
         # on the Trial row (api_key_encrypted) and decrypted inside the task.
         # Passing it as a Celery arg would serialize the plaintext key into
         # Redis, exposing it via `celery inspect` / Flower.
-        extract_info_celery.delay(
-            trial_id=trial_db.id,
-            document_ids=document_ids,
-            llm_model=llm_model,
-            base_url=base_url,
-            schema_id=trial.schema_id,
-            prompt_id=trial.prompt_id,
-            project_id=project_id,
-            advanced_options=trial_db.advanced_options,
-        )
+        try:
+            from ....celery.info_extraction import extract_info_celery
+
+            extract_info_celery.delay(
+                trial_id=trial_db.id,
+                document_ids=document_ids,
+                llm_model=llm_model,
+                base_url=base_url,
+                schema_id=trial.schema_id,
+                prompt_id=trial.prompt_id,
+                project_id=project_id,
+                advanced_options=trial_db.advanced_options,
+            )
+        except Exception as e:
+            # Dispatch failed (broker unreachable / Celery disabled). The trial
+            # was committed PENDING; without this it would sit PENDING forever
+            # (the sweeper only reaps PROCESSING trials, and PENDING is exactly
+            # the state we use to keep queued trials out of the sweeper). Mark it
+            # FAILED with a correlated error id so the user sees it and can retry.
+            db.rollback()
+            trial_db = db.get(models.Trial, trial_db.id)
+            if trial_db and trial_db.status not in (
+                models.TrialStatus.COMPLETED,
+                models.TrialStatus.FAILED,
+                models.TrialStatus.CANCELLED,
+            ):
+                trial_db.status = models.TrialStatus.FAILED
+                trial_db.finished_at = datetime.datetime.now(datetime.UTC)
+                trial_db.meta = (trial_db.meta or {}) | {
+                    "failures": {
+                        "_dispatch": internal_error_message(
+                            e, actor=current_user, prefix="Failed to queue trial"
+                        )
+                    },
+                    "eta_seconds": 0,
+                }
+                db.commit()
+            logger.error(
+                "Failed to dispatch trial %s: %s",
+                trial_db.id if trial_db else "?",
+                e,
+                exc_info=True,
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="Could not queue trial for background processing. "
+                "Please try again later.",
+            )
+
+        # Dispatch succeeded — now record the PHI egress this trial represents.
+        _record_egress("celery")
 
     return schemas.Trial.model_validate(trial_db)
 
@@ -843,6 +900,14 @@ def cancel_trial(
     trial.status = models.TrialStatus.CANCELLED
     db.commit()
     db.refresh(trial)
+    record_audit(
+        AuditAction.CANCEL,
+        actor=current_user,
+        resource_type="trial",
+        resource_id=trial_id,
+        project_id=project_id,
+        detail={"rollback_on_cancel": trial.rollback_on_cancel},
+    )
     return schemas.Trial.model_validate(trial)
 
 

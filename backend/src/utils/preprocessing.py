@@ -17,7 +17,7 @@ from ..db.session import db_session
 from ..dependencies import get_file
 from ..middleware.error_handlers import internal_error_message
 from .helpers import _make_aware
-from .url_safety import validate_user_endpoint
+from .url_safety import enforce_endpoint_allowlist, validate_user_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -1838,12 +1838,18 @@ class PreprocessingPipeline:
         if not base_url and self.client:
             base_url = str(self.client.base_url)
 
-        # Validate a user-supplied custom endpoint against the SSRF policy.
-        # System defaults (VISION_OCR_API_BASE) and self.client.base_url (already
-        # validated in __init__) are trusted; only the per-config vision_base_url
-        # from additional_settings is user-controlled.
+        # Validate a user-supplied custom endpoint against the SSRF policy AND the
+        # operator egress allowlist. System defaults (VISION_OCR_API_BASE) and
+        # self.client.base_url (already validated in __init__) are trusted; only
+        # the per-config vision_base_url from additional_settings is
+        # user-controlled. The dispatch endpoint only enforces the allowlist on
+        # the top-level task base_url, so without this check a user could route
+        # patient page images to any non-metadata host via vision_base_url,
+        # bypassing ALLOWED_OCR_ENDPOINTS. This is the actual egress point, so
+        # enforcing here closes the hole regardless of how the config was created.
         if additional.get("vision_base_url"):
             base_url = validate_user_endpoint(base_url)
+            enforce_endpoint_allowlist(base_url, settings.ALLOWED_OCR_ENDPOINTS)
 
         if not api_key or not base_url:
             raise ValueError(

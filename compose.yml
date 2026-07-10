@@ -6,21 +6,41 @@ services:
     image: quay.io/docling-project/docling-serve-cpu:latest
     restart: unless-stopped
     environment:
-      - DOCLING_SERVE_ENABLE_UI=0
-      - UVICORN_WORKERS=2
-      - OMP_NUM_THREADS=2
-      # TESSDATA_PREFIX: verify path in container first; remove if not needed
+      - DOCLING_SERVE_ENABLE_UI=false
+      # CPU threads for model inference (layout + table-structure, and Tesseract
+      # when OCR is on). Both point at the same knob on purpose: DOCLING_NUM_THREADS
+      # sets docling's own inference threads, OMP_NUM_THREADS bounds the other
+      # native pools in the process (OpenBLAS/MKL via numpy, onnxruntime intra-op).
+      # These are THREADS, not processes — model weights are shared across threads,
+      # NOT duplicated, so raising this costs cores + a little scratch RAM, not a
+      # second copy of the models. Tune via DOCLING_CPU_THREADS in .env
+      # (recommended: ~number of physical CPU cores). Weight *duplication* is a
+      # per-process concern, governed by ENG_LOC_NUM_WORKERS / ENG_LOC_SHARE_MODELS.
+      - DOCLING_NUM_THREADS=${DOCLING_CPU_THREADS:-4}
+      - OMP_NUM_THREADS=${DOCLING_CPU_THREADS:-4}
+      # Async engine: one local worker process, sharing a single in-memory copy
+      # of the model weights (SHARE_MODELS=true) so >1 worker wouldn't N× the RAM.
+      # Keep NUM_WORKERS=1 unless you have the memory headroom for parallel docs.
+      - DOCLING_SERVE_ENG_KIND=local
+      - DOCLING_SERVE_ENG_LOC_NUM_WORKERS=1
+      - DOCLING_SERVE_ENG_LOC_SHARE_MODELS=true
+      # Persist downloaded models (ARTIFACTS_PATH) and scratch across restarts so
+      # boot doesn't re-download; LOAD_MODELS_AT_BOOT warms them before first request.
+      - DOCLING_SERVE_ARTIFACTS_PATH=/models
+      - DOCLING_SERVE_LOAD_MODELS_AT_BOOT=true
+      - DOCLING_SERVE_SCRATCH_PATH=/scratch
     # ports:
     #   - "5001:5001"
-    # Memory limit: 6GB is usually sufficient for CPU-based Tesseract OCR
-    # Adjust based on your deployment needs
+    volumes:
+      - docling-models:/models
+      - docling-scratch:/scratch
     mem_limit: 8g
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/openapi.json', timeout=5)\""]
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/openapi.json', timeout=5)\"" ]
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 30s
+      start_period: 90s
 
   backend:
     build:
@@ -71,6 +91,12 @@ services:
     image: ghcr.io/katherlab/llmaixweb-backend:latest
     restart: unless-stopped
     env_file: .env
+    environment:
+      # Identifies which queue this worker owns so it can instantly finalize
+      # tasks it abandoned on restart (see reclaim_orphaned_on_startup). Only
+      # set this when running a SINGLE worker per role (the stock deployment);
+      # leave unset for scaled multi-worker queues and rely on the sweeper.
+      - CELERY_WORKER_ROLE=default
     # -B embeds the beat scheduler so the periodic orphan/stuck-task sweeper
     # runs. Keep beat on exactly ONE worker; do not scale this service beyond
     # replicas=1 (or the sweep runs in duplicate). -s points the schedule file
@@ -91,6 +117,10 @@ services:
       # .env can override (e.g. DOCLING_SERVE_ENABLED=false). Keeps the worker
       # and web process in agreement when .env is unset.
       - DOCLING_SERVE_ENABLED=${DOCLING_SERVE_ENABLED:-true}
+      # Owns the preprocess queue: on restart it instantly fails any task left
+      # IN_PROGRESS (see reclaim_orphaned_on_startup). Keep this worker at a
+      # single replica; leave unset if you scale it to rely on the sweeper.
+      - CELERY_WORKER_ROLE=preprocess
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
       worker -Q preprocess -c 1 --loglevel=info
@@ -178,3 +208,5 @@ volumes:
   pgdata:
   redis-data:
   minio-data:
+  docling-models:
+  docling-scratch:

@@ -336,7 +336,7 @@ const actionGroups: { label: string; actions: AuditAction[] }[] = [
     label: 'Access (PHI)',
     actions: ['document_view', 'document_download', 'file_download', 'trial_result_view', 'export'],
   },
-  { label: 'Mutations', actions: ['create', 'update', 'delete'] },
+  { label: 'Mutations', actions: ['create', 'update', 'delete', 'cancel'] },
   { label: 'Egress', actions: ['llm_extraction_call', 'ocr_external_call'] },
   {
     label: 'Administration',

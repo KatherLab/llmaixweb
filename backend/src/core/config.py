@@ -169,7 +169,13 @@ class Settings(BaseSettings):
     # Docling-serve remote OCR service configuration
     DOCLING_SERVE_ENABLED: bool = False
     DOCLING_SERVE_URL: str = "http://docling-serve:5001"
-    DOCLING_SERVE_TIMEOUT_SECONDS: int = 600
+    # HTTP read timeout for the (synchronous) /v1/convert/file call. Docling runs
+    # its layout + table-structure models on every page even with OCR disabled,
+    # so a large PDF can legitimately take many minutes on CPU (~6 min observed
+    # for an 18 MB doc). This MUST be >= DOCLING_SERVE_FILE_TIMEOUT_SECONDS,
+    # otherwise the HTTP read aborts before the per-file budget is spent and a
+    # slow-but-valid conversion is lost as a timeout.
+    DOCLING_SERVE_TIMEOUT_SECONDS: int = 1800
     DOCLING_SERVE_MAX_RETRIES: int = 1
     DOCLING_SERVE_DISPLAY_NAME: str = "Quick (Local OCR)"
     DOCLING_SERVE_DISPLAY_SUBTITLE: str = "Docling / Tesseract"
@@ -243,12 +249,51 @@ class Settings(BaseSettings):
         description="Max files processed per preprocessing task execution before it re-enqueues itself to continue",
     )
 
+    CELERY_TASK_SOFT_TIME_LIMIT_SECONDS: int = Field(
+        default=21600,  # 6 hours
+        ge=300,
+        le=86400,
+        description=(
+            "Celery soft time limit for a task execution (applied at worker "
+            "boot). Also used to size each preprocessing self-requeue chunk so a "
+            "single run can't exceed this limit even if every file runs to its "
+            "full per-file timeout."
+        ),
+    )
+
     # Per-file timeout (general default)
     PREPROCESS_FILE_TIMEOUT_SECONDS: int = Field(
         default=600,
         ge=60,
         le=7200,
         description="Default timeout in seconds for processing a single file",
+    )
+
+    # ─────────────────────────────────────────────────────────────
+    # Orphaned-task recovery (crash / restart detection)
+    # ─────────────────────────────────────────────────────────────
+    # A preprocessing file task heartbeats every ~15s while alive and a trial
+    # bumps updated_at every few seconds, so a non-terminal task whose last
+    # heartbeat is older than this is assumed to have a dead worker. Kept low
+    # (8+ missed heartbeats) so a crashed worker is detected in ~2 min instead
+    # of the old 10 min — well clear of a transient DB blip. The per-file OCR
+    # timeout (up to 2h) is irrelevant here: a slow-but-alive file keeps
+    # heartbeating, so it's never falsely reaped.
+    ORPHAN_STALE_SECONDS: int = Field(
+        default=120,
+        ge=30,
+        le=3600,
+        description="Seconds since last heartbeat before a running task is treated as orphaned by the sweeper",
+    )
+
+    # How often the periodic sweeper runs. Short so a crashed (not restarted)
+    # worker's tasks are finalized promptly; a restart is handled instantly by
+    # the worker-startup reclaim, independent of this interval.
+    ORPHAN_SWEEP_INTERVAL_SECONDS: int = Field(
+        default=60,
+        ge=15,
+        le=3600,
+        description="Interval in seconds between periodic orphaned-task sweeps",
     )
 
     # ─────────────────────────────────────────────────────────────
@@ -262,8 +307,16 @@ class Settings(BaseSettings):
         le=10,
         description="Maximum concurrent files for docling-serve OCR",
     )
+    # Per-file processing budget for the docling-serve path. Covers the whole
+    # conversion (layout + table models, plus Tesseract OCR when enabled), which
+    # is CPU-bound and slow for large PDFs. Kept generous (30 min) so big/scanned
+    # docs aren't falsely reaped; a genuinely stuck file only blocks one of the
+    # DOCLING_SERVE_MAX_CONCURRENT_FILES slots until this elapses. The pipeline
+    # heartbeats every ~15s throughout, so the orphan sweeper (ORPHAN_STALE_
+    # SECONDS) never trips while a conversion this long is actually running.
+    # Keep DOCLING_SERVE_TIMEOUT_SECONDS (the HTTP read timeout) >= this value.
     DOCLING_SERVE_FILE_TIMEOUT_SECONDS: int = Field(
-        default=900,
+        default=1800,
         ge=60,
         le=7200,
         description="Timeout in seconds for docling-serve OCR per file",
@@ -1187,6 +1240,14 @@ SETTINGS_META = {
         "category": "Preprocessing",
         "label": "Preprocessing Chunk Size",
         "help": "Files processed per preprocessing task execution before it re-enqueues itself to continue. Keeps large batches under the task time limit and interleaves users' batches fairly.",
+    },
+    "CELERY_TASK_SOFT_TIME_LIMIT_SECONDS": {
+        "type": "int",
+        "secret": False,
+        "readonly": True,
+        "category": "Preprocessing",
+        "label": "Celery Task Soft Time Limit (seconds)",
+        "help": "Soft time limit for a Celery task execution (applied at worker boot; restart workers to change). Preprocessing sizes each self-requeue chunk to stay under this even in the worst case.",
     },
     "PREPROCESS_FILE_TIMEOUT_SECONDS": {
         "type": "int",

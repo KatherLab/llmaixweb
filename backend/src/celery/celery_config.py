@@ -38,8 +38,9 @@ if not settings.DISABLE_CELERY:
         # and the periodic stuck-task sweeper catch real hangs far earlier.
         # SoftTimeLimitExceeded is an Exception, so the trial task's top-level
         # try/except finalizes it as FAILED; preprocessing handles it per-file.
-        task_soft_time_limit=21600,  # 6 hours
-        task_time_limit=21700,  # 6h + 100s (hard kill)
+        task_soft_time_limit=settings.CELERY_TASK_SOFT_TIME_LIMIT_SECONDS,  # 6h default
+        task_time_limit=settings.CELERY_TASK_SOFT_TIME_LIMIT_SECONDS
+        + 100,  # +100s (hard kill)
     )
 
     # — Queues —

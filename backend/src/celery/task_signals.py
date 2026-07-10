@@ -13,12 +13,15 @@ import datetime
 import logging
 
 from celery import signals
-from celery.exceptions import SoftTimeLimitExceeded, WorkerLostError
 from sqlalchemy import func
 
 from .. import models
+from ..core.config import settings
 from ..dependencies import get_db
-from ..middleware.error_handlers import internal_error_message
+from ..middleware.error_handlers import (
+    internal_error_message,
+    operational_error_message,
+)
 from .celery_config import celery_app
 
 logger = logging.getLogger(__name__)
@@ -180,6 +183,40 @@ def mark_started(sender=None, task_id=None, args=None, **_):
     _update(args[0], models.PreprocessingStatus.IN_PROGRESS)
 
 
+@signals.task_prerun.connect
+def mark_trial_started(sender=None, task_id=None, args=None, kwargs=None, **_):
+    """Flip a queued Trial to PROCESSING the moment a worker actually starts it.
+
+    Trials are created PENDING for the Celery path (see create_trial) and only
+    become PROCESSING here. This is what makes the orphan sweeper safe: it fails
+    PROCESSING trials whose ``updated_at`` is stale, so a trial that is merely
+    waiting in the queue behind busy workers (still PENDING) is never falsely
+    swept to FAILED. Skips terminal trials (e.g. cancelled while queued) so a
+    re-delivery can't resurrect them, mirroring ``mark_started`` above.
+    """
+    if sender is None or not sender.name.endswith("extract_info_celery"):
+        return
+    trial_id = (kwargs or {}).get("trial_id")
+    if trial_id is None and args:
+        trial_id = args[0]
+    if trial_id is None:
+        return
+    with next(get_db()) as db:
+        trial = db.get(models.Trial, trial_id)
+        if not trial:
+            return
+        if trial.status in (
+            models.TrialStatus.COMPLETED,
+            models.TrialStatus.FAILED,
+            models.TrialStatus.CANCELLED,
+        ):
+            return
+        trial.status = models.TrialStatus.PROCESSING
+        if trial.started_at is None:
+            trial.started_at = datetime.datetime.now(datetime.UTC)
+        db.commit()
+
+
 # @signals.task_postrun.connect
 # def mark_done(sender=None, task_id=None, retval=None, args=None, **_):
 #
@@ -196,19 +233,15 @@ def mark_failed(sender=None, task_id=None, exception=None, args=None, **_):
     if not args:
         return
 
-    if isinstance(exception, WorkerLostError):
-        friendly = (
-            "The worker process crashed while preprocessing. "
-            "This usually means the machine ran out of memory or a native "
-            "library (e.g. PaddleOCR) seg‑faulted. "
-            "Please check the Celery worker logs."
-        )
-    elif isinstance(exception, SoftTimeLimitExceeded):
-        friendly = "Preprocessing exceeded the maximum runtime limit."
-    else:
-        # Any other worker-side failure: record the traceback under a correlation
-        # id and surface only that id, never the raw exception text.
-        friendly = internal_error_message(exception, prefix="Preprocessing task failed")
+    # Record the real cause (WorkerLostError → OOM/segfault, SoftTimeLimitExceeded
+    # → runtime cap, or any other worker-side exception) under a correlation id in
+    # the error log, and surface only a generic message + that id to the user —
+    # never the raw exception text or internal infrastructure hints. The exception
+    # type stored in the log tells an admin whether it was a crash, timeout, etc.
+    friendly = internal_error_message(
+        exception,
+        prefix="Preprocessing failed before it could complete. Please retry.",
+    )
 
     _update(args[0], models.PreprocessingStatus.FAILED, friendly, broadcast=True)
 
@@ -219,10 +252,14 @@ def sweep_orphans():
     # that never heartbeated — e.g. created before the heartbeat column
     # existed, or crashed before the first bump) is older than this window is
     # assumed to have a dead worker. The pipeline heartbeats every ~15s while
-    # actively processing, so 10 minutes is a generous margin that won't reap
-    # slow-but-legitimate files even when their per-file timeout (up to 2h)
-    # exceeds the window.
-    cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=10)
+    # actively processing, so ORPHAN_STALE_SECONDS (default 120s = 8+ missed
+    # heartbeats) won't reap slow-but-legitimate files even when their per-file
+    # timeout (up to 2h) exceeds the window. A *restart* is handled instantly by
+    # the worker-startup reclaim below; this sweeper is the backstop for a
+    # crashed-but-not-restarted worker (OOM/segfault) and multi-worker setups.
+    cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
+        seconds=settings.ORPHAN_STALE_SECONDS
+    )
     with next(get_db()) as db:
         # 1) fail orphaned file tasks
         q = db.query(models.FilePreprocessingTask).filter(
@@ -241,9 +278,14 @@ def sweep_orphans():
         affected = 0
         parent_ids: set[int] = set()
 
+        # Generic user-facing text (no "sweeper/worker lost" infra detail); the
+        # real cause is recorded once per finalized parent below, and its error
+        # id is carried on the parent's message.
         for ft in q.all():
             ft.status = models.PreprocessingStatus.FAILED
-            ft.error_message = "Marked FAILED by sweeper (worker lost)"
+            ft.error_message = (
+                "Preprocessing was interrupted before it completed. Please retry."
+            )
             affected += 1
             parent_ids.add(ft.preprocessing_task_id)
 
@@ -290,9 +332,18 @@ def sweep_orphans():
 
             finalized_parent_ids.add(pid)
             parent.status = models.PreprocessingStatus.FAILED
-            parent.message = (
-                f"{completed} of {total} files processed successfully, "
-                f"{failed} failed (worker crashed or was killed)."
+            # Keep the factual counts (not sensitive), but move the "worker
+            # crashed/lost" cause into the error log and expose only its id.
+            parent.message = operational_error_message(
+                detail=(
+                    f"PreprocessingTask {pid} finalized by orphan sweeper "
+                    f"(worker crashed or was killed): {failed} of {total} file "
+                    f"tasks failed, {completed} completed."
+                ),
+                prefix=(
+                    f"{completed} of {total} files processed successfully, "
+                    f"{failed} failed."
+                ),
             )
             parent.completed_at = datetime.datetime.now(datetime.UTC)
 
@@ -311,7 +362,7 @@ def sweep_orphans():
         # try/except in extract_info_celery only catches exceptions, not a hard
         # worker kill, so without this the trial would stay PROCESSING forever.
         trial_cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
-            minutes=10
+            seconds=settings.ORPHAN_STALE_SECONDS
         )
         stuck_trials = (
             db.query(models.Trial)
@@ -325,7 +376,15 @@ def sweep_orphans():
             trial.status = models.TrialStatus.FAILED
             trial.finished_at = datetime.datetime.now(datetime.UTC)
             trial.meta = (trial.meta or {}) | {
-                "failures": {"_sweeper": "Marked FAILED by sweeper (worker lost)"},
+                "failures": {
+                    "_sweeper": operational_error_message(
+                        detail=(
+                            f"Trial {trial.id} finalized by orphan sweeper "
+                            "(worker crashed or was killed)."
+                        ),
+                        prefix="The trial was interrupted before it completed. Please retry.",
+                    )
+                },
                 "eta_seconds": 0,
             }
             affected += 1
@@ -335,6 +394,118 @@ def sweep_orphans():
             _broadcast_trial_update(trial, "failed")
 
     return f"{affected} orphaned file tasks / stuck trials marked as FAILED"
+
+
+# ────────────────── worker-startup reclaim ──────────────────
+def reclaim_orphaned_on_startup(role: str) -> str:
+    """Immediately finalize work a just-restarted worker abandoned.
+
+    The time-based ``sweep_orphans`` can't react to a *restart* — a benign
+    ``docker compose restart`` kills the worker mid-task, and with
+    ``task_acks_late`` the in-flight Celery message is stranded in the broker's
+    unacked set behind the 8h ``visibility_timeout`` (it is NOT re-queued for
+    hours). Meanwhile the DB row sits IN_PROGRESS/PROCESSING and the UI shows a
+    dead-looking spinner until the staleness window elapses.
+
+    A freshly booted worker knows for certain that anything still non-terminal
+    in the queue(s) it serves was interrupted, so we finalize it as FAILED right
+    now (the user retries). Scoped by ``role`` so a default-worker restart never
+    touches a live preprocess worker's in-flight files, and vice-versa — the
+    stock deployment runs exactly one worker per role. In a scaled multi-worker
+    deployment (several workers on the same queue) leave ``CELERY_WORKER_ROLE``
+    unset so this is skipped and the staleness sweeper handles recovery instead.
+    """
+    now = datetime.datetime.now(datetime.UTC)
+    reclaimed = 0
+
+    with next(get_db()) as db:
+        if role == "preprocess":
+            tasks = (
+                db.query(models.PreprocessingTask)
+                .filter(
+                    models.PreprocessingTask.status
+                    == models.PreprocessingStatus.IN_PROGRESS
+                )
+                .all()
+            )
+            finalized_ids: list[int] = []
+            for task in tasks:
+                # Record the "worker restarted" cause in the error log under a
+                # fresh id (one per task); the user sees only a generic message
+                # plus that id, never the internal restart detail.
+                msg = operational_error_message(
+                    detail=(
+                        f"Preprocessing worker (role={role}) was restarted; "
+                        f"task {task.id} was interrupted before completion."
+                    ),
+                    prefix="Preprocessing was interrupted before it completed. Please retry.",
+                )
+                for ft in task.file_tasks:
+                    if ft.status in (
+                        models.PreprocessingStatus.PENDING,
+                        models.PreprocessingStatus.IN_PROGRESS,
+                    ):
+                        ft.status = models.PreprocessingStatus.FAILED
+                        ft.error_message = msg
+                        ft.completed_at = now
+
+                completed = sum(
+                    1
+                    for ft in task.file_tasks
+                    if ft.status == models.PreprocessingStatus.COMPLETED
+                )
+                failed = sum(
+                    1
+                    for ft in task.file_tasks
+                    if ft.status == models.PreprocessingStatus.FAILED
+                )
+                cancelled = sum(
+                    1
+                    for ft in task.file_tasks
+                    if ft.status == models.PreprocessingStatus.CANCELLED
+                )
+                task.processed_files = completed + failed + cancelled
+                task.failed_files = failed
+                task.skipped_files = cancelled
+                task.status = models.PreprocessingStatus.FAILED
+                task.message = msg
+                task.completed_at = now
+                finalized_ids.append(task.id)
+                reclaimed += 1
+            db.commit()
+
+            for tid in finalized_ids:
+                task = db.get(models.PreprocessingTask, tid)
+                if task:
+                    _broadcast_preprocessing_update(task, "failed")
+
+        elif role == "default":
+            trials = (
+                db.query(models.Trial)
+                .filter(models.Trial.status == models.TrialStatus.PROCESSING)
+                .all()
+            )
+            for trial in trials:
+                trial.status = models.TrialStatus.FAILED
+                trial.finished_at = now
+                msg = operational_error_message(
+                    detail=(
+                        f"Worker (role={role}) was restarted; trial {trial.id} "
+                        "was interrupted before completion."
+                    ),
+                    prefix="The trial was interrupted before it completed. Please retry.",
+                )
+                trial.meta = (trial.meta or {}) | {
+                    "failures": {"_restart": msg},
+                    "eta_seconds": 0,
+                }
+                reclaimed += 1
+            db.commit()
+
+            for trial in trials:
+                _broadcast_trial_update(trial, "failed")
+
+    return f"reclaimed {reclaimed} orphaned {role} task(s) on startup"
 
 
 # Register the sweeper as a periodic Celery task. Guarded so the module can be
@@ -348,12 +519,38 @@ if celery_app is not None:
 
     @celery_app.on_after_configure.connect
     def _setup_sweeper(sender, **_):
-        """Register the periodic orphan sweeper (every 5 minutes)."""
+        """Register the periodic orphan sweeper (ORPHAN_SWEEP_INTERVAL_SECONDS)."""
         sender.add_periodic_task(
-            300,  # seconds
+            settings.ORPHAN_SWEEP_INTERVAL_SECONDS,
             sweep_orphans_task.s(),
             name="sweep_orphaned_file_tasks",
         )
+
+    @signals.worker_ready.connect
+    def _reclaim_on_worker_ready(sender=None, **_):
+        """React to a restart the instant this worker is up.
+
+        Runs once in the worker's main process when it's ready to consume:
+          1. Kick the staleness sweeper immediately so a restart triggers
+             reconciliation now instead of waiting for the next beat interval.
+          2. Aggressively finalize work this worker's queue abandoned on the
+             previous run (see ``reclaim_orphaned_on_startup``). Gated by
+             CELERY_WORKER_ROLE so it only touches the queue this worker owns;
+             unset → skipped (multi-worker-safe; sweeper still covers it).
+        """
+        import os
+
+        try:
+            logger.info("Worker ready: %s", sweep_orphans())
+        except Exception as e:  # pragma: no cover - best effort
+            logger.warning("Startup sweep failed: %s", e, exc_info=True)
+
+        role = os.environ.get("CELERY_WORKER_ROLE")
+        if role in ("preprocess", "default"):
+            try:
+                logger.info("Worker ready: %s", reclaim_orphaned_on_startup(role))
+            except Exception as e:  # pragma: no cover - best effort
+                logger.warning("Startup reclaim failed: %s", e, exc_info=True)
 
     # ────────────────── runtime-settings propagation ──────────────────
     # Each Celery worker process keeps its own @lru_cache'd copy of the

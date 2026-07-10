@@ -26,6 +26,7 @@ export type AuditAction =
   | 'create'
   | 'update'
   | 'delete'
+  | 'cancel'
   // egress
   | 'llm_extraction_call'
   | 'ocr_external_call'

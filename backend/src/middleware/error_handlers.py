@@ -39,21 +39,35 @@ def _resolve_error_id(request: Request) -> str:
 def _write_error_log(
     *,
     error_id: str,
-    exc: Exception,
+    exc: Exception | None = None,
+    message: str | None = None,
+    exception_type: str | None = None,
     actor_id: int | None = None,
     actor_email: str | None = None,
     method: str | None = None,
     path: str | None = None,
     status_code: int = 500,
 ) -> None:
-    """Best-effort write of one ErrorLog row (own session, never re-raises)."""
+    """Best-effort write of one ErrorLog row (own session, never re-raises).
+
+    Pass ``exc`` for a caught exception (its type + message + traceback are
+    stored), or ``message``/``exception_type`` for a non-exception operational
+    condition (worker restart/loss) that has no traceback.
+    """
     try:
         from ..db.session import SessionLocal
         from ..models.audit import ErrorLog
 
-        tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))[
-            :20000
-        ]
+        if exc is not None:
+            tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))[
+                :20000
+            ]
+            resolved_type = type(exc).__name__[:255]
+            resolved_message = str(exc)[:2000]
+        else:
+            tb = ""
+            resolved_type = (exception_type or "OperationalError")[:255]
+            resolved_message = (message or "")[:2000]
         row = ErrorLog(
             error_id=error_id,
             request_id=get_request_id(),
@@ -62,8 +76,8 @@ def _write_error_log(
             method=method,
             path=(str(path)[:512] if path else None),
             status_code=status_code,
-            exception_type=type(exc).__name__[:255],
-            message=str(exc)[:2000],
+            exception_type=resolved_type,
+            message=resolved_message,
             traceback=tb,
         )
         with SessionLocal() as db:
@@ -126,6 +140,35 @@ def internal_error_message(
     so raw exception text (DB/storage/provider internals) never reaches the user.
     """
     error_id = record_internal_error(exc, actor=actor)
+    return f"{prefix} (error id: {error_id})"
+
+
+def operational_error_message(
+    detail: str,
+    *,
+    prefix: str,
+    actor: "User | None" = None,
+) -> str:
+    """Record a *non-exception* operational failure and return a safe user string.
+
+    Sibling of ``internal_error_message`` for known conditions that carry no
+    traceback — a worker restart/loss, an orphan sweep — surfaced on persisted
+    async fields (``PreprocessingTask.message``, ``FilePreprocessingTask.
+    error_message``, ``Trial.meta['failures']``). The descriptive ``detail``
+    (which may name internal infrastructure state, e.g. "worker was restarted")
+    is stored in the error log under a fresh id; the caller shows only
+    ``"<prefix> (error id: X)"`` so that infra detail never reaches the user.
+    Best-effort — never raises.
+    """
+    error_id = get_request_id() or new_request_id()
+    logger.warning("Operational failure [error_id=%s] %s", error_id, detail)
+    _write_error_log(
+        error_id=error_id,
+        message=detail,
+        exception_type="OperationalError",
+        actor_id=getattr(actor, "id", None),
+        actor_email=getattr(actor, "email", None),
+    )
     return f"{prefix} (error id: {error_id})"
 
 
