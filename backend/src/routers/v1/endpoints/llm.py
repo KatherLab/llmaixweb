@@ -9,6 +9,7 @@ from .... import models
 from ....core.config import settings
 from ....core.security import can_access_project, get_current_user
 from ....dependencies import get_db
+from ....middleware.error_handlers import record_internal_error
 from ....schemas.other import (
     LLMConnectionRequest,
     LLMModelSchemaTestRequest,
@@ -212,8 +213,14 @@ def test_vlm_image_support(
             if supported
             else "Model does not support image input",
         }
-    except Exception:
+    except Exception as e:
         # Don't echo the upstream exception string — it can embed the response
         # body/URL of an internal service the user pointed base_url at (SSRF
-        # exfiltration channel). Return a category-only message.
-        return {"supported": False, "message": "Image support test failed."}
+        # exfiltration channel). Record it server-side under a correlation id
+        # (so an admin can diagnose) and return a category-only message + id.
+        error_id = record_internal_error(e, actor=current_user)
+        return {
+            "supported": False,
+            "message": f"Image support test failed. (error id: {error_id})",
+            "error_id": error_id,
+        }

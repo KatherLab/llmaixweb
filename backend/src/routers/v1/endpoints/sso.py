@@ -16,6 +16,7 @@ Admin (auth + admin):
 
 from __future__ import annotations
 
+import logging
 import re
 from datetime import datetime, timezone
 
@@ -39,8 +40,11 @@ from ....dependencies import get_db
 from ....models import User, UserIdentity
 from ....models.sso import IdentityProvider
 from ....services import oidc_service
+from ....utils.audit import record_audit
 from ....utils.crypto import decrypt
-from ....utils.enums import UserRole
+from ....utils.enums import AuditAction, UserRole
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -148,9 +152,10 @@ def sso_login(
     except HTTPException:
         raise
     except Exception as e:
+        logger.warning("Failed to start SSO flow for provider %s: %s", slug, e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to start SSO flow: {e}",
+            detail="Failed to start the SSO flow. Please try again later.",
         )
 
     resp = RedirectResponse(url=authorize_url, status_code=status.HTTP_302_FOUND)
@@ -248,6 +253,14 @@ def sso_callback(
         )
 
     user = _resolve_or_provision_user(db, provider, subject, email, userinfo)
+
+    record_audit(
+        AuditAction.SSO_LOGIN,
+        actor=user,
+        resource_type="user",
+        resource_id=user.id,
+        detail={"provider": slug},
+    )
 
     access_token = create_access_token(user.id, token_version=user.token_version)
     from ....core.security import create_refresh_token

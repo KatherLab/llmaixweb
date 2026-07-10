@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, selectinload
 from thefuzz import fuzz
 
 from .. import models
+from ..middleware.error_handlers import internal_error_message
 from .enums import ComparisonMethod, FieldType
 from .helpers import flatten_dict
 from .json_utils import make_jsonable
@@ -507,7 +508,10 @@ class EvaluationEngine:
                 except Exception as exc:  # noqa: BLE001
                     logger.exception("EvaluationEngine error on doc %s", doc_id)
                     doc_evaluations.append(
-                        self._create_error_result(doc_id, f"Evaluation failed: {exc}")
+                        self._create_error_result(
+                            doc_id,
+                            internal_error_message(exc, prefix="Evaluation failed"),
+                        )
                     )
 
         return {

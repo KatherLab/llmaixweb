@@ -441,6 +441,24 @@ def download_evaluations_report(
     if not evaluations:
         raise HTTPException(status_code=404, detail="No evaluations found")
 
+    # Audit the export before streaming. This endpoint can bundle raw document
+    # text and ground-truth values (PHI) into the file via the *_content flags,
+    # so it is a PHI-egress event that must leave a trail. detail records the
+    # scope (which evaluations, format, and whether PHI content was included) —
+    # never the content itself.
+    record_audit(
+        AuditAction.EXPORT,
+        actor=current_user,
+        resource_type="evaluation",
+        project_id=project_id,
+        detail={
+            "evaluation_ids": [e.id for e, _ in evaluations],
+            "format": format,
+            "include_document_content": include_document_content,
+            "include_ground_truth_content": include_ground_truth_content,
+        },
+    )
+
     # --- ZIP Export ---
     if format == "zip":
         files = build_evaluation_zipfiles(

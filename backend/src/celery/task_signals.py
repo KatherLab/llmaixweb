@@ -18,6 +18,7 @@ from sqlalchemy import func
 
 from .. import models
 from ..dependencies import get_db
+from ..middleware.error_handlers import internal_error_message
 from .celery_config import celery_app
 
 logger = logging.getLogger(__name__)
@@ -205,7 +206,9 @@ def mark_failed(sender=None, task_id=None, exception=None, args=None, **_):
     elif isinstance(exception, SoftTimeLimitExceeded):
         friendly = "Preprocessing exceeded the maximum runtime limit."
     else:
-        friendly = str(exception) or "Preprocessing task failed with an unknown error."
+        # Any other worker-side failure: record the traceback under a correlation
+        # id and surface only that id, never the raw exception text.
+        friendly = internal_error_message(exception, prefix="Preprocessing task failed")
 
     _update(args[0], models.PreprocessingStatus.FAILED, friendly, broadcast=True)
 

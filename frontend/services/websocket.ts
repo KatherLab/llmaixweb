@@ -166,7 +166,10 @@ class WebSocketService {
       try {
         callback(data)
       } catch (error) {
-        console.error(`[WebSocket] Error in ${eventType} listener:`, error)
+        // Pass eventType as a separate argument rather than interpolating it
+        // into the format string — the message type is server-supplied, so
+        // embedding it could inject console format specifiers.
+        console.error('[WebSocket] Error in listener for event:', eventType, error)
       }
     })
   }

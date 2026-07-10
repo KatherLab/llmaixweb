@@ -38,6 +38,7 @@ from ....dependencies import (
     save_file,
     stream_file,
 )
+from ....middleware.error_handlers import record_internal_error
 from ....models.project import document_set_association
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction, FileCreator
@@ -437,18 +438,19 @@ def get_project_file_content(
     }
     serve_inline = preview and (file.file_type in safe_inline_types)
     disposition = "inline" if serve_inline else "attachment"
-    # Audit actual downloads (PHI bytes leaving as an attachment). Inline
-    # previews are browser-rendered views, not exfiltration, so they're not
-    # recorded here to keep the download signal meaningful.
-    if not serve_inline:
-        record_audit(
-            AuditAction.FILE_DOWNLOAD,
-            actor=current_user,
-            resource_type="file",
-            resource_id=file.id,
-            project_id=project_id,
-            detail={"file_name": file.file_name},
-        )
+    # Audit every access to source PHI bytes. An attachment download (bytes
+    # leaving the browser) is a FILE_DOWNLOAD; an inline browser-rendered
+    # preview of the source document is a DOCUMENT_DOWNLOAD. The distinct
+    # actions keep "downloaded" and "viewed inline" separable while ensuring
+    # neither path is a blind spot.
+    record_audit(
+        AuditAction.DOCUMENT_DOWNLOAD if serve_inline else AuditAction.FILE_DOWNLOAD,
+        actor=current_user,
+        resource_type="file",
+        resource_id=file.id,
+        project_id=project_id,
+        detail={"file_name": file.file_name, "disposition": disposition},
+    )
     headers = {"Content-Disposition": f'{disposition}; filename="{file.file_name}"'}
     return StreamingResponse(
         stream_file(file.file_uuid),
@@ -1064,9 +1066,19 @@ def batch_delete_files(
             )
             deleted.append(file_id)
         except HTTPException as e:
+            # Our own controlled message (e.g. "file is linked, use force").
             errors.append({"file_id": file_id, "error": e.detail})
         except Exception as e:
-            errors.append({"file_id": file_id, "error": str(e)})
+            # Unexpected failure (DB/storage) — surface a correlation id, not the
+            # raw exception text, so internals don't leak to the client.
+            error_id = record_internal_error(e, actor=current_user)
+            errors.append(
+                {
+                    "file_id": file_id,
+                    "error_id": error_id,
+                    "error": "Failed to delete file (see error id).",
+                }
+            )
 
     return {
         "deleted": deleted,
@@ -1319,7 +1331,15 @@ def move_files(
             moved_count += 1
 
         except Exception as e:
-            errors.append({"file_id": file_id, "error": str(e)})
+            # Surface a correlation id rather than raw exception text.
+            error_id = record_internal_error(e, actor=current_user)
+            errors.append(
+                {
+                    "file_id": file_id,
+                    "error_id": error_id,
+                    "error": "Failed to move file (see error id).",
+                }
+            )
 
     db.commit()
 

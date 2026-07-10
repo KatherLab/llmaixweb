@@ -15,6 +15,7 @@ from .. import models
 from ..core.config import settings
 from ..db.session import db_session
 from ..dependencies import get_file
+from ..middleware.error_handlers import internal_error_message
 from .helpers import _make_aware
 from .url_safety import validate_user_endpoint
 
@@ -256,7 +257,7 @@ class PreprocessingPipeline:
         except Exception as e:
             # any unhandled exception ⇒ whole preprocessing task failed
             self.task.status = models.PreprocessingStatus.FAILED
-            self.task.message = f"Processing failed: {str(e)}"
+            self.task.message = internal_error_message(e, prefix="Processing failed")
             self.task.completed_at = datetime.datetime.now(datetime.UTC)
             self.db.commit()
             # Broadcast failure
@@ -623,7 +624,9 @@ class PreprocessingPipeline:
                 e,
                 exc_info=True,
             )
-            file_task.error_message = str(e)
+            file_task.error_message = internal_error_message(
+                e, prefix="File processing failed"
+            )
             file_task.completed_at = datetime.datetime.now(datetime.UTC)
 
         self.db.commit()

@@ -11,6 +11,7 @@ from sqlalchemy import delete, func, select
 from .. import models
 from ..core.config import settings
 from ..db.session import db_session
+from ..middleware.error_handlers import internal_error_message
 from ..utils.info_extraction import extract_info_single_doc_async, update_trial_progress
 from .celery_config import celery_app
 
@@ -184,7 +185,9 @@ if celery_app:
                             failures[str(doc_id)] = "Cancelled"
                             raise
                         except Exception as exc:
-                            failures[str(doc_id)] = str(exc)
+                            failures[str(doc_id)] = internal_error_message(
+                                exc, prefix="Extraction failed"
+                            )
                             log.error(
                                 "Trial %s: Doc %s failed: %s", trial_id, doc_id, exc
                             )
@@ -328,7 +331,11 @@ if celery_app:
                         trial.status = models.TrialStatus.FAILED
                         trial.finished_at = dt.datetime.now(dt.UTC)
                         trial.meta = (trial.meta or {}) | {
-                            "failures": {"_task": str(exc)},
+                            "failures": {
+                                "_task": internal_error_message(
+                                    exc, prefix="Trial failed"
+                                )
+                            },
                             "eta_seconds": 0,
                         }
                         db.commit()

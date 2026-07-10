@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from .. import models
 from ..core.config import settings
 from ..dependencies import get_db
+from ..middleware.error_handlers import internal_error_message
 from ..utils.preprocessing import PreprocessingPipeline
 from .celery_config import celery_app
 
@@ -323,13 +324,16 @@ if celery_app:
                         db.commit()
                     raise
                 except Exception as exc:
-                    failures[str(file_task_id)] = str(exc)
+                    safe_msg = internal_error_message(
+                        exc, prefix="File processing failed"
+                    )
+                    failures[str(file_task_id)] = safe_msg
                     # Use a fresh session for the status update to avoid any
                     # transaction state issues from the failed operation
                     with next(get_db()) as db:
                         file_task = db.get(models.FilePreprocessingTask, file_task_id)
                         file_task.status = models.PreprocessingStatus.FAILED
-                        file_task.error_message = str(exc)
+                        file_task.error_message = safe_msg
                         file_task.completed_at = dt.datetime.now(dt.UTC)
                         db.commit()
 

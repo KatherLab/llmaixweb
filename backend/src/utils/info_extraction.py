@@ -16,6 +16,7 @@ import re
 import unicodedata
 from types import SimpleNamespace
 from typing import Any, Literal
+from urllib.parse import urlparse
 
 import httpx
 import jsonschema
@@ -33,6 +34,7 @@ from sqlalchemy import func, select
 from .. import models
 from ..core.config import settings
 from ..db.session import db_session
+from ..middleware.error_handlers import record_internal_error
 from ..utils.enums import TrialResultStatus
 
 logger = logging.getLogger(__name__)
@@ -112,11 +114,16 @@ PROVIDER_PROFILES = {
 
 
 def _detect_provider(base_url: str) -> str:
-    """Detect provider type from base URL."""
+    """Detect provider type from base URL (for capability flags only, not auth)."""
     if not base_url:
         return "generic"
     url_lower = base_url.lower()
-    if "openai.com" in url_lower:
+    # Match the official OpenAI host precisely rather than by substring, so
+    # look-alikes ("openai.com.evil.example", "myopenai.com") don't false-match.
+    host = (
+        urlparse(url_lower if "://" in url_lower else f"//{url_lower}").hostname or ""
+    )
+    if host == "openai.com" or host.endswith(".openai.com"):
         return "openai"
     if "vllm" in url_lower or "localhost:5000" in url_lower:
         return "vllm"
@@ -172,10 +179,14 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
                 "error_type": "model_not_found",
             }
         else:
+            # Unrecognised API error: record the full error server-side so an
+            # admin can look it up, and hand the caller a correlation id.
+            error_id = record_internal_error(e)
             return {
                 "success": False,
-                "message": "The API returned an error.",
+                "message": f"The API returned an error. (error id: {error_id})",
                 "error_type": "api_error",
+                "error_id": error_id,
             }
     except requests.exceptions.ConnectionError:
         return {
@@ -189,11 +200,13 @@ def test_llm_connection(api_key: str, base_url: str, llm_model: str) -> dict[str
             "message": "Connection timeout. The service might be slow or unavailable.",
             "error_type": "timeout",
         }
-    except Exception:
+    except Exception as e:
+        error_id = record_internal_error(e)
         return {
             "success": False,
-            "message": "Unexpected error.",
+            "message": f"Unexpected error. (error id: {error_id})",
             "error_type": "unknown",
+            "error_id": error_id,
         }
 
 
@@ -229,12 +242,14 @@ def get_available_models(api_key: str, base_url: str) -> dict[str, Any]:
             "message": "Connection refused. Please check if the base URL is correct and the service is running.",
             "error_type": "connection_refused",
         }
-    except Exception:
+    except Exception as e:
+        error_id = record_internal_error(e)
         return {
             "success": False,
             "models": [],
-            "message": "Failed to load models.",
+            "message": f"Failed to load models. (error id: {error_id})",
             "error_type": "model_loading_failed",
+            "error_id": error_id,
         }
 
 
@@ -266,11 +281,13 @@ def test_api_connection(api_key: str, base_url: str) -> dict[str, Any]:
             "message": "Connection refused. Please check if the base URL is correct and the service is running.",
             "error_type": "connection_refused",
         }
-    except Exception:
+    except Exception as e:
+        error_id = record_internal_error(e)
         return {
             "success": False,
-            "message": "Unexpected error.",
+            "message": f"Unexpected error. (error id: {error_id})",
             "error_type": "unknown",
+            "error_id": error_id,
         }
 
 
@@ -413,13 +430,15 @@ def test_model_with_schema(
                 "error_type": "model_not_found",
             }
 
-        # Other API errors
+        # Other API errors: record the full error for admin diagnosis, return id.
+        error_id = record_internal_error(e)
         return {
             "success": False,
-            "message": "The API returned an error.",
+            "message": f"The API returned an error. (error id: {error_id})",
             "request_accepted": False,
             "supports_structured_output": False,
             "error_type": "api_error",
+            "error_id": error_id,
         }
 
     except AuthenticationError:
@@ -449,13 +468,15 @@ def test_model_with_schema(
             "error_type": "connection_refused",
         }
 
-    except Exception:
+    except Exception as e:
+        error_id = record_internal_error(e)
         return {
             "success": False,
-            "message": "Unexpected error.",
+            "message": f"Unexpected error. (error id: {error_id})",
             "request_accepted": False,
             "supports_structured_output": False,
             "error_type": "unknown",
+            "error_id": error_id,
         }
 
 

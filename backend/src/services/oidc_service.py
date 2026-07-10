@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 import hashlib
+import logging
 import secrets
 
 import httpx
@@ -20,6 +21,8 @@ from fastapi import HTTPException, status
 
 from ..core.config import settings
 from ..utils.url_safety import UnsafeEndpointError, validate_user_endpoint
+
+logger = logging.getLogger(__name__)
 
 # Per-process discovery cache: issuer -> discovery document. OIDC discovery
 # documents are effectively static; a process restart picks up changes.
@@ -62,9 +65,12 @@ def discover(issuer_url: str) -> dict:
         resp = httpx.get(discovery_url, timeout=_DISCOVERY_TIMEOUT)
         resp.raise_for_status()
     except httpx.HTTPError as e:
+        # Don't echo the raw httpx error: it can embed the internal host/port a
+        # misconfigured issuer resolved to. Log it, tell the client generically.
+        logger.warning("OIDC discovery failed for %s: %s", issuer, e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to reach OIDC discovery endpoint: {e}",
+            detail="Failed to reach the OIDC discovery endpoint. Check the issuer URL.",
         )
     doc = resp.json()
     # Minimal sanity check — these are the endpoints we actually use.
@@ -105,9 +111,10 @@ def _verify_state(state: str) -> dict:
             state, settings.SECRET_KEY, algorithms=["HS256"], issuer="llmaixweb-sso"
         )
     except jwt.PyJWTError as e:
+        logger.info("SSO state rejected: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid or expired SSO state: {e}",
+            detail="Invalid or expired SSO state. Please restart the sign-in.",
         )
     return payload
 
@@ -160,14 +167,23 @@ def exchange_code(
     try:
         resp = httpx.post(doc["token_endpoint"], data=data, timeout=_TOKEN_TIMEOUT)
     except httpx.HTTPError as e:
+        logger.warning("OIDC token endpoint unreachable (%s): %s", issuer_url, e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to contact OIDC token endpoint: {e}",
+            detail="Failed to contact the OIDC token endpoint.",
         )
     if resp.status_code != 200:
+        # The IdP's response body can contain sensitive details — log it, don't
+        # echo it back to the browser.
+        logger.warning(
+            "OIDC token exchange failed (%s): %s %s",
+            issuer_url,
+            resp.status_code,
+            resp.text[:300],
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"OIDC token exchange failed: {resp.text[:300]}",
+            detail="OIDC token exchange failed.",
         )
     return resp.json()
 
@@ -187,14 +203,21 @@ def fetch_userinfo(issuer_url: str, access_token: str) -> dict:
             timeout=_USERINFO_TIMEOUT,
         )
     except httpx.HTTPError as e:
+        logger.warning("OIDC userinfo endpoint unreachable (%s): %s", issuer_url, e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to contact OIDC userinfo endpoint: {e}",
+            detail="Failed to contact the OIDC userinfo endpoint.",
         )
     if resp.status_code != 200:
+        logger.warning(
+            "OIDC userinfo request failed (%s): %s %s",
+            issuer_url,
+            resp.status_code,
+            resp.text[:300],
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"OIDC userinfo request failed: {resp.text[:300]}",
+            detail="OIDC userinfo request failed.",
         )
     info = resp.json()
     # `iss` claim validation guards against token mix-up across providers.

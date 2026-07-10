@@ -13,7 +13,9 @@ from ....dependencies import get_db
 from ....models import User
 from ....models.sso import IdentityProvider
 from ....services import oidc_service
+from ....utils.audit import record_audit
 from ....utils.crypto import encrypt
+from ....utils.enums import AuditAction
 
 router = APIRouter()
 
@@ -79,6 +81,13 @@ def create_provider(
     db.add(provider)
     db.commit()
     db.refresh(provider)
+    record_audit(
+        AuditAction.SSO_PROVIDER_CHANGE,
+        actor=current_user,
+        resource_type="identity_provider",
+        resource_id=provider.id,
+        detail={"operation": "create", "slug": provider.slug},
+    )
     return _to_response(provider)
 
 
@@ -126,6 +135,17 @@ def update_provider(
 
     db.commit()
     db.refresh(provider)
+    record_audit(
+        AuditAction.SSO_PROVIDER_CHANGE,
+        actor=current_user,
+        resource_type="identity_provider",
+        resource_id=provider.id,
+        detail={
+            "operation": "update",
+            "slug": provider.slug,
+            "fields": sorted(payload.model_dump(exclude_unset=True).keys()),
+        },
+    )
     return _to_response(provider)
 
 
@@ -140,8 +160,16 @@ def delete_provider(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Provider not found."
         )
+    slug = provider.slug
     db.delete(provider)
     db.commit()
+    record_audit(
+        AuditAction.SSO_PROVIDER_CHANGE,
+        actor=current_user,
+        resource_type="identity_provider",
+        resource_id=provider_id,
+        detail={"operation": "delete", "slug": slug},
+    )
     return None
 
 

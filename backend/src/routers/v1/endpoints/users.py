@@ -20,6 +20,7 @@ from .... import models, schemas
 from ....core.config import settings
 from ....core.rate_limit import limiter
 from ....core.security import (
+    _hash_token,
     get_admin_user,
     get_current_user,
     get_password_hash,
@@ -688,14 +689,16 @@ def forgot_password(
             models.PasswordResetToken.user_id == user.id
         ).delete()
 
-        # Create new reset token (24h expiry)
+        # Create new reset token (24h expiry). Only the sha256 hash is stored;
+        # the plaintext is emailed once and never persisted, so a DB read
+        # (SQLi, backup/replica exposure) cannot yield a usable reset token.
         token = secrets.token_urlsafe(32)
         expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
             hours=24
         )
         reset_token = models.PasswordResetToken(
             user_id=user.id,
-            token=token,
+            token=_hash_token(token),
             expires_at=expires_at,
         )
         db.add(reset_token)
@@ -730,7 +733,7 @@ def validate_reset_token(
     """Check if a password reset token is valid and not expired."""
     reset_token = (
         db.query(models.PasswordResetToken)
-        .filter(models.PasswordResetToken.token == token)
+        .filter(models.PasswordResetToken.token == _hash_token(token))
         .first()
     )
     if not reset_token or reset_token.expires_at < datetime.now(timezone.utc).replace(
@@ -761,7 +764,7 @@ def reset_password(
 
     reset_token = (
         db.query(models.PasswordResetToken)
-        .filter(models.PasswordResetToken.token == token)
+        .filter(models.PasswordResetToken.token == _hash_token(token))
         .first()
     )
     if not reset_token or reset_token.expires_at < datetime.now(timezone.utc).replace(

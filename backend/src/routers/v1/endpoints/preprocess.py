@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, selectinload
 from .... import models, schemas
 from ....core.security import admin_has_global_project_access, get_current_user
 from ....dependencies import get_db
+from ....middleware.error_handlers import internal_error_message
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
 
@@ -675,7 +676,9 @@ async def preprocess_project_data(
             pipeline.process()
         except Exception as e:
             task.status = models.PreprocessingStatus.FAILED
-            task.message = f"Processing failed: {str(e)}"
+            task.message = internal_error_message(
+                e, actor=current_user, prefix="Processing failed"
+            )
             db.commit()
             logger.error(
                 "Preprocessing failed for task %s: %s", task.id, e, exc_info=True

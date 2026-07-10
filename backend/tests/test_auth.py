@@ -361,16 +361,41 @@ def test_reset_password(client, api_url):
     assert response.status_code == 200
     assert "message" in response.json()
 
-    # Step 2: Check that a reset token was created
+    # Step 2: Check that a reset token was created — and stored HASHED, never in
+    # plaintext (the plaintext is emailed once and never persisted, so a DB
+    # read can't yield a usable token).
+    from datetime import datetime, timedelta, timezone
+
+    from backend.src.core.security import _hash_token
+    from backend.src.models import User
+
     db = SessionLocal()
-    reset_token = (
+    user = db.query(User).filter(User.email == "test@example.com").first()
+    stored = (
         db.query(PasswordResetToken)
-        .join(PasswordResetToken.user)
-        .filter(PasswordResetToken.user.has(email="test@example.com"))
+        .filter(PasswordResetToken.user_id == user.id)
         .first()
     )
-    assert reset_token is not None
-    token = reset_token.token
+    assert stored is not None
+    # Stored value is a sha256 hex digest, not the raw urlsafe token.
+    assert len(stored.token) == 64
+    assert all(c in "0123456789abcdef" for c in stored.token)
+
+    # The emailed plaintext isn't recoverable from the stored hash (by design),
+    # so mint a token whose plaintext we control for the rest of the flow.
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id
+    ).delete()
+    token = "known-reset-token-for-test-1234567890"
+    db.add(
+        PasswordResetToken(
+            user_id=user.id,
+            token=_hash_token(token),
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
+            + timedelta(hours=1),
+        )
+    )
+    db.commit()
     db.close()
 
     # Step 3: Validate the reset token

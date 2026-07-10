@@ -48,11 +48,19 @@ export function extractErrorMessage(err: unknown, fallback = 'Something went wro
       const detail = response.data.detail
       if (typeof detail === 'string' && detail.trim()) return detail
 
-      // Structured detail objects (e.g. our 409 `{ message, links }`) carry the
-      // human-readable text in `detail.message`.
+      // Structured detail objects (e.g. our 409 `{ message, links }`, or a
+      // caught-500 `{ error_id, message }`) carry the human-readable text in
+      // `detail.message`; when an `error_id` is present, append it so the user
+      // can quote it to an admin.
       if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
         const dmsg = (detail as { message?: unknown }).message
-        if (typeof dmsg === 'string' && dmsg.trim()) return dmsg
+        const did = (detail as { error_id?: unknown }).error_id
+        if (typeof dmsg === 'string' && dmsg.trim()) {
+          if (typeof did === 'string' && did.trim() && !dmsg.includes(did)) {
+            return `${dmsg} (Error ID: ${did})`
+          }
+          return dmsg
+        }
       }
 
       const message = response.data.message

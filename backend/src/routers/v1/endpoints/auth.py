@@ -216,6 +216,12 @@ def refresh_token(
         )
     access_token = create_access_token(user.id, token_version=user.token_version)
     new_refresh = create_refresh_token(db, user)
+    record_audit(
+        AuditAction.TOKEN_REFRESH,
+        actor=user,
+        resource_type="user",
+        resource_id=user.id,
+    )
     return schemas.Token(
         access_token=access_token,
         token_type="bearer",
