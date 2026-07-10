@@ -98,7 +98,13 @@ if celery_app:
     def process_files_async(
         self,
         task_id: int,
+        resumed: bool = False,
     ):
+        # ``resumed=True`` marks a self-continuation: this task processes files in
+        # chunks (PREPROCESS_CHUNK_SIZE per execution) and re-enqueues itself to
+        # finish the rest, so a huge batch never runs under a single time limit /
+        # broker visibility window. A resume is an intentional re-dispatch, not a
+        # worker-crash redelivery, so the stale-task guard below is skipped for it.
         async def _run():
             failures = {}
 
@@ -153,9 +159,14 @@ if celery_app:
                 # This also handles any edge cases where tasks get stuck
                 # in IN_PROGRESS due to unhandled exceptions or crashes.
                 now = dt.datetime.now(dt.UTC)
-                if task.started_at is not None and task.status in (
-                    models.PreprocessingStatus.PENDING,
-                    models.PreprocessingStatus.IN_PROGRESS,
+                if (
+                    not resumed
+                    and task.started_at is not None
+                    and task.status
+                    in (
+                        models.PreprocessingStatus.PENDING,
+                        models.PreprocessingStatus.IN_PROGRESS,
+                    )
                 ):
                     # Check how long ago the task started
                     time_since_start = (now - task.started_at).total_seconds()
@@ -198,15 +209,21 @@ if celery_app:
 
                 # Mark the task as in_progress immediately so the frontend
                 # never sees a stale PENDING status after Celery accepted it.
+                # Preserve the original started_at across resumes (accurate ETA).
                 task.status = models.PreprocessingStatus.IN_PROGRESS
-                task.started_at = now
+                if task.started_at is None:
+                    task.started_at = now
                 db.commit()
 
+                # Process at most PREPROCESS_CHUNK_SIZE PENDING files this
+                # execution; the finalization block re-enqueues the task to
+                # continue with the rest, keeping each run bounded.
+                chunk_size = settings.PREPROCESS_CHUNK_SIZE
                 file_tasks = [
                     ft
                     for ft in task.file_tasks
                     if ft.status == models.PreprocessingStatus.PENDING
-                ]
+                ][:chunk_size]
 
                 # Get configuration to determine appropriate concurrency
                 additional_settings = (
@@ -369,6 +386,11 @@ if celery_app:
 
                             now = dt.datetime.now(dt.UTC)
                             started = task.started_at or now
+                            # Coerce to tz-aware: Postgres returns aware datetimes
+                            # but SQLite (dev) returns naive, which can't be
+                            # subtracted from the aware `now`.
+                            if started.tzinfo is None:
+                                started = started.replace(tzinfo=dt.UTC)
                             elapsed = (
                                 (now - started).total_seconds() if completed else 0
                             )
@@ -398,10 +420,12 @@ if celery_app:
                                 last_broadcast = current_state
                                 _broadcast_preprocessing_update(task, "progress")
 
-                            # Done once no file task is still pending/in-progress.
-                            if not in_progress and not counts.get(
-                                models.PreprocessingStatus.PENDING, 0
-                            ):
+                            # Done once THIS chunk's file tasks have all finished.
+                            # (There may be further PENDING files belonging to
+                            # later chunks, which a subsequent resume handles —
+                            # so we key off this execution's running_tasks, not
+                            # the global PENDING count.)
+                            if all(t.done() for t in running_tasks.values()):
                                 break
                 except asyncio.CancelledError:
                     raise
@@ -430,6 +454,55 @@ if celery_app:
                 progress_heartbeat(),
                 cancellation_watcher(),
             )
+
+            # --- Chunk boundary: continue with the next chunk, or finalize ---
+            with next(get_db()) as db:
+                task = db.get(models.PreprocessingTask, task_id)
+                now = dt.datetime.now(dt.UTC)
+
+                # If the task wasn't cancelled and PENDING files remain beyond
+                # this chunk, re-enqueue to continue instead of finalizing. The
+                # re-enqueued message goes to the back of the queue, so other
+                # users' batches interleave fairly at chunk granularity.
+                pending_remaining = (
+                    db.scalar(
+                        select(func.count())
+                        .select_from(models.FilePreprocessingTask)
+                        .where(
+                            models.FilePreprocessingTask.preprocessing_task_id
+                            == task_id,
+                            models.FilePreprocessingTask.status
+                            == models.PreprocessingStatus.PENDING,
+                        )
+                    )
+                    or 0
+                )
+
+                if not task.is_cancelled and pending_remaining > 0:
+                    counts = _count_file_tasks_by_status(db, task_id)
+                    completed = counts.get(models.PreprocessingStatus.COMPLETED, 0)
+                    failed = counts.get(models.PreprocessingStatus.FAILED, 0)
+                    cancelled = counts.get(models.PreprocessingStatus.CANCELLED, 0)
+                    task.processed_files = completed + failed + cancelled
+                    task.failed_files = failed
+                    task.skipped_files = cancelled
+                    task.status = models.PreprocessingStatus.IN_PROGRESS
+                    task.meta = (task.meta or {}) | {
+                        "total_files": sum(counts.values()),
+                        "completed_files": completed,
+                    }
+                    db.commit()
+                    _broadcast_preprocessing_update(task, "progress")
+                    log.info(
+                        "PreprocessingTask %s: chunk done, %d files remaining — "
+                        "will re-enqueue to continue",
+                        task_id,
+                        pending_remaining,
+                    )
+                    # Signal the (sync) task body to re-enqueue AFTER the event
+                    # loop unwinds — re-enqueuing here (inside asyncio.run) would
+                    # nest asyncio.run under Celery's eager mode.
+                    return True
 
             # --- Finalization: update all remaining statuses, handle doc rollback ---
             with next(get_db()) as db:
@@ -505,7 +578,12 @@ if celery_app:
                 # Broadcast final status via Redis pub/sub (FastAPI will relay to WebSocket clients)
                 _broadcast_preprocessing_update(task, event)
 
-        asyncio.run(_run())
+        # _run() returns True when this chunk finished but PENDING files remain,
+        # meaning the task should re-enqueue itself to continue. Doing it here
+        # (outside asyncio.run) avoids nesting event loops under eager mode.
+        should_resume = asyncio.run(_run())
+        if should_resume:
+            process_files_async.apply_async(args=[task_id], kwargs={"resumed": True})
 
     # NOTE: a previous task_failure handler lived here to mark the
     # PreprocessingTask FAILED after retries were exhausted, but Celery's

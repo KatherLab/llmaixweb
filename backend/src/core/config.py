@@ -231,6 +231,18 @@ class Settings(BaseSettings):
         description="Maximum number of files to process concurrently in a single preprocessing task",
     )
 
+    # A preprocessing task processes at most this many files per Celery
+    # execution, then re-enqueues itself (to the back of the queue) to continue
+    # the rest. This keeps each execution well under the task time limit / broker
+    # visibility timeout (so large batches finish instead of being killed), and
+    # interleaves different users' batches fairly at chunk granularity.
+    PREPROCESS_CHUNK_SIZE: int = Field(
+        default=200,
+        ge=1,
+        le=100000,
+        description="Max files processed per preprocessing task execution before it re-enqueues itself to continue",
+    )
+
     # Per-file timeout (general default)
     PREPROCESS_FILE_TIMEOUT_SECONDS: int = Field(
         default=600,
@@ -1167,6 +1179,14 @@ SETTINGS_META = {
         "category": "Preprocessing",
         "label": "Max Concurrent Files",
         "help": "Maximum number of files to process concurrently in a single preprocessing task (1-20)",
+    },
+    "PREPROCESS_CHUNK_SIZE": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Preprocessing",
+        "label": "Preprocessing Chunk Size",
+        "help": "Files processed per preprocessing task execution before it re-enqueues itself to continue. Keeps large batches under the task time limit and interleaves users' batches fairly.",
     },
     "PREPROCESS_FILE_TIMEOUT_SECONDS": {
         "type": "int",
