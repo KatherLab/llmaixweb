@@ -34,6 +34,16 @@ export function extractErrorMessage(err: unknown, fallback = 'Something went wro
   // Axios-style error with a response body
   if (isAxiosLike(err)) {
     const response = err.response
+
+    // 413 Payload Too Large: this can come from the backend (JSON detail with a
+    // raw byte count) OR from the nginx proxy (an HTML body, which none of the
+    // parsing below can read — it would otherwise fall through to axios's
+    // opaque "Request failed with status code 413"). Return one friendly,
+    // actionable message for both.
+    if (response?.status === 413) {
+      return 'The file is too large to upload. Please choose a smaller file.'
+    }
+
     if (response?.data) {
       // Our global 500 handler returns { error_id, message, detail }. Surface
       // the correlation id so the user can quote it to an admin — it takes
