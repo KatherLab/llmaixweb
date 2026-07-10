@@ -40,6 +40,10 @@ dev = [
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
     "isort==8.0.1",
+    # Starlette's TestClient prefers httpx2 and warns (deprecation) when it has
+    # to fall back to httpx. It's only used by the test suite, so keep it here
+    # (out of the production image) rather than in the main deps.
+    "httpx2==2.5.0",
     "boto3-stubs==1.43.45",
     "pandas-stubs==3.0.3.260530",
     "celery-types==0.26.0",
