@@ -727,13 +727,37 @@ async def preprocess_project_data(
                 detail="Preprocessing failed. See server logs for details.",
             )
     else:
-        from ....celery.preprocessing import process_files_async
-
         # Credentials are NOT passed through the broker: the api_key is stored
         # encrypted on the task row and decrypted inside the worker; base_url
         # is read from task_metadata. Passing either as a Celery arg would
         # serialize the plaintext key into Redis.
-        result = process_files_async.delay(task.id)
+        try:
+            from ....celery.preprocessing import process_files_async
+
+            result = process_files_async.delay(task.id)
+        except Exception as e:
+            # Dispatch failed (broker unreachable, or Celery disabled). The task
+            # + its file tasks were already committed as PENDING, and the orphan
+            # sweeper can't reap never-started rows (NULL heartbeat/started_at),
+            # so they'd sit PENDING forever. Mark them FAILED so the user sees the
+            # failure and can retry, instead of a silent stuck task + raw 500.
+            task.status = models.PreprocessingStatus.FAILED
+            task.message = internal_error_message(
+                e, actor=current_user, prefix="Failed to queue preprocessing"
+            )
+            task.completed_at = datetime.datetime.now(datetime.UTC)
+            for ft in file_tasks_to_process:
+                ft.status = models.PreprocessingStatus.FAILED
+                ft.error_message = "Could not be queued for processing."
+            db.commit()
+            logger.error(
+                "Failed to dispatch preprocessing task %s: %s", task.id, e, exc_info=True
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="Could not queue preprocessing for background processing. "
+                "Please try again later.",
+            )
         task.celery_task_id = result.id
         db.commit()
 
