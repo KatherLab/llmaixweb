@@ -516,6 +516,14 @@ def update_trial_progress(db, trial_id: int) -> None:
     trial.docs_done = done
     trial.progress = progress
 
+    # Force `updated_at` to advance on every heartbeat. When a trial is slow to
+    # produce its first result, done/progress/meta are all unchanged between
+    # ticks (0 / 0.0 / eta_seconds=0), so SQLAlchemy would emit no UPDATE and
+    # `updated_at` (onupdate) would never move — the orphan sweeper, which reaps
+    # PROCESSING trials whose `updated_at` is >10min old, would then false-fail a
+    # live-but-slow trial. Setting it explicitly guarantees a real heartbeat.
+    trial.updated_at = _now_utc()
+
     # ETA logic
     if trial.started_at and done:
         elapsed = (_now_utc() - _to_utc(trial.started_at)).total_seconds()

@@ -231,28 +231,45 @@ def sso_callback(
     )
 
     access_token_oidc = token_resp.get("access_token", "")
+
+    # Verify the id_token's signature + claims (aud/iss/exp/nonce) when present.
+    # These are the only claims we can cryptographically trust; the previous
+    # code decoded the id_token with verify_signature=False for provisioning.
+    verified_claims: dict = {}
+    if token_resp.get("id_token"):
+        verified_claims = oidc_service.verify_id_token(
+            provider.issuer_url,
+            token_resp["id_token"],
+            provider.client_id,
+            nonce=state_payload.get("nonce"),
+        )
+
     userinfo = oidc_service.fetch_userinfo(provider.issuer_url, access_token_oidc)
-    # If the IdP has no userinfo endpoint, fall back to the id_token claims.
-    if not userinfo and token_resp.get("id_token"):
-        import jwt as pyjwt
+    # If the IdP has no userinfo endpoint, fall back to the (now verified)
+    # id_token claims instead of an unverified decode.
+    if not userinfo:
+        userinfo = verified_claims
 
-        try:
-            userinfo = pyjwt.decode(
-                token_resp["id_token"],
-                options={"verify_signature": False},
-            )
-        except pyjwt.PyJWTError:
-            userinfo = {}
-
-    subject = userinfo.get("sub")
-    email = userinfo.get("email")
+    subject = userinfo.get("sub") or verified_claims.get("sub")
+    email = userinfo.get("email") or verified_claims.get("email")
     if not subject:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OIDC provider did not return a subject identifier.",
         )
 
-    user = _resolve_or_provision_user(db, provider, subject, email, userinfo)
+    # Email is only trustworthy if a trusted source asserts email_verified.
+    # Some IdPs emit the claim as a string ("true"); accept both.
+    def _is_verified(v: object) -> bool:
+        return v is True or (isinstance(v, str) and v.lower() == "true")
+
+    email_verified = _is_verified(userinfo.get("email_verified")) or _is_verified(
+        verified_claims.get("email_verified")
+    )
+
+    user = _resolve_or_provision_user(
+        db, provider, subject, email, userinfo, email_verified
+    )
 
     record_audit(
         AuditAction.SSO_LOGIN,
@@ -280,6 +297,7 @@ def _resolve_or_provision_user(
     subject: str,
     email: str | None,
     userinfo: dict,
+    email_verified: bool,
 ) -> User:
     """Find an existing user by identity or email, else JIT-create one.
 
@@ -287,6 +305,10 @@ def _resolve_or_provision_user(
       1. Existing UserIdentity(provider, subject) → load that user.
       2. Existing User with matching email → link the identity to it.
       3. Else create a new user (subject to SSO_BYPASS_INVITATION / REQUIRE_INVITATION).
+
+    Email-based linking/provisioning (steps 2 & 3) requires a verified email
+    when ``SSO_REQUIRE_VERIFIED_EMAIL`` is set (default), so an IdP that permits
+    unverified emails can't be used to take over an existing local account.
     """
     identity = db.execute(
         select(UserIdentity).where(
@@ -305,6 +327,17 @@ def _resolve_or_provision_user(
         identity.last_login_at = datetime.now(timezone.utc)
         db.commit()
         return user
+
+    # Anything below links or creates an account keyed on the email claim, so
+    # gate it on a verified email to prevent takeover / impersonation.
+    if email and settings.SSO_REQUIRE_VERIFIED_EMAIL and not email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "The identity provider did not verify this email address, so it "
+                "cannot be linked to an account. Contact your administrator."
+            ),
+        )
 
     # No identity yet — try to link by email.
     user_by_email: User | None = None

@@ -93,14 +93,18 @@ def _pkce_pair() -> tuple[str, str]:
     return verifier, challenge_b64
 
 
-def _make_state(provider_slug: str, code_verifier: str, redirect: str) -> str:
+def _make_state(
+    provider_slug: str, code_verifier: str, redirect: str, nonce: str
+) -> str:
     payload = {
         "exp": _now() + datetime.timedelta(minutes=10),
         "iss": "llmaixweb-sso",
         "provider": provider_slug,
         "verifier": code_verifier,
         "redirect": redirect or "/",
-        "nonce": secrets.token_urlsafe(16),
+        # Bound to the OIDC `nonce` sent in the authorize request; verified
+        # against the id_token on callback to defend against replay.
+        "nonce": nonce,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
@@ -131,7 +135,8 @@ def build_authorization_url(
     by the caller and verified on callback."""
     doc = discover(issuer_url)
     verifier, challenge = _pkce_pair()
-    state = _make_state(provider_slug, verifier, post_login_redirect)
+    nonce = secrets.token_urlsafe(16)
+    state = _make_state(provider_slug, verifier, post_login_redirect, nonce)
 
     params = {
         "response_type": "code",
@@ -139,6 +144,7 @@ def build_authorization_url(
         "redirect_uri": redirect_uri,
         "scope": scopes or "openid email profile",
         "state": state,
+        "nonce": nonce,
         "code_challenge": challenge,
         "code_challenge_method": "S256",
     }
@@ -228,6 +234,53 @@ def fetch_userinfo(issuer_url: str, access_token: str) -> dict:
             detail="OIDC userinfo issuer mismatch.",
         )
     return info
+
+
+def verify_id_token(
+    issuer_url: str,
+    id_token: str,
+    client_id: str,
+    nonce: str | None = None,
+) -> dict:
+    """Verify an OIDC id_token's signature and claims, returning its payload.
+
+    Fetches the IdP's JWKS (from the SSRF-validated, admin-configured discovery
+    document), verifies the RS/ES signature, and validates ``aud`` (== our
+    client_id), ``iss``, ``exp``, and — when provided — the ``nonce`` binding.
+    Raises HTTP 400 on any failure. This replaces the previous
+    ``verify_signature=False`` decode, which trusted attacker-influenceable
+    token contents for account provisioning.
+    """
+    doc = discover(issuer_url)
+    jwks_uri = doc.get("jwks_uri")
+    issuer = doc.get("issuer") or _validate_issuer(issuer_url)
+    if not jwks_uri:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OIDC discovery document has no jwks_uri; cannot verify id_token.",
+        )
+    try:
+        jwk_client = jwt.PyJWKClient(jwks_uri)
+        signing_key = jwk_client.get_signing_key_from_jwt(id_token)
+        payload = jwt.decode(
+            id_token,
+            signing_key.key,
+            algorithms=["RS256", "RS384", "RS512", "ES256", "ES384", "ES512"],
+            audience=client_id,
+            issuer=issuer,
+        )
+    except jwt.PyJWTError as e:
+        logger.warning("OIDC id_token verification failed (%s): %s", issuer_url, e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OIDC id_token verification failed.",
+        )
+    if nonce is not None and payload.get("nonce") != nonce:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OIDC id_token nonce mismatch.",
+        )
+    return payload
 
 
 def decode_state(state: str) -> dict:

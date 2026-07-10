@@ -78,6 +78,12 @@ class Settings(BaseSettings):
     # When True, SSO login bypasses REQUIRE_INVITATION (standard for SSO —
     # the IdP is the trust source, not an invitation token).
     SSO_BYPASS_INVITATION: bool = True
+    # When True (default), the IdP must assert `email_verified: true` before we
+    # will link an SSO identity to (or provision) an account by email address.
+    # This prevents account takeover: without it, an IdP that permits
+    # self-asserted/unverified emails would let an attacker register
+    # victim@clinic.com upstream and get merged into the victim's local account.
+    SSO_REQUIRE_VERIFIED_EMAIL: bool = True
 
     # ─────────────────────────────────────────────────────────────
     # Refresh tokens
@@ -777,6 +783,14 @@ SETTINGS_META = {
         "category": "SSO",
         "label": "SSO Bypass Invitation",
         "help": "When True, SSO login ignores REQUIRE_INVITATION (the IdP is the trust source).",
+    },
+    "SSO_REQUIRE_VERIFIED_EMAIL": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "SSO",
+        "label": "SSO Require Verified Email",
+        "help": "When True, the IdP must assert email_verified before an SSO identity is linked to or provisions an account by email. Prevents account takeover via unverified emails. Keep enabled unless every configured IdP verifies emails.",
     },
     "REFRESH_TOKEN_EXPIRE_DAYS": {
         "type": "int",

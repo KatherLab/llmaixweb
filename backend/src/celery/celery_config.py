@@ -59,7 +59,7 @@ if not settings.DISABLE_CELERY:
     def _configure_celery_logging(**_kwargs):
         from ..utils.logging_config import setup_logging
 
-        setup_logging(level=settings.LOG_LEVEL)
+        setup_logging(level=settings.LOG_LEVEL, log_format=settings.LOG_FORMAT)
 
     # Import signal handlers + periodic sweeper once the app is ready. This
     # must run inside the `not DISABLE_CELERY` guard: task_signals registers

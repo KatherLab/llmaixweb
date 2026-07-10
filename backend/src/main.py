@@ -93,7 +93,7 @@ def _resolve_celery_pool(pool: str) -> str:
 
 
 def _spawn_celery_worker(
-    queue: str, concurrency: int, pool: str | None = None
+    queue: str, concurrency: int, pool: str | None = None, with_beat: bool = False
 ) -> mp.Process:
     """
     Start ONE Celery worker process listening on <queue>.
@@ -102,6 +102,13 @@ def _spawn_celery_worker(
     to the ``CELERY_DEV_POOL`` env var (default ``threads``). The preprocess
     queue should pass ``settings.CELERY_PREPROCESS_POOL`` so the heavy OCR
     worker uses a native-library-safe pool (solo on macOS).
+
+    ``with_beat`` embeds the beat scheduler (``-B``) in this worker so the
+    periodic orphan/stuck-task sweeper actually runs. Enable it on exactly ONE
+    worker (the single ``default`` worker) — the periodic schedule is
+    registered via ``on_after_configure``/``add_periodic_task`` but nothing
+    fires it without a beat process. Do not enable on more than one worker or
+    the sweep would run in duplicate.
     """
     resolved_pool = _resolve_celery_pool(
         pool if pool is not None else os.getenv("CELERY_DEV_POOL", "threads")
@@ -121,6 +128,10 @@ def _spawn_celery_worker(
         "-n",
         f"{queue}@%(hostname)s",  # unique node‑name → no warnings
     ]
+    if with_beat:
+        # Embed beat + use an in-memory schedule so no celerybeat-schedule file
+        # is written to the container filesystem.
+        argv += ["-B", "-s", "/tmp/celerybeat-schedule"]
 
     assert celery_app is not None  # guarded by caller (INITIALIZE_CELERY block)
     proc = mp.Process(
@@ -252,8 +263,9 @@ async def lifespan(app):
 
     workers: list[mp.Process] = []
     if celery_app is not None and settings.INITIALIZE_CELERY:
-        # 1) general‑purpose tasks
-        workers.append(_spawn_celery_worker("default", concurrency=4))
+        # 1) general‑purpose tasks. Embed beat here (single default worker) so
+        # the periodic orphan/stuck-task sweeper runs.
+        workers.append(_spawn_celery_worker("default", concurrency=4, with_beat=True))
 
         # 2) heavy OCR / preprocessing tasks — use the preprocess-specific pool
         # (CELERY_PREPROCESS_POOL, defaults to "auto" → solo on macOS for

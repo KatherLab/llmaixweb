@@ -71,9 +71,13 @@ services:
     image: ghcr.io/katherlab/llmaixweb-backend:latest
     restart: unless-stopped
     env_file: .env
+    # -B embeds the beat scheduler so the periodic orphan/stuck-task sweeper
+    # runs. Keep beat on exactly ONE worker; do not scale this service beyond
+    # replicas=1 (or the sweep runs in duplicate). -s points the schedule file
+    # at a writable path.
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
-      worker -Q default -c 4 --loglevel=info
+      worker -Q default -c 4 --loglevel=info -B -s /tmp/celerybeat-schedule
     depends_on:
       backend:
         condition: service_started
