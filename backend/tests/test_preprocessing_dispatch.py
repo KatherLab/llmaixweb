@@ -73,4 +73,17 @@ def test_celery_dispatch_failure_fails_task_not_stuck_pending(client, api_url):
     assert tasks[0]["status"] == "failed"
     assert all(ft["status"] == "failed" for ft in tasks[0]["file_tasks"])
 
+    # And the file must be deletable afterwards even though a (failed)
+    # preprocessing task references it — no force needed, since it produced no
+    # documents. Previously the lingering FilePreprocessingTask blocked deletion.
+    del_resp = client.delete(
+        f"{api_url}/project/{project_id}/file/{file_id}", headers=headers
+    )
+    assert del_resp.status_code == 200, del_resp.text
+    # The now-empty parent preprocessing task is cleaned up too.
+    remaining = client.get(
+        f"{api_url}/project/{project_id}/preprocess", headers=headers
+    ).json()
+    assert remaining == []
+
     client.delete(f"{api_url}/project/{project_id}", headers=headers)

@@ -951,36 +951,67 @@ def delete_file(
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
 
-    # Check if file is linked to other resources
-    is_linked = (
-        len(file.documents_as_original) > 0
-        or len(file.documents_as_preprocessed) > 0
-        or len(file.preprocessing_tasks) > 0
-        or len(file.file_preprocessing_tasks) > 0
-    )
-
     doc_count = len(file.documents_as_original) + len(file.documents_as_preprocessed)
-    task_count = len(file.preprocessing_tasks) + len(file.file_preprocessing_tasks)
 
-    if is_linked and not force:
-        linked_parts = []
-        if doc_count:
-            linked_parts.append(f"{doc_count} document(s)")
-        if task_count:
-            linked_parts.append(f"{task_count} preprocessing task(s)")
+    # A file that's mid-preprocessing must not be deleted — the running task
+    # would fail and leave orphaned rows. Block that regardless of `force`.
+    # TERMINAL file tasks (failed/completed/cancelled) are just history and are
+    # cleaned up below, so a *failed* preprocess no longer makes the file
+    # undeletable (previously any file_preprocessing_task row blocked deletion).
+    active_file_tasks = [
+        ft
+        for ft in file.file_preprocessing_tasks
+        if ft.status
+        in (
+            models.PreprocessingStatus.PENDING,
+            models.PreprocessingStatus.IN_PROGRESS,
+        )
+    ]
+    if active_file_tasks:
         raise HTTPException(
             status_code=409,
             detail={
                 "message": (
-                    f"This file is linked to {' and '.join(linked_parts)}. "
-                    "Delete those first before removing the file."
+                    "This file is currently being preprocessed. Cancel the "
+                    "preprocessing task before deleting the file."
                 ),
-                "links": {
-                    "documents": doc_count,
-                    "preprocessing_tasks": task_count,
-                },
+                "links": {"active_preprocessing_tasks": len(active_file_tasks)},
             },
         )
+
+    # Documents may be referenced by trials/evaluations, so still require force.
+    if doc_count and not force:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": (
+                    f"This file is linked to {doc_count} document(s). Delete those "
+                    "first, or retry with force to remove them along with the file."
+                ),
+                "links": {"documents": doc_count},
+            },
+        )
+
+    # Remove the file's (terminal) preprocessing-task rows first:
+    # file_preprocessing_tasks.file_id is a plain FK with no ON DELETE, so these
+    # rows would otherwise block the file delete. Their documents cascade
+    # (delete-orphan); a trial-referenced doc surfaces as the IntegrityError → 409
+    # handler below. Then drop any parent PreprocessingTask left with no files.
+    parent_task_ids = {ft.preprocessing_task_id for ft in file.file_preprocessing_tasks}
+    for ft in list(file.file_preprocessing_tasks):
+        db.delete(ft)
+    if parent_task_ids:
+        db.flush()
+        for pid in parent_task_ids:
+            remaining = db.scalar(
+                select(func.count())
+                .select_from(models.FilePreprocessingTask)
+                .where(models.FilePreprocessingTask.preprocessing_task_id == pid)
+            )
+            if not remaining:
+                parent = db.get(models.PreprocessingTask, pid)
+                if parent:
+                    db.delete(parent)
 
     # Build the response while the instance is still attached, then delete the
     # DB row and commit BEFORE removing storage. If storage removal happened
@@ -1003,11 +1034,10 @@ def delete_file(
             detail={
                 "message": (
                     "This file can't be deleted while documents or results still "
-                    "reference it. Delete the dependent documents first."
+                    "reference it. Delete the dependent trials/documents first."
                 ),
                 "links": {
                     "documents": doc_count,
-                    "preprocessing_tasks": task_count,
                 },
             },
         )
