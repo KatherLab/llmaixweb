@@ -67,7 +67,7 @@ jobs:
           sudo apt-get install -y tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng
 
       - name: Install uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -79,4 +79,50 @@ jobs:
         run: mkdir -p test_local_storage
 
       - name: Run tests
-        run: ENV_PATH=backend/tests/.env uv run pytest
+        # Coverage floor set just below the current baseline (~40%) so it can't
+        # silently regress; ratchet up as coverage grows.
+        run: >
+          ENV_PATH=backend/tests/.env uv run pytest
+          --cov=backend/src --cov-report=term-missing --cov-fail-under=38
+
+  migrations:
+    name: Alembic migrations (PostgreSQL)
+    runs-on: ubuntu-latest
+
+    # Prod runs `alembic upgrade head` against PostgreSQL on container start, but
+    # the test suite runs on SQLite via create_all() — so a broken migration
+    # (or a Postgres-only DDL issue) would ship undetected. Exercise the full
+    # migration chain against a real PostgreSQL here.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: llmaixweb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Run migrations to head
+        env:
+          SKIP_RUNTIME_CHECKS: "true"
+          SQLALCHEMY_DATABASE_URI: postgresql+psycopg://postgres:postgres@localhost:5432/llmaixweb
+        run: uv run alembic upgrade head
