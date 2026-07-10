@@ -2,11 +2,9 @@
 """Document and document-set endpoints for projects."""
 
 import datetime
-import io
 import logging
 import urllib.parse
-import zipfile
-from typing import Annotated, Any, cast
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.responses import StreamingResponse
@@ -23,6 +21,7 @@ from ....dependencies import get_db, get_file, remove_file
 from ....models.project import document_set_association
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
+from ....utils.streaming_zip import iter_zip
 
 logger = logging.getLogger(__name__)
 
@@ -865,68 +864,22 @@ def delete_document_set(
     return {"deleted_set_id": set_id, "deleted_document_ids": deleted_doc_ids}
 
 
-class _StreamingZipSink:
-    """Forward-only file-like sink for :mod:`zipfile`.
-
-    ``zipfile.ZipFile`` in write mode only calls ``write()`` and ``tell()`` (it
-    records offsets from ``tell()`` and writes the central directory on
-    ``close()`` without seeking back). This lets us drain the bytes it produces
-    incrementally and stream them to the client, so a 100k-document set doesn't
-    get buffered entirely in memory (or on disk) before the first byte ships.
-    """
-
-    def __init__(self) -> None:
-        self._chunks: list[bytes] = []
-        self._pos = 0
-
-    def write(self, data) -> None:
-        if data:
-            b = bytes(data)
-            self._chunks.append(b)
-            self._pos += len(b)
-
-    def tell(self) -> int:
-        return self._pos
-
-    def seek(self, offset: int, whence: int = 0) -> int:
-        # zipfile only uses tell() in write mode; allow the no-op seek-to-current
-        # it occasionally issues, and refuse anything else rather than corrupt.
-        if whence == 1 and offset == 0:
-            return self._pos
-        raise io.UnsupportedOperation("forward-only stream does not support seek")
-
-    def flush(self) -> None:  # pragma: no cover - zipfile calls this
-        pass
-
-    def drain(self) -> bytes:
-        if not self._chunks:
-            return b""
-        data = b"".join(self._chunks)
-        self._chunks.clear()
-        return data
-
-
 def _stream_set_zip(file_rows):
     """Yield a ZIP archive byte-stream for ``(file_name, file_uuid)`` entries.
 
     Each file's content is read from storage (via ``get_file``) lazily as the
     stream is consumed, so we never hold more than one file's bytes in memory.
     """
-    sink = _StreamingZipSink()
-    zf = zipfile.ZipFile(cast(Any, sink), "w", zipfile.ZIP_DEFLATED)
-    try:
+
+    def _entries():
         for file_name, file_uuid in file_rows:
             try:
-                content = get_file(file_uuid)
-                zf.writestr(file_name, content)
+                yield (file_name, get_file(file_uuid))
             except Exception:
                 # Log and continue with the other files.
                 logger.exception("Error adding file %s", file_name)
-            yield sink.drain()
-        zf.close()  # writes the central directory
-        yield sink.drain()
-    finally:
-        zf.close()
+
+    return iter_zip(_entries())
 
 
 @router.post("/document-set/{set_id}/download-all")

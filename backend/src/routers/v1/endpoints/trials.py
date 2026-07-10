@@ -6,11 +6,10 @@ import datetime
 import io
 import json
 import logging
-import zipfile
 from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import String, delete, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, noload, selectinload
@@ -27,6 +26,7 @@ from ....utils.audit import record_audit
 from ....utils.csv_safety import SafeDictCsvWriter
 from ....utils.enums import AuditAction, TrialResultStatus
 from ....utils.helpers import flatten_dict
+from ....utils.streaming_zip import iter_zip
 from ....utils.url_safety import (
     UnsafeEndpointError,
     enforce_endpoint_allowlist,
@@ -1106,15 +1106,18 @@ def download_trial_results(
 
     # --- JSON Format ---
     if format == "json":
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+
+        def _json_entries():
+            """Yield (arcname, bytes) lazily so the ZIP streams and each embedded
+            file's bytes are read from storage one at a time (not all buffered)."""
             metadata_json = {
                 "trial": trial_dict,
                 "prompt": prompt_dict,
                 "schema": schema_dict,
             }
-            zipf.writestr(
-                "metadata.json", json.dumps(metadata_json, indent=2, ensure_ascii=False)
+            yield (
+                "metadata.json",
+                json.dumps(metadata_json, indent=2, ensure_ascii=False).encode("utf-8"),
             )
 
             added_files = set()
@@ -1169,7 +1172,7 @@ def download_trial_results(
                             file_path = (
                                 f"files/{file_to_add.file_uuid}_{file_to_add.file_name}"
                             )
-                            zipf.writestr(file_path, file_content)
+                            yield (file_path, file_content)
 
                 file_base = document_name or f"document_{result.document_id}"
                 safe_base = "".join(
@@ -1178,13 +1181,15 @@ def download_trial_results(
                 if not safe_base:
                     safe_base = f"document_{result.document_id}"
                 json_filename = f"{safe_base}.json"
-                zipf.writestr(
+                yield (
                     json_filename,
-                    json.dumps(result_data, indent=2, ensure_ascii=False),
+                    json.dumps(result_data, indent=2, ensure_ascii=False).encode(
+                        "utf-8"
+                    ),
                 )
-        zip_buffer.seek(0)
-        return Response(
-            content=zip_buffer.getvalue(),
+
+        return StreamingResponse(
+            iter_zip(_json_entries()),
             media_type="application/zip",
             headers={
                 "Content-Disposition": f'attachment; filename="trial_{trial_id}_results.zip"'
@@ -1201,23 +1206,30 @@ def download_trial_results(
         schema_keys = sorted(_extract_keys(schema_dict))
 
         if include_content:
-            output = io.BytesIO()
-            with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zipf:
-                header = (
-                    [
-                        "document_id",
-                        "document_name",
-                        "file_name",
-                        "created_at",
-                        "document_content",
-                    ]
-                    + [f"meta.{k}" for k in meta_keys]
-                    + [f"preprocessing.{k}" for k in prep_keys]
-                    + [f"trial.{k}" for k in trial_keys]
-                    + [f"prompt.{k}" for k in prompt_keys]
-                    + [f"schema.{k}" for k in schema_keys]
-                    + [f"result.{k}" for k in result_keys]
-                )
+            header = (
+                [
+                    "document_id",
+                    "document_name",
+                    "file_name",
+                    "created_at",
+                    "document_content",
+                ]
+                + [f"meta.{k}" for k in meta_keys]
+                + [f"preprocessing.{k}" for k in prep_keys]
+                + [f"trial.{k}" for k in trial_keys]
+                + [f"prompt.{k}" for k in prompt_keys]
+                + [f"schema.{k}" for k in schema_keys]
+                + [f"result.{k}" for k in result_keys]
+            )
+
+            def _csv_content_entries():
+                """Stream embedded original files one at a time, then the CSV.
+
+                The CSV text itself is accumulated (it's the extracted data, far
+                smaller than the file bytes), but the original file payloads —
+                the memory-dominant part — are yielded and drained per file
+                instead of all held in a single in-memory archive buffer.
+                """
                 csv_output = io.StringIO()
                 writer = SafeDictCsvWriter(
                     csv.DictWriter(csv_output, fieldnames=header)
@@ -1279,7 +1291,7 @@ def download_trial_results(
                                 added_files.add(file_id)
                                 file_content = get_file(file_to_add.file_uuid)
                                 file_path = f"files/{file_to_add.file_uuid}_{file_to_add.file_name}"
-                                zipf.writestr(file_path, file_content)
+                                yield (file_path, file_content)
                     row["document_name"] = document_name or ""
                     row["file_name"] = file_name or ""
                     meta_flat = flatten_dict(document.meta_data if document else {})
@@ -1301,10 +1313,10 @@ def download_trial_results(
                     for k in result_keys:
                         row[f"result.{k}"] = res_flat.get(k, "")
                     writer.writerow(row)
-                zipf.writestr("results.csv", csv_output.getvalue())
-            output.seek(0)
-            return Response(
-                content=output.getvalue(),
+                yield ("results.csv", csv_output.getvalue().encode("utf-8"))
+
+            return StreamingResponse(
+                iter_zip(_csv_content_entries()),
                 media_type="application/zip",
                 headers={
                     "Content-Disposition": f'attachment; filename="trial_{trial_id}_results.zip"'

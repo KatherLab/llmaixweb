@@ -186,6 +186,28 @@ def test_bypass_celery_trial_extracts_and_stores_result(client, api_url, monkeyp
     assert len(items) == 1
     assert items[0]["result"] == expected
 
+    # Streamed ZIP downloads (JSON + CSV-with-content) must be valid archives.
+    import io as _io
+    import zipfile as _zipfile
+
+    for fmt in ("json", "csv"):
+        dl = client.get(
+            f"{api_url}/project/{project_id}/trial/{trial_id}/download",
+            headers=headers,
+            params={"format": fmt, "include_content": True},
+        )
+        assert dl.status_code == 200, dl.text
+        assert dl.headers["content-type"] == "application/zip"
+        zf = _zipfile.ZipFile(_io.BytesIO(dl.content))
+        assert zf.testzip() is None  # archive integrity
+        names = zf.namelist()
+        if fmt == "json":
+            assert "metadata.json" in names
+        else:
+            assert "results.csv" in names
+            # The extracted value must appear in the CSV.
+            assert b"hello" in zf.read("results.csv")
+
     # Deleting the trial removes it (and bulk-deletes its results/evaluations).
     assert (
         client.delete(
