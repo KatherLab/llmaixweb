@@ -587,7 +587,9 @@ async def preprocess_project_data(
     # Handle force_reprocess: delete existing documents
     if preprocessing_task.force_reprocess:
         docs_to_delete = [
-            doc for _file, existing_docs in files_with_existing_docs for doc in existing_docs
+            doc
+            for _file, existing_docs in files_with_existing_docs
+            for doc in existing_docs
         ]
         doc_ids_to_delete = [doc.id for doc in docs_to_delete]
         if doc_ids_to_delete:
@@ -600,14 +602,18 @@ async def preprocess_project_data(
                     select(models.TrialResult.document_id).where(
                         models.TrialResult.document_id.in_(doc_ids_to_delete)
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
             blocked |= set(
                 db.execute(
                     select(models.EvaluationMetric.document_id).where(
                         models.EvaluationMetric.document_id.in_(doc_ids_to_delete)
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
             if blocked:
                 raise HTTPException(
@@ -751,7 +757,10 @@ async def preprocess_project_data(
                 ft.error_message = "Could not be queued for processing."
             db.commit()
             logger.error(
-                "Failed to dispatch preprocessing task %s: %s", task.id, e, exc_info=True
+                "Failed to dispatch preprocessing task %s: %s",
+                task.id,
+                e,
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=503,

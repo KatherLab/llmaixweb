@@ -207,9 +207,7 @@ async def _redis_subscriber_task():
                         # so we don't re-publish and loop.
                         from .core.dynamic_settings import reload_settings_cache
 
-                        await asyncio.to_thread(
-                            reload_settings_cache, broadcast=False
-                        )
+                        await asyncio.to_thread(reload_settings_cache, broadcast=False)
                         continue
                     # Filter server-side by project ownership: deliver only to
                     # the project owner + admins. Previously this was broadcast
