@@ -146,6 +146,83 @@ async def read_upload_with_limit_async(file, max_bytes: int | None = None) -> by
     return b"".join(chunks)
 
 
+def hash_measure_and_head(
+    file, max_bytes: int | None = None, head_len: int = 8192
+) -> tuple[str, int, bytes]:
+    """Stream an upload once to compute its SHA-256, size, and a head buffer.
+
+    Reads ``file.file`` (a Starlette ``UploadFile``'s disk-backed
+    ``SpooledTemporaryFile``) in chunks WITHOUT accumulating the whole payload in
+    memory, so a large upload can't OOM the process. Enforces the size cap (413)
+    and captures the first ``head_len`` bytes — enough for content-based MIME
+    sniffing (``detect_structured_mime`` only reads the first 4096). Rewinds the
+    file to position 0 so the caller can stream it to storage afterwards.
+
+    Returns ``(sha256_hex, size, head_bytes)``. Use with :func:`save_upload_stream`
+    for a fully streamed upload path (hash/dedup, then store, never buffering the
+    whole file).
+    """
+    from fastapi import HTTPException
+
+    limit = max_bytes if max_bytes is not None else settings.MAX_UPLOAD_SIZE_BYTES
+
+    declared = getattr(file, "size", None)
+    if declared is not None and declared > limit:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+        )
+
+    hasher = hashlib.sha256()
+    total = 0
+    head = bytearray()
+    chunk_size = settings.FILE_STREAM_CHUNK_SIZE
+    fileobj = file.file
+    fileobj.seek(0)
+    while True:
+        chunk = fileobj.read(chunk_size)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > limit:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+            )
+        hasher.update(chunk)
+        if len(head) < head_len:
+            head.extend(chunk[: head_len - len(head)])
+    fileobj.seek(0)
+    return hasher.hexdigest(), total, bytes(head)
+
+
+def save_upload_stream(file) -> str:
+    """Stream a Starlette ``UploadFile`` to storage without buffering it in RAM.
+
+    The file must be positioned at 0 (``hash_measure_and_head`` rewinds it).
+    Local storage writes chunk-by-chunk; S3 uses ``upload_fileobj`` (streaming +
+    automatic multipart). Returns the generated storage key.
+    """
+    file_name = f"{uuid.uuid4()}"
+    fileobj = file.file
+    fileobj.seek(0)
+
+    if settings.LOCAL_DIRECTORY:
+        file_path = f"{settings.LOCAL_DIRECTORY}/{file_name}"
+        chunk_size = settings.FILE_STREAM_CHUNK_SIZE
+        with open(file_path, "wb") as dest:
+            while True:
+                chunk = fileobj.read(chunk_size)
+                if not chunk:
+                    break
+                dest.write(chunk)
+    else:
+        s3: Any = get_s3_client()
+        s3.upload_fileobj(fileobj, settings.S3_BUCKET_NAME, file_name)
+
+    return file_name
+
+
 def stream_file(file_name: str):
     """Yield a file's content in chunks from S3 or local storage.
 

@@ -30,12 +30,11 @@ from ....core.security import (
     get_current_user,
 )
 from ....dependencies import (
-    calculate_file_hash,
     get_db,
     get_file,
-    read_upload_with_limit,
+    hash_measure_and_head,
     remove_file,
-    save_file,
+    save_upload_stream,
     stream_file,
 )
 from ....middleware.error_handlers import record_internal_error
@@ -478,18 +477,21 @@ def upload_file(
 
     check_project_access(project_id, current_user, db, permission="write")
 
-    # Read file content *once*, capped at MAX_UPLOAD_SIZE_BYTES (rejects 413
-    # before an oversized upload can exhaust memory).
-    file_content = read_upload_with_limit(file)
-    file_size = len(file_content)
-    file_hash = calculate_file_hash(file_content)
+    # Stream the upload ONCE to compute its hash + size and capture a small head
+    # buffer for MIME sniffing, without ever loading the whole file into memory
+    # (a 500MB upload would otherwise cost 500MB of RSS). Enforces the size cap
+    # (413) during the pass. The file is rewound afterwards so it can be streamed
+    # to storage below only if it's not a duplicate.
+    file_hash, file_size, head = hash_measure_and_head(file)
 
     # --- Normalize MIME based on content + filename (fixes CSV mislabeled as vnd.ms-excel) ---
     # Prefer the originally submitted file name if present in the upload field; otherwise use the JSON's file_name.
+    # `head` (first 8KB) is sufficient — detect_structured_mime only reads the
+    # first 4096 bytes for magic-byte signatures.
     incoming_name = file.filename or file_create.file_name
     normalized_mime = detect_structured_mime(
         file_name=incoming_name,
-        content=file_content,
+        content=head,
         provided_mime=file.content_type or getattr(file_info, "file_type", None),
     )
 
@@ -522,8 +524,8 @@ def upload_file(
     file_create.file_name = incoming_name
     file_create.file_type = normalized_mime or "application/octet-stream"
 
-    # Save the file bytes and persist DB row
-    file_uuid = save_file(file_content)
+    # Stream the (rewound) upload to storage — never buffering the whole file.
+    file_uuid = save_upload_stream(file)
 
     new_file = models.File(
         **file_create.model_dump(
