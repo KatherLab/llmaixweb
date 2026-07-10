@@ -29,7 +29,13 @@ from ....core.security import (
 from ....dependencies import get_db, remove_file
 from ....schemas import PasswordSet
 from ....utils.audit import record_audit
-from ....utils.email_service import send_invitation_email, send_password_reset_email
+from ....utils.email_service import (
+    is_configured as is_email_configured,
+)
+from ....utils.email_service import (
+    send_invitation_email,
+    send_password_reset_email,
+)
 from ....utils.enums import AuditAction, AuditOutcome, UserRole
 from ....utils.password_policy import validate_password
 
@@ -683,6 +689,14 @@ def forgot_password(
     # Look up user silently — always return success
     user = db.query(models.User).filter(models.User.email == body.email).first()
 
+    # Whether email delivery is configured is a GLOBAL property, decided here
+    # independent of whether the account exists. Keying the response body on it
+    # (rather than on the outcome of an attempted send, which only happens for
+    # real users) keeps the response identical for existing and non-existing
+    # emails — otherwise the presence of the `warning` key leaks which emails
+    # are registered.
+    email_configured = is_email_configured()
+
     if user and user.is_active:
         # Delete any existing reset tokens for this user
         db.query(models.PasswordResetToken).filter(
@@ -704,17 +718,20 @@ def forgot_password(
         db.add(reset_token)
         db.commit()
 
-        # Send email if configured
-        base_url = settings.APP_URL
-        reset_url = f"{base_url}/reset-password/{token}"
-        email_sent = send_password_reset_email(body.email, token, reset_url)
+        # Send the email only when delivery is configured.
+        if email_configured:
+            base_url = settings.APP_URL
+            reset_url = f"{base_url}/reset-password/{token}"
+            send_password_reset_email(body.email, token, reset_url)
 
-        if not email_sent:
-            return {
-                "message": "If an account with this email exists, a password reset link has been generated. "
-                "Please contact your administrator to obtain the reset link.",
-                "warning": "Email delivery is not configured. The reset link was not sent.",
-            }
+    # Identical response shape for all callers, gated only on the global email
+    # configuration — never on account existence.
+    if not email_configured:
+        return {
+            "message": "If an account with this email exists, a password reset link has been generated. "
+            "Please contact your administrator to obtain the reset link.",
+            "warning": "Email delivery is not configured. The reset link was not sent.",
+        }
 
     return {
         "message": "If an account with this email exists, a password reset link has been sent.",

@@ -126,6 +126,21 @@ def test_refresh_token_rotation_and_reuse_detection(client, api_url):
     assert after.status_code == 401
 
 
+def test_forgot_password_does_not_enumerate(client, api_url):
+    """The response must be identical for a registered and an unknown email so
+    an attacker can't tell which accounts exist (even when SMTP is unconfigured,
+    as in the test env)."""
+    existing = client.post(
+        f"{api_url}/user/forgot-password", json={"email": "test@example.com"}
+    )
+    missing = client.post(
+        f"{api_url}/user/forgot-password",
+        json={"email": "definitely-not-a-user@example.com"},
+    )
+    assert existing.status_code == missing.status_code
+    assert existing.json() == missing.json()
+
+
 def test_refresh_token_invalid_is_rejected(client, api_url):
     assert (
         client.post(
