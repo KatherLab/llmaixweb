@@ -35,11 +35,10 @@ def _seed_batch(n_files: int, *, cancelled: bool, rollback: bool):
     from backend.src.utils.enums import FileType, PreprocessingStatus
 
     db = SessionLocal()
-    user = (
-        db.query(models.User).filter_by(email="v@example.com").first()
-        or models.User(
-            email="v@example.com", full_name="V", hashed_password="x", role="user"
-        )
+    user = db.query(models.User).filter_by(
+        email="v@example.com"
+    ).first() or models.User(
+        email="v@example.com", full_name="V", hashed_password="x", role="user"
     )
     db.add(user)
     db.flush()
@@ -106,7 +105,9 @@ def _scenario_happy_path() -> bool:
     docs = db.query(models.Document).filter_by(project_id=project_id).count()
     db.close()
 
-    print(f"[happy] task.status={task.status.value} docs={docs} (want completed/{N_FILES})")
+    print(
+        f"[happy] task.status={task.status.value} docs={docs} (want completed/{N_FILES})"
+    )
     ok = (
         task.status == PreprocessingStatus.COMPLETED
         and all(s == PreprocessingStatus.COMPLETED for s in statuses)
