@@ -557,11 +557,23 @@ function performBatchAction(action: string): void {
   showBatchModal.value = true
 }
 
+// After removing rows, clamp the current page if it now sits past the last
+// page (deleting the last item(s) on the last page) and refetch so the page
+// isn't left empty and out of range.
+function clampPageAfterRemoval(): void {
+  const lastPage = Math.max(1, Math.ceil(totalTrials.value / limit.value))
+  if (currentPage.value > lastPage) {
+    currentPage.value = lastPage
+  }
+  fetchTrials()
+}
+
 function handleTrialsDeleted(deletedIds: number[] = []): void {
   if (deletedIds.length === 0) return
   const idSet = new Set(deletedIds)
   trials.value = trials.value.filter((t) => !idSet.has(t.id))
   totalTrials.value = Math.max(0, totalTrials.value - deletedIds.length)
+  clampPageAfterRemoval()
 }
 
 function handleBatchActionComplete(): void {
@@ -613,6 +625,7 @@ async function deleteTrial(trial: TrialSummary | null): Promise<void> {
     await trialsApi.delete(props.projectId, trial.id)
     trials.value = trials.value.filter((t) => t.id !== trial.id)
     totalTrials.value = Math.max(0, totalTrials.value - 1)
+    clampPageAfterRemoval()
     toast.success('Trial deleted')
   } catch {
     toast.error('Failed to delete trial')
@@ -681,6 +694,7 @@ const { start: startWebSocket, stop: stopWebSocket } = useTrialUpdates({
   projectId: computed(() => props.projectId),
   trials,
   resetAndFetch,
+  isFirstPage: () => currentPage.value === 1,
 })
 
 onMounted(async () => {

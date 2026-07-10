@@ -14,7 +14,15 @@
  * MUST be declared before this call. Declaring it after throws a temporal-dead-zone
  * ReferenceError ("can't access lexical declaration before initialization").
  */
-import { ref, computed, watch, type Ref, type ComputedRef } from 'vue'
+import {
+  ref,
+  computed,
+  watch,
+  toValue,
+  type Ref,
+  type ComputedRef,
+  type MaybeRefOrGetter,
+} from 'vue'
 
 /**
  * Pure ellipsis-window pagination algorithm: returns the page numbers (and
@@ -52,8 +60,13 @@ export function computeVisiblePages(current: number, total: number): (number | '
 interface UsePaginationOptions {
   /** Returns the total item count (drives `totalPages`). */
   getTotal?: () => number
-  /** Page size used to compute total pages and the offset. */
-  pageSize?: number
+  /**
+   * Page size used to compute total pages and the offset. Accepts a plain
+   * number, a ref, or a getter — pass a ref/getter when the page size is
+   * user-adjustable so `totalPages`/`offset` stay reactive (a plain
+   * `itemsPerPage.value` snapshot would freeze the math at its initial value).
+   */
+  pageSize?: MaybeRefOrGetter<number>
 }
 
 interface UsePaginationReturn {
@@ -70,10 +83,11 @@ interface UsePaginationReturn {
 
 export function usePagination(options: UsePaginationOptions = {}): UsePaginationReturn {
   const { getTotal = () => 0, pageSize = 10 } = options
+  const resolvePageSize = () => Math.max(1, toValue(pageSize))
 
   const currentPage = ref(1)
-  const totalPages = computed(() => Math.max(1, Math.ceil(getTotal() / pageSize)))
-  const offset = computed(() => (currentPage.value - 1) * pageSize)
+  const totalPages = computed(() => Math.max(1, Math.ceil(getTotal() / resolvePageSize())))
+  const offset = computed(() => (currentPage.value - 1) * resolvePageSize())
 
   const visiblePages = computed(() => computeVisiblePages(currentPage.value, totalPages.value))
 

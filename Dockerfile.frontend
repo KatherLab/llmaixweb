@@ -5,8 +5,12 @@ ARG GIT_COMMIT_HASH=unknown
 ENV VITE_GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 
 WORKDIR /app
-COPY package.json pnpm-lock.yaml* yarn.lock* ./
-RUN npm install
+# Copy the committed lockfile and install with `npm ci` so the image is built
+# from the exact, tested dependency tree (reproducible + supply-chain safe).
+# `npm install` re-resolved versions on every build, so the shipped image could
+# diverge from what CI validated.
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY frontend ./frontend
 
 RUN npm run build

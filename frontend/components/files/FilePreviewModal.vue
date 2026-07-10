@@ -365,6 +365,11 @@ const loadPreview = async (): Promise<void> => {
   const file = props.file
   isLoading.value = true
   error.value = ''
+  // Revoke the previous blob URL before dropping the reference — otherwise
+  // paging prev/next through PDFs/images leaks one full-file blob per view.
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+  }
   previewUrl.value = ''
   previewContent.value = ''
   tabularData.value = null

@@ -33,6 +33,14 @@ interface UseTrialUpdatesOptions {
   trials: Ref<TrialSummary[]>
   /** Refetch the full trial list (terminal / new trial case). */
   resetAndFetch: () => void
+  /**
+   * Optional: returns whether the list is currently showing the first page.
+   * When provided, updates for trials NOT on the current page only trigger a
+   * refetch while on page 1 — so a progress tick for an off-page trial can't
+   * yank a user browsing page 2+ (or a filtered view) back to page 1 every
+   * ~500ms during a run. Omit to always refetch (legacy behavior).
+   */
+  isFirstPage?: () => boolean
 }
 
 /** Return type of `useTrialUpdates`. */
@@ -45,6 +53,7 @@ export function useTrialUpdates({
   projectId,
   trials,
   resetAndFetch,
+  isFirstPage,
 }: UseTrialUpdatesOptions): UseTrialUpdatesReturn {
   let wsTrialUnsubscribe: (() => void) | null = null
   let wsConnectedUnsubscribe: (() => void) | null = null
@@ -72,8 +81,13 @@ export function useTrialUpdates({
 
       const idx = trials.value.findIndex((t) => t.id === update.trial_id)
       if (idx === -1) {
-        // New trial not yet in the list → refetch (debounced).
-        debouncedResetAndFetch()
+        // Update for a trial not in the current view. Refetch (which resets to
+        // page 1) only when it's a terminal state or we're already on page 1 —
+        // otherwise a progress tick for an off-page trial would repeatedly yank
+        // a user browsing page 2+ back to page 1.
+        if (isTerminal || !isFirstPage || isFirstPage()) {
+          debouncedResetAndFetch()
+        }
         return
       }
 

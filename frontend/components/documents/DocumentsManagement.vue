@@ -214,7 +214,8 @@ const itemsPerPage = ref<number>(50)
 const totalCount = ref<number>(0) // total rows on the server (after filters) — must be declared before usePagination (its getTotal reads it eagerly during setup)
 const pagination = usePagination({
   getTotal: () => totalCount.value,
-  pageSize: itemsPerPage.value,
+  // Pass the ref (not a snapshot) so totalPages/offset track page-size changes.
+  pageSize: itemsPerPage,
 })
 const currentPage = pagination.currentPage
 const activeTab = ref<string>('documents')

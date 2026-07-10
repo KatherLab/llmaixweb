@@ -113,6 +113,15 @@ router.beforeEach(async (to, _from, next) => {
     return next('/')
   }
 
+  // Ensure the user profile is loaded before evaluating auth/admin guards.
+  // `initialize()` is idempotent (no-op once done) and only hits the network
+  // when a token exists. Without this, a hard refresh or deep-link to an
+  // /admin/* route runs the guard while `user` is still null → `isAdmin` is
+  // false → the admin gets bounced to '/'.
+  if (!authStore.isInitialized) {
+    await authStore.initialize()
+  }
+
   // Standard auth guard
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     if (!authStore.isAuthenticated) {

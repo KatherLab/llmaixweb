@@ -22,6 +22,12 @@ export const useAuthStore = defineStore('auth', () => {
     api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
   }
 
+  // Let the WebSocket service refresh the access token before a reconnect,
+  // so a socket that drops after the short-lived token expired can recover
+  // instead of retrying forever with a dead token. Registered as a hook to
+  // avoid a circular import (websocket.ts <-> stores/auth.ts).
+  websocketService.setTokenRefreshHook(() => refresh())
+
   const isAuthenticated = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
 
@@ -48,6 +54,11 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = newToken
     localStorage.setItem('token', newToken)
     api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+    // Bring the live-updates socket up as soon as we have a token. The
+    // module-load auto-connect runs before login (no token yet) and the
+    // cross-tab `storage` event never fires in the tab that logged in, so
+    // without this an in-tab login leaves the WS dead until a page reload.
+    websocketService.connect()
   }
 
   /**
@@ -140,6 +151,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     token,
     refreshToken,
+    isInitialized,
     isAuthenticated,
     isAdmin,
     setToken,
