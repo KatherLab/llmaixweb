@@ -24,10 +24,10 @@ from .... import models, schemas
 from ....core.security import can_access_project, get_current_user
 from ....dependencies import (
     get_db,
-    read_upload_with_limit,
     read_upload_with_limit_async,
     remove_file,
     save_file,
+    save_upload_stream_checked,
 )
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction, ComparisonMethod
@@ -133,15 +133,17 @@ async def upload_groundtruth(
         zip_buffer.seek(0)
         file_content = zip_buffer.read()
         format = "zip"  # Treat as ZIP internally
+        # The zipped JSON blob is already in memory; save_file() does blocking
+        # disk/S3 I/O, so run it in a threadpool to keep the event loop free.
+        file_uuid = await run_in_threadpool(save_file, file_content)
     else:
-        # Single file upload (existing logic)
+        # Single file upload — stream it straight to storage (size-capped)
+        # instead of reading the whole file into memory first, so a large
+        # ground-truth file can't exhaust process memory.
         upload_file = file or (files[0] if files else None)
         if not upload_file:
             raise HTTPException(status_code=400, detail="No file provided")
-        file_content = await read_upload_with_limit_async(upload_file)
-    # save_file() does blocking disk/S3 I/O; run it in a threadpool so the
-    # event loop isn't blocked for the duration of the write.
-    file_uuid = await run_in_threadpool(save_file, file_content)
+        file_uuid = await run_in_threadpool(save_upload_stream_checked, upload_file)
     # Derive a name safely: ``file`` may be None in the multiple_json path
     # (where the caller must pass ``name`` explicitly).
     fallback_name = file.filename if file else None
@@ -370,8 +372,9 @@ def update_groundtruth(
         # leaves the DB row pointing at deleted storage.
         old_file_uuid = groundtruth.file_uuid
 
-        file_content = read_upload_with_limit(file)
-        file_uuid = save_file(file_content)
+        # Stream the replacement file to storage (size-capped) rather than
+        # buffering it fully in memory.
+        file_uuid = save_upload_stream_checked(file)
         groundtruth.file_uuid = file_uuid
 
         # The parsed ground-truth cache was built from the *old* file bytes.

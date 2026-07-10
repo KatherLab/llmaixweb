@@ -223,6 +223,21 @@ def save_upload_stream(file) -> str:
     return file_name
 
 
+def save_upload_stream_checked(file, max_bytes: int | None = None) -> str:
+    """Size-cap-enforced streamed save, for uploads that don't need hash/dedup.
+
+    Two passes over the disk-backed upload: the first enforces the size cap
+    (rejecting an oversized upload with 413 BEFORE anything is written to
+    storage, so there's no partial file to clean up), the second streams it to
+    storage. Neither buffers the whole file in memory. Returns the storage key.
+
+    (The file-upload endpoint uses :func:`hash_measure_and_head` directly instead
+    because it needs the hash for dedup and the head for MIME detection.)
+    """
+    hash_measure_and_head(file, max_bytes=max_bytes)  # cap check (+ rewinds)
+    return save_upload_stream(file)
+
+
 def stream_file(file_name: str):
     """Yield a file's content in chunks from S3 or local storage.
 
