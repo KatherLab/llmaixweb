@@ -1,31 +1,35 @@
 services:
-  # docling-serve: Separate service for PDF/image OCR and conversion
-  # This keeps Docling out of the main backend/Celery processes, reducing
-  # memory usage and avoiding duplicate model loading in workers.
+  # Downloads docling's OCR/layout models into the docling-models volume
+  # before docling-serve starts (runs as root to avoid volume permission issues).
+  docling-models-init:
+    image: quay.io/docling-project/docling-serve-cpu:latest
+    restart: "no"
+    user: "0:0"
+    volumes:
+      - docling-models:/models
+    command: >
+      sh -c "
+        set -e;
+        docling-tools models download --output-dir /models;
+      "
+
+  # Separate service for PDF/image OCR and conversion, kept out of the
+  # backend/Celery processes to reduce memory usage.
   docling-serve:
     image: quay.io/docling-project/docling-serve-cpu:latest
     restart: unless-stopped
+    depends_on:
+      docling-models-init:
+        condition: service_completed_successfully
     environment:
       - DOCLING_SERVE_ENABLE_UI=false
-      # CPU threads for model inference (layout + table-structure, and Tesseract
-      # when OCR is on). Both point at the same knob on purpose: DOCLING_NUM_THREADS
-      # sets docling's own inference threads, OMP_NUM_THREADS bounds the other
-      # native pools in the process (OpenBLAS/MKL via numpy, onnxruntime intra-op).
-      # These are THREADS, not processes — model weights are shared across threads,
-      # NOT duplicated, so raising this costs cores + a little scratch RAM, not a
-      # second copy of the models. Tune via DOCLING_CPU_THREADS in .env
-      # (recommended: ~number of physical CPU cores). Weight *duplication* is a
-      # per-process concern, governed by ENG_LOC_NUM_WORKERS / ENG_LOC_SHARE_MODELS.
+      # CPU threads for inference. Tune via DOCLING_CPU_THREADS in .env
+      # (recommended: ~number of physical CPU cores).
       - DOCLING_NUM_THREADS=${DOCLING_CPU_THREADS:-4}
       - OMP_NUM_THREADS=${DOCLING_CPU_THREADS:-4}
-      # Async engine: one local worker process, sharing a single in-memory copy
-      # of the model weights (SHARE_MODELS=true) so >1 worker wouldn't N× the RAM.
-      # Keep NUM_WORKERS=1 unless you have the memory headroom for parallel docs.
       - DOCLING_SERVE_ENG_KIND=local
       - DOCLING_SERVE_ENG_LOC_NUM_WORKERS=1
       - DOCLING_SERVE_ENG_LOC_SHARE_MODELS=true
-      # Persist downloaded models (ARTIFACTS_PATH) and scratch across restarts so
-      # boot doesn't re-download; LOAD_MODELS_AT_BOOT warms them before first request.
       - DOCLING_SERVE_ARTIFACTS_PATH=/models
       - DOCLING_SERVE_LOAD_MODELS_AT_BOOT=true
       - DOCLING_SERVE_SCRATCH_PATH=/scratch
@@ -52,24 +56,15 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      # DB URI is derived from POSTGRES_* in .env (see core/config.py), so
-      # changing POSTGRES_PASSWORD there is enough — no hardcoded URI to keep
-      # in sync across the backend and workers.
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DISABLE_CELERY=false
       - INITIALIZE_CELERY=${INITIALIZE_CELERY:-false}
       - REQUIRE_INVITATION=${REQUIRE_INVITATION:-false}
       - APP_URL=${APP_URL:-http://localhost:5173}
       - DOCLING_SERVE_URL=http://docling-serve:5001
-      # Defaults to true for the stock deployment; .env can override (e.g.
-      # DOCLING_SERVE_ENABLED=false). Interpolated here rather than relying on
-      # env_file, because a literal value in `environment:` would override .env.
       - DOCLING_SERVE_ENABLED=${DOCLING_SERVE_ENABLED:-true}
     # ports: ["8000:8000"] # uncomment for local debugging / testing the backend
     healthcheck:
-      # '/' returns {"message": "Hello, hello!"} once uvicorn is ready to serve.
-      # This lets downstream services (frontend, workers) wait for actual readiness
-      # rather than just container start. start_period covers migrations on first boot.
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5)\""]
       interval: 10s
       timeout: 5s
@@ -92,15 +87,11 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      # Identifies which queue this worker owns so it can instantly finalize
-      # tasks it abandoned on restart (see reclaim_orphaned_on_startup). Only
-      # set this when running a SINGLE worker per role (the stock deployment);
-      # leave unset for scaled multi-worker queues and rely on the sweeper.
+      # Only set this when running a single worker per role (the stock
+      # deployment); leave unset if you scale this queue to multiple workers.
       - CELERY_WORKER_ROLE=default
-    # -B embeds the beat scheduler so the periodic orphan/stuck-task sweeper
-    # runs. Keep beat on exactly ONE worker; do not scale this service beyond
-    # replicas=1 (or the sweep runs in duplicate). -s points the schedule file
-    # at a writable path.
+    # -B embeds the beat scheduler (keep on exactly one worker, don't scale
+    # this service beyond replicas=1).
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
       worker -Q default -c 4 --loglevel=info -B -s /tmp/celerybeat-schedule
@@ -114,12 +105,8 @@ services:
     env_file: .env
     environment:
       - DOCLING_SERVE_URL=http://docling-serve:5001
-      # .env can override (e.g. DOCLING_SERVE_ENABLED=false). Keeps the worker
-      # and web process in agreement when .env is unset.
       - DOCLING_SERVE_ENABLED=${DOCLING_SERVE_ENABLED:-true}
-      # Owns the preprocess queue: on restart it instantly fails any task left
-      # IN_PROGRESS (see reclaim_orphaned_on_startup). Keep this worker at a
-      # single replica; leave unset if you scale it to rely on the sweeper.
+      # Keep this worker at a single replica; leave unset if you scale it.
       - CELERY_WORKER_ROLE=preprocess
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
