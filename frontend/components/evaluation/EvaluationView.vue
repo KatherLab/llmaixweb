@@ -776,14 +776,22 @@ const selectGroundTruthWithValidation = async (groundTruth: GroundTruth | null):
 const fetchEvaluations = async (): Promise<void> => {
   if (!selectedGroundTruth.value) return
 
+  // Capture the ground truth this request is for so a slow response can't be
+  // applied after the user has switched to a different ground truth (which
+  // would render GT-A's evaluations under GT-B's selection).
+  const requestedGtId = selectedGroundTruth.value.id
+
   lastFailedOperation.value = fetchEvaluations
   loadingStates.value.evaluations = true
   error.value = null
 
   try {
     const { data } = await evaluationsApi.list(props.projectId, {
-      groundtruth_id: selectedGroundTruth.value.id,
+      groundtruth_id: requestedGtId,
     })
+
+    // Ignore a stale response if the selected ground truth changed mid-flight.
+    if (selectedGroundTruth.value?.id !== requestedGtId) return
 
     // 1) store the evaluations
     const list = data as Evaluation[] | { items?: Evaluation[] }

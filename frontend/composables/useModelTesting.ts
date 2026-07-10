@@ -188,7 +188,17 @@ export function useModelTesting({
     modelTestError.value = null
   }
 
-  const loadModels = async (apiKey = '', baseUrl = ''): Promise<void> => {
+  // Monotonic sequence for connection/model tests. Incremented at each
+  // user-initiated test; a response whose captured seq no longer matches has
+  // been superseded (e.g. the user corrected a typo'd base URL and re-tested),
+  // so it must not apply its result over the newer test's.
+  let connectionSeq = 0
+
+  const loadModels = async (
+    apiKey = '',
+    baseUrl = '',
+    seq: number = ++connectionSeq,
+  ): Promise<void> => {
     isLoadingModels.value = true
     try {
       const params: Record<string, unknown> = {}
@@ -196,6 +206,7 @@ export function useModelTesting({
       if ((baseUrl || '').trim()) params.base_url = baseUrl.trim()
 
       const response = await llmApi.models(params)
+      if (seq !== connectionSeq) return // superseded by a newer test
 
       if (response.data.success) {
         availableModels.value = response.data.models || []
@@ -213,14 +224,16 @@ export function useModelTesting({
         throw new Error(response.data.message || 'Failed to load models')
       }
     } catch (error) {
+      if (seq !== connectionSeq) return
       availableModels.value = []
       throw error
     } finally {
-      isLoadingModels.value = false
+      if (seq === connectionSeq) isLoadingModels.value = false
     }
   }
 
   const testAndLoadModels = async (apiKey = '', baseUrl = ''): Promise<void> => {
+    const seq = ++connectionSeq
     isTestingConnection.value = true
     connectionTested.value = false
     connectionValid.value = false
@@ -236,12 +249,14 @@ export function useModelTesting({
       if ((baseUrl || '').trim()) params.base_url = baseUrl.trim()
 
       const testResponse = await llmApi.testConnection(params)
+      if (seq !== connectionSeq) return // superseded by a newer test
 
       if (testResponse.data.success) {
         connectionValid.value = true
         connectionTested.value = true
 
-        await loadModels(apiKey, baseUrl)
+        await loadModels(apiKey, baseUrl, seq)
+        if (seq !== connectionSeq) return // superseded while loading models
 
         if (availableModels.value.length === 0) {
           const errorMsg = 'Connection successful but no models available'
@@ -279,6 +294,7 @@ export function useModelTesting({
         }
       }
     } catch (error) {
+      if (seq !== connectionSeq) return // superseded — don't clobber newer state
       connectionValid.value = false
       connectionTested.value = true
       const errMsg: string =
@@ -297,7 +313,7 @@ export function useModelTesting({
         toast.error(`System configuration error: ${errMsg}. Please contact your administrator.`)
       }
     } finally {
-      isTestingConnection.value = false
+      if (seq === connectionSeq) isTestingConnection.value = false
     }
   }
 
