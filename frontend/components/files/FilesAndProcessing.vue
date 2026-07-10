@@ -447,6 +447,20 @@ const getFileStatus = (file: FileWithTasks): string => {
 }
 
 // Fetch files with preprocessing tasks (paginated)
+// Append the currently-active list filters to a params object. Shared by
+// fetchFiles and selectAllFiles so "select all across pages" selects exactly
+// the filtered set that's shown (not a broader search/status-only set).
+const appendFileFilters = (params: URLSearchParams): void => {
+  if (searchQuery.value) params.append('search', searchQuery.value)
+  if (filterStatus.value) params.append('status', filterStatus.value)
+  if (filterFileType.value) params.append('file_type', filterFileType.value)
+  if (filterDateRange.value) {
+    const { date_from, date_to } = getDateBounds(filterDateRange.value)
+    if (date_from) params.append('date_from', date_from)
+    if (date_to) params.append('date_to', date_to)
+  }
+}
+
 const fetchFiles = async (options: { forceRefreshTasks?: boolean } = {}): Promise<void> => {
   const { forceRefreshTasks = false } = options
 
@@ -458,27 +472,7 @@ const fetchFiles = async (options: { forceRefreshTasks?: boolean } = {}): Promis
       sort_order: sortOrder.value,
     })
 
-    // Add search filter
-    if (searchQuery.value) {
-      params.append('search', searchQuery.value)
-    }
-
-    // Add status filter
-    if (filterStatus.value) {
-      params.append('status', filterStatus.value)
-    }
-
-    // Add file type filter
-    if (filterFileType.value) {
-      params.append('file_type', filterFileType.value)
-    }
-
-    // Add date range filter
-    if (filterDateRange.value) {
-      const { date_from, date_to } = getDateBounds(filterDateRange.value)
-      if (date_from) params.append('date_from', date_from)
-      if (date_to) params.append('date_to', date_to)
-    }
+    appendFileFilters(params)
 
     const response = await filesApi.list(
       props.projectId,
@@ -609,15 +603,23 @@ const toggleSelection = (fileId: number): void => {
   }
 }
 
-// Toggle select all (for current page only)
+// Toggle select all for the CURRENT page, by id membership (not length). Using
+// length equality wrongly wiped a cross-page selection whenever its size didn't
+// match the current page's row count. This adds/removes only the current page's
+// ids, preserving any selection made on other pages.
 const toggleSelectAll = (): void => {
-  if (selectedFiles.value.length === files.value.length) {
-    selectedFiles.value = []
-    selectAllMode.value = false
+  const pageIds = files.value.map((f) => f.id)
+  const allOnPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selectedFiles.value.includes(id))
+  if (allOnPageSelected) {
+    const pageSet = new Set(pageIds)
+    selectedFiles.value = selectedFiles.value.filter((id) => !pageSet.has(id))
   } else {
-    selectedFiles.value = files.value.map((f) => f.id)
-    selectAllMode.value = false
+    const merged = new Set(selectedFiles.value)
+    pageIds.forEach((id) => merged.add(id))
+    selectedFiles.value = [...merged]
   }
+  selectAllMode.value = false
 }
 
 // Select ALL files across all pages (for 50k+ files)
@@ -639,8 +641,7 @@ const selectAllFiles = async (): Promise<void> => {
         sort_order: sortOrder.value,
       })
 
-      if (searchQuery.value) params.append('search', searchQuery.value)
-      if (filterStatus.value) params.append('status', filterStatus.value)
+      appendFileFilters(params)
 
       const response = await filesApi.list(
         props.projectId,
@@ -706,6 +707,9 @@ const deleteFile = async (file: FileModel): Promise<void> => {
   try {
     await filesApi.delete(props.projectId, file.id)
     toast.success(`Deleted ${file.file_name}`)
+    // Prune the deleted id from the selection so batch actions can't operate on
+    // a file that no longer exists.
+    selectedFiles.value = selectedFiles.value.filter((id) => id !== file.id)
     // Invalidate task cache when files change
     invalidateTaskCache()
     await fetchFiles({ forceRefreshTasks: true })

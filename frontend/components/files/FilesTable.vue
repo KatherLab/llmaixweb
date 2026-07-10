@@ -213,9 +213,14 @@ const onViewHistory = (file: FileRow): void => {
   emit('view-history', file as unknown as FileWithTasks)
 }
 
-const allSelected = computed(
-  () => props.files.length > 0 && props.selectedFiles.length === props.files.length,
-)
+// "All selected" means every file on THIS page is selected (by id membership),
+// not that the selection count equals the page size — otherwise a cross-page
+// selection of the same size would falsely render the header as fully checked.
+const allSelected = computed(() => {
+  if (props.files.length === 0) return false
+  const selected = new Set(props.selectedFiles)
+  return props.files.every((f) => selected.has(f.id))
+})
 
 const columns = [
   { key: 'file_name', label: 'File', sortable: true },

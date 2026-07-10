@@ -493,15 +493,19 @@ function applyFilters(): void {
 }
 
 function toggleSelectAll(): void {
-  if (selectedTrials.value.length > 0 && selectedTrials.value.length >= trials.value.length) {
-    // Deselect all on current page
-    const pageIds = trials.value.map((t) => t.id)
-    selectedTrials.value = selectedTrials.value.filter((id) => !pageIds.includes(id))
+  // Toggle by id membership (not selection-count vs page-size, which mis-fired
+  // for cross-page selections): if every trial on this page is selected,
+  // deselect just those; otherwise add this page's ids to the selection.
+  const pageIds = trials.value.map((t) => t.id)
+  const allOnPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selectedTrials.value.includes(id))
+  if (allOnPageSelected) {
+    const pageSet = new Set(pageIds)
+    selectedTrials.value = selectedTrials.value.filter((id) => !pageSet.has(id))
   } else {
-    // Select all on current page
-    const pageIds = trials.value.map((t) => t.id)
-    const newIds = pageIds.filter((id) => !selectedTrials.value.includes(id))
-    selectedTrials.value = [...selectedTrials.value, ...newIds]
+    const merged = new Set(selectedTrials.value)
+    pageIds.forEach((id) => merged.add(id))
+    selectedTrials.value = [...merged]
   }
 }
 
@@ -572,6 +576,7 @@ function handleTrialsDeleted(deletedIds: number[] = []): void {
   if (deletedIds.length === 0) return
   const idSet = new Set(deletedIds)
   trials.value = trials.value.filter((t) => !idSet.has(t.id))
+  selectedTrials.value = selectedTrials.value.filter((id) => !idSet.has(id))
   totalTrials.value = Math.max(0, totalTrials.value - deletedIds.length)
   clampPageAfterRemoval()
 }
@@ -624,6 +629,7 @@ async function deleteTrial(trial: TrialSummary | null): Promise<void> {
   try {
     await trialsApi.delete(props.projectId, trial.id)
     trials.value = trials.value.filter((t) => t.id !== trial.id)
+    selectedTrials.value = selectedTrials.value.filter((id) => id !== trial.id)
     totalTrials.value = Math.max(0, totalTrials.value - 1)
     clampPageAfterRemoval()
     toast.success('Trial deleted')
