@@ -237,6 +237,15 @@ onMounted(() => {
   handleQueryParams()
 })
 
+// Refetch when navigating between projects. vue-router reuses this component
+// instance across /projects/:projectId changes, so onMounted doesn't run again —
+// without this the previous project's name/data would render under the new URL
+// (e.g. jumping between projects from the ActivityBell).
+watch(projectId, () => {
+  fetchProject()
+  handleQueryParams()
+})
+
 // Publish the project context into the global navbar (breadcrumb + centered
 // workflow tabs + settings gear), replacing the default Projects/Admin links.
 // Re-published whenever the project name, steps, or active step change.
