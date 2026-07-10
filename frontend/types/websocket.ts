@@ -7,19 +7,28 @@ export interface WsMessage {
   [key: string]: unknown
 }
 
-/** `preprocessing_update` message. */
+/**
+ * `preprocessing_update` message. Field names mirror the backend broadcast
+ * payload (celery/task_signals.py, utils/preprocessing.py, celery/preprocessing.py)
+ * exactly — the merge composables spread the raw payload, so a mismatched name
+ * (e.g. the old `skipped_files`) would silently never update.
+ */
 export interface WsPreprocessingUpdate extends WsMessage {
   type: 'preprocessing_update'
   task_id: number | string
   status?: PreprocessingStatus | string
   project_id: string | number
+  /** Present only on the celery/preprocessing.py completion broadcast. */
   configuration?: Record<string, unknown> | null
+  configuration_name?: string | null
   meta?: Record<string, unknown> | null
   processed_files?: number
   total_files?: number
   failed_files?: number
-  skipped_files?: number
-  message?: string | null
+  /** The backend field is `cancelled_files` (task.skipped_files under the hood). */
+  cancelled_files?: number
+  /** Lifecycle event tag, e.g. 'started' | 'progress' | 'completed' | 'failed'. */
+  event?: string
   [key: string]: unknown
 }
 

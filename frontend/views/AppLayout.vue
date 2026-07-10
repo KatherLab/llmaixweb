@@ -524,9 +524,8 @@ onMounted(async () => {
   // Fetch backend version and git commit
   try {
     const response = await versionApi.get()
-    backendVersion.value = response.data.backend_version || response.data.version
-    backendGitCommit.value =
-      (response.data as { backend_git_commit?: string }).backend_git_commit || 'unknown'
+    backendVersion.value = response.data.backend_version || response.data.version || 'unknown'
+    backendGitCommit.value = response.data.backend_git_commit || 'unknown'
     isBackendDown.value = false
   } catch (error) {
     console.error('Error fetching backend version:', error)

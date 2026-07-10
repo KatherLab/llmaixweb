@@ -133,6 +133,13 @@ export function usePreprocessingUpdates({
             data.configuration as unknown as PreprocessingTask['configuration']
         }
 
+        // The WS payload names this `cancelled_files`; the REST PreprocessingTask
+        // model (and the UI) read `skipped_files`. Map it so the skipped count
+        // updates live during a run instead of staying stale until a refetch.
+        if (typeof data.cancelled_files === 'number') {
+          updatedTask.skipped_files = data.cancelled_files
+        }
+
         // Calculate progress percentage if not provided but we have the data
         const meta = updatedTask.meta ?? {}
         if (!meta.progress && (meta.total_files ?? 0) > 0) {
