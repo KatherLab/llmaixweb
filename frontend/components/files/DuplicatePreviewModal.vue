@@ -195,9 +195,12 @@
 
     <!-- Footer Actions -->
     <template #footer>
-      <BaseButton variant="secondary" @click="emit('cancel')">Cancel</BaseButton>
+      <BaseButton variant="secondary" :disabled="submitting" @click="emit('cancel')">
+        Cancel
+      </BaseButton>
       <BaseButton
         class="flex items-center gap-2"
+        :disabled="submitting"
         @click="emit('confirm', { skipExisting: skipExisting })"
       >
         <Check class="w-4 h-4" />
@@ -221,10 +224,13 @@ import type { PreprocessingDuplicatePreview } from '@/types'
 interface Props {
   open: boolean
   duplicatePreview?: PreprocessingDuplicatePreview | null
+  /** Disables the action buttons while the confirmed action is in flight. */
+  submitting?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   duplicatePreview: null,
+  submitting: false,
 })
 
 const emit = defineEmits<{

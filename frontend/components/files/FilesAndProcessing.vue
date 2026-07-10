@@ -243,6 +243,7 @@
     <DuplicatePreviewModal
       :open="showDuplicatePreviewModal"
       :duplicate-preview="duplicatePreview"
+      :submitting="isStartingProcessing"
       @confirm="onDuplicateConfirm"
       @cancel="cancelDuplicatePreview"
     />
@@ -384,6 +385,11 @@ const visionOcrEnabled = ref(false)
 const mistralOcrEnabled = ref(false)
 const doclingOcrEnabled = ref(true)
 const isSubmitting = ref(false)
+// Re-entrancy guard for the "start preprocessing" action specifically. Separate
+// from isSubmitting (which is already true on the no-duplicate path when
+// confirmAndStartProcessing runs), so a double-click on the duplicate-modal
+// confirm can't dispatch two identical preprocessing tasks.
+const isStartingProcessing = ref(false)
 
 // Cache for preprocessing tasks to avoid refetching on every file refresh
 let cachedTasks: PreprocessingTask[] | null = null
@@ -996,6 +1002,8 @@ const onDuplicateConfirm = ({ skipExisting }: { skipExisting: boolean }): void =
 // Confirm and start processing (called after user approves duplicate preview)
 const confirmAndStartProcessing = async (skipExisting = false): Promise<void> => {
   if (!pendingProcessingSettings.value) return
+  if (isStartingProcessing.value) return // guard against double-click
+  isStartingProcessing.value = true
 
   // Add skip_existing flag if user selected it
   if (skipExisting) {
@@ -1056,6 +1064,7 @@ const confirmAndStartProcessing = async (skipExisting = false): Promise<void> =>
     toast.error(errorMsg)
   } finally {
     isSubmitting.value = false
+    isStartingProcessing.value = false
   }
 }
 
