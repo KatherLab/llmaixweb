@@ -11,7 +11,7 @@ from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import Response
-from sqlalchemy import String, func, or_, select
+from sqlalchemy import String, delete, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, noload, selectinload
 
@@ -874,29 +874,46 @@ def delete_trial(
     trial_data = schemas.Trial.model_validate(trial)
 
     try:
-        evaluations = (
-            db.execute(
-                select(models.Evaluation).where(models.Evaluation.trial_id == trial_id)
+        # Count first (for the audit), then bulk-delete children in one
+        # statement each instead of hydrating + ORM-deleting potentially
+        # thousands of rows one at a time. Evaluation metric children are
+        # removed before their evaluations (the FK has no DB-level ON DELETE),
+        # then the evaluations and trial results, then the trial itself.
+        eval_count = (
+            db.scalar(
+                select(func.count())
+                .select_from(models.Evaluation)
+                .where(models.Evaluation.trial_id == trial_id)
             )
-            .scalars()
-            .all()
+            or 0
         )
-        for evaluation in evaluations:
-            db.delete(evaluation)
-
-        results = (
-            db.execute(
-                select(models.TrialResult).where(
-                    models.TrialResult.trial_id == trial_id
-                )
+        result_count = (
+            db.scalar(
+                select(func.count())
+                .select_from(models.TrialResult)
+                .where(models.TrialResult.trial_id == trial_id)
             )
-            .scalars()
-            .all()
+            or 0
         )
-        for result in results:
-            db.delete(result)
 
-        db.delete(trial)
+        eval_ids = select(models.Evaluation.id).where(
+            models.Evaluation.trial_id == trial_id
+        )
+        db.execute(
+            delete(models.EvaluationMetric).where(
+                models.EvaluationMetric.evaluation_id.in_(eval_ids)
+            )
+        )
+        db.execute(
+            delete(models.Evaluation).where(models.Evaluation.trial_id == trial_id)
+        )
+        db.execute(
+            delete(models.TrialResult).where(models.TrialResult.trial_id == trial_id)
+        )
+        # Core-delete the trial row too (rather than db.delete(trial)) so the ORM
+        # doesn't re-run a delete-orphan cascade over the results/evaluations we
+        # just bulk-deleted (which would warn "0 rows matched").
+        db.execute(delete(models.Trial).where(models.Trial.id == trial_id))
         db.commit()
     except SQLAlchemyError as e:
         db.rollback()
@@ -913,8 +930,8 @@ def delete_trial(
         resource_id=trial_id,
         project_id=project_id,
         detail={
-            "results_deleted": len(results),
-            "evaluations_deleted": len(evaluations),
+            "results_deleted": result_count,
+            "evaluations_deleted": eval_count,
         },
     )
     return trial_data

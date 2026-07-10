@@ -186,5 +186,19 @@ def test_bypass_celery_trial_extracts_and_stores_result(client, api_url, monkeyp
     assert len(items) == 1
     assert items[0]["result"] == expected
 
+    # Deleting the trial removes it (and bulk-deletes its results/evaluations).
+    assert (
+        client.delete(
+            f"{api_url}/project/{project_id}/trial/{trial_id}", headers=headers
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"{api_url}/project/{project_id}/trial/{trial_id}", headers=headers
+        ).status_code
+        == 404
+    )
+
     # Cleanup.
     client.delete(f"{api_url}/project/{project_id}", headers=headers)
