@@ -679,6 +679,98 @@ Document 3,This is the third document,Contains additional data,A"""
     assert doc1["meta_data"]["source_columns"] == ["description", "details"]
 
 
+def test_validate_id_column_detects_duplicates(client, api_url):
+    """The validate-id-column endpoint should flag non-unique case-ID columns
+    and the configure endpoint should reject them (422) before preprocessing."""
+    import json
+
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
+    response = client.post(f"{api_url}/auth/login", data=user_data)
+    assert response.status_code == 200
+    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    response = client.post(
+        f"{api_url}/project",
+        headers=headers,
+        json={"name": "ID Validation Project", "description": "x"},
+    )
+    assert response.status_code == 200
+    project_id = response.json()["id"]
+
+    # subject_id "S1" appears twice → not unique
+    csv_content = (
+        "subject_id,report\nS1,First report\nS2,Second report\nS1,Duplicate subject\n"
+    )
+    file_info = {"file_name": "dupe.csv", "file_type": "text/csv"}
+    response = client.post(
+        f"{api_url}/project/{project_id}/file",
+        headers=headers,
+        files={"file": ("dupe.csv", csv_content.encode(), "text/csv")},
+        data={"file_info": json.dumps(file_info)},
+    )
+    assert response.status_code == 200
+    file_id = response.json()["id"]
+
+    # Duplicate column → invalid, with the offending value reported
+    response = client.post(
+        f"{api_url}/project/{project_id}/file/{file_id}/validate-id-column",
+        headers=headers,
+        json={"case_id_column": "subject_id", "has_header": True, "delimiter": ","},
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result["is_valid"] is False
+    assert result["column_exists"] is True
+    assert result["duplicate_rows"] == 2
+    assert any(d["value"] == "S1" and d["count"] == 2 for d in result["duplicates"])
+
+    # Unique column → valid
+    response = client.post(
+        f"{api_url}/project/{project_id}/file/{file_id}/validate-id-column",
+        headers=headers,
+        json={"case_id_column": "report", "has_header": True, "delimiter": ","},
+    )
+    assert response.status_code == 200
+    assert response.json()["is_valid"] is True
+
+    # Saving a config with the duplicate ID column is rejected with 422
+    response = client.post(
+        f"{api_url}/project/{project_id}/file/{file_id}/configure",
+        headers=headers,
+        json={
+            "preprocessing_strategy": "row_by_row",
+            "file_metadata": {
+                "delimiter": ",",
+                "encoding": "utf-8",
+                "has_header": True,
+                "text_columns": ["report"],
+                "case_id_column": "subject_id",
+            },
+        },
+    )
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["is_valid"] is False
+    assert any(d["value"] == "S1" for d in detail["duplicates"])
+
+    # A unique ID column saves successfully
+    response = client.post(
+        f"{api_url}/project/{project_id}/file/{file_id}/configure",
+        headers=headers,
+        json={
+            "preprocessing_strategy": "row_by_row",
+            "file_metadata": {
+                "delimiter": ",",
+                "encoding": "utf-8",
+                "has_header": True,
+                "text_columns": ["report"],
+                "case_id_column": "report",
+            },
+        },
+    )
+    assert response.status_code == 200
+
+
 # Test auto-generated document set for row-by-row preprocessing
 def test_row_by_row_document_set_auto_generation(client, api_url):
     """Test that row-by-row preprocessing automatically creates a DocumentSet."""

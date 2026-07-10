@@ -24,6 +24,24 @@ export interface FilePreviewRows {
   sheets?: string[]
 }
 
+/** A single non-unique case-ID value found in the file. */
+export interface IdColumnDuplicate {
+  value: string
+  count: number
+  is_empty: boolean
+}
+
+/** Result of `POST /file/{id}/validate-id-column`. */
+export interface IdColumnValidation {
+  is_valid: boolean
+  column_exists: boolean
+  case_id_column?: string
+  total_rows?: number
+  duplicate_rows?: number
+  duplicate_value_count?: number
+  duplicates: IdColumnDuplicate[]
+}
+
 export const filesApi = {
   list(projectId: number | string, params: FileFilter = {}) {
     return api.get(`/project/${projectId}/file`, {
@@ -47,6 +65,18 @@ export const filesApi = {
   configure(projectId: number | string, fileId: number | string, payload: Record<string, unknown>) {
     return api.post(`/project/${projectId}/file/${fileId}/configure`, payload) as Promise<
       ApiBody<File>
+    >
+  },
+  // Validate that a row-by-row import's case-ID column is unique across the
+  // whole file. `config` mirrors the file_metadata (case_id_column, delimiter,
+  // encoding, has_header, sheet).
+  validateIdColumn(
+    projectId: number | string,
+    fileId: number | string,
+    config: Record<string, unknown>,
+  ) {
+    return api.post(`/project/${projectId}/file/${fileId}/validate-id-column`, config) as Promise<
+      ApiBody<IdColumnValidation>
     >
   },
 

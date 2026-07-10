@@ -160,6 +160,61 @@
           <div class="text-xs text-content-subtle mt-1">
             Optional: names each document (e.g. <code>CASE-001</code>). Defaults to row number.
           </div>
+
+          <!-- ID uniqueness validation -->
+          <div
+            v-if="caseIdColumn && validatingId"
+            class="mt-2 text-xs text-content-muted flex items-center gap-1.5"
+          >
+            <LoadingSpinner inline size="small" color="current" label="" />
+            Checking that IDs are unique…
+          </div>
+
+          <div
+            v-else-if="idColumnMissing"
+            class="mt-2 rounded-card border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300"
+          >
+            Column <strong>{{ caseIdColumn }}</strong> was not found with the current settings.
+            Adjust the header/sheet options or pick another column.
+          </div>
+
+          <div
+            v-else-if="idHasDuplicates"
+            class="mt-2 rounded-card border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300"
+          >
+            <p class="font-medium">
+              This column is not unique — {{ idValidation?.duplicate_rows }} rows share a duplicate
+              ID. Each document needs a unique ID, so saving is disabled.
+            </p>
+            <ul class="mt-1.5 space-y-0.5 list-disc pl-4">
+              <li v-for="dup in idValidation?.duplicates || []" :key="dup.value">
+                <span v-if="dup.is_empty" class="italic">(empty)</span>
+                <code v-else>{{ dup.value }}</code>
+                — appears {{ dup.count }}×
+              </li>
+            </ul>
+            <p v-if="extraDuplicateCount > 0" class="mt-1">
+              …and {{ extraDuplicateCount }} more duplicate value(s).
+            </p>
+            <p class="mt-1.5">
+              Pick a different ID column, or use <strong>(Row number)</strong> to name documents
+              automatically.
+            </p>
+          </div>
+
+          <div
+            v-else-if="caseIdColumn && idValidation?.is_valid"
+            class="mt-2 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5"
+          >
+            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path
+                fill-rule="evenodd"
+                d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 111.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            All {{ idValidation?.total_rows }} IDs in this column are unique.
+          </div>
         </div>
       </div>
     </div>
@@ -179,7 +234,13 @@
     <template #footer>
       <BaseButton variant="secondary" @click="tryClose">Cancel</BaseButton>
       <BaseButton
-        :disabled="saving || (preprocessingStrategy === 'row_by_row' && textColumns.length === 0)"
+        :disabled="
+          saving ||
+          validatingId ||
+          idHasDuplicates ||
+          idColumnMissing ||
+          (preprocessingStrategy === 'row_by_row' && textColumns.length === 0)
+        "
         :loading="saving"
         @click="saveConfig"
       >
@@ -192,11 +253,13 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { filesApi } from '@/services/filesApi'
+import type { IdColumnValidation } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { selectClass, labelClass } from '@/utils/formStyles'
 import type { File } from '@/types'
 
@@ -259,6 +322,25 @@ const caseIdColumn = ref('')
 const saving = ref(false)
 const showConfirm = ref(false)
 const initialConfig = ref('')
+
+// Case-ID uniqueness validation (checked against the whole file server-side).
+const idValidation = ref<IdColumnValidation | null>(null)
+const validatingId = ref(false)
+let idValidateTimer: ReturnType<typeof setTimeout> | null = null
+let idValidateSeq = 0
+
+const idHasDuplicates = computed(
+  () =>
+    idValidation.value != null && idValidation.value.column_exists && !idValidation.value.is_valid,
+)
+const idColumnMissing = computed(
+  () => idValidation.value != null && !idValidation.value.column_exists,
+)
+const extraDuplicateCount = computed(() => {
+  const v = idValidation.value
+  if (!v) return 0
+  return Math.max(0, (v.duplicate_value_count ?? v.duplicates.length) - v.duplicates.length)
+})
 
 // Derived header labels (no null/empty headers)
 const headerLabels = computed(() =>
@@ -400,6 +482,8 @@ async function initFromMeta(): Promise<void> {
   if (!props.file) return
   const file = props.file
   isEdit.value = !!file.preprocessing_strategy
+  idValidation.value = null
+  validatingId.value = false
 
   // Reset transient config to defaults before pre-filling from metadata.
   delimiter.value = ','
@@ -443,6 +527,52 @@ watch([delimiter, encoding, sheet, hasHeader], async () => {
   await loadPreview()
 })
 
+// Validate the case-ID column's uniqueness across the whole file. Debounced,
+// with a sequence guard so stale responses can't overwrite newer results.
+async function runIdValidation(): Promise<void> {
+  if (!props.file) return
+  if (preprocessingStrategy.value !== 'row_by_row' || !caseIdColumn.value) {
+    idValidation.value = null
+    validatingId.value = false
+    return
+  }
+  const seq = ++idValidateSeq
+  validatingId.value = true
+  try {
+    const { data } = await filesApi.validateIdColumn(props.projectId, props.file.id, {
+      case_id_column: String(caseIdColumn.value),
+      delimiter: isCSV.value ? delimiter.value : undefined,
+      encoding: encoding.value,
+      has_header: hasHeader.value,
+      sheet: isXLSX.value ? sheet.value : undefined,
+    })
+    if (seq === idValidateSeq) idValidation.value = data
+  } catch {
+    // On a transient validation error don't block the user — the configure
+    // endpoint re-validates server-side as a safety net.
+    if (seq === idValidateSeq) idValidation.value = null
+  } finally {
+    if (seq === idValidateSeq) validatingId.value = false
+  }
+}
+
+function scheduleIdValidation(): void {
+  if (idValidateTimer) clearTimeout(idValidateTimer)
+  // Show the spinner immediately when a column is selected so the Save button
+  // is disabled while we wait (prevents saving before the check completes).
+  if (preprocessingStrategy.value === 'row_by_row' && caseIdColumn.value) {
+    validatingId.value = true
+  } else {
+    idValidation.value = null
+    validatingId.value = false
+  }
+  idValidateTimer = setTimeout(runIdValidation, 400)
+}
+
+watch([caseIdColumn, preprocessingStrategy, sheet, delimiter, encoding, hasHeader], () => {
+  scheduleIdValidation()
+})
+
 const saveConfig = async (): Promise<void> => {
   if (!props.file) return
   saving.value = true
@@ -471,8 +601,17 @@ const saveConfig = async (): Promise<void> => {
     toast.success('Import configuration saved')
     emit('saved')
     doClose()
-  } catch {
-    toast.error('Failed to save import configuration')
+  } catch (err: unknown) {
+    // Safety net: the configure endpoint re-validates the ID column and rejects
+    // duplicates with 422 + the structured result. Surface it inline.
+    const resp = (err as { response?: { status?: number; data?: { detail?: IdColumnValidation } } })
+      ?.response
+    if (resp?.status === 422 && resp.data?.detail?.duplicates) {
+      idValidation.value = resp.data.detail
+      toast.error('This ID column is not unique — pick a different column or fix the file.')
+    } else {
+      toast.error('Failed to save import configuration')
+    }
   } finally {
     saving.value = false
   }

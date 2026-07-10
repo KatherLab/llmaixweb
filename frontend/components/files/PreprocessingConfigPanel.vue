@@ -40,111 +40,130 @@
         </BaseButton>
       </div>
 
-      <!-- OCR Engine Selection -->
-      <div>
-        <label :class="[labelClass, 'mb-3']"> OCR Engine </label>
-        <div class="space-y-3">
-          <!-- Local OCR -->
-          <button
-            v-if="doclingOcrEnabled"
-            :class="[
-              'w-full rounded-card border-2 p-4 text-left transition-all',
-              selectedEngine === 'docling_tesseract'
-                ? 'border-primary bg-primary-soft'
-                : 'border-default hover:border-strong',
-            ]"
-            @click="selectedEngine = 'docling_tesseract'"
-          >
-            <div class="flex items-center">
-              <Zap class="w-6 h-6 text-primary mr-3" />
-              <div>
-                <p class="font-medium text-content">
-                  {{ getEngineLabel('docling_tesseract') }}
-                </p>
-                <p class="text-xs text-content-muted">
-                  {{ getEngineSubtitle('docling_tesseract') }}
-                </p>
-              </div>
-            </div>
-          </button>
+      <!-- OCR configuration — only shown when the selection includes files that
+           need OCR (PDF / images). CSV, Excel and plain-text files are imported as
+           structured text and never touch an OCR engine, so we neither show this
+           section nor force an engine choice for a table/text-only selection. -->
+      <template v-if="hasOcrRequiringFiles">
+        <div>
+          <label :class="[labelClass, 'mb-3']"> OCR Engine </label>
 
-          <!-- Mistral OCR -->
-          <button
-            v-if="mistralOcrEnabled"
-            :class="[
-              'w-full rounded-card border-2 p-4 text-left transition-all',
-              selectedEngine === 'mistral_ocr'
-                ? 'border-primary bg-primary-soft'
-                : 'border-default hover:border-strong',
-            ]"
-            @click="selectedEngine = 'mistral_ocr'"
-          >
-            <div class="flex items-center">
-              <CircleCheckBig class="w-6 h-6 text-primary mr-3" />
-              <div>
-                <p class="font-medium text-content">
-                  {{ getEngineLabel('mistral_ocr') }}
-                </p>
-                <p class="text-xs text-content-muted">
-                  {{ getEngineSubtitle('mistral_ocr') }}
-                </p>
-              </div>
-            </div>
-          </button>
-
-          <!-- Vision LLM -->
-          <button
-            v-if="visionOcrEnabled"
-            :class="[
-              'w-full rounded-card border-2 p-4 text-left transition-all',
-              selectedEngine === 'llm_vision'
-                ? 'border-primary bg-primary-soft'
-                : 'border-default hover:border-strong',
-            ]"
-            @click="selectedEngine = 'llm_vision'"
-          >
-            <div class="flex items-center">
-              <Eye class="w-6 h-6 text-primary mr-3" />
-              <div>
-                <p class="font-medium text-content">
-                  {{ getEngineLabel('llm_vision') }}
-                </p>
-                <p class="text-xs text-content-muted">
-                  {{ getEngineSubtitle('llm_vision') }}
-                </p>
-              </div>
-            </div>
-          </button>
-        </div>
-        <!-- Warning: No OCR engines enabled -->
-        <Callout v-if="noOcrEnabled" variant="warning" class="mt-3">
-          <p class="text-sm font-medium">
-            All OCR engines are disabled. Only PDFs with embedded text can be processed.
-          </p>
-          <p class="text-xs mt-1">
-            Image files (PNG/JPEG) require OCR. Enable Local OCR, Mistral OCR, or Vision LLM in
-            Admin Settings to process images. PDFs will use pypdf for embedded text extraction.
-          </p>
-        </Callout>
-      </div>
-
-      <!-- Force OCR (always visible) -->
-      <div class="border-t border-default pt-4">
-        <label
-          class="flex items-start space-x-3 p-3 bg-amber-50 rounded-card border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
-        >
-          <input v-model="forceOcr" type="checkbox" class="mt-0.5 text-amber-600 rounded" />
-          <div>
-            <p class="text-sm font-medium text-amber-900 dark:text-amber-300">Force OCR for PDFs</p>
-            <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">
-              Skip embedded text extraction and run OCR on all PDF pages
+          <!-- Hard error: the selection needs OCR but no engine is enabled. -->
+          <Callout v-if="ocrRequiredButUnavailable" variant="danger">
+            <p class="text-sm font-medium">
+              Selected files require OCR, but no OCR engine is enabled.
             </p>
-          </div>
-        </label>
-      </div>
+            <p class="text-xs mt-1">
+              PDF and image files need an OCR engine. Enable Local OCR, Mistral OCR, or Vision LLM
+              in Admin Settings — or remove those files and process only CSV/Excel/text files, which
+              don't require OCR.
+            </p>
+          </Callout>
 
-      <!-- Vision LLM Prompt (always visible when using Vision LLM) -->
-      <div v-if="selectedEngine === 'llm_vision'" class="pt-4">
+          <div v-else class="space-y-3">
+            <!-- Local OCR -->
+            <button
+              v-if="doclingOcrEnabled"
+              :class="[
+                'w-full rounded-card border-2 p-4 text-left transition-all',
+                selectedEngine === 'docling_tesseract'
+                  ? 'border-primary bg-primary-soft'
+                  : 'border-default hover:border-strong',
+              ]"
+              @click="selectedEngine = 'docling_tesseract'"
+            >
+              <div class="flex items-center">
+                <Zap class="w-6 h-6 text-primary mr-3" />
+                <div>
+                  <p class="font-medium text-content">
+                    {{ getEngineLabel('docling_tesseract') }}
+                  </p>
+                  <p class="text-xs text-content-muted">
+                    {{ getEngineSubtitle('docling_tesseract') }}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <!-- Mistral OCR -->
+            <button
+              v-if="mistralOcrEnabled"
+              :class="[
+                'w-full rounded-card border-2 p-4 text-left transition-all',
+                selectedEngine === 'mistral_ocr'
+                  ? 'border-primary bg-primary-soft'
+                  : 'border-default hover:border-strong',
+              ]"
+              @click="selectedEngine = 'mistral_ocr'"
+            >
+              <div class="flex items-center">
+                <CircleCheckBig class="w-6 h-6 text-primary mr-3" />
+                <div>
+                  <p class="font-medium text-content">
+                    {{ getEngineLabel('mistral_ocr') }}
+                  </p>
+                  <p class="text-xs text-content-muted">
+                    {{ getEngineSubtitle('mistral_ocr') }}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <!-- Vision LLM -->
+            <button
+              v-if="visionOcrEnabled"
+              :class="[
+                'w-full rounded-card border-2 p-4 text-left transition-all',
+                selectedEngine === 'llm_vision'
+                  ? 'border-primary bg-primary-soft'
+                  : 'border-default hover:border-strong',
+              ]"
+              @click="selectedEngine = 'llm_vision'"
+            >
+              <div class="flex items-center">
+                <Eye class="w-6 h-6 text-primary mr-3" />
+                <div>
+                  <p class="font-medium text-content">
+                    {{ getEngineLabel('llm_vision') }}
+                  </p>
+                  <p class="text-xs text-content-muted">
+                    {{ getEngineSubtitle('llm_vision') }}
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Force OCR (PDFs only; needs an enabled engine) -->
+        <div v-if="anyOcrEnabled" class="border-t border-default pt-4">
+          <label
+            class="flex items-start space-x-3 p-3 bg-amber-50 rounded-card border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
+          >
+            <input v-model="forceOcr" type="checkbox" class="mt-0.5 text-amber-600 rounded" />
+            <div>
+              <p class="text-sm font-medium text-amber-900 dark:text-amber-300">
+                Force OCR for PDFs
+              </p>
+              <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                Skip embedded text extraction and run OCR on all PDF pages
+              </p>
+            </div>
+          </label>
+        </div>
+      </template>
+
+      <!-- Table/text-only selection: no OCR engine required. -->
+      <Callout v-else variant="info">
+        <p class="text-sm font-medium">No OCR engine needed</p>
+        <p class="text-xs mt-1">
+          CSV, Excel and plain-text files are imported as structured text — they don't use an OCR
+          engine. Just start processing.
+        </p>
+      </Callout>
+
+      <!-- Vision LLM Prompt (visible when Vision LLM is picked for an OCR file) -->
+      <div v-if="hasOcrRequiringFiles && selectedEngine === 'llm_vision'" class="pt-4">
         <label :class="labelClass">Prompt</label>
         <textarea
           v-model="visionPrompt"
@@ -154,8 +173,8 @@
         ></textarea>
       </div>
 
-      <!-- Advanced Options -->
-      <div class="border-t border-default pt-4">
+      <!-- Advanced Options (OCR-engine specific) -->
+      <div v-if="hasOcrRequiringFiles && anyOcrEnabled" class="border-t border-default pt-4">
         <button
           class="text-sm font-medium text-content-muted flex items-center"
           @click="showAdvanced = !showAdvanced"
@@ -264,7 +283,7 @@
       <BaseButton variant="secondary" class="flex-1" @click="emit('close')"> Cancel </BaseButton>
       <BaseButton
         class="flex-1"
-        :disabled="!canStartProcessing || isSubmitting"
+        :disabled="!canSubmit || isSubmitting"
         :loading="isSubmitting"
         @click="onStart"
       >
@@ -313,8 +332,10 @@ const emit = defineEmits<{
   start: [payload: PreprocessingTaskCreate]
 }>()
 
-// Processing config (owned by this panel)
-const selectedEngine = ref<OcrEngine>('docling_tesseract')
+// Processing config (owned by this panel). The engine is seeded by the watcher
+// below to the first *enabled* engine, so we start empty rather than assuming a
+// default (e.g. 'docling_tesseract') that may be disabled.
+const selectedEngine = ref<OcrEngine>(null)
 const forceOcr = ref(false)
 const tesseractLang = ref('auto')
 const mistralApiKey = ref('')
@@ -334,48 +355,92 @@ watch(
   },
 )
 
-// Reset selected engine if server settings disable the current selection.
-// Mirrors the reset logic that previously lived in the parent's fetchOcrSettings().
-watch(
-  () => [props.doclingOcrEnabled, props.mistralOcrEnabled, props.visionOcrEnabled],
-  ([docling, mistral, vision]) => {
-    if (selectedEngine.value === 'llm_vision' && !vision) {
-      selectedEngine.value = 'docling_tesseract'
-    } else if (selectedEngine.value === 'mistral_ocr' && !mistral) {
-      selectedEngine.value = 'docling_tesseract'
-    }
-    // If all OCR engines are disabled, reset to null to show the warning.
-    if (!vision && !mistral && !docling) {
-      selectedEngine.value = null
-    }
-  },
-)
-
 const anyOcrEnabled = computed(
   () => props.doclingOcrEnabled || props.mistralOcrEnabled || props.visionOcrEnabled,
 )
 const noOcrEnabled = computed(() => !anyOcrEnabled.value)
 
+// The first enabled engine — the default selection and the fallback when the
+// current choice becomes unavailable. null when no engine is enabled.
+const firstEnabledEngine = computed<OcrEngine>(() => {
+  if (props.doclingOcrEnabled) return 'docling_tesseract'
+  if (props.mistralOcrEnabled) return 'mistral_ocr'
+  if (props.visionOcrEnabled) return 'llm_vision'
+  return null
+})
+
+// Keep the selected engine valid as server settings load/change: if the current
+// choice isn't an enabled engine (e.g. the old default 'docling_tesseract' while
+// docling is disabled), fall back to the first enabled one — or null if none.
+// `immediate` seeds the default on mount.
+watch(
+  firstEnabledEngine,
+  () => {
+    const stillValid =
+      (selectedEngine.value === 'docling_tesseract' && props.doclingOcrEnabled) ||
+      (selectedEngine.value === 'mistral_ocr' && props.mistralOcrEnabled) ||
+      (selectedEngine.value === 'llm_vision' && props.visionOcrEnabled)
+    if (!stillValid) selectedEngine.value = firstEnabledEngine.value
+  },
+  { immediate: true },
+)
+
+// ── File-type–aware OCR requirement ──────────────────────────────────────────
+// CSV / Excel / plain-text files are imported as structured text and never use
+// an OCR engine. Any other type (PDF, images, …) may need OCR, so when one is in
+// the selection we require an enabled engine (and error if none is enabled).
+const NON_OCR_FILE_TYPES = new Set<string>([
+  'text/plain',
+  'text/csv',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+])
+
+const hasOcrRequiringFiles = computed(() =>
+  props.selectedFiles.some((id) => {
+    const type = props.getFileById(id)?.file_type
+    // Unknown/undefined type → treat as OCR-requiring (safer: forces a choice).
+    return !type || !NON_OCR_FILE_TYPES.has(type)
+  }),
+)
+
+// OCR-requiring files are selected but no engine is enabled → hard block + error.
+const ocrRequiredButUnavailable = computed(() => hasOcrRequiringFiles.value && noOcrEnabled.value)
+
+// Combine the parent's gate (files selected, CSV/XLSX configured, not submitting)
+// with the OCR rules: a table/text-only selection needs no engine; an
+// OCR-requiring selection needs an enabled engine to be picked.
+const canSubmit = computed(() => {
+  if (!props.canStartProcessing) return false
+  if (!hasOcrRequiringFiles.value) return true // table/text only → no engine needed
+  if (noOcrEnabled.value) return false // needs OCR, none enabled
+  return selectedEngine.value !== null // needs OCR → must pick an engine
+})
+
 // Build the processing settings payload and emit start.
 // Mirrors the logic that previously lived in the parent's startProcessing().
 const onStart = (): void => {
-  if (!props.canStartProcessing || props.isSubmitting) return
+  if (!canSubmit.value || props.isSubmitting) return
+
+  // Table/text-only selections don't use OCR — send no engine (and no
+  // engine-specific options). Otherwise send the picked engine + its options.
+  const engine = hasOcrRequiringFiles.value ? selectedEngine.value : null
 
   const settings: Record<string, unknown> = {
-    ocr_engine: selectedEngine.value,
+    ocr_engine: engine,
     force_ocr: forceOcr.value,
   }
 
-  if (selectedEngine.value === 'docling_tesseract' && tesseractLang.value !== 'auto') {
+  if (engine === 'docling_tesseract' && tesseractLang.value !== 'auto') {
     settings.docling_ocr_languages = [tesseractLang.value]
   }
 
-  if (selectedEngine.value === 'mistral_ocr') {
+  if (engine === 'mistral_ocr') {
     if (mistralApiKey.value) settings.mistral_api_key = mistralApiKey.value
     if (mistralModel.value) settings.mistral_model = mistralModel.value
   }
 
-  if (selectedEngine.value === 'llm_vision') {
+  if (engine === 'llm_vision') {
     if (visionApiKey.value) settings.vision_api_key = visionApiKey.value
     if (visionBaseUrl.value) settings.vision_base_url = visionBaseUrl.value
     if (visionModel.value) settings.vision_model = visionModel.value
@@ -389,7 +454,7 @@ const onStart = (): void => {
     llm_vision: 'Vision LLM',
   }
   const forceOcrText = forceOcr.value ? ' + Force OCR' : ''
-  const taskName = `${engineNames[selectedEngine.value ?? ''] || 'Custom'}${forceOcrText}`
+  const taskName = engine ? `${engineNames[engine] || 'Custom'}${forceOcrText}` : 'Text extraction'
 
   emit('start', {
     file_ids: props.selectedFiles,

@@ -555,6 +555,141 @@ def upload_file(
     return schemas.File.model_validate(new_file)
 
 
+def _load_full_table(file: models.File, file_content: bytes, metadata: dict):
+    """Read a CSV/XLSX file into a full pandas DataFrame using import config.
+
+    Mirrors the read logic in ``PreprocessingPipeline._process_table_file`` so
+    that validation results match what preprocessing will actually see.
+    """
+    import pandas as pd
+
+    has_header = metadata.get("has_header", True)
+    header = 0 if has_header else None
+
+    is_csv = file.file_type == models.FileType.TEXT_CSV or (
+        file.file_name or ""
+    ).lower().endswith(".csv")
+
+    if is_csv:
+        delimiter = metadata.get("delimiter") or ","
+        encoding = metadata.get("encoding") or "utf-8"
+        try:
+            return pd.read_csv(
+                io.BytesIO(file_content),
+                encoding=encoding,
+                delimiter=delimiter,
+                header=header,
+            )
+        except Exception:
+            # Fall back to lenient decoding, matching the pipeline behaviour.
+            content = file_content.decode(encoding, errors="replace").encode("utf-8")
+            return pd.read_csv(
+                io.BytesIO(content),
+                encoding="utf-8",
+                delimiter=delimiter,
+                header=header,
+            )
+
+    sheet = metadata.get("sheet")
+    return pd.read_excel(
+        io.BytesIO(file_content),
+        sheet_name=sheet if sheet else 0,
+        header=header,
+    )
+
+
+def _validate_id_column(file: models.File, metadata: dict) -> dict:
+    """Check whether the configured case-ID column holds unique, non-empty values.
+
+    Returns a structured result describing any duplicates so the client can tell
+    the user exactly which IDs collide (and block saving) before preprocessing.
+    """
+    import pandas as pd
+
+    case_id_column = metadata.get("case_id_column")
+
+    # Nothing to validate: full-document imports or "(row number)" IDs are
+    # always unique.
+    if not case_id_column:
+        return {"is_valid": True, "column_exists": True, "duplicates": []}
+
+    file_content = get_file(file.file_uuid)
+    try:
+        df = _load_full_table(file, file_content, metadata)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not read file for validation: {exc}",
+        )
+
+    if case_id_column not in df.columns:
+        return {
+            "is_valid": False,
+            "column_exists": False,
+            "total_rows": int(len(df)),
+            "duplicates": [],
+            "case_id_column": case_id_column,
+        }
+
+    col = df[case_id_column]
+    counts = col.value_counts(dropna=False)
+    duplicated = counts[counts > 1]
+
+    duplicates = []
+    for value, count in duplicated.items():
+        is_empty = bool(pd.isna(value)) or (
+            isinstance(value, str) and value.strip() == ""
+        )
+        duplicates.append(
+            {
+                "value": "" if pd.isna(value) else str(value),
+                "count": int(count),
+                "is_empty": is_empty,
+            }
+        )
+
+    # Rows that share a non-unique ID (for a concise summary in the UI).
+    duplicate_rows = int(duplicated.sum())
+
+    return {
+        "is_valid": len(duplicates) == 0,
+        "column_exists": True,
+        "case_id_column": case_id_column,
+        "total_rows": int(len(df)),
+        "duplicate_rows": duplicate_rows,
+        # Cap the payload; the UI shows a "+N more" hint when truncated.
+        "duplicates": duplicates[:50],
+        "duplicate_value_count": len(duplicates),
+    }
+
+
+@router.post("/{file_id}/validate-id-column", response_model=dict)
+def validate_id_column(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    file_id: int,
+    config: dict = Body(...),
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Validate that the chosen case-ID column is unique across the whole file.
+
+    Called by the import-config modal before saving so duplicate IDs are caught
+    up-front (with the offending values) instead of failing at preprocessing.
+    """
+    check_project_access(project_id, current_user, db)
+
+    file = db.execute(
+        select(models.File).where(
+            models.File.project_id == project_id, models.File.id == file_id
+        )
+    ).scalar_one_or_none()
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return _validate_id_column(file, config)
+
+
 @router.post("/{file_id}/configure", response_model=schemas.File)
 def configure_file_import(
     *,
@@ -594,6 +729,16 @@ def configure_file_import(
         )
     ):
         file.file_metadata = {**(file.file_metadata or {}), **config}
+
+    # Reject configs whose case-ID column is not unique across the whole file,
+    # so the failure surfaces here instead of mid-preprocessing.
+    if file.preprocessing_strategy == models.PreprocessingStrategy.ROW_BY_ROW and (
+        file.file_metadata or {}
+    ).get("case_id_column"):
+        result = _validate_id_column(file, file.file_metadata or {})
+        if not result["is_valid"]:
+            db.rollback()
+            raise HTTPException(status_code=422, detail=result)
 
     db.add(file)
     db.commit()

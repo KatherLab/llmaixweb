@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 # stale-heartbeat cutoff so an actively-processing file is never reaped.
 _HEARTBEAT_INTERVAL_SECONDS = 15
 
+# Sentinel pushed to the result queue by the worker thread when it fails, so the
+# poller wakes immediately (instead of blocking a full heartbeat interval) and
+# raises the real exception carried on the separate exception queue.
+_WORKER_ERROR = object()
+
 
 class PreprocessingPipeline:
     """Flexible preprocessing pipeline for different file types."""
@@ -692,7 +697,11 @@ class PreprocessingPipeline:
                         e,
                     )
                 else:
+                    # Carry the real exception on exception_queue, then wake the
+                    # poller via result_queue so a fast failure surfaces at once
+                    # rather than after a full heartbeat interval / the timeout.
                     exception_queue.put(e)
+                    result_queue.put(_WORKER_ERROR)
 
         def _heartbeat():
             now = datetime.datetime.now(datetime.UTC)
@@ -728,6 +737,14 @@ class PreprocessingPipeline:
                 result = result_queue.get(
                     timeout=min(_HEARTBEAT_INTERVAL_SECONDS, remaining)
                 )
+                # A fast worker failure would otherwise sit unread on the separate
+                # exception_queue until the full per-file timeout elapsed — making a
+                # file that failed in milliseconds (e.g. a validation error like
+                # duplicate case IDs or missing text columns) look like it
+                # "processed" for minutes. The worker pushes _WORKER_ERROR here to
+                # wake us immediately; raise the real exception it carried.
+                if result is _WORKER_ERROR:
+                    raise exception_queue.get_nowait()
                 return result
             except queue.Empty:
                 # Still running — bump the heartbeat and keep waiting.
@@ -738,9 +755,6 @@ class PreprocessingPipeline:
                         "Heartbeat update failed for file task %s: %s", file_task.id, e
                     )
                 continue
-            except Exception as e:
-                # Re-raise any exception from the worker thread
-                raise e
 
     def _route_pdf_image(
         self, file: models.File, file_task: models.FilePreprocessingTask
