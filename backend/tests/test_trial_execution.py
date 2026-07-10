@@ -276,3 +276,105 @@ def test_document_set_from_explicit_ids(client, api_url):
     assert [d["id"] for d in docs] == [doc_id]
 
     client.delete(f"{api_url}/project/{project_id}", headers=headers)
+
+
+def test_force_reprocess_blocked_by_trial_result(client, api_url, monkeypatch):
+    """force_reprocess on a document referenced by a trial result must return a
+    409 (not a raw 500 IntegrityError from the RESTRICT FK)."""
+    headers = _admin_headers(client, api_url)
+    monkeypatch.setattr(
+        "backend.src.utils.info_extraction.OpenAI",
+        _make_fake_openai(json.dumps({"field1": "x"})),
+    )
+
+    project_id = client.post(
+        f"{api_url}/project", headers=headers, json={"name": "Force Reprocess"}
+    ).json()["id"]
+    prompt_id = client.post(
+        f"{api_url}/project/{project_id}/prompt",
+        headers=headers,
+        json={
+            "name": "P",
+            "system_prompt": "x",
+            "user_prompt": "{document_content}",
+            "project_id": project_id,
+        },
+    ).json()["id"]
+    schema_id = client.post(
+        f"{api_url}/project/{project_id}/schema",
+        headers=headers,
+        json={
+            "schema_name": "S",
+            "schema_definition": {
+                "type": "object",
+                "properties": {"field1": {"type": "string"}},
+                "required": ["field1"],
+            },
+        },
+    ).json()["id"]
+    file_id = client.post(
+        f"{api_url}/project/{project_id}/file",
+        headers=headers,
+        files={
+            "file": ("d.txt", b"clinical text", "text/plain"),
+            "file_info": (
+                "",
+                '{"file_name": "d.txt", "file_type": "text/plain"}',
+                "application/json",
+            ),
+        },
+    ).json()["id"]
+
+    # Same inline_config both times so the config — and thus the existing
+    # document — is reused on the force_reprocess attempt (config-matching is by
+    # additional_settings).
+    inline_config = {"name": "cfg", "description": "d", "additional_settings": {}}
+    assert (
+        client.post(
+            f"{api_url}/project/{project_id}/preprocess",
+            headers=headers,
+            json={
+                "file_ids": [file_id],
+                "inline_config": inline_config,
+                "bypass_celery": True,
+            },
+        ).status_code
+        == 200
+    )
+    doc_id = client.get(
+        f"{api_url}/project/{project_id}/document", headers=headers
+    ).json()["items"][0]["id"]
+
+    # Produce a trial result that references the document (RESTRICT FK).
+    assert (
+        client.post(
+            f"{api_url}/project/{project_id}/trial",
+            headers=headers,
+            json={
+                "schema_id": schema_id,
+                "prompt_id": prompt_id,
+                "document_ids": [doc_id],
+                "bypass_celery": True,
+                "llm_model": "mock",
+                "api_key": "k",
+                "base_url": "http://localhost:11434/v1",
+            },
+        ).status_code
+        == 200
+    )
+
+    # force_reprocess must now be refused with a 409 (not a 500).
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": inline_config,
+            "force_reprocess": True,
+            "bypass_celery": True,
+        },
+    )
+    assert resp.status_code == 409, resp.text
+    assert doc_id in resp.json()["detail"]["referenced_document_ids"]
+
+    client.delete(f"{api_url}/project/{project_id}", headers=headers)

@@ -347,7 +347,12 @@ async def preprocess_project_data(
 
     # Get config settings from inline config
     config_dict = preprocessing_task.inline_config.model_dump(exclude={"bypass_celery"})
-    new_additional_settings = config_dict.get("additional_settings", {})
+    # Coerce None → {} so it matches the same normalization applied to stored
+    # configs below (`existing.additional_settings or {}`). Without this, a config
+    # with empty settings never matches an existing one (None != {}), so a fresh
+    # config is created every time — breaking the document versioning this reuse
+    # is meant to support.
+    new_additional_settings = config_dict.get("additional_settings") or {}
 
     # Try to find an existing config with matching settings
     # This ensures document versioning works correctly when re-processing with same settings
@@ -581,10 +586,44 @@ async def preprocess_project_data(
 
     # Handle force_reprocess: delete existing documents
     if preprocessing_task.force_reprocess:
-        for file, existing_docs in files_with_existing_docs:
-            for doc in existing_docs:
-                doc.document_sets.clear()
-                db.delete(doc)
+        docs_to_delete = [
+            doc for _file, existing_docs in files_with_existing_docs for doc in existing_docs
+        ]
+        doc_ids_to_delete = [doc.id for doc in docs_to_delete]
+        if doc_ids_to_delete:
+            # trial_results.document_id and evaluation_metrics.document_id are
+            # ON DELETE RESTRICT, so deleting a referenced document would raise a
+            # raw IntegrityError at commit → 500. Detect it first and return an
+            # actionable 409 (mirrors delete_document / delete_file).
+            blocked = set(
+                db.execute(
+                    select(models.TrialResult.document_id).where(
+                        models.TrialResult.document_id.in_(doc_ids_to_delete)
+                    )
+                ).scalars().all()
+            )
+            blocked |= set(
+                db.execute(
+                    select(models.EvaluationMetric.document_id).where(
+                        models.EvaluationMetric.document_id.in_(doc_ids_to_delete)
+                    )
+                ).scalars().all()
+            )
+            if blocked:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "message": (
+                            "Cannot force-reprocess: some existing documents are "
+                            "referenced by trial results or evaluations. Delete "
+                            "those trials/evaluations first."
+                        ),
+                        "referenced_document_ids": sorted(blocked),
+                    },
+                )
+        for doc in docs_to_delete:
+            doc.document_sets.clear()
+            db.delete(doc)
         files_to_process = list(files)
 
     # Resolve bypass_celery (from the request body or an inline config) and
