@@ -542,10 +542,7 @@ def create_document_set(
         if ordered_ids:
             db.execute(
                 document_set_association.insert(),
-                [
-                    {"document_id": d, "document_set_id": db_set.id}
-                    for d in ordered_ids
-                ],
+                [{"document_id": d, "document_set_id": db_set.id} for d in ordered_ids],
             )
 
     db.commit()
