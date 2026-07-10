@@ -152,7 +152,10 @@ async def _redis_subscriber_task():
     the task simply doesn't run - Celery workers will still work, just without
     real-time progress updates.
     """
-    from .utils.redis_broadcast import TASK_UPDATE_CHANNEL
+    from .utils.redis_broadcast import (
+        SETTINGS_INVALIDATE_CHANNEL,
+        TASK_UPDATE_CHANNEL,
+    )
 
     try:
         from .utils.redis_broadcast import new_dedicated_redis_client
@@ -172,8 +175,18 @@ async def _redis_subscriber_task():
 
     try:
         pubsub = redis_client.pubsub()
-        pubsub.subscribe(TASK_UPDATE_CHANNEL)
-        logger.info("Subscribed to Redis channel: %s", TASK_UPDATE_CHANNEL)
+        # Subscribe to task updates (for WebSocket fan-out) AND settings
+        # invalidation. Without the latter, a settings change made on ANOTHER
+        # web replica never reaches this process's @lru_cache'd settings, so it
+        # would serve stale config until restart. (The saving replica reloads
+        # its own cache directly; Celery workers get it via their own
+        # subscriber — this closes the gap for multi-replica web deployments.)
+        pubsub.subscribe(TASK_UPDATE_CHANNEL, SETTINGS_INVALIDATE_CHANNEL)
+        logger.info(
+            "Subscribed to Redis channels: %s, %s",
+            TASK_UPDATE_CHANNEL,
+            SETTINGS_INVALIDATE_CHANNEL,
+        )
 
         # Yield control back to event loop so startup can complete
         await asyncio.sleep(0)
@@ -189,6 +202,15 @@ async def _redis_subscriber_task():
                 message = await asyncio.to_thread(pubsub.get_message, timeout=0.1)
                 if message and message["type"] == "message":
                     data = json.loads(message["data"])
+                    if data.get("type") == "settings_invalidate":
+                        # Reload this replica's cached settings. broadcast=False
+                        # so we don't re-publish and loop.
+                        from .core.dynamic_settings import reload_settings_cache
+
+                        await asyncio.to_thread(
+                            reload_settings_cache, broadcast=False
+                        )
+                        continue
                     # Filter server-side by project ownership: deliver only to
                     # the project owner + admins. Previously this was broadcast
                     # to every connected user and the frontend was trusted to
