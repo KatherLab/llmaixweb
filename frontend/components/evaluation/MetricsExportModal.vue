@@ -83,7 +83,15 @@
                 />
                 <div class="ml-3 flex-1">
                   <div class="text-sm font-medium text-content">
-                    Trial #{{ evaluation.trial_id }}
+                    {{
+                      trialLabel(
+                        {
+                          name: evaluation.trial_name,
+                          project_trial_number: evaluation.project_trial_number,
+                        },
+                        evaluation.trial_id,
+                      )
+                    }}
                   </div>
                   <div class="text-sm text-content-subtle">
                     {{ getEvaluationAccuracyPct(evaluation) }} accuracy •
@@ -210,6 +218,7 @@ import { Upload } from '@lucide/vue'
 import { evaluationsApi } from '@/services/evaluationsApi'
 import { formatDate } from '@/utils/formatters'
 import { getEvaluationAccuracyPct, getEvaluationDocumentCount } from '@/utils/evaluationHelpers'
+import { trialLabel } from '@/utils/trialLabel'
 import { checkboxClass, radioClass, labelClass } from '@/utils/formStyles'
 import { useToast } from '@/composables/useToast'
 import { useFileDownload } from '@/composables/useFileDownload'

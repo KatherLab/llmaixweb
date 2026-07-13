@@ -3,6 +3,8 @@ import type { ISODateString, QueryParams } from './api'
 export interface Evaluation {
   id: number
   trial_id: number
+  trial_name?: string | null
+  project_trial_number?: number
   groundtruth_id: number
   metrics: Record<string, unknown>
   field_metrics: Record<string, unknown>

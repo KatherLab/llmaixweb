@@ -538,6 +538,13 @@ class FilePreprocessingTask(Base):
     document_ids: Mapped[list[int]] = mapped_column(
         MutableList.as_mutable(JSON), nullable=True, default=list
     )
+    # The auto-generated document set produced by a row-by-row CSV/XLSX run
+    # (NULL for non-table files and the full-document strategy). Lets the UI
+    # deep-link straight to the group viewer instead of the first document.
+    # ondelete=SET NULL so deleting the set doesn't remove the file task record.
+    document_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("document_sets.id", ondelete="SET NULL"), nullable=True
+    )
 
     # Add these new fields
     file_name: Mapped[str] = mapped_column(String(255), nullable=True)

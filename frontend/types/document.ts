@@ -89,6 +89,9 @@ export interface DocumentFilter extends QueryParams {
   file_ids?: number[]
   status?: string
   tags?: string[]
+  document_set_id?: number
+  compute_stats?: boolean
+  sort?: 'created_desc' | 'created_asc'
 }
 
 export interface DocumentBulkAction {

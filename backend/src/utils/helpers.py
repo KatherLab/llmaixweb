@@ -22,6 +22,63 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 XLS_MIME = "application/vnd.ms-excel"
 
 
+def trial_display_label(trial: Any) -> str:
+    """Human-facing label for a trial.
+
+    Prefers the user-set ``name`` and falls back to the per-project sequence
+    number (``Trial #N``) only when no name is set — mirrors the frontend
+    ``trialLabel`` helper. Never uses the global DB ``id``.
+    """
+    name = (trial.name or "").strip()
+    if name:
+        return name
+    return f"Trial #{trial.project_trial_number}"
+
+
+def trial_filename_slug(trial: Any) -> str:
+    """Filesystem-safe slug identifying a trial, for download filenames.
+
+    Uses the user-set name when present (slugified), otherwise ``trial_N`` from
+    the per-project sequence number.
+    """
+    import re
+
+    name = (trial.name or "").strip()
+    if name:
+        slug = re.sub(r"[^\w.-]+", "_", name).strip("_.")
+        if slug:
+            return slug[:80]
+    return f"trial_{trial.project_trial_number}"
+
+
+def excel_sheet_name(
+    label: str, fallback: str = "Sheet", used: set[str] | None = None
+) -> str:
+    """Sanitize an arbitrary label into a valid, unique Excel sheet name.
+
+    Excel forbids the characters ``: \\ / ? * [ ]`` and caps sheet names at 31
+    characters. When ``used`` is provided, ensures the returned name is unique
+    within it (appending a numeric suffix on collision) and records it — needed
+    because duplicate trial names would otherwise make xlsxwriter raise.
+    """
+    import re
+
+    cleaned = re.sub(r"[:\\/?*\[\]]", " ", label).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    if not cleaned:
+        cleaned = fallback
+    name = cleaned[:31]
+    if used is not None:
+        base = name
+        i = 2
+        while name in used:
+            suffix = f" ({i})"
+            name = base[: 31 - len(suffix)] + suffix
+            i += 1
+        used.add(name)
+    return name
+
+
 def detect_text_encoding(
     content: bytes, fallback_chain: str, use_chardet: bool = True
 ) -> str:
@@ -162,6 +219,8 @@ def build_evaluation_zipfiles(
         writer.writerow(
             [
                 "Evaluation ID",
+                "Trial",
+                "Trial Number",
                 "Trial ID",
                 "Model",
                 "Ground Truth",
@@ -179,6 +238,8 @@ def build_evaluation_zipfiles(
             writer.writerow(
                 [
                     eval_obj.id,
+                    trial_display_label(trial),
+                    trial.project_trial_number,
                     eval_obj.trial_id,
                     trial.llm_model,
                     gt.name if gt else "Unknown",
@@ -201,6 +262,8 @@ def build_evaluation_zipfiles(
             summary_data.append(
                 {
                     "Evaluation ID": eval_obj.id,
+                    "Trial": trial_display_label(trial),
+                    "Trial Number": trial.project_trial_number,
                     "Trial ID": eval_obj.trial_id,
                     "Model": trial.llm_model,
                     "Ground Truth": gt.name if gt else "Unknown",

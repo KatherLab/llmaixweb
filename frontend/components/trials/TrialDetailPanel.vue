@@ -91,12 +91,17 @@
           Results
         </BaseButton>
         <BaseButton
-          v-if="trial.status === 'completed'"
+          v-if="canDownload"
           variant="success"
           size="sm"
+          :title="
+            trial.status === 'completed'
+              ? undefined
+              : 'This trial did not finish — only the successfully extracted documents are included.'
+          "
           @click.stop="emit('download', trial)"
         >
-          Download
+          {{ trial.status === 'completed' ? 'Download' : 'Download partial' }}
         </BaseButton>
       </div>
       <div class="flex gap-2 flex-wrap">
@@ -148,6 +153,14 @@ const schemaName = computed(
 const promptName = computed(() => props.trial.prompt_snapshot?.name || prompt.value?.name)
 
 const isActive = computed(() => !['completed', 'failed', 'cancelled'].includes(props.trial.status))
+
+// Completed trials are always downloadable. Failed/cancelled trials are downloadable
+// too when some documents finished — the archive contains only the successful results.
+const canDownload = computed(
+  () =>
+    props.trial.status === 'completed' ||
+    (['failed', 'cancelled'].includes(props.trial.status) && (props.trial.results_count ?? 0) > 0),
+)
 
 const docsDone = computed(() => {
   if (props.trial.docs_done != null) return props.trial.docs_done

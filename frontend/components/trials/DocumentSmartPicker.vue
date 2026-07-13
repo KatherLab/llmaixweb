@@ -9,7 +9,7 @@
       >
         <option value="">Select a previous trial...</option>
         <option v-for="trial in previousTrials" :key="trial.id" :value="trial.id">
-          Trial #{{ trial.project_trial_number }} - {{ formatDate(trial.created_at) }} ({{
+          {{ trialLabel(trial, trial.id) }} - {{ formatDate(trial.created_at) }} ({{
             trial.document_ids.length
           }}
           docs)
@@ -87,6 +87,7 @@
 import { ref, type PropType } from 'vue'
 import { ChevronDown } from '@lucide/vue'
 import { formatDate } from '@/utils/formatters'
+import { trialLabel } from '@/utils/trialLabel'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { inputClass, selectClass } from '@/utils/formStyles'
 import type { TrialSummary } from '@/types'

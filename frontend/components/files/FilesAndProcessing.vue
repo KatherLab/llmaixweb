@@ -145,6 +145,7 @@
       :highlight-task-id="highlightTaskId"
       @close="showHistoryPanel = false"
       @navigate="navigateToDocument"
+      @navigate-group="navigateToGroup"
       @retry="retryFailedFiles"
       @cancel="cancelPreprocessingTask"
       @process="processFileAndClose"
@@ -700,6 +701,16 @@ const navigateToDocument = (documentId: number): void => {
   router.push({
     path: `/projects/${props.projectId}`,
     query: { tab: 'documents', highlight: documentId },
+  })
+}
+
+// Navigate to the auto-generated document group (row-by-row CSV/XLSX runs)
+const navigateToGroup = (documentSetId: number): void => {
+  showHistoryPanel.value = false
+  emit('files-changed')
+  router.push({
+    path: `/projects/${props.projectId}`,
+    query: { tab: 'documents', group: documentSetId },
   })
 }
 

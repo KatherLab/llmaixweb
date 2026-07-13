@@ -27,7 +27,7 @@ from ....utils.audit import record_audit
 from ....utils.csv_safety import SafeDictCsvWriter
 from ....utils.deletion import cascade_delete_trials
 from ....utils.enums import AuditAction, TrialResultStatus
-from ....utils.helpers import flatten_dict
+from ....utils.helpers import flatten_dict, trial_filename_slug
 from ....utils.streaming_zip import iter_zip
 from ....utils.url_safety import (
     UnsafeEndpointError,
@@ -999,9 +999,9 @@ def download_trial_results(
     if not trial:
         raise HTTPException(status_code=404, detail="Trial not found")
 
-    # Use the project-wise trial number for the download filename so it matches
-    # the "Trial #N" shown in the UI (trial.id is the global DB id and differs).
-    download_basename = f"trial_{trial.project_trial_number}_results"
+    # Prefer the user-set trial name for the download filename, falling back to
+    # the project-wise "trial_N" number so it still matches the UI when unnamed.
+    download_basename = f"{trial_filename_slug(trial)}_results"
 
     prompt = db.execute(
         select(models.Prompt).where(models.Prompt.id == trial.prompt_id)

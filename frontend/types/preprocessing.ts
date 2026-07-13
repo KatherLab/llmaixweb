@@ -57,6 +57,8 @@ export interface FilePreprocessingTask {
   started_at: ISODateString | null
   completed_at: ISODateString | null
   document_ids: number[] | null
+  // Set only for row-by-row CSV/XLSX runs — the auto-generated group to open.
+  document_set_id: number | null
 }
 
 export interface PreprocessingTask {

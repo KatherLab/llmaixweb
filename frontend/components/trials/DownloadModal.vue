@@ -24,10 +24,28 @@ const includeContent = ref(true)
 const isDownloading = ref(false)
 const toast = useToast()
 
+const isPartial = computed(
+  () => props.trial?.status === 'failed' || props.trial?.status === 'cancelled',
+)
+
 const isJsonZip = computed(() => format.value === 'json')
 const isCsvZip = computed(() => format.value === 'csv' && includeContent.value)
 const isCsvOnly = computed(() => format.value === 'csv' && !includeContent.value)
 const fileExt = computed(() => (isCsvOnly.value ? 'csv' : 'zip'))
+
+// Prefer the user-set trial name (slugified) for the filename; fall back to the
+// project-wise "trial_N" number so it still matches the UI when unnamed.
+const downloadBasename = computed(() => {
+  const name = props.trial?.name?.trim()
+  if (name) {
+    const slug = name
+      .replace(/[^\w.-]+/g, '_')
+      .replace(/^[_.]+|[_.]+$/g, '')
+      .slice(0, 80)
+    if (slug) return slug
+  }
+  return `trial_${props.trial?.project_trial_number ?? props.trial?.id}`
+})
 
 watch(
   () => props.open,
@@ -49,7 +67,7 @@ async function download(): Promise<void> {
           format: format.value,
           include_content: includeContent.value,
         }),
-      `trial_${props.trial!.project_trial_number ?? props.trial!.id}_results.${fileExt.value}`,
+      `${downloadBasename.value}_results.${fileExt.value}`,
     )
     toast.success('Downloaded')
     emit('close')
@@ -69,6 +87,12 @@ async function download(): Promise<void> {
     body-class="p-6"
     @close="$emit('close')"
   >
+    <Callout v-if="isPartial" variant="warning" class="mb-4 text-xs">
+      This trial did not finish successfully. The download contains only the
+      <b>{{ trial?.results_count }}</b> document(s) that were extracted — documents that failed are
+      not included.
+    </Callout>
+
     <Callout variant="gray" class="mb-4 text-xs">
       <span v-if="isJsonZip">
         <strong>JSON (per-document):</strong> Downloads a <b>ZIP archive</b> with one JSON file per

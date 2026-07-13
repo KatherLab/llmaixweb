@@ -155,11 +155,22 @@
       @prev="viewerPrev"
       @next="viewerNext"
     />
+
+    <!-- Document Group Viewer (opened via ?group= deep-link from preprocessing history) -->
+    <ViewDocumentGroupModal
+      v-if="viewingGroup"
+      :open="showViewGroup"
+      :group="viewingGroup"
+      :project-id="projectId"
+      @close="closeGroupViewer"
+      @edit="closeGroupViewer"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { isAxiosError } from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 import { Download, FileText, FolderPlus, RefreshCw, Search, Trash2 } from '@lucide/vue'
 import { documentsApi } from '@/services/documentsApi'
@@ -185,10 +196,11 @@ import DocumentViewer from './DocumentViewer.vue'
 import BatchActionsModal from './BatchActionsModal.vue'
 import DocumentGroups from './DocumentsGroups.vue'
 import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
+import ViewDocumentGroupModal from './ViewDocumentGroupModal.vue'
 import DocumentsFilters from './DocumentsFilters.vue'
 import DocumentsTable from './DocumentsTable.vue'
 import { extractErrorMessage } from '@/utils/errors'
-import type { DocumentListItem, DocumentSetCreate } from '@/types'
+import type { DocumentListItem, DocumentSetCreate, DocumentSetSummary } from '@/types'
 
 interface Props {
   projectId: string | number
@@ -339,6 +351,77 @@ watch(
   },
   { immediate: true },
 )
+
+// Already-mounted case: the group param changes while DocumentsManagement is the
+// active tab (mount-time reads happen in onMounted).
+watch(
+  () => route.query.group,
+  (newGroup) => {
+    if (newGroup) {
+      consumeGroupParam()
+    }
+  },
+)
+
+// Open the auto-generated group's viewer directly (from preprocessing history
+// "Go to Group" navigation for row-by-row CSV/XLSX runs) instead of the first
+// document. Driven by a DOM event dispatched by ProjectDetail once this (async)
+// component has mounted — the route param alone is racy against the async mount.
+const viewingGroup = ref<DocumentSetSummary | null>(null)
+const showViewGroup = ref<boolean>(false)
+
+// Remove the ?group= param from the URL (once the group viewer is closed or the
+// lookup failed). Kept separate so we DON'T strip it during the mount window —
+// see consumeGroupParam.
+const clearGroupParam = (): void => {
+  if (route.query.group) {
+    router.replace({ query: { ...route.query, group: undefined } })
+  }
+}
+
+const openGroupById = async (groupId: string | number): Promise<void> => {
+  try {
+    const { data } = await documentSetsApi.get(props.projectId, groupId)
+    if (data) {
+      activeTab.value = 'groups'
+      viewingGroup.value = data
+      showViewGroup.value = true
+    }
+  } catch (error) {
+    // The group may have been deleted since the link was created (e.g. the user
+    // removed the group but kept its documents). Fall back to the documents list
+    // rather than dead-ending. (If the group was deleted *with* its documents,
+    // the preprocessing task itself is cleaned up server-side, so this link is
+    // already gone.)
+    if (isAxiosError(error) && error.response?.status === 404) {
+      activeTab.value = 'documents'
+      toast.info('That document group no longer exists — showing all documents instead.')
+    } else {
+      console.error('Failed to load document group:', error)
+      toast.error('Failed to load document group')
+    }
+    // Nothing to close on failure — strip the param so a refresh doesn't retry.
+    clearGroupParam()
+  }
+}
+
+// Close the group viewer and strip the deep-link param. Clearing happens HERE
+// (on close) rather than on open: the Documents tab is an async component behind
+// an out-in transition, so it can mount more than once during navigation — if we
+// stripped the param on the first mount, the final (visible) instance would read
+// an empty param and never open the modal. Leaving it until close means every
+// instance that mounts still sees it and opens.
+const closeGroupViewer = (): void => {
+  showViewGroup.value = false
+  clearGroupParam()
+}
+
+// Read the ?group= param and open its viewer. Called from onMounted (reliable
+// once mounted) and from a watcher for the already-mounted case.
+const consumeGroupParam = (): void => {
+  const groupId = route.query.group
+  if (groupId) openGroupById(groupId as string)
+}
 
 // Methods
 const fetchDocuments = async (): Promise<void> => {
@@ -654,6 +737,8 @@ const fetchDocumentGroupsCount = async (): Promise<void> => {
 onMounted(() => {
   fetchDocuments()
   fetchDocumentGroupsCount()
+  // Deep-link "Go to Group": open the group viewer if arriving with ?group=.
+  consumeGroupParam()
   // Load OCR display names from server
   authApi
     .getSettings()

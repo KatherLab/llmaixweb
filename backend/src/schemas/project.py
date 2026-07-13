@@ -626,6 +626,9 @@ class FilePreprocessingTaskBase(UTCModel):
     started_at: datetime | None = None
     completed_at: datetime | None = None
     document_ids: list[int] | None = Field(default_factory=list)
+    # Set only for row-by-row CSV/XLSX runs — the auto-generated group the UI
+    # can open directly instead of the first document.
+    document_set_id: int | None = None
 
 
 class FilePreprocessingTask(FilePreprocessingTaskBase):
@@ -758,6 +761,12 @@ class EvaluationListItem(UTCModel):
 
     id: int
     trial_id: int
+    # User-set trial name, preferred over the number in the UI. Populated by the
+    # list endpoint from the joined Trial; None when the trial is unnamed.
+    trial_name: str | None = None
+    # Project-wise trial number ("Trial #N" in the UI). Populated by the list
+    # endpoint from the joined Trial; differs from the global trial_id.
+    project_trial_number: int | None = None
     groundtruth_id: int
     metrics: dict
     created_at: datetime

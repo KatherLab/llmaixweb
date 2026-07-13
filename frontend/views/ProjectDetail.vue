@@ -290,6 +290,11 @@ function handleQueryParams(): void {
     handleStepChange(queryTab)
   }
 
+  // Note: the `?group=` param (preprocessing history "Go to Group") is consumed
+  // by DocumentsManagement itself on mount. Driving it from here with a timed
+  // dispatch is racy against the async tab component + out-in transition, so the
+  // child reads the param directly once mounted.
+
   // Pass expand parameters to child components via custom events
   // Need to wait for tab change to render the component first
   if (expandTask) {

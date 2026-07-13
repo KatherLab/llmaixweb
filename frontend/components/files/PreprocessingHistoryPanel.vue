@@ -231,8 +231,20 @@
                           fileTask.document_ids.length !== 1 ? 's' : ''
                         }}
                       </span>
+                      <!-- Row-by-row CSV/XLSX runs produce an auto-generated
+                           document group — open the group viewer directly. -->
                       <BaseButton
-                        v-if="fileTask.document_ids.length === 1"
+                        v-if="fileTask.document_set_id"
+                        variant="ghost"
+                        size="sm"
+                        class="text-xs font-medium underline"
+                        @click.stop="emit('navigate-group', fileTask.document_set_id)"
+                      >
+                        <ExternalLink class="w-3 h-3" />
+                        Go to Group ({{ fileTask.document_ids.length }})
+                      </BaseButton>
+                      <BaseButton
+                        v-else-if="fileTask.document_ids.length === 1"
                         variant="ghost"
                         size="sm"
                         class="text-xs font-medium underline"
@@ -378,6 +390,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   close: []
   navigate: [documentId: number]
+  'navigate-group': [documentSetId: number]
   retry: [taskId: number]
   cancel: [task: PreprocessingTask]
   process: [file: FileWithTasks]

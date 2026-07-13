@@ -906,8 +906,27 @@ def preview_structured_file(
             except Exception:
                 detected_delimiter = ","
 
-        reader = _csv.reader(_io.StringIO(sample), delimiter=detected_delimiter)
-        all_rows = list(reader)
+        # newline="" so StringIO recognizes \r, \n and \r\n line endings without
+        # translating them — the csv module requires this, otherwise \r-only
+        # (old Mac) files collapse into one line and raise
+        # "new-line character seen in unquoted field".
+        reader = _csv.reader(
+            _io.StringIO(sample, newline=""), delimiter=detected_delimiter
+        )
+        try:
+            all_rows = list(reader)
+        except _csv.Error as exc:
+            # The bytes are not parseable as CSV (e.g. a binary file mislabeled
+            # as .csv/.xlsx that is neither a valid ZIP nor OLE archive, so it
+            # reached here as a fallback). Return a clean 400 instead of a 500.
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "This file could not be read as CSV. It may be binary, "
+                    "corrupted, or in an unsupported format. Please re-export it "
+                    "as .csv or .xlsx and try again."
+                ),
+            ) from exc
 
         if not all_rows:
             return {

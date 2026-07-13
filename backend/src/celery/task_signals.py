@@ -393,7 +393,9 @@ def sweep_orphans():
         for trial in stuck_trials:
             _broadcast_trial_update(trial, "failed")
 
-    return f"{affected} orphaned file tasks / stuck trials marked as FAILED"
+    if affected == 0:
+        return "no orphaned file tasks / stuck trials found"
+    return f"{affected} orphaned file tasks / stuck trials marked as failed"
 
 
 # ────────────────── worker-startup reclaim ──────────────────

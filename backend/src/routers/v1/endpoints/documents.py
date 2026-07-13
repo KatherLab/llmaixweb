@@ -90,6 +90,13 @@ def get_documents(
     document_set_id: Annotated[
         int | None, Query(description="Filter by document set membership")
     ] = None,
+    sort: Annotated[
+        str,
+        Query(
+            description="Sort order: 'created_desc' (default, newest first) or "
+            "'created_asc' (oldest first — natural row/insertion order)"
+        ),
+    ] = "created_desc",
     limit: Annotated[int, Query(ge=1, le=500)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
     include_archived: Annotated[
@@ -146,6 +153,7 @@ def get_documents(
         base = base.join(F, F.id == D.original_file_id).where(
             or_(
                 D.text.ilike(pattern),
+                D.document_name.ilike(pattern),
                 F.file_name.ilike(pattern),
             )
         )
@@ -201,8 +209,21 @@ def get_documents(
         # Recent count (alias for week_count)
         recent_count = week_count
 
-    # Page query
-    page_q = base.order_by(D.created_at.desc()).limit(limit).offset(offset)
+    # Page query.
+    # A stable secondary sort on the primary key is REQUIRED: rows created in the
+    # same transaction (e.g. a batch-committed row-by-row CSV import) share an
+    # identical `created_at` because Postgres `now()` returns the transaction
+    # start time. Ordering by `created_at` alone leaves those ties in an
+    # arbitrary, query-to-query order, so a document could appear on two pages
+    # (and another be skipped) as the UI paginates. Tie-breaking on `id` makes
+    # pagination deterministic.
+    if sort == "created_asc":
+        # Oldest first — for a row-by-row import this is the natural ID001→ID150
+        # order (lowest id = first inserted).
+        page_q = base.order_by(D.created_at.asc(), D.id.asc())
+    else:
+        page_q = base.order_by(D.created_at.desc(), D.id.desc())
+    page_q = page_q.limit(limit).offset(offset)
 
     # Eager load relationships needed for the document list UI
     if joined_for_search:
@@ -664,6 +685,47 @@ def get_document_sets(
         page_size=limit,
         total_pages=total_pages,
     )
+
+
+@router.get("/document-set/{set_id}", response_model=schemas.DocumentSetSummary)
+def get_document_set(
+    project_id: int,
+    set_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.DocumentSetSummary:
+    """Fetch a single document set's summary (used to deep-link the group viewer)."""
+    check_project_access(project_id, current_user, db, "read")
+
+    DS = models.DocumentSet
+    doc_set = db.execute(
+        select(DS)
+        .where(DS.id == set_id, DS.project_id == project_id)
+        .options(selectinload(DS.preprocessing_config))
+    ).scalar_one_or_none()
+
+    if not doc_set:
+        raise HTTPException(status_code=404, detail="Document set not found")
+
+    document_count = (
+        db.execute(
+            select(func.count()).where(
+                document_set_association.c.document_set_id == set_id
+            )
+        ).scalar()
+        or 0
+    )
+    trials_count = (
+        db.execute(
+            select(func.count()).where(models.Trial.document_set_id == set_id)
+        ).scalar()
+        or 0
+    )
+
+    summary = schemas.DocumentSetSummary.model_validate(doc_set)
+    summary.document_count = document_count
+    summary.trials_count = trials_count
+    return summary
 
 
 @router.patch("/document-set/{set_id}", response_model=schemas.DocumentSet)

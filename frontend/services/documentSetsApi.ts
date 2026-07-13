@@ -8,6 +8,7 @@ import type {
   DocumentSetCreate,
   DocumentSetFilter,
   DocumentSetStats,
+  DocumentSetSummary,
   DocumentSetUpdate,
   PaginatedDocumentSets,
 } from '@/types'
@@ -17,6 +18,11 @@ export const documentSetsApi = {
     return api.get(`/project/${projectId}/document-set`, {
       params,
     }) as Promise<ApiBody<PaginatedDocumentSets>>
+  },
+  get(projectId: number | string, setId: number | string) {
+    return api.get(`/project/${projectId}/document-set/${setId}`) as Promise<
+      ApiBody<DocumentSetSummary>
+    >
   },
   create(projectId: number | string, payload: DocumentSetCreate) {
     return api.post(`/project/${projectId}/document-set`, payload) as Promise<ApiBody<DocumentSet>>

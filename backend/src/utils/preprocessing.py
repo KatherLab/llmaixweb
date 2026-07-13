@@ -2254,6 +2254,11 @@ class PreprocessingPipeline:
                 file, df, case_id_column
             )
             documents_set_created = document_set is not None
+            # Link the run's file task to its auto-generated set so the UI can
+            # deep-link to the group viewer. The set was flushed on creation, so
+            # its id is available here.
+            if documents_set_created:
+                file_task.document_set_id = document_set.id
 
             # Process rows in batches
             batch_documents = []

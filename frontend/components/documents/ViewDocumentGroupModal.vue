@@ -283,6 +283,9 @@ const fetchDocuments = async (): Promise<void> => {
       limit: docPageSize.value,
       offset: (docPage.value - 1) * docPageSize.value,
       compute_stats: false,
+      // Oldest-first so a row-by-row set reads in its natural ID001→ID150 order
+      // (and paginates deterministically — see the endpoint's sort tie-breaker).
+      sort: 'created_asc',
       ...(search.value ? { search: search.value } : {}),
     })
     documents.value = data.items || []

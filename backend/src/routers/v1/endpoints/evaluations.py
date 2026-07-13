@@ -22,6 +22,8 @@ from ....utils.helpers import (
     build_evaluation_zipfiles,
     collect_evaluation_field_level_details,
     collect_trial_document_metadata,
+    excel_sheet_name,
+    trial_display_label,
 )
 
 logger = logging.getLogger(__name__)
@@ -154,9 +156,16 @@ def get_evaluations(
     # Get all evaluations for this ground truth. Load only the columns the
     # summary needs; field_metrics / document_metrics / confusion_matrices
     # (potentially multi-MB JSON each) stay deferred and are never fetched here.
-    evaluations = list(
+    # Join the trial to surface its project-wise number ("Trial #N" in the UI)
+    # alongside the global trial_id, so the list/export match what users see.
+    rows = list(
         db.execute(
-            select(models.Evaluation)
+            select(
+                models.Evaluation,
+                models.Trial.name,
+                models.Trial.project_trial_number,
+            )
+            .join(models.Trial, models.Trial.id == models.Evaluation.trial_id)
             .options(
                 load_only(
                     models.Evaluation.id,
@@ -170,12 +179,16 @@ def get_evaluations(
             .order_by(models.Evaluation.created_at.desc())
             .limit(limit)
             .offset(offset)
-        )
-        .scalars()
-        .all()
+        ).all()
     )
 
-    return [schemas.EvaluationListItem.model_validate(eval) for eval in evaluations]
+    items: list[schemas.EvaluationListItem] = []
+    for eval_obj, trial_name, project_trial_number in rows:
+        item = schemas.EvaluationListItem.model_validate(eval_obj)
+        item.trial_name = trial_name
+        item.project_trial_number = project_trial_number
+        items.append(item)
+    return items
 
 
 @router.get("/evaluation/{evaluation_id}", response_model=schemas.EvaluationDetail)
@@ -505,6 +518,8 @@ def download_evaluations_report(
         writer.writerow(
             [
                 "Evaluation ID",
+                "Trial",
+                "Trial Number",
                 "Trial ID",
                 "Model",
                 "Ground Truth",
@@ -522,6 +537,8 @@ def download_evaluations_report(
             writer.writerow(
                 [
                     eval_obj.id,
+                    trial_display_label(trial),
+                    trial.project_trial_number,
                     eval_obj.trial_id,
                     trial.llm_model,
                     gt.name if gt else "Unknown",
@@ -663,6 +680,8 @@ def download_evaluations_report(
                 summary_data.append(
                     {
                         "Evaluation ID": eval_obj.id,
+                        "Trial": trial_display_label(trial),
+                        "Trial Number": trial.project_trial_number,
                         "Trial ID": eval_obj.trial_id,
                         "Model": trial.llm_model,
                         "Ground Truth": gt.name if gt else "Unknown",
@@ -740,6 +759,12 @@ def download_evaluations_report(
                     )
             # Document metadata/content/GT per doc
             if include_document_content or include_ground_truth_content:
+                used_sheet_names: set[str] = {
+                    "Summary",
+                    "Field Metrics",
+                    "Field Details",
+                    "Document Metrics",
+                }
                 for eval_obj, trial in evaluations:
                     docs = collect_trial_document_metadata(
                         db,
@@ -749,7 +774,13 @@ def download_evaluations_report(
                     )
                     if docs:
                         pd.DataFrame(docs).to_excel(
-                            writer, sheet_name=f"Trial {trial.id} Docs", index=False
+                            writer,
+                            sheet_name=excel_sheet_name(
+                                f"{trial_display_label(trial)} Docs",
+                                fallback=f"Trial {trial.project_trial_number} Docs",
+                                used=used_sheet_names,
+                            ),
+                            index=False,
                         )
         output.seek(0)
         content = output.getvalue()
