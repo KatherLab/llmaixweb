@@ -49,7 +49,7 @@ async function download(): Promise<void> {
           format: format.value,
           include_content: includeContent.value,
         }),
-      `trial_${props.trial!.id}_results.${fileExt.value}`,
+      `trial_${props.trial!.project_trial_number ?? props.trial!.id}_results.${fileExt.value}`,
     )
     toast.success('Downloaded')
     emit('close')

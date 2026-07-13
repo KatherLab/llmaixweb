@@ -43,6 +43,10 @@ from ....middleware.error_handlers import (
 )
 from ....models.project import document_set_association
 from ....utils.audit import record_audit
+from ....utils.deletion import (
+    cascade_clear_document_references,
+    compute_document_dependencies,
+)
 from ....utils.enums import AuditAction, FileCreator
 from ....utils.helpers import detect_structured_mime
 
@@ -1119,6 +1123,41 @@ def check_duplicates(
     return results
 
 
+@router.post("/dependencies", response_model=schemas.FileDependencies)
+def get_file_dependencies(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    payload: schemas.FileDependencyRequest,
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.FileDependencies:
+    """Summarize what a cascade delete of the given files would also remove.
+
+    Resolves each file to the documents produced from it, then reports the same
+    downstream impact (trials, groups, extraction results, evaluation metrics)
+    as the document preview, plus the document count.
+    """
+    check_project_access(project_id, current_user, db, permission="write")
+    if not payload.file_ids:
+        return schemas.FileDependencies()
+
+    doc_ids = list(
+        db.execute(
+            select(models.Document.id).where(
+                models.Document.project_id == project_id,
+                or_(
+                    models.Document.original_file_id.in_(payload.file_ids),
+                    models.Document.preprocessed_file_id.in_(payload.file_ids),
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    summary = compute_document_dependencies(db, project_id, doc_ids)
+    return schemas.FileDependencies(documents=len(doc_ids), **summary)
+
+
 @router.delete("/{file_id}", response_model=schemas.File)
 def delete_file(
     *,
@@ -1186,6 +1225,30 @@ def delete_file(
             },
         )
 
+    # With force, clear everything downstream of this file's documents — whole
+    # trials, groups, evaluations, and residual result/metric rows — BEFORE the
+    # document delete-orphan cascade runs below, so it doesn't trip the RESTRICT
+    # FKs on trial results / evaluation metrics (which would otherwise 409).
+    cascade_counts: dict[str, int] = {}
+    orphaned_preprocessed_uuids: list[str] = []
+    preprocessed_ids: set[int] = set()
+    if force and doc_count:
+        doc_ids = list(
+            {d.id for d in file.documents_as_original}
+            | {d.id for d in file.documents_as_preprocessed}
+        )
+        cascade_counts = cascade_clear_document_references(db, project_id, doc_ids)
+        # The doomed documents point at system-generated preprocessed/OCR output
+        # files — separate File rows (mostly S3 blobs). Collect them now, while
+        # the relationships are loaded, so we can reclaim any that become orphaned
+        # once the documents are deleted below (otherwise their rows AND bytes
+        # would leak).
+        preprocessed_ids = {
+            d.preprocessed_file_id
+            for d in (*file.documents_as_original, *file.documents_as_preprocessed)
+            if d.preprocessed_file_id and d.preprocessed_file_id != file_id
+        }
+
     # Remove the file's (terminal) preprocessing-task rows first:
     # file_preprocessing_tasks.file_id is a plain FK with no ON DELETE, so these
     # rows would otherwise block the file delete. Their documents cascade
@@ -1206,6 +1269,31 @@ def delete_file(
                 parent = db.get(models.PreprocessingTask, pid)
                 if parent:
                     db.delete(parent)
+
+    # Reclaim now-orphaned preprocessed files (both the File row and its storage
+    # blob). The documents that referenced them were just delete-orphaned via
+    # their file tasks; flush so the reference check sees them gone, then delete
+    # any preprocessed file no surviving document still points at.
+    if preprocessed_ids:
+        db.flush()
+        for pf_id in preprocessed_ids:
+            still_referenced = db.scalar(
+                select(func.count())
+                .select_from(models.Document)
+                .where(
+                    or_(
+                        models.Document.original_file_id == pf_id,
+                        models.Document.preprocessed_file_id == pf_id,
+                    )
+                )
+            )
+            if still_referenced:
+                continue
+            pf = db.get(models.File, pf_id)
+            if pf is not None:
+                if pf.file_uuid:
+                    orphaned_preprocessed_uuids.append(pf.file_uuid)
+                db.delete(pf)
 
     # Build the response while the instance is still attached, then delete the
     # DB row and commit BEFORE removing storage. If storage removal happened
@@ -1242,16 +1330,28 @@ def delete_file(
         resource_type="file",
         resource_id=file_id,
         project_id=project_id,
-        detail={"forced": bool(force)},
+        detail={
+            "forced": bool(force),
+            "documents_deleted": doc_count,
+            "preprocessed_files_deleted": len(orphaned_preprocessed_uuids),
+            **cascade_counts,
+        },
     )
 
-    try:
-        if file_uuid:
-            remove_file(file_uuid)
-    except FileNotFoundError:
-        pass
-    except Exception as e:
-        logger.warning("Failed to remove storage for file %s: %s", file_uuid, e)
+    # Remove the storage blobs for the original file and every orphaned
+    # preprocessed file, best-effort (a failure here only leaves recoverable
+    # storage, never a dangling DB row).
+    for uuid_to_remove in (file_uuid, *orphaned_preprocessed_uuids):
+        if not uuid_to_remove:
+            continue
+        try:
+            remove_file(uuid_to_remove)
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            logger.warning(
+                "Failed to remove storage for file %s: %s", uuid_to_remove, e
+            )
 
     return file_response
 

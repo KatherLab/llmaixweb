@@ -1,5 +1,12 @@
 import type { ISODateString, Paginated, QueryParams } from './api'
+import type { DocumentDependencies } from './document'
 import type { FileCreator, FileStorageType, FileType, PreprocessingStrategy } from './enums'
+
+/** Impact preview for a cascade file delete (`POST /file/dependencies`):
+ * the documents produced from the files, plus the same downstream dependents. */
+export interface FileDependencies extends DocumentDependencies {
+  documents: number
+}
 
 /**
  * CSV/XLSX import configuration stored on `File.file_metadata`.

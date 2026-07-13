@@ -20,6 +20,11 @@ from ....core.security import (
 from ....dependencies import get_db, get_file, remove_file
 from ....models.project import document_set_association
 from ....utils.audit import record_audit
+from ....utils.deletion import (
+    cascade_clear_document_references,
+    compute_document_dependencies,
+    trials_referencing_docs,
+)
 from ....utils.enums import AuditAction
 from ....utils.streaming_zip import iter_zip
 
@@ -51,36 +56,6 @@ def check_project_access(
     raise HTTPException(
         status_code=403, detail=f"Not authorized to {permission} this project"
     )
-
-
-def _trials_referencing_docs(
-    db: Session, project_id: int, doc_ids: list[int]
-) -> list[tuple[int, str | None, datetime.datetime | None]]:
-    """Return ``(id, name, created_at)`` for trials in ``project_id`` whose
-    ``document_ids`` JSON list contains any of ``doc_ids``.
-
-    Loads only lightweight columns instead of full Trial rows (which include
-    ``meta``, ``advanced_options``, schema/prompt snapshots, etc.). Membership
-    is checked in Python to stay compatible with both SQLite (tests) and
-    PostgreSQL (prod), since JSON array containment operators differ between
-    the two.
-    """
-    if not doc_ids:
-        return []
-    doc_id_set = set(doc_ids)
-    rows = db.execute(
-        select(
-            models.Trial.id,
-            models.Trial.name,
-            models.Trial.document_ids,
-            models.Trial.created_at,
-        ).where(models.Trial.project_id == project_id)
-    ).all()
-    return [
-        (row[0], row[1], row[3])
-        for row in rows
-        if row[2] and doc_id_set.intersection(row[2])
-    ]
 
 
 @router.get("/document", response_model=None)  # keep None just for the test
@@ -356,15 +331,45 @@ def cleanup_empty_preprocessing_tasks(
     db.commit()
 
 
+@router.post("/document/dependencies", response_model=schemas.DocumentDependencies)
+def get_document_dependencies(
+    project_id: int,
+    payload: schemas.DocumentDependencyRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.DocumentDependencies:
+    """Summarize what a cascade delete of the given documents would also remove.
+
+    Used by the batch-delete confirmation to preview the impact (how many trials,
+    groups, extraction results and evaluation metrics would be deleted).
+    """
+    check_project_access(project_id, current_user, db, "write")
+    summary = compute_document_dependencies(db, project_id, payload.document_ids)
+    return schemas.DocumentDependencies(**summary)
+
+
 @router.delete("/document/{document_id}")
 def delete_document(
     *,
     project_id: int,
     document_id: int,
+    cascade: Annotated[
+        bool,
+        Query(
+            description="Also delete the trials, groups, and evaluations that "
+            "reference this document, instead of refusing when they exist."
+        ),
+    ] = False,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Delete a specific document, only if not used in any trial, trial result, or evaluation metric."""
+    """Delete a specific document.
+
+    Without ``cascade``, deletion is refused (``400``) if the document is used in
+    any trial, trial result, evaluation metric, or document set. With
+    ``cascade=true``, those referencing trials and groups (and their evaluations)
+    are deleted first so the document can be removed.
+    """
     check_project_access(project_id, current_user, db, "write")
 
     document = db.execute(
@@ -376,57 +381,69 @@ def delete_document(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # --- Check for usage in any trial (document_ids is a JSON list) ---
-    # Membership is checked in Python to avoid JSON operator incompatibility
-    # between SQLite and PostgreSQL; only lightweight columns are loaded.
-    referencing = _trials_referencing_docs(db, project_id, [document_id])
-    if referencing:
-        trial_id, trial_name, _ = referencing[0]
-        raise HTTPException(
-            status_code=400,
-            detail=f"Document is referenced in trial '{trial_name or trial_id}'. Remove from trial(s) first.",
+    cascade_counts: dict[str, int] = {}
+    if cascade:
+        # Delete everything that references the document so it becomes deletable:
+        # whole trials (with their evaluations/results), whole groups, plus any
+        # residual result/metric rows (RESTRICT FKs) tied directly to this doc.
+        cascade_counts.update(
+            cascade_clear_document_references(db, project_id, [document_id])
         )
-
-    # --- Check if document is used in any trial results ---
-    # A document can have results across many trials; use .scalars().first()
-    # (scalar_one_or_none raises MultipleResultsFound when >1 row exists).
-    trial_result = (
-        db.execute(
-            select(models.TrialResult).where(
-                models.TrialResult.document_id == document_id
+        # Membership rows for any set are gone via cascade_clear_document_references;
+        # refresh the ORM relationship so the later db.delete(document) is clean.
+        db.expire(document, ["document_sets"])
+    else:
+        # --- Check for usage in any trial (document_ids is a JSON list) ---
+        # Membership is checked in Python to avoid JSON operator incompatibility
+        # between SQLite and PostgreSQL; only lightweight columns are loaded.
+        referencing = trials_referencing_docs(db, project_id, [document_id])
+        if referencing:
+            trial_id, trial_name, _ = referencing[0]
+            raise HTTPException(
+                status_code=400,
+                detail=f"Document is referenced in trial '{trial_name or trial_id}'. Remove from trial(s) first.",
             )
-        )
-        .scalars()
-        .first()
-    )
-    if trial_result:
-        raise HTTPException(
-            status_code=400,
-            detail="Document is referenced in a trial result. Remove results/trials first.",
-        )
 
-    # --- (Optional) Check if document is used in any evaluation metric ---
-    metric = (
-        db.execute(
-            select(models.EvaluationMetric).where(
-                models.EvaluationMetric.document_id == document_id
+        # --- Check if document is used in any trial results ---
+        # A document can have results across many trials; use .scalars().first()
+        # (scalar_one_or_none raises MultipleResultsFound when >1 row exists).
+        trial_result = (
+            db.execute(
+                select(models.TrialResult).where(
+                    models.TrialResult.document_id == document_id
+                )
             )
+            .scalars()
+            .first()
         )
-        .scalars()
-        .first()
-    )
-    if metric:
-        raise HTTPException(
-            status_code=400,
-            detail="Document is referenced in evaluation metrics. Remove related evaluation/trial first.",
-        )
+        if trial_result:
+            raise HTTPException(
+                status_code=400,
+                detail="Document is referenced in a trial result. Remove results/trials first.",
+            )
 
-    # --- Existing check: Document sets ---
-    if document.document_sets:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Document is part of {len(document.document_sets)} document sets. Remove from sets first.",
+        # --- (Optional) Check if document is used in any evaluation metric ---
+        metric = (
+            db.execute(
+                select(models.EvaluationMetric).where(
+                    models.EvaluationMetric.document_id == document_id
+                )
+            )
+            .scalars()
+            .first()
         )
+        if metric:
+            raise HTTPException(
+                status_code=400,
+                detail="Document is referenced in evaluation metrics. Remove related evaluation/trial first.",
+            )
+
+        # --- Existing check: Document sets ---
+        if document.document_sets:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Document is part of {len(document.document_sets)} document sets. Remove from sets first.",
+            )
 
     # Store file_preprocessing_task_id before deletion for cleanup
     file_preprocessing_task_id = document.file_preprocessing_task_id
@@ -463,6 +480,7 @@ def delete_document(
         resource_type="document",
         resource_id=document_id,
         project_id=project_id,
+        detail={"cascade": True, **cascade_counts} if cascade else None,
     )
 
     # Clean up empty preprocessing tasks after document deletion
@@ -987,7 +1005,7 @@ def get_document_set_stats(
     # Count trials that contain ANY of these document IDs. Membership is
     # checked in Python for SQLite/PostgreSQL compatibility; only lightweight
     # columns are loaded instead of full Trial rows.
-    trials_with_docs = _trials_referencing_docs(db, project_id, doc_ids)
+    trials_with_docs = trials_referencing_docs(db, project_id, doc_ids)
 
     trials_count = len(trials_with_docs)
     last_trial_date = None

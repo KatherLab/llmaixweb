@@ -248,16 +248,15 @@
       @cancel="cancelDuplicatePreview"
     />
 
-    <!-- Delete file confirmation -->
-    <ConfirmationDialog
-      :open="showDeleteFileConfirm"
-      title="Delete file?"
-      :message="`Delete “${fileToDelete?.file_name}”? This action cannot be undone.`"
-      confirm-text="Delete"
-      cancel-text="Cancel"
-      confirm-variant="danger"
-      @confirm="executeDeleteFile"
-      @cancel="showDeleteFileConfirm = false"
+    <!-- Delete file (with optional cascade + impact preview) -->
+    <BatchActionsModal
+      :open="showDeleteFileModal"
+      action="delete"
+      mode="files"
+      :documents="fileToDelete ? [fileToDelete.id] : []"
+      :project-id="projectId"
+      @deleted="onFilesDeleted"
+      @close="closeDeleteFileModal"
     />
 
     <!-- Cancel preprocessing task confirmation -->
@@ -296,6 +295,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
 import BatchActionBar from '@/components/common/BatchActionBar.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
+import BatchActionsModal from '@/components/documents/BatchActionsModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { setEngineLabels } from '@/utils/ocrLabels'
@@ -443,7 +443,14 @@ const getFileStatus = (file: FileWithTasks): string => {
 
   if (!latestTask) return 'not_preprocessed'
 
-  const status = String(latestTask.status || '').toLowerCase()
+  // Derive this file's status from its OWN per-file subtask, not the parent
+  // task's aggregate status. A parent task can be FAILED (e.g. finalized by the
+  // orphan sweeper after a restart) while most of its files completed and
+  // produced documents — using the parent status would wrongly show every file
+  // in the batch as "failed". Fall back to the parent status only when the
+  // per-file entry is missing.
+  const fileTask = latestTask.file_tasks?.find((ft) => ft.file_id === file.id)
+  const status = String((fileTask?.status ?? latestTask.status) || '').toLowerCase()
 
   if (['pending', 'processing', 'in_progress'].includes(status)) {
     return 'processing'
@@ -696,36 +703,25 @@ const navigateToDocument = (documentId: number): void => {
   })
 }
 
-// Confirm delete file (confirmed via ConfirmationDialog)
-const showDeleteFileConfirm = ref(false)
+// Delete file — handled by BatchActionsModal (mode='files'), which shows the
+// cascade checkbox + impact preview and reports success/failure via toasts.
+const showDeleteFileModal = ref(false)
 const confirmDeleteFile = (file: FileModel): void => {
   fileToDelete.value = file
-  showDeleteFileConfirm.value = true
+  showDeleteFileModal.value = true
 }
-const executeDeleteFile = async (): Promise<void> => {
-  const file = fileToDelete.value
-  showDeleteFileConfirm.value = false
-  if (!file) return
-  await deleteFile(file)
+// Prune successfully deleted ids from the selection so batch actions can't
+// operate on a file that no longer exists.
+const onFilesDeleted = (ids: number[]): void => {
+  selectedFiles.value = selectedFiles.value.filter((id) => !ids.includes(id))
+}
+// Modal closed (after any delete attempts) — refresh the file list.
+const closeDeleteFileModal = async (): Promise<void> => {
+  showDeleteFileModal.value = false
   fileToDelete.value = null
-}
-
-// Delete file
-const deleteFile = async (file: FileModel): Promise<void> => {
-  try {
-    await filesApi.delete(props.projectId, file.id)
-    toast.success(`Deleted ${file.file_name}`)
-    // Prune the deleted id from the selection so batch actions can't operate on
-    // a file that no longer exists.
-    selectedFiles.value = selectedFiles.value.filter((id) => id !== file.id)
-    // Invalidate task cache when files change
-    invalidateTaskCache()
-    await fetchFiles({ forceRefreshTasks: true })
-    emit('files-changed')
-  } catch (err) {
-    console.error('Failed to delete file:', err)
-    toast.error(extractErrorMessage(err, `Failed to delete ${file.file_name}`))
-  }
+  invalidateTaskCache()
+  await fetchFiles({ forceRefreshTasks: true })
+  emit('files-changed')
 }
 
 // Open import config modal

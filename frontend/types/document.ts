@@ -58,6 +58,21 @@ export interface PaginatedDocuments {
   month_count: number | null
 }
 
+/** Count of affected resources plus a few names for display. */
+export interface DocumentDependencyGroup {
+  count: number
+  names: string[]
+}
+
+/** Impact preview for a cascade delete (`POST /document/dependencies`). */
+export interface DocumentDependencies {
+  trials: DocumentDependencyGroup
+  document_sets: DocumentDependencyGroup
+  trial_results: number
+  evaluation_metrics: number
+  evaluations: number
+}
+
 export interface DocumentCreate {
   original_file_id: number
   text: string

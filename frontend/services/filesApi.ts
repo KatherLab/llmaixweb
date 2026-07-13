@@ -3,7 +3,7 @@
  */
 import { api } from './api'
 import type { ApiBody, BlobResponse } from '@/types'
-import type { File, FileFilter, PaginatedFiles } from '@/types'
+import type { File, FileDependencies, FileFilter, PaginatedFiles } from '@/types'
 
 const MULTIPART = { 'Content-Type': 'multipart/form-data' }
 
@@ -51,8 +51,18 @@ export const filesApi = {
   get(projectId: number | string, fileId: number | string) {
     return api.get(`/project/${projectId}/file/${fileId}`) as Promise<ApiBody<File>>
   },
-  delete(projectId: number | string, fileId: number | string) {
-    return api.delete(`/project/${projectId}/file/${fileId}`) as Promise<ApiBody<unknown>>
+  delete(projectId: number | string, fileId: number | string, cascade = false) {
+    // `cascade` maps to the backend `force` flag: delete the file's documents
+    // and everything downstream (trials, groups, evaluations) along with it.
+    return api.delete(`/project/${projectId}/file/${fileId}`, {
+      params: cascade ? { force: true } : undefined,
+    }) as Promise<ApiBody<unknown>>
+  },
+  // Preview what a cascade delete of these files would also remove.
+  checkDependencies(projectId: number | string, fileIds: number[]) {
+    return api.post(`/project/${projectId}/file/dependencies`, {
+      file_ids: fileIds,
+    }) as Promise<ApiBody<FileDependencies>>
   },
 
   // Multipart upload. `formData` must include the File + a `file_info` JSON string.

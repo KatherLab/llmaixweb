@@ -50,6 +50,33 @@
       <Callout variant="danger" title="Warning: This action cannot be undone">
         <p class="mt-1">{{ deleteWarningText }}</p>
       </Callout>
+
+      <!-- Cascade option (documents & files) -->
+      <div v-if="supportsCascade" class="rounded-md border border-default p-3">
+        <label class="flex items-start">
+          <input
+            v-model="cascadeDelete"
+            type="checkbox"
+            :class="[checkboxClass, 'mt-0.5 text-red-600 focus:ring-red-500']"
+          />
+          <span class="ml-2 text-sm text-content-muted">{{ cascadeLabel }}</span>
+        </label>
+        <p v-if="loadingDeps" class="mt-2 text-xs text-content-subtle">Checking usage…</p>
+        <p v-else-if="cascadeDelete && dependencyImpact" class="mt-2 text-xs text-red-600">
+          This will also delete {{ dependencyImpact }}.
+        </p>
+        <p
+          v-else-if="cascadeDelete && dependencies && !dependencyImpact"
+          class="mt-2 text-xs text-content-subtle"
+        >
+          These {{ entityLabel }}s aren't used anywhere else.
+        </p>
+        <p v-else-if="!cascadeDelete && dependencyImpact" class="mt-2 text-xs text-content-subtle">
+          In use by {{ dependencyImpact }}. Enable the option above to remove them too, otherwise
+          deletion will be blocked.
+        </p>
+      </div>
+
       <div class="flex items-center">
         <input
           v-model="confirmDelete"
@@ -77,17 +104,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
 import { checkboxClass, selectClass, labelClass } from '@/utils/formStyles'
 import { documentsApi } from '@/services/documentsApi'
 import { trialsApi } from '@/services/trialsApi'
+import { filesApi } from '@/services/filesApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { useToast } from '@/composables/useToast'
 import { extractErrorMessage } from '@/utils/errors'
-import type { PreprocessingTaskCreate } from '@/types'
+import type { DocumentDependencies, FileDependencies, PreprocessingTaskCreate } from '@/types'
 
 interface Props {
   open: boolean
@@ -95,8 +123,9 @@ interface Props {
   documents: number[]
   projectId: string | number
   // 'documents' (default) operates on documents via documentsApi;
-  // 'trials' operates on trials via trialsApi (delete only).
-  mode?: 'documents' | 'trials'
+  // 'trials' operates on trials via trialsApi (delete only);
+  // 'files' operates on files via filesApi (delete only).
+  mode?: 'documents' | 'trials' | 'files'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -118,14 +147,79 @@ const includePreprocessingInfo = ref<boolean>(true)
 const confirmDelete = ref<boolean>(false)
 const isProcessing = ref<boolean>(false)
 
-// Computed
-const entityLabel = computed(() => (props.mode === 'trials' ? 'trial' : 'document'))
+// Cascade-delete state (documents & files modes)
+const cascadeDelete = ref<boolean>(false)
+const dependencies = ref<DocumentDependencies | FileDependencies | null>(null)
+const loadingDeps = ref<boolean>(false)
 
-const deleteWarningText = computed(() =>
-  props.mode === 'trials'
-    ? 'The selected trials and their results will be permanently deleted.'
-    : 'The selected documents and their preprocessing results will be permanently deleted.',
+// Only documents and files fan out to trials/groups/evaluations; trials don't.
+const supportsCascade = computed(() => props.mode === 'documents' || props.mode === 'files')
+
+// Fetch the cascade impact preview whenever the delete modal opens for a
+// cascade-capable resource.
+watch(
+  () => props.open,
+  async (isOpen) => {
+    if (!isOpen || props.action !== 'delete' || !supportsCascade.value) return
+    // Reset per-open state
+    cascadeDelete.value = false
+    dependencies.value = null
+    if (props.documents.length === 0) return
+    loadingDeps.value = true
+    try {
+      const { data } =
+        props.mode === 'files'
+          ? await filesApi.checkDependencies(props.projectId, props.documents)
+          : await documentsApi.checkDependencies(props.projectId, props.documents)
+      dependencies.value = data
+    } catch (error) {
+      // Non-fatal: the checkbox still works, just without a preview.
+      console.error(extractErrorMessage(error, 'Failed to check usage'), error)
+    } finally {
+      loadingDeps.value = false
+    }
+  },
+  { immediate: true },
 )
+
+// Human-readable impact summary, e.g. "3 documents, 2 trials, 1 group, 5 extraction results".
+const dependencyImpact = computed<string>(() => {
+  const d = dependencies.value
+  if (!d) return ''
+  const parts: string[] = []
+  const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+  // Files delete their produced documents too; show that first.
+  if ('documents' in d && d.documents) parts.push(plural(d.documents, 'document'))
+  if (d.trials.count) parts.push(plural(d.trials.count, 'trial'))
+  if (d.document_sets.count) parts.push(plural(d.document_sets.count, 'group'))
+  if (d.trial_results) parts.push(plural(d.trial_results, 'extraction result'))
+  if (d.evaluation_metrics) parts.push(plural(d.evaluation_metrics, 'evaluation metric'))
+  return parts.join(', ')
+})
+
+// Computed
+const entityLabel = computed(() => {
+  if (props.mode === 'trials') return 'trial'
+  if (props.mode === 'files') return 'file'
+  return 'document'
+})
+
+const cascadeLabel = computed(() =>
+  props.mode === 'files'
+    ? 'Also delete produced documents and their trials, groups, and extraction results'
+    : 'Also delete related trials, groups, and extraction results',
+)
+
+const deleteWarningText = computed(() => {
+  switch (props.mode) {
+    case 'trials':
+      return 'The selected trials and their results will be permanently deleted.'
+    case 'files':
+      return 'The selected files and their preprocessing results will be permanently deleted.'
+    default:
+      return 'The selected documents and their preprocessing results will be permanently deleted.'
+  }
+})
 
 const actionTitle = computed(() => {
   const entity = entityLabel.value
@@ -248,12 +342,18 @@ interface FailedDoc {
 const deleteDocuments = async (): Promise<number[]> => {
   const failedDocs: FailedDoc[] = []
   const successDocs: number[] = []
-  const deleteFn = props.mode === 'trials' ? trialsApi.delete : documentsApi.delete
+  const useCascade = supportsCascade.value && cascadeDelete.value
   const label = entityLabel.value
 
   for (const docId of props.documents) {
     try {
-      await deleteFn(props.projectId, docId)
+      if (props.mode === 'trials') {
+        await trialsApi.delete(props.projectId, docId)
+      } else if (props.mode === 'files') {
+        await filesApi.delete(props.projectId, docId, useCascade)
+      } else {
+        await documentsApi.delete(props.projectId, docId, useCascade)
+      }
       successDocs.push(docId)
     } catch (error) {
       failedDocs.push({

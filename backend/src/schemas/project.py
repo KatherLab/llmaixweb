@@ -180,6 +180,42 @@ class PaginatedDocuments(UTCModel):
     month_count: int | None = None  # Documents created in last 30 days
 
 
+class DocumentDependencyRequest(UTCModel):
+    """Request body for previewing what a cascade delete would remove."""
+
+    document_ids: list[int] = Field(default_factory=list, max_length=1000)
+
+
+class DependencyGroup(UTCModel):
+    """A count of affected resources plus a few names for display."""
+
+    count: int = 0
+    names: list[str] = []
+
+
+class DocumentDependencies(UTCModel):
+    """Summary of what deleting the given documents (with cascade) would remove."""
+
+    trials: DependencyGroup = Field(default_factory=DependencyGroup)
+    document_sets: DependencyGroup = Field(default_factory=DependencyGroup)
+    trial_results: int = 0
+    evaluation_metrics: int = 0
+    evaluations: int = 0
+
+
+class FileDependencyRequest(UTCModel):
+    """Request body for previewing what a cascade file delete would remove."""
+
+    file_ids: list[int] = Field(default_factory=list, max_length=1000)
+
+
+class FileDependencies(DocumentDependencies):
+    """Impact preview for a cascade file delete: the documents produced from the
+    files, plus the same downstream dependents (`POST /file/dependencies`)."""
+
+    documents: int = 0
+
+
 class DocumentSetBase(UTCModel):
     name: str
     description: str | None = None

@@ -10,7 +10,7 @@ from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import Response, StreamingResponse
-from sqlalchemy import String, delete, func, or_, select
+from sqlalchemy import String, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, noload, selectinload
 
@@ -25,6 +25,7 @@ from ....dependencies import get_db, get_file
 from ....middleware.error_handlers import internal_error_message
 from ....utils.audit import record_audit
 from ....utils.csv_safety import SafeDictCsvWriter
+from ....utils.deletion import cascade_delete_trials
 from ....utils.enums import AuditAction, TrialResultStatus
 from ....utils.helpers import flatten_dict
 from ....utils.streaming_zip import iter_zip
@@ -939,46 +940,7 @@ def delete_trial(
     trial_data = schemas.Trial.model_validate(trial)
 
     try:
-        # Count first (for the audit), then bulk-delete children in one
-        # statement each instead of hydrating + ORM-deleting potentially
-        # thousands of rows one at a time. Evaluation metric children are
-        # removed before their evaluations (the FK has no DB-level ON DELETE),
-        # then the evaluations and trial results, then the trial itself.
-        eval_count = (
-            db.scalar(
-                select(func.count())
-                .select_from(models.Evaluation)
-                .where(models.Evaluation.trial_id == trial_id)
-            )
-            or 0
-        )
-        result_count = (
-            db.scalar(
-                select(func.count())
-                .select_from(models.TrialResult)
-                .where(models.TrialResult.trial_id == trial_id)
-            )
-            or 0
-        )
-
-        eval_ids = select(models.Evaluation.id).where(
-            models.Evaluation.trial_id == trial_id
-        )
-        db.execute(
-            delete(models.EvaluationMetric).where(
-                models.EvaluationMetric.evaluation_id.in_(eval_ids)
-            )
-        )
-        db.execute(
-            delete(models.Evaluation).where(models.Evaluation.trial_id == trial_id)
-        )
-        db.execute(
-            delete(models.TrialResult).where(models.TrialResult.trial_id == trial_id)
-        )
-        # Core-delete the trial row too (rather than db.delete(trial)) so the ORM
-        # doesn't re-run a delete-orphan cascade over the results/evaluations we
-        # just bulk-deleted (which would warn "0 rows matched").
-        db.execute(delete(models.Trial).where(models.Trial.id == trial_id))
+        counts = cascade_delete_trials(db, [trial_id])
         db.commit()
     except SQLAlchemyError as e:
         db.rollback()
@@ -995,8 +957,8 @@ def delete_trial(
         resource_id=trial_id,
         project_id=project_id,
         detail={
-            "results_deleted": result_count,
-            "evaluations_deleted": eval_count,
+            "results_deleted": counts["results"],
+            "evaluations_deleted": counts["evaluations"],
         },
     )
     return trial_data
@@ -1036,6 +998,10 @@ def download_trial_results(
     ).scalar_one_or_none()
     if not trial:
         raise HTTPException(status_code=404, detail="Trial not found")
+
+    # Use the project-wise trial number for the download filename so it matches
+    # the "Trial #N" shown in the UI (trial.id is the global DB id and differs).
+    download_basename = f"trial_{trial.project_trial_number}_results"
 
     prompt = db.execute(
         select(models.Prompt).where(models.Prompt.id == trial.prompt_id)
@@ -1257,7 +1223,7 @@ def download_trial_results(
             iter_zip(_json_entries()),
             media_type="application/zip",
             headers={
-                "Content-Disposition": f'attachment; filename="trial_{trial_id}_results.zip"'
+                "Content-Disposition": f'attachment; filename="{download_basename}.zip"'
             },
         )
 
@@ -1384,7 +1350,7 @@ def download_trial_results(
                 iter_zip(_csv_content_entries()),
                 media_type="application/zip",
                 headers={
-                    "Content-Disposition": f'attachment; filename="trial_{trial_id}_results.zip"'
+                    "Content-Disposition": f'attachment; filename="{download_basename}.zip"'
                 },
             )
         else:
@@ -1460,7 +1426,7 @@ def download_trial_results(
                 content=output.getvalue(),
                 media_type="text/csv",
                 headers={
-                    "Content-Disposition": f'attachment; filename="trial_{trial_id}_results.csv"'
+                    "Content-Disposition": f'attachment; filename="{download_basename}.csv"'
                 },
             )
 

@@ -4,7 +4,7 @@
  */
 import { api } from './api'
 import type { ApiBody, DocumentFilter } from '@/types'
-import type { Document, PaginatedDocuments } from '@/types'
+import type { Document, DocumentDependencies, PaginatedDocuments } from '@/types'
 
 export const documentsApi = {
   list(projectId: number | string, params: DocumentFilter = {}) {
@@ -15,7 +15,15 @@ export const documentsApi = {
   get(projectId: number | string, documentId: number | string) {
     return api.get(`/project/${projectId}/document/${documentId}`) as Promise<ApiBody<Document>>
   },
-  delete(projectId: number | string, documentId: number | string) {
-    return api.delete(`/project/${projectId}/document/${documentId}`) as Promise<ApiBody<unknown>>
+  delete(projectId: number | string, documentId: number | string, cascade = false) {
+    return api.delete(`/project/${projectId}/document/${documentId}`, {
+      params: cascade ? { cascade: true } : undefined,
+    }) as Promise<ApiBody<unknown>>
+  },
+  // Preview what a cascade delete of these documents would also remove.
+  checkDependencies(projectId: number | string, documentIds: number[]) {
+    return api.post(`/project/${projectId}/document/dependencies`, {
+      document_ids: documentIds,
+    }) as Promise<ApiBody<DocumentDependencies>>
   },
 }
