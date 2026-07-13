@@ -236,6 +236,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import SlideOver from '@/components/common/SlideOver.vue'
 import { formatFileSize, formatDateFull } from '@/utils/formatters'
+import { extractErrorMessage } from '@/utils/errors'
 import type { File } from '@/types'
 
 interface Props {
@@ -428,7 +429,7 @@ const loadPreview = async (): Promise<void> => {
     }
   } catch (err) {
     if (seq !== loadSeq) return
-    error.value = 'Failed to load preview'
+    error.value = extractErrorMessage(err, 'Failed to load preview')
     console.error('Preview error:', err)
   } finally {
     if (seq === loadSeq) isLoading.value = false

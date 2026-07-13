@@ -879,7 +879,7 @@ def preview_structured_file(
     decided = _decide_format()
 
     # ---------------- CSV ----------------
-    if decided == "csv":
+    def _parse_csv() -> dict:
         sample_bytes = file_content[:131072]  # 128 KiB
         try:
             sample = sample_bytes.decode(encoding, errors="replace")
@@ -950,13 +950,54 @@ def preview_structured_file(
             "truncated": truncated,
         }
 
+    if decided == "csv":
+        return _parse_csv()
+
     # --------------- XLSX ----------------
     if decided == "xlsx":
+        from zipfile import BadZipFile
+
         import openpyxl
 
-        wb = openpyxl.load_workbook(
-            _io.BytesIO(file_content), read_only=True, data_only=True
-        )
+        try:
+            wb = openpyxl.load_workbook(
+                _io.BytesIO(file_content), read_only=True, data_only=True
+            )
+        except (BadZipFile, KeyError, OSError, ValueError) as exc:
+            # File was decided XLSX (usually by .xlsx extension) but the bytes
+            # are not a valid OOXML/ZIP archive. Excel opens several such formats
+            # that openpyxl cannot read, so disambiguate by magic bytes.
+            head = file_content[:16]
+            if _is_zip_xlsx(head):
+                # Genuinely a ZIP but unreadable as a workbook. Ambiguous — a
+                # benign corrupt upload, or a symptom of storage returning the
+                # wrong/truncated bytes — so record it to the error log for admin
+                # visibility and hand the correlation id to the user, while still
+                # returning a clean 400 (not a 500).
+                error_id = record_internal_error(exc, actor=current_user)
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "This file is labeled as .xlsx but could not be read as "
+                        "an Excel workbook. It may be corrupted. Please re-export "
+                        "the file as .xlsx or .csv and try again. Quote this ID to "
+                        f"your administrator for support: {error_id}"
+                    ),
+                ) from exc
+            if _is_ole_xls(head):
+                # Legacy binary .xls (OLE2) with an .xlsx name — Excel opens it,
+                # openpyxl cannot.
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "This looks like a legacy binary Excel file (.xls) even "
+                        "though it is named .xlsx. Preview of binary .xls is not "
+                        "supported — please re-save it as .xlsx or .csv."
+                    ),
+                )
+            # Otherwise the content is textual (e.g. a CSV or HTML table renamed
+            # to .xlsx) — fall back to CSV parsing so the preview still works.
+            return _parse_csv()
 
         # Guard sheet selection
         if not sheet or sheet not in wb.sheetnames:
