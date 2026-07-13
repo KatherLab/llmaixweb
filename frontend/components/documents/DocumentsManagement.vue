@@ -150,7 +150,7 @@
       :total="viewerTotal"
       :has-prev="viewerHasPrev"
       :has-next="viewerHasNext"
-      @close="showDocumentViewer = false"
+      @close="closeDocumentViewer"
       @reprocess="reprocessDocument"
       @prev="viewerPrev"
       @next="viewerNext"
@@ -318,7 +318,13 @@ const handlePageSizeChange = (size: number): void => {
   currentPage.value = 1
 }
 
-// Handle highlight query parameter (from preprocessing history "Go to Document" navigation)
+// Handle highlight query parameter (from preprocessing history "Go to Document"
+// navigation). Mirrors the ?group= handling below: the param is stripped on
+// CLOSE (see closeDocumentViewer), not on open, and the initial read happens in
+// onMounted rather than an immediate watch. Stripping on open was racy against a
+// remount of this async tab component — the transient instance opened + cleared
+// the param, then the final visible instance mounted with no param and never
+// showed the preview (leaving you on the bare documents table).
 const handleHighlight = async (): Promise<void> => {
   const highlightId = route.query.highlight
   if (!highlightId) return
@@ -328,28 +334,47 @@ const handleHighlight = async (): Promise<void> => {
     const { data } = await documentsApi.get(props.projectId, highlightId as string | number)
     if (data) {
       // Open the document viewer
+      activeTab.value = 'documents'
       viewingDocument.value = data
       showDocumentViewer.value = true
-      // Clear the highlight parameter without reloading
-      router.replace({ query: { ...route.query, highlight: undefined } })
     }
   } catch (error) {
     console.error('Failed to load highlighted document:', error)
     toast.error('Failed to load document')
-    // Still clear the parameter to avoid repeated errors
+    // Strip the param so a remount/refresh doesn't retry the failed lookup.
+    clearHighlightParam()
+  }
+}
+
+// Remove the ?highlight= param once the viewer is closed (or the lookup failed).
+const clearHighlightParam = (): void => {
+  if (route.query.highlight) {
     router.replace({ query: { ...route.query, highlight: undefined } })
   }
 }
 
-// Watch for route query changes (e.g., highlight parameter from navigation)
+// Close the document viewer and strip the deep-link param (see the strip-on-close
+// rationale on closeGroupViewer).
+const closeDocumentViewer = (): void => {
+  showDocumentViewer.value = false
+  clearHighlightParam()
+}
+
+// Read the ?highlight= param and open its viewer. Called from onMounted (reliable
+// once mounted) and from a watcher for the already-mounted case.
+const consumeHighlightParam = (): void => {
+  if (route.query.highlight) handleHighlight()
+}
+
+// Already-mounted case: the highlight param changes while DocumentsManagement is
+// the active tab (mount-time reads happen in onMounted).
 watch(
   () => route.query.highlight,
   (newHighlight) => {
     if (newHighlight) {
-      handleHighlight()
+      consumeHighlightParam()
     }
   },
-  { immediate: true },
 )
 
 // Already-mounted case: the group param changes while DocumentsManagement is the
@@ -737,6 +762,8 @@ const fetchDocumentGroupsCount = async (): Promise<void> => {
 onMounted(() => {
   fetchDocuments()
   fetchDocumentGroupsCount()
+  // Deep-link "Go to Document": open the document viewer if arriving with ?highlight=.
+  consumeHighlightParam()
   // Deep-link "Go to Group": open the group viewer if arriving with ?group=.
   consumeGroupParam()
   // Load OCR display names from server

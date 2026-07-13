@@ -333,8 +333,16 @@ function handleQueryParams(): void {
 }
 
 // --- API ---
-const fetchProject = async (): Promise<void> => {
-  isLoading.value = true
+const fetchProject = async ({
+  background = false,
+}: { background?: boolean } = {}): Promise<void> => {
+  // Only show the full-page spinner on the initial load / project switch. A
+  // background refresh (files-changed, tab-switch count refresh, a child
+  // stripping its deep-link query param) must NOT toggle isLoading: doing so
+  // unmounts/remounts the whole GlassCard — including the active tab component
+  // and any modal it has open — which is the "weird reload" that dropped the
+  // "Go to Document" preview and reset the Documents/Groups sub-tab on close.
+  if (!background) isLoading.value = true
   try {
     const response = await projectsApi.get(projectId.value)
     project.value = response.data
@@ -342,10 +350,10 @@ const fetchProject = async (): Promise<void> => {
     error.value = 'Failed to load project details'
     console.error(err)
   } finally {
-    isLoading.value = false
+    if (!background) isLoading.value = false
   }
 }
-const refreshProject = (): Promise<void> => fetchProject()
+const refreshProject = (): Promise<void> => fetchProject({ background: true })
 
 // --- WORKFLOW & TAB LOGIC ---
 function handleStepChange(stepId: string): void {
