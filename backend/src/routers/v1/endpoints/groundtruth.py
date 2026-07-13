@@ -32,6 +32,7 @@ from ....dependencies import (
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction, ComparisonMethod
 from ....utils.helpers import extract_field_types_from_schema
+from ....utils.json_utils import strip_nul
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +153,9 @@ async def upload_groundtruth(
         raise HTTPException(
             status_code=400, detail="A name is required when no single file is provided"
         )
+    # GroundTruth.name is String(100); a long filename would fail the insert
+    # with a DataError. Sanitize + truncate instead.
+    gt_name = strip_nul(gt_name)[:100]
     # Create ground truth record
     gt = models.GroundTruth(
         project_id=project_id,
@@ -363,7 +367,8 @@ def update_groundtruth(
         raise HTTPException(status_code=404, detail="Ground truth not found")
 
     if name:
-        groundtruth.name = name
+        # GroundTruth.name is String(100) — sanitize + truncate (see upload)
+        groundtruth.name = strip_nul(name)[:100]
 
     old_file_uuid = None
     if file:
@@ -452,7 +457,14 @@ def update_ground_truth_id_column(
     if not groundtruth:
         raise HTTPException(status_code=404, detail="Ground truth not found")
 
-    # Update ID column/field
+    # Update ID column/field (column is String(200) — reject rather than
+    # truncate, since a silently-shortened name would never match a header)
+    id_column = strip_nul(id_column).strip()
+    if len(id_column) > 200:
+        raise HTTPException(
+            status_code=400,
+            detail="ID column name is too long (max 200 characters).",
+        )
     groundtruth.id_column_name = id_column
 
     # Clear data cache to force re-parsing with new ID column/field logic

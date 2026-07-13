@@ -3,6 +3,7 @@
 import datetime
 import io
 import logging
+import math
 from typing import Any, List, cast
 
 import httpx
@@ -15,8 +16,13 @@ from .. import models
 from ..core.config import settings
 from ..db.session import db_session
 from ..dependencies import get_file
-from ..middleware.error_handlers import internal_error_message
-from .helpers import _make_aware
+from ..middleware.error_handlers import (
+    internal_error_message,
+    operational_error_message,
+)
+from .helpers import _make_aware, detect_text_encoding
+from .json_utils import case_id_str as _case_id_str
+from .json_utils import strip_nul as _strip_nul
 from .url_safety import enforce_endpoint_allowlist, validate_user_endpoint
 
 logger = logging.getLogger(__name__)
@@ -30,6 +36,35 @@ _HEARTBEAT_INTERVAL_SECONDS = 15
 # poller wakes immediately (instead of blocking a full heartbeat interval) and
 # raises the real exception carried on the separate exception queue.
 _WORKER_ERROR = object()
+
+
+def _json_safe(value: Any) -> Any:
+    """Recursively convert a value into something ``json.dumps`` can handle.
+
+    Raw pandas cell values leak non-JSON types into JSON columns
+    (``pd.Timestamp`` from date columns, numpy scalars, ``NaT``/``NaN``),
+    which otherwise blow up the whole batch commit at flush time.
+    """
+    if isinstance(value, str):
+        return _strip_nul(value)
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if value is None or isinstance(value, (int, bool)):
+        return value
+    if isinstance(value, dict):
+        return {_strip_nul(str(k)): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(v) for v in value]
+    try:
+        if pd.isna(value):  # NaT, pd.NA
+            return None
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return value.isoformat()
+    if hasattr(value, "item"):  # numpy scalar
+        return _json_safe(value.item())
+    return _strip_nul(str(value))
 
 
 class PreprocessingPipeline:
@@ -450,12 +485,30 @@ class PreprocessingPipeline:
                 f"Case ID column '{case_id_column}' not found in file {file.file_name}"
             )
 
-        # Check for duplicates in the case_id column
-        duplicates = df[case_id_column].duplicated()
-        if duplicates.any():
-            duplicate_values = df[case_id_column][duplicates].unique()
+        case_ids = df[case_id_column]
+
+        # Empty/NaN case IDs would silently produce documents named "nan"
+        # (or trip the duplicate check below with a baffling message) —
+        # fail with an explicit, actionable error instead.
+        empty_mask = case_ids.isna() | case_ids.astype(str).str.strip().eq("")
+        if empty_mask.any():
+            empty_rows = [int(i) for i in case_ids.index[empty_mask][:10]]
             raise ValueError(
-                f"Duplicate case IDs found in column '{case_id_column}': {duplicate_values[:10]}... "
+                f"{int(empty_mask.sum())} row(s) in file {file.file_name} have an "
+                f"empty case ID in column '{case_id_column}' (row indices: "
+                f"{empty_rows}...). Fill in the missing IDs or choose a "
+                "different case ID column."
+            )
+
+        # Compare the normalized strings that actually become document names
+        # (so 1 vs "1" vs 1.0, or values differing only in whitespace, are
+        # caught as the collisions they would cause).
+        normalized = case_ids.map(_case_id_str)
+        duplicates = normalized.duplicated()
+        if duplicates.any():
+            duplicate_values = list(normalized[duplicates].unique()[:10])
+            raise ValueError(
+                f"Duplicate case IDs found in column '{case_id_column}': {duplicate_values}... "
                 f"File: {file.file_name}"
             )
 
@@ -508,7 +561,10 @@ class PreprocessingPipeline:
         now = datetime.datetime.now(datetime.UTC)
         file_task.started_at = now
         file_task.last_heartbeat_at = now
-        file_task.file_name = file_task.file.file_name
+        # File.file_name is String(500) but this column is String(255) —
+        # truncate so a long filename doesn't fail the commit (outside the
+        # try below, that would abort the whole batch).
+        file_task.file_name = file_task.file.file_name[:255]
         self.db.commit()
 
         try:
@@ -629,7 +685,29 @@ class PreprocessingPipeline:
             self._fail_file_task_fresh(file_task_id, msg)
             return
 
+        except ValueError as e:
+            # ValueError is this pipeline's user-facing error convention (as
+            # in the API endpoints): deliberately crafted, actionable messages
+            # about the user's own data/config (duplicate case IDs, missing
+            # columns, unsupported variants, parse errors of the uploaded
+            # file). Surface the message verbatim — hiding it behind an error
+            # id would make the failure un-actionable. Sites that wrap raw
+            # service/library errors route them through
+            # internal_error_message() first, so no internals arrive here.
+            self.db.rollback()
+            file_task.status = models.PreprocessingStatus.FAILED
+            logger.warning(
+                "File %s failed preprocessing: %s", file_task.file.file_name, e
+            )
+            file_task.error_message = _strip_nul(str(e))[:4000]
+            file_task.completed_at = datetime.datetime.now(datetime.UTC)
+
         except Exception as e:
+            # A failed flush/commit leaves the session in pending-rollback
+            # state; roll back before touching ORM attributes, otherwise the
+            # lazy loads below raise PendingRollbackError and the file task
+            # is never marked FAILED.
+            self.db.rollback()
             file_task.status = models.PreprocessingStatus.FAILED
             logger.error(
                 "Error processing file %s: %s",
@@ -877,11 +955,12 @@ class PreprocessingPipeline:
                     "PDF %s is password-protected. OCR will be attempted but may fail.",
                     file.file_name,
                 )
-                file_task.warnings = {
-                    "messages": [
+                self._add_file_task_warnings(
+                    file_task,
+                    [
                         "This PDF is password-protected. Text extraction may be incomplete."
-                    ]
-                }
+                    ],
+                )
             else:
                 raise ValueError(
                     f"PDF {file.file_name} is password-protected. "
@@ -937,7 +1016,10 @@ class PreprocessingPipeline:
                     return [doc]
                 except DoclingServeError as e:
                     raise ValueError(
-                        f"PDF has no embedded text and local Docling fallback failed: {e}"
+                        internal_error_message(
+                            e,
+                            prefix="PDF has no embedded text and local Docling fallback failed",
+                        )
                     )
             else:
                 # No embedded text and no OCR available - fail with clear message
@@ -1236,7 +1318,10 @@ class PreprocessingPipeline:
                     return [doc]
                 except DoclingServeError as e:
                     raise ValueError(
-                        f"Image processing requires OCR. docling-serve is disabled and local Docling fallback failed: {e}"
+                        internal_error_message(
+                            e,
+                            prefix="Image processing requires OCR; docling-serve is disabled and local Docling fallback failed",
+                        )
                     )
             else:
                 # No local OCR and no remote OCR available - fail
@@ -1291,7 +1376,9 @@ class PreprocessingPipeline:
                 mime_type=mime_type,
             )
         except DoclingServeError as e:
-            raise ValueError(f"docling-serve image OCR failed: {e}")
+            raise ValueError(
+                internal_error_message(e, prefix="docling-serve image OCR failed")
+            )
 
         doc = self._build_pdf_document(
             file=file,
@@ -1346,7 +1433,11 @@ class PreprocessingPipeline:
                 force_ocr=force_full_page_ocr,
             )
         except DoclingServeError as e:
-            raise ValueError(f"docling-serve Tesseract extraction failed: {e}")
+            raise ValueError(
+                internal_error_message(
+                    e, prefix="docling-serve Tesseract extraction failed"
+                )
+            )
 
         doc = self._build_pdf_document(
             file=file,
@@ -1393,7 +1484,9 @@ class PreprocessingPipeline:
                 filename=file.file_name,
             )
         except DoclingServeError as e:
-            raise ValueError(f"docling-serve extraction failed: {e}")
+            raise ValueError(
+                internal_error_message(e, prefix="docling-serve extraction failed")
+            )
 
         doc = self._build_pdf_document(
             file=file,
@@ -1447,12 +1540,20 @@ class PreprocessingPipeline:
             if not extracted_text:
                 raise ValueError("pypdf extracted no text from PDF")
 
+        except ValueError:
+            # Deliberate user-facing message (e.g. "no text extracted") —
+            # pass through untouched.
+            raise
         except ImportError:
             raise ValueError(
                 "pypdf is not installed. Install it with: pip install pypdf"
             )
         except Exception as e:
-            raise ValueError(f"pypdf PDF extraction failed: {e}")
+            # Raw pypdf/library errors can carry internals — error-log them
+            # and surface only the category + error id.
+            raise ValueError(
+                internal_error_message(e, prefix="pypdf PDF extraction failed")
+            )
 
         doc = self._build_pdf_document(
             file=file,
@@ -1496,6 +1597,10 @@ class PreprocessingPipeline:
         Uses database-level locking (FOR UPDATE) to prevent race conditions
         when concurrent tasks process the same file with the same config.
         """
+        # PostgreSQL rejects NUL bytes in text columns; OCR/pypdf output from
+        # malformed PDFs can contain them.
+        text = _strip_nul(text)
+
         # Use database-level locking to prevent race conditions.
         # with_for_update(nowait=True) will raise if another transaction holds the lock,
         # which we catch and retry after a brief wait.
@@ -1633,6 +1738,13 @@ class PreprocessingPipeline:
         Uses database-level locking (FOR UPDATE) to prevent race conditions
         when concurrent tasks process the same file with the same config.
         """
+        # Sanitize before anything touches the DB: PostgreSQL rejects NUL
+        # bytes in text/varchar columns, and document_name is String(500) —
+        # a case ID from a wrongly-selected column can be arbitrarily long
+        # and would otherwise fail the whole batch commit with a DataError.
+        text = _strip_nul(text)
+        document_name = _strip_nul(document_name)[:500]
+
         # Use database-level locking to prevent race conditions
         max_retries = 3
         retry_delay = 0.1  # seconds
@@ -1784,7 +1896,7 @@ class PreprocessingPipeline:
         self, file: models.File, file_task: models.FilePreprocessingTask
     ) -> List[models.Document]:
         """Process file using Mistral OCR API."""
-        from ..services.mistral_ocr_service import MistralOCRService
+        from ..services.mistral_ocr_service import MistralOCRError, MistralOCRService
 
         additional = self.config.additional_settings or {}
 
@@ -1813,7 +1925,12 @@ class PreprocessingPipeline:
             max_retries=settings.MISTRAL_OCR_MAX_RETRIES,
         )
         file_content = get_file(file.file_uuid)
-        result = service.process(file_content)
+        try:
+            result = service.process(file_content)
+        except MistralOCRError as e:
+            # Raw provider errors can carry endpoint/response internals —
+            # error-log them and surface only the category + error id.
+            raise ValueError(internal_error_message(e, prefix="Mistral OCR failed"))
 
         doc = self._get_or_create_document(
             file=file,
@@ -1835,7 +1952,10 @@ class PreprocessingPipeline:
         self, file: models.File, file_task: models.FilePreprocessingTask
     ) -> List[models.Document]:
         """Process file using a Vision LLM API."""
-        from ..services.llm_vision_ocr_service import LLMVisionOCRService
+        from ..services.llm_vision_ocr_service import (
+            LLMVisionOCRError,
+            LLMVisionOCRService,
+        )
 
         additional = self.config.additional_settings or {}
 
@@ -1881,24 +2001,39 @@ class PreprocessingPipeline:
         # method runs per file; leaking the client accumulates connection pools).
         file_content = get_file(file.file_uuid)
         is_pdf = file.file_type == models.FileType.APPLICATION_PDF
-        with LLMVisionOCRService(
-            api_key=api_key,
-            base_url=base_url,
-            model=model,
-            prompt=prompt,
-            max_image_dim=max_image_dim,
-            max_retries=settings.VISION_OCR_MAX_RETRIES,
-            max_concurrency=settings.VISION_OCR_MAX_CONCURRENT_FILES,
-        ) as service:
-            result = service.process(file_content, is_pdf=is_pdf)
+        try:
+            with LLMVisionOCRService(
+                api_key=api_key,
+                base_url=base_url,
+                model=model,
+                prompt=prompt,
+                max_image_dim=max_image_dim,
+                max_retries=settings.VISION_OCR_MAX_RETRIES,
+                max_concurrency=settings.VISION_OCR_MAX_CONCURRENT_FILES,
+            ) as service:
+                result = service.process(file_content, is_pdf=is_pdf)
+        except LLMVisionOCRError as e:
+            # Raw provider errors can carry endpoint/response internals —
+            # error-log them and surface only the category + error id.
+            raise ValueError(internal_error_message(e, prefix="Vision LLM OCR failed"))
 
-        # Surface partial failures as warnings on the file task
+        # Surface partial failures as warnings on the file task. The per-page
+        # error strings come straight from the provider and can leak
+        # endpoint/internal detail — store them in the error log and show
+        # only a safe summary with the error id.
         if result.failed_pages > 0:
-            file_task.warnings = {
-                "messages": result.errors,
-                "failed_pages": result.failed_pages,
-                "total_pages": result.total_pages,
-            }
+            safe_summary = operational_error_message(
+                detail="; ".join(str(err) for err in result.errors)[:2000],
+                prefix=(
+                    f"{result.failed_pages} of {result.total_pages} page(s) failed OCR"
+                ),
+            )
+            self._add_file_task_warnings(
+                file_task,
+                [safe_summary],
+                failed_pages=result.failed_pages,
+                total_pages=result.total_pages,
+            )
 
         doc = self._get_or_create_document(
             file=file,
@@ -1926,46 +2061,51 @@ class PreprocessingPipeline:
         Returns:
             Detected or first successful encoding from fallback chain.
         """
-        # Try chardet for automatic detection if available
-        if settings.CSV_DETECT_ENCODING:
-            try:
-                import chardet
+        encoding = detect_text_encoding(
+            file_content,
+            fallback_chain,
+            use_chardet=settings.CSV_DETECT_ENCODING,
+        )
+        logger.info("Using encoding %s for CSV/text content", encoding)
+        return encoding
 
-                result = chardet.detect(file_content[:1024])  # Sample first 1KB
-                if result and result.get("confidence", 0) > 0.7:
-                    detected_encoding = result.get("encoding", "utf-8")
-                    logger.info(
-                        "Detected CSV encoding: %s (confidence: %.2f)",
-                        detected_encoding,
-                        result.get("confidence", 0),
-                    )
-                    # Verify it works by trying to decode
-                    try:
-                        file_content.decode(detected_encoding)
-                        return detected_encoding
-                    except (UnicodeDecodeError, LookupError):
-                        logger.warning(
-                            "Detected encoding %s failed validation, using fallback",
-                            detected_encoding,
-                        )
-            except ImportError:
-                logger.debug(
-                    "chardet not installed, skipping automatic encoding detection"
-                )
+    def _read_excel(
+        self, file: models.File, file_content: bytes, **read_kwargs
+    ) -> pd.DataFrame:
+        """Read an Excel file, translating engine errors into clear messages.
 
-        # Try fallback chain
-        encodings = [e.strip() for e in fallback_chain.split(",")]
-        for encoding in encodings:
-            try:
-                file_content.decode(encoding)
-                logger.info("Using fallback encoding: %s", encoding)
-                return encoding
-            except (UnicodeDecodeError, LookupError):
-                continue
+        Legacy .xls files need the ``xlrd`` engine, which is not installed —
+        pandas surfaces that as a bare ImportError that would reach the user
+        as an opaque internal failure.
+        """
+        try:
+            return pd.read_excel(io.BytesIO(file_content), **read_kwargs)
+        except ImportError as e:
+            logger.info("Excel engine unavailable for %s: %s", file.file_name, e)
+            raise ValueError(
+                f"Cannot read {file.file_name}: legacy Excel (.xls) files are "
+                "not supported. Save the file as .xlsx and re-upload."
+            )
 
-        # Ultimate fallback
-        logger.warning("All encodings failed, using utf-8 with errors='replace'")
-        return "utf-8"
+    def _add_file_task_warnings(
+        self,
+        file_task: models.FilePreprocessingTask,
+        messages: List[str],
+        **extra: Any,
+    ) -> None:
+        """Merge warning messages into ``file_task.warnings``.
+
+        Merging (rather than assigning a fresh dict) keeps earlier warnings —
+        e.g. a password-protected-PDF notice — from being clobbered by later
+        ones like per-page OCR failures.
+        """
+        warnings = dict(file_task.warnings or {})
+        merged = list(warnings.get("messages", []))
+        merged.extend(messages)
+        warnings["messages"] = merged
+        for key, value in extra.items():
+            warnings[key] = value
+        file_task.warnings = warnings
 
     def _process_table_file(
         self, file: models.File, file_task: models.FilePreprocessingTask
@@ -2006,13 +2146,18 @@ class PreprocessingPipeline:
                     ).encode("utf-8")
                     df = pd.read_csv(io.BytesIO(file_content_str), encoding="utf-8")
             else:
-                df = pd.read_excel(io.BytesIO(file_content))
+                df = self._read_excel(file, file_content)
 
             # Check row limit
             if len(df) > self.MAX_ROWS_PER_FILE:
                 raise ValueError(
                     f"File {file.file_name} has {len(df)} rows, exceeding the maximum limit of {self.MAX_ROWS_PER_FILE}"
                 )
+
+            # An empty table would produce a junk "Empty DataFrame" document
+            # that gets sent to the LLM — fail with a clear message instead.
+            if df.empty:
+                raise ValueError(f"File {file.file_name} contains no data rows.")
 
             # Convert entire dataframe to text
             text = df.to_string()
@@ -2026,7 +2171,7 @@ class PreprocessingPipeline:
                     "file_type": "table",
                     "preprocessing_strategy": "full_document",
                     "total_rows": len(df),
-                    "columns": list(df.columns),
+                    "columns": [str(c) for c in df.columns],
                     "detected_encoding": encoding
                     if file.file_type == models.FileType.TEXT_CSV
                     else None,
@@ -2080,8 +2225,8 @@ class PreprocessingPipeline:
                         header=0 if has_header else None,
                     )
             else:
-                df = pd.read_excel(
-                    io.BytesIO(file_content), header=0 if has_header else None
+                df = self._read_excel(
+                    file, file_content, header=0 if has_header else None
                 )
 
             # Check row limit
@@ -2089,6 +2234,9 @@ class PreprocessingPipeline:
                 raise ValueError(
                     f"File {file.file_name} has {len(df)} rows, exceeding the maximum limit of {self.MAX_ROWS_PER_FILE}"
                 )
+
+            if df.empty:
+                raise ValueError(f"File {file.file_name} contains no data rows.")
 
             # Validate columns exist
             missing_columns = [col for col in text_columns if col not in df.columns]
@@ -2121,6 +2269,7 @@ class PreprocessingPipeline:
             # N rows keeps cancellation responsive without saturating the DB.
             cancel_check_interval = 100
             row_counter = 0
+            skipped_empty_rows = 0
 
             for idx, row in df.iterrows():
                 row_idx = int(
@@ -2139,16 +2288,28 @@ class PreprocessingPipeline:
 
                 content = " ".join(content_parts)
 
-                # Skip empty documents
+                # Skip empty documents (count them so the file task can
+                # surface the skipped rows as a warning instead of silently
+                # dropping data)
                 if not content.strip():
+                    skipped_empty_rows += 1
                     continue
 
-                # Build document name using case_id_column if specified
+                # Build document name using case_id_column if specified.
+                # _check_duplicate_case_ids already rejected empty/NaN IDs;
+                # the pd.notna guard is belt-and-braces.
+                case_id = None
                 if case_id_column and case_id_column in row:
-                    case_id = row[case_id_column]
-                    doc_name = f"{case_id}"
+                    if pd.notna(row[case_id_column]):
+                        case_id = _case_id_str(row[case_id_column])
+                if case_id:
+                    doc_name = case_id
                 else:
-                    doc_name = f"{file.file_name}_row_{idx}"
+                    # Bound the filename part well below document_name's 500-char
+                    # limit — if truncation happened at the full name instead,
+                    # every row of a long-named file would collapse to the same
+                    # document name and silently version-replace each other.
+                    doc_name = f"{file.file_name[:400]}_row_{idx}"
 
                 # Create or update document (idempotent)
                 doc = self._get_or_create_document(
@@ -2159,12 +2320,13 @@ class PreprocessingPipeline:
                     meta_data={
                         "row_index": row_idx,  # Convert numpy int to Python int
                         "source_columns": text_columns,
-                        "case_id": str(row[case_id_column])
-                        if case_id_column and case_id_column in row
-                        else None,
+                        "case_id": case_id,
                         "file_type": "table",
                         "preprocessing_strategy": "row_by_row",
-                        "all_row_data": row.to_dict(),  # Store full row for reference
+                        # Store full row for reference; sanitize so pandas
+                        # types (Timestamp, numpy scalars, NaT) don't break
+                        # the JSON serialization of meta_data at commit time.
+                        "all_row_data": _json_safe(row.to_dict()),
                     },
                 )
 
@@ -2190,6 +2352,25 @@ class PreprocessingPipeline:
                 self.db.commit()
                 documents.extend(batch_documents)
 
+            if skipped_empty_rows:
+                self._add_file_task_warnings(
+                    file_task,
+                    [
+                        f"Skipped {skipped_empty_rows} row(s) with empty values "
+                        "in the selected text columns."
+                    ],
+                    skipped_rows=skipped_empty_rows,
+                )
+
+            # All rows skipped → the file "succeeding" with zero documents
+            # would look identical to a fully processed one. Fail explicitly.
+            if not documents and not self.cancelled:
+                raise ValueError(
+                    f"No documents were created from {file.file_name}: all "
+                    f"{total_rows} row(s) have empty values in the selected "
+                    f"text columns {text_columns}."
+                )
+
         else:
             raise ValueError(f"Unsupported preprocessing strategy: {strategy}")
 
@@ -2201,8 +2382,20 @@ class PreprocessingPipeline:
         """Process plain text files."""
         file_content = get_file(file.file_uuid)
 
-        # Decode text content
-        text = file_content.decode("utf-8", errors="replace")
+        # Decode text content: try strict UTF-8 first, then the same
+        # detection/fallback chain used for CSVs. Decoding e.g. a UTF-16 or
+        # Latin-1 file blindly as UTF-8 with errors="replace" produces
+        # NUL-riddled mojibake instead of the actual text.
+        encoding = "utf-8"
+        try:
+            text = file_content.decode("utf-8")
+        except UnicodeDecodeError:
+            encoding = self._detect_csv_encoding(
+                file_content, settings.CSV_ENCODING_FALLBACK_CHAIN
+            )
+            text = file_content.decode(encoding, errors="replace")
+        # Strip a BOM so it doesn't leak into the document text
+        text = text.lstrip("\ufeff")
 
         # Create or update document (idempotent)
         doc = self._get_or_create_document(
@@ -2210,7 +2403,7 @@ class PreprocessingPipeline:
             file_task=file_task,
             text=text,
             document_name=file.file_name,
-            meta_data={"file_type": "text"},
+            meta_data={"file_type": "text", "detected_encoding": encoding},
         )
 
         return [doc]
@@ -2229,11 +2422,14 @@ class PreprocessingPipeline:
             The created DocumentSet, or None if creation failed.
         """
         try:
-            # Build a descriptive name for the document set
+            # Build a descriptive name for the document set. DocumentSet.name
+            # is String(100) — truncate (before the existence lookup, so the
+            # query and the insert agree) or a long filename fails the flush
+            # and poisons the session for the rest of the file.
             if case_id_column:
-                set_name = f"{file.file_name} (by {case_id_column})"
+                set_name = f"{file.file_name} (by {case_id_column})"[:100]
             else:
-                set_name = f"{file.file_name} (row-by-row)"
+                set_name = f"{file.file_name} (row-by-row)"[:100]
 
             # Check if an auto-generated set already exists for this file + config
             existing_set = (
@@ -2255,11 +2451,11 @@ class PreprocessingPipeline:
                 )
                 return existing_set
 
-            # Create new document set
+            # Create new document set (description is String(500))
             description = (
                 f"Auto-generated document set for row-by-row preprocessing of {file.file_name}. "
                 f"Contains {len(df)} documents extracted from individual rows."
-            )
+            )[:500]
 
             document_set = models.DocumentSet(
                 project_id=self.task.project_id,

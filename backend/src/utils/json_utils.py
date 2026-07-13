@@ -7,11 +7,37 @@ import numpy as np
 import pandas as pd
 
 
+def strip_nul(value: str) -> str:
+    """Remove NUL bytes — PostgreSQL rejects them in text/varchar columns."""
+    return value.replace("\x00", "")
+
+
+def case_id_str(value: Any) -> str:
+    """Normalize a case/document ID cell to a stable string.
+
+    pandas reads integer ID columns that contain blanks as floats, so a case
+    ID of 123 arrives as 123.0 — ``str()`` would produce "123.0" and break
+    matching. Whole-number floats are rendered as ints; everything else is
+    str()'d, NUL-stripped, and whitespace-trimmed.
+
+    Shared by preprocessing (document naming) and ground-truth parsing so
+    both sides produce identical keys and evaluation matching works.
+    """
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return strip_nul(str(value)).strip()
+
+
 def make_jsonable(obj: Any) -> Any:
     """Recursively convert Pandas/NumPy/Datetime types to JSON-serializable primitives."""
     # Scalars first
     if obj is None:
         return None
+
+    # Strings pass through, minus NUL bytes (PostgreSQL rejects the NUL
+    # escape in JSONB and NUL bytes in text columns).
+    if isinstance(obj, str):
+        return strip_nul(obj)
 
     # pandas NA/NaT / numpy nan
     try:
@@ -36,7 +62,7 @@ def make_jsonable(obj: Any) -> Any:
 
     # containers
     if isinstance(obj, dict):
-        return {str(k): make_jsonable(v) for k, v in obj.items()}
+        return {strip_nul(str(k)): make_jsonable(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple, set)):
         return [make_jsonable(v) for v in obj]
 
@@ -48,4 +74,4 @@ def make_jsonable(obj: Any) -> Any:
         return obj
     except Exception:
         pass
-    return str(obj)
+    return strip_nul(str(obj))

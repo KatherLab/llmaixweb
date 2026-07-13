@@ -15,10 +15,11 @@ from sqlalchemy.orm import Session, selectinload
 from thefuzz import fuzz
 
 from .. import models
+from ..core.config import settings
 from ..middleware.error_handlers import internal_error_message
 from .enums import ComparisonMethod, FieldType
-from .helpers import flatten_dict
-from .json_utils import make_jsonable
+from .helpers import detect_text_encoding, flatten_dict
+from .json_utils import case_id_str, make_jsonable
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,16 @@ def _is_missing(value: Any) -> bool:
         return bool(pd.isna(value))
     except (TypeError, ValueError):
         return False
+
+
+def _deep_merge_dicts(dst: Dict, src: Dict) -> None:
+    """Recursively merge ``src`` into ``dst`` (used to combine the same
+    ground-truth ID appearing across multiple Excel sheets)."""
+    for k, v in src.items():
+        if k in dst and isinstance(dst[k], dict) and isinstance(v, dict):
+            _deep_merge_dicts(dst[k], v)
+        else:
+            dst[k] = v
 
 
 class EvaluationEngine:
@@ -390,7 +401,10 @@ class EvaluationEngine:
 
         if ground_truth.format == "csv":
             try:
-                df = pd.read_csv(io.BytesIO(content), nrows=0)
+                encoding = detect_text_encoding(
+                    content, settings.CSV_ENCODING_FALLBACK_CHAIN
+                )
+                df = pd.read_csv(io.BytesIO(content), nrows=0, encoding=encoding)
             except Exception as e:
                 raise ValueError(f"Failed to read CSV headers: {e}")
             return [_norm(c) for c in df.columns.tolist()]
@@ -825,55 +839,145 @@ class GroundTruthParser:
                         raise ValueError(f"Invalid JSON in {filename}: {e}")
         return make_jsonable(result)
 
-    def _parse_csv(self, content: bytes, id_column: Optional[str] = None) -> Dict:
-        """Parse CSV ground truth."""
-        df = pd.read_csv(io.BytesIO(content))
-        df = df.convert_dtypes()
-        df = df.where(pd.notna(df), None)
+    @staticmethod
+    def _resolve_id_column(df: pd.DataFrame, id_column: Optional[str]) -> str:
+        """Resolve the ID column, failing loudly when a chosen column is missing.
 
-        # Choose ID column
-        if id_column and id_column in df.columns:
-            id_col = id_column
-        else:
-            candidates = ["document_id", "doc_id", "id", "filename", "file_name"]
-            id_col = next((c for c in candidates if c in df.columns), "_index")
-            if id_col == "_index":
-                df["_index"] = df.index
+        Silently falling back to the row index when the user-selected column
+        isn't found (e.g. because of a typo or a renamed header) would key
+        every document by row number and make evaluation matching fail with
+        no visible cause.
+        """
+        if id_column:
+            if id_column not in df.columns:
+                raise ValueError(
+                    f"ID column '{id_column}' was not found in the ground "
+                    f"truth file. Available columns: {list(df.columns)[:20]}"
+                )
+            return id_column
+        candidates = ["document_id", "doc_id", "id", "filename", "file_name"]
+        id_col = next((c for c in candidates if c in df.columns), "_index")
+        if id_col == "_index":
+            df["_index"] = df.index
+        return id_col
 
-        result = {}
-        for _, row in df.iterrows():
-            doc_id = row[id_col]
-            values = {}
+    @staticmethod
+    def _collect_rows(
+        df: pd.DataFrame,
+        id_col: str,
+        result: Dict[str, Dict],
+        *,
+        source: str,
+        merge: bool = False,
+    ) -> None:
+        """Convert dataframe rows into ``{doc_id: values}`` entries in ``result``.
+
+        - IDs are normalized with :func:`case_id_str` so they produce the same
+          keys as preprocessing's document names (e.g. 123.0 → "123").
+        - Rows that contain data but no ID, and duplicate IDs within the same
+          table, raise instead of silently dropping/overwriting rows.
+        - Fully empty (phantom) rows are skipped.
+        - With ``merge=True`` an ID already present in ``result`` (from an
+          earlier Excel sheet) is deep-merged instead of treated as duplicate.
+        """
+
+        def _cell_is_na(v: Any) -> bool:
+            # ``df.where(pd.notna(df), None)`` does not reliably yield None
+            # for nullable dtypes (pandas keeps pd.NA) — check both.
+            if v is None:
+                return True
+            try:
+                return bool(pd.isna(v))
+            except (TypeError, ValueError):
+                return False
+
+        rows_missing_id: List[int] = []
+        duplicate_ids: List[str] = []
+        seen: set[str] = set()
+
+        for idx, row in df.iterrows():
+            values: Dict[str, Any] = {}
             for col in df.columns:
-                if col == id_col or row[col] is None:
+                if col == id_col or _cell_is_na(row[col]):
                     continue
-                keys = col.split(".")
+                keys = str(col).split(".")
                 current = values
                 for key in keys[:-1]:
-                    if key not in current:
+                    if key not in current or not isinstance(current[key], dict):
                         current[key] = {}
                     current = current[key]
                 current[keys[-1]] = row[col]
-            if values:
-                result[str(doc_id)] = make_jsonable(values)
+
+            raw_id = row[id_col]
+            if _cell_is_na(raw_id) or str(raw_id).strip() == "":
+                if values:
+                    rows_missing_id.append(int(cast(Any, idx)))
+                continue  # fully empty (phantom) rows are skipped
+            if not values:
+                continue
+
+            doc_id = case_id_str(raw_id)
+            if doc_id in seen:
+                duplicate_ids.append(doc_id)
+                continue
+            seen.add(doc_id)
+
+            jsonable = make_jsonable(values)
+            if merge and doc_id in result:
+                _deep_merge_dicts(result[doc_id], jsonable)
+            else:
+                result[doc_id] = jsonable
+
+        if rows_missing_id:
+            raise ValueError(
+                f"{len(rows_missing_id)} row(s) in the ground truth {source} "
+                f"have data but no value in ID column '{id_col}' "
+                f"(row indices: {rows_missing_id[:10]}). Fill in the missing "
+                "IDs or choose a different ID column."
+            )
+        if duplicate_ids:
+            raise ValueError(
+                f"Duplicate IDs in the ground truth {source}: "
+                f"{sorted(set(duplicate_ids))[:10]}. Each row must have a "
+                "unique ID."
+            )
+
+    def _parse_csv(self, content: bytes, id_column: Optional[str] = None) -> Dict:
+        """Parse CSV ground truth."""
+        encoding = detect_text_encoding(content, settings.CSV_ENCODING_FALLBACK_CHAIN)
+        try:
+            df = pd.read_csv(io.BytesIO(content), encoding=encoding)
+        except UnicodeDecodeError:
+            # Nothing decoded cleanly — decode leniently rather than failing.
+            cleaned = content.decode(encoding, errors="replace").encode("utf-8")
+            df = pd.read_csv(io.BytesIO(cleaned))
+        except pd.errors.EmptyDataError:
+            raise ValueError("The ground truth CSV file is empty.")
+        df = df.convert_dtypes()
+        df = df.where(pd.notna(df), None)
+        # Trim header whitespace so columns match what get_available_columns
+        # showed when the user picked the ID column.
+        df.columns = [str(c).strip() for c in df.columns]
+
+        id_col = self._resolve_id_column(df, id_column)
+        result: Dict[str, Dict] = {}
+        self._collect_rows(df, id_col, result, source="CSV file")
+        if not result:
+            raise ValueError(
+                "No documents could be parsed from the ground truth file "
+                "(no rows with both an ID and at least one value)."
+            )
         return result
 
     def _parse_excel(self, content: bytes, id_column: Optional[str] = None) -> Dict:
         """Parse XLSX ground truth (multi-sheet, dot notation)."""
-
-        def _deep_merge(dst: Dict, src: Dict) -> None:
-            for k, v in src.items():
-                if k in dst and isinstance(dst[k], dict) and isinstance(v, dict):
-                    _deep_merge(dst[k], v)
-                else:
-                    dst[k] = v
-
         try:
             xls = pd.ExcelFile(io.BytesIO(content))
         except Exception as e:
             raise ValueError(f"Invalid Excel file: {e}")
 
         result: Dict[str, Dict] = {}
+        sheets_missing_id: List[str] = []
         for sheet_name in xls.sheet_names:
             try:
                 df = xls.parse(sheet_name)
@@ -884,8 +988,14 @@ class GroundTruthParser:
 
             df = df.convert_dtypes()
             df = df.where(pd.notna(df), None)
+            df.columns = [str(c).strip() for c in df.columns]
 
-            if id_column and id_column in df.columns:
+            if id_column:
+                if id_column not in df.columns:
+                    # A sheet without the chosen ID column can't be matched —
+                    # skip it rather than silently keying rows by row number.
+                    sheets_missing_id.append(str(sheet_name))
+                    continue
                 id_col = id_column
             else:
                 candidates = ["document_id", "doc_id", "id", "filename", "file_name"]
@@ -893,29 +1003,28 @@ class GroundTruthParser:
                 if id_col == "_index":
                     df["_index"] = df.index
 
-            for _, row in df.iterrows():
-                doc_id_val = row.get(id_col)
-                if doc_id_val is None:
-                    continue
-                doc_id = str(doc_id_val)
-                values: Dict[str, Any] = {}
-                for col in df.columns:
-                    if col == id_col or row[col] is None:
-                        continue
-                    keys = str(col).split(".")
-                    current = values
-                    for key in keys[:-1]:
-                        if key not in current or not isinstance(current[key], dict):
-                            current[key] = {}
-                        current = current[key]
-                    current[keys[-1]] = row[col]
-                if values:
-                    if doc_id not in result:
-                        result[doc_id] = make_jsonable(values)
-                    else:
-                        _deep_merge(result[doc_id], make_jsonable(values))
+            # merge=True: the same ID appearing on different sheets deep-merges
+            # (multi-sheet dot-notation feature); duplicates within one sheet
+            # still raise inside _collect_rows.
+            self._collect_rows(
+                df,
+                id_col,
+                result,
+                source=f"Excel sheet '{sheet_name}'",
+                merge=True,
+            )
 
-        return make_jsonable(result)
+        if id_column and sheets_missing_id and not result:
+            raise ValueError(
+                f"ID column '{id_column}' was not found in any sheet of the "
+                f"ground truth file (sheets: {sheets_missing_id[:10]})."
+            )
+        if not result:
+            raise ValueError(
+                "No documents could be parsed from the ground truth file "
+                "(no rows with both an ID and at least one value)."
+            )
+        return result
 
 
 class ValueComparator:

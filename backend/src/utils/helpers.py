@@ -22,6 +22,42 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 XLS_MIME = "application/vnd.ms-excel"
 
 
+def detect_text_encoding(
+    content: bytes, fallback_chain: str, use_chardet: bool = True
+) -> str:
+    """Detect the encoding of raw text/CSV bytes.
+
+    Tries chardet (when available and ``use_chardet``), then each encoding in
+    the comma-separated ``fallback_chain``, returning the first that decodes
+    cleanly. Falls back to ``"utf-8"`` (caller should decode with
+    ``errors="replace"`` in that case). Shared by preprocessing and the
+    ground-truth parser so both handle non-UTF-8 uploads the same way.
+    """
+    if use_chardet:
+        try:
+            import chardet
+
+            result = chardet.detect(content[:1024])
+            if result and result.get("confidence", 0) > 0.7:
+                detected = result.get("encoding") or "utf-8"
+                try:
+                    content.decode(detected)
+                    return detected
+                except (UnicodeDecodeError, LookupError):
+                    pass
+        except ImportError:
+            pass
+
+    for encoding in [e.strip() for e in fallback_chain.split(",") if e.strip()]:
+        try:
+            content.decode(encoding)
+            return encoding
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    return "utf-8"
+
+
 def _is_zip(buffer: bytes) -> bool:
     # Fast check: PK\x03\x04
     return len(buffer) >= 4 and buffer[:4] == b"PK\x03\x04"

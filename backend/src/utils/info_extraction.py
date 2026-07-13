@@ -34,7 +34,10 @@ from sqlalchemy import func, select
 from .. import models
 from ..core.config import settings
 from ..db.session import db_session
-from ..middleware.error_handlers import record_internal_error
+from ..middleware.error_handlers import (
+    internal_error_message,
+    record_internal_error,
+)
 from ..utils.enums import TrialResultStatus
 
 logger = logging.getLogger(__name__)
@@ -1150,7 +1153,9 @@ def validate_against_schema(data: Any, schema: dict) -> tuple[bool, str | None]:
     except jsonschema.SchemaError as e:
         return False, f"Invalid schema definition: {e.message}"
     except Exception as e:
-        return False, f"Validation error: {type(e).__name__}: {e}"
+        # Unexpected validator failure — raw exception text can carry
+        # internals; store it in the error log and return only the id.
+        return False, internal_error_message(e, prefix="Validation error")
 
 
 # =============================================================================

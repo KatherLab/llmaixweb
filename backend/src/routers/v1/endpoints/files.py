@@ -37,7 +37,10 @@ from ....dependencies import (
     save_upload_stream,
     stream_file,
 )
-from ....middleware.error_handlers import record_internal_error
+from ....middleware.error_handlers import (
+    internal_error_message,
+    record_internal_error,
+)
 from ....models.project import document_set_association
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction, FileCreator
@@ -617,9 +620,14 @@ def _validate_id_column(file: models.File, metadata: dict) -> dict:
     try:
         df = _load_full_table(file, file_content, metadata)
     except Exception as exc:
+        # Raw parse/storage errors can carry library internals or paths —
+        # store the full exception in the error log and return only a safe
+        # message with the error id.
         raise HTTPException(
             status_code=400,
-            detail=f"Could not read file for validation: {exc}",
+            detail=internal_error_message(
+                exc, prefix="Could not read file for validation"
+            ),
         )
 
     if case_id_column not in df.columns:
