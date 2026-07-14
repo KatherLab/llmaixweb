@@ -67,6 +67,19 @@
           </div>
         </div>
 
+        <!-- Mode explanation: clarifies what Simple vs Advanced actually do -->
+        <p class="px-6 pb-2 text-xs text-content-muted flex-shrink-0">
+          <template v-if="simpleMode">
+            <span class="font-medium text-content-muted">Simple:</span> add extraction fields as a
+            flat list. Switch to <span class="font-medium">Advanced</span> for nested groups, lists,
+            and raw JSON.
+          </template>
+          <template v-else>
+            <span class="font-medium text-content-muted">Advanced:</span> build nested structures in
+            the visual editor or edit the raw JSON schema directly.
+          </template>
+        </p>
+
         <!-- Tab Navigation (only show in Advanced mode) -->
         <div v-if="!simpleMode" class="px-6 flex-shrink-0 flex items-end justify-between gap-4">
           <BaseTabGroup v-model="activeTab" :tabs="tabs">
@@ -78,10 +91,13 @@
           </BaseTabGroup>
 
           <div class="flex items-center space-x-4 pb-2">
-            <!-- Advanced Features Toggle -->
-            <label class="flex items-center space-x-2 text-sm">
+            <!-- Developer-terminology toggle: JSON Schema type names + extra field options -->
+            <label
+              class="flex items-center space-x-2 text-sm"
+              title="Use JSON Schema type names (String, Object, Array…) and expose advanced field options like formats and constraints."
+            >
               <input v-model="advancedMode" type="checkbox" :class="checkboxClass" />
-              <span class="text-content-muted">Enable advanced features</span>
+              <span class="text-content-muted">Developer options</span>
             </label>
 
             <!-- Split View Toggle -->

@@ -7,6 +7,12 @@
     </template>
 
     <!-- Body -->
+    <!-- Purpose hint -->
+    <p v-if="!group" class="mb-4 text-sm text-content-muted">
+      A group is a named set of documents you can run a trial against — use it to run an extraction
+      on a specific selection of documents.
+    </p>
+
     <!-- Group Name -->
     <div class="mb-4">
       <label :class="labelClass"> Group Name <span class="text-red-500">*</span> </label>

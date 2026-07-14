@@ -291,6 +291,112 @@ def get_document(
     return schemas.Document.model_validate(document)
 
 
+@router.post("/document/{document_id}/restore", response_model=schemas.Document)
+def restore_document_version(
+    *,
+    project_id: int,
+    document_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.Document:
+    """Restore an archived document version as the new latest — WITHOUT reprocessing.
+
+    Copies the archived version's extracted text (and metadata) into a fresh
+    ``is_latest=True`` document, archiving whatever version was previously latest.
+    No OCR/LLM work runs, so the restored content is exactly the archived
+    version's content. Users can still run "Reprocess Document" afterwards.
+    """
+    check_project_access(project_id, current_user, db, "write")
+
+    target: models.Document | None = db.execute(
+        select(models.Document).where(
+            models.Document.id == document_id,
+            models.Document.project_id == project_id,
+        )
+    ).scalar_one_or_none()
+    if not target:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if target.is_latest:
+        raise HTTPException(
+            status_code=400, detail="This version is already the latest."
+        )
+
+    # Current latest version(s) sharing the same versioning key (file/config/name).
+    latest_docs = (
+        db.execute(
+            select(models.Document).where(
+                models.Document.project_id == project_id,
+                models.Document.original_file_id == target.original_file_id,
+                models.Document.preprocessing_config_id
+                == target.preprocessing_config_id,
+                models.Document.document_name == target.document_name,
+                models.Document.is_latest.is_(True),
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    # Determine the version-chain root (mirrors the preprocessing convention).
+    if latest_docs:
+        first_latest = latest_docs[0]
+        version_of_root = first_latest.version_of or first_latest.id
+        replaced_doc_id: int | None = first_latest.id
+    else:
+        version_of_root = target.version_of or target.id
+        replaced_doc_id = None
+
+    # Archive the current latest to free the is_latest uniqueness slot, capturing
+    # its document-set memberships so the restored copy inherits them (a restore
+    # shouldn't silently drop the document out of its groups).
+    inherited_sets: dict[int, models.DocumentSet] = {}
+    for doc in latest_docs:
+        for ds in doc.document_sets:
+            inherited_sets[ds.id] = ds
+        doc.document_sets.clear()
+        doc.is_latest = False
+        doc.updated_at = datetime.datetime.now(datetime.UTC)
+        doc.version_of = version_of_root
+    db.flush()
+
+    # Copy the archived version's content into a new latest document. The
+    # preprocessed file is shared by reference — delete_document only removes a
+    # preprocessed file once no document references it, so sharing is safe.
+    new_meta = dict(target.meta_data or {})
+    new_meta["version_of"] = version_of_root
+    new_meta["restored_from_document_id"] = target.id
+    if replaced_doc_id is not None:
+        new_meta["replaced_document_id"] = replaced_doc_id
+
+    restored = models.Document(
+        project_id=project_id,
+        original_file_id=target.original_file_id,
+        file_preprocessing_task_id=target.file_preprocessing_task_id,
+        preprocessing_config_id=target.preprocessing_config_id,
+        text=target.text,
+        document_name=target.document_name,
+        meta_data=new_meta,
+        preprocessed_file_id=target.preprocessed_file_id,
+        is_latest=True,
+        version_of=version_of_root,
+    )
+    if inherited_sets:
+        restored.document_sets = list(inherited_sets.values())
+    db.add(restored)
+    db.commit()
+    db.refresh(restored)
+
+    record_audit(
+        AuditAction.UPDATE,
+        actor=current_user,
+        resource_type="document",
+        resource_id=restored.id,
+        project_id=project_id,
+        detail={"restored_from_document_id": target.id},
+    )
+    return schemas.Document.model_validate(restored)
+
+
 def cleanup_empty_preprocessing_tasks(
     db: Session, file_preprocessing_task_id: int | None
 ) -> None:

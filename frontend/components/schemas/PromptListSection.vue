@@ -58,7 +58,16 @@
           <StatusBadge v-if="hasPlaceholder(prompt as Prompt)" color="green" class="font-medium">
             Contains placeholder
           </StatusBadge>
-          <span v-else class="text-sm text-content-subtle">—</span>
+          <Tooltip
+            v-else
+            text="No {document_content} placeholder — the document text is appended automatically when the trial runs."
+          >
+            <span
+              class="text-sm text-content-subtle cursor-help border-b border-dotted border-default"
+            >
+              Auto-injected
+            </span>
+          </Tooltip>
         </template>
 
         <template #cell-created_at="{ row: prompt }">
@@ -146,6 +155,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import Tooltip from '@/components/common/Tooltip.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import FilterBar from '@/components/common/FilterBar.vue'
 import type { Prompt } from '@/types'

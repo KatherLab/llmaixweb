@@ -15,6 +15,13 @@ export const documentsApi = {
   get(projectId: number | string, documentId: number | string) {
     return api.get(`/project/${projectId}/document/${documentId}`) as Promise<ApiBody<Document>>
   },
+  // Promote an archived version to the new latest by copying its content — no
+  // reprocessing. Returns the newly created latest document.
+  restoreVersion(projectId: number | string, documentId: number | string) {
+    return api.post(`/project/${projectId}/document/${documentId}/restore`) as Promise<
+      ApiBody<Document>
+    >
+  },
   delete(projectId: number | string, documentId: number | string, cascade = false) {
     return api.delete(`/project/${projectId}/document/${documentId}`, {
       params: cascade ? { cascade: true } : undefined,

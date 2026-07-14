@@ -302,31 +302,47 @@ const performAction = async (): Promise<void> => {
 const reprocessDocuments = async (): Promise<void> => {
   // `props.documents` are *document* IDs, but a preprocessing task needs the
   // underlying *file* IDs. Resolve each selected document to its
-  // original_file_id (deduped — row-by-row CSVs share one file).
-  const fileIds = new Set<number>()
+  // original_file_id (deduped — row-by-row CSVs share one file) AND reuse its
+  // original preprocessing configuration, so the reprocess runs with the same
+  // OCR engine/settings instead of silently falling back to defaults. Documents
+  // are grouped by config so a mixed selection produces one task per config.
+  type Group = { fileIds: Set<number>; settings: Record<string, unknown> }
+  const byConfig = new Map<number | 'inline', Group>()
   for (const docId of props.documents) {
     try {
       const { data } = await documentsApi.get(props.projectId, docId)
-      if (data?.original_file_id) fileIds.add(data.original_file_id)
+      if (!data?.original_file_id) continue
+      const key = data.preprocessing_config_id ?? 'inline'
+      const group = byConfig.get(key) ?? {
+        fileIds: new Set<number>(),
+        settings: (data.preprocessing_config?.additional_settings as Record<string, unknown>) ?? {},
+      }
+      group.fileIds.add(data.original_file_id)
+      byConfig.set(key, group)
     } catch (error) {
       console.error(`Failed to resolve document #${docId} to a file:`, error)
     }
   }
-  if (fileIds.size === 0) {
+  const totalFiles = new Set<number>()
+  byConfig.forEach((g) => g.fileIds.forEach((id) => totalFiles.add(id)))
+  if (totalFiles.size === 0) {
     toast.error('Could not resolve the selected documents to any files.')
     return
   }
-  const taskData: PreprocessingTaskCreate = {
-    inline_config: {
-      name: `Reprocess ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
-      additional_settings: {},
-    },
-    file_ids: Array.from(fileIds),
-    force_reprocess: forceReprocess.value,
+  const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ')
+  for (const group of byConfig.values()) {
+    const taskData: PreprocessingTaskCreate = {
+      inline_config: {
+        name: `Reprocess ${stamp}`,
+        additional_settings: group.settings,
+      },
+      file_ids: Array.from(group.fileIds),
+      force_reprocess: forceReprocess.value,
+    }
+    await preprocessingApi.create(props.projectId, taskData)
   }
-  await preprocessingApi.create(props.projectId, taskData)
   toast.success(
-    `Reprocessing task started for ${fileIds.size} file${fileIds.size !== 1 ? 's' : ''}`,
+    `Reprocessing task started for ${totalFiles.size} file${totalFiles.size !== 1 ? 's' : ''}`,
   )
 }
 

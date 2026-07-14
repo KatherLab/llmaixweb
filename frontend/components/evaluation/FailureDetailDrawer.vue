@@ -170,7 +170,7 @@
               <h4
                 class="flex items-center gap-2 text-sm font-semibold text-content-muted px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
               >
-                <GitCompare class="h-4 w-4" /> GT vs Prediction
+                <GitCompare class="h-4 w-4" /> Expected vs Predicted
               </h4>
               <div class="flex-1 min-h-0 overflow-auto bg-surface">
                 <table class="w-full text-xs">
@@ -195,12 +195,17 @@
                         <div class="font-medium text-content-muted">
                           {{ prettifyField(fieldName) }}
                         </div>
-                        <Tooltip v-if="!detail.is_correct" :text="errorTooltip(detail.error_type)">
-                          <span
-                            class="text-[10px] text-red-600 dark:text-red-400 underline cursor-help"
-                            >{{ prettifyErrorType(detail.error_type) }}</span
-                          >
-                        </Tooltip>
+                        <div v-if="!detail.is_correct" class="mt-1 space-y-0.5">
+                          <Tooltip :text="getErrorSuggestion(detail.error_type)">
+                            <span
+                              class="text-[10px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-400 cursor-help"
+                              >{{ prettifyErrorType(detail.error_type) }}</span
+                            >
+                          </Tooltip>
+                          <p class="text-[10px] leading-snug text-content-subtle">
+                            {{ getErrorTypeDescription(detail.error_type) }}
+                          </p>
+                        </div>
                       </td>
                       <td class="p-2 align-top text-content-muted break-words">
                         {{ formatValue(detail.ground_truth_value) }}
@@ -416,7 +421,7 @@ const availablePanels = computed<PanelOption[]>(() => {
   if (hasOriginalContent.value) {
     panels.push({ key: 'source', label: 'Source', icon: FileText })
   }
-  panels.push({ key: 'comparison', label: 'GT vs Pred', icon: GitCompare })
+  panels.push({ key: 'comparison', label: 'Comparison', icon: GitCompare })
   panels.push({ key: 'output', label: 'Output', icon: Braces })
   if (reasoningContent.value) {
     panels.push({ key: 'reasoning', label: 'Reasoning', icon: MessageSquare })
@@ -458,10 +463,6 @@ const formatValue = (value: unknown): string => {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
-}
-
-const errorTooltip = (errorType: string | null | undefined): string => {
-  return `${getErrorTypeDescription(errorType)} — ${getErrorSuggestion(errorType)}`
 }
 
 // Reset panels + original-view toggle when switching documents. Source is

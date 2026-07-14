@@ -68,7 +68,7 @@
     <ConfirmationDialog
       :open="showRestoreConfirm"
       title="Restore archived version?"
-      message="This will create a new latest version with the same content as the selected archived version."
+      message="This makes the selected version the latest again. Nothing is reprocessed."
       confirm-text="Restore"
       cancel-text="Cancel"
       confirm-variant="primary"
@@ -86,6 +86,7 @@ import { useToast } from '@/composables/useToast'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useFileDownload } from '@/composables/useFileDownload'
+import { extractErrorMessage } from '@/utils/errors'
 import SplitPane from '@/components/common/SplitPane.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import DocumentFilePreview from './DocumentFilePreview.vue'
@@ -111,6 +112,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   reprocess: [payload: Partial<DocumentListItem>]
+  // Emitted after a true (no-reprocess) version restore, carrying the new latest
+  // document's id so the host can refresh its list.
+  restored: [documentId: number]
   'update-document': [version: DocumentListItem]
   'update:showVersionHistory': [value: boolean]
   // Notifies the host header of the real archived-version count once the
@@ -275,18 +279,26 @@ const restoreVersion = (version: DocumentListItem): void => {
   pendingRestoreVersion.value = version
   showRestoreConfirm.value = true
 }
-const confirmRestore = (): void => {
+const confirmRestore = async (): Promise<void> => {
   const version = pendingRestoreVersion.value
   showRestoreConfirm.value = false
   pendingRestoreVersion.value = null
   if (!version) return
 
   try {
-    emit('reprocess', { ...props.document, ...version })
-    toast.success('Version restoration initiated. The document will be reprocessed.')
+    // True restore: copy this version's content into a new latest version. No
+    // reprocessing — the restored text is exactly the archived version's text.
+    const { data } = await documentsApi.restoreVersion(props.projectId, version.id)
+    toast.success('Version restored')
+    // Refresh the version list, then show the freshly restored latest version.
+    await fetchVersions()
+    const newLatest = versions.value.find((v) => v.is_latest) || versions.value[0] || null
+    if (newLatest) selectVersion(newLatest)
+    // Let the host refresh its document list so the new latest is reflected there.
+    emit('restored', data.id)
   } catch (error) {
     console.error('Failed to restore version:', error)
-    toast.error('Failed to restore version')
+    toast.error(extractErrorMessage(error, 'Failed to restore version'))
   }
 }
 

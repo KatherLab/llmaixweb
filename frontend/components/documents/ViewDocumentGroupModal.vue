@@ -159,6 +159,7 @@
             :project-id="projectId"
             :open="true"
             @update-document="onUpdateDocument"
+            @restored="onDocumentRestored"
           />
           <div
             v-else-if="docLoading"
@@ -301,6 +302,13 @@ const fetchDocuments = async (): Promise<void> => {
   } finally {
     docLoading.value = false
   }
+}
+
+// A version was restored to a new latest (no reprocessing). Refresh the set's
+// documents so the rail reflects the new latest instead of the archived one.
+async function onDocumentRestored(newDocId: number): Promise<void> {
+  activeDocId.value = newDocId
+  await fetchDocuments()
 }
 
 const debouncedFetchDocuments = debounce(() => {

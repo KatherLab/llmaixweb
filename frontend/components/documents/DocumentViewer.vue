@@ -95,6 +95,7 @@
       :project-id="projectId"
       :open="open"
       @reprocess="(payload) => emit('reprocess', payload)"
+      @restored="(id) => emit('restored', id)"
       @update-document="(version) => emit('update-document', version)"
       @update:version-count="(count) => (versionCount = count)"
     />
@@ -133,6 +134,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   close: []
   reprocess: [payload: Partial<DocumentListItem>]
+  restored: [documentId: number]
   'update-document': [version: DocumentListItem]
   prev: []
   next: []

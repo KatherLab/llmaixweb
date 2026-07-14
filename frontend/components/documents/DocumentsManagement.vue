@@ -146,12 +146,13 @@
       :open="showDocumentViewer"
       :document="viewingDocument!"
       :project-id="projectId"
-      :index="viewerIndex"
-      :total="viewerTotal"
+      :index="viewerGlobalIndex"
+      :total="totalCount"
       :has-prev="viewerHasPrev"
       :has-next="viewerHasNext"
       @close="closeDocumentViewer"
       @reprocess="reprocessDocument"
+      @restored="handleVersionRestored"
       @prev="viewerPrev"
       @next="viewerNext"
     />
@@ -200,7 +201,12 @@ import ViewDocumentGroupModal from './ViewDocumentGroupModal.vue'
 import DocumentsFilters from './DocumentsFilters.vue'
 import DocumentsTable from './DocumentsTable.vue'
 import { extractErrorMessage } from '@/utils/errors'
-import type { DocumentListItem, DocumentSetCreate, DocumentSetSummary } from '@/types'
+import type {
+  DocumentListItem,
+  DocumentSetCreate,
+  DocumentSetSummary,
+  PreprocessingTaskCreate,
+} from '@/types'
 
 interface Props {
   projectId: string | number
@@ -357,6 +363,7 @@ const clearHighlightParam = (): void => {
 // rationale on closeGroupViewer).
 const closeDocumentViewer = (): void => {
   showDocumentViewer.value = false
+  pendingViewerSelect.value = null
   clearHighlightParam()
 }
 
@@ -471,6 +478,16 @@ const fetchDocuments = async (): Promise<void> => {
     // Mark that we've loaded documents at least once (for filter UX)
     hasLoadedDocuments.value = true
 
+    // If this fetch was triggered by viewer prev/next crossing a page boundary,
+    // land on the first/last document of the freshly loaded page.
+    if (pendingViewerSelect.value && showDocumentViewer.value && serverItems.value.length) {
+      viewingDocument.value =
+        pendingViewerSelect.value === 'first'
+          ? serverItems.value[0]!
+          : serverItems.value[serverItems.value.length - 1]!
+    }
+    pendingViewerSelect.value = null
+
     // Safety: if you navigated beyond last page due to a filter change, pull back
     if (
       serverItems.value.length === 0 &&
@@ -522,24 +539,42 @@ const viewDocument = (doc: DocumentListItem): void => {
   showDocumentViewer.value = true
 }
 
-// --- Document viewer prev/next (page-local within the current table page) ---
+// --- Document viewer prev/next ---
+// Nav is page-aware: moving past a page boundary loads the adjacent page and
+// selects its first/last document, so the counter can show the true corpus-wide
+// position (e.g. "51 / 320") instead of a page-local one that looks like the end.
 const viewerIndex = computed(() =>
   viewingDocument.value
     ? serverItems.value.findIndex((d) => d.id === viewingDocument.value!.id)
     : -1,
 )
-const viewerTotal = computed(() => serverItems.value.length)
-const viewerHasPrev = computed(() => viewerIndex.value > 0)
-const viewerHasNext = computed(
-  () => viewerIndex.value >= 0 && viewerIndex.value < serverItems.value.length - 1,
+// Global 0-based position across all pages (after filters).
+const viewerGlobalIndex = computed(() =>
+  viewerIndex.value < 0 ? -1 : (currentPage.value - 1) * itemsPerPage.value + viewerIndex.value,
 )
+const viewerHasPrev = computed(() => viewerGlobalIndex.value > 0)
+const viewerHasNext = computed(
+  () => viewerGlobalIndex.value >= 0 && viewerGlobalIndex.value < totalCount.value - 1,
+)
+// After a page load triggered by viewer nav, select this end of the new page.
+const pendingViewerSelect = ref<'first' | 'last' | null>(null)
 const viewerPrev = (): void => {
   const i = viewerIndex.value
-  if (i > 0) viewingDocument.value = serverItems.value[i - 1]!
+  if (i > 0) {
+    viewingDocument.value = serverItems.value[i - 1]!
+  } else if (currentPage.value > 1) {
+    pendingViewerSelect.value = 'last'
+    currentPage.value -= 1 // triggers fetchDocuments via watcher
+  }
 }
 const viewerNext = (): void => {
   const i = viewerIndex.value
-  if (i >= 0 && i < serverItems.value.length - 1) viewingDocument.value = serverItems.value[i + 1]!
+  if (i >= 0 && i < serverItems.value.length - 1) {
+    viewingDocument.value = serverItems.value[i + 1]!
+  } else if (currentPage.value < totalPages.value) {
+    pendingViewerSelect.value = 'first'
+    currentPage.value += 1 // triggers fetchDocuments via watcher
+  }
 }
 
 const downloadDocument = async (doc: DocumentListItem): Promise<void> => {
@@ -642,6 +677,14 @@ const handleGroupsRefresh = async (): Promise<void> => {
   await fetchDocuments()
 }
 
+// A version was restored (copied to a new latest, no reprocessing). Refresh the
+// list and, if the new latest is on the current page, focus it in the viewer.
+const handleVersionRestored = async (documentId: number): Promise<void> => {
+  await fetchDocuments()
+  const restored = serverItems.value.find((d) => d.id === documentId)
+  if (restored) viewingDocument.value = restored
+}
+
 const reprocessDocument = async (doc: Partial<DocumentListItem>): Promise<void> => {
   try {
     const fileId = doc.original_file?.id
@@ -650,11 +693,13 @@ const reprocessDocument = async (doc: Partial<DocumentListItem>): Promise<void> 
       toast.error('Original file id not found for this document!')
       return
     }
-    const payload = {
+    // Reuse the document's original OCR engine/settings so the reprocess doesn't
+    // silently fall back to defaults (which can change extraction results).
+    const payload: PreprocessingTaskCreate = {
       file_ids: [fileId],
       inline_config: {
         name: `Reprocess ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
-        additional_settings: {},
+        additional_settings: doc.preprocessing_config?.additional_settings ?? {},
       },
       force_reprocess: true,
     }

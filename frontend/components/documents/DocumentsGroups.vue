@@ -30,11 +30,11 @@
     >
       <Layers class="mx-auto h-12 w-12 text-content-subtle" />
       <h3 class="mt-2 text-sm font-medium text-content">No document groups</h3>
-      <p class="mt-1 text-sm text-content-muted">
+      <p class="mt-1 text-sm text-content-muted max-w-md mx-auto">
         {{
           searchQuery
             ? 'Try adjusting your search'
-            : 'Create your first group to organize documents'
+            : 'A group is a named set of documents you can run a trial against. Create one to run an extraction on a specific selection of documents.'
         }}
       </p>
     </div>
