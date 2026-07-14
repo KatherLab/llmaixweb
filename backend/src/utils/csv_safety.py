@@ -15,6 +15,8 @@ treat as "force text". Applied to every string cell we write to a CSV.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 _FORMULA_PREFIXES = ("=", "+", "-", "@")
 # Leading tab (\t) and carriage return (\r) can also trigger formula parsing.
 _RISKY_LEADING_WHITESPACE = ("\t", "\r")
@@ -35,7 +37,7 @@ def sanitize_csv_cell(value: object) -> object:
     return value
 
 
-def safe_csv_row(values: object) -> list:
+def safe_csv_row(values: Iterable[object]) -> list:
     """Map :func:`sanitize_csv_cell` over an iterable of cell values."""
     return [sanitize_csv_cell(v) for v in values]
 

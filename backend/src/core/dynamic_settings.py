@@ -17,7 +17,7 @@ except ImportError:
     _config_module_name = "backend.src.core.config"
 
 try:
-    from .session import SessionLocal
+    from ..db.session import SessionLocal
 except ImportError:
     from backend.src.db.session import SessionLocal
 
