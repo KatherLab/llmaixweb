@@ -49,7 +49,7 @@ dev = [
     # docling so the production image (`uv sync --no-dev`) doesn't ship ~1GB of
     # unused torch/opencv/scipy. torch/torchvision are declared explicitly so the
     # CPU-index pin in [tool.uv.sources] applies (avoids the huge CUDA build).
-    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.112.0",
+    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.113.0",
     "torch==2.13.0",
     "torchvision==0.28.0",
     "scipy==1.18.0",
