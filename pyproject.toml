@@ -12,7 +12,7 @@ dependencies = [
     "pydantic_settings==2.14.2",
     "openai==2.45.0",
     "bcrypt==5.0.0",
-    "boto3==1.43.46",
+    "boto3==1.43.48",
     "mistralai==2.6.0",
     "pypdf==6.14.2",
     "redis==8.0.1",
@@ -39,8 +39,8 @@ dev = [
     "ty==0.0.59",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "httpx2==2.5.0",
-    "boto3-stubs==1.43.46",
+    "httpx2==2.7.0",
+    "boto3-stubs==1.43.48",
     "pandas-stubs==3.0.3.260530",
     "celery-types==0.26.0",
     # Docling for local fallback during tests (when docling-serve unavailable).
@@ -49,7 +49,7 @@ dev = [
     # docling so the production image (`uv sync --no-dev`) doesn't ship ~1GB of
     # unused torch/opencv/scipy. torch/torchvision are declared explicitly so the
     # CPU-index pin in [tool.uv.sources] applies (avoids the huge CUDA build).
-    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.112.0",
+    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.113.0",
     "torch==2.13.0",
     "torchvision==0.28.0",
     "scipy==1.18.0",
