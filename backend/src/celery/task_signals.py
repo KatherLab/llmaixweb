@@ -356,7 +356,8 @@ def sweep_orphans():
             if parent:
                 _broadcast_preprocessing_update(parent, "failed")
 
-        # 4) fail stuck Trials. The extraction heartbeat bumps `updated_at` every
+        # 4) fail stuck Trials. The extraction heartbeat (run by both the Celery
+        # task and the synchronous bypass_celery path) bumps `updated_at` every
         # few seconds, so a PROCESSING trial whose `updated_at` is older than the
         # cutoff has a dead worker (crash / OOM / SIGKILL) — the top-level
         # try/except in extract_info_celery only catches exceptions, not a hard
@@ -482,9 +483,17 @@ def reclaim_orphaned_on_startup(role: str) -> str:
                     _broadcast_preprocessing_update(task, "failed")
 
         elif role == "default":
+            # Bypass trials run inside a FastAPI *web* process, not this worker —
+            # a worker restart says nothing about them, so reclaiming them here
+            # would false-fail a live synchronous trial. If the web process
+            # really died mid-trial, its heartbeat stops and the staleness
+            # sweeper finalizes the trial within ~2 sweep intervals.
             trials = (
                 db.query(models.Trial)
-                .filter(models.Trial.status == models.TrialStatus.PROCESSING)
+                .filter(
+                    models.Trial.status == models.TrialStatus.PROCESSING,
+                    models.Trial.bypass_celery.isnot(True),
+                )
                 .all()
             )
             for trial in trials:

@@ -12,14 +12,17 @@ import DOMPurify from 'dompurify'
 /**
  * Render a markdown string to sanitized HTML.
  * @param {string} text - Markdown source
- * @returns {string} Sanitized HTML (or the original text on failure)
+ * @returns {string} Sanitized HTML (or sanitized plain text on failure)
  */
 export const renderMarkdown = (text: string | null | undefined): string => {
   if (!text) return ''
   try {
     return DOMPurify.sanitize(marked.parse(text) as string)
   } catch {
-    return text
+    // Never return the raw string: every caller feeds this to v-html, so an
+    // unsanitized fallback would be an XSS escape hatch around DOMPurify
+    // whenever marked throws on adversarial LLM/OCR content.
+    return DOMPurify.sanitize(text)
   }
 }
 

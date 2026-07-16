@@ -125,8 +125,9 @@ def cascade_clear_document_references(
     db: Session, project_id: int, doc_ids: list[int]
 ) -> dict[str, int]:
     """Delete everything that would otherwise block deleting ``doc_ids``: whole
-    trials (with their evaluations/results), whole groups, and any residual
-    result/metric rows tied directly to those docs.
+    trials (with their evaluations/results), the docs' set memberships (and any
+    group left empty by that), and any residual result/metric rows tied directly
+    to those docs.
 
     Does **not** delete the documents themselves and does **not** commit — the
     caller deletes the documents (or their parent file) and owns the transaction.
@@ -144,6 +145,9 @@ def cascade_clear_document_references(
     trial_ids = [tid for tid, _, _ in trials_referencing_docs(db, project_id, doc_ids)]
     counts.update(cascade_delete_trials(db, trial_ids))
 
+    # Remove only the doomed docs' membership rows — deleting a whole group
+    # because one member is deleted would destroy user-curated sets. A group is
+    # deleted outright only when losing these members leaves it empty.
     set_ids = [
         row[0]
         for row in db.execute(
@@ -152,7 +156,25 @@ def cascade_clear_document_references(
             .distinct()
         ).all()
     ]
-    counts.update(cascade_delete_document_sets(db, set_ids))
+    if set_ids:
+        db.execute(
+            delete(document_set_association).where(
+                document_set_association.c.document_id.in_(doc_ids)
+            )
+        )
+        non_empty = {
+            row[0]
+            for row in db.execute(
+                select(document_set_association.c.document_set_id)
+                .where(document_set_association.c.document_set_id.in_(set_ids))
+                .distinct()
+            ).all()
+        }
+        counts.update(
+            cascade_delete_document_sets(
+                db, [sid for sid in set_ids if sid not in non_empty]
+            )
+        )
 
     db.execute(
         delete(models.EvaluationMetric).where(

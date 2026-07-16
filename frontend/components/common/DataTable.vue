@@ -5,8 +5,7 @@
       <div class="flex items-center justify-between">
         <p class="text-sm text-primary">
           <span class="font-medium">{{ totalSelected }}</span>
-          {{ itemLabelSingular }}
-          {{ totalSelected !== 1 ? 's' : '' }} selected
+          {{ totalSelected === 1 ? itemLabelSingular : itemLabel }} selected
           <span v-if="(totalSelected ?? 0) < (pagination?.total ?? 0)" class="text-primary">
             out of {{ pagination?.total }} total
           </span>

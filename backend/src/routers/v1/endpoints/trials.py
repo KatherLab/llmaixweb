@@ -237,6 +237,18 @@ def create_trial(
     if trial.bypass_celery and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admins may set bypass_celery")
 
+    # With Celery disabled there is no worker, no queue, and no sweeper — a
+    # non-bypass trial could only ever fail at dispatch. Refuse it up front
+    # with an explicit reason instead of committing a trial row that
+    # immediately dies with an opaque "could not queue" error.
+    if settings.DISABLE_CELERY and not trial.bypass_celery:
+        raise HTTPException(
+            status_code=503,
+            detail="Background processing is disabled on this server "
+            "(DISABLE_CELERY). Enable Celery, or run the trial with "
+            "bypass_celery (admins only).",
+        )
+
     # 4. Create trial object
     # Per-project sequence number (MAX+1) for the "Trial #N" display fallback.
     # Computed before the insert so the unique constraint
@@ -342,10 +354,43 @@ def create_trial(
     if trial.bypass_celery:
         # synchronous (debug)
         _record_egress("sync")
+        import threading
+
+        from ....db.session import db_session
         from ....utils.info_extraction import (
             extract_info_single_doc,
             update_trial_progress,
         )
+
+        # Heartbeat for the synchronous path. The Celery path bumps
+        # `updated_at` every few seconds; here progress only advances after
+        # each *document*, and a single LLM call (LLM_REQUEST_TIMEOUT_SECONDS,
+        # doubled on the length-retry) can outlast ORPHAN_STALE_SECONDS — the
+        # orphan sweeper would false-fail a live trial mid-call. A background
+        # tick keeps `updated_at` fresh so the sweeper's staleness contract
+        # holds for bypass trials too (and a dead web process stops ticking,
+        # so genuinely orphaned bypass trials still get swept).
+        stop_heartbeat = threading.Event()
+
+        def _sync_heartbeat(trial_id: int) -> None:
+            while not stop_heartbeat.wait(15):
+                try:
+                    with db_session() as hb_db:
+                        hb_trial = hb_db.get(models.Trial, trial_id)
+                        if (
+                            not hb_trial
+                            or hb_trial.status != models.TrialStatus.PROCESSING
+                        ):
+                            return
+                        hb_trial.updated_at = datetime.datetime.now(datetime.UTC)
+                        hb_db.commit()
+                except Exception:  # noqa: BLE001 — keep ticking on transient DB errors
+                    logger.debug("sync trial heartbeat tick failed", exc_info=True)
+
+        heartbeat = threading.Thread(
+            target=_sync_heartbeat, args=(trial_db.id,), daemon=True
+        )
+        heartbeat.start()
 
         try:
             for doc_id in document_ids:
@@ -365,6 +410,20 @@ def create_trial(
 
             trial_db.status = models.TrialStatus.COMPLETED
             trial_db.finished_at = datetime.datetime.now(datetime.UTC)
+            # Scrub phantom sweeper/reclaim failure markers: if the sweeper (or
+            # a worker-startup reclaim) wrongly declared this live trial dead
+            # mid-run, the marker would otherwise survive the COMPLETED commit
+            # as a permanent "has failures" flag.
+            failures = dict((trial_db.meta or {}).get("failures") or {})
+            had_sweeper = failures.pop("_sweeper", None) is not None
+            had_restart = failures.pop("_restart", None) is not None
+            if had_sweeper or had_restart:
+                meta = dict(trial_db.meta or {})
+                if failures:
+                    meta["failures"] = failures
+                else:
+                    meta.pop("failures", None)
+                trial_db.meta = meta
             db.commit()
         except Exception:
             # Without this the trial stays stuck in PROCESSING forever after a
@@ -384,6 +443,8 @@ def create_trial(
                 }
                 db.commit()
             raise
+        finally:
+            stop_heartbeat.set()
     else:
         # The api_key is NOT passed through the broker: it is stored encrypted
         # on the Trial row (api_key_encrypted) and decrypted inside the task.

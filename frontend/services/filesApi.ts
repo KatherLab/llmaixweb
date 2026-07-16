@@ -43,6 +43,15 @@ export interface IdColumnValidation {
   duplicates: IdColumnDuplicate[]
 }
 
+/** Response of `POST /file/batch-delete`. */
+export interface FileBatchDeleteResult {
+  deleted: number[]
+  /** `error` is the backend HTTPException detail: a string or `{ message, links }`. */
+  errors: { file_id: number; error?: unknown; error_id?: string }[]
+  total_deleted: number
+  total_errors: number
+}
+
 export const filesApi = {
   list(projectId: number | string, params: FileFilter = {}) {
     return api.get(`/project/${projectId}/file`, {
@@ -58,6 +67,14 @@ export const filesApi = {
     return api.delete(`/project/${projectId}/file/${fileId}`, {
       params: cascade ? { force: true } : undefined,
     }) as Promise<ApiBody<unknown>>
+  },
+  // Bulk delete (up to 200 ids per call — callers chunk larger selections).
+  // `force` maps to cascade: also delete produced documents + downstream.
+  batchDelete(projectId: number | string, fileIds: number[], force = false) {
+    return api.post(`/project/${projectId}/file/batch-delete`, {
+      file_ids: fileIds,
+      force,
+    }) as Promise<ApiBody<FileBatchDeleteResult>>
   },
   // Preview what a cascade delete of these files would also remove.
   checkDependencies(projectId: number | string, fileIds: number[]) {

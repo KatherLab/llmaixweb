@@ -611,8 +611,6 @@ def _validate_id_column(file: models.File, metadata: dict) -> dict:
     Returns a structured result describing any duplicates so the client can tell
     the user exactly which IDs collide (and block saving) before preprocessing.
     """
-    import pandas as pd
-
     case_id_column = metadata.get("case_id_column")
 
     # Nothing to validate: full-document imports or "(row number)" IDs are
@@ -643,25 +641,33 @@ def _validate_id_column(file: models.File, metadata: dict) -> dict:
             "case_id_column": case_id_column,
         }
 
+    from ....utils.json_utils import case_id_str
+
     col = df[case_id_column]
-    counts = col.value_counts(dropna=False)
-    duplicated = counts[counts > 1]
-
     duplicates = []
-    for value, count in duplicated.items():
-        is_empty = bool(pd.isna(value)) or (
-            isinstance(value, str) and value.strip() == ""
-        )
-        duplicates.append(
-            {
-                "value": "" if pd.isna(value) else str(value),
-                "count": int(count),
-                "is_empty": is_empty,
-            }
-        )
 
-    # Rows that share a non-unique ID (for a concise summary in the UI).
-    duplicate_rows = int(duplicated.sum())
+    # Mirror the pipeline's checks (_check_duplicate_case_ids) exactly —
+    # otherwise this validation passes and preprocessing then fails with the
+    # very error it exists to prevent.
+    #
+    # 1) The pipeline rejects ANY empty/NaN ID (they'd become documents named
+    #    "nan"), so even a single empty cell must fail validation here.
+    empty_mask = col.isna() | col.astype(str).str.strip().eq("")
+    empty_count = int(empty_mask.sum())
+    if empty_count:
+        duplicates.append({"value": "", "count": empty_count, "is_empty": True})
+
+    # 2) Duplicates are detected on the same normalized strings that become
+    #    document names (whitespace-trimmed, whole-number floats as ints), so
+    #    "A " vs "A" or 1 vs "1.0" collide here exactly as they would there.
+    normalized = col[~empty_mask].map(case_id_str)
+    counts = normalized.value_counts()
+    duplicated = counts[counts > 1]
+    for value, count in duplicated.items():
+        duplicates.append({"value": str(value), "count": int(count), "is_empty": False})
+
+    # Rows affected (empty IDs + rows sharing a non-unique ID) for the UI summary.
+    duplicate_rows = empty_count + int(duplicated.sum())
 
     return {
         "is_valid": len(duplicates) == 0,
@@ -1267,6 +1273,14 @@ def delete_file(
             for d in (*file.documents_as_original, *file.documents_as_preprocessed)
             if d.preprocessed_file_id and d.preprocessed_file_id != file_id
         }
+        # Delete the doomed documents explicitly. The file-task delete-orphan
+        # cascade below only reaches documents attached to THIS file's file
+        # tasks — for a system-generated preprocessed file (whose documents hang
+        # off the *original* file's tasks) and for task-less documents (e.g.
+        # moved between projects) it never fires, so the references cleared
+        # above would be gone while the documents themselves survived.
+        for doomed in {*file.documents_as_original, *file.documents_as_preprocessed}:
+            db.delete(doomed)
 
     # Remove the file's (terminal) preprocessing-task rows first:
     # file_preprocessing_tasks.file_id is a plain FK with no ON DELETE, so these

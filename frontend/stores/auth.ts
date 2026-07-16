@@ -1,6 +1,7 @@
 // src/stores/auth.ts
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { isAxiosError } from 'axios'
 import { api } from '@/services/api'
 import { authApi } from '@/services/authApi'
 import { usersApi } from '@/services/usersApi'
@@ -40,8 +41,10 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         await fetchUser()
       } catch (error) {
-        console.error('Failed to fetch user during init:', error)
-        await logout()
+        // Transient failure (network error, backend restarting, 5xx):
+        // fetchUser kept the tokens. Leave isInitialized false so the next
+        // navigation retries, instead of destroying a valid session.
+        console.error('Failed to fetch user during init (will retry):', error)
         return false
       }
     }
@@ -88,9 +91,18 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = response.data
       return true
     } catch (error) {
-      console.error('Failed to fetch user:', (error as Error)?.message || error)
-      await logout()
-      return false
+      // Only an actual auth rejection invalidates the session. (A 401 has
+      // already been through the interceptor's silent-refresh retry by the
+      // time it reaches here.) Logging out on a network error or 5xx — e.g.
+      // reloading the app while the backend restarts — would destroy a valid
+      // session AND revoke the refresh token server-side.
+      const status = isAxiosError(error) ? error.response?.status : undefined
+      if (status === 401 || status === 403) {
+        console.error('Session rejected, logging out:', (error as Error)?.message || error)
+        await logout()
+        return false
+      }
+      throw error
     }
   }
 

@@ -656,6 +656,17 @@ async def preprocess_project_data(
             bypass_celery = inline_cfg.get("bypass_celery", False)
     if bypass_celery and current_user.role != "admin":
         raise HTTPException(403, "Only admins may set bypass_celery")
+    # With Celery disabled there is no worker, no queue, and no sweeper — a
+    # non-bypass submission could only ever fail at dispatch. Refuse it up
+    # front with an explicit reason instead of creating task rows that
+    # immediately die with an opaque "could not queue" error.
+    if settings.DISABLE_CELERY and not bypass_celery:
+        raise HTTPException(
+            status_code=503,
+            detail="Background processing is disabled on this server "
+            "(DISABLE_CELERY). Enable Celery, or run with bypass_celery "
+            "(admins only).",
+        )
 
     # Create preprocessing task
     task = models.PreprocessingTask(
@@ -1071,6 +1082,18 @@ def retry_failed_files(
         raise HTTPException(status_code=400, detail="No failed files to retry")
 
     # Create new task with same configuration. Carry over custom OCR
+    # With Celery disabled a retry could only die at dispatch — refuse up front
+    # (same guard as the main preprocess endpoint) before creating any rows.
+    from ....core.dynamic_settings import get_settings
+
+    if get_settings().DISABLE_CELERY:
+        raise HTTPException(
+            status_code=503,
+            detail="Background processing is disabled on this server "
+            "(DISABLE_CELERY), so failed files cannot be retried. "
+            "Enable Celery, or start a new run with bypass_celery (admins only).",
+        )
+
     # credentials (encrypted key + api_base_url metadata) so a retry of a
     # custom-API run doesn't silently fall back to the default backend.
     new_task = models.PreprocessingTask(

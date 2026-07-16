@@ -1,5 +1,12 @@
 <template>
-  <BaseModal :open="open" size="lg" @close="$emit('close')">
+  <BaseModal
+    :open="open"
+    size="lg"
+    :closeable="!isProcessing"
+    :close-on-backdrop="!isProcessing"
+    :close-on-esc="!isProcessing"
+    @close="requestClose"
+  >
     <template #header>
       <div>
         <h3 class="text-lg font-semibold text-content">
@@ -62,6 +69,11 @@
           <span class="ml-2 text-sm text-content-muted">{{ cascadeLabel }}</span>
         </label>
         <p v-if="loadingDeps" class="mt-2 text-xs text-content-subtle">Checking usage…</p>
+        <p v-else-if="depsPreviewUnavailable" class="mt-2 text-xs text-content-muted">
+          Usage preview is unavailable for selections over
+          {{ DEPS_PREVIEW_LIMIT.toLocaleString() }} {{ entityLabel }}s — the option above still
+          applies to the whole selection.
+        </p>
         <p v-else-if="cascadeDelete && dependencyImpact" class="mt-2 text-xs text-red-600">
           This will also delete {{ dependencyImpact }}.
         </p>
@@ -90,7 +102,16 @@
     </div>
 
     <template #footer>
-      <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
+      <p
+        v-if="isProcessing && progress"
+        class="mr-auto self-center text-sm text-content-muted"
+        role="status"
+      >
+        Deleting {{ progress.done.toLocaleString() }} of {{ progress.total.toLocaleString() }}…
+      </p>
+      <BaseButton variant="secondary" :disabled="isProcessing" @click="requestClose">
+        Cancel
+      </BaseButton>
       <BaseButton
         :variant="action === 'delete' ? 'danger' : 'primary'"
         :disabled="!canPerformAction"
@@ -146,25 +167,48 @@ const includeMetadata = ref<boolean>(true)
 const includePreprocessingInfo = ref<boolean>(true)
 const confirmDelete = ref<boolean>(false)
 const isProcessing = ref<boolean>(false)
+// Live progress while a delete batch runs ("Deleting X of Y…").
+const progress = ref<{ done: number; total: number } | null>(null)
 
 // Cascade-delete state (documents & files modes)
 const cascadeDelete = ref<boolean>(false)
 const dependencies = ref<DocumentDependencies | FileDependencies | null>(null)
 const loadingDeps = ref<boolean>(false)
+// The dependency-preview endpoints cap the id list; past that we skip the call
+// and say so instead of silently swallowing a 422.
+const DEPS_PREVIEW_LIMIT = 1000
+const depsPreviewUnavailable = computed(
+  () => props.action === 'delete' && props.documents.length > DEPS_PREVIEW_LIMIT,
+)
+
+// The backend batch endpoint caps ids per call; larger selections are chunked.
+const BATCH_DELETE_CHUNK = 200
 
 // Only documents and files fan out to trials/groups/evaluations; trials don't.
 const supportsCascade = computed(() => props.mode === 'documents' || props.mode === 'files')
 
-// Fetch the cascade impact preview whenever the delete modal opens for a
-// cascade-capable resource.
+// While a delete batch is running the modal must not be dismissable — the
+// requests would keep running invisibly behind a refetching parent.
+const requestClose = (): void => {
+  if (isProcessing.value) return
+  emit('close')
+}
+
+// Reset per-open state and fetch the cascade impact preview whenever the
+// delete modal opens for a cascade-capable resource.
 watch(
   () => props.open,
   async (isOpen) => {
-    if (!isOpen || props.action !== 'delete' || !supportsCascade.value) return
-    // Reset per-open state
+    if (!isOpen) return
+    // Reset per-open state — otherwise the permanent-action confirmation (and
+    // force-reprocess) stays armed from the previous use of this modal.
+    confirmDelete.value = false
+    forceReprocess.value = false
+    progress.value = null
     cascadeDelete.value = false
     dependencies.value = null
-    if (props.documents.length === 0) return
+    if (props.action !== 'delete' || !supportsCascade.value) return
+    if (props.documents.length === 0 || depsPreviewUnavailable.value) return
     loadingDeps.value = true
     try {
       const { data } =
@@ -191,7 +235,8 @@ const dependencyImpact = computed<string>(() => {
   // Files delete their produced documents too; show that first.
   if ('documents' in d && d.documents) parts.push(plural(d.documents, 'document'))
   if (d.trials.count) parts.push(plural(d.trials.count, 'trial'))
-  if (d.document_sets.count) parts.push(plural(d.document_sets.count, 'group'))
+  // Groups lose the deleted documents (and are removed only if left empty).
+  if (d.document_sets.count) parts.push(plural(d.document_sets.count, 'group membership'))
   if (d.trial_results) parts.push(plural(d.trial_results, 'extraction result'))
   if (d.evaluation_metrics) parts.push(plural(d.evaluation_metrics, 'evaluation metric'))
   return parts.join(', ')
@@ -206,8 +251,8 @@ const entityLabel = computed(() => {
 
 const cascadeLabel = computed(() =>
   props.mode === 'files'
-    ? 'Also delete produced documents and their trials, groups, and extraction results'
-    : 'Also delete related trials, groups, and extraction results',
+    ? 'Also delete produced documents and their trials and extraction results, and remove them from groups'
+    : 'Also delete related trials and extraction results, and remove the documents from groups',
 )
 
 const deleteWarningText = computed(() => {
@@ -355,27 +400,65 @@ interface FailedDoc {
   error: string
 }
 
+// Normalize a batch-endpoint error entry (string or `{ message, links }`) to text.
+const batchErrorText = (err: unknown, fallback: string): string => {
+  if (typeof err === 'string') return err
+  if (err && typeof err === 'object' && 'message' in err) {
+    return String((err as { message: unknown }).message)
+  }
+  return fallback
+}
+
 const deleteDocuments = async (): Promise<number[]> => {
   const failedDocs: FailedDoc[] = []
   const successDocs: number[] = []
   const useCascade = supportsCascade.value && cascadeDelete.value
   const label = entityLabel.value
+  progress.value = { done: 0, total: props.documents.length }
 
-  for (const docId of props.documents) {
-    try {
-      if (props.mode === 'trials') {
-        await trialsApi.delete(props.projectId, docId)
-      } else if (props.mode === 'files') {
-        await filesApi.delete(props.projectId, docId, useCascade)
-      } else {
-        await documentsApi.delete(props.projectId, docId, useCascade)
+  if (props.mode === 'files') {
+    // Files use the batch endpoint (one request per 200 ids) — select-all can
+    // hold tens of thousands of ids, and one DELETE per file doesn't scale.
+    for (let i = 0; i < props.documents.length; i += BATCH_DELETE_CHUNK) {
+      const chunk = props.documents.slice(i, i + BATCH_DELETE_CHUNK)
+      try {
+        const { data } = await filesApi.batchDelete(props.projectId, chunk, useCascade)
+        successDocs.push(...data.deleted)
+        for (const err of data.errors) {
+          failedDocs.push({
+            docId: err.file_id,
+            error: batchErrorText(err.error, `Failed to delete ${label}`),
+          })
+        }
+      } catch (error) {
+        // Whole-chunk failure (network, 4xx before any delete ran).
+        const message = extractErrorMessage(error, `Failed to delete ${label}s`)
+        failedDocs.push(...chunk.map((docId) => ({ docId, error: message })))
       }
-      successDocs.push(docId)
-    } catch (error) {
-      failedDocs.push({
-        docId,
-        error: extractErrorMessage(error, `Failed to delete ${label}`),
-      })
+      progress.value = {
+        done: Math.min(i + chunk.length, props.documents.length),
+        total: props.documents.length,
+      }
+    }
+  } else {
+    for (const docId of props.documents) {
+      try {
+        if (props.mode === 'trials') {
+          await trialsApi.delete(props.projectId, docId)
+        } else {
+          await documentsApi.delete(props.projectId, docId, useCascade)
+        }
+        successDocs.push(docId)
+      } catch (error) {
+        failedDocs.push({
+          docId,
+          error: extractErrorMessage(error, `Failed to delete ${label}`),
+        })
+      }
+      progress.value = {
+        done: progress.value ? progress.value.done + 1 : 1,
+        total: props.documents.length,
+      }
     }
   }
 

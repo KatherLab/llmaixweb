@@ -380,16 +380,23 @@ def test_force_reprocess_blocked_by_trial_result(client, api_url, monkeypatch):
     client.delete(f"{api_url}/project/{project_id}", headers=headers)
 
 
-def test_celery_trial_dispatch_failure_marks_failed_not_stuck(client, api_url):
+def test_celery_trial_dispatch_failure_marks_failed_not_stuck(
+    client, api_url, monkeypatch
+):
     """A non-bypass trial whose Celery dispatch fails must end FAILED, not stuck.
 
-    The test env runs DISABLE_CELERY=True, so importing/dispatching the Celery
-    task raises → the create endpoint's dispatch guard must mark the trial FAILED
-    and return 503. Without the guard the trial would sit in the queued state
-    forever (the sweeper only reaps PROCESSING trials, and a queued trial is
-    intentionally PENDING to stay out of the sweeper).
+    The test env runs DISABLE_CELERY=True, which now fails fast at submission —
+    so the runtime flag is flipped off to get past that guard; importing the
+    Celery task then still raises (the module was loaded with Celery disabled),
+    exactly like a broker/dispatch error → the create endpoint's dispatch guard
+    must mark the trial FAILED and return 503. Without the guard the trial would
+    sit in the queued state forever (the sweeper only reaps PROCESSING trials,
+    and a queued trial is intentionally PENDING to stay out of the sweeper).
     """
+    from ..src.core import config
+
     headers = _admin_headers(client, api_url)
+    monkeypatch.setattr(config._get_settings(), "DISABLE_CELERY", False)
 
     project_id = client.post(
         f"{api_url}/project", headers=headers, json={"name": "Trial Dispatch Fail"}
@@ -472,5 +479,29 @@ def test_celery_trial_dispatch_failure_marks_failed_not_stuck(client, api_url):
     ).json()["items"]
     assert len(trials) == 1
     assert trials[0]["status"] == "failed"
+
+    # With DISABLE_CELERY back on (monkeypatch scope ends at test end, but the
+    # flag is still off here — flip it back explicitly for this check), a
+    # non-bypass trial is refused up front without creating a row.
+    monkeypatch.setattr(config._get_settings(), "DISABLE_CELERY", True)
+    resp = client.post(
+        f"{api_url}/project/{project_id}/trial",
+        headers=headers,
+        json={
+            "schema_id": schema_id,
+            "prompt_id": prompt_id,
+            "document_ids": [document_id],
+            "bypass_celery": False,
+            "llm_model": "mock",
+            "api_key": "k",
+            "base_url": "http://localhost:11434/v1",
+        },
+    )
+    assert resp.status_code == 503, resp.text
+    assert "disabled" in resp.json()["detail"].lower()
+    trials = client.get(
+        f"{api_url}/project/{project_id}/trial", headers=headers
+    ).json()["items"]
+    assert len(trials) == 1  # still only the earlier dispatch-failure trial
 
     client.delete(f"{api_url}/project/{project_id}", headers=headers)

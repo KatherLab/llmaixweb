@@ -76,6 +76,13 @@ import { computed, ref, watch, onMounted, onUnmounted, nextTick, useId } from 'v
 import { X } from '@lucide/vue'
 import { useScrollLock } from '@/composables/useScrollLock'
 
+// Shared stack of currently-open modals (drawers/dialogs/confirms all build on
+// BaseModal). Every instance listens on `window`, so without the stack one
+// Escape press would close EVERY open layer at once, and the focus traps of
+// stacked dialogs would fight each other (making the top dialog impossible to
+// Tab through). Only the top-most modal handles Escape and traps Tab.
+const modalStack: symbol[] = []
+
 interface Props {
   open: boolean
   title?: string
@@ -112,6 +119,18 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 const panelRef = ref<HTMLElement | null>(null)
 const titleId = useId()
 
+// Identify this instance on the shared modal stack (see below).
+const stackId = Symbol('BaseModal')
+
+function isTopModal(): boolean {
+  return modalStack[modalStack.length - 1] === stackId
+}
+
+function removeFromStack(): void {
+  const i = modalStack.indexOf(stackId)
+  if (i !== -1) modalStack.splice(i, 1)
+}
+
 const transitionName = computed(() =>
   props.placement === 'right'
     ? 'base-drawer-slide'
@@ -144,12 +163,15 @@ function onBackdropClick() {
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape' && props.open && props.closeOnEsc) {
+  // Only the top-most open modal reacts to the keyboard — a lower layer
+  // handling Escape/Tab would close or steal focus from the dialog above it.
+  if (!props.open || !isTopModal()) return
+  if (e.key === 'Escape' && props.closeOnEsc) {
     emit('close')
     return
   }
   // Focus trap: keep Tab (and Shift+Tab) cycling within the dialog while open.
-  if (e.key === 'Tab' && props.open && panelRef.value) {
+  if (e.key === 'Tab' && panelRef.value) {
     const focusable = panelRef.value.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
     )
@@ -180,6 +202,7 @@ watch(
   () => props.open,
   (isOpen) => {
     if (isOpen) {
+      modalStack.push(stackId)
       previouslyFocused = document.activeElement as HTMLElement | null
       nextTick(() => {
         // Focus the panel (or first focusable element) for keyboard users.
@@ -189,6 +212,7 @@ watch(
         ;(focusable ?? panelRef.value)?.focus?.()
       })
     } else {
+      removeFromStack()
       previouslyFocused?.focus?.()
       previouslyFocused = null
     }
@@ -197,10 +221,13 @@ watch(
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
+  // Components mounted with `open` already true never fire the watcher above.
+  if (props.open) modalStack.push(stackId)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
+  removeFromStack()
 })
 </script>
 

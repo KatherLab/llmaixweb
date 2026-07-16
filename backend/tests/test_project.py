@@ -771,6 +771,54 @@ def test_validate_id_column_detects_duplicates(client, api_url):
     assert response.status_code == 200
 
 
+def test_id_column_validation_matches_pipeline_normalization(client, api_url):
+    """Validation must apply the same ID normalization as the pipeline:
+    values differing only in whitespace collide, and even a single empty ID
+    is invalid — otherwise validation passes and preprocessing then fails."""
+    import json
+
+    user_data = {"username": "admin@example.com", "password": "Adminpassword1"}
+    response = client.post(f"{api_url}/auth/login", data=user_data)
+    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    project_id = client.post(
+        f"{api_url}/project",
+        headers=headers,
+        json={"name": "ID Normalization Project", "description": "x"},
+    ).json()["id"]
+
+    def _upload_and_validate(name: str, csv_content: str) -> dict:
+        resp = client.post(
+            f"{api_url}/project/{project_id}/file",
+            headers=headers,
+            files={"file": (name, csv_content.encode(), "text/csv")},
+            data={
+                "file_info": json.dumps({"file_name": name, "file_type": "text/csv"})
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        resp = client.post(
+            f"{api_url}/project/{project_id}/file/{resp.json()['id']}/validate-id-column",
+            headers=headers,
+            json={"case_id_column": "id", "has_header": True, "delimiter": ","},
+        )
+        assert resp.status_code == 200, resp.text
+        return resp.json()
+
+    # "A" vs "A " differ only in trailing whitespace — the pipeline trims both
+    # to the same document name, so validation must flag the collision.
+    result = _upload_and_validate("ws.csv", 'id,report\nA,First\n"A ",Second\n')
+    assert result["is_valid"] is False
+    assert any(d["value"] == "A" and d["count"] == 2 for d in result["duplicates"])
+
+    # A single empty ID cell is a hard error in the pipeline → invalid here.
+    result = _upload_and_validate("empty.csv", "id,report\nA,First\n,Second\n")
+    assert result["is_valid"] is False
+    assert any(d["is_empty"] and d["count"] == 1 for d in result["duplicates"])
+
+    client.delete(f"{api_url}/project/{project_id}", headers=headers)
+
+
 # Test auto-generated document set for row-by-row preprocessing
 def test_row_by_row_document_set_auto_generation(client, api_url):
     """Test that row-by-row preprocessing automatically creates a DocumentSet."""
@@ -3799,5 +3847,240 @@ def test_file_cascade_delete(client, api_url):
             ).first()
             is None
         )
+    finally:
+        db.close()
+
+
+def test_preprocessed_file_force_delete_removes_documents(client, api_url):
+    """Force-deleting a system-generated *preprocessed* file must delete the
+    documents referencing it — not just their trials/evaluations. Regression:
+    the delete-orphan cascade only reaches documents via the ORIGINAL file's
+    file tasks, so preprocessed-file force deletes wiped the downstream trials
+    while leaving the documents alive."""
+    import uuid
+
+    from sqlalchemy import select
+
+    from backend.src.db.session import SessionLocal
+    from backend.src.models.project import Document, File, Trial, TrialResult
+    from backend.src.utils.enums import FileCreator
+
+    resp = client.post(
+        f"{api_url}/auth/login",
+        data={"username": "admin@example.com", "password": "Adminpassword1"},
+    )
+    headers = {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+    pid = client.post(
+        f"{api_url}/project", headers=headers, json={"name": "PreprocDelProj"}
+    ).json()["id"]
+    prompt_id = client.post(
+        f"{api_url}/project/{pid}/prompt",
+        headers=headers,
+        json={
+            "name": "P",
+            "system_prompt": "SP {document_content}",
+            "user_prompt": "UP {document_content}",
+            "project_id": pid,
+        },
+    ).json()["id"]
+    schema_id = client.post(
+        f"{api_url}/project/{pid}/schema",
+        headers=headers,
+        json={
+            "schema_name": "S",
+            "schema_definition": {
+                "type": "object",
+                "properties": {"val": {"type": "string"}},
+            },
+        },
+    ).json()["id"]
+    file_id = client.post(
+        f"{api_url}/project/{pid}/file",
+        headers=headers,
+        files={
+            "file": ("pfdel.txt", b"some text", "text/plain"),
+            "file_info": (
+                "",
+                '{"file_name": "pfdel.txt", "file_type": "text/plain"}',
+                "application/json",
+            ),
+        },
+    ).json()["id"]
+    assert (
+        client.post(
+            f"{api_url}/project/{pid}/preprocess",
+            headers=headers,
+            json={
+                "file_ids": [file_id],
+                "inline_config": {"name": "Cfg", "description": "d"},
+                "bypass_celery": True,
+            },
+        ).status_code
+        == 200
+    )
+    doc_id = client.get(f"{api_url}/project/{pid}/document", headers=headers).json()[
+        "items"
+    ][0]["id"]
+
+    # Attach a system-generated preprocessed file to the document (as OCR would).
+    db = SessionLocal()
+    try:
+        pf = File(
+            project_id=pid,
+            file_uuid=uuid.uuid4().hex,
+            file_name="preprocessed.txt",
+            file_creator=FileCreator.system,
+        )
+        db.add(pf)
+        db.flush()
+        preprocessed_file_id = pf.id
+        db.get(Document, doc_id).preprocessed_file_id = preprocessed_file_id
+        db.commit()
+    finally:
+        db.close()
+
+    seeded = _seed_doc_with_dependencies(pid, doc_id, schema_id, prompt_id)
+
+    # Deleting the PREPROCESSED file without force is blocked (it has a linked doc).
+    assert (
+        client.delete(
+            f"{api_url}/project/{pid}/file/{preprocessed_file_id}", headers=headers
+        ).status_code
+        == 409
+    )
+
+    # Force delete must remove the documents together with their dependents.
+    assert (
+        client.delete(
+            f"{api_url}/project/{pid}/file/{preprocessed_file_id}?force=true",
+            headers=headers,
+        ).status_code
+        == 200
+    )
+
+    db = SessionLocal()
+    try:
+        assert db.get(File, preprocessed_file_id) is None
+        assert db.get(Document, doc_id) is None, (
+            "document must not survive its trials/evaluations"
+        )
+        assert db.get(Trial, seeded["trial_id"]) is None
+        assert (
+            db.execute(
+                select(TrialResult).where(TrialResult.document_id == doc_id)
+            ).first()
+            is None
+        )
+        # The original (user-uploaded) file is untouched.
+        assert db.get(File, file_id) is not None
+    finally:
+        db.close()
+
+
+def test_cascade_delete_keeps_shared_document_sets(client, api_url):
+    """Cascade-deleting one document removes it FROM its groups; a group with
+    other members survives, only a group left empty is deleted."""
+    from backend.src.db.session import SessionLocal
+    from backend.src.models.project import DocumentSet
+
+    resp = client.post(
+        f"{api_url}/auth/login",
+        data={"username": "admin@example.com", "password": "Adminpassword1"},
+    )
+    headers = {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+    pid = client.post(
+        f"{api_url}/project", headers=headers, json={"name": "SetSurvivesProj"}
+    ).json()["id"]
+    prompt_id = client.post(
+        f"{api_url}/project/{pid}/prompt",
+        headers=headers,
+        json={
+            "name": "P",
+            "system_prompt": "SP {document_content}",
+            "user_prompt": "UP {document_content}",
+            "project_id": pid,
+        },
+    ).json()["id"]
+    schema_id = client.post(
+        f"{api_url}/project/{pid}/schema",
+        headers=headers,
+        json={
+            "schema_name": "S",
+            "schema_definition": {
+                "type": "object",
+                "properties": {"val": {"type": "string"}},
+            },
+        },
+    ).json()["id"]
+
+    file_ids = []
+    for name in ("setdoc1.txt", "setdoc2.txt"):
+        file_ids.append(
+            client.post(
+                f"{api_url}/project/{pid}/file",
+                headers=headers,
+                files={
+                    "file": (name, f"text of {name}".encode(), "text/plain"),
+                    "file_info": (
+                        "",
+                        f'{{"file_name": "{name}", "file_type": "text/plain"}}',
+                        "application/json",
+                    ),
+                },
+            ).json()["id"]
+        )
+    assert (
+        client.post(
+            f"{api_url}/project/{pid}/preprocess",
+            headers=headers,
+            json={
+                "file_ids": file_ids,
+                "inline_config": {"name": "Cfg", "description": "d"},
+                "bypass_celery": True,
+            },
+        ).status_code
+        == 200
+    )
+    doc_ids = [
+        d["id"]
+        for d in client.get(
+            f"{api_url}/project/{pid}/document", headers=headers
+        ).json()["items"]
+    ]
+    assert len(doc_ids) == 2
+    doomed_id, survivor_id = doc_ids
+
+    # A shared group with both docs, and a solo group with only the doomed doc.
+    shared_set_id = client.post(
+        f"{api_url}/project/{pid}/document-set",
+        headers=headers,
+        json={"name": "SharedGrp", "document_ids": doc_ids},
+    ).json()["id"]
+    solo_set_id = client.post(
+        f"{api_url}/project/{pid}/document-set",
+        headers=headers,
+        json={"name": "SoloGrp", "document_ids": [doomed_id]},
+    ).json()["id"]
+
+    _seed_doc_with_dependencies(pid, doomed_id, schema_id, prompt_id)
+
+    assert (
+        client.delete(
+            f"{api_url}/project/{pid}/document/{doomed_id}?cascade=true",
+            headers=headers,
+        ).status_code
+        == 200
+    )
+
+    db = SessionLocal()
+    try:
+        # Shared group survives with only the surviving member.
+        shared = db.get(DocumentSet, shared_set_id)
+        assert shared is not None
+        assert [d.id for d in shared.documents] == [survivor_id]
+        # The group left empty is deleted.
+        assert db.get(DocumentSet, solo_set_id) is None
     finally:
         db.close()

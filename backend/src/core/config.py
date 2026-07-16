@@ -998,9 +998,12 @@ SETTINGS_META = {
         "label": "Log Format",
         "help": "Log output format: 'text' (human-readable) or 'json' (structured for a SIEM). Applied at process startup.",
     },
-    # NOTE: DISABLE_CELERY is intentionally NOT exposed here. It runs tasks
-    # synchronously in-process (test/dev only) and is dangerous in production,
-    # so it is configurable via environment variable only — never the UI.
+    # NOTE: DISABLE_CELERY is intentionally NOT exposed here. It disables
+    # background processing entirely (no workers, no queue, no sweeper):
+    # non-bypass preprocessing/trial submissions are refused with a 503, and
+    # only the admin-only bypass_celery paths run (synchronously, in-process).
+    # Test/dev only and dangerous in production, so it is configurable via
+    # environment variable only — never the UI.
     "EMAIL_ENABLED": {
         "type": "bool",
         "secret": False,

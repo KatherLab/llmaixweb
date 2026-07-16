@@ -2146,7 +2146,14 @@ class PreprocessingPipeline:
                     ).encode("utf-8")
                     df = pd.read_csv(io.BytesIO(file_content_str), encoding="utf-8")
             else:
-                df = self._read_excel(file, file_content)
+                # Honor the sheet chosen in the import config — validation and
+                # preview read it, so the pipeline must too (defaulting to the
+                # first sheet would silently process different data than the
+                # user validated).
+                sheet = (file.file_metadata or {}).get("sheet")
+                df = self._read_excel(
+                    file, file_content, sheet_name=sheet if sheet else 0
+                )
 
             # Check row limit
             if len(df) > self.MAX_ROWS_PER_FILE:
@@ -2225,8 +2232,13 @@ class PreprocessingPipeline:
                         header=0 if has_header else None,
                     )
             else:
+                # Same sheet the import config was validated/previewed against.
+                sheet = file_metadata.get("sheet")
                 df = self._read_excel(
-                    file, file_content, header=0 if has_header else None
+                    file,
+                    file_content,
+                    header=0 if has_header else None,
+                    sheet_name=sheet if sheet else 0,
                 )
 
             # Check row limit
