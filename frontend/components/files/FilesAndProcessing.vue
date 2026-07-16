@@ -53,9 +53,10 @@
         variant="ghost"
         size="sm"
         class="ml-auto font-medium"
-        @click="selectedFiles = files.map((f) => f.id)"
+        :disabled="isSelectingAll"
+        @click="selectAllFiles"
       >
-        Select all
+        {{ isSelectingAll ? 'Selecting…' : `Select all ${pagination.total}` }}
       </BaseButton>
     </Callout>
 
@@ -189,6 +190,10 @@
           unconfiguredCsvXlsxFiles.length > 0 ? 'Configure Files First' : 'Configure Preprocessing'
         }}
       </BaseButton>
+      <BaseButton variant="danger" @click="confirmDeleteSelected">
+        <Trash2 class="w-4 h-4" />
+        Delete
+      </BaseButton>
     </BatchActionBar>
 
     <!-- Slide-in Preprocessing Config Panel -->
@@ -211,7 +216,8 @@
     <!-- Upload Modal -->
     <UploadFilesModal
       :open="showUploadModal"
-      @close="showUploadModal = false"
+      :progress="uploadProgress"
+      @close="onUploadModalClose"
       @files="uploadFiles"
     />
 
@@ -254,7 +260,7 @@
       :open="showDeleteFileModal"
       action="delete"
       mode="files"
-      :documents="fileToDelete ? [fileToDelete.id] : []"
+      :documents="filesToDeleteIds"
       :project-id="projectId"
       @deleted="onFilesDeleted"
       @close="closeDeleteFileModal"
@@ -277,7 +283,7 @@
 <script setup lang="ts">
 import { ref, computed, toRef, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { AlertTriangle, Search, Settings, Upload } from '@lucide/vue'
+import { AlertTriangle, Search, Settings, Trash2, Upload } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { authApi } from '@/services/authApi'
@@ -340,7 +346,7 @@ const historyFile = ref<FileWithTasks | null>(null)
 const highlightTaskId = ref<number | null>(null)
 const previewingFile = ref<FileModel | null>(null)
 const showFilePreview = ref(false)
-const fileToDelete = ref<FileModel | null>(null)
+const filesToDeleteIds = ref<number[]>([])
 const showImportConfigModal = ref(false)
 const configuringFile = ref<FileModel | null>(null)
 const isLoading = ref(true)
@@ -357,6 +363,7 @@ const pendingProcessingSettings = ref<PreprocessingTaskCreate | null>(null)
 
 // "Select all" across all pages state
 const selectAllMode = ref(false) // true = all files in project, false = only current page
+const isSelectingAll = ref(false) // fetching all file ids across pages
 
 interface PaginationState {
   page: number
@@ -393,6 +400,18 @@ const isSubmitting = ref(false)
 const isStartingProcessing = ref(false)
 // Re-entrancy guard for the batch upload loop (see uploadFiles).
 const isUploading = ref(false)
+// Live progress for the upload modal so large batches aren't a silent spinner.
+interface UploadProgressState {
+  total: number
+  completed: number // finished (succeeded or failed)
+  succeeded: number
+  currentIndex: number // 1-based index of the file being uploaded
+  currentName: string
+  currentPercent: number // 0-100 for the in-flight file
+  failures: { name: string; message: string }[]
+  done: boolean // whole batch finished (modal shows a summary)
+}
+const uploadProgress = ref<UploadProgressState | null>(null)
 
 // Cache for preprocessing tasks to avoid refetching on every file refresh
 let cachedTasks: PreprocessingTask[] | null = null
@@ -640,7 +659,9 @@ const toggleSelectAll = (): void => {
 
 // Select ALL files across all pages (for 50k+ files)
 const selectAllFiles = async (): Promise<void> => {
+  if (isSelectingAll.value) return
   selectAllMode.value = true
+  isSelectingAll.value = true
   // Fetch all file IDs from the project (server-side)
   try {
     // We need to fetch all file IDs - use a minimal request
@@ -677,6 +698,8 @@ const selectAllFiles = async (): Promise<void> => {
     console.error('Failed to select all files:', err)
     toast.error('Failed to select all files')
     selectAllMode.value = false
+  } finally {
+    isSelectingAll.value = false
   }
 }
 
@@ -718,7 +741,14 @@ const navigateToGroup = (documentSetId: number): void => {
 // cascade checkbox + impact preview and reports success/failure via toasts.
 const showDeleteFileModal = ref(false)
 const confirmDeleteFile = (file: FileModel): void => {
-  fileToDelete.value = file
+  filesToDeleteIds.value = [file.id]
+  showDeleteFileModal.value = true
+}
+// Batch delete: every currently selected file (works across pages via
+// selectAllFiles). Reuses the same cascade/impact-preview modal as single delete.
+const confirmDeleteSelected = (): void => {
+  if (!selectedFiles.value.length) return
+  filesToDeleteIds.value = [...selectedFiles.value]
   showDeleteFileModal.value = true
 }
 // Prune successfully deleted ids from the selection so batch actions can't
@@ -729,7 +759,7 @@ const onFilesDeleted = (ids: number[]): void => {
 // Modal closed (after any delete attempts) — refresh the file list.
 const closeDeleteFileModal = async (): Promise<void> => {
   showDeleteFileModal.value = false
-  fileToDelete.value = null
+  filesToDeleteIds.value = []
   invalidateTaskCache()
   await fetchFiles({ forceRefreshTasks: true })
   emit('files-changed')
@@ -1087,10 +1117,24 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
   isUploading.value = true
   isSubmitting.value = true
 
-  let succeeded = 0
   const failures: { name: string; message: string }[] = []
+  const progress: UploadProgressState = {
+    total: fileList.length,
+    completed: 0,
+    succeeded: 0,
+    currentIndex: 0,
+    currentName: '',
+    currentPercent: 0,
+    failures,
+    done: false,
+  }
+  uploadProgress.value = progress
 
-  for (const file of fileList) {
+  for (let i = 0; i < fileList.length; i++) {
+    const file = fileList[i]
+    progress.currentIndex = i + 1
+    progress.currentName = file.name
+    progress.currentPercent = 0
     try {
       const formData = new FormData()
       formData.append('file', file)
@@ -1103,14 +1147,22 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
         }),
       )
 
-      await filesApi.upload(props.projectId, formData)
-      succeeded++
+      await filesApi.upload(props.projectId, formData, (e) => {
+        progress.currentPercent = e.total ? Math.round((e.loaded / e.total) * 100) : 0
+      })
+      progress.succeeded++
     } catch (err) {
       console.error(`Failed to upload ${file.name}:`, err)
       failures.push({ name: file.name, message: extractErrorMessage(err, 'Upload failed') })
+    } finally {
+      progress.completed++
     }
   }
 
+  progress.currentPercent = 100
+  progress.done = true
+
+  const succeeded = progress.succeeded
   // One summary toast per batch instead of one per file (50 files ≠ 50 toasts).
   if (succeeded > 0) {
     toast.success(`Uploaded ${succeeded} file${succeeded === 1 ? '' : 's'}`)
@@ -1126,11 +1178,24 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
 
   isSubmitting.value = false
   isUploading.value = false
-  showUploadModal.value = false
+  // Keep the modal open on the summary screen when some files failed so the
+  // user can see what went wrong; auto-close on a fully successful batch.
+  if (failures.length === 0) {
+    showUploadModal.value = false
+    uploadProgress.value = null
+  }
   // Invalidate task cache when files change
   invalidateTaskCache()
   await fetchFiles({ forceRefreshTasks: true })
   emit('files-changed')
+}
+
+// Reset upload state when the modal is dismissed (from the summary screen or
+// otherwise). Guarded so it can't clear state mid-upload.
+const onUploadModalClose = (): void => {
+  if (isUploading.value) return
+  showUploadModal.value = false
+  uploadProgress.value = null
 }
 
 // Fetch OCR settings on mount to use server-provided display names
