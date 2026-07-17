@@ -576,6 +576,7 @@ def delete_document(
     file_preprocessing_task_id = document.file_preprocessing_task_id
 
     # --- Preprocessed file deletion logic as before ---
+    orphaned_blob_uuid: str | None = None
     if document.preprocessed_file_id:
         other_docs_using_file = (
             db.execute(
@@ -592,14 +593,19 @@ def delete_document(
         if not other_docs_using_file:
             preprocessed_file = db.get(models.File, document.preprocessed_file_id)
             if preprocessed_file:
-                try:
-                    remove_file(preprocessed_file.file_uuid)
-                    db.delete(preprocessed_file)
-                except Exception:
-                    logger.exception("Error deleting preprocessed file")
+                orphaned_blob_uuid = preprocessed_file.file_uuid
+                db.delete(preprocessed_file)
 
     db.delete(document)
     db.commit()
+
+    # Remove the storage blob only after the DB delete committed — if the
+    # commit fails the blob must still back the surviving File row.
+    if orphaned_blob_uuid:
+        try:
+            remove_file(orphaned_blob_uuid)
+        except Exception:
+            logger.exception("Error deleting preprocessed file from storage")
 
     record_audit(
         AuditAction.DELETE,
@@ -942,6 +948,7 @@ def delete_document_set(
     # 4. Optionally delete documents first
     deleted_doc_ids = []
     file_preprocessing_task_ids = set()  # Track tasks for cleanup
+    orphaned_blob_uuids: list[str] = []  # Storage blobs to remove post-commit
     if delete_documents:
         # Load trial-referenced doc IDs once for the whole set instead of
         # re-querying every trial per document (was O(docs × trials)).
@@ -1014,17 +1021,12 @@ def delete_document_set(
                     )
 
                     if not other_docs:
-                        try:
-                            preprocessed_file = db.get(
-                                models.File, doc.preprocessed_file_id
-                            )
-                            if preprocessed_file:
-                                remove_file(preprocessed_file.file_uuid)
-                                db.delete(preprocessed_file)
-                        except Exception:
-                            logger.exception(
-                                "Error deleting preprocessed file for doc %s", doc.id
-                            )
+                        preprocessed_file = db.get(
+                            models.File, doc.preprocessed_file_id
+                        )
+                        if preprocessed_file:
+                            orphaned_blob_uuids.append(preprocessed_file.file_uuid)
+                            db.delete(preprocessed_file)
 
                 deleted_doc_ids.append(doc.id)
                 db.delete(doc)
@@ -1035,6 +1037,14 @@ def delete_document_set(
     # - Remaining associations will be deleted when doc_set is deleted (many-to-many cleanup)
     db.delete(doc_set)
     db.commit()
+
+    # Remove storage blobs only after the DB delete committed — if the commit
+    # fails the blobs must still back the surviving File rows.
+    for blob_uuid in orphaned_blob_uuids:
+        try:
+            remove_file(blob_uuid)
+        except Exception:
+            logger.exception("Error deleting preprocessed file from storage")
 
     record_audit(
         AuditAction.DELETE,

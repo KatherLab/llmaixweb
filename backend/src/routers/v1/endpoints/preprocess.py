@@ -997,6 +997,16 @@ def cancel_preprocessing_task(
     # Refresh to ensure we get the latest data including updated file_tasks
     db.refresh(task)
 
+    # Best-effort WebSocket broadcast: a task cancelled before (or between)
+    # worker heartbeats never emits a terminal update itself, leaving other
+    # clients' progress spinners stuck on the pre-cancel status.
+    try:
+        from ....celery.task_signals import _broadcast_preprocessing_update
+
+        _broadcast_preprocessing_update(task, event="cancelled")
+    except Exception as e:
+        logger.debug("Cancel broadcast failed: %s", e)
+
     return schemas.PreprocessingTask.model_validate(task)
 
 
@@ -1071,6 +1081,18 @@ def retry_failed_files(
     if not original_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    # Refuse to retry while the original task is still running — its worker
+    # may still write to the same file tasks/documents.
+    if original_task.status in (
+        models.PreprocessingStatus.PENDING,
+        models.PreprocessingStatus.IN_PROGRESS,
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Task is still running. Wait for it to finish (or cancel it) "
+            "before retrying failed files.",
+        )
+
     # Get failed file IDs
     failed_file_ids = [
         ft.file_id
@@ -1080,6 +1102,34 @@ def retry_failed_files(
 
     if not failed_file_ids:
         raise HTTPException(status_code=400, detail="No failed files to retry")
+
+    # In-flight guard: a double-click (or a second client) would spawn a
+    # second retry over the same files; both workers then upsert the same
+    # documents and the first task false-fails on the uniqueness constraint.
+    in_flight = db.execute(
+        select(models.FilePreprocessingTask.id)
+        .join(
+            models.PreprocessingTask,
+            models.FilePreprocessingTask.preprocessing_task_id
+            == models.PreprocessingTask.id,
+        )
+        .where(
+            models.FilePreprocessingTask.file_id.in_(failed_file_ids),
+            models.PreprocessingTask.project_id == project_id,
+            models.PreprocessingTask.status.in_(
+                [
+                    models.PreprocessingStatus.PENDING,
+                    models.PreprocessingStatus.IN_PROGRESS,
+                ]
+            ),
+        )
+        .limit(1)
+    ).first()
+    if in_flight:
+        raise HTTPException(
+            status_code=409,
+            detail="A retry for these files is already in progress.",
+        )
 
     # Create new task with same configuration. Carry over custom OCR
     # With Celery disabled a retry could only die at dispatch — refuse up front

@@ -1640,6 +1640,88 @@ def test_delete_schema(client, api_url):
     assert response.status_code == 404
 
 
+def test_delete_schema_with_field_mappings(client, api_url):
+    """Deleting a schema that has field mappings (but no trials) must succeed
+    and take the mappings with it — previously the NOT NULL FK on
+    field_mappings.schema_id made this a 500 (regression)."""
+    import uuid
+
+    from backend.src import models
+    from backend.src.db.session import SessionLocal
+
+    user_data = {
+        "username": "test@example.com",
+        "password": "Testpassword1",
+    }
+    response = client.post(f"{api_url}/auth/login", data=user_data)
+    assert response.status_code == 200
+    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    response = client.post(
+        f"{api_url}/project",
+        headers=headers,
+        json={"name": "Mapping Delete Project"},
+    )
+    assert response.status_code == 200
+    project_id = response.json()["id"]
+
+    schema_data = {
+        "schema_name": "Mapped Schema",
+        "schema_definition": {
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        },
+    }
+    response = client.post(
+        f"{api_url}/project/{project_id}/schema", headers=headers, json=schema_data
+    )
+    assert response.status_code == 200
+    schema_id = response.json()["id"]
+
+    # Seed a ground truth + field mapping directly (the API path needs a real
+    # ground-truth file upload, which is irrelevant to this regression).
+    db = SessionLocal()
+    try:
+        gt = models.GroundTruth(
+            project_id=project_id,
+            name="GT for mapping",
+            format="csv",
+            file_uuid=str(uuid.uuid4()),
+        )
+        db.add(gt)
+        db.flush()
+        db.add(
+            models.FieldMapping(
+                ground_truth_id=gt.id,
+                schema_id=schema_id,
+                schema_field="name",
+                ground_truth_field="name",
+            )
+        )
+        db.commit()
+        gt_id = gt.id
+    finally:
+        db.close()
+
+    response = client.delete(
+        f"{api_url}/project/{project_id}/schema/{schema_id}", headers=headers
+    )
+    assert response.status_code == 200, response.text
+
+    db = SessionLocal()
+    try:
+        remaining = (
+            db.query(models.FieldMapping)
+            .filter(models.FieldMapping.schema_id == schema_id)
+            .count()
+        )
+        assert remaining == 0
+        # The ground truth itself must survive — only the mappings go.
+        assert db.get(models.GroundTruth, gt_id) is not None
+    finally:
+        db.close()
+
+
 # Test Delete Schema Referenced by Trial
 def test_delete_schema_referenced_by_trial(client, api_url):
     from backend.src.core.config import settings

@@ -25,6 +25,7 @@ from ....utils.helpers import (
     excel_sheet_name,
     trial_display_label,
 )
+from ....utils.streaming_zip import sanitize_arcname
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +190,138 @@ def get_evaluations(
         item.project_trial_number = project_trial_number
         items.append(item)
     return items
+
+
+# NOTE: this static route must stay declared before the dynamic
+# /evaluation/{evaluation_id} route below, or "compare" is captured as an id.
+@router.get("/evaluation/compare", response_model=dict)
+def compare_evaluations(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    evaluation_ids: list[int] = Query(...),
+    current_user: models.User = Depends(get_current_user),
+) -> dict:
+    """Compare multiple evaluations side by side."""
+    # Cap the number of evaluations in a single comparison to bound the
+    # side-by-side matrix and per-eval queries.
+    max_evaluations = 10
+    if len(evaluation_ids) > max_evaluations:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot compare more than {max_evaluations} evaluations at once "
+            f"(requested {len(evaluation_ids)}).",
+        )
+
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if not can_access_project(current_user, project):
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this project's evaluations",
+        )
+
+    # Get evaluations
+    evaluations: list[tuple[models.Evaluation, models.Trial]] = []
+    for eval_id in evaluation_ids:
+        eval_obj = db.execute(
+            select(models.Evaluation).where(models.Evaluation.id == eval_id)
+        ).scalar_one_or_none()
+
+        if eval_obj:
+            # Verify it belongs to project
+            trial = db.execute(
+                select(models.Trial).where(
+                    models.Trial.id == eval_obj.trial_id,
+                    models.Trial.project_id == project_id,
+                )
+            ).scalar_one_or_none()
+
+            if trial:
+                evaluations.append((eval_obj, trial))
+
+    if not evaluations:
+        raise HTTPException(status_code=404, detail="No evaluations found")
+
+    # Build comparison
+    comparison = {
+        "evaluations": [],
+        "overall_comparison": {},
+        "field_comparison": {},
+        "model_comparison": {},
+    }
+
+    # Collect all fields
+    all_fields = set()
+    for eval_obj, _trial in evaluations:
+        all_fields.update(eval_obj.field_metrics.keys())
+
+    # Build evaluation summaries
+    for eval_obj, trial in evaluations:
+        comparison["evaluations"].append(
+            {
+                "id": eval_obj.id,
+                "trial_id": eval_obj.trial_id,
+                "model": trial.llm_model,
+                "groundtruth_id": eval_obj.groundtruth_id,
+                "metrics": eval_obj.metrics,
+                "created_at": eval_obj.created_at.isoformat(),
+            }
+        )
+
+    # Compare overall metrics
+    metrics_to_compare = ["accuracy", "precision", "recall", "f1_score"]
+    for metric in metrics_to_compare:
+        comparison["overall_comparison"][metric] = []
+        for eval_obj, trial in evaluations:
+            comparison["overall_comparison"][metric].append(
+                {
+                    "evaluation_id": eval_obj.id,
+                    "model": trial.llm_model,
+                    "value": eval_obj.metrics.get(metric, 0),
+                }
+            )
+
+    # Compare field metrics
+    for field in sorted(all_fields):
+        comparison["field_comparison"][field] = []
+        for eval_obj, trial in evaluations:
+            field_metric = eval_obj.field_metrics.get(field, {})
+            comparison["field_comparison"][field].append(
+                {
+                    "evaluation_id": eval_obj.id,
+                    "model": trial.llm_model,
+                    "accuracy": field_metric.get("accuracy", 0),
+                    "total_count": field_metric.get("total_count", 0),
+                    "correct_count": field_metric.get("correct_count", 0),
+                }
+            )
+
+    # Group by model
+    model_groups = {}
+    for eval_obj, trial in evaluations:
+        model = trial.llm_model
+
+        if model not in model_groups:
+            model_groups[model] = []
+        model_groups[model].append(eval_obj.metrics.get("accuracy", 0))
+
+    comparison["model_comparison"] = {
+        model: {
+            "average_accuracy": sum(accuracies) / len(accuracies),
+            "evaluation_count": len(accuracies),
+            "min_accuracy": min(accuracies),
+            "max_accuracy": max(accuracies),
+        }
+        for model, accuracies in model_groups.items()
+    }
+
+    return comparison
 
 
 @router.get("/evaluation/{evaluation_id}", response_model=schemas.EvaluationDetail)
@@ -499,7 +632,7 @@ def download_evaluations_report(
         out = io.BytesIO()
         with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             for arcname, data in files:
-                zf.writestr(arcname, data)
+                zf.writestr(sanitize_arcname(arcname), data)
         out.seek(0)
         content = out.getvalue()
         media_type = "application/zip"
@@ -876,136 +1009,6 @@ def batch_evaluate_trials(
         },
     )
     return results
-
-
-@router.get("/evaluation/compare", response_model=dict)
-def compare_evaluations(
-    *,
-    db: Session = Depends(get_db),
-    project_id: int,
-    evaluation_ids: list[int] = Query(...),
-    current_user: models.User = Depends(get_current_user),
-) -> dict:
-    """Compare multiple evaluations side by side."""
-    # Cap the number of evaluations in a single comparison to bound the
-    # side-by-side matrix and per-eval queries.
-    max_evaluations = 10
-    if len(evaluation_ids) > max_evaluations:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot compare more than {max_evaluations} evaluations at once "
-            f"(requested {len(evaluation_ids)}).",
-        )
-
-    project: models.Project | None = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's evaluations",
-        )
-
-    # Get evaluations
-    evaluations: list[tuple[models.Evaluation, models.Trial]] = []
-    for eval_id in evaluation_ids:
-        eval_obj = db.execute(
-            select(models.Evaluation).where(models.Evaluation.id == eval_id)
-        ).scalar_one_or_none()
-
-        if eval_obj:
-            # Verify it belongs to project
-            trial = db.execute(
-                select(models.Trial).where(
-                    models.Trial.id == eval_obj.trial_id,
-                    models.Trial.project_id == project_id,
-                )
-            ).scalar_one_or_none()
-
-            if trial:
-                evaluations.append((eval_obj, trial))
-
-    if not evaluations:
-        raise HTTPException(status_code=404, detail="No evaluations found")
-
-    # Build comparison
-    comparison = {
-        "evaluations": [],
-        "overall_comparison": {},
-        "field_comparison": {},
-        "model_comparison": {},
-    }
-
-    # Collect all fields
-    all_fields = set()
-    for eval_obj, _trial in evaluations:
-        all_fields.update(eval_obj.field_metrics.keys())
-
-    # Build evaluation summaries
-    for eval_obj, trial in evaluations:
-        comparison["evaluations"].append(
-            {
-                "id": eval_obj.id,
-                "trial_id": eval_obj.trial_id,
-                "model": trial.llm_model,
-                "groundtruth_id": eval_obj.groundtruth_id,
-                "metrics": eval_obj.metrics,
-                "created_at": eval_obj.created_at.isoformat(),
-            }
-        )
-
-    # Compare overall metrics
-    metrics_to_compare = ["accuracy", "precision", "recall", "f1_score"]
-    for metric in metrics_to_compare:
-        comparison["overall_comparison"][metric] = []
-        for eval_obj, trial in evaluations:
-            comparison["overall_comparison"][metric].append(
-                {
-                    "evaluation_id": eval_obj.id,
-                    "model": trial.llm_model,
-                    "value": eval_obj.metrics.get(metric, 0),
-                }
-            )
-
-    # Compare field metrics
-    for field in sorted(all_fields):
-        comparison["field_comparison"][field] = []
-        for eval_obj, trial in evaluations:
-            field_metric = eval_obj.field_metrics.get(field, {})
-            comparison["field_comparison"][field].append(
-                {
-                    "evaluation_id": eval_obj.id,
-                    "model": trial.llm_model,
-                    "accuracy": field_metric.get("accuracy", 0),
-                    "total_count": field_metric.get("total_count", 0),
-                    "correct_count": field_metric.get("correct_count", 0),
-                }
-            )
-
-    # Group by model
-    model_groups = {}
-    for eval_obj, trial in evaluations:
-        model = trial.llm_model
-
-        if model not in model_groups:
-            model_groups[model] = []
-        model_groups[model].append(eval_obj.metrics.get("accuracy", 0))
-
-    comparison["model_comparison"] = {
-        model: {
-            "average_accuracy": sum(accuracies) / len(accuracies),
-            "evaluation_count": len(accuracies),
-            "min_accuracy": min(accuracies),
-            "max_accuracy": max(accuracies),
-        }
-        for model, accuracies in model_groups.items()
-    }
-
-    return comparison
 
 
 @router.get("/evaluation/{evaluation_id}/errors", response_model=list[dict])

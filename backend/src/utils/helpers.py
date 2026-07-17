@@ -51,6 +51,19 @@ def trial_filename_slug(trial: Any) -> str:
     return f"trial_{trial.project_trial_number}"
 
 
+def content_disposition(filename: str, disposition: str = "attachment") -> str:
+    """Build a Content-Disposition header value with a safely-encoded filename.
+
+    Percent-encoding (RFC 5987) neutralizes quotes, CR/LF and non-ASCII in
+    user-controlled file names, which could otherwise break the header or
+    smuggle extra directives into it.
+    """
+    import urllib.parse
+
+    quoted = urllib.parse.quote(filename or "download", safe="")
+    return f"{disposition}; filename=\"{quoted}\"; filename*=UTF-8''{quoted}"
+
+
 def excel_sheet_name(
     label: str, fallback: str = "Sheet", used: set[str] | None = None
 ) -> str:

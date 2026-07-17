@@ -48,7 +48,8 @@ from ....utils.deletion import (
     compute_document_dependencies,
 )
 from ....utils.enums import AuditAction, FileCreator
-from ....utils.helpers import detect_structured_mime
+from ....utils.helpers import content_disposition, detect_structured_mime
+from ....utils.streaming_zip import sanitize_arcname
 
 logger = logging.getLogger(__name__)
 
@@ -457,7 +458,7 @@ def get_project_file_content(
         project_id=project_id,
         detail={"file_name": file.file_name, "disposition": disposition},
     )
-    headers = {"Content-Disposition": f'{disposition}; filename="{file.file_name}"'}
+    headers = {"Content-Disposition": content_disposition(file.file_name, disposition)}
     return StreamingResponse(
         stream_file(file.file_uuid),
         media_type=file.file_type,
@@ -1500,8 +1501,8 @@ def download_files_as_zip(
                 # Get file content
                 file_content = get_file(file.file_uuid)
 
-                # Add file to ZIP
-                zip_file.writestr(file.file_name, file_content)
+                # Add file to ZIP (arcname sanitized against zip-slip)
+                zip_file.writestr(sanitize_arcname(file.file_name), file_content)
 
                 # Collect metadata
                 if include_metadata:

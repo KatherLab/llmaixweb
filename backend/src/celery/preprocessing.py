@@ -275,17 +275,20 @@ if celery_app:
                 # concurrency 3 needs ~16h, far past the 6h limit — and when
                 # SoftTimeLimitExceeded fires it kills the whole *remaining* batch
                 # (mark_failed), defeating the point of chunking. Worst-case wall
-                # time for C files at concurrency N is ceil(C / N) * T, so keep
-                # C ≤ N * budget / T where budget is a safe fraction of the soft
-                # limit. Typical files finish well under T, so a fast chunk simply
-                # re-enqueues sooner (which also improves fairness).
+                # time for C files at concurrency N is ceil(C / N) * T, i.e. it
+                # advances in whole *waves* of N files — so size the chunk as
+                # full waves (C = floor(budget / T) * N) rather than C ≤
+                # N * budget / T, whose ceil(C / N) can overshoot the budget by
+                # almost a full T. At least one wave always runs (progress
+                # guarantee), even when a single T exceeds the budget. Typical
+                # files finish well under T, so a fast chunk simply re-enqueues
+                # sooner (which also improves fairness).
                 time_budget = int(
                     settings.CELERY_TASK_SOFT_TIME_LIMIT_SECONDS
                     * _CHUNK_TIME_BUDGET_FRACTION
                 )
-                max_by_time = max(
-                    1, (max_concurrent * time_budget) // max(1, per_file_timeout)
-                )
+                waves = max(1, time_budget // max(1, per_file_timeout))
+                max_by_time = waves * max_concurrent
                 chunk_size = min(settings.PREPROCESS_CHUNK_SIZE, max_by_time)
 
                 # Process at most chunk_size PENDING files this execution; the

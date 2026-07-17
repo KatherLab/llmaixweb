@@ -40,18 +40,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _broadcast_trial_created(trial_db: models.Trial) -> None:
-    """Best-effort WebSocket broadcast that a new trial was just created.
+def _broadcast_trial_event(trial_db: models.Trial, event: str = "created") -> None:
+    """Best-effort WebSocket broadcast for an API-side trial state change.
 
     The Celery extraction task emits progress/terminal updates on its own
-    heartbeat, but the first of those only fires ~3s after creation. Without
-    this initial "created" event, the ActivityBell and trials table don't
-    learn about a brand-new trial until that heartbeat lands (or until a page
-    reload) — so a freshly created trial sometimes doesn't appear live.
+    heartbeat, but state changes made directly by the API — creation and
+    cancellation — happen outside that loop. Without these events, other
+    clients' ActivityBell/trials table don't learn about a brand-new trial
+    until the first heartbeat lands, and a PENDING trial cancelled before its
+    worker starts never gets a terminal update at all (stuck spinner).
 
     Mirrors the payload shape used by ``celery/info_extraction.py`` so the
     frontend merge logic treats it identically. Best-effort: if Redis is down,
-    the trial still runs — the frontend just won't see the created event.
+    the trial still runs — the frontend just won't see the event.
     """
     try:
         from ....utils.redis_broadcast import publish_trial_update
@@ -74,13 +75,15 @@ def _broadcast_trial_created(trial_db: models.Trial) -> None:
                 "started_at": trial_db.started_at.isoformat()
                 if trial_db.started_at
                 else None,
-                "finished_at": None,
+                "finished_at": trial_db.finished_at.isoformat()
+                if trial_db.finished_at
+                else None,
                 "meta": trial_db.meta,
-                "event": "created",
+                "event": event,
             }
         )
     except Exception as e:
-        logger.debug("Trial created broadcast failed: %s", e)
+        logger.debug("Trial %s broadcast failed: %s", event, e)
 
 
 def _to_int(value) -> int:
@@ -319,7 +322,7 @@ def create_trial(
 
     # Notify WS clients immediately so the new trial appears in the ActivityBell
     # and trials table without waiting for the first Celery heartbeat.
-    _broadcast_trial_created(trial_db)
+    _broadcast_trial_event(trial_db)
 
     # Accountability: record the trial creation now; the PHI-egress audit
     # (LLM_EXTRACTION_CALL) is deferred until the work is actually initiated —
@@ -627,58 +630,52 @@ def get_trials(
             conds.append(T.id.cast(String).ilike(pattern))
         base = base.where(or_(*conds))
 
-    apply_python_has_failures = has_failures is not None
-
-    total_pre = db.scalar(select(func.count()).select_from(base.subquery())) or 0
-
-    page_q = (
-        base.order_by(T.created_at.desc())
-        .limit(limit)
-        .offset(offset)
-        .options(
-            noload(T.results),
-            selectinload(T.prompt),
-            selectinload(T.document_set),
-        )
+    page_options = (
+        noload(T.results),
+        selectinload(T.prompt),
+        selectinload(T.document_set),
     )
 
-    page_trials: list[models.Trial] = list(db.execute(page_q).scalars().all())
-    if not page_trials:
-        return schemas.PaginatedTrials(items=[], total=0 if offset == 0 else total_pre)
+    if has_failures is not None:
+        # ``meta.failures`` is JSON evaluated in Python, so the filter must
+        # run over the full candidate set BEFORE limit/offset — post-filtering
+        # a sliced page drops items and desyncs ``total`` from the pages.
+        # Load only (id, meta) to avoid hydrating schema/prompt snapshots,
+        # advanced_options, document_ids, etc. for every candidate row.
+        id_meta_rows = db.execute(
+            base.with_only_columns(T.id, T.meta).order_by(T.created_at.desc())
+        ).all()
+        matching_ids: list[int] = []
+        for _id, _meta in id_meta_rows:
+            _has = False
+            if isinstance(_meta, dict) and isinstance(_meta.get("failures"), dict):
+                _has = len(_meta["failures"]) > 0
+            if (has_failures is True and _has) or (has_failures is False and not _has):
+                matching_ids.append(_id)
+        total = len(matching_ids)
 
-    # --- post-filter for has_failures if requested ---
-    if apply_python_has_failures:
-        filtered = []
-        for t in page_trials:
-            _has = None
-            if isinstance(t.meta, dict) and isinstance(t.meta.get("failures"), dict):
-                _has = len(t.meta["failures"]) > 0
-            elif t.meta is None:
-                _has = False
-            if has_failures is True and _has:
-                filtered.append(t)
-            elif has_failures is False and not _has:
-                filtered.append(t)
-        page_trials = filtered
-
-        all_ids_rows = db.execute(base.with_only_columns(T.id)).all()
-        all_ids = [r[0] for r in all_ids_rows]
-        if all_ids:
-            # Load only (id, meta) instead of full Trial rows — the failure
-            # check only needs ``meta.failures``, so avoid hydrating
-            # schema/prompt snapshots, advanced_options, document_ids, etc.
-            meta_rows = db.execute(select(T.id, T.meta).where(T.id.in_(all_ids))).all()
-            total = 0
-            for _id, _meta in meta_rows:
-                _has = False
-                if isinstance(_meta, dict) and isinstance(_meta.get("failures"), dict):
-                    _has = len(_meta["failures"]) > 0
-                if (has_failures and _has) or (has_failures is False and not _has):
-                    total += 1
-        else:
-            total = 0
+        page_ids = matching_ids[offset : offset + limit]
+        page_trials: list[models.Trial] = []
+        if page_ids:
+            rank = {tid: i for i, tid in enumerate(page_ids)}
+            page_trials = sorted(
+                db.execute(select(T).where(T.id.in_(page_ids)).options(*page_options))
+                .scalars()
+                .all(),
+                key=lambda t: rank[t.id],
+            )
     else:
-        total = total_pre
+        total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
+        page_q = (
+            base.order_by(T.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+            .options(*page_options)
+        )
+        page_trials = list(db.execute(page_q).scalars().all())
+
+    if not page_trials:
+        return schemas.PaginatedTrials(items=[], total=total)
 
     # --- aggregates (counts and last_result_at) for *current* page ---
     trial_ids = [t.id for t in page_trials]
@@ -962,6 +959,9 @@ def cancel_trial(
     trial.status = models.TrialStatus.CANCELLED
     db.commit()
     db.refresh(trial)
+    # A PENDING trial cancelled before its worker starts never gets a
+    # terminal heartbeat, so tell other clients directly.
+    _broadcast_trial_event(trial, event="cancelled")
     record_audit(
         AuditAction.CANCEL,
         actor=current_user,
@@ -997,6 +997,15 @@ def delete_trial(
     ).scalar_one_or_none()
     if not trial:
         raise HTTPException(status_code=404, detail="Trial not found")
+
+    # Deleting a running trial doesn't stop its worker: the task keeps
+    # calling the LLM and writing results against a vanished row. Require
+    # cancellation (which the task observes) before deletion.
+    if trial.status in (models.TrialStatus.PENDING, models.TrialStatus.PROCESSING):
+        raise HTTPException(
+            status_code=409,
+            detail="Trial is still running. Cancel it before deleting.",
+        )
 
     trial_data = schemas.Trial.model_validate(trial)
 

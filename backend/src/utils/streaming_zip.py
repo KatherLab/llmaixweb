@@ -16,6 +16,24 @@ from collections.abc import Iterable, Iterator
 from typing import Any, cast
 
 
+def sanitize_arcname(name: str) -> str:
+    """Neutralize path traversal in a ZIP member name (zip-slip).
+
+    Member names often embed user-controlled file names (``files/{uuid}_{name}``),
+    so a name like ``../../etc/cron.d/x`` would otherwise escape the extraction
+    directory on permissive unzip tools. Intentional forward-slash nesting is
+    preserved; ``..``/``.``/empty components, backslashes, drive-letter colons
+    and NUL bytes are stripped.
+    """
+    parts: list[str] = []
+    for comp in str(name).replace("\\", "/").split("/"):
+        comp = comp.replace("\x00", "").replace(":", "_").strip()
+        if not comp or comp in {".", ".."}:
+            continue
+        parts.append(comp)
+    return "/".join(parts) or "file"
+
+
 class StreamingZipSink:
     """A forward-only, file-like sink for :class:`zipfile.ZipFile`."""
 
@@ -61,7 +79,7 @@ def iter_zip(entries: Iterable[tuple[str, bytes]]) -> Iterator[bytes]:
     zf = zipfile.ZipFile(cast(Any, sink), "w", zipfile.ZIP_DEFLATED)
     try:
         for arcname, data in entries:
-            zf.writestr(arcname, data)
+            zf.writestr(sanitize_arcname(arcname), data)
             chunk = sink.drain()
             if chunk:
                 yield chunk

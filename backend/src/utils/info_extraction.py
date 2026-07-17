@@ -513,6 +513,9 @@ def update_trial_progress(db, trial_id: int) -> None:
         .where(models.TrialResult.trial_id == trial_id)
     )
     trial = db.get(models.Trial, trial_id)
+    if trial is None:
+        # Trial row vanished (e.g. deleted mid-run) — nothing to update.
+        return
     total = len(trial.document_ids or [])
     progress = done / total if total else 1.0
 

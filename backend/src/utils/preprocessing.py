@@ -545,11 +545,14 @@ class PreprocessingPipeline:
             if extraction_mode == "auto" or extraction_mode is None:
                 return settings.DOCLING_SERVE_FILE_TIMEOUT_SECONDS
 
-        # For remote OCR backends
-        if ocr_engine == "mistral_ocr" or extraction_mode == "high_accuracy_remote":
-            return settings.MISTRAL_OCR_FILE_TIMEOUT_SECONDS
+        # For remote OCR backends. Check the explicit engine first: with
+        # extraction_mode == "high_accuracy_remote" AND ocr_engine ==
+        # "llm_vision", the mode-based branch would otherwise win and apply
+        # the Mistral timeout to a Vision run.
         if ocr_engine == "llm_vision":
             return settings.VISION_OCR_FILE_TIMEOUT_SECONDS
+        if ocr_engine == "mistral_ocr" or extraction_mode == "high_accuracy_remote":
+            return settings.MISTRAL_OCR_FILE_TIMEOUT_SECONDS
 
         # Default to docling-serve timeout for local OCR
         return settings.DOCLING_SERVE_FILE_TIMEOUT_SECONDS

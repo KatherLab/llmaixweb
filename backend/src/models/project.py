@@ -628,7 +628,11 @@ class Schema(Base):
     )
     project: Mapped["Project"] = relationship(back_populates="schemas")
     trials: Mapped[list["Trial"]] = relationship(back_populates="schema")
-    field_mappings: Mapped[list["FieldMapping"]] = relationship(back_populates="schema")
+    # Mappings are meaningless without their schema; delete them with it
+    # (schema_id is NOT NULL, so the default nulling cascade would 500).
+    field_mappings: Mapped[list["FieldMapping"]] = relationship(
+        back_populates="schema", cascade="all, delete-orphan"
+    )
 
 
 class TrialStatus(str, enum.Enum):

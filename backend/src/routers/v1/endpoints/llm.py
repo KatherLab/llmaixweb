@@ -23,7 +23,11 @@ from ....utils.info_extraction import (
     test_llm_connection,
     test_model_with_schema,
 )
-from ....utils.url_safety import UnsafeEndpointError, validate_user_endpoint
+from ....utils.url_safety import (
+    UnsafeEndpointError,
+    enforce_endpoint_allowlist,
+    validate_user_endpoint,
+)
 
 router = APIRouter()
 
@@ -33,6 +37,18 @@ def _resolve_creds(
 ) -> tuple[str | None, str | None]:
     """Fall back to the system-wide configured LLM credentials when not supplied."""
     return api_key or settings.OPENAI_API_KEY, base_url or settings.OPENAI_API_BASE
+
+
+def _validated_base_url(base_url: str | None) -> str | None:
+    """SSRF policy + egress allowlist for user-supplied test endpoints.
+
+    Mirrors trial creation: these test endpoints make the server call a
+    user-chosen URL, so they must honor ``ALLOWED_LLM_ENDPOINTS`` too — not
+    just the SSRF blocklist. Raises ``UnsafeEndpointError`` when blocked.
+    """
+    url = validate_user_endpoint(base_url)
+    enforce_endpoint_allowlist(url, settings.ALLOWED_LLM_ENDPOINTS)
+    return url
 
 
 def _invalid_url_response(
@@ -49,7 +65,7 @@ def get_available_llm_models(
 ) -> dict[str, Any]:
     user_base_url = (body.base_url if body else None) or settings.OPENAI_API_BASE
     try:
-        user_base_url = validate_user_endpoint(user_base_url)
+        user_base_url = _validated_base_url(user_base_url)
     except UnsafeEndpointError:
         # Include an empty `models` list so the response still satisfies the
         # frontend LlmModelsResponse contract (models: string[]).
@@ -72,7 +88,7 @@ def test_api_connection_endpoint(
 ) -> dict[str, Any]:
     user_base_url = (body.base_url if body else None) or settings.OPENAI_API_BASE
     try:
-        user_base_url = validate_user_endpoint(user_base_url)
+        user_base_url = _validated_base_url(user_base_url)
     except UnsafeEndpointError:
         return _invalid_url_response()
     api_key, base_url = _resolve_creds((body.api_key if body else None), user_base_url)
@@ -92,7 +108,7 @@ def test_llm_model_endpoint(
 ) -> dict[str, Any]:
     user_base_url = (body.base_url if body else None) or settings.OPENAI_API_BASE
     try:
-        user_base_url = validate_user_endpoint(user_base_url)
+        user_base_url = _validated_base_url(user_base_url)
     except UnsafeEndpointError:
         return _invalid_url_response()
     api_key, base_url = _resolve_creds((body.api_key if body else None), user_base_url)
@@ -114,9 +130,7 @@ def test_model_with_schema_endpoint(
 ) -> dict[str, Any]:
     """Test if a model supports structured output with a specific schema"""
     try:
-        user_base_url = validate_user_endpoint(
-            body.base_url or settings.OPENAI_API_BASE
-        )
+        user_base_url = _validated_base_url(body.base_url or settings.OPENAI_API_BASE)
     except UnsafeEndpointError:
         return _invalid_url_response()
     api_key, base_url = _resolve_creds(body.api_key, user_base_url)
@@ -185,7 +199,7 @@ def test_vlm_image_support(
     """
     user_base_url = (body.base_url if body else None) or settings.OPENAI_API_BASE
     try:
-        user_base_url = validate_user_endpoint(user_base_url)
+        user_base_url = _validated_base_url(user_base_url)
     except UnsafeEndpointError:
         return {
             "supported": False,

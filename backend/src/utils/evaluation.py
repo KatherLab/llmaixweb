@@ -91,29 +91,32 @@ class EvaluationEngine:
         # would silently see metrics for stale results. (Field-mapping, ID-column
         # and ground-truth file changes already delete the cached evaluation;
         # this guards against the trial simply being re-run.)
-        if not force_recalculate:
-            existing = (
-                self.db.query(models.Evaluation)
-                .filter_by(trial_id=trial_id, groundtruth_id=groundtruth_id)
-                .first()
+        existing_rows = (
+            self.db.query(models.Evaluation)
+            .filter_by(trial_id=trial_id, groundtruth_id=groundtruth_id)
+            .order_by(models.Evaluation.created_at.desc())
+            .all()
+        )
+        if existing_rows and not force_recalculate:
+            existing = existing_rows[0]
+            latest_result_update = (
+                self.db.query(func.max(models.TrialResult.updated_at))
+                .filter_by(trial_id=trial_id)
+                .scalar()
             )
-            if existing:
-                latest_result_update = (
-                    self.db.query(func.max(models.TrialResult.updated_at))
-                    .filter_by(trial_id=trial_id)
-                    .scalar()
-                )
-                if (
-                    latest_result_update is None
-                    or existing.created_at >= latest_result_update
-                ):
-                    return existing
-                # Results changed since the cached evaluation → recompute.
-                # Delete the stale row first (cascade removes its
-                # EvaluationMetric children) so we don't leave duplicate
-                # evaluations for the same (trial, ground truth) pair.
-                self.db.delete(existing)
-                self.db.flush()
+            if (
+                latest_result_update is None
+                or existing.created_at >= latest_result_update
+            ):
+                return existing
+        # Recomputing (forced, or results changed since the cached
+        # evaluation). Delete every existing row for this (trial, ground
+        # truth) pair first (cascade removes their EvaluationMetric
+        # children) so we never accumulate duplicate evaluations.
+        if existing_rows:
+            for stale in existing_rows:
+                self.db.delete(stale)
+            self.db.flush()
 
         # Load validated data
         trial = self.db.get(models.Trial, trial_id)
