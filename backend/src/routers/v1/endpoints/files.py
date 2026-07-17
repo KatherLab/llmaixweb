@@ -5,7 +5,6 @@ import datetime
 import io
 import json
 import logging
-import zipfile
 
 from fastapi import (
     APIRouter,
@@ -49,7 +48,7 @@ from ....utils.deletion import (
 )
 from ....utils.enums import AuditAction, FileCreator
 from ....utils.helpers import content_disposition, detect_structured_mime
-from ....utils.streaming_zip import sanitize_arcname
+from ....utils.streaming_zip import iter_zip, sanitize_arcname
 
 logger = logging.getLogger(__name__)
 
@@ -1533,44 +1532,35 @@ def download_files_as_zip(
     files_by_id = {f.id: f for f in files}
     ordered_files = [files_by_id[i] for i in file_ids if i in files_by_id]
 
-    # Create ZIP file in memory
-    zip_buffer = io.BytesIO()
-
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+    # Stream the archive: each file's bytes are read from storage only when the
+    # client has consumed the previous entry, so the ZIP is never assembled in
+    # memory (was a full BytesIO buffer — RAM-bound at 200 large files).
+    def _entries():
         files_metadata = []
-
         for file in ordered_files:
             try:
-                # Get file content
-                file_content = get_file(file.file_uuid)
-
-                # Add file to ZIP (arcname sanitized against zip-slip)
-                zip_file.writestr(sanitize_arcname(file.file_name), file_content)
-
-                # Collect metadata
-                if include_metadata:
-                    files_metadata.append(
-                        {
-                            "id": file.id,
-                            "file_name": file.file_name,
-                            "file_type": file.file_type,
-                            "file_size": file.file_size,
-                            "file_hash": file.file_hash,
-                            "description": file.description,
-                            "created_at": file.created_at.isoformat()
-                            if file.created_at
-                            else None,
-                            "updated_at": file.updated_at.isoformat()
-                            if file.updated_at
-                            else None,
-                        }
-                    )
-
+                # Arcname sanitized against zip-slip.
+                yield sanitize_arcname(file.file_name), get_file(file.file_uuid)
             except Exception as e:
                 logger.error("Error adding file %s to ZIP: %s", file.file_name, e)
                 continue
-
-        # Add metadata file if requested
+            if include_metadata:
+                files_metadata.append(
+                    {
+                        "id": file.id,
+                        "file_name": file.file_name,
+                        "file_type": file.file_type,
+                        "file_size": file.file_size,
+                        "file_hash": file.file_hash,
+                        "description": file.description,
+                        "created_at": file.created_at.isoformat()
+                        if file.created_at
+                        else None,
+                        "updated_at": file.updated_at.isoformat()
+                        if file.updated_at
+                        else None,
+                    }
+                )
         if include_metadata and files_metadata:
             metadata_json = json.dumps(
                 {
@@ -1581,10 +1571,8 @@ def download_files_as_zip(
                 },
                 indent=2,
             )
-            zip_file.writestr("metadata.json", metadata_json)
+            yield "metadata.json", metadata_json.encode("utf-8")
 
-    # Prepare response
-    zip_buffer.seek(0)
     filename = f"project_{project_id}_files_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')}.zip"
 
     record_audit(
@@ -1594,8 +1582,8 @@ def download_files_as_zip(
         project_id=project_id,
         detail={"files": len(file_ids), "format": "zip"},
     )
-    return Response(
-        content=zip_buffer.getvalue(),
+    return StreamingResponse(
+        iter_zip(_entries()),
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

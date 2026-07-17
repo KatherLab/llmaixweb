@@ -4,12 +4,11 @@
 import csv
 import io
 import logging
-import zipfile
 
 import pandas as pd
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from fastapi.responses import Response
-from sqlalchemy import select
+from fastapi.responses import Response, StreamingResponse
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, load_only, selectinload
 
 from .... import models, schemas
@@ -25,7 +24,7 @@ from ....utils.helpers import (
     excel_sheet_name,
     trial_display_label,
 )
-from ....utils.streaming_zip import sanitize_arcname
+from ....utils.streaming_zip import iter_zip, sanitize_arcname
 
 logger = logging.getLogger(__name__)
 
@@ -629,17 +628,12 @@ def download_evaluations_report(
             include_ground_truth_content=include_ground_truth_content,
             zip_format="csv",
         )
-        out = io.BytesIO()
-        with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            for arcname, data in files:
-                zf.writestr(sanitize_arcname(arcname), data)
-        out.seek(0)
-        content = out.getvalue()
-        media_type = "application/zip"
         filename = f"evaluation_export_{project_id}.zip"
-        return Response(
-            content=content,
-            media_type=media_type,
+        # Stream: entries (incl. per-document texts) are produced lazily by the
+        # generator, so the archive is never assembled in memory.
+        return StreamingResponse(
+            iter_zip((sanitize_arcname(arcname), data) for arcname, data in files),
+            media_type="application/zip",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
@@ -1072,32 +1066,32 @@ def get_evaluation_errors(
 
     errors = query.limit(limit).all()
 
-    # Batch-load the referenced documents (with their original file) in one
-    # query instead of one query + lazy load per error (N+1).
+    # Batch-load the referenced documents' display name and a 500-char snippet
+    # in one query. substr() runs in the database, so the full text column
+    # (potentially hundreds of KB per document) is never hydrated just to show
+    # a context preview.
     doc_ids = {error.document_id for error in errors if error.document_id}
-    documents_by_id: dict[int, models.Document] = {}
+    doc_info_by_id: dict[int, tuple[str | None, str]] = {}
     if doc_ids:
-        documents_by_id = {
-            doc.id: doc
-            for doc in db.execute(
-                select(models.Document)
-                .where(models.Document.id.in_(doc_ids))
-                .options(selectinload(models.Document.original_file))
+        rows = db.execute(
+            select(
+                models.Document.id,
+                models.File.file_name,
+                func.substr(models.Document.text, 1, 500),
             )
-            .scalars()
-            .all()
-        }
+            .outerjoin(models.File, models.File.id == models.Document.original_file_id)
+            .where(models.Document.id.in_(doc_ids))
+        ).all()
+        doc_info_by_id = {row[0]: (row[1], row[2] or "") for row in rows}
 
     # Build error details
     error_details = []
     for error in errors:
-        document = documents_by_id.get(error.document_id) if error.document_id else None
+        doc_info = doc_info_by_id.get(error.document_id) if error.document_id else None
 
         error_detail = {
             "document_id": error.document_id,
-            "document_name": document.original_file.file_name
-            if document and document.original_file
-            else "Unknown",
+            "document_name": doc_info[0] if doc_info and doc_info[0] else "Unknown",
             "field_name": error.field_name,
             "ground_truth_value": error.ground_truth_value,
             "predicted_value": error.predicted_value,
@@ -1106,10 +1100,8 @@ def get_evaluation_errors(
         }
 
         # Add context if available
-        if document:
-            # Extract surrounding text for context
-            text_snippet = document.text[:500] if document.text else ""
-            error_detail["context"] = text_snippet
+        if doc_info:
+            error_detail["context"] = doc_info[1]
 
         error_details.append(error_detail)
 

@@ -307,6 +307,11 @@ class Document(Base):
         Index("ix_documents_project_file", "project_id", "original_file_id"),
         Index("ix_documents_project_config", "project_id", "preprocessing_config_id"),
         Index("ix_documents_project_task", "project_id", "file_preprocessing_task_id"),
+        # Single-column FK indexes: the composites above can't serve lookups
+        # that filter on the FK alone (orphan checks on preprocessed_file_id,
+        # per-task doc loads/cascades on file_preprocessing_task_id).
+        Index("ix_documents_preprocessed_file_id", "preprocessed_file_id"),
+        Index("ix_documents_file_preprocessing_task_id", "file_preprocessing_task_id"),
     )
 
 
@@ -586,6 +591,9 @@ class FilePreprocessingTask(Base):
             "ix_file_preprocessing_tasks_preprocessing_task_id", "preprocessing_task_id"
         ),
         Index("ix_file_preprocessing_tasks_file_id", "file_id"),
+        # The orphan sweeper scans by status every tick; without this it's a
+        # full-table scan once file task counts reach the hundreds of thousands.
+        Index("ix_file_preprocessing_tasks_status", "status"),
     )
 
 
@@ -668,6 +676,8 @@ class Trial(Base):
     __table_args__ = (
         Index("ix_trials_project_created", "project_id", "created_at"),
         Index("ix_trials_project_status", "project_id", "status"),
+        # FK index for "which trials reference this set" (set-delete guard).
+        Index("ix_trials_document_set_id", "document_set_id"),
         UniqueConstraint(
             "project_id", "project_trial_number", name="uq_trials_project_number"
         ),

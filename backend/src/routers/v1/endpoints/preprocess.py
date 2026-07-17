@@ -6,13 +6,15 @@ import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, load_only, selectinload
 
 from .... import models, schemas
 from ....core.security import admin_has_global_project_access, get_current_user
 from ....dependencies import get_db
 from ....middleware.error_handlers import internal_error_message
+from ....models.project import document_set_association
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
 
@@ -167,9 +169,18 @@ async def preview_preprocessing_duplicates(
 
     file_ids = [f.id for f in files]
 
-    # Single batched query for all existing documents
+    # Single batched query for all existing documents. Only the columns the
+    # comparison below reads — without load_only every duplicate's full text
+    # would be hydrated just to inspect its meta_data.
     existing_docs_query = (
         select(models.Document)
+        .options(
+            load_only(
+                models.Document.id,
+                models.Document.original_file_id,
+                models.Document.meta_data,
+            )
+        )
         .where(
             models.Document.original_file_id.in_(file_ids),
             models.Document.is_latest.is_(True),
@@ -528,36 +539,42 @@ async def preprocess_project_data(
         )
 
     # HARD CHECK: Reject request if any file is already being processed with this config
-    # This prevents all race conditions and duplicate document creation
+    # This prevents all race conditions and duplicate document creation.
+    # One batched query for all files (was one query per file).
+    file_ids = [file.id for file in files]
+    files_by_id = {file.id: file for file in files}
     in_progress_files = []
-    for file in files:
-        in_progress_file_task = (
-            db.execute(
-                select(models.FilePreprocessingTask)
-                .join(models.PreprocessingTask)
-                .where(
-                    models.FilePreprocessingTask.file_id == file.id,
-                    models.PreprocessingTask.configuration_id == config.id,
-                    models.FilePreprocessingTask.status.in_(
-                        [
-                            models.PreprocessingStatus.PENDING,
-                            models.PreprocessingStatus.IN_PROGRESS,
-                        ]
-                    ),
-                )
-            )
-            .scalars()
-            .first()
+    in_progress_rows = db.execute(
+        select(
+            models.FilePreprocessingTask.file_id,
+            models.FilePreprocessingTask.preprocessing_task_id,
+            models.FilePreprocessingTask.status,
         )
-        if in_progress_file_task:
-            in_progress_files.append(
-                {
-                    "file_id": file.id,
-                    "file_name": file.file_name,
-                    "task_id": in_progress_file_task.preprocessing_task_id,
-                    "status": in_progress_file_task.status.value,
-                }
-            )
+        .join(models.PreprocessingTask)
+        .where(
+            models.FilePreprocessingTask.file_id.in_(file_ids),
+            models.PreprocessingTask.configuration_id == config.id,
+            models.FilePreprocessingTask.status.in_(
+                [
+                    models.PreprocessingStatus.PENDING,
+                    models.PreprocessingStatus.IN_PROGRESS,
+                ]
+            ),
+        )
+    ).all()
+    seen_in_progress: set[int] = set()
+    for row in in_progress_rows:
+        if row.file_id in seen_in_progress:
+            continue
+        seen_in_progress.add(row.file_id)
+        in_progress_files.append(
+            {
+                "file_id": row.file_id,
+                "file_name": files_by_id[row.file_id].file_name,
+                "task_id": row.preprocessing_task_id,
+                "status": row.status.value,
+            }
+        )
 
     if in_progress_files:
         raise HTTPException(
@@ -570,29 +587,24 @@ async def preprocess_project_data(
             },
         )
 
-    # Check for existing documents (for skip_existing / force_reprocess logic)
-    files_with_existing_docs = []
-    for file in files:
-        existing_docs = (
-            db.execute(
-                select(models.Document).where(
-                    models.Document.original_file_id == file.id,
-                    models.Document.preprocessing_config_id == config.id,
-                )
-            )
-            .scalars()
-            .all()
+    # Check for existing documents (for skip_existing / force_reprocess logic).
+    # Column-only batched query — the old shape ran one query per file and
+    # hydrated every existing document's full text just to read its id.
+    existing_doc_ids_by_file: dict[int, list[int]] = {}
+    for doc_id, original_file_id in db.execute(
+        select(models.Document.id, models.Document.original_file_id).where(
+            models.Document.original_file_id.in_(file_ids),
+            models.Document.preprocessing_config_id == config.id,
         )
-        if existing_docs:
-            files_with_existing_docs.append((file, existing_docs))
+    ).all():
+        existing_doc_ids_by_file.setdefault(original_file_id, []).append(doc_id)
 
     # Handle skip_existing: filter out files with existing documents
     files_to_process = []
     skipped_file_names = []
     if preprocessing_task.skip_existing:
         for file in files:
-            has_existing = any(f.id == file.id for f, _ in files_with_existing_docs)
-            if has_existing:
+            if file.id in existing_doc_ids_by_file:
                 skipped_file_names.append(file.file_name)
                 continue
             files_to_process.append(file)
@@ -601,12 +613,11 @@ async def preprocess_project_data(
 
     # Handle force_reprocess: delete existing documents
     if preprocessing_task.force_reprocess:
-        docs_to_delete = [
-            doc
-            for _file, existing_docs in files_with_existing_docs
-            for doc in existing_docs
+        doc_ids_to_delete = [
+            doc_id
+            for doc_ids in existing_doc_ids_by_file.values()
+            for doc_id in doc_ids
         ]
-        doc_ids_to_delete = [doc.id for doc in docs_to_delete]
         if doc_ids_to_delete:
             # trial_results.document_id and evaluation_metrics.document_id are
             # ON DELETE RESTRICT, so deleting a referenced document would raise a
@@ -642,9 +653,19 @@ async def preprocess_project_data(
                         "referenced_document_ids": sorted(blocked),
                     },
                 )
-        for doc in docs_to_delete:
-            doc.document_sets.clear()
-            db.delete(doc)
+        if doc_ids_to_delete:
+            # Bulk-delete membership rows + documents (was per-doc ORM deletes,
+            # each lazy-loading the doc's document_sets collection).
+            db.execute(
+                document_set_association.delete().where(
+                    document_set_association.c.document_id.in_(doc_ids_to_delete)
+                )
+            )
+            db.execute(
+                sa_delete(models.Document).where(
+                    models.Document.id.in_(doc_ids_to_delete)
+                )
+            )
         files_to_process = list(files)
 
     # Resolve bypass_celery (from the request body or an inline config) and

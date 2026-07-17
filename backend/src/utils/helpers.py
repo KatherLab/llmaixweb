@@ -215,15 +215,14 @@ def build_evaluation_zipfiles(
     zip_format="csv",  # or "xlsx"
 ):
     """
-    Prepares files (filename, bytes) for a ZIP, using the export helpers and pandas.
-    Returns: List of (arcname, bytes)
+    Yields ``(arcname, bytes)`` entries for a ZIP, using the export helpers and
+    pandas. A generator so the caller can stream the archive without holding
+    every entry (notably per-document texts) in memory at once.
     """
     import csv
     import io
 
     import pandas as pd
-
-    files = []
 
     # --- Summary CSV/XLSX ---
     if zip_format == "csv":
@@ -265,7 +264,7 @@ def build_evaluation_zipfiles(
                     eval_obj.created_at.isoformat(),
                 ]
             )
-        files.append(("summary.csv", output.getvalue().encode("utf-8")))
+        yield (("summary.csv", output.getvalue().encode("utf-8")))
 
     else:
         output = io.BytesIO()
@@ -294,7 +293,7 @@ def build_evaluation_zipfiles(
                 writer, sheet_name="Summary", index=False
             )
         output.seek(0)
-        files.append(("summary.xlsx", output.getvalue()))
+        yield (("summary.xlsx", output.getvalue()))
 
     # Field-level metrics are exported with precision/recall/F1 alongside
     # accuracy — a researcher comparing fields usually cares more about recall
@@ -337,7 +336,7 @@ def build_evaluation_zipfiles(
                 w.writerow(field_metric_columns)
                 for row in field_rows:
                     w.writerow(row)
-                files.append(("field_metrics.csv", out.getvalue().encode("utf-8")))
+                yield (("field_metrics.csv", out.getvalue().encode("utf-8")))
             else:
                 out = io.BytesIO()
                 with pd.ExcelWriter(out, engine="xlsxwriter") as writer:
@@ -345,7 +344,7 @@ def build_evaluation_zipfiles(
                         writer, sheet_name="Field Metrics", index=False
                     )
                 out.seek(0)
-                files.append(("field_metrics.xlsx", out.getvalue()))
+                yield (("field_metrics.xlsx", out.getvalue()))
 
     # --- Field-by-field Details (CSV or Excel sheet) ---
     if include_field_details:
@@ -362,7 +361,7 @@ def build_evaluation_zipfiles(
                 w.writerow(headers)
                 for row in details:
                     w.writerow([row.get(h, "") for h in headers])
-                files.append(("field_details.csv", out.getvalue().encode("utf-8")))
+                yield (("field_details.csv", out.getvalue().encode("utf-8")))
             else:
                 out = io.BytesIO()
                 with pd.ExcelWriter(out, engine="xlsxwriter") as writer:
@@ -370,7 +369,7 @@ def build_evaluation_zipfiles(
                         writer, sheet_name="Field Details", index=False
                     )
                 out.seek(0)
-                files.append(("field_details.xlsx", out.getvalue()))
+                yield (("field_details.xlsx", out.getvalue()))
 
     # --- Document-level metrics ---
     if include_details:
@@ -401,7 +400,7 @@ def build_evaluation_zipfiles(
                 w.writerow(headers)
                 for row in doc_data:
                     w.writerow([row.get(h, "") for h in headers])
-                files.append(("document_metrics.csv", out.getvalue().encode("utf-8")))
+                yield (("document_metrics.csv", out.getvalue().encode("utf-8")))
             else:
                 out = io.BytesIO()
                 with pd.ExcelWriter(out, engine="xlsxwriter") as writer:
@@ -409,7 +408,7 @@ def build_evaluation_zipfiles(
                         writer, sheet_name="Doc Metrics", index=False
                     )
                 out.seek(0)
-                files.append(("document_metrics.xlsx", out.getvalue()))
+                yield (("document_metrics.xlsx", out.getvalue()))
 
     # --- Per-document JSONs/Texts/GT (optional) ---
     if include_document_content or include_ground_truth_content:
@@ -426,7 +425,7 @@ def build_evaluation_zipfiles(
                     doc.get("Document ID") or doc.get("document_id") or doc.get("id")
                 )
                 arcname = f"docs/{doc_id}.json"
-                files.append(
+                yield (
                     (
                         arcname,
                         json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8"),
@@ -438,7 +437,7 @@ def build_evaluation_zipfiles(
                     and "Document Content" in doc
                     and doc["Document Content"]
                 ):
-                    files.append(
+                    yield (
                         (f"docs/{doc_id}.txt", doc["Document Content"].encode("utf-8"))
                     )
                 if (
@@ -448,9 +447,9 @@ def build_evaluation_zipfiles(
                 ):
                     gt = doc["Ground Truth"]
                     if isinstance(gt, str):
-                        files.append((f"docs/{doc_id}_gt.txt", gt.encode("utf-8")))
+                        yield ((f"docs/{doc_id}_gt.txt", gt.encode("utf-8")))
                     else:
-                        files.append(
+                        yield (
                             (
                                 f"docs/{doc_id}_gt.json",
                                 json.dumps(gt, ensure_ascii=False, indent=2).encode(
@@ -458,7 +457,6 @@ def build_evaluation_zipfiles(
                                 ),
                             )
                         )
-    return files
 
 
 def collect_evaluation_field_level_details(

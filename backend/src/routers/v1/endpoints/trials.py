@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import String, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session, noload, selectinload
+from sqlalchemy.orm import Session, defer, noload, selectinload
 
 from .... import models, schemas
 from ....core.config import settings
@@ -1112,16 +1112,21 @@ def download_trial_results(
     all_prep_keys = set()
 
     # Batch-load all documents (with their original file + preprocessing config)
-    # in a single query instead of 3 queries per result (N+1).
+    # in a single query instead of 3 queries per result (N+1). The text column
+    # is only fetched when the export actually embeds it — without content it
+    # stays deferred (never loaded; nothing below reads it in that case).
     doc_ids = [result.document_id for result in results]
+    doc_options = [
+        selectinload(models.Document.original_file),
+        selectinload(models.Document.preprocessing_config),
+    ]
+    if not include_content:
+        doc_options.append(defer(models.Document.text))
     docs = (
         db.execute(
             select(models.Document)
             .where(models.Document.id.in_(doc_ids))
-            .options(
-                selectinload(models.Document.original_file),
-                selectinload(models.Document.preprocessing_config),
-            )
+            .options(*doc_options)
         )
         .scalars()
         .all()

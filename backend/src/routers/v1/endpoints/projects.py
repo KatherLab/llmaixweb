@@ -3,7 +3,7 @@ import datetime
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session, load_only, noload, selectinload
 
 from .... import models, schemas
@@ -14,6 +14,7 @@ from ....core.security import (
 )
 from ....dependencies import get_db, remove_file
 from ....utils.audit import record_audit
+from ....utils.deletion import cascade_delete_project
 from ....utils.enums import AuditAction
 from .documents import router as documents_router
 from .evaluations import router as evaluations_router
@@ -578,10 +579,31 @@ def delete_project(
         ).all()
     )
 
+    # Serialize the response before deleting. The old ORM-cascade path left
+    # every child collection loaded so model_validate happened to work; the
+    # bulk path never hydrates children, so build the schema from scalars only
+    # (documents/counts are meaningless for a deleted project anyway).
+    response = schemas.Project(
+        id=existing_project.id,
+        name=existing_project.name,
+        description=existing_project.description,
+        status=existing_project.status,
+        owner_id=existing_project.owner_id,
+        owner=schemas.UserPublic.model_validate(existing_project.owner)
+        if existing_project.owner
+        else None,
+        created_at=existing_project.created_at,
+        updated_at=existing_project.updated_at,
+    )
+
     # Commit the DB deletion first; only then remove the stored bytes. If a
     # storage removal fails we log and continue (the DB row is already gone,
     # so leaving an orphaned blob is the lesser evil vs. failing the delete).
-    db.delete(existing_project)
+    # Children are bulk-deleted in FK order instead of db.delete(project)'s
+    # ORM cascade, which would hydrate the whole object graph into memory.
+    db.expunge(existing_project)
+    counts = cascade_delete_project(db, project_id)
+    db.execute(delete(models.Project).where(models.Project.id == project_id))
     db.commit()
 
     record_audit(
@@ -590,7 +612,7 @@ def delete_project(
         resource_type="project",
         resource_id=project_id,
         project_id=project_id,
-        detail={"stored_files_removed": len(file_uuids)},
+        detail={"stored_files_removed": len(file_uuids), "deleted": counts},
     )
 
     for file_uuid in file_uuids:
@@ -606,4 +628,4 @@ def delete_project(
                 exc_info=True,
             )
 
-    return schemas.Project.model_validate(existing_project)
+    return response

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from .. import models
@@ -259,3 +259,141 @@ def compute_document_dependencies(
         "evaluation_metrics": metric_count,
         "evaluations": eval_count,
     }
+
+
+def cascade_delete_project(db: Session, project_id: int) -> dict[str, int]:
+    """Bulk-delete every child row of a project, children first.
+
+    Replaces the ORM ``cascade="all, delete-orphan"`` path on ``Project``
+    (``db.delete(project)`` hydrates the entire object graph into the session
+    before deleting it row by row — unusable on 100k-document projects) with
+    Core deletes in FK order. Does not delete the project row itself and does
+    not commit; the caller owns both.
+
+    ``document_id`` OR-clauses on metrics/results also catch rows owned by
+    another project's trial that reference this project's documents (historic
+    cross-project ``move_files`` chains) — without them the ``RESTRICT`` FKs
+    would abort the document delete.
+    """
+    trial_ids = (
+        select(models.Trial.id)
+        .where(models.Trial.project_id == project_id)
+        .scalar_subquery()
+    )
+    gt_ids = (
+        select(models.GroundTruth.id)
+        .where(models.GroundTruth.project_id == project_id)
+        .scalar_subquery()
+    )
+    schema_ids = (
+        select(models.Schema.id)
+        .where(models.Schema.project_id == project_id)
+        .scalar_subquery()
+    )
+    doc_ids = (
+        select(models.Document.id)
+        .where(models.Document.project_id == project_id)
+        .scalar_subquery()
+    )
+    set_ids = (
+        select(models.DocumentSet.id)
+        .where(models.DocumentSet.project_id == project_id)
+        .scalar_subquery()
+    )
+    ptask_ids = (
+        select(models.PreprocessingTask.id)
+        .where(models.PreprocessingTask.project_id == project_id)
+        .scalar_subquery()
+    )
+    eval_ids = (
+        select(models.Evaluation.id)
+        .where(
+            or_(
+                models.Evaluation.trial_id.in_(trial_ids),
+                models.Evaluation.groundtruth_id.in_(gt_ids),
+            )
+        )
+        .scalar_subquery()
+    )
+
+    counts: dict[str, int] = {}
+    counts["evaluation_metrics"] = db.execute(
+        delete(models.EvaluationMetric).where(
+            or_(
+                models.EvaluationMetric.evaluation_id.in_(eval_ids),
+                models.EvaluationMetric.document_id.in_(doc_ids),
+            )
+        )
+    ).rowcount
+    counts["evaluations"] = db.execute(
+        delete(models.Evaluation).where(
+            or_(
+                models.Evaluation.trial_id.in_(trial_ids),
+                models.Evaluation.groundtruth_id.in_(gt_ids),
+            )
+        )
+    ).rowcount
+    counts["trial_results"] = db.execute(
+        delete(models.TrialResult).where(
+            or_(
+                models.TrialResult.trial_id.in_(trial_ids),
+                models.TrialResult.document_id.in_(doc_ids),
+            )
+        )
+    ).rowcount
+    counts["trials"] = db.execute(
+        delete(models.Trial).where(models.Trial.project_id == project_id)
+    ).rowcount
+    counts["field_mappings"] = db.execute(
+        delete(models.FieldMapping).where(
+            or_(
+                models.FieldMapping.ground_truth_id.in_(gt_ids),
+                models.FieldMapping.schema_id.in_(schema_ids),
+            )
+        )
+    ).rowcount
+    counts["ground_truth"] = db.execute(
+        delete(models.GroundTruth).where(models.GroundTruth.project_id == project_id)
+    ).rowcount
+    # Membership rows have DB-level ON DELETE CASCADE, but delete them
+    # explicitly so SQLite databases created before the FK pragma was enabled
+    # behave identically (same reasoning as cascade_delete_document_sets).
+    counts["set_memberships"] = db.execute(
+        document_set_association.delete().where(
+            or_(
+                document_set_association.c.document_set_id.in_(set_ids),
+                document_set_association.c.document_id.in_(doc_ids),
+            )
+        )
+    ).rowcount
+    counts["document_sets"] = db.execute(
+        delete(models.DocumentSet).where(models.DocumentSet.project_id == project_id)
+    ).rowcount
+    counts["documents"] = db.execute(
+        delete(models.Document).where(models.Document.project_id == project_id)
+    ).rowcount
+    counts["file_tasks"] = db.execute(
+        delete(models.FilePreprocessingTask).where(
+            models.FilePreprocessingTask.preprocessing_task_id.in_(ptask_ids)
+        )
+    ).rowcount
+    counts["preprocessing_tasks"] = db.execute(
+        delete(models.PreprocessingTask).where(
+            models.PreprocessingTask.project_id == project_id
+        )
+    ).rowcount
+    counts["files"] = db.execute(
+        delete(models.File).where(models.File.project_id == project_id)
+    ).rowcount
+    counts["prompts"] = db.execute(
+        delete(models.Prompt).where(models.Prompt.project_id == project_id)
+    ).rowcount
+    counts["schemas"] = db.execute(
+        delete(models.Schema).where(models.Schema.project_id == project_id)
+    ).rowcount
+    counts["preprocessing_configurations"] = db.execute(
+        delete(models.PreprocessingConfiguration).where(
+            models.PreprocessingConfiguration.project_id == project_id
+        )
+    ).rowcount
+    return counts

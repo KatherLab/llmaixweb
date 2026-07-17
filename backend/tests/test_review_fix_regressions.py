@@ -344,3 +344,222 @@ def test_cancel_rollback_keeps_trial_referenced_documents(client, api_url):
         )
     finally:
         db.close()
+
+
+def _build_full_project_graph(db, *, owner_id: int):
+    """Full object graph: project → file/config/task/file_task/docs → set →
+    schema/prompt → trial → result → ground truth → mapping → evaluation →
+    metric. Used to prove the bulk project delete removes every child table."""
+    from ..src import models
+    from ..src.models.project import document_set_association
+
+    project, config, file, task, file_task, docs = _build_preprocessing_graph(
+        db, owner_id=owner_id
+    )
+    project.name = "Bulk Delete"
+
+    doc_set = models.DocumentSet(project_id=project.id, name="set")
+    db.add(doc_set)
+    db.flush()
+    db.execute(
+        document_set_association.insert(),
+        [{"document_id": d.id, "document_set_id": doc_set.id} for d in docs],
+    )
+
+    schema = models.Schema(
+        project_id=project.id,
+        schema_name="s",
+        schema_definition={"type": "object", "properties": {}},
+    )
+    prompt = models.Prompt(project_id=project.id, name="p")
+    db.add_all([schema, prompt])
+    db.flush()
+
+    trial = models.Trial(
+        project_id=project.id,
+        project_trial_number=1,
+        schema_id=schema.id,
+        prompt_id=prompt.id,
+        document_set_id=doc_set.id,
+        document_ids=[d.id for d in docs],
+        llm_model="m",
+        base_url="http://localhost",
+    )
+    trial.api_key = "k"
+    db.add(trial)
+    db.flush()
+
+    result = models.TrialResult(
+        trial_id=trial.id, document_id=docs[0].id, result={"a": 1}
+    )
+    gt = models.GroundTruth(
+        project_id=project.id, name="gt", format="csv", file_uuid=str(uuid.uuid4())
+    )
+    db.add_all([result, gt])
+    db.flush()
+
+    mapping = models.FieldMapping(
+        ground_truth_id=gt.id,
+        schema_id=schema.id,
+        schema_field="a",
+        ground_truth_field="a",
+    )
+    evaluation = models.Evaluation(
+        trial_id=trial.id,
+        groundtruth_id=gt.id,
+        metrics={},
+        field_metrics={},
+        document_metrics=[],
+    )
+    db.add_all([mapping, evaluation])
+    db.flush()
+
+    metric = models.EvaluationMetric(
+        evaluation_id=evaluation.id,
+        document_id=docs[0].id,
+        field_name="a",
+        is_correct=True,
+    )
+    db.add(metric)
+    db.commit()
+    child_ids = {
+        "file_task": file_task.id,
+        "trial_result": result.id,
+        "field_mapping": mapping.id,
+        "evaluation": evaluation.id,
+        "metric": metric.id,
+        "set": doc_set.id,
+    }
+    return project, child_ids
+
+
+def test_project_delete_bulk_cascade_removes_all_children(client, api_url):
+    """DELETE /project must remove every child row (bulk path, no ORM cascade)."""
+    from ..src import models
+    from ..src.db.session import SessionLocal
+    from ..src.models.project import document_set_association
+
+    headers = _admin_headers(client, api_url)
+    db = SessionLocal()
+    try:
+        project, child_ids = _build_full_project_graph(db, owner_id=_admin_user_id())
+        project_id = project.id
+    finally:
+        db.close()
+
+    resp = client.delete(f"{api_url}/project/{project_id}", headers=headers)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["name"] == "Bulk Delete"
+
+    db = SessionLocal()
+    try:
+        checks = [
+            (models.Project, models.Project.id == project_id),
+            (models.File, models.File.project_id == project_id),
+            (models.Document, models.Document.project_id == project_id),
+            (models.DocumentSet, models.DocumentSet.project_id == project_id),
+            (
+                models.PreprocessingTask,
+                models.PreprocessingTask.project_id == project_id,
+            ),
+            (
+                models.PreprocessingConfiguration,
+                models.PreprocessingConfiguration.project_id == project_id,
+            ),
+            (models.Schema, models.Schema.project_id == project_id),
+            (models.Prompt, models.Prompt.project_id == project_id),
+            (models.Trial, models.Trial.project_id == project_id),
+            (models.GroundTruth, models.GroundTruth.project_id == project_id),
+        ]
+        for model, cond in checks:
+            assert db.execute(select(model).where(cond)).scalars().first() is None, (
+                f"{model.__name__} rows survived project delete"
+            )
+        # Grandchildren without a project_id column: check the specific rows
+        # this graph created (the shared test DB may hold other tests' rows).
+        assert db.get(models.FilePreprocessingTask, child_ids["file_task"]) is None
+        assert db.get(models.TrialResult, child_ids["trial_result"]) is None
+        assert db.get(models.FieldMapping, child_ids["field_mapping"]) is None
+        assert db.get(models.Evaluation, child_ids["evaluation"]) is None
+        assert db.get(models.EvaluationMetric, child_ids["metric"]) is None
+        assert (
+            db.execute(
+                select(document_set_association).where(
+                    document_set_association.c.document_set_id == child_ids["set"]
+                )
+            ).first()
+            is None
+        ), "document_set_association rows survived project delete"
+    finally:
+        db.close()
+
+
+def test_delete_document_set_batched_keeps_referenced_docs(client, api_url):
+    """delete_documents=true: unreferenced docs die with the set, docs with
+    trial results survive (batched reference checks, bulk deletes)."""
+    from ..src import models
+    from ..src.db.session import SessionLocal
+    from ..src.models.project import document_set_association
+
+    headers = _admin_headers(client, api_url)
+    db = SessionLocal()
+    try:
+        project, config, file, task, file_task, docs = _build_preprocessing_graph(
+            db, owner_id=_admin_user_id()
+        )
+        project_id = project.id
+        doc_set = models.DocumentSet(project_id=project.id, name="batch-del")
+        db.add(doc_set)
+        db.flush()
+        set_id = doc_set.id
+        db.execute(
+            document_set_association.insert(),
+            [{"document_id": d.id, "document_set_id": set_id} for d in docs],
+        )
+        schema = models.Schema(
+            project_id=project.id, schema_name="s", schema_definition={}
+        )
+        prompt = models.Prompt(project_id=project.id, name="p")
+        db.add_all([schema, prompt])
+        db.flush()
+        trial = models.Trial(
+            project_id=project.id,
+            project_trial_number=1,
+            schema_id=schema.id,
+            prompt_id=prompt.id,
+            document_ids=[],
+            llm_model="m",
+            base_url="http://localhost",
+        )
+        trial.api_key = "k"
+        db.add(trial)
+        db.flush()
+        db.add(models.TrialResult(trial_id=trial.id, document_id=docs[0].id, result={}))
+        db.commit()
+        referenced_id, unreferenced_id = docs[0].id, docs[1].id
+    finally:
+        db.close()
+
+    resp = client.delete(
+        f"{api_url}/project/{project_id}/document-set/{set_id}",
+        params={"delete_documents": "true"},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["deleted_document_ids"] == [unreferenced_id]
+
+    db = SessionLocal()
+    try:
+        assert db.get(models.DocumentSet, set_id) is None
+        assert db.get(models.Document, referenced_id) is not None
+        assert db.get(models.Document, unreferenced_id) is None
+        assert (
+            db.execute(
+                select(document_set_association).where(
+                    document_set_association.c.document_set_id == set_id
+                )
+            ).first()
+            is None
+        )
+    finally:
+        db.close()

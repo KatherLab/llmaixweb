@@ -8,6 +8,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, contains_eager, defer, joinedload, selectinload
 
@@ -22,6 +23,7 @@ from ....models.project import document_set_association
 from ....utils.audit import record_audit
 from ....utils.deletion import (
     cascade_clear_document_references,
+    cascade_delete_document_sets,
     compute_document_dependencies,
     trials_referencing_docs,
 )
@@ -882,13 +884,15 @@ def update_document_set(
                         )
                     ).all()
                 }
-                for doc_id in value:
-                    if doc_id in valid_ids:
-                        db.execute(
-                            document_set_association.insert().values(
-                                document_id=doc_id, document_set_id=set_id
-                            )
-                        )
+                ordered_ids = [d for d in dict.fromkeys(value) if d in valid_ids]
+                if ordered_ids:
+                    db.execute(
+                        document_set_association.insert(),
+                        [
+                            {"document_id": d, "document_set_id": set_id}
+                            for d in ordered_ids
+                        ],
+                    )
         else:
             setattr(doc_set, field, value)
 
@@ -922,17 +926,15 @@ def delete_document_set(
     # 1. Permission check
     check_project_access(project_id, current_user, db, "write")
 
-    # 2. Fetch the document set with relationships
+    # 2. Fetch the document set. Members are loaded as lightweight column rows
+    # below — selectinload(documents) would hydrate every document's full text.
     doc_set = db.execute(
         select(models.DocumentSet)
         .where(
             models.DocumentSet.id == set_id,
             models.DocumentSet.project_id == project_id,
         )
-        .options(
-            selectinload(models.DocumentSet.trials),
-            selectinload(models.DocumentSet.documents),
-        )
+        .options(selectinload(models.DocumentSet.trials))
     ).scalar_one_or_none()
 
     if not doc_set:
@@ -945,97 +947,137 @@ def delete_document_set(
             detail="Cannot delete document set: one or more trials reference it.",
         )
 
-    # 4. Optionally delete documents first
-    deleted_doc_ids = []
+    # 4. Optionally delete documents first. All reference checks are batched —
+    # the old shape ran 3-4 queries per document and hydrated full texts.
+    deleted_doc_ids: list[int] = []
     file_preprocessing_task_ids = set()  # Track tasks for cleanup
     orphaned_blob_uuids: list[str] = []  # Storage blobs to remove post-commit
+    orphan_file_ids: set[int] = set()  # Preprocessed File rows to delete
     if delete_documents:
-        # Load trial-referenced doc IDs once for the whole set instead of
-        # re-querying every trial per document (was O(docs × trials)).
-        set_doc_ids = [doc.id for doc in doc_set.documents]
+        doc_rows = db.execute(
+            select(
+                models.Document.id,
+                models.Document.file_preprocessing_task_id,
+                models.Document.preprocessed_file_id,
+            )
+            .join(
+                document_set_association,
+                document_set_association.c.document_id == models.Document.id,
+            )
+            .where(document_set_association.c.document_set_id == set_id)
+        ).all()
+        set_doc_ids = [row.id for row in doc_rows]
+
         referenced_doc_ids: set[int] = set()
         if set_doc_ids:
-            rows = db.execute(
+            # Trial references via the document_ids JSON list (checked in
+            # Python — JSON containment isn't portable across SQLite/PG).
+            trial_rows = db.execute(
                 select(models.Trial.document_ids).where(
                     models.Trial.project_id == project_id
                 )
             ).all()
             ref_set = set(set_doc_ids)
-            for (trial_doc_ids,) in rows:
-                if trial_doc_ids and ref_set.intersection(trial_doc_ids):
+            for (trial_doc_ids,) in trial_rows:
+                if trial_doc_ids:
                     referenced_doc_ids.update(ref_set.intersection(trial_doc_ids))
-
-        for doc in doc_set.documents:
-            # Check if document can be safely deleted
-            can_delete = True
-
-            # Check trial references (via document_ids JSON list)
-            if doc.id in referenced_doc_ids:
-                can_delete = False
-
-            # Check trial results (a doc may have results across many trials)
-            if (
+            # Trial results / evaluation metrics (RESTRICT FKs) and membership
+            # in any other set — one query each for the whole member list.
+            referenced_doc_ids.update(
                 db.execute(
-                    select(models.TrialResult).where(
-                        models.TrialResult.document_id == doc.id
-                    )
-                )
-                .scalars()
-                .first()
-            ):
-                can_delete = False
-
-            # Check evaluation metrics (many per document)
-            if (
+                    select(models.TrialResult.document_id)
+                    .where(models.TrialResult.document_id.in_(set_doc_ids))
+                    .distinct()
+                ).scalars()
+            )
+            referenced_doc_ids.update(
                 db.execute(
-                    select(models.EvaluationMetric).where(
-                        models.EvaluationMetric.document_id == doc.id
+                    select(models.EvaluationMetric.document_id)
+                    .where(models.EvaluationMetric.document_id.in_(set_doc_ids))
+                    .distinct()
+                ).scalars()
+            )
+            referenced_doc_ids.update(
+                db.execute(
+                    select(document_set_association.c.document_id)
+                    .where(
+                        document_set_association.c.document_id.in_(set_doc_ids),
+                        document_set_association.c.document_set_id != set_id,
                     )
+                    .distinct()
+                ).scalars()
+            )
+
+        deletable = [row for row in doc_rows if row.id not in referenced_doc_ids]
+        deleted_doc_ids = [row.id for row in deletable]
+        file_preprocessing_task_ids = {
+            row.file_preprocessing_task_id
+            for row in deletable
+            if row.file_preprocessing_task_id
+        }
+
+        if deleted_doc_ids:
+            # Preprocessed files orphaned by this delete: keep any still
+            # referenced by a surviving document (as preprocessed OR original —
+            # an OCR-output file can be re-preprocessed) or by a file task.
+            candidate_file_ids = {
+                row.preprocessed_file_id
+                for row in deletable
+                if row.preprocessed_file_id
+            }
+            if candidate_file_ids:
+                still_used = set(
+                    db.execute(
+                        select(models.Document.preprocessed_file_id)
+                        .where(
+                            models.Document.preprocessed_file_id.in_(
+                                candidate_file_ids
+                            ),
+                            models.Document.id.not_in(deleted_doc_ids),
+                        )
+                        .distinct()
+                    ).scalars()
                 )
-                .scalars()
-                .first()
-            ):
-                can_delete = False
-
-            # Check other document sets
-            if doc.document_sets and any(s.id != set_id for s in doc.document_sets):
-                can_delete = False
-
-            if can_delete:
-                # Track file_preprocessing_task_id for cleanup after deletion
-                if doc.file_preprocessing_task_id:
-                    file_preprocessing_task_ids.add(doc.file_preprocessing_task_id)
-
-                # Delete preprocessed file if not used by other docs
-                if doc.preprocessed_file_id:
-                    other_docs = (
+                still_used.update(
+                    db.execute(
+                        select(models.Document.original_file_id)
+                        .where(
+                            models.Document.original_file_id.in_(candidate_file_ids),
+                            models.Document.id.not_in(deleted_doc_ids),
+                        )
+                        .distinct()
+                    ).scalars()
+                )
+                still_used.update(
+                    db.execute(
+                        select(models.FilePreprocessingTask.file_id)
+                        .where(
+                            models.FilePreprocessingTask.file_id.in_(candidate_file_ids)
+                        )
+                        .distinct()
+                    ).scalars()
+                )
+                orphan_file_ids = candidate_file_ids - still_used
+                if orphan_file_ids:
+                    orphaned_blob_uuids = list(
                         db.execute(
-                            select(models.Document).where(
-                                models.Document.preprocessed_file_id
-                                == doc.preprocessed_file_id,
-                                models.Document.id != doc.id,
+                            select(models.File.file_uuid).where(
+                                models.File.id.in_(orphan_file_ids)
                             )
-                        )
-                        .scalars()
-                        .first()
+                        ).scalars()
                     )
 
-                    if not other_docs:
-                        preprocessed_file = db.get(
-                            models.File, doc.preprocessed_file_id
-                        )
-                        if preprocessed_file:
-                            orphaned_blob_uuids.append(preprocessed_file.file_uuid)
-                            db.delete(preprocessed_file)
-
-                deleted_doc_ids.append(doc.id)
-                db.delete(doc)
-
-    # 5. Delete the document set
-    # Note: Association rows in document_set_association are automatically handled:
-    # - If documents were deleted above, their associations are already gone (cascade from Document)
-    # - Remaining associations will be deleted when doc_set is deleted (many-to-many cleanup)
-    db.delete(doc_set)
+    # 5. Delete membership rows + the set (bulk), then the documents, then the
+    # orphaned preprocessed File rows (docs reference files, so files go last).
+    cascade_delete_document_sets(db, [set_id])
+    if deleted_doc_ids:
+        db.execute(
+            sa_delete(models.Document).where(models.Document.id.in_(deleted_doc_ids))
+        )
+        if orphan_file_ids:
+            db.execute(
+                sa_delete(models.File).where(models.File.id.in_(orphan_file_ids))
+            )
     db.commit()
 
     # Remove storage blobs only after the DB delete committed — if the commit
@@ -1258,13 +1300,12 @@ def create_document_set_from_trial(
                 )
             ).all()
         }
-        for doc_id in doc_ids:
-            if doc_id in valid_ids:
-                db.execute(
-                    document_set_association.insert().values(
-                        document_id=doc_id, document_set_id=db_set.id
-                    )
-                )
+        ordered_ids = [d for d in dict.fromkeys(doc_ids) if d in valid_ids]
+        if ordered_ids:
+            db.execute(
+                document_set_association.insert(),
+                [{"document_id": d, "document_set_id": db_set.id} for d in ordered_ids],
+            )
 
     db.commit()
     db.refresh(db_set)
