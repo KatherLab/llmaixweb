@@ -118,8 +118,8 @@ async function download(): Promise<void> {
     </Callout>
 
     <div class="mb-4">
-      <label :class="labelClass">Format</label>
-      <select v-model="format" :class="selectClass">
+      <label :class="labelClass" for="download-format">Format</label>
+      <select id="download-format" v-model="format" :class="selectClass">
         <option value="json">JSON (per-document, ZIP)</option>
         <option value="csv">CSV (table, with optional files)</option>
       </select>

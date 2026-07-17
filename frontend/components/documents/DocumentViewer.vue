@@ -1,5 +1,10 @@
 <template>
-  <SlideOver :open="open" body-class="!p-0 overflow-hidden" @close="$emit('close')">
+  <SlideOver
+    :open="open"
+    aria-label="Document viewer"
+    body-class="!p-0 overflow-hidden"
+    @close="$emit('close')"
+  >
     <template #header>
       <div class="flex items-center justify-between gap-4 flex-1 min-w-0 pr-8">
         <div class="flex items-center gap-3 min-w-0">

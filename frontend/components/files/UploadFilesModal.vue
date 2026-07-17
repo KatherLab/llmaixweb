@@ -1,5 +1,14 @@
 <template>
-  <BaseModal :open="open" title="Upload Files" size="md" @close="emit('close')">
+  <!-- While a batch is uploading, backdrop/ESC are disabled so an accidental
+       click can't cancel it — only the explicit X / Cancel button does. -->
+  <BaseModal
+    :open="open"
+    title="Upload Files"
+    size="md"
+    :close-on-backdrop="!progress || progress.done"
+    :close-on-esc="!progress || progress.done"
+    @close="emit('close')"
+  >
     <!-- Idle: drop zone -->
     <FileDropzone v-if="!progress" compact :dragging="dragging" @drop="onDrop" @select="onSelect" />
 
@@ -14,16 +23,23 @@
             </template>
             <template v-else> Upload complete </template>
           </p>
-          <span class="text-xs text-content-subtle tabular-nums">{{ overallPercent }}%</span>
+          <span class="text-xs text-content tabular-nums">{{ overallPercent }}%</span>
         </div>
-        <div class="mt-2 h-2 w-full bg-surface-sunken rounded-full overflow-hidden">
+        <div
+          class="mt-2 h-2 w-full bg-surface-sunken rounded-full overflow-hidden"
+          role="progressbar"
+          aria-label="Overall upload progress"
+          :aria-valuenow="overallPercent"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
           <div
             class="h-full transition-all duration-200"
             :class="progress.failures.length > 0 && progress.done ? 'bg-amber-500' : 'bg-primary'"
             :style="{ width: overallPercent + '%' }"
           ></div>
         </div>
-        <p class="mt-2 text-xs text-content-muted">
+        <p class="mt-2 text-xs text-content-muted" aria-live="polite">
           {{ progress.succeeded }} succeeded<span v-if="progress.failures.length > 0">
             ·
             <span class="text-red-600 dark:text-red-400"
@@ -39,11 +55,18 @@
           <p class="text-xs font-medium text-content truncate" :title="progress.currentName">
             {{ progress.currentName }}
           </p>
-          <span class="text-xs text-content-subtle tabular-nums shrink-0"
+          <span class="text-xs text-content tabular-nums shrink-0"
             >{{ progress.currentPercent }}%</span
           >
         </div>
-        <div class="mt-1.5 h-1 w-full bg-surface-sunken rounded-full overflow-hidden">
+        <div
+          class="mt-1.5 h-1 w-full bg-surface-sunken rounded-full overflow-hidden"
+          role="progressbar"
+          aria-label="Current file upload progress"
+          :aria-valuenow="progress.currentPercent"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
           <div
             class="h-full bg-primary transition-all duration-200"
             :style="{ width: progress.currentPercent + '%' }"
@@ -70,8 +93,17 @@
       </div>
     </div>
 
-    <template v-if="progress && progress.done" #footer>
-      <BaseButton @click="emit('close')">Close</BaseButton>
+    <!-- Cancel while uploading; Close on the summary screen -->
+    <template v-if="progress" #footer>
+      <BaseButton
+        v-if="!progress.done"
+        variant="secondary"
+        :disabled="cancelling"
+        @click="emit('cancel')"
+      >
+        {{ cancelling ? 'Cancelling…' : 'Cancel upload' }}
+      </BaseButton>
+      <BaseButton v-else @click="emit('close')">Close</BaseButton>
     </template>
   </BaseModal>
 </template>
@@ -96,14 +128,18 @@ export interface UploadProgressState {
 interface Props {
   open: boolean
   progress?: UploadProgressState | null
+  /** True once the user requested a cancel and the loop is winding down. */
+  cancelling?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   progress: null,
+  cancelling: false,
 })
 
 const emit = defineEmits<{
   close: []
+  cancel: []
   files: [files: File[]]
 }>()
 

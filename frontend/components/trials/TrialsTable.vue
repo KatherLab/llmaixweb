@@ -70,13 +70,20 @@
     <template #cell-progress="{ row: trial }">
       <!-- Active: compact inline progress -->
       <div v-if="isActive(trial as unknown as TrialSummary)" class="flex items-center gap-2">
-        <div class="w-16 h-1 bg-surface-sunken rounded-full overflow-hidden">
+        <div
+          class="w-16 h-1 bg-surface-sunken rounded-full overflow-hidden"
+          role="progressbar"
+          aria-label="Trial progress"
+          :aria-valuenow="progressPercent(trial as unknown as TrialSummary)"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
           <div
             class="h-full bg-primary transition-all duration-500"
             :style="{ width: progressPercent(trial as unknown as TrialSummary) + '%' }"
           ></div>
         </div>
-        <span class="text-xs text-content-muted"
+        <span class="text-xs text-content-muted" aria-live="polite"
           >{{ docsDone(trial as unknown as TrialSummary) }}/{{
             totalDocs(trial as unknown as TrialSummary)
           }}</span
@@ -97,7 +104,7 @@
         <AlertCircle class="w-4 h-4" />
         Failed
       </div>
-      <span v-else class="text-xs text-content-subtle">{{ trial.status }}</span>
+      <span v-else class="text-xs text-content-muted">{{ trial.status }}</span>
     </template>
 
     <template #cell-created_at="{ row: trial }">

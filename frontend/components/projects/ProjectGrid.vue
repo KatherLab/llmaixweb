@@ -95,7 +95,7 @@
               <div class="text-sm font-medium text-content">
                 {{ project.user.full_name }}
               </div>
-              <div class="text-xs text-content-subtle">{{ project.user.email }}</div>
+              <div class="text-xs text-content-muted">{{ project.user.email }}</div>
             </div>
           </div>
         </template>

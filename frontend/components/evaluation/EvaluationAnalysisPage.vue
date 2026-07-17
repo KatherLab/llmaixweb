@@ -248,7 +248,7 @@
             <template #cell-incorrect_fields="{ row }">
               <span class="text-sm text-content-muted">
                 {{ (row.incorrect_fields?.length || 0) + (row.missing_fields?.length || 0) }}
-                <span class="text-content-subtle">/ {{ row.total_fields }}</span>
+                <span class="text-content-muted">/ {{ row.total_fields }}</span>
               </span>
             </template>
             <template #cell-status="{ row }">

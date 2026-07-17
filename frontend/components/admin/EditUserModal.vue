@@ -3,7 +3,7 @@
     <template #header>
       <div>
         <h3 class="text-lg font-semibold text-content">Edit User</h3>
-        <p class="text-sm text-content-subtle mt-0.5">#{{ user?.id }} &middot; {{ user?.email }}</p>
+        <p class="text-sm text-content-muted mt-0.5">#{{ user?.id }} &middot; {{ user?.email }}</p>
       </div>
     </template>
 
@@ -24,17 +24,29 @@
         <h4 class="text-xs font-bold text-content-subtle uppercase tracking-wider mb-3">General</h4>
         <div class="space-y-4">
           <div>
-            <label :class="labelClass">Full Name</label>
-            <input v-model="editForm.full_name" type="text" :class="inputClass" />
+            <label :class="labelClass" for="edit-user-full-name">Full Name</label>
+            <input
+              id="edit-user-full-name"
+              v-model="editForm.full_name"
+              type="text"
+              :class="inputClass"
+            />
           </div>
           <div>
-            <label :class="labelClass">Email</label>
-            <input v-model="editForm.email" type="email" :class="inputClass" maxlength="254" />
+            <label :class="labelClass" for="edit-user-email">Email</label>
+            <input
+              id="edit-user-email"
+              v-model="editForm.email"
+              type="email"
+              :class="inputClass"
+              maxlength="254"
+            />
           </div>
           <div class="flex gap-4">
             <div class="flex-1">
-              <label :class="labelClass">Role</label>
+              <label :class="labelClass" for="edit-user-role">Role</label>
               <select
+                id="edit-user-role"
                 v-model="editForm.role"
                 :class="selectClass"
                 :disabled="user?.id === currentUserId"

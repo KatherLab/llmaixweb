@@ -43,6 +43,16 @@
       <!-- Documents Grid/List -->
       <SkeletonTable v-if="isLoading" :columns="4" :rows="8" />
 
+      <!-- Inline error state: a failed fetch must not masquerade as
+           "no documents" — show the error with a retry instead. -->
+      <ErrorBanner
+        v-else-if="fetchError"
+        :message="fetchError"
+        retry-text="Retry"
+        :retry-loading="isLoading"
+        @retry="fetchDocuments"
+      />
+
       <!-- Empty State: No documents (either no documents exist or filters returned no results) -->
       <EmptyState
         v-else-if="hasLoadedDocuments && serverItems.length === 0"
@@ -187,6 +197,7 @@ import SkeletonTable from '@/components/common/SkeletonTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BatchActionBar from '@/components/common/BatchActionBar.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import Tooltip from '@/components/common/Tooltip.vue'
@@ -269,6 +280,9 @@ const customDateTo = ref<string>('')
 
 // Track if we've ever loaded documents (for filter UX)
 const hasLoadedDocuments = ref<boolean>(false)
+
+// Inline error for a failed list fetch (rendered via ErrorBanner + Retry).
+const fetchError = ref<string>('')
 
 // Check if any filters are active
 const hasActiveFilters = computed<boolean>(() => {
@@ -497,8 +511,10 @@ const fetchDocuments = async (): Promise<void> => {
       currentPage.value = totalPages.value
       await fetchDocuments()
     }
+
+    fetchError.value = ''
   } catch (error) {
-    toast.error('Failed to load documents')
+    fetchError.value = extractErrorMessage(error, 'Failed to load documents')
     console.error(error)
   } finally {
     isLoading.value = false

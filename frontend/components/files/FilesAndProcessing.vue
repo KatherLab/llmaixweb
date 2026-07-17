@@ -15,10 +15,20 @@
       </template>
     </PageHeader>
 
+    <!-- Inline error state: a failed list fetch must not masquerade as an
+         empty project (dropzone) — show the error with a retry instead. -->
+    <ErrorBanner
+      v-if="fetchError"
+      :message="fetchError"
+      retry-text="Retry"
+      :retry-loading="isLoading"
+      @retry="retryFetchFiles"
+    />
+
     <!-- Upload Zone (shown whenever there are no files and no active filters,
          including a brand-new project after its initial empty fetch) -->
     <FileDropzone
-      v-if="!files.length && !hasActiveFilters"
+      v-if="!files.length && !hasActiveFilters && !fetchError"
       v-model:dragging="isDragging"
       @drop="uploadFiles"
       @select="uploadFiles"
@@ -26,7 +36,7 @@
 
     <!-- Filters & Search (only when there are files, or active filters to show/clear) -->
     <FilesFilterBar
-      v-else
+      v-else-if="files.length > 0 || hasActiveFilters"
       v-model:search="searchQuery"
       v-model:status="filterStatus"
       v-model:file-type="filterFileType"
@@ -70,7 +80,7 @@
       <div class="flex items-center gap-3">
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between gap-2">
-            <p class="text-sm font-medium text-content">
+            <p class="text-sm font-medium text-content" aria-live="polite">
               Preprocessing
               <span class="text-content-muted font-normal">
                 {{ activePreprocessingSummary.processed }} of
@@ -84,7 +94,7 @@
               </span>
             </p>
             <div class="flex items-center gap-2 shrink-0">
-              <span class="text-xs text-content-subtle tabular-nums"
+              <span class="text-xs text-content tabular-nums"
                 >{{ activePreprocessingSummary.percent }}%</span
               >
               <BaseButton variant="ghost" size="sm" @click="viewActiveTaskDetails">
@@ -94,14 +104,21 @@
                 v-if="activePreprocessingSummary.cancelableTask"
                 variant="ghost"
                 size="sm"
-                class="text-red-600 dark:text-red-400 hover:text-red-700"
+                class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                 @click="cancelPreprocessingTask(activePreprocessingSummary.cancelableTask)"
               >
                 Cancel
               </BaseButton>
             </div>
           </div>
-          <div class="mt-2 h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden">
+          <div
+            class="mt-2 h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden"
+            role="progressbar"
+            aria-label="Preprocessing progress"
+            :aria-valuenow="activePreprocessingSummary.percent"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
             <div
               class="h-full bg-primary transition-all duration-500"
               :style="{ width: activePreprocessingSummary.percent + '%' }"
@@ -125,6 +142,7 @@
       :sort-by="sortBy"
       :sort-order="sortOrder"
       :pagination="pagination"
+      :select-all-busy="isSelectingAll"
       @toggle-selection="toggleSelection"
       @toggle-all="toggleSelectAll"
       @preview="previewFile"
@@ -155,7 +173,7 @@
 
     <!-- Empty State: filters active but returned nothing -->
     <EmptyState
-      v-if="!files.length && !isDragging && hasLoadedFiles && hasActiveFilters"
+      v-if="!files.length && !isDragging && hasLoadedFiles && hasActiveFilters && !fetchError"
       title="No files match your filters"
       description="Try adjusting or clearing your filters to see more results"
       action-text="Clear All Filters"
@@ -217,7 +235,9 @@
     <UploadFilesModal
       :open="showUploadModal"
       :progress="uploadProgress"
+      :cancelling="cancelUploadRequested"
       @close="onUploadModalClose"
+      @cancel="requestUploadCancel"
       @files="uploadFiles"
     />
 
@@ -304,6 +324,7 @@ import BatchActionBar from '@/components/common/BatchActionBar.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import BatchActionsModal from '@/components/documents/BatchActionsModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { setEngineLabels } from '@/utils/ocrLabels'
 import { getDateRangeBounds } from '@/utils/dateRange'
@@ -351,6 +372,8 @@ const showImportConfigModal = ref(false)
 const configuringFile = ref<FileModel | null>(null)
 const isLoading = ref(true)
 const hasLoadedFiles = ref(false) // Track if we've ever loaded files (for filter UX)
+// Inline error for a failed list fetch (rendered via ErrorBanner + Retry).
+const fetchError = ref('')
 
 // Custom date range state
 const customDateFrom = ref('')
@@ -400,6 +423,10 @@ const isSubmitting = ref(false)
 const isStartingProcessing = ref(false)
 // Re-entrancy guard for the batch upload loop (see uploadFiles).
 const isUploading = ref(false)
+// Cancel support for the upload loop: aborts the in-flight request and stops
+// the loop before the next file. Set via the modal's Cancel/X while uploading.
+const cancelUploadRequested = ref(false)
+let uploadAbortController: AbortController | null = null
 // Live progress for the upload modal so large batches aren't a silent spinner.
 interface UploadProgressState {
   total: number
@@ -591,12 +618,20 @@ const fetchFiles = async (options: { forceRefreshTasks?: boolean } = {}): Promis
         historyFile.value = { ...updatedHistoryFile }
       }
     }
+
+    fetchError.value = ''
   } catch (err) {
     console.error('Failed to fetch files:', err)
-    toast.error('Failed to load files')
+    fetchError.value = extractErrorMessage(err, 'Failed to load files')
   } finally {
     isLoading.value = false
   }
+}
+
+// Retry a failed list fetch from the inline error banner.
+const retryFetchFiles = (): void => {
+  isLoading.value = true
+  fetchFiles()
 }
 
 // Display files (for the table - just returns files.value since pagination is server-side)
@@ -1135,6 +1170,8 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
   uploadProgress.value = progress
 
   for (let i = 0; i < fileList.length; i++) {
+    // Stop before the next file once a cancel was requested.
+    if (cancelUploadRequested.value) break
     const file = fileList[i]
     progress.currentIndex = i + 1
     progress.currentName = file.name
@@ -1151,27 +1188,45 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
         }),
       )
 
-      await filesApi.upload(props.projectId, formData, (e) => {
-        progress.currentPercent = e.total ? Math.round((e.loaded / e.total) * 100) : 0
-      })
+      uploadAbortController = new AbortController()
+      await filesApi.upload(
+        props.projectId,
+        formData,
+        (e) => {
+          progress.currentPercent = e.total ? Math.round((e.loaded / e.total) * 100) : 0
+        },
+        uploadAbortController.signal,
+      )
       progress.succeeded++
+      progress.completed++
     } catch (err) {
+      // An abort triggered by cancel isn't a failure — just stop the loop.
+      if (cancelUploadRequested.value) break
       console.error(`Failed to upload ${file.name}:`, err)
       failures.push({ name: file.name, message: extractErrorMessage(err, 'Upload failed') })
-    } finally {
       progress.completed++
     }
   }
+  uploadAbortController = null
 
+  const wasCancelled = cancelUploadRequested.value
   progress.currentPercent = 100
   progress.done = true
 
   const succeeded = progress.succeeded
-  // One summary toast per batch instead of one per file (50 files ≠ 50 toasts).
-  if (succeeded > 0) {
+  if (wasCancelled) {
+    // Clear summary of what made it vs. what didn't before the cancel.
+    const notUploaded = progress.total - succeeded - failures.length
+    toast.info(
+      `Upload cancelled — ${succeeded} file${succeeded === 1 ? '' : 's'} uploaded, ` +
+        `${notUploaded + failures.length} not uploaded` +
+        `${failures.length > 0 ? ` (${failures.length} failed)` : ''}`,
+    )
+  } else if (succeeded > 0) {
+    // One summary toast per batch instead of one per file (50 files ≠ 50 toasts).
     toast.success(`Uploaded ${succeeded} file${succeeded === 1 ? '' : 's'}`)
   }
-  if (failures.length > 0) {
+  if (!wasCancelled && failures.length > 0) {
     const first = failures[0]
     const more = failures.length > 1 ? ` (+${failures.length - 1} more)` : ''
     toast.error(
@@ -1182,9 +1237,11 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
 
   isSubmitting.value = false
   isUploading.value = false
+  cancelUploadRequested.value = false
   // Keep the modal open on the summary screen when some files failed so the
-  // user can see what went wrong; auto-close on a fully successful batch.
-  if (failures.length === 0) {
+  // user can see what went wrong; auto-close on a fully successful batch and
+  // on cancel (the toast above carries the summary).
+  if (wasCancelled || failures.length === 0) {
     showUploadModal.value = false
     uploadProgress.value = null
   }
@@ -1194,10 +1251,21 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
   emit('files-changed')
 }
 
-// Reset upload state when the modal is dismissed (from the summary screen or
-// otherwise). Guarded so it can't clear state mid-upload.
+// Cancel the running upload batch: abort the in-flight request and let the
+// loop stop before the next file.
+const requestUploadCancel = (): void => {
+  if (!isUploading.value || cancelUploadRequested.value) return
+  cancelUploadRequested.value = true
+  uploadAbortController?.abort()
+}
+
+// Modal dismissed: mid-upload this requests a cancel (the X must never be
+// dead); otherwise it simply closes and resets the summary state.
 const onUploadModalClose = (): void => {
-  if (isUploading.value) return
+  if (isUploading.value) {
+    requestUploadCancel()
+    return
+  }
   showUploadModal.value = false
   uploadProgress.value = null
 }

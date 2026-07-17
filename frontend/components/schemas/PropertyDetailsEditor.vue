@@ -9,10 +9,11 @@
 
       <!-- Add this if not editing root -->
       <div v-if="propertyKey !== '__root__' && propertyKey !== 'items'">
-        <label :class="labelClass">
+        <label :class="labelClass" :for="`${uid}-key`">
           {{ advancedMode ? 'Property Key' : 'Field Name' }}
         </label>
         <input
+          :id="`${uid}-key`"
           :value="propertyKey"
           :class="[inputClass, 'font-mono']"
           placeholder="property_name"
@@ -26,10 +27,11 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label :class="labelClass">
+          <label :class="labelClass" :for="`${uid}-title`">
             {{ advancedMode ? 'Title' : 'Display Name' }}
           </label>
           <input
+            :id="`${uid}-title`"
             v-model="localProperty.title"
             :class="inputClass"
             :placeholder="`${propertyKey} display name`"
@@ -38,11 +40,12 @@
 
         <!-- Update the type select dropdown (around line 35) -->
         <div>
-          <label :class="labelClass">
+          <label :class="labelClass" :for="`${uid}-type`">
             {{ advancedMode ? 'Type' : 'Field Type' }}
           </label>
           <div class="relative group">
             <select
+              :id="`${uid}-type`"
               v-model="localProperty.type"
               :class="[selectClass, 'pl-10']"
               @change="onTypeChange"
@@ -77,8 +80,9 @@
       </div>
 
       <div>
-        <label :class="labelClass"> Description </label>
+        <label :class="labelClass" :for="`${uid}-description`"> Description </label>
         <textarea
+          :id="`${uid}-description`"
           v-model="localProperty.description"
           rows="2"
           :class="textareaClass"
@@ -96,8 +100,9 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label :class="labelClass"> Minimum Length </label>
+          <label :class="labelClass" :for="`${uid}-min-length`"> Minimum Length </label>
           <input
+            :id="`${uid}-min-length`"
             v-model.number="localProperty.minLength"
             type="number"
             min="0"
@@ -107,8 +112,9 @@
         </div>
 
         <div>
-          <label :class="labelClass"> Maximum Length </label>
+          <label :class="labelClass" :for="`${uid}-max-length`"> Maximum Length </label>
           <input
+            :id="`${uid}-max-length`"
             v-model.number="localProperty.maxLength"
             type="number"
             min="0"
@@ -120,8 +126,8 @@
 
       <!-- Format Selection -->
       <div>
-        <label :class="labelClass"> Format </label>
-        <select v-model="localProperty.format" :class="selectClass">
+        <label :class="labelClass" :for="`${uid}-format`"> Format </label>
+        <select :id="`${uid}-format`" v-model="localProperty.format" :class="selectClass">
           <option value="">No specific format</option>
           <option value="email">Email</option>
           <option value="uri">URL</option>
@@ -136,7 +142,7 @@
 
       <!-- Pattern -->
       <div>
-        <label :class="labelClass">
+        <label :class="labelClass" :for="`${uid}-pattern`">
           Pattern (Regular Expression)
           <button
             class="ml-1 text-content-subtle hover:text-content-muted"
@@ -146,6 +152,7 @@
           </button>
         </label>
         <input
+          :id="`${uid}-pattern`"
           v-model="localProperty.pattern"
           :class="[inputClass, 'font-mono']"
           placeholder="e.g., ^[A-Z]{2}[0-9]{4}$"
@@ -206,8 +213,9 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label :class="labelClass"> Minimum Value </label>
+          <label :class="labelClass" :for="`${uid}-minimum`"> Minimum Value </label>
           <input
+            :id="`${uid}-minimum`"
             v-model.number="localProperty.minimum"
             type="number"
             :class="inputClass"
@@ -216,8 +224,9 @@
         </div>
 
         <div>
-          <label :class="labelClass"> Maximum Value </label>
+          <label :class="labelClass" :for="`${uid}-maximum`"> Maximum Value </label>
           <input
+            :id="`${uid}-maximum`"
             v-model.number="localProperty.maximum"
             type="number"
             :class="inputClass"
@@ -228,8 +237,9 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label :class="labelClass"> Multiple Of </label>
+          <label :class="labelClass" :for="`${uid}-multiple-of`"> Multiple Of </label>
           <input
+            :id="`${uid}-multiple-of`"
             v-model.number="localProperty.multipleOf"
             type="number"
             step="any"
@@ -273,8 +283,9 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label :class="labelClass"> Minimum Items </label>
+          <label :class="labelClass" :for="`${uid}-min-items`"> Minimum Items </label>
           <input
+            :id="`${uid}-min-items`"
             v-model.number="localProperty.minItems"
             type="number"
             min="0"
@@ -284,8 +295,9 @@
         </div>
 
         <div>
-          <label :class="labelClass"> Maximum Items </label>
+          <label :class="labelClass" :for="`${uid}-max-items`"> Maximum Items </label>
           <input
+            :id="`${uid}-max-items`"
             v-model.number="localProperty.maxItems"
             type="number"
             min="0"
@@ -358,7 +370,9 @@
       <h4 class="text-sm font-medium text-content">Additional Settings</h4>
 
       <div>
-        <label :class="labelClass"> Default Value </label>
+        <label :class="labelClass" :for="hasDefaultInput ? `${uid}-default` : undefined">
+          Default Value
+        </label>
         <div v-if="localProperty.type === 'boolean'" class="flex items-center space-x-4">
           <label class="flex items-center space-x-2">
             <input
@@ -391,6 +405,7 @@
         </div>
         <input
           v-else-if="localProperty.type === 'string'"
+          :id="`${uid}-default`"
           v-model="localProperty.default"
           type="text"
           :class="inputClass"
@@ -398,6 +413,7 @@
         />
         <input
           v-else-if="localProperty.type === 'number'"
+          :id="`${uid}-default`"
           v-model.number="localProperty.default"
           type="number"
           :class="inputClass"
@@ -424,8 +440,9 @@
 
         <!-- Examples -->
         <div>
-          <label :class="labelClass"> Examples </label>
+          <label :class="labelClass" :for="`${uid}-examples`"> Examples </label>
           <textarea
+            :id="`${uid}-examples`"
             v-model="examplesText"
             rows="2"
             :class="[textareaClass, 'font-mono']"
@@ -438,7 +455,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, type Component } from 'vue'
+import { ref, computed, watch, useId, type Component } from 'vue'
 import {
   CircleCheckBig,
   CircleHelp,
@@ -470,6 +487,10 @@ const emit = defineEmits<{
   'update-key': [key: string]
 }>()
 
+// Unique per-instance prefix for label/input ids (the editor can be mounted
+// twice at once: inline in VisualSchemaEditor and inside EditPropertyModal).
+const uid = useId()
+
 const localProperty = ref<SchemaProperty>(JSON.parse(JSON.stringify(props.property)))
 const showPatternHelp = ref(false)
 const enumValues = ref<string[]>(props.property.enum ? [...(props.property.enum as string[])] : [])
@@ -483,6 +504,11 @@ const examplesText = ref(
 const typeIcon = computed<Component>(() => getTypeIcon(localProperty.value.type))
 
 const typeColorClass = computed(() => getTypeColor(localProperty.value.type))
+
+// Only string/number types render a single default-value input the label can point at.
+const hasDefaultInput = computed(
+  () => localProperty.value.type === 'string' || localProperty.value.type === 'number',
+)
 
 const isInteger = computed<boolean>({
   get: () => localProperty.value.type === 'integer',

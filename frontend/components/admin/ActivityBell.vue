@@ -137,11 +137,19 @@
                       <div v-if="isTaskActive(task) && task.meta" class="mt-2">
                         <div
                           class="flex items-center justify-between text-xs text-content-subtle mb-1"
+                          aria-live="polite"
                         >
                           <span>Processing...</span>
                           <span>{{ getProgressPercent(task) }}%</span>
                         </div>
-                        <div class="w-full bg-surface-sunken rounded-full h-1.5 overflow-hidden">
+                        <div
+                          class="w-full bg-surface-sunken rounded-full h-1.5 overflow-hidden"
+                          role="progressbar"
+                          aria-label="Preprocessing progress"
+                          :aria-valuenow="getProgressPercent(task)"
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                        >
                           <div
                             class="bg-primary h-1.5 rounded-full transition-all duration-300"
                             :style="{ width: `${getProgressPercent(task)}%` }"

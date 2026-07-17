@@ -10,7 +10,22 @@
     <!-- Content -->
     <!-- Preview -->
     <h3 class="font-semibold text-content text-sm mb-3">Preview (first 25 rows)</h3>
-    <div class="overflow-x-auto border border-default rounded bg-surface-muted p-2 max-h-72 mb-5">
+
+    <!-- Preview load error: surface the backend detail inline with a retry
+         (mirrors FilePreviewModal's error handling). -->
+    <ErrorBanner
+      v-if="previewError"
+      :message="previewError"
+      retry-text="Retry"
+      :retry-loading="previewLoading"
+      class="!mb-5"
+      @retry="loadPreview"
+    />
+
+    <div
+      v-else
+      class="overflow-x-auto border border-default rounded bg-surface-muted p-2 max-h-72 mb-5"
+    >
       <table v-if="headerLabels.length" class="min-w-full text-sm">
         <thead>
           <tr>
@@ -38,7 +53,7 @@
         No preview data available.
       </div>
     </div>
-    <div class="text-xs text-content-subtle mb-4">
+    <div v-if="!previewError" class="text-xs text-content-subtle mb-4">
       Previewing first {{ preview.rows.length }} rows
     </div>
 
@@ -46,8 +61,8 @@
     <div class="space-y-6">
       <div class="flex flex-wrap gap-4">
         <div>
-          <label :class="labelClass">Encoding</label>
-          <select v-model="encoding" :class="selectClass">
+          <label for="import-encoding" :class="labelClass">Encoding</label>
+          <select id="import-encoding" v-model="encoding" :class="selectClass">
             <option v-for="enc in detectedEncodings" :key="enc" :value="enc">
               {{ enc }}
             </option>
@@ -55,8 +70,8 @@
         </div>
 
         <div v-if="isCSV">
-          <label :class="labelClass">Delimiter</label>
-          <select v-model="delimiter" :class="selectClass">
+          <label for="import-delimiter" :class="labelClass">Delimiter</label>
+          <select id="import-delimiter" v-model="delimiter" :class="selectClass">
             <option v-for="d in detectedDelimiters" :key="d" :value="d">
               {{ displayDelimiter(d) }}
             </option>
@@ -64,14 +79,16 @@
         </div>
 
         <div v-if="isCSV || isXLSX">
-          <label :class="labelClass">Header Row</label>
-          <input v-model="hasHeader" type="checkbox" />
-          <span class="text-sm text-content-muted">File contains header row</span>
+          <label for="import-has-header" :class="labelClass">Header Row</label>
+          <input id="import-has-header" v-model="hasHeader" type="checkbox" />
+          <label for="import-has-header" class="text-sm text-content-muted"
+            >File contains header row</label
+          >
         </div>
 
         <div v-if="isXLSX && sheets.length">
-          <label :class="labelClass">Sheet</label>
-          <select v-model="sheet" :class="selectClass">
+          <label for="import-sheet" :class="labelClass">Sheet</label>
+          <select id="import-sheet" v-model="sheet" :class="selectClass">
             <option v-for="s in sheets" :key="s" :value="s">{{ s }}</option>
           </select>
         </div>
@@ -150,8 +167,8 @@
 
         <!-- ID column -->
         <div>
-          <label :class="labelClass">Case/Document ID Column</label>
-          <select v-model="caseIdColumn" :class="selectClass">
+          <label for="import-case-id" :class="labelClass">Case/Document ID Column</label>
+          <select id="import-case-id" v-model="caseIdColumn" :class="selectClass">
             <option value="">(Row number)</option>
             <option v-for="(col, idx) in headerLabels" :key="idx" :value="col">
               {{ col }}<span v-if="isRecommendedId(col)"> (Recommended)</span>
@@ -260,7 +277,9 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { selectClass, labelClass } from '@/utils/formStyles'
+import { extractErrorMessage } from '@/utils/errors'
 import type { File } from '@/types'
 
 interface Props {
@@ -307,6 +326,9 @@ interface PreviewData {
 }
 
 const preview = ref<PreviewData>({ headers: [], rows: [] })
+// Inline preview-load error (with retry) instead of a dropped toast.
+const previewError = ref('')
+const previewLoading = ref(false)
 const detectedDelimiters = ref<string[]>([',', ';', '\t'])
 const delimiter = ref(',')
 const encoding = ref('utf-8')
@@ -429,6 +451,7 @@ function hasUnsavedChanges(): boolean {
 
 const loadPreview = async (): Promise<void> => {
   if (!props.file) return
+  previewLoading.value = true
   try {
     const params = new URLSearchParams({ encoding: encoding.value })
     if (isCSV.value && delimiter.value) params.append('delimiter', delimiter.value)
@@ -470,9 +493,13 @@ const loadPreview = async (): Promise<void> => {
       const firstSheet = data.sheets[0]
       if (firstSheet) sheet.value = firstSheet
     }
-  } catch {
-    toast.error('Failed to load preview')
+
+    previewError.value = ''
+  } catch (err) {
+    previewError.value = extractErrorMessage(err, 'Failed to load preview')
     preview.value = { headers: [], rows: [] }
+  } finally {
+    previewLoading.value = false
   }
 }
 

@@ -1,12 +1,15 @@
 <template>
   <div>
     <div class="flex items-center gap-1 mb-1.5">
-      <label :class="labelClass">LLM Model <span class="text-red-500">*</span></label>
+      <label :class="labelClass" for="trial-model-select"
+        >LLM Model <span class="text-red-500">*</span></label
+      >
       <Tooltip :text="modelHelpText">
         <Info class="h-4 w-4 text-content-subtle hover:text-content-muted" />
       </Tooltip>
     </div>
     <select
+      id="trial-model-select"
       v-model="model"
       :disabled="isLoadingModels || isTestingConnection || (availableModels ?? []).length === 0"
       :class="[selectClass, 'disabled:opacity-60 disabled:cursor-not-allowed']"

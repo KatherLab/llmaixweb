@@ -21,8 +21,13 @@
     <!-- Reprocess Action -->
     <div v-if="action === 'reprocess'" class="space-y-4">
       <div class="flex items-center">
-        <input v-model="forceReprocess" type="checkbox" :class="checkboxClass" />
-        <label class="ml-2 text-sm text-content-muted">
+        <input
+          id="batch-force-reprocess"
+          v-model="forceReprocess"
+          type="checkbox"
+          :class="checkboxClass"
+        />
+        <label for="batch-force-reprocess" class="ml-2 text-sm text-content-muted">
           Force reprocess (ignore existing results)
         </label>
       </div>
@@ -32,8 +37,8 @@
     <div v-else-if="action === 'export'" class="space-y-4">
       <p class="text-sm text-content-muted">Choose export format and options:</p>
       <div>
-        <label :class="labelClass"> Export Format </label>
-        <select v-model="exportFormat" :class="selectClass">
+        <label for="batch-export-format" :class="labelClass"> Export Format </label>
+        <select id="batch-export-format" v-model="exportFormat" :class="selectClass">
           <option value="json">JSON</option>
           <option value="csv">CSV</option>
           <option value="txt">Plain Text</option>
@@ -91,11 +96,12 @@
 
       <div class="flex items-center">
         <input
+          id="batch-confirm-delete"
           v-model="confirmDelete"
           type="checkbox"
           :class="[checkboxClass, 'text-red-600 focus:ring-red-500']"
         />
-        <label class="ml-2 text-sm text-content-muted">
+        <label for="batch-confirm-delete" class="ml-2 text-sm text-content-muted">
           I understand that this action is permanent
         </label>
       </div>
@@ -479,9 +485,12 @@ const deleteDocuments = async (): Promise<number[]> => {
     const hint = failedDocs.some((f) => f.error.includes('document sets'))
       ? ' Go to the Document Groups tab to manage.'
       : ''
+    // The backend error text says "document sets"; the UI-facing term is
+    // "document groups" — normalize so one toast doesn't mix both.
+    const firstError = first.error.replace(/document set(s?)/gi, 'document group$1')
     toast.error(
       `Failed to delete ${failedDocs.length} ${label}${failedDocs.length !== 1 ? 's' : ''}: ` +
-        `#${first.docId} — ${first.error}${more}.${hint}`,
+        `#${first.docId} — ${firstError}${more}.${hint}`,
     )
     // Don't throw - close modal anyway but parent will know what was deleted
   }

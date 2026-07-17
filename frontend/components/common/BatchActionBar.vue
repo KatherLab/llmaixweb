@@ -1,7 +1,12 @@
 <template>
-  <div v-if="count > 0" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+  <!-- max-w + flex-wrap keep the bar usable on narrow (375px) viewports
+       instead of overflowing off-screen. -->
+  <div
+    v-if="count > 0"
+    class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-max max-w-[calc(100vw-2rem)]"
+  >
     <div
-      class="bg-inverse-surface text-inverse-content border border-inverse-border rounded-modal shadow-2xl px-6 py-3 flex items-center space-x-4"
+      class="bg-inverse-surface text-inverse-content border border-inverse-border rounded-modal shadow-2xl px-6 py-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2"
     >
       <span class="font-medium"
         >{{ count }} {{ countLabel || 'item' }}{{ count !== 1 ? 's' : '' }} selected</span

@@ -14,10 +14,11 @@
     <form @submit.prevent="submit">
       <div class="space-y-4">
         <div>
-          <label :class="labelClass">
+          <label :class="labelClass" for="add-property-name">
             {{ advancedMode ? 'Property Name' : 'Field Name' }}
           </label>
           <input
+            id="add-property-name"
             ref="propertyNameInput"
             v-model="form.name"
             :class="inputClass"
@@ -52,13 +53,19 @@
         </div>
 
         <div>
-          <label :class="labelClass"> Display Name </label>
-          <input v-model="form.title" :class="inputClass" placeholder="e.g., Patient Name" />
+          <label :class="labelClass" for="add-property-title"> Display Name </label>
+          <input
+            id="add-property-title"
+            v-model="form.title"
+            :class="inputClass"
+            placeholder="e.g., Patient Name"
+          />
         </div>
 
         <div>
-          <label :class="labelClass"> Description </label>
+          <label :class="labelClass" for="add-property-description"> Description </label>
           <textarea
+            id="add-property-description"
             v-model="form.description"
             rows="2"
             :class="textareaClass"

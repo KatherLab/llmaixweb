@@ -7,6 +7,7 @@
     :selected-keys="selectedFiles"
     :all-selected="allSelected"
     :total-selected="selectedFiles.length"
+    :select-all-busy="selectAllBusy"
     :sort-by="sortBy"
     :sort-order="sortOrder"
     :pagination="pagination"
@@ -168,12 +169,15 @@ interface Props {
   sortBy?: string
   sortOrder?: string
   pagination?: Pagination
+  /** Busy state while the cross-page "select all" id fetch runs. */
+  selectAllBusy?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   sortBy: 'created_at',
   sortOrder: 'desc',
   pagination: () => ({ page: 1, page_size: 25, total: 0, total_pages: 0, start: 0, end: 0 }),
+  selectAllBusy: false,
 })
 
 const emit = defineEmits<{

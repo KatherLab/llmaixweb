@@ -1,7 +1,9 @@
 <template>
   <div class="mb-4">
-    <label :class="labelClass">Prompt <span class="text-red-500">*</span></label>
-    <select v-model="model" :class="selectClass" @change="emit('change')">
+    <label :class="labelClass" for="trial-prompt-select"
+      >Prompt <span class="text-red-500">*</span></label
+    >
+    <select id="trial-prompt-select" v-model="model" :class="selectClass" @change="emit('change')">
       <option disabled value="">Select a prompt</option>
       <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id.toString()">
         {{ prompt.name }}

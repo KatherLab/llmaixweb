@@ -49,8 +49,9 @@
 
     <template v-if="dateRange === 'custom'" #custom-range>
       <div class="flex items-center gap-2">
-        <label :class="labelClass">From:</label>
+        <label :class="labelClass" for="documents-filter-date-from">From:</label>
         <input
+          id="documents-filter-date-from"
           v-model="customDateFrom"
           type="date"
           :class="[inputClass, 'px-3 py-1.5']"
@@ -58,8 +59,9 @@
         />
       </div>
       <div class="flex items-center gap-2">
-        <label :class="labelClass">To:</label>
+        <label :class="labelClass" for="documents-filter-date-to">To:</label>
         <input
+          id="documents-filter-date-to"
           v-model="customDateTo"
           type="date"
           :class="[inputClass, 'px-3 py-1.5']"

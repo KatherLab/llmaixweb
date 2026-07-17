@@ -1,5 +1,10 @@
 <template>
-  <SlideOver :open="open" max-width="max-w-[95rem]" @close="$emit('close')">
+  <SlideOver
+    :open="open"
+    aria-label="Failure details"
+    max-width="max-w-[95rem]"
+    @close="$emit('close')"
+  >
     <template #header>
       <div class="flex items-center justify-between gap-4 flex-1 min-w-0 pr-8">
         <div class="min-w-0">

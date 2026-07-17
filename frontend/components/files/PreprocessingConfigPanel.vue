@@ -164,8 +164,9 @@
 
       <!-- Vision LLM Prompt (visible when Vision LLM is picked for an OCR file) -->
       <div v-if="hasOcrRequiringFiles && selectedEngine === 'llm_vision'" class="pt-4">
-        <label :class="labelClass">Prompt</label>
+        <label :class="labelClass" for="vision-ocr-prompt">Prompt</label>
         <textarea
+          id="vision-ocr-prompt"
           v-model="visionPrompt"
           rows="2"
           placeholder="Extract all text as markdown..."
@@ -188,8 +189,8 @@
         <div v-show="showAdvanced" class="mt-4 space-y-4">
           <!-- Tesseract Language -->
           <div v-if="selectedEngine === 'docling_tesseract'">
-            <label :class="labelClass"> Tesseract Language </label>
-            <select v-model="tesseractLang" :class="selectClass">
+            <label :class="labelClass" for="tesseract-language"> Tesseract Language </label>
+            <select id="tesseract-language" v-model="tesseractLang" :class="selectClass">
               <option value="auto">Auto-detect</option>
               <option value="eng">English</option>
               <option value="deu">German</option>

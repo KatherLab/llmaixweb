@@ -36,8 +36,9 @@
       class="flex flex-wrap md:flex-nowrap items-center gap-x-6 gap-y-3 px-6 py-3 border-b border-default bg-surface z-10 text-sm"
     >
       <div class="flex items-center gap-2">
-        <label class="text-sm font-medium text-content">Schema</label>
+        <label class="text-sm font-medium text-content" for="gt-preview-schema">Schema</label>
         <select
+          id="gt-preview-schema"
           v-model="selectedSchemaId"
           class="px-2.5 py-1.5 rounded-card border border-strong bg-surface text-sm text-content shadow-sm focus:ring-2 focus:ring-ring transition min-w-[180px]"
           @change="onSchemaChange"

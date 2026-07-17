@@ -85,15 +85,18 @@ export const filesApi = {
 
   // Multipart upload. `formData` must include the File + a `file_info` JSON string.
   // Callers upload one file per request (sequential loop). Pass `onUploadProgress`
-  // to drive a per-file progress bar in the upload modal.
+  // to drive a per-file progress bar in the upload modal, and `signal` to allow
+  // cancelling the in-flight request (AbortController).
   upload(
     projectId: number | string,
     formData: FormData,
     onUploadProgress?: (e: AxiosProgressEvent) => void,
+    signal?: AbortSignal,
   ) {
     return api.post(`/project/${projectId}/file`, formData, {
       headers: MULTIPART,
       onUploadProgress,
+      signal,
     }) as Promise<ApiBody<File>>
   },
   configure(projectId: number | string, fileId: number | string, payload: Record<string, unknown>) {

@@ -45,14 +45,21 @@
 
     <!-- Progress (active) -->
     <div v-if="isActive" class="flex flex-col gap-1">
-      <div class="flex items-center gap-2 text-xs">
+      <div class="flex items-center gap-2 text-xs" aria-live="polite">
         <span class="font-medium text-primary">{{ docsDone }}/{{ totalDocs }} docs</span>
         <span class="text-content-muted">{{ formatDuration(elapsedSeconds) }} elapsed</span>
         <span v-if="etaSeconds && etaSeconds > 0" class="text-content-muted"
           >• ≈ {{ formatDuration(etaSeconds) }} left</span
         >
       </div>
-      <div class="w-full h-1 bg-surface-sunken rounded-full overflow-hidden">
+      <div
+        class="w-full h-1 bg-surface-sunken rounded-full overflow-hidden"
+        role="progressbar"
+        aria-label="Trial progress"
+        :aria-valuenow="progressPercent"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
         <div
           class="h-full bg-primary transition-all duration-500"
           :style="{ width: progressPercent + '%' }"

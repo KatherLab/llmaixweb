@@ -98,9 +98,14 @@
 
       <!-- Task inspection -->
       <div class="mt-8">
-        <label :class="labelClass">Inspect Task by ID:</label>
+        <label :class="labelClass" for="celery-inspect-task-id">Inspect Task by ID:</label>
         <form class="flex gap-2 mb-4" @submit.prevent="inspectTask">
-          <input v-model="taskId" :class="inputClass" placeholder="Paste task ID here" />
+          <input
+            id="celery-inspect-task-id"
+            v-model="taskId"
+            :class="inputClass"
+            placeholder="Paste task ID here"
+          />
           <BaseButton type="submit" variant="primary">Inspect</BaseButton>
         </form>
         <div v-if="taskStatus">

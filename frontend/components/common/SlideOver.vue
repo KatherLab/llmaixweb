@@ -20,6 +20,7 @@
   <BaseModal
     :open="open"
     placement="right"
+    :aria-label="ariaLabel || title || undefined"
     :panel-class="`w-screen ${maxWidth}`"
     header-class="bg-surface-muted"
     :body-class="`!p-0 flex-1 overflow-hidden ${bodyClass}`"
@@ -73,6 +74,9 @@ interface Props {
   open: boolean
   title?: string
   subtitle?: string
+  // Accessible dialog name. Falls back to `title`; pass explicitly when the
+  // #header slot is overridden (the title prop is unused then).
+  ariaLabel?: string
   // Tailwind max-width class for the drawer panel. Defaults very wide so the
   // split (file | content) layout has room; narrow it (e.g. 'max-w-md') for
   // single-column slide-overs like preprocessing history.
@@ -90,6 +94,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   title: '',
   subtitle: '',
+  ariaLabel: '',
   maxWidth: 'max-w-[95rem]',
   bodyClass: '',
   footerClass: '',

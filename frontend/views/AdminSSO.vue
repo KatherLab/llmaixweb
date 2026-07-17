@@ -82,12 +82,19 @@
     >
       <form class="space-y-4" @submit.prevent="saveProvider">
         <div>
-          <label :class="labelClass">Display name</label>
-          <input v-model="form.name" type="text" :class="inputClass" placeholder="e.g. Google" />
+          <label :class="labelClass" for="sso-provider-name">Display name</label>
+          <input
+            id="sso-provider-name"
+            v-model="form.name"
+            type="text"
+            :class="inputClass"
+            placeholder="e.g. Google"
+          />
         </div>
         <div>
-          <label :class="labelClass">Issuer URL</label>
+          <label :class="labelClass" for="sso-provider-issuer-url">Issuer URL</label>
           <input
+            id="sso-provider-issuer-url"
             v-model="form.issuer_url"
             type="url"
             :class="inputClass"
@@ -99,12 +106,18 @@
           </p>
         </div>
         <div>
-          <label :class="labelClass">Client ID</label>
-          <input v-model="form.client_id" type="text" :class="inputClass" />
+          <label :class="labelClass" for="sso-provider-client-id">Client ID</label>
+          <input
+            id="sso-provider-client-id"
+            v-model="form.client_id"
+            type="text"
+            :class="inputClass"
+          />
         </div>
         <div>
-          <label :class="labelClass">Client secret</label>
+          <label :class="labelClass" for="sso-provider-client-secret">Client secret</label>
           <input
+            id="sso-provider-client-secret"
             v-model="form.client_secret"
             type="password"
             :class="inputClass"
@@ -113,8 +126,8 @@
           />
         </div>
         <div>
-          <label :class="labelClass">Scopes</label>
-          <input v-model="form.scopes" type="text" :class="inputClass" />
+          <label :class="labelClass" for="sso-provider-scopes">Scopes</label>
+          <input id="sso-provider-scopes" v-model="form.scopes" type="text" :class="inputClass" />
         </div>
         <label class="flex items-center gap-2 text-sm text-content-muted">
           <input v-model="form.enabled" type="checkbox" class="rounded" />

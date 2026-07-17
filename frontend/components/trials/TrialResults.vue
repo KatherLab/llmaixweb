@@ -2,6 +2,7 @@
   <SlideOver
     v-if="isModal"
     :open="isModal"
+    aria-label="Trial results"
     body-class="!p-0 overflow-hidden"
     @close="$emit('close')"
   >

@@ -1,5 +1,10 @@
 <template>
-  <SlideOver :open="open" max-width="max-w-md" @close="emit('close')">
+  <SlideOver
+    :open="open"
+    aria-label="Preprocessing history"
+    max-width="max-w-md"
+    @close="emit('close')"
+  >
     <template #header>
       <div class="min-w-0 flex-1 pr-8">
         <h3 class="text-lg font-semibold text-content">Preprocessing History</h3>

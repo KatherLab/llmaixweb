@@ -1,7 +1,9 @@
 <template>
   <div class="mb-4">
-    <label :class="labelClass">Schema <span class="text-red-500">*</span></label>
-    <select v-model="model" :class="selectClass" @change="emit('change')">
+    <label :class="labelClass" for="trial-schema-select"
+      >Schema <span class="text-red-500">*</span></label
+    >
+    <select id="trial-schema-select" v-model="model" :class="selectClass" @change="emit('change')">
       <option disabled value="">Select a schema</option>
       <option v-for="schema in schemas" :key="schema.id" :value="schema.id.toString()">
         {{ schema.schema_name }}

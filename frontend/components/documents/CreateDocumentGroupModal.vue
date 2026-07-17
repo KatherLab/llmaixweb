@@ -15,8 +15,11 @@
 
     <!-- Group Name -->
     <div class="mb-4">
-      <label :class="labelClass"> Group Name <span class="text-red-500">*</span> </label>
+      <label :class="labelClass" for="doc-group-name">
+        Group Name <span class="text-red-500">*</span>
+      </label>
       <input
+        id="doc-group-name"
         v-model="formData.name"
         type="text"
         :class="inputClass"
@@ -27,8 +30,9 @@
 
     <!-- Description -->
     <div class="mb-4">
-      <label :class="labelClass">Description</label>
+      <label :class="labelClass" for="doc-group-description">Description</label>
       <textarea
+        id="doc-group-description"
         v-model="formData.description"
         rows="3"
         :class="textareaClass"

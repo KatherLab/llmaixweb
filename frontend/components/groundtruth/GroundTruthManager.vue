@@ -60,17 +60,19 @@
             <button
               class="p-2 text-content-muted hover:text-content hover:bg-surface-muted rounded-card transition-colors"
               title="Rename"
+              :aria-label="`Rename ${gt.name || 'ground truth file'}`"
               @click="editGroundTruth(gt)"
             >
-              <Pencil class="w-5 h-5" />
+              <Pencil class="w-5 h-5" aria-hidden="true" />
             </button>
             <!-- Delete (trash) -->
             <button
               class="p-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-card transition-colors"
               title="Delete"
+              :aria-label="`Delete ${gt.name || 'ground truth file'}`"
               @click="deleteGroundTruth(gt)"
             >
-              <Trash2 class="w-5 h-5" />
+              <Trash2 class="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -149,6 +151,7 @@ import { ref } from 'vue'
 import { Pencil, Settings, Trash2 } from '@lucide/vue'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
+import { extractErrorMessage } from '@/utils/errors'
 import { inputClass, labelClass } from '@/utils/formStyles'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -201,7 +204,7 @@ async function saveEdit() {
     emit('updated')
     cancelEdit()
   } catch (err) {
-    toast.error(`Failed to update ground truth: ${(err as Error).message}`)
+    toast.error(extractErrorMessage(err, 'Failed to update ground truth'))
     console.error(err)
   } finally {
     isSaving.value = false
@@ -234,7 +237,7 @@ async function confirmDelete() {
     toast.success('Ground truth deleted')
     emit('updated')
   } catch (err) {
-    toast.error(`Failed to delete ground truth: ${(err as Error).message}`)
+    toast.error(extractErrorMessage(err, 'Failed to delete ground truth'))
     console.error(err)
   }
 }

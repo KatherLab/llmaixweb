@@ -23,7 +23,7 @@
           <div class="text-sm font-medium text-content">
             {{ user.full_name || 'N/A' }}
           </div>
-          <div class="text-sm text-content-subtle">{{ user.email }}</div>
+          <div class="text-sm text-content-muted">{{ user.email }}</div>
         </div>
       </div>
     </template>

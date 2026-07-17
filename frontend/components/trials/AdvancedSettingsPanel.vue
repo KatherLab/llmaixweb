@@ -1,10 +1,11 @@
 <template>
   <div class="mt-2 bg-surface-muted border border-default rounded-card p-4 grid gap-6">
     <div>
-      <label :class="labelClass">
+      <label :class="labelClass" for="advanced-max-completion-tokens">
         Max Completion Tokens <span class="text-content-subtle font-normal">(optional)</span>
       </label>
       <input
+        id="advanced-max-completion-tokens"
         v-model="maxCompletionTokens"
         :class="inputClass"
         min="1"
@@ -16,10 +17,11 @@
       </p>
     </div>
     <div>
-      <label :class="labelClass">
+      <label :class="labelClass" for="advanced-temperature">
         Temperature <span class="text-content-subtle font-normal">(optional)</span>
       </label>
       <input
+        id="advanced-temperature"
         v-model="temperature"
         :class="inputClass"
         min="0"
@@ -34,10 +36,10 @@
       </p>
     </div>
     <div>
-      <label :class="labelClass">
+      <label :class="labelClass" for="advanced-reasoning-effort">
         Reasoning Effort <span class="text-content-subtle font-normal">(optional)</span>
       </label>
-      <select v-model="reasoningEffort" :class="selectClass">
+      <select id="advanced-reasoning-effort" v-model="reasoningEffort" :class="selectClass">
         <option value="">Use model default</option>
         <option value="low">Low</option>
         <option value="medium">Medium</option>

@@ -8,6 +8,7 @@
 <template>
   <SlideOver
     :open="open"
+    aria-label="Document group"
     max-width="max-w-[95rem]"
     body-class="!p-0 overflow-hidden"
     @close="$emit('close')"

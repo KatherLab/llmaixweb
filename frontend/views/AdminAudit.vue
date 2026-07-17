@@ -43,8 +43,13 @@
     <div v-if="mode === 'activity'">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <div>
-          <label :class="labelClass">Action</label>
-          <select v-model="filters.action" :class="inputClass" @change="applyFilters">
+          <label :class="labelClass" for="audit-filter-action">Action</label>
+          <select
+            id="audit-filter-action"
+            v-model="filters.action"
+            :class="inputClass"
+            @change="applyFilters"
+          >
             <option :value="undefined">All actions</option>
             <optgroup v-for="group in actionGroups" :key="group.label" :label="group.label">
               <option v-for="a in group.actions" :key="a" :value="a">{{ actionLabel(a) }}</option>
@@ -52,8 +57,13 @@
           </select>
         </div>
         <div>
-          <label :class="labelClass">Outcome</label>
-          <select v-model="filters.outcome" :class="inputClass" @change="applyFilters">
+          <label :class="labelClass" for="audit-filter-outcome">Outcome</label>
+          <select
+            id="audit-filter-outcome"
+            v-model="filters.outcome"
+            :class="inputClass"
+            @change="applyFilters"
+          >
             <option :value="undefined">All outcomes</option>
             <option value="success">Success</option>
             <option value="failure">Failure</option>
@@ -61,8 +71,9 @@
           </select>
         </div>
         <div>
-          <label :class="labelClass">Resource type</label>
+          <label :class="labelClass" for="audit-filter-resource-type">Resource type</label>
           <input
+            id="audit-filter-resource-type"
             v-model.trim="filters.resource_type"
             :class="inputClass"
             placeholder="e.g. document, trial"
@@ -70,8 +81,9 @@
           />
         </div>
         <div>
-          <label :class="labelClass">Request / error ID</label>
+          <label :class="labelClass" for="audit-filter-request-id">Request / error ID</label>
           <input
+            id="audit-filter-request-id"
             v-model.trim="filters.request_id"
             :class="inputClass"
             placeholder="Correlation ID"

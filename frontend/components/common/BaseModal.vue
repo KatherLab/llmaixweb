@@ -18,6 +18,7 @@
           :role="role"
           aria-modal="true"
           :aria-labelledby="title && !$slots.header ? titleId : undefined"
+          :aria-label="ariaLabel || undefined"
           tabindex="-1"
           :class="[
             placement === 'right'
@@ -88,6 +89,9 @@ interface Props {
   title?: string
   // Accessible role: 'dialog' (default) or 'alertdialog' (for confirmations).
   role?: 'dialog' | 'alertdialog'
+  // Accessible name when the header slot is overridden (aria-labelledby only
+  // wires up automatically for the default title-based header).
+  ariaLabel?: string
   size?: string
   // 'center' (modal dialog) | 'right' (slide-in drawer) | 'fullscreen' (near-fullscreen panel)
   placement?: 'center' | 'right' | 'fullscreen'
@@ -103,6 +107,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   title: '',
   role: 'dialog',
+  ariaLabel: '',
   size: 'md',
   placement: 'center',
   closeable: true,

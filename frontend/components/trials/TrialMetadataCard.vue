@@ -8,10 +8,11 @@
     <div class="w-full">
       <div class="grid grid-cols-1 gap-4">
         <div>
-          <label :class="[labelClass, 'tracking-wide']"
+          <label :class="[labelClass, 'tracking-wide']" for="trial-meta-name"
             >Trial Name <span class="text-content-subtle font-normal">(optional)</span></label
           >
           <input
+            id="trial-meta-name"
             v-model="name"
             :class="inputClass"
             maxlength="100"
@@ -19,10 +20,11 @@
           />
         </div>
         <div>
-          <label :class="[labelClass, 'tracking-wide']"
+          <label :class="[labelClass, 'tracking-wide']" for="trial-meta-description"
             >Description <span class="text-content-subtle font-normal">(optional)</span></label
           >
           <textarea
+            id="trial-meta-description"
             v-model="description"
             :class="textareaClass"
             maxlength="512"

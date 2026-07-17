@@ -15,9 +15,10 @@
           variant="ghost"
           size="sm"
           class="font-medium underline"
+          :disabled="selectAllBusy"
           @click="$emit('select-all')"
         >
-          Select all {{ pagination?.total }} {{ itemLabel }}
+          {{ selectAllBusy ? 'Selecting…' : `Select all ${pagination?.total} ${itemLabel}` }}
         </BaseButton>
         <BaseButton v-else variant="ghost" size="sm" @click="$emit('clear-selection')">
           Clear selection
@@ -35,6 +36,7 @@
                 type="checkbox"
                 :checked="allSelected"
                 :indeterminate="someSelected"
+                :aria-label="`Select all ${itemLabel} on this page`"
                 class="h-4 w-4 text-primary border-strong rounded focus:ring-ring"
                 @change="$emit('toggle-all')"
               />
@@ -43,26 +45,37 @@
               v-for="column in columns"
               :key="column.key"
               scope="col"
+              :aria-sort="ariaSortFor(column)"
               :class="[
                 t.th,
-                column.sortable
-                  ? 'cursor-pointer hover:bg-surface-muted transition-colors select-none'
-                  : '',
+                column.sortable ? 'hover:bg-surface-muted transition-colors select-none' : '',
                 column.align === 'right' ? 'text-right' : 'text-left',
               ]"
-              @click="column.sortable ? $emit('sort', column.key) : null"
             >
+              <button
+                v-if="column.sortable"
+                type="button"
+                :class="[
+                  'flex items-center gap-1 w-full cursor-pointer',
+                  column.align === 'right' ? 'flex-row-reverse' : '',
+                ]"
+                @click="$emit('sort', column.key)"
+              >
+                {{ column.label }}
+                <ChevronDown
+                  v-if="sortBy === column.key"
+                  :class="['w-4 h-4 transition-transform', sortOrder === 'asc' ? 'rotate-180' : '']"
+                  aria-hidden="true"
+                />
+              </button>
               <div
+                v-else
                 :class="[
                   'flex items-center gap-1',
                   column.align === 'right' ? 'flex-row-reverse' : '',
                 ]"
               >
                 {{ column.label }}
-                <ChevronDown
-                  v-if="column.sortable && sortBy === column.key"
-                  :class="['w-4 h-4 transition-transform', sortOrder === 'asc' ? 'rotate-180' : '']"
-                />
               </div>
             </th>
             <th v-if="hasRowActions" scope="col" :class="[t.th, 'text-right']">Actions</th>
@@ -81,12 +94,16 @@
                   : '',
                 rowClickable ? 'cursor-pointer' : '',
               ]"
+              :tabindex="rowClickable ? 0 : undefined"
               @click="rowClickable ? $emit('row-click', row) : null"
+              @keydown.enter.self="rowClickable ? $emit('row-click', row) : null"
+              @keydown.space.self.prevent="rowClickable ? $emit('row-click', row) : null"
             >
               <td v-if="selectable" :class="t.td" class="whitespace-nowrap">
                 <input
                   type="checkbox"
                   :checked="isRowSelected(row)"
+                  :aria-label="`Select ${itemLabelSingular} ${rowLabel(row)}`"
                   class="h-4 w-4 text-primary border-strong rounded focus:ring-ring"
                   @click.stop="$emit('toggle-selection', getRowKeyValue(row))"
                 />
@@ -209,6 +226,8 @@ interface Props {
 
   // cross-page select-all banner
   totalSelected?: number
+  // busy state while the "select all across pages" id fetch runs
+  selectAllBusy?: boolean
 
   // per-row highlight (e.g. emerald ring for "just notified" rows)
   highlightedKeys?: (string | number)[]
@@ -242,6 +261,7 @@ const props = withDefaults(defineProps<Props>(), {
   pageSizeOptions: () => [25, 50, 100, 250],
   itemLabel: 'items',
   totalSelected: 0,
+  selectAllBusy: false,
   highlightedKeys: () => [],
   rowIdPrefix: '',
   rowClickable: false,
@@ -299,6 +319,20 @@ const itemLabelSingular = computed(() => {
   const label = props.itemLabel
   return label.endsWith('s') ? label.slice(0, -1) : label
 })
+
+// aria-sort value for a header cell: only the actively sorted column carries a
+// direction; other sortable columns expose 'none'.
+function ariaSortFor(column: DataTableColumn): 'ascending' | 'descending' | 'none' | undefined {
+  if (!column.sortable) return undefined
+  if (props.sortBy !== column.key) return 'none'
+  return props.sortOrder === 'asc' ? 'ascending' : 'descending'
+}
+
+// Human-friendly label for a row's select checkbox (falls back to the key).
+function rowLabel(row: T): string | number {
+  const candidate = row.name ?? row.file_name ?? row.document_name ?? row.title
+  return typeof candidate === 'string' && candidate ? candidate : getRowKeyValue(row)
+}
 
 function getRowKeyValue(row: T): string | number {
   return (row?.[props.rowKey] ?? undefined) as string | number
