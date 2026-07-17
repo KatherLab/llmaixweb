@@ -670,15 +670,19 @@ const selectAllFiles = async (): Promise<void> => {
     let page = 1
     const pageSize = 250 // Max allowed per page
 
-    while (true) {
-      const params = new URLSearchParams({
-        page: String(page),
-        page_size: String(pageSize),
-        sort_by: sortBy.value,
-        sort_order: sortOrder.value,
-      })
+    // Snapshot sort + filters ONCE before paging. The loop can span many
+    // requests; re-reading the live filter refs on each iteration would mix
+    // pages from different filter sets if the user changes filters mid-loop.
+    const baseParams = new URLSearchParams({
+      sort_by: sortBy.value,
+      sort_order: sortOrder.value,
+    })
+    appendFileFilters(baseParams)
 
-      appendFileFilters(params)
+    while (true) {
+      const params = new URLSearchParams(baseParams)
+      params.set('page', String(page))
+      params.set('page_size', String(pageSize))
 
       const response = await filesApi.list(
         props.projectId,

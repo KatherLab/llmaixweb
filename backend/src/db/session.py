@@ -1,7 +1,7 @@
 # backend/src/db/session.py
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from ..core.config import settings
@@ -15,6 +15,20 @@ engine = create_engine(
     # Ensure connections are properly reset when returned to pool
     pool_reset_on_return="rollback",
 )
+
+# SQLite ships with foreign-key enforcement OFF per connection. Without this,
+# the dev/test stack silently accepts FK violations (orphan rows, broken
+# RESTRICT semantics) that PostgreSQL would reject — so tests never exercise
+# the same constraint behavior as production. Enable it on every connection.
+if engine.dialect.name == "sqlite":
+
+    @event.listens_for(engine, "connect")
+    def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+
 # expire_on_commit=False: after a commit, keep loaded attribute values in
 # memory instead of expiring them (which would force a lazy SELECT on the next
 # access). Celery tasks and broadcast helpers routinely read task/trial

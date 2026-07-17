@@ -467,7 +467,13 @@ def reclaim_orphaned_on_startup(role: str) -> str:
                     for ft in task.file_tasks
                     if ft.status == models.PreprocessingStatus.CANCELLED
                 )
-                task.processed_files = completed + failed + cancelled
+                # processed_files = successfully completed ONLY — the same
+                # semantics as the pipeline's final tally, the staleness
+                # sweeper, and the progress endpoint's remaining-files math
+                # (total - processed - failed). Including failed/cancelled
+                # here used to make a fully-failed reclaimed task report
+                # "N of N processed".
+                task.processed_files = completed
                 task.failed_files = failed
                 task.skipped_files = cancelled
                 task.status = models.PreprocessingStatus.FAILED

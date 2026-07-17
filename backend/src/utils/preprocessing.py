@@ -9,6 +9,7 @@ from typing import Any, List, cast
 import httpx
 import pandas as pd
 from openai import OpenAI
+from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
@@ -350,6 +351,57 @@ class PreprocessingPipeline:
                 task = fresh_db.get(models.PreprocessingTask, task_id)
                 if not task:
                     return
+
+                # Roll back the timed-out file's partially committed documents.
+                # A row-by-row table file commits documents in batches, so a
+                # timeout mid-file leaves up to BATCH_SIZE·k docs live under a
+                # FAILED file task — a partial run indistinguishable from a
+                # complete one. Delete this run's docs (they all carry this
+                # file task's id); any previous version this run archived stays
+                # archived, which is exactly the "only archived exists (failed
+                # re-process)" state _get_or_create_document repairs on retry.
+                # Best-effort: the zombie worker thread may still commit a late
+                # batch afterwards, but the retry path handles those too.
+                partial_docs = (
+                    fresh_db.query(models.Document)
+                    .filter(
+                        models.Document.file_preprocessing_task_id
+                        == timed_out_file_task_id
+                    )
+                    .all()
+                )
+                # Skip docs a trial result / evaluation metric already points
+                # at (ON DELETE RESTRICT would fail the whole finalization
+                # commit). Unlikely for docs created seconds ago, but cheap.
+                partial_ids = [d.id for d in partial_docs]
+                blocked: set[int] = set()
+                if partial_ids:
+                    blocked = set(
+                        fresh_db.execute(
+                            select(models.TrialResult.document_id).where(
+                                models.TrialResult.document_id.in_(partial_ids)
+                            )
+                        ).scalars()
+                    )
+                    blocked |= set(
+                        fresh_db.execute(
+                            select(models.EvaluationMetric.document_id).where(
+                                models.EvaluationMetric.document_id.in_(partial_ids)
+                            )
+                        ).scalars()
+                    )
+                partial_docs = [d for d in partial_docs if d.id not in blocked]
+                for doc in partial_docs:
+                    doc.document_sets.clear()
+                    fresh_db.delete(doc)
+                if partial_docs:
+                    logger.info(
+                        "PreprocessingTask %s: rolled back %d partially "
+                        "committed document(s) from timed-out file task %s",
+                        task_id,
+                        len(partial_docs),
+                        timed_out_file_task_id,
+                    )
 
                 now = datetime.datetime.now(datetime.UTC)
                 for ft in task.file_tasks:

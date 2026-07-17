@@ -432,7 +432,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
   Settings,
   Sun,
@@ -508,17 +508,21 @@ function toggleDarkMode(): void {
 }
 
 // Watch for system theme changes (only if user hasn't set explicit preference)
-if (typeof window !== 'undefined' && window.matchMedia) {
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-  const handleChange = (e: MediaQueryListEvent): void => {
-    const saved = localStorage.getItem('darkMode')
-    if (saved === null) {
-      // User hasn't set explicit preference, follow system
-      setDarkClass(e.matches)
-    }
+let systemThemeQuery: MediaQueryList | null = null
+const handleSystemThemeChange = (e: MediaQueryListEvent): void => {
+  const saved = localStorage.getItem('darkMode')
+  if (saved === null) {
+    // User hasn't set explicit preference, follow system
+    setDarkClass(e.matches)
   }
-  mediaQuery.addEventListener('change', handleChange)
 }
+if (typeof window !== 'undefined' && window.matchMedia) {
+  systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  systemThemeQuery.addEventListener('change', handleSystemThemeChange)
+}
+onUnmounted(() => {
+  systemThemeQuery?.removeEventListener('change', handleSystemThemeChange)
+})
 
 onMounted(async () => {
   // Fetch backend version and git commit

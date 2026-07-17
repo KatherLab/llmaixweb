@@ -58,9 +58,10 @@
       >
         <p class="text-xs font-medium text-red-700 dark:text-red-300 mb-1.5">Failed uploads</p>
         <ul class="space-y-1">
+          <!-- Key by index + name: two failed files can share the same name. -->
           <li
-            v-for="f in progress.failures"
-            :key="f.name"
+            v-for="(f, idx) in progress.failures"
+            :key="`${idx}-${f.name}`"
             class="text-xs text-red-600 dark:text-red-400"
           >
             <span class="font-medium">{{ f.name }}</span> — {{ f.message }}

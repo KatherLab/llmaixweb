@@ -342,15 +342,29 @@ const fetchProject = async ({
   // unmounts/remounts the whole GlassCard — including the active tab component
   // and any modal it has open — which is the "weird reload" that dropped the
   // "Go to Document" preview and reset the Documents/Groups sub-tab on close.
-  if (!background) isLoading.value = true
+  // Capture the target project id: the route can change mid-fetch (project
+  // switch), and a slow response for the old project must not overwrite the
+  // new one's data (or brick it with a stale error).
+  const requestedId = projectId.value
+  if (!background) {
+    isLoading.value = true
+    error.value = ''
+  }
   try {
-    const response = await projectsApi.get(projectId.value)
+    const response = await projectsApi.get(requestedId)
+    if (String(requestedId) !== String(projectId.value)) return // stale — route changed
     project.value = response.data
+    // Clear any earlier transient failure so a successful refetch un-bricks
+    // the workspace (the error banner replaces the whole GlassCard).
+    error.value = ''
   } catch (err) {
+    if (String(requestedId) !== String(projectId.value)) return
     error.value = 'Failed to load project details'
     console.error(err)
   } finally {
-    if (!background) isLoading.value = false
+    if (!background && String(requestedId) === String(projectId.value)) {
+      isLoading.value = false
+    }
   }
 }
 const refreshProject = (): Promise<void> => fetchProject({ background: true })

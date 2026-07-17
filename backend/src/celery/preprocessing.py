@@ -477,7 +477,13 @@ if celery_app:
                                     else 0
                                 )
 
-                                task.processed_files = completed + failed + cancelled
+                                # processed_files counts successful completions
+                                # ONLY — app-wide convention shared by the
+                                # pipeline tally, the orphan sweeper, and the
+                                # progress endpoint's remaining-files math
+                                # (total - processed - failed). Failed/cancelled
+                                # are carried separately below.
+                                task.processed_files = completed
                                 task.failed_files = failed
                                 task.skipped_files = cancelled
                                 task.meta = (task.meta or {}) | {
@@ -616,7 +622,8 @@ if celery_app:
                     completed = counts.get(models.PreprocessingStatus.COMPLETED, 0)
                     failed = counts.get(models.PreprocessingStatus.FAILED, 0)
                     cancelled = counts.get(models.PreprocessingStatus.CANCELLED, 0)
-                    task.processed_files = completed + failed + cancelled
+                    # Same convention as the heartbeat above: completed only.
+                    task.processed_files = completed
                     task.failed_files = failed
                     task.skipped_files = cancelled
                     task.status = models.PreprocessingStatus.IN_PROGRESS
@@ -670,25 +677,62 @@ if celery_app:
                     # Handle keep/delete processed docs on cancel
                     if task.rollback_on_cancel:
                         deleted_count = 0
-                        for file_task in task.file_tasks:
-                            # Include CANCELLED and FAILED file_tasks too: a
-                            # row-by-row CSV file_task commits documents in
-                            # batches (every BATCH_SIZE rows), so one that was
-                            # cancelled or FAILED mid-flight can still have many
-                            # committed documents in the DB. Skipping them would
-                            # leave orphaned docs that pollute the project and can
-                            # be picked up by trials despite the "rolled back"
-                            # message.
-                            if file_task.status in (
+                        # Include CANCELLED and FAILED file_tasks too: a
+                        # row-by-row CSV file_task commits documents in
+                        # batches (every BATCH_SIZE rows), so one that was
+                        # cancelled or FAILED mid-flight can still have many
+                        # committed documents in the DB. Skipping them would
+                        # leave orphaned docs that pollute the project and can
+                        # be picked up by trials despite the "rolled back"
+                        # message.
+                        candidate_docs = [
+                            doc
+                            for file_task in task.file_tasks
+                            if file_task.status
+                            in (
                                 models.PreprocessingStatus.COMPLETED,
                                 models.PreprocessingStatus.CANCELLED,
                                 models.PreprocessingStatus.FAILED,
-                            ):
-                                for doc in file_task.documents:
-                                    doc.document_sets.clear()
-                                    db.delete(doc)
-                                    deleted_count += 1
+                            )
+                            for doc in file_task.documents
+                        ]
+                        # Keep docs a trial result / evaluation metric points at:
+                        # those FKs are ON DELETE RESTRICT, so deleting them
+                        # would fail the whole finalization commit. Mirrors the
+                        # cancel endpoint's guard.
+                        blocked: set[int] = set()
+                        candidate_ids = [doc.id for doc in candidate_docs]
+                        if candidate_ids:
+                            blocked = set(
+                                db.execute(
+                                    select(models.TrialResult.document_id).where(
+                                        models.TrialResult.document_id.in_(
+                                            candidate_ids
+                                        )
+                                    )
+                                ).scalars()
+                            )
+                            blocked |= set(
+                                db.execute(
+                                    select(models.EvaluationMetric.document_id).where(
+                                        models.EvaluationMetric.document_id.in_(
+                                            candidate_ids
+                                        )
+                                    )
+                                ).scalars()
+                            )
+                        for doc in candidate_docs:
+                            if doc.id in blocked:
+                                continue
+                            doc.document_sets.clear()
+                            db.delete(doc)
+                            deleted_count += 1
                         task.message = f"Task cancelled and {deleted_count} processed documents rolled back"
+                        if blocked:
+                            task.message += (
+                                f"; {len(blocked)} document(s) kept because trial "
+                                "results or evaluations still reference them"
+                            )
                     else:
                         task.message = "Task cancelled, keeping processed documents"
                 elif completed == total and total > 0:
@@ -706,6 +750,12 @@ if celery_app:
                         f"{completed} of {total} files processed successfully, "
                         f"{failed} failed, {cancelled} cancelled."
                     )
+                # Sync the persisted counters with the final tally — the last
+                # heartbeat tick may predate the just-cancelled file tasks
+                # above (and heartbeats stop once this finalization starts).
+                task.processed_files = completed
+                task.failed_files = failed
+                task.skipped_files = cancelled
                 db.commit()
 
                 # Broadcast final status via Redis pub/sub (FastAPI will relay to WebSocket clients)

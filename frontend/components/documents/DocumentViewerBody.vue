@@ -223,34 +223,48 @@ const downloadDocument = async (): Promise<void> => {
 }
 
 // Fetch the full document (with text) for a given document id.
+// Monotonic counter: fetchFullText is fired by load() (prev/next nav) and by
+// selectVersion; a slow response for an earlier document/version must not
+// overwrite the text of the one selected later.
+let textLoadSeq = 0
 const fetchFullText = async (docId: number | null | undefined): Promise<void> => {
   if (!docId) return
+  const seq = ++textLoadSeq
   textLoading.value = true
   try {
     const { data } = await documentsApi.get(props.projectId, docId)
+    if (seq !== textLoadSeq) return // superseded by a newer selection
     fullText.value = data?.text ?? null
   } catch (error) {
+    if (seq !== textLoadSeq) return
     console.error('Failed to load document text:', error)
     fullText.value = null
   } finally {
-    textLoading.value = false
+    if (seq === textLoadSeq) textLoading.value = false
   }
 }
 
 // Fetch all versions of this document
+// Same race class as fetchFullText: a stale versions response (from a
+// previous document during prev/next nav) must not replace the current one's
+// version list / selection.
+let versionsLoadSeq = 0
 const fetchVersions = async (): Promise<void> => {
-  if (!props.document.original_file_id) return
+  const doc = props.document
+  if (!doc.original_file_id) return
 
+  const seq = ++versionsLoadSeq
   loadingVersions.value = true
   try {
     const response = await documentsApi.list(props.projectId, {
-      file_id: props.document.original_file_id,
-      config_id: props.document.preprocessing_config_id,
+      file_id: doc.original_file_id,
+      config_id: doc.preprocessing_config_id,
       include_archived: true,
       limit: 100,
     } as DocumentFilter)
+    if (seq !== versionsLoadSeq) return // superseded by a newer document
 
-    const docName = props.document.document_name || props.document.original_file?.file_name
+    const docName = doc.document_name || doc.original_file?.file_name
     versions.value = (response.data.items || [])
       .filter((d) => d.document_name === docName)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -258,10 +272,11 @@ const fetchVersions = async (): Promise<void> => {
     selectedVersion.value =
       versions.value.find((v) => v.id === props.document.id) || versions.value[0] || null
   } catch (error) {
+    if (seq !== versionsLoadSeq) return
     console.error('Failed to fetch document versions:', error)
     versions.value = []
   } finally {
-    loadingVersions.value = false
+    if (seq === versionsLoadSeq) loadingVersions.value = false
   }
 }
 
@@ -311,16 +326,26 @@ const revokeUrls = (): void => {
 
 // Load the full document (text + original-file preview + versions). Called on
 // each open by the host, and on document swaps via the watcher below.
+// Monotonic load counter: rapid prev/next fires load() again before the
+// previous one resolves; a stale response must not overwrite the newer
+// document's state or create an object URL that nothing revokes.
+let loadSeq = 0
 async function load(): Promise<void> {
+  const seq = ++loadSeq
+  const doc = props.document
   revokeUrls()
 
   try {
-    await fetchFullText(props.document.id)
+    await fetchFullText(doc.id)
+    if (seq !== loadSeq) return // superseded by a newer document
 
-    if (props.document.original_file?.id) {
-      const response = await filesApi.getContent(props.projectId, props.document.original_file.id, {
+    if (doc.original_file?.id) {
+      const response = await filesApi.getContent(props.projectId, doc.original_file.id, {
         preview: true,
       })
+      // Bail BEFORE creating the object URL — creating it and then dropping
+      // the reference would leak one full-file blob per superseded load.
+      if (seq !== loadSeq) return
       if (originalFileType.value === 'image') {
         originalImageUrl.value = URL.createObjectURL(response.data)
       } else if (originalFileType.value === 'pdf') {
@@ -330,6 +355,7 @@ async function load(): Promise<void> {
     setDefaultView()
     await fetchVersions()
   } catch (error) {
+    if (seq !== loadSeq) return
     toast.error('Failed to load document preview.')
     console.error(error)
   }
@@ -345,6 +371,9 @@ watch(
       selectedVersion.value = null
       load()
     } else {
+      // Invalidate any in-flight load so it can't recreate object URLs after
+      // this revoke (which would leak them until the next open).
+      loadSeq++
       revokeUrls()
     }
   },
@@ -364,6 +393,7 @@ watch(
 )
 
 onUnmounted(() => {
+  loadSeq++
   revokeUrls()
 })
 </script>

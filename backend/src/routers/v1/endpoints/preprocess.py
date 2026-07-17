@@ -375,6 +375,12 @@ async def preprocess_project_data(
             config = existing_config
             break
 
+    # NOTE: flush (not commit) in both branches — every validation below
+    # (missing files 404, unconfigured CSV 400, SSRF 400, in-progress 409, …)
+    # raises before the task is created, and the request teardown's rollback
+    # must discard this config too. Committing here used to leave an orphaned
+    # PreprocessingConfiguration row behind on every rejected submission. The
+    # config is persisted by the same commit that persists the task.
     if config:
         # Reuse existing config - update name/description if provided
         if config_dict.get("name"):
@@ -382,8 +388,7 @@ async def preprocess_project_data(
         if config_dict.get("description"):
             config.description = config_dict.get("description")
         db.add(config)
-        db.commit()
-        db.refresh(config)
+        db.flush()
     else:
         # Create new configuration
         config = models.PreprocessingConfiguration(
@@ -393,8 +398,7 @@ async def preprocess_project_data(
             additional_settings=new_additional_settings,
         )
         db.add(config)
-        db.commit()
-        db.refresh(config)
+        db.flush()  # assign config.id for the queries below
 
     # Validate files exist and belong to project.
     #
@@ -957,15 +961,48 @@ def cancel_preprocessing_task(
             models.PreprocessingStatus.CANCELLED,
             models.PreprocessingStatus.FAILED,
         )
-        for file_task in task.file_tasks:
-            if file_task.status in rollback_statuses:
-                for doc in file_task.documents:
-                    doc.document_sets.clear()
-                    db.delete(doc)
-                    deleted_count += 1
+        candidate_docs = [
+            doc
+            for file_task in task.file_tasks
+            if file_task.status in rollback_statuses
+            for doc in file_task.documents
+        ]
+        # trial_results.document_id / evaluation_metrics.document_id are
+        # ON DELETE RESTRICT — deleting a referenced document would raise a raw
+        # IntegrityError at commit and fail the whole cancel with a 500. Skip
+        # referenced documents (keep them) instead: the cancel itself must
+        # succeed. Mirrors the force_reprocess guard in preprocess submission.
+        blocked: set[int] = set()
+        candidate_ids = [doc.id for doc in candidate_docs]
+        if candidate_ids:
+            blocked = set(
+                db.execute(
+                    select(models.TrialResult.document_id).where(
+                        models.TrialResult.document_id.in_(candidate_ids)
+                    )
+                ).scalars()
+            )
+            blocked |= set(
+                db.execute(
+                    select(models.EvaluationMetric.document_id).where(
+                        models.EvaluationMetric.document_id.in_(candidate_ids)
+                    )
+                ).scalars()
+            )
+        for doc in candidate_docs:
+            if doc.id in blocked:
+                continue
+            doc.document_sets.clear()
+            db.delete(doc)
+            deleted_count += 1
         task.message = (
             f"Task cancelled and {deleted_count} processed documents rolled back"
         )
+        if blocked:
+            task.message += (
+                f"; {len(blocked)} document(s) kept because trial results or "
+                "evaluations still reference them"
+            )
     else:
         task.message = "Task cancelled, keeping processed documents"
 

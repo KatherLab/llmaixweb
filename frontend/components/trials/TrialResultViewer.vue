@@ -384,12 +384,18 @@ async function copyResult(): Promise<void> {
   }
 }
 
-async function loadDocumentTextAndMeta(): Promise<void> {
+// Monotonic load counter: rapid prev/next through results fires the loaders
+// again before earlier responses land; a stale response must not overwrite
+// the newer document's state (or create an object URL nothing revokes).
+let loadSeq = 0
+
+async function loadDocumentTextAndMeta(seq: number): Promise<void> {
   const docId = props.result.document_id
   if (!docId) return
   docLoading.value = true
   try {
     const r = await documentsApi.get(props.projectId, docId)
+    if (seq !== loadSeq) return // superseded by a newer result selection
     const d = r.data
     documentContent.value = d.text || 'No text content available'
     const previewable = analyzeOriginalFile(d.original_file?.file_type)
@@ -404,14 +410,15 @@ async function loadDocumentTextAndMeta(): Promise<void> {
       activePanels.value = ['source', ...activePanels.value]
     }
   } catch (err) {
+    if (seq !== loadSeq) return
     documentContent.value = 'Error loading document content'
     console.error(err)
   } finally {
-    docLoading.value = false
+    if (seq === loadSeq) docLoading.value = false
   }
 }
 
-async function loadOriginalFilePreview(): Promise<void> {
+async function loadOriginalFilePreview(seq: number): Promise<void> {
   if (documentPdfUrl.value || documentPdfLoading.value) return
   if (!documentPreviewable.value || !documentFileId.value) return
   documentPdfLoading.value = true
@@ -419,15 +426,19 @@ async function loadOriginalFilePreview(): Promise<void> {
     const fr = await filesApi.getContent(props.projectId, documentFileId.value, {
       preview: true,
     })
+    // Bail BEFORE creating the object URL — creating it and then dropping the
+    // reference would leak one full-file blob per superseded load.
+    if (seq !== loadSeq) return
     const blob = new Blob([fr.data], {
       type: (fr.headers['content-type'] as string) || undefined,
     })
     documentPdfUrl.value = URL.createObjectURL(blob)
   } catch (err) {
+    if (seq !== loadSeq) return
     console.error(err)
     toast.error('Failed to load document')
   } finally {
-    documentPdfLoading.value = false
+    if (seq === loadSeq) documentPdfLoading.value = false
   }
 }
 
@@ -445,18 +456,25 @@ function resetDocState(): void {
 }
 
 // When the active result changes, reset state and prefetch the new doc's text
-// + file preview so pane switches feel instant.
+// + file preview so pane switches feel instant. The preview load must run
+// AFTER the text/meta load resolves — it depends on documentPreviewable /
+// documentFileId set there.
 watch(
   () => props.result.id,
-  () => {
+  async () => {
+    const seq = ++loadSeq
     resetDocState()
-    loadDocumentTextAndMeta()
-    loadOriginalFilePreview()
+    await loadDocumentTextAndMeta(seq)
+    if (seq !== loadSeq) return
+    await loadOriginalFilePreview(seq)
   },
   { immediate: true },
 )
 
 onUnmounted(() => {
+  // Invalidate any in-flight load so it can't create an object URL after
+  // this final revoke (which would leak it).
+  loadSeq++
   if (documentPdfUrl.value) URL.revokeObjectURL(documentPdfUrl.value)
 })
 </script>

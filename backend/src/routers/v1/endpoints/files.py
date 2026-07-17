@@ -535,6 +535,46 @@ def upload_file(
     # Stream the (rewound) upload to storage — never buffering the whole file.
     file_uuid = save_upload_stream(file)
 
+    # Re-check for a duplicate under a project-row lock. The check above is a
+    # plain check-then-act: two concurrent uploads of the same file both pass
+    # it and both insert (there is no unique constraint on (project_id,
+    # file_hash) — system-generated preprocessed files may legitimately share
+    # hashes). Locking the project row serializes the check+insert window
+    # across uploads to the same project (PostgreSQL; SQLite serializes
+    # writers anyway), and the lock is only held for this short recheck +
+    # commit — never during the storage upload above.
+    db.execute(
+        select(models.Project.id)
+        .where(models.Project.id == project_id)
+        .with_for_update()
+    )
+    raced_duplicate = db.execute(
+        select(models.File).where(
+            and_(
+                models.File.project_id == project_id, models.File.file_hash == file_hash
+            )
+        )
+    ).scalar_one_or_none()
+    if raced_duplicate:
+        # Lost the race: another request inserted the same file after our
+        # early check. Reclaim the just-uploaded bytes and answer like the
+        # early-duplicate path.
+        try:
+            remove_file(file_uuid)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "File already exists",
+                "existing_file": {
+                    "id": raced_duplicate.id,
+                    "file_name": raced_duplicate.file_name,
+                    "created_at": raced_duplicate.created_at.isoformat(),
+                },
+            },
+        )
+
     new_file = models.File(
         **file_create.model_dump(
             exclude={"file_uuid", "file_size", "file_hash", "file_metadata"}
@@ -1130,11 +1170,14 @@ def check_duplicates(
 
     results = []
     for file_info in files:
-        existing = existing_by_hash.get(file_info["hash"])
+        # .get() throughout: entries are client-supplied dicts, so a missing
+        # "hash"/"filename" key must degrade to a no-match row, not a
+        # KeyError → 500.
+        existing = existing_by_hash.get(file_info.get("hash"))
         results.append(
             {
-                "filename": file_info["filename"],
-                "hash": file_info["hash"],
+                "filename": file_info.get("filename"),
+                "hash": file_info.get("hash"),
                 "exists": existing is not None,
                 "existing_file": {
                     "id": existing.id,
@@ -1677,6 +1720,10 @@ def move_files(
         return clone.id
 
     for file_id in file_ids:
+        # Snapshot the clone cache so a failed file's savepoint rollback can
+        # also discard the (now rolled-back, dangling) clone ids it created —
+        # otherwise a later file would reuse a config id that no longer exists.
+        clone_keys_before = set(config_clone_map)
         try:
             file = db.execute(
                 select(models.File).where(
@@ -1688,43 +1735,55 @@ def move_files(
                 errors.append({"file_id": file_id, "error": "File not found"})
                 continue
 
-            # Update the file's project
-            file.project_id = target_project_id
+            # SAVEPOINT per file: a mid-file failure (e.g. flushing a config
+            # clone) must not leave that file half-moved — file repointed but
+            # documents still in the source project, or vice versa. The final
+            # commit below would otherwise persist whatever partial mutations
+            # were pending when the exception fired.
+            with db.begin_nested():
+                # Update the file's project
+                file.project_id = target_project_id
 
-            # Update any related documents
-            documents = (
-                db.execute(
-                    select(models.Document).where(
-                        or_(
-                            models.Document.original_file_id == file_id,
-                            models.Document.preprocessed_file_id == file_id,
+                # Update any related documents
+                documents = (
+                    db.execute(
+                        select(models.Document).where(
+                            or_(
+                                models.Document.original_file_id == file_id,
+                                models.Document.preprocessed_file_id == file_id,
+                            )
                         )
                     )
+                    .scalars()
+                    .all()
                 )
-                .scalars()
-                .all()
-            )
 
-            for doc in documents:
-                doc.project_id = target_project_id
-                # Sever cross-project lineage so that later deleting the SOURCE
-                # project can't cascade-delete these now-target documents:
-                #  - preprocessing_config_id is NOT NULL and its config lives in
-                #    (and is delete-orphan'd with) the source project, so repoint
-                #    it at a clone in the target project;
-                #  - file_preprocessing_task_id's relationship is
-                #    cascade="all, delete-orphan", so leaving it pointed at the
-                #    source FilePreprocessingTask would let the source project's
-                #    deletion wipe these moved documents. Null it (provenance to
-                #    the original task is dropped; the file itself has moved).
-                doc.preprocessing_config_id = _target_config_id(
-                    doc.preprocessing_config_id
-                )
-                doc.file_preprocessing_task_id = None
+                for doc in documents:
+                    doc.project_id = target_project_id
+                    # Sever cross-project lineage so that later deleting the SOURCE
+                    # project can't cascade-delete these now-target documents:
+                    #  - preprocessing_config_id is NOT NULL and its config lives in
+                    #    (and is delete-orphan'd with) the source project, so repoint
+                    #    it at a clone in the target project;
+                    #  - file_preprocessing_task_id's relationship is
+                    #    cascade="all, delete-orphan", so leaving it pointed at the
+                    #    source FilePreprocessingTask would let the source project's
+                    #    deletion wipe these moved documents. Null it (provenance to
+                    #    the original task is dropped; the file itself has moved).
+                    doc.preprocessing_config_id = _target_config_id(
+                        doc.preprocessing_config_id
+                    )
+                    doc.file_preprocessing_task_id = None
+
+                # Flush inside the savepoint so every pending mutation for this
+                # file is captured by it (and rolled back with it on failure).
+                db.flush()
 
             moved_count += 1
 
         except Exception as e:
+            for stale_key in set(config_clone_map) - clone_keys_before:
+                config_clone_map.pop(stale_key, None)
             # Surface a correlation id rather than raw exception text.
             error_id = record_internal_error(e, actor=current_user)
             errors.append(

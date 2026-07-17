@@ -697,6 +697,9 @@ const openDocById = (documentId: number): void => {
 }
 
 const closeDrawer = (): void => {
+  // Invalidate any in-flight loadDocDetail so it can't repopulate the drawer
+  // state (or create an object URL) after close.
+  docLoadSeq++
   selectedDocId.value = null
   selectedDocEval.value = null
   selectedDocResult.value = null
@@ -765,7 +768,13 @@ const loadAllResults = async (trialId: number): Promise<void> => {
   }
 }
 
+// Monotonic load counter: rapid prev/next in the drawer fires loadDocDetail
+// again before earlier responses land; a stale response must not overwrite
+// the newer document's state (or create an object URL nothing revokes).
+let docLoadSeq = 0
+
 const loadDocDetail = async (docId: number): Promise<void> => {
+  const seq = ++docLoadSeq
   selectedDocEval.value = null
   selectedDocResult.value = null
   selectedDocText.value = ''
@@ -779,11 +788,13 @@ const loadDocDetail = async (docId: number): Promise<void> => {
   // Per-document field details (GT vs predicted)
   try {
     const { data } = await evaluationsApi.getDocument(props.projectId, props.evaluationId, docId)
+    if (seq !== docLoadSeq) return // superseded by a newer selection
     selectedDocEval.value = data as DocumentEvaluationDetail
   } catch {
+    if (seq !== docLoadSeq) return
     selectedDocEval.value = null
   } finally {
-    loadingDocDetail.value = false
+    if (seq === docLoadSeq) loadingDocDetail.value = false
   }
 
   // Trial result (result + reasoning) — from the pre-built map
@@ -793,6 +804,7 @@ const loadDocDetail = async (docId: number): Promise<void> => {
   // Document text + original file
   try {
     const { data: doc } = await documentsApi.get(props.projectId, docId)
+    if (seq !== docLoadSeq) return
     selectedDocText.value = (doc.text as string) || ''
     selectedOriginalFile.value = (doc.original_file as unknown as OriginalFile) || null
     const fileType: string = (doc.original_file?.file_type as string) || ''
@@ -804,6 +816,9 @@ const loadDocDetail = async (docId: number): Promise<void> => {
       const resp = await filesApi.getContent(props.projectId, doc.original_file.id, {
         preview: true,
       })
+      // Bail BEFORE creating the object URL — creating it and then dropping
+      // the reference would leak one full-file blob per superseded load.
+      if (seq !== docLoadSeq) return
       currentObjectUrl = window.URL.createObjectURL(resp.data as Blob)
       selectedOriginalFileUrl.value = currentObjectUrl
     }
@@ -880,6 +895,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
+  docLoadSeq++
   revokeObjectUrl()
 })
 </script>
