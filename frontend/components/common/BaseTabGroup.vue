@@ -15,6 +15,7 @@
 <template>
   <div class="border-b border-default">
     <nav
+      ref="tabStrip"
       class="-mb-px flex space-x-8 overflow-x-auto no-scrollbar scroll-fade-x"
       :aria-label="ariaLabel"
     >
@@ -49,6 +50,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useScrollFade } from '@/composables/useScrollFade'
+
 export interface TabItem {
   label?: string
   value: string | number
@@ -71,6 +75,9 @@ withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{ (e: 'update:modelValue', value: string | number): void }>()
+
+const tabStrip = ref<HTMLElement | null>(null)
+useScrollFade(tabStrip)
 
 const activeClass = 'border-primary text-primary'
 

@@ -178,16 +178,26 @@ body {
 }
 
 /* Edge fade for horizontally-scrollable tab strips: signals there's more
-   content off-screen without showing a scrollbar. Fades are subtle so short
-   (non-overflowing) strips aren't visibly affected. */
+   content off-screen without showing a scrollbar. The `scroll-fade-start` /
+   `scroll-fade-end` classes are toggled by `useScrollFade` so a side only fades
+   when there's actually content scrolled off in that direction — short,
+   non-overflowing strips (e.g. the project workflow tabs) stay fully visible. */
 .scroll-fade-x {
+  --scroll-fade-start: #000;
+  --scroll-fade-end: #000;
   mask-image: linear-gradient(
     to right,
-    transparent 0,
+    var(--scroll-fade-start) 0,
     #000 16px,
     #000 calc(100% - 16px),
-    transparent 100%
+    var(--scroll-fade-end) 100%
   );
+}
+.scroll-fade-x.scroll-fade-start {
+  --scroll-fade-start: transparent;
+}
+.scroll-fade-x.scroll-fade-end {
+  --scroll-fade-end: transparent;
 }
 
 /* Toast auto-dismiss progress bar (used by components/common/ToastItem.vue). */
