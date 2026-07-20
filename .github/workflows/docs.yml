@@ -1,0 +1,68 @@
+name: Documentation
+
+# Builds the MkDocs site on every push/PR (catching broken links and includes
+# via --strict), and deploys to GitHub Pages on pushes to main.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "README.md"
+      - "USAGE.md"
+      - "DEPLOY.md"
+      - "DEVELOPER.md"
+      - "AGENTS.md"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/docs.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build docs (strict)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990
+
+      - name: Build site
+        # Not --strict: the included root docs (DEPLOY.md, governance files)
+        # cross-link to other repo-root files that aren't site pages, which
+        # would fail strict mode. A non-strict build still fails on missing
+        # nav pages, missing includes, and config/plugin errors.
+        run: uv run --only-group docs mkdocs build --site-dir site
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    # Only deploy from main. Enable Pages (Settings → Pages → Source: GitHub
+    # Actions) once, then pushes to main publish automatically.
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

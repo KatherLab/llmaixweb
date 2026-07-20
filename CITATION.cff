@@ -1,0 +1,92 @@
+cff-version: 1.2.0
+title: "LLMAIx Web"
+message: >-
+  If you use this software in your research, please cite the software and the
+  associated publication using the metadata from this file.
+type: software
+
+authors:
+  - family-names: "Wolf"
+    given-names: "Fabian"
+    affiliation: >-
+      Else Kroener Fresenius Center for Digital Health, Faculty of Medicine
+      and University Hospital Carl Gustav Carus, TUD Dresden University of
+      Technology, Dresden, Germany
+    email: "fabian.wolf2@tu-dresden.de"
+
+  - name: "KatherLab"
+    website: "https://github.com/KatherLab"
+
+repository-code: "https://github.com/KatherLab/llmaixweb"
+url: "https://github.com/KatherLab/llmaixweb"
+
+abstract: >-
+  A privacy-first web application for extracting structured JSON data from
+  unstructured medical and laboratory documents using large language models.
+  Users can upload files, preprocess them using optical character recognition
+  or text extraction, define JSON schemas and prompts, run LLM-based extraction
+  trials against OpenAI-compatible endpoints, and evaluate the extracted
+  results against ground-truth data.
+
+keywords:
+  - "large language models"
+  - "information extraction"
+  - "optical character recognition"
+  - "medical natural language processing"
+  - "structured data extraction"
+  - "clinical text"
+  - "privacy-preserving artificial intelligence"
+
+license: "AGPL-3.0-or-later"
+version: "0.6.8"
+date-released: "2026-07-20"
+
+preferred-citation:
+  type: article
+  title: >-
+    A software pipeline for medical information extraction with large language
+    models, open source and suitable for oncology
+
+  authors:
+    - family-names: "Wiest"
+      given-names: "Isabella Catharina"
+
+    - family-names: "Wolf"
+      given-names: "Fabian"
+
+    - family-names: "Leßmann"
+      given-names: "Marie-Elisabeth"
+
+    - family-names: "van Treeck"
+      given-names: "Marko"
+
+    - family-names: "Ferber"
+      given-names: "Dyke"
+
+    - family-names: "Zhu"
+      given-names: "Jiefu"
+
+    - family-names: "Boehme"
+      given-names: "Heiko"
+
+    - family-names: "Bressem"
+      given-names: "Keno K."
+
+    - family-names: "Ulrich"
+      given-names: "Hannes"
+
+    - family-names: "Ebert"
+      given-names: "Matthias P."
+
+    - family-names: "Kather"
+      given-names: "Jakob Nikolas"
+      orcid: "https://orcid.org/0000-0002-3730-5348"
+
+  journal: "npj Precision Oncology"
+  volume: 9
+  issue: 1
+  article-number: "313"
+  year: 2025
+  date-published: "2025-09-17"
+  doi: "10.1038/s41698-025-01103-4"
+  url: "https://doi.org/10.1038/s41698-025-01103-4"

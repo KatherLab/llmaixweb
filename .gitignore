@@ -41,3 +41,5 @@ test_local_storage/
 
 # Agents
 .claude
+# MkDocs local build output
+/site/

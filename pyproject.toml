@@ -1,8 +1,39 @@
 [project]
 name = "llmaixweb"
 version = "0.6.8"
-description = "LLM Information Extraction Web Application"
+description = "LLM Information Extraction Web Application — extract structured JSON from unstructured medical/lab documents with LLMs."
+readme = "README.md"
 requires-python = ">=3.13,<3.14"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [
+    { name = "KatherLab" },
+]
+maintainers = [
+  {name = "Fabian Wolf", email = "fabian.wolf2@tu-dresden.de"}
+]
+keywords = [
+    "llm",
+    "information-extraction",
+    "ocr",
+    "medical-nlp",
+    "structured-extraction",
+    "json-schema",
+    "fastapi",
+    "vue",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Healthcare Industry",
+    "Intended Audience :: Science/Research",
+    "Environment :: Web Environment",
+    "Framework :: FastAPI",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Text Processing :: General",
+]
+
 dependencies = [
     "fastapi[standard]==0.139.2",
     "uvicorn==0.51.0",
@@ -33,6 +64,12 @@ dependencies = [
     "openpyxl==3.1.5"
 ]
 
+[project.urls]
+Homepage = "https://github.com/KatherLab/llmaixweb"
+Repository = "https://github.com/KatherLab/llmaixweb"
+Issues = "https://github.com/KatherLab/llmaixweb/issues"
+Documentation = "https://github.com/KatherLab/llmaixweb#readme"
+
 [dependency-groups]
 dev = [
     "ruff==0.15.22",
@@ -55,6 +92,10 @@ dev = [
     "scipy==1.18.0",
     "opencv-python-headless==5.0.0.93",
     "rtree==1.4.1",
+]
+docs = [
+    "mkdocs-material==9.6.14",
+    "mkdocs-include-markdown-plugin==7.1.5",
 ]
 
 [tool.uv.sources]

@@ -1,0 +1,113 @@
+site_name: LLMAIx Web Documentation
+site_description: >-
+  Extract structured JSON from unstructured medical and lab documents with LLMs.
+  User guide, operator handbook, and developer reference for LLMAIx Web.
+site_url: https://katherlab.github.io/llmaixweb/
+repo_url: https://github.com/KatherLab/llmaixweb
+repo_name: KatherLab/llmaixweb
+edit_uri: edit/main/docs/
+copyright: >-
+  LLMAIx Web is licensed under AGPL-3.0-or-later. Research use only — not a
+  certified medical device.
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - navigation.tracking
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+  - include-markdown
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Overview: getting-started/index.md
+      - Installation: getting-started/installation.md
+      - Quickstart walkthrough: getting-started/quickstart.md
+      - Core concepts: getting-started/concepts.md
+  - User guide:
+      - Overview: user-guide/index.md
+      - Files: user-guide/files.md
+      - Preprocessing: user-guide/preprocessing.md
+      - Documents: user-guide/documents.md
+      - Schemas & prompts: user-guide/schemas-and-prompts.md
+      - Trials: user-guide/trials.md
+      - Ground truth: user-guide/ground-truth.md
+      - Evaluation: user-guide/evaluation.md
+      - Account settings: user-guide/account.md
+  - Administration:
+      - Overview: admin/index.md
+      - System settings: admin/settings.md
+      - User management: admin/user-management.md
+      - Single sign-on (SSO): admin/sso.md
+      - Task monitoring: admin/celery.md
+  - Operations:
+      - Deployment: operations/deployment.md
+      - Configuration: operations/configuration.md
+      - Upgrading: operations/upgrading.md
+      - Backup & restore: operations/backup-restore.md
+  - Security & governance:
+      - Security overview: SECURITY.md
+      - Threat model: THREAT_MODEL.md
+      - Data flow: DATA_FLOW.md
+      - Data retention: DATA_RETENTION.md
+      - Audit logging: AUDIT_LOGGING.md
+      - Risk register: RISK_REGISTER.md
+      - DPIA template: DPIA_TEMPLATE.md
+  - Development:
+      - Contributing: development/contributing.md
+      - Developer guide: development/developer-guide.md
+      - Architecture: development/architecture.md

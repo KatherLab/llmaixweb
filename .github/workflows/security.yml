@@ -93,3 +93,41 @@ jobs:
           scanners: vuln,misconfig,secret
           severity: HIGH,CRITICAL
           exit-code: "0" # informational baseline; set to "1" to gate once clean
+
+  license-compliance:
+    name: Dependency license compliance
+    # Lists the licenses of all SHIPPED dependencies so a new copyleft or
+    # no-license dependency is caught in review. AGPL-3.0-or-later (this
+    # project's license) is compatible with the permissive + weak-copyleft
+    # licenses currently in use. Informational baseline — see the `--fail-on`
+    # / `--failOn` notes below to turn it into a merge gate.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Backend license scan (production deps)
+        env:
+          SKIP_RUNTIME_CHECKS: "true"
+        run: |
+          uv export --no-dev --no-emit-project --format requirements-txt > /tmp/prod-reqs.txt
+          # Add `--fail-on "GPL;LGPL;MPL"` (etc.) to gate the build on a
+          # disallowed license — e.g. before a future relicense to MIT.
+          uvx --with-requirements /tmp/prod-reqs.txt --with pip-licenses \
+            pip-licenses --format=markdown --with-urls --order=license || true
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+
+      - name: Frontend license scan (production deps)
+        # Add `--failOn "GPL-3.0-only;AGPL-3.0-only"` to gate the build.
+        run: npx --yes license-checker-rseidelsohn --production --start . --summary || true

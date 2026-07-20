@@ -2,6 +2,17 @@
   "name": "llmaixwebui",
   "version": "0.6.8",
   "private": true,
+  "description": "LLMAIx Web frontend — extract structured JSON from unstructured medical/lab documents with LLMs.",
+  "license": "AGPL-3.0-or-later",
+  "author": "KatherLab",
+  "homepage": "https://github.com/KatherLab/llmaixweb#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KatherLab/llmaixweb.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KatherLab/llmaixweb/issues"
+  },
   "type": "module",
   "//pinia": "Pinned to 3.x: pinia 4.0.1 ships a broken package.json 'exports' map (no 'types' condition), so vue-tsc/Bundler resolution can't find its declarations (TS7016). Revisit once pinia publishes a fixed exports map.",
   "//typescript": "Pinned to 6.x: typescript-eslint (8.x) still requires typescript <6.1.0 and vue-tsc has no TS 7 (native port) support yet. Revisit bumping to 7.x once the lint/type-check toolchain supports it.",

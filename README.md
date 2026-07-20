@@ -1,4 +1,8 @@
 ![Tests](https://github.com/KatherLab/llmaixweb/actions/workflows/tests.yml/badge.svg?branch=main)
+[![Docs](https://github.com/KatherLab/llmaixweb/actions/workflows/docs.yml/badge.svg?branch=main)](https://katherlab.github.io/llmaixweb/)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+
+> 📖 **Full documentation:** [katherlab.github.io/llmaixweb](https://katherlab.github.io/llmaixweb/) — installation, a per-page user guide, operator handbook, and developer reference.
 
 > [!IMPORTANT]
 > This application is a research prototype. It may not run stably and extracted results can be inaccurate. Always check outputs for validity before using them in practice.
