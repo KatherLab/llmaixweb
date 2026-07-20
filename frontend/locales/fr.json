@@ -2813,5 +2813,25 @@
         "mappings_configured": "Correspondances de champs configurées"
       }
     }
+  },
+  "errors": {
+    "generic_fallback": "Une erreur s'est produite",
+    "unexpected": "Une erreur inattendue s'est produite.",
+    "error_id_suffix": " (ID d'erreur : {id})",
+    "file_too_large": "Le fichier est trop volumineux pour être téléversé. Veuillez choisir un fichier plus petit.",
+    "http": {
+      "network": "Erreur réseau lors de {operation}. Veuillez vérifier votre connexion et réessayer.",
+      "bad_request": "Échec de {operation} : {detail}",
+      "forbidden": "Accès refusé : vous n'avez pas accès à {operation}.",
+      "not_found": "Ressource introuvable lors de {operation}. Veuillez actualiser et réessayer.",
+      "server": "Erreur serveur lors de {operation}. Veuillez réessayer plus tard ou contacter le support.",
+      "generic": "Échec de {operation} : {detail}"
+    },
+    "auth": {
+      "account_locked": "Compte temporairement verrouillé en raison d'un trop grand nombre de tentatives de connexion échouées. Réessayez plus tard.",
+      "invalid_credentials": "E-mail ou mot de passe incorrect",
+      "inactive_user": "Utilisateur inactif",
+      "invalid_refresh_token": "Jeton d'actualisation invalide ou expiré."
+    }
   }
 }

@@ -2813,5 +2813,25 @@
         "mappings_configured": "Asignaciones de campos configuradas"
       }
     }
+  },
+  "errors": {
+    "generic_fallback": "Algo salió mal",
+    "unexpected": "Se produjo un error inesperado.",
+    "error_id_suffix": " (ID de error: {id})",
+    "file_too_large": "El archivo es demasiado grande para subirlo. Por favor, elija un archivo más pequeño.",
+    "http": {
+      "network": "Error de red durante {operation}. Compruebe su conexión e inténtelo de nuevo.",
+      "bad_request": "{operation} falló: {detail}",
+      "forbidden": "Acceso denegado: no tiene acceso a {operation}.",
+      "not_found": "Recurso no encontrado durante {operation}. Actualice la página e inténtelo de nuevo.",
+      "server": "Error del servidor durante {operation}. Inténtelo de nuevo más tarde o contacte con soporte.",
+      "generic": "{operation} falló: {detail}"
+    },
+    "auth": {
+      "account_locked": "Cuenta bloqueada temporalmente debido a demasiados intentos de inicio de sesión fallidos. Inténtelo de nuevo más tarde.",
+      "invalid_credentials": "Correo electrónico o contraseña incorrectos",
+      "inactive_user": "Usuario inactivo",
+      "invalid_refresh_token": "Token de actualización no válido o caducado."
+    }
   }
 }

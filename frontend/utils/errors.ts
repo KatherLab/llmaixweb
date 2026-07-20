@@ -11,6 +11,8 @@
  * @returns {string} Extracted message
  */
 
+import { i18n } from '@/i18n'
+
 /** A minimal Axios-like error shape (only the fields we inspect). */
 interface AxiosLikeError {
   message?: string
@@ -28,7 +30,28 @@ function isAxiosLike(err: unknown): err is AxiosLikeError {
   return typeof err === 'object' && err !== null
 }
 
-export function extractErrorMessage(err: unknown, fallback = 'Something went wrong'): string {
+/**
+ * Localize a backend error code (i18n Phase 3). Migrated endpoints send a
+ * structured `detail` of `{ code, message, params }`; if the code has a catalog
+ * entry we render the translated string, otherwise the caller falls back to the
+ * embedded English `message`.
+ */
+function localizeErrorCode(detail: { code?: unknown; params?: unknown }): string | null {
+  const code = detail.code
+  if (typeof code !== 'string' || !code.trim()) return null
+  const key = `errors.${code}`
+  if (!i18n.global.te(key)) return null
+  const params =
+    detail.params && typeof detail.params === 'object' && !Array.isArray(detail.params)
+      ? (detail.params as Record<string, unknown>)
+      : {}
+  return i18n.global.t(key, params)
+}
+
+export function extractErrorMessage(
+  err: unknown,
+  fallback = i18n.global.t('errors.generic_fallback'),
+): string {
   if (!err) return fallback
 
   // Axios-style error with a response body
@@ -41,7 +64,7 @@ export function extractErrorMessage(err: unknown, fallback = 'Something went wro
     // opaque "Request failed with status code 413"). Return one friendly,
     // actionable message for both.
     if (response?.status === 413) {
-      return 'The file is too large to upload. Please choose a smaller file.'
+      return i18n.global.t('errors.file_too_large')
     }
 
     if (response?.data) {
@@ -51,23 +74,29 @@ export function extractErrorMessage(err: unknown, fallback = 'Something went wro
       const errorId = response.data.error_id
       if (typeof errorId === 'string' && errorId.trim()) {
         const msg = response.data.message
-        const base = typeof msg === 'string' && msg.trim() ? msg : `An unexpected error occurred.`
-        return base.includes(errorId) ? base : `${base} (Error ID: ${errorId})`
+        const base =
+          typeof msg === 'string' && msg.trim() ? msg : i18n.global.t('errors.unexpected')
+        return base.includes(errorId)
+          ? base
+          : `${base}${i18n.global.t('errors.error_id_suffix', { id: errorId })}`
       }
 
       const detail = response.data.detail
       if (typeof detail === 'string' && detail.trim()) return detail
 
-      // Structured detail objects (e.g. our 409 `{ message, links }`, or a
-      // caught-500 `{ error_id, message }`) carry the human-readable text in
-      // `detail.message`; when an `error_id` is present, append it so the user
-      // can quote it to an admin.
+      // Structured detail objects carry the human-readable text in
+      // `detail.message`. A migrated endpoint (i18n Phase 3) also sends a stable
+      // `detail.code`; if that code has a catalog entry we render the localized
+      // string, otherwise we fall back to the embedded English `message`.
       if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+        const localized = localizeErrorCode(detail as { code?: unknown; params?: unknown })
+        if (localized !== null) return localized
+
         const dmsg = (detail as { message?: unknown }).message
         const did = (detail as { error_id?: unknown }).error_id
         if (typeof dmsg === 'string' && dmsg.trim()) {
           if (typeof did === 'string' && did.trim() && !dmsg.includes(did)) {
-            return `${dmsg} (Error ID: ${did})`
+            return `${dmsg}${i18n.global.t('errors.error_id_suffix', { id: did })}`
           }
           return dmsg
         }
@@ -106,23 +135,24 @@ export function extractErrorMessage(err: unknown, fallback = 'Something went wro
  */
 export function describeHttpError(err: unknown, operation: string): string {
   const detail = extractErrorMessage(err, '')
+  const { t } = i18n.global
 
   if (!isAxiosLike(err) || !err?.response) {
-    return `Network error during ${operation}. Please check your connection and try again.`
+    return t('errors.http.network', { operation })
   }
 
   const message = typeof err.message === 'string' ? err.message : ''
 
   switch (err.response.status) {
     case 400:
-      return `${operation} failed: ${detail || message}`
+      return t('errors.http.bad_request', { operation, detail: detail || message })
     case 403:
-      return `Permission denied: You don't have access to ${operation.toLowerCase()}.`
+      return t('errors.http.forbidden', { operation: operation.toLowerCase() })
     case 404:
-      return `Resource not found during ${operation}. Please refresh and try again.`
+      return t('errors.http.not_found', { operation })
     case 500:
-      return `Server error during ${operation}. Please try again later or contact support.`
+      return t('errors.http.server', { operation })
     default:
-      return `${operation} failed: ${detail || message}`
+      return t('errors.http.generic', { operation, detail: detail || message })
   }
 }

@@ -2,7 +2,7 @@
 import time
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -19,6 +19,7 @@ from ....core.security import (
     verify_password,
 )
 from ....dependencies import get_db
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction, AuditOutcome
 
@@ -122,9 +123,10 @@ def login(
             resource_type="user",
             resource_id=user.id,
         )
-        raise HTTPException(
-            status_code=status.HTTP_423_LOCKED,
-            detail="Account temporarily locked due to too many failed login attempts. Try again later.",
+        raise api_error(
+            "auth.account_locked",
+            status.HTTP_423_LOCKED,
+            "Account temporarily locked due to too many failed login attempts. Try again later.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -141,15 +143,18 @@ def login(
             outcome=AuditOutcome.FAILURE,
             detail={"reason": "invalid_credentials"},
         )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+        raise api_error(
+            "auth.invalid_credentials",
+            status.HTTP_401_UNAUTHORIZED,
+            "Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     elif not user.is_active:
         time.sleep(0.5)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user"
+        raise api_error(
+            "auth.inactive_user",
+            status.HTTP_401_UNAUTHORIZED,
+            "Inactive user",
         )
 
     # Success: clear any failed-attempt state and record the login time.
@@ -207,9 +212,10 @@ def refresh_token(
     """
     user = rotate_refresh_token(body.refresh_token, db)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token.",
+        raise api_error(
+            "auth.invalid_refresh_token",
+            status.HTTP_401_UNAUTHORIZED,
+            "Invalid or expired refresh token.",
         )
     access_token = create_access_token(user.id, token_version=user.token_version)
     new_refresh = create_refresh_token(db, user)

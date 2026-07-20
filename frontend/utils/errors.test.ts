@@ -47,6 +47,40 @@ describe('extractErrorMessage', () => {
     ).toBe('Conflict (Error ID: x1)')
   })
 
+  it('localizes a structured detail carrying a known error code', () => {
+    expect(
+      extractErrorMessage({
+        response: { data: { detail: { code: 'auth.invalid_credentials', message: 'ignored' } } },
+      }),
+    ).toBe('Incorrect email or password')
+  })
+
+  it('interpolates params for a localized error code', () => {
+    // errors.http.bad_request uses {operation}/{detail}; reuse it as a
+    // param-carrying code to prove params reach the catalog string.
+    expect(
+      extractErrorMessage({
+        response: {
+          data: {
+            detail: {
+              code: 'http.bad_request',
+              params: { operation: 'Save', detail: 'oops' },
+              message: 'ignored',
+            },
+          },
+        },
+      }),
+    ).toBe('Save failed: oops')
+  })
+
+  it('falls back to the embedded message when the error code is unknown', () => {
+    expect(
+      extractErrorMessage({
+        response: { data: { detail: { code: 'not.a.real.code', message: 'Plain English' } } },
+      }),
+    ).toBe('Plain English')
+  })
+
   it('reads a top-level message when there is no detail', () => {
     expect(extractErrorMessage({ response: { data: { message: 'Just a message' } } })).toBe(
       'Just a message',

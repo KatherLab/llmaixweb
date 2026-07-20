@@ -2813,5 +2813,25 @@
         "mappings_configured": "Feldzuordnungen konfiguriert"
       }
     }
+  },
+  "errors": {
+    "generic_fallback": "Etwas ist schiefgelaufen",
+    "unexpected": "Ein unerwarteter Fehler ist aufgetreten.",
+    "error_id_suffix": " (Fehler-ID: {id})",
+    "file_too_large": "Die Datei ist zu groß zum Hochladen. Bitte wählen Sie eine kleinere Datei.",
+    "http": {
+      "network": "Netzwerkfehler bei {operation}. Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "bad_request": "{operation} fehlgeschlagen: {detail}",
+      "forbidden": "Zugriff verweigert: Sie haben keine Berechtigung für {operation}.",
+      "not_found": "Ressource bei {operation} nicht gefunden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "server": "Serverfehler bei {operation}. Bitte versuchen Sie es später erneut oder wenden Sie sich an den Support.",
+      "generic": "{operation} fehlgeschlagen: {detail}"
+    },
+    "auth": {
+      "account_locked": "Konto vorübergehend gesperrt wegen zu vieler fehlgeschlagener Anmeldeversuche. Bitte versuchen Sie es später erneut.",
+      "invalid_credentials": "Falsche E-Mail-Adresse oder falsches Passwort",
+      "inactive_user": "Inaktiver Benutzer",
+      "invalid_refresh_token": "Ungültiger oder abgelaufener Refresh-Token."
+    }
   }
 }

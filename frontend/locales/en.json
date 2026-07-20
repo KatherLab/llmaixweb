@@ -2813,5 +2813,25 @@
         "mappings_configured": "Field mappings configured"
       }
     }
+  },
+  "errors": {
+    "generic_fallback": "Something went wrong",
+    "unexpected": "An unexpected error occurred.",
+    "error_id_suffix": " (Error ID: {id})",
+    "file_too_large": "The file is too large to upload. Please choose a smaller file.",
+    "http": {
+      "network": "Network error during {operation}. Please check your connection and try again.",
+      "bad_request": "{operation} failed: {detail}",
+      "forbidden": "Permission denied: You don't have access to {operation}.",
+      "not_found": "Resource not found during {operation}. Please refresh and try again.",
+      "server": "Server error during {operation}. Please try again later or contact support.",
+      "generic": "{operation} failed: {detail}"
+    },
+    "auth": {
+      "account_locked": "Account temporarily locked due to too many failed login attempts. Try again later.",
+      "invalid_credentials": "Incorrect email or password",
+      "inactive_user": "Inactive user",
+      "invalid_refresh_token": "Invalid or expired refresh token."
+    }
   }
 }
