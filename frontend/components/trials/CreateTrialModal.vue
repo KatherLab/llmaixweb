@@ -132,10 +132,11 @@
           />
         </div>
 
-        <!-- Simple mode: custom-API escape hatch. Shown when there's no usable
-             system LLM config, so a scientist pointing at a self-hosted / Ollama
-             / vLLM endpoint isn't stranded with a disabled Start button. -->
-        <div v-else-if="!hasValidConfig || hasCustomApiSettings" class="mb-8">
+        <!-- Simple mode: custom-API escape hatch. Always discoverable (not just
+             when the system config is broken), so a scientist pointing at a
+             self-hosted / Ollama / vLLM endpoint can find it without switching
+             to Advanced mode. -->
+        <div v-else class="mb-8">
           <Callout
             v-if="!hasValidConfig && !hasCustomApiSettings"
             variant="warning"
@@ -153,10 +154,13 @@
             class="text-sm flex items-center"
             @click="advancedOptionsVisible = !advancedOptionsVisible"
           >
-            <span
-              >{{ advancedOptionsVisible ? 'Hide' : hasCustomApiSettings ? 'Edit' : 'Use' }} Custom
-              API Settings</span
-            >
+            <span>{{
+              advancedOptionsVisible
+                ? 'Hide custom API settings'
+                : hasCustomApiSettings
+                  ? 'Edit custom API settings'
+                  : 'Use a different API'
+            }}</span>
             <ChevronDown
               :class="{ 'rotate-180': advancedOptionsVisible }"
               class="h-4 w-4 ml-1 transition-transform"
@@ -300,7 +304,9 @@ const props = defineProps({
 
 const emit = defineEmits<{
   close: []
-  create: [payload: TrialCreatePayload]
+  /** `done(success)` lets the parent report the API outcome back: on failure
+   *  the modal re-enables its form instead of staying stuck in "Verifying…". */
+  create: [payload: TrialCreatePayload, done: (success: boolean) => void]
   'create-group': []
 }>()
 
@@ -503,7 +509,12 @@ const handleStartTrial = async (): Promise<void> => {
         return
       }
     }
-    emit('create', buildFormData()) // Phase 2 — submit
+    // Phase 2 — submit. The parent closes the modal on success; on failure it
+    // reports back so the form is re-enabled (otherwise Cancel and Start stay
+    // disabled behind `submitting` forever).
+    emit('create', buildFormData(), (success: boolean) => {
+      if (!success) submitting.value = false
+    })
   } catch {
     toast.error('Could not start the trial. Please try again.')
     submitting.value = false
@@ -602,14 +613,19 @@ watch([() => trialData.value.api_key, () => trialData.value.base_url], () => {
   trialData.value.llm_model = ''
   availableModels.value = []
 
-  if (hasCustomApiSettings.value) {
-    if (customSettingsTimeout) clearTimeout(customSettingsTimeout)
-    customSettingsTimeout = setTimeout(() => {
+  // Debounce BOTH branches: while typing, the fields transiently pass through
+  // the empty state (e.g. select-all + retype), and an immediate system-config
+  // retest on every such keystroke is just as noisy as the custom one.
+  // Auto-triggered tests are silent — the inline configStatus line shows the
+  // outcome (see useModelTesting).
+  if (customSettingsTimeout) clearTimeout(customSettingsTimeout)
+  customSettingsTimeout = setTimeout(() => {
+    if (hasCustomApiSettings.value) {
       testAndLoadModels(trialData.value.api_key || '', trialData.value.base_url || '')
-    }, 1000)
-  } else {
-    testAndLoadModels()
-  }
+    } else {
+      testAndLoadModels()
+    }
+  }, 1000)
 })
 
 watch(

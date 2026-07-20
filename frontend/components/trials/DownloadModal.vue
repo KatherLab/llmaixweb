@@ -141,12 +141,25 @@ async function download(): Promise<void> {
       </label>
     </div>
 
-    <div v-if="format === 'csv'" class="mb-3 text-xs text-content-muted">
-      <span v-if="includeContent">
-        Will include original files and full document text inside a ZIP.<br />
-        <b>Note:</b> Download may be large if your trial contains many files.
-      </span>
-      <span v-else> Only a single CSV will be downloaded (no files/text included). </span>
+    <div class="mb-3 text-xs text-content-muted">
+      <template v-if="format === 'csv'">
+        <span v-if="includeContent">
+          Will include original files and full document text inside a ZIP.<br />
+          <b>Note:</b> Download may be large if your trial contains many files.
+        </span>
+        <span v-else> Only a single CSV will be downloaded (no files/text included). </span>
+      </template>
+      <template v-else>
+        <span v-if="includeContent">
+          Each per-document JSON will contain the extracted document text, and the original source
+          files are bundled in a <code>files/</code> folder inside the ZIP.<br />
+          <b>Note:</b> Download may be large if your trial contains many files.
+        </span>
+        <span v-else>
+          The JSON files contain only the extracted results and metadata — no document text or
+          source files.
+        </span>
+      </template>
     </div>
 
     <template #footer>

@@ -81,7 +81,11 @@ interface UseModelTestingReturn {
   configStatus: ComputedRef<StatusDescriptor>
   modelTestStatus: ComputedRef<StatusDescriptor>
   currentError: ComputedRef<string | null>
-  testAndLoadModels: (apiKey?: string, baseUrl?: string) => Promise<void>
+  testAndLoadModels: (
+    apiKey?: string,
+    baseUrl?: string,
+    opts?: { notify?: boolean },
+  ) => Promise<void>
   loadModels: (apiKey?: string, baseUrl?: string) => Promise<void>
   resetModelTest: () => void
   testSelectedModel: () => Promise<void>
@@ -232,7 +236,20 @@ export function useModelTesting({
     }
   }
 
-  const testAndLoadModels = async (apiKey = '', baseUrl = ''): Promise<void> => {
+  /**
+   * Connection test + model list load.
+   *
+   * Auto-triggered runs (modal open, debounced typing in the custom API fields)
+   * must be silent — the result is already surfaced via the inline
+   * `configStatus` line, and toasting on every keystroke-triggered retest
+   * produces a stream of red/green toasts. Pass `{ notify: true }` only for an
+   * explicit user-initiated test.
+   */
+  const testAndLoadModels = async (
+    apiKey = '',
+    baseUrl = '',
+    { notify = false }: { notify?: boolean } = {},
+  ): Promise<void> => {
     const seq = ++connectionSeq
     isTestingConnection.value = true
     connectionTested.value = false
@@ -262,12 +279,12 @@ export function useModelTesting({
           const errorMsg = 'Connection successful but no models available'
           if (hasCustomApiSettings.value) {
             customConfigError.value = errorMsg
-            toast.error(errorMsg)
+            if (notify) toast.error(errorMsg)
           } else {
             systemConfigError.value = errorMsg
-            toast.error('No models available. Please contact your administrator.')
+            if (notify) toast.error('No models available. Please contact your administrator.')
           }
-        } else {
+        } else if (notify) {
           toast.success(`Connection successful. Loaded ${availableModels.value.length} models.`)
         }
       } else {
@@ -277,19 +294,21 @@ export function useModelTesting({
 
         if (hasCustomApiSettings.value) {
           customConfigError.value = errorMsg
-          toast.error(errorMsg)
+          if (notify) toast.error(errorMsg)
         } else {
           systemConfigError.value = errorMsg
           hasSystemConfig.value = false
 
-          if (testResponse.data.error_type === 'incomplete_config') {
-            toast.error(
-              'System LLM configuration is incomplete. Please contact your administrator or provide custom API settings.',
-            )
-          } else {
-            toast.error(
-              `System LLM configuration error: ${errorMsg}. Please contact your administrator.`,
-            )
+          if (notify) {
+            if (testResponse.data.error_type === 'incomplete_config') {
+              toast.error(
+                'System LLM configuration is incomplete. Please contact your administrator or provide custom API settings.',
+              )
+            } else {
+              toast.error(
+                `System LLM configuration error: ${errorMsg}. Please contact your administrator.`,
+              )
+            }
           }
         }
       }
@@ -306,11 +325,12 @@ export function useModelTesting({
         'Connection test failed'
       if (hasCustomApiSettings.value) {
         customConfigError.value = errMsg
-        toast.error(`Connection failed: ${errMsg}`)
+        if (notify) toast.error(`Connection failed: ${errMsg}`)
       } else {
         systemConfigError.value = errMsg
         hasSystemConfig.value = false
-        toast.error(`System configuration error: ${errMsg}. Please contact your administrator.`)
+        if (notify)
+          toast.error(`System configuration error: ${errMsg}. Please contact your administrator.`)
       }
     } finally {
       if (seq === connectionSeq) isTestingConnection.value = false

@@ -517,6 +517,13 @@ def create_trial(
 def retry_trial(
     project_id: int,
     trial_id: int,
+    only_failed: Annotated[
+        bool,
+        Query(
+            description="Retry only the documents that failed in the source trial "
+            "(per-document entries in meta.failures) instead of all documents"
+        ),
+    ] = False,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.Trial:
@@ -526,6 +533,10 @@ def retry_trial(
     the custom endpoint ``base_url`` and its encrypted ``api_key`` — which are
     never returned in API responses — along with the document set, name, and
     description. Reuses ``create_trial`` for all validation and dispatch.
+
+    With ``only_failed=true`` the clone targets just the documents recorded as
+    failed in the source trial, so a 500-document trial with 3 provider errors
+    doesn't re-run (and re-bill) the 497 successes.
     """
     source: models.Trial | None = db.execute(
         select(models.Trial).where(
@@ -540,13 +551,29 @@ def retry_trial(
     # current membership is picked up) if it was set-based, otherwise the exact
     # id list. TrialCreate requires exactly one of the two.
     uses_set = source.document_set_id is not None
+    document_ids = None if uses_set else (source.document_ids or [])
+    document_set_id = source.document_set_id if uses_set else None
+    if only_failed:
+        # meta.failures maps str(document_id) -> error; sentinel keys such as
+        # "_dispatch"/"_sweeper" describe trial-level failures, not documents.
+        failures = (source.meta or {}).get("failures") or {}
+        document_ids = sorted(
+            int(key) for key in failures if isinstance(key, str) and key.isdigit()
+        )
+        if not document_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="Trial has no failed documents to retry",
+            )
+        document_set_id = None
+
     payload = schemas.TrialCreate(
         name=source.name,
         description=source.description,
         schema_id=source.schema_id,
         prompt_id=source.prompt_id,
-        document_ids=None if uses_set else (source.document_ids or []),
-        document_set_id=source.document_set_id if uses_set else None,
+        document_ids=document_ids,
+        document_set_id=document_set_id,
         llm_model=source.llm_model,
         api_key=source.api_key,  # decrypted via the model property
         base_url=source.base_url,

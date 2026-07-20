@@ -279,7 +279,11 @@
       v-if="hasFailures && showErrors"
       class="border-t border-default bg-surface-muted px-6 py-4"
     >
-      <TrialDocumentErrors :failures="trialFailures" />
+      <TrialDocumentErrors
+        :failures="trialFailures"
+        :document-names="failureDocumentNames"
+        @select="selectFailureDocument"
+      />
     </div>
 
     <template #footer>
@@ -318,6 +322,7 @@ import { debounce } from 'perfect-debounce'
 import { ChevronLeft, ChevronRight, FileText, Frown, PanelLeft, X } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
 import { schemasApi } from '@/services/schemasApi'
+import { useToast } from '@/composables/useToast'
 import TrialResultViewer from './TrialResultViewer.vue'
 import TrialDocumentErrors from './TrialDocumentErrors.vue'
 import SchemaViewModal from '@/components/schemas/SchemaViewModal.vue'
@@ -349,6 +354,7 @@ const props = defineProps({
 defineEmits<{ close: [] }>()
 
 const route = useRoute()
+const toast = useToast()
 const trialId = computed(() => props.trialId || parseInt(route.params.trialId as string))
 
 // Trial-level state
@@ -397,6 +403,30 @@ const trialFailures = computed<Record<string, string>>(() => {
 })
 const errorCount = computed(() => Object.keys(trialFailures.value).length)
 const hasFailures = computed(() => errorCount.value > 0)
+
+// Resolve document names for the error list from the results already loaded
+// (failed documents that produced no result simply keep their id label).
+const failureDocumentNames = computed<Record<string, string>>(() => {
+  const names: Record<string, string> = {}
+  for (const r of results.value) {
+    const name = r.document_name || r.original_file_name
+    if (name) names[String(r.document_id)] = name
+  }
+  return names
+})
+
+// Click on an error entry → select the corresponding result in the viewer.
+function selectFailureDocument(documentId: number): void {
+  const idx = results.value.findIndex((r) => r.document_id === documentId)
+  if (idx !== -1) {
+    activeIndex.value = idx
+    showErrors.value = false
+    return
+  }
+  toast.info(
+    'No loaded result for this document — it may have failed before producing one, or is on another page.',
+  )
+}
 
 const statusOptions = [
   { value: 'success', label: 'Success' },

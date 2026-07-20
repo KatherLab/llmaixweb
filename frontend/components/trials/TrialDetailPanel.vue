@@ -169,15 +169,18 @@ const canDownload = computed(
     (['failed', 'cancelled'].includes(props.trial.status) && (props.trial.results_count ?? 0) > 0),
 )
 
+// document_ids is null/empty for set-based trials — fall back to the
+// server-computed documents_count so the progress label isn't "0/0".
+const totalDocs = computed(
+  () => props.trial.document_ids?.length || props.trial.documents_count || 0,
+)
 const docsDone = computed(() => {
   if (props.trial.docs_done != null) return props.trial.docs_done
   if (props.trial.progress != null) {
-    const total = props.trial.document_ids?.length ?? 0
-    return Math.round((props.trial.progress || 0) * total)
+    return Math.round((props.trial.progress || 0) * totalDocs.value)
   }
   return 0
 })
-const totalDocs = computed(() => props.trial.document_ids?.length ?? 0)
 const progressPercent = computed(() =>
   props.trial.progress != null ? Math.round((props.trial.progress || 0) * 100) : 0,
 )

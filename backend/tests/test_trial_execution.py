@@ -615,3 +615,138 @@ def test_trial_duplicate_document_ids_deduped_and_results_default_excluded(
     assert detail["results"][0]["result"] == expected
 
     client.delete(f"{api_url}/project/{project_id}", headers=headers)
+
+
+def test_retry_only_failed_targets_failed_documents(client, api_url, monkeypatch):
+    """retry?only_failed=true clones the trial against just the failed docs.
+
+    Sentinel failure keys (``_dispatch`` etc.) are trial-level, not documents,
+    and must be ignored; a trial whose failures are only sentinels is a 400.
+    """
+    headers = _admin_headers(client, api_url)
+    monkeypatch.setattr(
+        "backend.src.utils.info_extraction.OpenAI",
+        _make_fake_openai(json.dumps({"field1": "hello"})),
+    )
+
+    project_id = client.post(
+        f"{api_url}/project", headers=headers, json={"name": "Retry Failed Project"}
+    ).json()["id"]
+    prompt_id = client.post(
+        f"{api_url}/project/{project_id}/prompt",
+        headers=headers,
+        json={
+            "name": "P",
+            "system_prompt": "Extract as JSON.",
+            "user_prompt": "Doc: {document_content}",
+            "project_id": project_id,
+        },
+    ).json()["id"]
+    schema_id = client.post(
+        f"{api_url}/project/{project_id}/schema",
+        headers=headers,
+        json={
+            "schema_name": "S",
+            "schema_definition": {
+                "type": "object",
+                "properties": {"field1": {"type": "string"}},
+                "required": ["field1"],
+            },
+        },
+    ).json()["id"]
+
+    # Two documents so the failed subset is a strict subset.
+    file_ids = []
+    for name in ("a.txt", "b.txt"):
+        file_ids.append(
+            client.post(
+                f"{api_url}/project/{project_id}/file",
+                headers=headers,
+                files={
+                    "file": (name, f"text of {name}".encode(), "text/plain"),
+                    "file_info": (
+                        "",
+                        json.dumps({"file_name": name, "file_type": "text/plain"}),
+                        "application/json",
+                    ),
+                },
+            ).json()["id"]
+        )
+    assert (
+        client.post(
+            f"{api_url}/project/{project_id}/preprocess",
+            headers=headers,
+            json={
+                "file_ids": file_ids,
+                "inline_config": {"name": "cfg", "description": "d"},
+                "bypass_celery": True,
+            },
+        ).status_code
+        == 200
+    )
+    doc_ids = sorted(
+        d["id"]
+        for d in client.get(
+            f"{api_url}/project/{project_id}/document", headers=headers
+        ).json()["items"]
+    )
+    assert len(doc_ids) == 2
+
+    trial = client.post(
+        f"{api_url}/project/{project_id}/trial",
+        headers=headers,
+        json={
+            "schema_id": schema_id,
+            "prompt_id": prompt_id,
+            "document_ids": doc_ids,
+            "bypass_celery": True,
+            "llm_model": "mock-model",
+            "api_key": "test-key",
+            "base_url": "http://localhost:11434/v1",
+        },
+    ).json()
+    assert trial["status"] == "completed"
+
+    # Simulate one failed document (plus a sentinel) in the stored meta.
+    from backend.src.db.session import SessionLocal
+    from backend.src.models.project import Trial
+
+    db = SessionLocal()
+    trial_db = db.get(Trial, trial["id"])
+    trial_db.meta = {
+        "failures": {str(doc_ids[1]): "provider error", "_dispatch": "queue hiccup"}
+    }
+    db.commit()
+    db.close()
+
+    # Failed-only retry clones against just the failed document.
+    retried = client.post(
+        f"{api_url}/project/{project_id}/trial/{trial['id']}/retry",
+        headers=headers,
+        params={"only_failed": True},
+    )
+    assert retried.status_code == 200, retried.text
+    assert retried.json()["document_ids"] == [doc_ids[1]]
+
+    # The clone succeeded, so it has no failures — failed-only retry is a 400.
+    no_failures = client.post(
+        f"{api_url}/project/{project_id}/trial/{retried.json()['id']}/retry",
+        headers=headers,
+        params={"only_failed": True},
+    )
+    assert no_failures.status_code == 400
+
+    # Sentinel-only failures are trial-level: also a 400.
+    db = SessionLocal()
+    trial_db = db.get(Trial, trial["id"])
+    trial_db.meta = {"failures": {"_dispatch": "queue hiccup"}}
+    db.commit()
+    db.close()
+    sentinel_only = client.post(
+        f"{api_url}/project/{project_id}/trial/{trial['id']}/retry",
+        headers=headers,
+        params={"only_failed": True},
+    )
+    assert sentinel_only.status_code == 400
+
+    client.delete(f"{api_url}/project/{project_id}", headers=headers)

@@ -232,14 +232,15 @@ function isActive(trial: TrialSummary): boolean {
 function docsDone(trial: TrialSummary): number {
   if (trial.docs_done != null) return trial.docs_done
   if (trial.progress != null) {
-    const total = trial.document_ids?.length ?? 0
-    return Math.round((trial.progress || 0) * total)
+    return Math.round((trial.progress || 0) * totalDocs(trial))
   }
   return 0
 }
 
 function totalDocs(trial: TrialSummary): number {
-  return trial.document_ids?.length ?? 0
+  // document_ids is null/empty for set-based trials — fall back to the
+  // server-computed documents_count so the progress label isn't "0/0".
+  return trial.document_ids?.length || trial.documents_count || 0
 }
 
 function progressPercent(trial: TrialSummary): number {

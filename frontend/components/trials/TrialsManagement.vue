@@ -186,6 +186,19 @@
       :project-id="props.projectId"
       @close="showDownloadModal = false"
     />
+    <CancelTrialModal
+      v-if="showCancelModal"
+      :open="showCancelModal"
+      @close="showCancelModal = false"
+      @confirm="handleCancelConfirmed"
+    />
+    <RetryTrialModal
+      v-if="showRetryModal"
+      :open="showRetryModal"
+      :failed-count="trialToRetry?.error_count ?? 0"
+      @close="showRetryModal = false"
+      @confirm="handleRetryConfirmed"
+    />
   </div>
 </template>
 
@@ -206,6 +219,8 @@ import TrialsTable from '@/components/trials/TrialsTable.vue'
 import TrialFiltersPanel from '@/components/trials/TrialFiltersPanel.vue'
 import BatchActionsModal from '@/components/documents/BatchActionsModal.vue'
 import RenameTrialModal from '@/components/trials/RenameTrialModal.vue'
+import CancelTrialModal from '@/components/trials/CancelTrialModal.vue'
+import RetryTrialModal from '@/components/trials/RetryTrialModal.vue'
 import TrialResults from '@/components/trials/TrialResults.vue'
 import SchemaViewModal from '@/components/schemas/SchemaViewModal.vue'
 import PromptViewModal from '@/components/schemas/PromptViewModal.vue'
@@ -528,15 +543,20 @@ const debouncedFetchTrials = debounce(() => {
 function openCreateTrialModal(): void {
   isModalOpen.value = true
 }
-async function handleCreateTrial(trialData: TrialCreate): Promise<void> {
+async function handleCreateTrial(
+  trialData: TrialCreate,
+  done?: (success: boolean) => void,
+): Promise<void> {
   try {
     const response = await trialsApi.create(props.projectId, trialData)
     trials.value.unshift(response.data as unknown as TrialSummary)
     totalTrials.value += 1
     isModalOpen.value = false
     toast.success('Trial created')
-  } catch {
-    toast.error('Failed to create trial.')
+    done?.(true)
+  } catch (err) {
+    toast.error(extractErrorMessage(err, 'Failed to create trial'))
+    done?.(false)
   }
 }
 
@@ -597,32 +617,41 @@ function handleBatchActionComplete(): void {
   showBatchModal.value = false
 }
 
-async function cancelTrial(trial: TrialSummary): Promise<void> {
+async function cancelTrial(trial: TrialSummary, keepProcessed: boolean): Promise<void> {
   try {
-    await trialsApi.cancel(props.projectId, trial.id)
+    await trialsApi.cancel(props.projectId, trial.id, keepProcessed)
     const idx = trials.value.findIndex((t) => t.id === trial.id)
     const target = idx !== -1 ? trials.value[idx] : undefined
     if (target) {
       target.status = 'cancelled'
       ;(target as TrialSummary & { is_cancelled?: boolean }).is_cancelled = true
     }
-    toast.success('Trial cancelled')
-  } catch {
-    toast.error('Failed to cancel trial')
+    toast.success(
+      keepProcessed
+        ? 'Trial cancelled — already-processed results were kept'
+        : 'Trial cancelled — in-progress results were discarded',
+    )
+  } catch (err) {
+    toast.error(extractErrorMessage(err, 'Failed to cancel trial'))
   }
 }
 
+// Cancel uses a dedicated dialog (not the generic ConfirmationDialog) so the
+// user can choose whether already-processed results are kept.
+const showCancelModal = ref(false)
+const trialToCancel = ref<TrialSummary | null>(null)
+
 function confirmCancelTrial(trial: TrialSummary): void {
-  openConfirm({
-    title: 'Cancel Trial',
-    message: 'Cancel this running trial? In-progress work will be discarded and cannot be resumed.',
-    confirmText: 'Cancel Trial',
-    variant: 'warning',
-    handler: () => {
-      isConfirmDialogOpen.value = false
-      cancelTrial(trial)
-    },
-  })
+  trialToCancel.value = trial
+  showCancelModal.value = true
+}
+
+function handleCancelConfirmed(keepProcessed: boolean): void {
+  showCancelModal.value = false
+  if (trialToCancel.value) {
+    cancelTrial(trialToCancel.value, keepProcessed)
+    trialToCancel.value = null
+  }
 }
 
 function confirmDeleteTrial(trial: TrialSummary): void {
@@ -651,21 +680,39 @@ async function deleteTrial(trial: TrialSummary | null): Promise<void> {
   }
 }
 
-async function retryTrial(trial: TrialSummary): Promise<void> {
+async function retryTrial(trial: TrialSummary, onlyFailed = false): Promise<void> {
   try {
     // Clone server-side so the original's custom endpoint, API key, document
     // set, name and description are preserved (the client can't resend the key
     // or base URL — they're never returned in API responses).
-    const response = await trialsApi.retry(props.projectId, trial.id)
+    const response = await trialsApi.retry(props.projectId, trial.id, onlyFailed)
     trials.value.unshift(response.data as unknown as TrialSummary)
     totalTrials.value += 1
-    toast.success('Trial restarted')
+    toast.success(onlyFailed ? 'Retrying failed documents' : 'Trial restarted')
   } catch (err) {
     toast.error(extractErrorMessage(err, 'Failed to restart trial'))
   }
 }
 
+const showRetryModal = ref(false)
+const trialToRetry = ref<TrialSummary | null>(null)
+
+function handleRetryConfirmed(onlyFailed: boolean): void {
+  showRetryModal.value = false
+  if (trialToRetry.value) {
+    retryTrial(trialToRetry.value, onlyFailed)
+    trialToRetry.value = null
+  }
+}
+
 function confirmRetryTrial(trial: TrialSummary): void {
+  // Trials with per-document failures get a scope choice (failed-only vs all);
+  // otherwise the plain confirm suffices.
+  if (trial.has_failures && trial.error_count) {
+    trialToRetry.value = trial
+    showRetryModal.value = true
+    return
+  }
   openConfirm({
     title: 'Retry Trial',
     message:
