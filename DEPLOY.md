@@ -481,7 +481,7 @@ docker compose logs -f worker_default worker_preprocess   # task logs
 
 ## Troubleshooting
 
-See the [Troubleshooting](README.md#troubleshooting) section in the README for
+See the [Troubleshooting](https://katherlab.github.io/llmaixweb/operations/troubleshooting/) guide for
 common issues (port conflicts, backend startup failures, LLM connection
 errors, migration errors, stuck Celery tasks).
 

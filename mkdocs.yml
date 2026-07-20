@@ -82,6 +82,7 @@ nav:
       - Overview: user-guide/index.md
       - Files: user-guide/files.md
       - Preprocessing: user-guide/preprocessing.md
+      - OCR engines: user-guide/ocr-engines.md
       - Documents: user-guide/documents.md
       - Schemas & prompts: user-guide/schemas-and-prompts.md
       - Trials: user-guide/trials.md
@@ -99,6 +100,7 @@ nav:
       - Configuration: operations/configuration.md
       - Upgrading: operations/upgrading.md
       - Backup & restore: operations/backup-restore.md
+      - Troubleshooting: operations/troubleshooting.md
   - Security & governance:
       - Security overview: SECURITY.md
       - Threat model: THREAT_MODEL.md

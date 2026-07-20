@@ -21,8 +21,15 @@ that point forward.
 - `SECURITY.md` vulnerability-disclosure policy (GitHub Security tab).
 - `CITATION.cff` for academic citation.
 - This `CHANGELOG.md`.
-- Documentation site (MkDocs Material) with a per-page feature reference.
+- Documentation site (MkDocs Material) with a per-page feature reference,
+  including dedicated OCR-engines and troubleshooting pages.
 - `THIRD_PARTY_NOTICES` generation and a license-compatibility check in CI.
+
+### Changed
+
+- Trimmed `README.md` to a landing page; the preprocessing/OCR guide, the
+  environment-variable reference, and troubleshooting now live in the docs site
+  (single source of truth).
 
 ### Fixed
 

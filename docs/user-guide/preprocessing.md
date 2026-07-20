@@ -12,7 +12,8 @@ converts rows or the whole table into text.
 ## Choosing an OCR engine
 
 When your selection contains files that need OCR (PDFs and images), pick one of
-the engines your administrator has enabled:
+the engines your administrator has enabled. For a detailed description of each
+engine and when to use it, see **[OCR engines](ocr-engines.md)**.
 
 | Engine | Best for | Notes |
 | --- | --- | --- |

@@ -112,7 +112,7 @@ From the following medical report, extract the following information and return 
 When preprocessing finishes, you'll have **8 documents** (one per report).
 
 > [!NOTE]
-> For PDFs or images you would instead pick an OCR engine here (Quick/Docling, Mistral OCR, or Vision LLM OCR). See the [Preprocessing Guide](README.md#preprocessing-guide) in the README.
+> For PDFs or images you would instead pick an OCR engine here (Quick/Docling, Mistral OCR, or Vision LLM OCR). See the [OCR engines guide](https://katherlab.github.io/llmaixweb/user-guide/ocr-engines/).
 
 ---
 

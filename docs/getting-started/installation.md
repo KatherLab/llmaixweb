@@ -11,28 +11,57 @@ self-hosted GPU services only when you need them.
   (OpenAI, Mistral, …) or a self-hosted endpoint (vLLM, llama.cpp, Ollama, …).
 - For self-hosted OCR / vision models: an NVIDIA **GPU** with the appropriate
   drivers.
+- For local development from source: **Node.js 18+** and **Python 3.13+**.
+
+## Quick start
+
+```bash
+git clone https://github.com/KatherLab/llmaixweb
+cd llmaixweb
+cp .env.example .env
+# Edit .env — at minimum SECRET_KEY (OPENAI_API_* are optional; see Configuration)
+
+docker compose up -d
+```
+
+Then open **[http://localhost:5173](http://localhost:5173)** and create an admin
+account on first visit (see [First run](#first-run)).
+
+!!! note "First run may take a few minutes"
+    Images download on first launch. Watch progress with
+    `docker compose logs -f` — once the backend health check passes and
+    migrations finish, the app is ready. Pre-built images are published at
+    `ghcr.io/katherlab/llmaixweb-backend:latest` and `…-frontend:latest`; add
+    `--build` to build from source instead.
 
 ## Compose files
 
-The four compose files combine via repeated `-f` flags:
+The four compose files combine via repeated `-f` flags. The overlays are
+**optional** — without them the app simply connects to your configured remote
+API.
 
-| File | Purpose |
-| --- | --- |
-| `compose.yml` | Base stack (CPU) — **always required**. |
-| `compose.dev.yml` | Local code hot-reload for development. |
-| `compose.deepseek.yml` | Self-hosted Mistral-compatible OCR (DeepSeek-OCR-2 + KatDocExtract, GPU). |
-| `compose.vllm.yml` | Self-hosted OpenAI-compatible endpoint (e.g. Gemma via vLLM, GPU). |
-
-Example — base stack only:
-
-```bash
-docker compose -f compose.yml up -d
-```
-
-Example — base stack plus a self-hosted vision endpoint:
+| File | Purpose | GPU |
+| --- | --- | --- |
+| `compose.yml` | Base stack (CPU) — **always required** | No |
+| `compose.dev.yml` | Local code hot-reload for development | No |
+| `compose.deepseek.yml` | Self-hosted Mistral-compatible OCR (DeepSeek-OCR-2 + [KatDocExtract](https://github.com/KatherLab/KatDocExtract)) | Yes (24+ GB VRAM) |
+| `compose.vllm.yml` | Self-hosted OpenAI-compatible endpoint (e.g. Gemma via vLLM) | Yes (model-dependent) |
 
 ```bash
+# Minimal setup (CPU, uses your configured API provider)
+docker compose up -d
+
+# Development with hot-reload
+docker compose -f compose.yml -f compose.dev.yml up -d
+
+# Self-hosted Mistral OCR (GPU)
+docker compose -f compose.yml -f compose.deepseek.yml up -d
+
+# Self-hosted vision LLM (GPU)
 docker compose -f compose.yml -f compose.vllm.yml up -d
+
+# Combine overlays: all services
+docker compose -f compose.yml -f compose.deepseek.yml -f compose.vllm.yml up -d
 ```
 
 Database migrations run automatically on backend container startup.
