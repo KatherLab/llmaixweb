@@ -24,6 +24,7 @@ type EvaluationLike = (Evaluation | EvaluationSummary) & {
   metrics?: Record<string, unknown>
   document_summaries?: DocumentEvaluationDetail[]
   document_metrics?: Record<string, unknown>[]
+  document_count?: number
 }
 
 /** Evaluation payload (or null/undefined) as accepted by these helpers. */
@@ -57,6 +58,13 @@ export function getEvaluationAccuracyPct(evaluation: EvaluationArg, digits = 1):
  */
 export function getEvaluationDocumentCount(evaluation: EvaluationArg): number {
   if (!evaluation) return 0
+  // Prefer the explicit `document_count` (present on the list payload, which
+  // omits the heavy per-document arrays) so the count survives a page reload;
+  // fall back to `metrics.total_documents`, then to the array lengths that the
+  // freshly-evaluated / detail payloads carry.
+  if (typeof evaluation.document_count === 'number') return evaluation.document_count
+  const totalDocs = evaluation.metrics?.total_documents
+  if (typeof totalDocs === 'number') return totalDocs
   return evaluation.document_summaries?.length || evaluation.document_metrics?.length || 0
 }
 

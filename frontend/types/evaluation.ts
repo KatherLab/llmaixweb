@@ -9,6 +9,10 @@ export interface Evaluation {
   metrics: Record<string, unknown>
   field_metrics: Record<string, unknown>
   document_metrics: Record<string, unknown>[]
+  // Server-computed count of evaluated documents. Present on the list payload
+  // (which omits the heavy `document_metrics` array), derived from
+  // `metrics.total_documents` — see backend `EvaluationListItem.document_count`.
+  document_count?: number
   created_at: ISODateString
 }
 

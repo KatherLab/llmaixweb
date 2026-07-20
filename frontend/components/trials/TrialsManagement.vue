@@ -450,9 +450,13 @@ async function fetchTrialsPage({
   return res.data
 }
 
-async function fetchTrials(): Promise<void> {
+async function fetchTrials({ silent = false }: { silent?: boolean } = {}): Promise<void> {
   try {
-    isLoading.value = true
+    // Background (WS-driven) refetches run silently: toggling `isLoading` swaps
+    // the table for the skeleton, which unmounts <TrialsTable> and wipes its
+    // local expanded-row state — collapsing any rows the user had open when a
+    // trial finished. Only user-initiated loads show the skeleton.
+    if (!silent) isLoading.value = true
     const offsetParam = (currentPage.value - 1) * limit.value
     const data = await fetchTrialsPage({ limitParam: limit.value, offsetParam })
     totalTrials.value = data.total || 0
@@ -460,7 +464,7 @@ async function fetchTrials(): Promise<void> {
   } catch (err) {
     error.value = extractErrorMessage(err, 'Failed to load trials')
   } finally {
-    isLoading.value = false
+    if (!silent) isLoading.value = false
   }
 }
 
@@ -486,6 +490,13 @@ function handlePageSizeChange(size: number): void {
 function resetAndFetch(): void {
   currentPage.value = 1
   fetchTrials()
+}
+
+// Background variant used by the WS subscription: same page reset, but without
+// flipping `isLoading` (avoids unmounting the table / collapsing expanded rows).
+function backgroundResetAndFetch(): void {
+  currentPage.value = 1
+  fetchTrials({ silent: true })
 }
 
 function applyFilters(): void {
@@ -699,7 +710,7 @@ function viewTrialPrompt(trial: TrialSummary): void {
 const { start: startWebSocket, stop: stopWebSocket } = useTrialUpdates({
   projectId: computed(() => props.projectId),
   trials,
-  resetAndFetch,
+  resetAndFetch: backgroundResetAndFetch,
   isFirstPage: () => currentPage.value === 1,
 })
 

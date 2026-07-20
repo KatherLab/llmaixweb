@@ -771,6 +771,18 @@ class EvaluationListItem(UTCModel):
     metrics: dict
     created_at: datetime
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def document_count(self) -> int:
+        """Number of evaluated documents.
+
+        Derived from the already-loaded overall ``metrics`` (``total_documents``)
+        so the list endpoint can surface the "X docs" count without loading the
+        deferred, potentially multi-MB ``document_metrics`` array. Matches
+        ``EvaluationDetail.document_count`` (== ``len(document_metrics)``).
+        """
+        return int(self.metrics.get("total_documents", 0) or 0)
+
     model_config = ConfigDict(from_attributes=True)
 
 
