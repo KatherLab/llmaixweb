@@ -39,7 +39,11 @@ uv run ruff format backend/src/
 **Tests:**
 
 ```bash
+# Backend (pytest)
 ENV_PATH=backend/.env.localtest uv run pytest --verbose
+
+# Frontend (Vitest — utils/ helpers and composables)
+npm test
 ```
 
 ## Conventions

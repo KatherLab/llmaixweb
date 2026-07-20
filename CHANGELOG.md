@@ -24,6 +24,8 @@ that point forward.
 - Documentation site (MkDocs Material) with a per-page feature reference,
   including dedicated OCR-engines and troubleshooting pages.
 - `THIRD_PARTY_NOTICES` generation and a license-compatibility check in CI.
+- Frontend unit test suite (Vitest + Vue Test Utils) covering the shared
+  `utils/` helpers and logic-heavy composables, run in CI.
 
 ### Changed
 

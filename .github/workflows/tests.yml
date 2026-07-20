@@ -31,7 +31,7 @@ jobs:
         run: uv run ruff format --check backend/src/
 
   frontend-check:
-    name: Frontend lint, types & build
+    name: Frontend lint, types, test & build
     runs-on: ubuntu-latest
 
     steps:
@@ -50,6 +50,9 @@ jobs:
 
       - name: Format, lint & type-check
         run: npm run check
+
+      - name: Unit tests
+        run: npm test
 
       - name: Build
         run: npm run build
