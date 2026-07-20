@@ -53,33 +53,28 @@
         @retry="fetchDocuments"
       />
 
-      <!-- Empty State: No documents (either no documents exist or filters returned no results) -->
+      <!-- Empty State: no documents at all, or the filters returned nothing.
+           (The skeleton/error branches above win until the first load resolves,
+           so a single loaded-and-empty state covers both cases — with an
+           actionable CTA each way.) -->
       <EmptyState
         v-else-if="hasLoadedDocuments && serverItems.length === 0"
-        :title="hasActiveFilters ? 'No documents match your filters' : 'No documents found'"
+        :title="hasActiveFilters ? 'No documents match your filters' : 'No documents yet'"
         :description="
           hasActiveFilters
             ? 'Try adjusting or clearing your filters to see more results'
-            : filters.search
-              ? 'Try adjusting your search or filters'
-              : 'Process some files to see documents here'
+            : 'Process some files in the Files & Preprocessing tab to see documents here'
         "
-        :action-text="hasActiveFilters ? 'Clear All Filters' : ''"
-        @action="clearFilters"
+        :action-text="hasActiveFilters ? 'Clear All Filters' : 'Go to Files & Preprocessing'"
+        @action="handleEmptyStateAction"
       >
         <template #icon>
-          <Search class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
-        </template>
-      </EmptyState>
-
-      <!-- True Empty State: No documents processed yet -->
-      <EmptyState
-        v-else-if="!hasLoadedDocuments && serverItems.length === 0"
-        title="No documents yet"
-        description="Process some files in the Files & Preprocessing tab to see documents here"
-      >
-        <template #icon>
-          <FileText class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
+          <Search
+            v-if="hasActiveFilters"
+            class="h-12 w-12 mx-auto text-content-subtle"
+            aria-hidden="true"
+          />
+          <FileText v-else class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
         </template>
       </EmptyState>
 
@@ -89,9 +84,15 @@
         :documents="serverItems"
         :selected-documents="selectedDocuments"
         :are-all-selected="areAllDocumentsSelected"
+        :select-all-busy="isSelectingAllDocs"
+        sort-by="created_at"
+        :sort-order="sortOrder"
         :pagination="tablePagination"
         @toggle-select-all="toggleSelectAll"
         @toggle-selection="toggleDocumentSelection"
+        @select-all-documents="selectAllDocuments"
+        @clear-selection="clearSelection"
+        @sort="handleSort"
         @view="viewDocument"
         @download="downloadDocument"
         @page-change="handlePageChange"
@@ -338,6 +339,26 @@ const handlePageSizeChange = (size: number): void => {
   currentPage.value = 1
 }
 
+// Server-side sort (created_at only — the list endpoint orders solely by
+// creation time via sort=created_asc|created_desc).
+const sortOrder = ref<'asc' | 'desc'>('desc')
+const handleSort = (field: string): void => {
+  if (field !== 'created_at') return
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  currentPage.value = 1
+  fetchDocuments()
+}
+
+// Empty-state CTA: clear filters when they hid everything; otherwise guide the
+// user to the Files & Preprocessing step to produce documents.
+const handleEmptyStateAction = (): void => {
+  if (hasActiveFilters.value) {
+    clearFilters()
+  } else {
+    router.push({ path: `/projects/${props.projectId}`, query: { tab: 'files' } })
+  }
+}
+
 // Handle highlight query parameter (from preprocessing history "Go to Document"
 // navigation). Mirrors the ?group= handling below: the param is stripped on
 // CLOSE (see closeDocumentViewer), not on open, and the initial read happens in
@@ -482,6 +503,8 @@ const fetchDocuments = async (): Promise<void> => {
       date_to: date_to || undefined,
       include_archived: filters.value.includeArchived || undefined,
       ocr_engine: filters.value.ocrEngine || undefined,
+      sort: (sortOrder.value === 'asc' ? 'created_asc' : 'created_desc') as
+        'created_asc' | 'created_desc',
       compute_stats: true, // Get server-side stats
     }
 
@@ -549,6 +572,52 @@ const areAllDocumentsSelected = computed<boolean>(() => {
     serverItems.value.every((doc) => selectedDocuments.value.includes(doc.id))
   )
 })
+
+// Cross-page "select all": the batch endpoints take explicit id lists, so we
+// page through the list endpoint (max page size) with the current filters and
+// collect every matching document id. Mirrors the Files tab's selectAllFiles.
+const isSelectingAllDocs = ref<boolean>(false)
+const selectAllDocuments = async (): Promise<void> => {
+  if (isSelectingAllDocs.value) return
+  isSelectingAllDocs.value = true
+  try {
+    // Snapshot the filters ONCE before paging so a filter change mid-loop
+    // can't mix pages from different filter sets.
+    const { date_from, date_to } = computeDateBounds(filters.value.dateRange)
+    const baseParams = {
+      search: filters.value.search || undefined,
+      date_from: date_from || undefined,
+      date_to: date_to || undefined,
+      include_archived: filters.value.includeArchived || undefined,
+      ocr_engine: filters.value.ocrEngine || undefined,
+      compute_stats: false,
+    }
+    const PAGE_SIZE = 500 // endpoint max
+    let offset = 0
+    const allIds: number[] = []
+    while (true) {
+      const { data } = await documentsApi.list(props.projectId, {
+        ...baseParams,
+        limit: PAGE_SIZE,
+        offset,
+      })
+      allIds.push(...(data.items || []).map((d) => d.id))
+      if (!data.items || data.items.length < PAGE_SIZE) break
+      offset += PAGE_SIZE
+    }
+    selectedDocuments.value = allIds
+    toast.success(`Selected all ${allIds.length} documents`)
+  } catch (error) {
+    console.error('Failed to select all documents:', error)
+    toast.error('Failed to select all documents')
+  } finally {
+    isSelectingAllDocs.value = false
+  }
+}
+
+const clearSelection = (): void => {
+  selectedDocuments.value = []
+}
 
 const viewDocument = (doc: DocumentListItem): void => {
   viewingDocument.value = doc

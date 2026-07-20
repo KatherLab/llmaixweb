@@ -136,16 +136,21 @@
         >
           <SquarePen class="w-5 h-5" aria-hidden="true" />
         </BaseButton>
-        <BaseButton
-          variant="icon"
-          tone="red"
-          :title="group.trials_count > 0 ? 'Cannot delete - used by trial' : 'Delete'"
-          :aria-label="group.trials_count > 0 ? 'Cannot delete - used by trial' : 'Delete'"
-          :disabled="group.trials_count > 0"
-          @click.stop="deleteGroup(group as DocumentSetSummary)"
+        <Tooltip
+          :text="
+            group.trials_count > 0 ? 'Cannot delete — this group is used by a trial' : 'Delete'
+          "
         >
-          <Trash2 class="w-5 h-5" aria-hidden="true" />
-        </BaseButton>
+          <BaseButton
+            variant="icon"
+            tone="red"
+            :aria-label="group.trials_count > 0 ? 'Cannot delete - used by trial' : 'Delete'"
+            :disabled="group.trials_count > 0"
+            @click.stop="deleteGroup(group as DocumentSetSummary)"
+          >
+            <Trash2 class="w-5 h-5" aria-hidden="true" />
+          </BaseButton>
+        </Tooltip>
       </template>
     </DataTable>
 
@@ -205,6 +210,7 @@ import DataTable from '@/components/common/DataTable.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
+import Tooltip from '@/components/common/Tooltip.vue'
 import { usePagination } from '@/composables/usePagination'
 import { extractErrorMessage } from '@/utils/errors'
 import { checkboxClass } from '@/utils/formStyles'

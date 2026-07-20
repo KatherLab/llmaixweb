@@ -135,8 +135,8 @@
           </div>
         </div>
 
-        <!-- Force OCR (PDFs only; needs an enabled engine) -->
-        <div v-if="anyOcrEnabled" class="border-t border-default pt-4">
+        <!-- Force OCR (PDFs only; needs an enabled engine and PDFs in the selection) -->
+        <div v-if="anyOcrEnabled && hasPdfFiles" class="border-t border-default pt-4">
           <label
             class="flex items-start space-x-3 p-3 bg-amber-50 rounded-card border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
           >
@@ -208,10 +208,11 @@
 
           <!-- Mistral Settings -->
           <div v-if="selectedEngine === 'mistral_ocr'" class="space-y-3">
-            <FormField
+            <PasswordInput
               v-model="mistralApiKey"
               label="API Key"
-              type="text"
+              :show-strength="false"
+              autocomplete="off"
               maxlength="512"
               placeholder="Leave empty to use server default"
             />
@@ -225,10 +226,11 @@
 
           <!-- Vision LLM Advanced Settings -->
           <div v-if="selectedEngine === 'llm_vision'" class="space-y-3">
-            <FormField
+            <PasswordInput
               v-model="visionApiKey"
               label="API Key"
-              type="text"
+              :show-strength="false"
+              autocomplete="off"
               maxlength="512"
               placeholder="Leave empty to use server default"
             />
@@ -255,15 +257,12 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Panel Footer -->
-    <div class="px-6 py-4 border-t border-default bg-surface-muted flex-shrink-0">
-      <!-- Warning for unconfigured CSV/XLSX files -->
+      <!-- Warning for unconfigured CSV/XLSX files (part of the scrollable body,
+           right where the blocked state needs explaining) -->
       <Callout
         v-if="unconfiguredCsvXlsxFiles.length > 0"
         variant="warning"
-        class="mb-4"
         :title="`${unconfiguredCsvXlsxFiles.length} file(s) need import configuration`"
       >
         <ul class="mt-1 text-xs list-disc list-inside">
@@ -275,21 +274,30 @@
           Click "Configure" next to each file above to set up import settings before preprocessing.
         </p>
       </Callout>
-
-      <p class="text-xs text-content-muted mb-4">
-        This will create a new preprocessing run. Existing runs and documents are preserved.
-      </p>
     </div>
+
+    <!-- Single real footer: reassurance note + actions (the note used to sit in
+         a footer-styled block inside the scroll body, reading as two stacked
+         footers). -->
     <template #footer>
-      <BaseButton variant="secondary" class="flex-1" @click="emit('close')"> Cancel </BaseButton>
-      <BaseButton
-        class="flex-1"
-        :disabled="!canSubmit || isSubmitting"
-        :loading="isSubmitting"
-        @click="onStart"
-      >
-        {{ isSubmitting ? 'Processing...' : 'Start Processing' }}
-      </BaseButton>
+      <div class="w-full space-y-3">
+        <p class="text-xs text-content-muted">
+          This will create a new preprocessing run. Existing runs and documents are preserved.
+        </p>
+        <div class="flex items-center gap-3">
+          <BaseButton variant="secondary" class="flex-1" @click="emit('close')">
+            Cancel
+          </BaseButton>
+          <BaseButton
+            class="flex-1"
+            :disabled="!canSubmit || isSubmitting"
+            :loading="isSubmitting"
+            @click="onStart"
+          >
+            {{ isSubmitting ? 'Processing...' : 'Start Processing' }}
+          </BaseButton>
+        </div>
+      </div>
     </template>
   </BaseModal>
 </template>
@@ -302,6 +310,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FormField from '@/components/common/FormField.vue'
+import PasswordInput from '@/components/common/PasswordInput.vue'
 import { textareaClass, selectClass, labelClass } from '@/utils/formStyles'
 import type { File, PreprocessingTaskCreate } from '@/types'
 
@@ -405,6 +414,12 @@ const hasOcrRequiringFiles = computed(() =>
   }),
 )
 
+// Whether the selection contains any PDFs — "Force OCR for PDFs" is meaningless
+// (and hidden) otherwise.
+const hasPdfFiles = computed(() =>
+  props.selectedFiles.some((id) => props.getFileById(id)?.file_type === 'application/pdf'),
+)
+
 // OCR-requiring files are selected but no engine is enabled → hard block + error.
 const ocrRequiredButUnavailable = computed(() => hasOcrRequiringFiles.value && noOcrEnabled.value)
 
@@ -429,7 +444,8 @@ const onStart = (): void => {
 
   const settings: Record<string, unknown> = {
     ocr_engine: engine,
-    force_ocr: forceOcr.value,
+    // The Force-OCR toggle only renders (and only makes sense) for PDFs.
+    force_ocr: hasPdfFiles.value ? forceOcr.value : false,
   }
 
   if (engine === 'docling_tesseract' && tesseractLang.value !== 'auto') {
@@ -454,7 +470,7 @@ const onStart = (): void => {
     mistral_ocr: 'Mistral OCR',
     llm_vision: 'Vision LLM',
   }
-  const forceOcrText = forceOcr.value ? ' + Force OCR' : ''
+  const forceOcrText = settings.force_ocr ? ' + Force OCR' : ''
   const taskName = engine ? `${engineNames[engine] || 'Custom'}${forceOcrText}` : 'Text extraction'
 
   emit('start', {

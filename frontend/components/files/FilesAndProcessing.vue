@@ -26,9 +26,11 @@
     />
 
     <!-- Upload Zone (shown whenever there are no files and no active filters,
-         including a brand-new project after its initial empty fetch) -->
+         including a brand-new project after its initial empty fetch).
+         `hasLoadedFiles` gates it so the "empty project" hero can't flash
+         while the very first fetch is still in flight. -->
     <FileDropzone
-      v-if="!files.length && !hasActiveFilters && !fetchError"
+      v-if="hasLoadedFiles && !files.length && !hasActiveFilters && !fetchError"
       v-model:dragging="isDragging"
       @drop="uploadFiles"
       @select="uploadFiles"
@@ -68,6 +70,57 @@
       >
         {{ isSelectingAll ? 'Selecting…' : `Select all ${pagination.total}` }}
       </BaseButton>
+    </Callout>
+
+    <!-- Preprocessing-complete hand-off: shown when the last active task
+         finishes (the progress banner below vanishes at that moment), so the
+         user gets a clear "what next" instead of a silently disappearing bar. -->
+    <Callout
+      v-if="completionNotice"
+      :variant="completionNotice.failed > 0 ? 'warning' : 'success'"
+      class="mb-4 flex items-center gap-2"
+    >
+      <p class="text-sm">
+        <strong>Preprocessing complete</strong>
+        <span v-if="completionNotice.documents > 0">
+          — {{ completionNotice.documents }} document{{
+            completionNotice.documents === 1 ? '' : 's'
+          }}
+          created</span
+        >
+        <span v-if="completionNotice.failed > 0" class="text-red-600 dark:text-red-400">
+          · {{ completionNotice.failed }} file{{ completionNotice.failed === 1 ? '' : 's' }} failed
+        </span>
+      </p>
+      <div class="ml-auto flex items-center gap-2 shrink-0">
+        <BaseButton
+          v-if="completionNotice.failed > 0 && completionNotice.failedFileId"
+          variant="ghost"
+          size="sm"
+          class="font-medium"
+          @click="viewCompletionErrors"
+        >
+          View errors
+        </BaseButton>
+        <BaseButton
+          v-if="completionNotice.documents > 0"
+          variant="ghost"
+          size="sm"
+          class="font-medium"
+          @click="goToDocumentsTab"
+        >
+          View documents
+        </BaseButton>
+        <BaseButton
+          variant="icon"
+          tone="gray"
+          aria-label="Dismiss"
+          title="Dismiss"
+          @click="completionNotice = null"
+        >
+          <X class="w-4 h-4" aria-hidden="true" />
+        </BaseButton>
+      </div>
     </Callout>
 
     <!-- Global preprocessing progress banner: aggregates every active task so
@@ -187,21 +240,29 @@
     <!-- Floating Batch Toolbar -->
     <BatchActionBar :count="selectedFiles.length" count-label="file" @clear="selectedFiles = []">
       <template #warning>
-        <!-- Warning indicator for unconfigured CSV/XLSX -->
-        <span
+        <!-- Warning indicator for unconfigured CSV/XLSX — clicking it opens the
+             import-config modal for the first offender (and chains to the next
+             after each save), instead of hiding the offenders in a hover title. -->
+        <button
           v-if="unconfiguredCsvXlsxFiles.length > 0"
-          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500 text-white"
+          type="button"
+          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors cursor-pointer"
           :title="
             unconfiguredCsvXlsxFiles.map((f) => f.file_name).join(', ') +
-            ' need(s) import configuration'
+            ' need(s) import configuration — click to configure'
           "
+          @click="startConfigureChain"
         >
           <AlertTriangle class="w-3 h-3 mr-1" />
           {{ unconfiguredCsvXlsxFiles.length }} needs config
-        </span>
+        </button>
       </template>
 
-      <BaseButton :disabled="unconfiguredCsvXlsxFiles.length > 0" @click="openProcessingPanel">
+      <!-- With unconfigured CSV/XLSX in the selection this button opens the
+           import-config flow (chained per file) rather than being a dead end. -->
+      <BaseButton
+        @click="unconfiguredCsvXlsxFiles.length > 0 ? startConfigureChain() : openProcessingPanel()"
+      >
         <Settings v-if="unconfiguredCsvXlsxFiles.length === 0" class="w-4 h-4" />
         <AlertTriangle v-else class="w-4 h-4" />
         {{
@@ -237,7 +298,7 @@
       :progress="uploadProgress"
       :cancelling="cancelUploadRequested"
       @close="onUploadModalClose"
-      @cancel="requestUploadCancel"
+      @cancel="onUploadCancelRequest"
       @files="uploadFiles"
     />
 
@@ -256,14 +317,8 @@
       :open="showImportConfigModal && !!configuringFile"
       :file="configuringFile"
       :project-id="projectId"
-      @close="showImportConfigModal = false"
-      @saved="
-        () => {
-          showImportConfigModal = false
-          fetchFiles()
-          emit('files-changed')
-        }
-      "
+      @close="onImportConfigClose"
+      @saved="onImportConfigSaved"
     />
 
     <!-- Duplicate Preview Confirmation Modal -->
@@ -286,6 +341,18 @@
       @close="closeDeleteFileModal"
     />
 
+    <!-- Cancel running upload batch confirmation (X / Cancel mid-batch) -->
+    <ConfirmationDialog
+      :open="showCancelUploadConfirm"
+      title="Cancel remaining uploads?"
+      message="Files already uploaded will be kept; the rest of the batch will not be uploaded."
+      confirm-text="Cancel uploads"
+      cancel-text="Keep uploading"
+      confirm-variant="danger"
+      @confirm="confirmUploadCancel"
+      @cancel="showCancelUploadConfirm = false"
+    />
+
     <!-- Cancel preprocessing task confirmation -->
     <ConfirmationDialog
       :open="showCancelTaskConfirm"
@@ -301,9 +368,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRef, onMounted, onUnmounted } from 'vue'
+import { ref, computed, toRef, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { AlertTriangle, Search, Settings, Trash2, Upload } from '@lucide/vue'
+import { AlertTriangle, Search, Settings, Trash2, Upload, X } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { authApi } from '@/services/authApi'
@@ -455,7 +522,7 @@ const getDateBounds = (range: string): { date_from?: string; date_to?: string } 
   return getDateRangeBounds(range, customDateFrom.value, customDateTo.value)
 }
 
-// Check if any filters are active (status intentionally excluded — matches original logic)
+// Check if any filters are active (search, status, file type, or date range)
 const hasActiveFilters = computed(() => {
   return searchQuery.value || filterStatus.value || filterFileType.value || filterDateRange.value
 })
@@ -810,6 +877,38 @@ const openImportConfigModal = (file: FileModel): void => {
   showImportConfigModal.value = true
 }
 
+// "Configure Files First" flow: open the import-config modal for the first
+// unconfigured CSV/XLSX in the selection and, after each save, chain to the
+// next unconfigured one until the whole selection is ready to preprocess.
+const configChainActive = ref(false)
+const startConfigureChain = (): void => {
+  const first = unconfiguredCsvXlsxFiles.value[0]
+  if (!first) return
+  configChainActive.value = true
+  openImportConfigModal(first)
+}
+const onImportConfigClose = (): void => {
+  showImportConfigModal.value = false
+  configChainActive.value = false
+}
+const onImportConfigSaved = async (): Promise<void> => {
+  showImportConfigModal.value = false
+  await fetchFiles()
+  emit('files-changed')
+  if (configChainActive.value) {
+    // `unconfiguredCsvXlsxFiles` recomputes off the refreshed file list.
+    const next = unconfiguredCsvXlsxFiles.value[0]
+    if (next) {
+      openImportConfigModal(next)
+      return
+    }
+    configChainActive.value = false
+    if (selectedFiles.value.length > 0) {
+      toast.success('All selected files configured — ready to preprocess')
+    }
+  }
+}
+
 // Get file by ID (for panel display)
 const getFileById = (id: number): FileWithTasks | undefined => {
   return files.value.find((f) => f.id === id)
@@ -866,6 +965,9 @@ const executeCancelTask = async (): Promise<void> => {
     historyFile.value = null
     // Full refresh to get updated state from server
     await fetchFiles()
+    // A user-initiated cancel shouldn't read as "preprocessing complete".
+    trackedActiveTaskIds.delete(task.id)
+    if (trackedActiveTaskIds.size === 0) completionNotice.value = null
   } catch (err) {
     console.error('Failed to cancel preprocessing:', err)
     toast.error('Failed to cancel preprocessing')
@@ -993,6 +1095,90 @@ const activePreprocessingSummary = computed<ActivePreprocessingSummary | null>((
   const etaLabel = etaSeconds > 0 ? `≈ ${formatDuration(etaSeconds)} remaining` : ''
   return { total, processed, failed, percent, etaLabel, cancelableTask }
 })
+
+// ── Preprocessing-complete hand-off ─────────────────────────────────────────
+// When the aggregate progress banner disappears (last active task finished),
+// show a dismissible success callout with the outcome + a deep-link to the
+// Documents tab, instead of the banner just vanishing.
+interface CompletionNotice {
+  documents: number
+  failed: number
+  failedFileId: number | null
+}
+const completionNotice = ref<CompletionNotice | null>(null)
+// Ids of the tasks that were active while the banner showed (accumulated, so a
+// task that finishes early in a multi-task run is still counted at the end).
+const trackedActiveTaskIds = new Set<number>()
+
+const collectActiveTaskIds = (): void => {
+  const activeStatuses = ['pending', 'processing', 'in_progress']
+  for (const file of files.value) {
+    for (const task of file.preprocessing_tasks || []) {
+      if (activeStatuses.includes(String(task.status || '').toLowerCase())) {
+        trackedActiveTaskIds.add(task.id)
+      }
+    }
+  }
+}
+
+// Summarize the finished tracked tasks from the (WS-refreshed) task data.
+const summarizeTrackedTasks = (): CompletionNotice => {
+  let documents = 0
+  let failed = 0
+  let failedFileId: number | null = null
+  const seenTaskIds = new Set<number>()
+  for (const file of files.value) {
+    for (const task of file.preprocessing_tasks || []) {
+      if (!trackedActiveTaskIds.has(task.id)) continue
+      // Per-file failure lookup runs for every file the task touches…
+      const ownTask = task.file_tasks?.find((ft) => ft.file_id === file.id)
+      if (failedFileId === null && String(ownTask?.status || '').toLowerCase() === 'failed') {
+        failedFileId = file.id
+      }
+      // …but the totals are only summed once per task.
+      if (seenTaskIds.has(task.id)) continue
+      seenTaskIds.add(task.id)
+      if (task.file_tasks?.length) {
+        for (const ft of task.file_tasks) {
+          documents += ft.document_ids?.length ?? 0
+          if (String(ft.status || '').toLowerCase() === 'failed') failed++
+        }
+      } else {
+        failed += task.failed_files ?? 0
+      }
+    }
+  }
+  return { documents, failed, failedFileId }
+}
+
+watch(activePreprocessingSummary, (curr) => {
+  if (curr) {
+    // A run is (still) active: track its task ids and hide any stale notice.
+    collectActiveTaskIds()
+    completionNotice.value = null
+  } else if (trackedActiveTaskIds.size > 0) {
+    // Active → none: every tracked task finished. Summarize and notify.
+    completionNotice.value = summarizeTrackedTasks()
+    trackedActiveTaskIds.clear()
+  }
+})
+
+// Open the history panel on the first file that failed in the finished run.
+const viewCompletionErrors = (): void => {
+  const fileId = completionNotice.value?.failedFileId
+  if (fileId == null) return
+  const file = files.value.find((f) => f.id === fileId)
+  if (file) {
+    historyFile.value = file
+    showHistoryPanel.value = true
+  }
+}
+
+// Deep-link to the Documents tab (same query-param mechanism ProjectDetail uses).
+const goToDocumentsTab = (): void => {
+  emit('files-changed')
+  router.push({ path: `/projects/${props.projectId}`, query: { tab: 'documents' } })
+}
 
 // Format seconds into a compact human duration (e.g. "4m 30s", "1h 5m").
 function formatDuration(totalSeconds: number): string {
@@ -1151,8 +1337,12 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
   if (!fileList.length) return
   // Re-entrancy guard: a second drop while an upload loop is running would
   // otherwise run concurrently, and whichever finishes first would close the
-  // modal / reset state out from under the other.
-  if (isUploading.value) return
+  // modal / reset state out from under the other. Tell the user instead of
+  // silently ignoring the drop.
+  if (isUploading.value) {
+    toast.info('Upload already in progress')
+    return
+  }
   isUploading.value = true
   isSubmitting.value = true
 
@@ -1238,6 +1428,8 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
   isSubmitting.value = false
   isUploading.value = false
   cancelUploadRequested.value = false
+  // The batch is over — a still-open "cancel remaining uploads?" prompt is moot.
+  showCancelUploadConfirm.value = false
   // Keep the modal open on the summary screen when some files failed so the
   // user can see what went wrong; auto-close on a fully successful batch and
   // on cancel (the toast above carries the summary).
@@ -1259,11 +1451,23 @@ const requestUploadCancel = (): void => {
   uploadAbortController?.abort()
 }
 
-// Modal dismissed: mid-upload this requests a cancel (the X must never be
-// dead); otherwise it simply closes and resets the summary state.
+// Cancelling a running batch is destructive-ish (remaining files won't
+// upload), so both the X and the Cancel button go through a confirmation.
+const showCancelUploadConfirm = ref(false)
+const onUploadCancelRequest = (): void => {
+  if (!isUploading.value || cancelUploadRequested.value) return
+  showCancelUploadConfirm.value = true
+}
+const confirmUploadCancel = (): void => {
+  showCancelUploadConfirm.value = false
+  requestUploadCancel()
+}
+
+// Modal dismissed: mid-upload this asks to confirm the cancel (the X must
+// never be dead); otherwise it simply closes and resets the summary state.
 const onUploadModalClose = (): void => {
   if (isUploading.value) {
-    requestUploadCancel()
+    onUploadCancelRequest()
     return
   }
   showUploadModal.value = false

@@ -29,9 +29,15 @@
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <BaseButton variant="link" tone="blue" size="sm" @click="exportDocumentList">
+          <BaseButton
+            variant="link"
+            tone="blue"
+            size="sm"
+            :disabled="isExporting"
+            @click="exportDocumentList"
+          >
             <Download class="h-4 w-4" />
-            Export
+            {{ isExporting ? 'Exporting…' : 'Export' }}
           </BaseButton>
           <BaseButton variant="link" tone="blue" size="sm" @click="downloadAllDocuments">
             <Package class="h-4 w-4" />
@@ -421,28 +427,60 @@ watch(
   { immediate: true },
 )
 
-const exportDocumentList = (): void => {
-  const data = documents.value.map((doc) => ({
-    id: doc.id,
-    filename: doc.original_file?.file_name || `Document #${doc.id}`,
-    configuration: doc.preprocessing_config?.name || 'N/A',
-    created: formatDate(doc.created_at),
-  }))
+// RFC-4180 style CSV field quoting: wrap every field in quotes and double any
+// embedded quotes, so filenames with commas/quotes/newlines can't break rows.
+const csvField = (value: string): string => `"${value.replace(/"/g, '""')}"`
 
-  const csv = [
-    ['ID', 'Filename', 'Configuration', 'Created'],
-    ...data.map((row) => [String(row.id), row.filename, row.configuration, row.created]),
-  ]
-    .map((row) => row.join(','))
-    .join('\n')
+const isExporting = ref<boolean>(false)
+const exportDocumentList = async (): Promise<void> => {
+  if (isExporting.value) return
+  isExporting.value = true
+  try {
+    // Fetch ALL documents of the group (respecting the active search filter),
+    // not just the currently loaded rail page.
+    const PAGE_SIZE = 500 // endpoint max
+    let offset = 0
+    const allDocs: DocumentListItem[] = []
+    while (true) {
+      const { data } = await documentsApi.list(props.projectId, {
+        document_set_id: props.group.id,
+        limit: PAGE_SIZE,
+        offset,
+        compute_stats: false,
+        sort: 'created_asc',
+        ...(search.value ? { search: search.value } : {}),
+      })
+      allDocs.push(...(data.items || []))
+      if (!data.items || data.items.length < PAGE_SIZE) break
+      offset += PAGE_SIZE
+    }
 
-  downloadBlob(
-    csv as unknown as Blob,
-    `${props.group.name.replace(/[^a-z0-9]/gi, '_')}_documents.csv`,
-    'text/csv',
-  )
+    const csv = [
+      ['ID', 'Name', 'Filename', 'Configuration', 'Created'],
+      ...allDocs.map((doc) => [
+        String(doc.id),
+        doc.document_name || '',
+        doc.original_file?.file_name || `Document #${doc.id}`,
+        doc.preprocessing_config?.name || 'N/A',
+        formatDate(doc.created_at),
+      ]),
+    ]
+      .map((row) => row.map(csvField).join(','))
+      .join('\n')
 
-  toast.success('Document list exported')
+    downloadBlob(
+      csv as unknown as Blob,
+      `${props.group.name.replace(/[^a-z0-9]/gi, '_')}_documents.csv`,
+      'text/csv',
+    )
+
+    toast.success(`Exported ${allDocs.length} document${allDocs.length === 1 ? '' : 's'}`)
+  } catch (error) {
+    console.error('Failed to export document list:', error)
+    toast.error('Failed to export document list')
+  } finally {
+    isExporting.value = false
+  }
 }
 
 const showDownloadAllConfirm = ref<boolean>(false)

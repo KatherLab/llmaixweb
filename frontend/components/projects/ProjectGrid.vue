@@ -44,7 +44,8 @@
           extracting structured data with LLMs.
         </p>
         <CreateProjectButton class="mt-6" />
-        <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 max-w-3xl text-left">
+        <!-- 6 workflow steps: 2 / 3 / 6 columns keep the grid balanced (no orphan) -->
+        <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 max-w-4xl text-left">
           <div
             v-for="step in workflowSteps"
             :key="step.label"
@@ -56,62 +57,76 @@
         </div>
       </div>
 
-      <DataTable
-        v-else
-        :columns="columns"
-        :items="pagedProjects"
-        row-key="id"
-        row-clickable
-        :pagination="tablePagination"
-        :page-size-options="[20, 50, 100]"
-        item-label="projects"
-        empty-title="No projects found"
-        @row-click="goToProject"
-        @page-change="handlePageChange"
-        @page-size-change="handlePageSizeChange"
-      >
-        <template #cell-name="{ row: project }">
-          <span class="font-medium text-primary hover:text-primary cursor-pointer">
-            {{ project.name }}
-          </span>
-        </template>
+      <div v-else class="h-full flex flex-col min-h-0 gap-3">
+        <SearchInput v-model="searchQuery" placeholder="Search projects..." />
 
-        <template #cell-document_count="{ row: project }">
-          <span
-            class="px-2.5 py-1 inline-flex text-xs leading-4 font-medium rounded-full bg-primary-soft text-primary border border-default"
-          >
-            {{ project.document_count }} document{{ project.document_count !== 1 ? 's' : '' }}
-          </span>
-        </template>
+        <DataTable
+          class="flex-1 min-h-0"
+          :columns="columns"
+          :items="pagedProjects"
+          row-key="id"
+          row-clickable
+          :sort-by="sortBy"
+          :sort-order="sortOrder"
+          :pagination="tablePagination"
+          :page-size-options="[20, 50, 100]"
+          item-label="projects"
+          empty-title="No projects found"
+          :empty-description="
+            searchQuery ? 'Try a different search term' : 'Create a project to get started'
+          "
+          @sort="handleSort"
+          @row-click="goToProject"
+          @page-change="handlePageChange"
+          @page-size-change="handlePageSizeChange"
+        >
+          <template #cell-name="{ row: project }">
+            <span class="font-medium text-primary hover:text-primary cursor-pointer">
+              {{ project.name }}
+            </span>
+          </template>
 
-        <template #cell-user="{ row: project }">
-          <div class="flex items-center">
-            <div
-              class="flex-shrink-0 h-8 w-8 rounded-full bg-primary-soft flex items-center justify-center"
+          <template #cell-document_count="{ row: project }">
+            <span
+              class="px-2.5 py-1 inline-flex text-xs leading-4 font-medium rounded-full bg-primary-soft text-primary border border-default"
             >
-              <span class="text-primary font-medium text-xs">{{ project.user.initials }}</span>
-            </div>
-            <div class="ml-2">
-              <div class="text-sm font-medium text-content">
-                {{ project.user.full_name }}
+              {{ project.document_count }} document{{ project.document_count !== 1 ? 's' : '' }}
+            </span>
+          </template>
+
+          <template #cell-user="{ row: project }">
+            <div class="flex items-center">
+              <div
+                class="flex-shrink-0 h-8 w-8 rounded-full bg-primary-soft flex items-center justify-center"
+              >
+                <span class="text-primary font-medium text-xs">{{ project.user.initials }}</span>
               </div>
-              <div class="text-xs text-content-muted">{{ project.user.email }}</div>
+              <div class="ml-2">
+                <div class="text-sm font-medium text-content">
+                  {{ project.user.full_name }}
+                </div>
+                <div class="text-xs text-content-muted">{{ project.user.email }}</div>
+              </div>
             </div>
-          </div>
-        </template>
+          </template>
 
-        <template #cell-created_at="{ row: project }">
-          <span class="text-sm text-content-subtle">
-            {{ project.created_at ? formatDate(project.created_at) : '' }}
-          </span>
-        </template>
+          <template #cell-created_at="{ row: project }">
+            <span class="text-sm text-content-subtle">
+              {{ project.created_at ? formatDate(project.created_at) : '' }}
+            </span>
+          </template>
 
-        <template #row-actions="{ row: project }">
-          <BaseButton variant="primary" size="sm" @click.stop="goToProject(project as ProjectRow)">
-            View
-          </BaseButton>
-        </template>
-      </DataTable>
+          <template #row-actions="{ row: project }">
+            <BaseButton
+              variant="primary"
+              size="sm"
+              @click.stop="goToProject(project as ProjectRow)"
+            >
+              View
+            </BaseButton>
+          </template>
+        </DataTable>
+      </div>
     </div>
   </div>
 </template>
@@ -134,6 +149,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import SearchInput from '@/components/common/SearchInput.vue'
 import CreateProjectButton from './CreateProjectButton.vue'
 import { formatDate } from '@/utils/formatters'
 import { usePagination } from '@/composables/usePagination'
@@ -185,9 +201,63 @@ const projects = ref<ProjectRow[]>([])
 const currentPage = ref(1)
 const pageSize = ref(20)
 
-const totalCount = computed(() => projects.value.length)
+// Client-side search over project name/description (the list is fully loaded).
+const searchQuery = ref('')
+const filteredProjects: ComputedRef<ProjectRow[]> = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return projects.value
+  return projects.value.filter(
+    (p) =>
+      (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q),
+  )
+})
+watch(searchQuery, () => {
+  currentPage.value = 1
+})
 
-const pagination = usePagination({ getTotal: () => totalCount.value, pageSize: pageSize.value })
+// Client-side sorting (the columns were already marked sortable in the header).
+const sortBy = ref('created_at')
+const sortOrder = ref<'asc' | 'desc'>('desc')
+
+function handleSort(key: string): void {
+  if (sortBy.value === key) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = key
+    sortOrder.value = key === 'created_at' ? 'desc' : 'asc'
+  }
+  currentPage.value = 1
+}
+
+function sortValue(p: ProjectRow): string | number {
+  switch (sortBy.value) {
+    case 'name':
+      return (p.name || '').toLowerCase()
+    case 'document_count':
+      return p.document_count ?? 0
+    case 'user':
+      return p.user.full_name.toLowerCase()
+    case 'created_at':
+      return p.created_at ? new Date(p.created_at).getTime() : 0
+    default:
+      return 0
+  }
+}
+
+const sortedProjects: ComputedRef<ProjectRow[]> = computed(() => {
+  const dir = sortOrder.value === 'asc' ? 1 : -1
+  return [...filteredProjects.value].sort((a, b) => {
+    const va = sortValue(a)
+    const vb = sortValue(b)
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir
+    return String(va).localeCompare(String(vb)) * dir
+  })
+})
+
+const totalCount = computed(() => filteredProjects.value.length)
+
+// Pass the ref (not a snapshot) so totalPages tracks page-size changes.
+const pagination = usePagination({ getTotal: () => totalCount.value, pageSize })
 
 watch(totalCount, () => {
   if (currentPage.value > pagination.totalPages.value) {
@@ -197,7 +267,7 @@ watch(totalCount, () => {
 
 const pagedProjects: ComputedRef<ProjectRow[]> = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
-  return projects.value.slice(start, start + pageSize.value)
+  return sortedProjects.value.slice(start, start + pageSize.value)
 })
 
 const tablePagination: ComputedRef<TablePagination> = computed(() => ({

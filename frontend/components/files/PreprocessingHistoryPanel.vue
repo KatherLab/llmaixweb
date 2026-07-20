@@ -58,10 +58,10 @@
                     />
                   </div>
                   <p class="text-xs text-content-muted mt-0.5 truncate">
-                    {{ formatRelativeTime(task.created_at) }}
-                    <span v-if="task.completed_at">
-                      • {{ formatRelativeTime(task.completed_at) }}
-                    </span>
+                    Started {{ formatRelativeTime(task.created_at) }}
+                    <span v-if="taskDurationLabel(task)">
+                      · took {{ taskDurationLabel(task) }}</span
+                    >
                   </p>
                 </div>
               </div>
@@ -180,7 +180,7 @@
                         >
                           <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
                           <AlertTriangle class="w-3 h-3 inline" />
-                          {{ getWarnings(fileTask)?.skipped_rows?.count || 0 }} skipped rows
+                          {{ warningSummaryLabel(getWarnings(fileTask)) }}
                         </summary>
                         <div
                           class="mt-1 text-xs text-amber-600 dark:text-amber-300 dark:bg-amber-900/30 bg-amber-100 rounded p-2 max-h-32 overflow-y-auto"
@@ -476,6 +476,17 @@ function getWarnings(fileTask: FilePreprocessingTask): FileTaskWarnings | null {
   return fileTask.warnings as unknown as FileTaskWarnings
 }
 
+// Summary line for the warnings accordion, labelled by payload shape: a
+// skipped-rows payload reads "N skipped rows"; a messages-only payload reads
+// "N warning(s)" (previously it always said "0 skipped rows").
+const warningSummaryLabel = (warnings: FileTaskWarnings | null): string => {
+  if (!warnings) return ''
+  const skipped = warnings.skipped_rows?.count ?? warnings.skipped_rows?.details?.length ?? 0
+  if (skipped > 0) return `${skipped} skipped row${skipped === 1 ? '' : 's'}`
+  const messageCount = warnings.messages?.length ?? 0
+  return `${messageCount} warning${messageCount === 1 ? '' : 's'}`
+}
+
 // Format relative time. Delegates the just-now/m/h tiers to the shared
 // formatter; runs older than 24h fall back to a locale date (preserves the
 // original 24h cutoff vs the shared 30-day "Xd ago" tier).
@@ -485,6 +496,16 @@ const formatRelativeTime = (dateString: string | null | undefined): string => {
   if (isNaN(date.getTime())) return ''
   if (Date.now() - date.getTime() >= 86400000) return date.toLocaleDateString()
   return sharedFormatRelativeTime(dateString)
+}
+
+// Wall-clock duration of a finished task ("4m 30s"), from created→completed.
+// Empty while the task is still running (no completed_at yet).
+const taskDurationLabel = (task: PreprocessingTask): string => {
+  if (!task.created_at || !task.completed_at) return ''
+  const start = new Date(task.created_at).getTime()
+  const end = new Date(task.completed_at).getTime()
+  if (isNaN(start) || isNaN(end) || end < start) return ''
+  return formatProcessingTime((end - start) / 1000)
 }
 
 // Format processing time in seconds to human readable

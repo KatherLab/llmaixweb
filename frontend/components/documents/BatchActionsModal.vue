@@ -31,6 +31,12 @@
           Force reprocess (ignore existing results)
         </label>
       </div>
+      <Callout variant="info">
+        <p class="text-sm">
+          Reprocessing runs on the whole source file, not individual rows — selecting documents from
+          a row-by-row CSV/XLSX import reprocesses every row of that file.
+        </p>
+      </Callout>
     </div>
 
     <!-- Export Action -->
@@ -113,7 +119,8 @@
         class="mr-auto self-center text-sm text-content-muted"
         role="status"
       >
-        Deleting {{ progress.done.toLocaleString() }} of {{ progress.total.toLocaleString() }}…
+        {{ progressVerb }} {{ progress.done.toLocaleString() }} of
+        {{ progress.total.toLocaleString() }}…
       </p>
       <BaseButton variant="secondary" :disabled="isProcessing" @click="requestClose">
         Cancel
@@ -173,8 +180,11 @@ const includeMetadata = ref<boolean>(true)
 const includePreprocessingInfo = ref<boolean>(true)
 const confirmDelete = ref<boolean>(false)
 const isProcessing = ref<boolean>(false)
-// Live progress while a delete batch runs ("Deleting X of Y…").
+// Live progress while a batch runs ("Deleting/Resolving X of Y…").
 const progress = ref<{ done: number; total: number } | null>(null)
+// Verb for the footer progress counter — deletes delete, reprocess first
+// resolves each document to its source file.
+const progressVerb = computed(() => (props.action === 'reprocess' ? 'Resolving' : 'Deleting'))
 
 // Cascade-delete state (documents & files modes)
 const cascadeDelete = ref<boolean>(false)
@@ -359,21 +369,40 @@ const reprocessDocuments = async (): Promise<void> => {
   // are grouped by config so a mixed selection produces one task per config.
   type Group = { fileIds: Set<number>; settings: Record<string, unknown> }
   const byConfig = new Map<number | 'inline', Group>()
-  for (const docId of props.documents) {
-    try {
-      const { data } = await documentsApi.get(props.projectId, docId)
-      if (!data?.original_file_id) continue
-      const key = data.preprocessing_config_id ?? 'inline'
-      const group = byConfig.get(key) ?? {
-        fileIds: new Set<number>(),
-        settings: (data.preprocessing_config?.additional_settings as Record<string, unknown>) ?? {},
+  // Resolve with a live counter and modest concurrency — a big selection would
+  // otherwise sit behind a static "Processing..." label doing sequential GETs.
+  progress.value = { done: 0, total: props.documents.length }
+  const CONCURRENCY = 5
+  let nextIndex = 0
+  const worker = async (): Promise<void> => {
+    while (true) {
+      const i = nextIndex++
+      if (i >= props.documents.length) return
+      const docId = props.documents[i]!
+      try {
+        const { data } = await documentsApi.get(props.projectId, docId)
+        if (data?.original_file_id) {
+          const key = data.preprocessing_config_id ?? 'inline'
+          const group = byConfig.get(key) ?? {
+            fileIds: new Set<number>(),
+            settings:
+              (data.preprocessing_config?.additional_settings as Record<string, unknown>) ?? {},
+          }
+          group.fileIds.add(data.original_file_id)
+          byConfig.set(key, group)
+        }
+      } catch (error) {
+        console.error(`Failed to resolve document #${docId} to a file:`, error)
       }
-      group.fileIds.add(data.original_file_id)
-      byConfig.set(key, group)
-    } catch (error) {
-      console.error(`Failed to resolve document #${docId} to a file:`, error)
+      progress.value = {
+        done: (progress.value?.done ?? 0) + 1,
+        total: props.documents.length,
+      }
     }
   }
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, props.documents.length) }, () => worker()),
+  )
   const totalFiles = new Set<number>()
   byConfig.forEach((g) => g.fileIds.forEach((id) => totalFiles.add(id)))
   if (totalFiles.size === 0) {

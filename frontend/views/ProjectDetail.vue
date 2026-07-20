@@ -73,16 +73,14 @@
       @delete="showDeleteConfirmation = true"
     />
 
-    <!-- Delete Confirmation Modal -->
-    <ConfirmationDialog
+    <!-- Delete Confirmation Modal (type-the-name + impact summary) -->
+    <DeleteProjectDialog
       v-if="showDeleteConfirmation"
       :open="showDeleteConfirmation"
-      title="Delete Project"
-      message="Are you sure you want to delete this project? This action cannot be undone and all associated files and data will be lost."
-      confirm-text="Delete Project"
-      confirm-variant="danger"
+      :project="project"
+      :deleting="isDeleting"
       @confirm="deleteProject"
-      @cancel="showDeleteConfirmation = false"
+      @close="showDeleteConfirmation = false"
     />
   </div>
 </template>
@@ -110,7 +108,7 @@ const SchemaManagement = defineAsyncComponent(
 const EvaluationView = defineAsyncComponent(
   () => import('@/components/evaluation/EvaluationView.vue'),
 )
-import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
+import DeleteProjectDialog from '@/components/projects/DeleteProjectDialog.vue'
 import ProjectSettingsModal from '@/components/projects/ProjectSettingsModal.vue'
 import { useToast } from '@/composables/useToast'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -285,9 +283,9 @@ function handleQueryParams(): void {
   const expandTask = route.query.expandTask
   const expandTrial = route.query.expandTrial
 
-  // Handle tab switch from query
+  // Handle tab switch from query (programmatic — don't add a history entry)
   if (queryTab && typeof queryTab === 'string' && validSteps.includes(queryTab)) {
-    handleStepChange(queryTab)
+    handleStepChange(queryTab, { replace: true })
   }
 
   // Note: the `?group=` param (preprocessing history "Go to Group") is consumed
@@ -301,7 +299,7 @@ function handleQueryParams(): void {
     const taskId = String(expandTask)
     // Ensure we're on the files tab
     if (currentStep.value !== 'files') {
-      handleStepChange('files')
+      handleStepChange('files', { replace: true })
     }
     // Wait for component to render and then dispatch event
     setTimeout(() => {
@@ -319,7 +317,7 @@ function handleQueryParams(): void {
     const trialId = String(expandTrial)
     // Ensure we're on the trials tab
     if (currentStep.value !== 'trials') {
-      handleStepChange('trials')
+      handleStepChange('trials', { replace: true })
     }
     // Wait for component to render and then dispatch event
     setTimeout(() => {
@@ -370,10 +368,23 @@ const fetchProject = async ({
 const refreshProject = (): Promise<void> => fetchProject({ background: true })
 
 // --- WORKFLOW & TAB LOGIC ---
-function handleStepChange(stepId: string): void {
+// User-initiated step changes PUSH a history entry so the browser Back button
+// steps back through the workflow tabs instead of exiting the project.
+// Programmatic callers (query-param consumption in handleQueryParams) pass
+// `replace: true` to avoid polluting history.
+function handleStepChange(stepId: string, opts: { replace?: boolean } = {}): void {
   if (!validSteps.includes(stepId)) return // Ignore invalid steps
+  // Skip the no-op navigation when we're already on this tab with the query set
+  // (e.g. re-clicking the active tab) — avoids duplicate history entries.
+  const alreadyThere = currentStep.value === stepId && route.query.tab === stepId
   // currentStep is a computed (read-only); update via the URL query param.
-  router.replace({ query: { ...route.query, tab: stepId } })
+  if (!alreadyThere) {
+    if (opts.replace) {
+      router.replace({ query: { ...route.query, tab: stepId } })
+    } else {
+      router.push({ query: { ...route.query, tab: stepId } })
+    }
+  }
   // Refresh aggregate counts so per-step check marks reflect changes made
   // in other tabs (schema/prompt/trial/evaluation create/delete) since the
   // last fetch. Fire-and-forget — only FilesAndProcessing emits a dedicated
@@ -398,7 +409,10 @@ const saveProjectEdits = async (payload: ProjectUpdate): Promise<void> => {
 }
 
 // --- DELETE LOGIC ---
+const isDeleting = ref<boolean>(false)
 const deleteProject = async (): Promise<void> => {
+  if (isDeleting.value) return
+  isDeleting.value = true
   try {
     await projectsApi.delete(projectId.value)
     toast.success('Project deleted')
@@ -406,16 +420,13 @@ const deleteProject = async (): Promise<void> => {
   } catch {
     toast.error('Failed to delete project')
   } finally {
+    isDeleting.value = false
     showDeleteConfirmation.value = false
   }
 }
 
 // --- PROVIDE CONTEXT ---
 provide('projectId', projectId)
-provide(
-  'availableModels',
-  ref(['Llama-4-Maverick-17B-128E-Instruct-FP8', 'GPT-4o', 'Claude-3-Opus']),
-)
 </script>
 
 <style scoped>

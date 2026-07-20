@@ -6,12 +6,18 @@
     selectable
     :selected-keys="selectedDocuments"
     :all-selected="areAllSelected"
+    :total-selected="selectedDocuments.length"
+    :select-all-busy="selectAllBusy"
+    :sort-by="sortBy"
+    :sort-order="sortOrder"
     :pagination="pagination"
-    :show-page-size-selector="false"
     item-label="documents"
     empty-title="No documents found"
     @toggle-selection="$emit('toggle-selection', $event as number)"
     @toggle-all="$emit('toggle-select-all')"
+    @select-all="$emit('select-all-documents')"
+    @clear-selection="$emit('clear-selection')"
+    @sort="$emit('sort', $event)"
     @page-change="$emit('page-change', $event)"
     @page-size-change="$emit('page-size-change', $event)"
   >
@@ -103,6 +109,11 @@ interface Props {
   selectedDocuments?: number[]
   areAllSelected?: boolean
   pagination?: TablePagination | null
+  // Busy state while the cross-page "select all" id fetch runs.
+  selectAllBusy?: boolean
+  // Server-side sort state (only created_at is orderable server-side).
+  sortBy?: string
+  sortOrder?: string
 }
 
 withDefaults(defineProps<Props>(), {
@@ -110,22 +121,30 @@ withDefaults(defineProps<Props>(), {
   selectedDocuments: () => [],
   areAllSelected: false,
   pagination: null,
+  selectAllBusy: false,
+  sortBy: 'created_at',
+  sortOrder: 'desc',
 })
 
 defineEmits<{
   'toggle-select-all': []
   'toggle-selection': [id: number]
+  'select-all-documents': []
+  'clear-selection': []
+  sort: [key: string]
   view: [doc: DocumentListItem]
   download: [doc: DocumentListItem]
   'page-change': [page: number]
   'page-size-change': [size: number]
 }>()
 
+// Only `created_at` is sortable: the documents list endpoint supports ordering
+// solely by creation time (sort=created_asc|created_desc).
 const columns = [
   { key: 'document', label: 'Document' },
   { key: 'configuration', label: 'Configuration' },
   { key: 'model', label: 'Model' },
-  { key: 'created_at', label: 'Created' },
+  { key: 'created_at', label: 'Created', sortable: true },
 ]
 
 const getModelName = (doc: DocumentListItem): string => {

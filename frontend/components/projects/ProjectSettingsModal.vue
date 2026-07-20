@@ -4,13 +4,24 @@
     <!-- General Settings Section -->
     <div class="mb-6">
       <h3 class="text-sm font-semibold text-content-muted uppercase tracking-wide mb-3">General</h3>
-      <input
-        v-model="name"
-        :class="[inputClass, 'text-lg font-semibold mb-3']"
-        placeholder="Project Name"
-        maxlength="100"
-        autofocus
-      />
+      <div class="mb-3">
+        <input
+          v-model="name"
+          :class="[
+            inputClass,
+            'text-lg font-semibold',
+            nameError ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : '',
+          ]"
+          placeholder="Project Name"
+          maxlength="100"
+          required
+          autofocus
+          :aria-invalid="!!nameError"
+        />
+        <p v-if="nameError" class="mt-1 text-sm text-red-600 dark:text-red-400">
+          {{ nameError }}
+        </p>
+      </div>
       <textarea
         v-model="description"
         :class="textareaClass"
@@ -73,6 +84,7 @@ const emit = defineEmits<{
 
 const name = ref(props.initialName || '')
 const description = ref(props.initialDescription || '')
+const nameError = ref('')
 
 // Sync props changes
 watch(
@@ -80,12 +92,24 @@ watch(
   ([newName, newDesc]) => {
     name.value = newName || ''
     description.value = newDesc || ''
+    nameError.value = ''
   },
 )
 
-// Emit save event with form data
+// Clear the validation error as soon as the user types a non-empty name.
+watch(name, (v) => {
+  if (v.trim()) nameError.value = ''
+})
+
+// Emit save event with form data (name is required — never emit an empty one)
 function onSave(): void {
-  emit('save', { name: name.value, description: description.value })
+  const trimmedName = name.value.trim()
+  if (!trimmedName) {
+    nameError.value = 'Project name is required'
+    return
+  }
+  nameError.value = ''
+  emit('save', { name: trimmedName, description: description.value.trim() })
 }
 
 // Emit close event

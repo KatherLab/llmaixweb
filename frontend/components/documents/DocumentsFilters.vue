@@ -47,6 +47,8 @@
       </label>
     </template>
 
+    <!-- Custom date range: applied explicitly via the Apply button (no fetch
+         on every input change — picking a range means touching both fields). -->
     <template v-if="dateRange === 'custom'" #custom-range>
       <div class="flex items-center gap-2">
         <label :class="labelClass" for="documents-filter-date-from">From:</label>
@@ -55,7 +57,6 @@
           v-model="customDateFrom"
           type="date"
           :class="[inputClass, 'px-3 py-1.5']"
-          @change="emit('apply-custom-range')"
         />
       </div>
       <div class="flex items-center gap-2">
@@ -65,7 +66,6 @@
           v-model="customDateTo"
           type="date"
           :class="[inputClass, 'px-3 py-1.5']"
-          @change="emit('apply-custom-range')"
         />
       </div>
       <button
