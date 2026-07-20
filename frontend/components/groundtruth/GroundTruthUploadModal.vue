@@ -81,6 +81,9 @@
                 <template v-else-if="groundTruthFormat === 'zip'"
                   >ZIP file containing JSON files</template
                 >
+                <template v-else-if="groundTruthFormat === 'xlsx'"
+                  >Excel file (.xlsx/.xls) with flattened fields (dots for nesting)</template
+                >
               </p>
             </div>
           </div>
@@ -193,25 +196,50 @@ const handleFileSelect = (event: Event) => {
   }
 }
 
+/** Ground-truth format implied by a filename extension (null = unsupported). */
+const formatForExtension = (name: string): string | null => {
+  const n = name.toLowerCase()
+  if (n.endsWith('.csv')) return 'csv'
+  if (n.endsWith('.xlsx') || n.endsWith('.xls')) return 'xlsx'
+  if (n.endsWith('.zip')) return 'zip'
+  if (n.endsWith('.json')) return 'json'
+  return null
+}
+
 const handleFileDrop = (event: DragEvent) => {
   const files = Array.from(event.dataTransfer?.files ?? [])
-  if (groundTruthFormat.value === 'json') {
-    const jsonFiles = files.filter((f) => f.name.toLowerCase().endsWith('.json'))
+  if (files.length === 0) return
+
+  // Multiple JSON files → the JSON format supports multi-file uploads.
+  const jsonFiles = files.filter((f) => formatForExtension(f.name) === 'json')
+  if (files.length > 1 && jsonFiles.length === files.length) {
+    if (groundTruthFormat.value !== 'json') {
+      groundTruthFormat.value = 'json'
+      toast.info('Format switched to JSON to match the dropped files.')
+    }
     selectedFiles.value = jsonFiles
-    if (jsonFiles.length === 0 && files.length > 0) {
-      toast.warning('Only .json files are accepted for the JSON format.')
-    }
-  } else {
-    // CSV / ZIP / XLSX are single-file
-    const allowed = ['.csv', '.zip', '.xlsx', '.xls']
-    const picked = files.find((f) => allowed.some((ext) => f.name.toLowerCase().endsWith(ext)))
-    selectedFiles.value = picked ? [picked] : []
-    if (!picked && files.length > 0) {
-      toast.warning(
-        `No file matching the ${groundTruthFormat.value.toUpperCase()} format was found in the drop.`,
-      )
-    }
+    return
   }
+
+  // Multiple mixed / non-JSON files → ambiguous.
+  if (files.length > 1) {
+    toast.warning('Drop a single CSV, XLSX or ZIP file — or multiple JSON files.')
+    return
+  }
+
+  const file = files[0]!
+  const fmt = formatForExtension(file.name)
+  if (!fmt) {
+    toast.warning(`Unsupported file type: "${file.name}". Accepted: CSV, XLSX, JSON, ZIP.`)
+    return
+  }
+  // Auto-switch the format so the file isn't uploaded under the wrong one
+  // (e.g. a .zip dropped while CSV is selected would fail server-side).
+  if (fmt !== groundTruthFormat.value) {
+    groundTruthFormat.value = fmt
+    toast.info(`Format switched to ${fmt.toUpperCase()} to match the dropped file.`)
+  }
+  selectedFiles.value = [file]
 }
 
 const removeFile = (index: number) => {

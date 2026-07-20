@@ -11,55 +11,29 @@
       >
         <div class="flex items-center gap-2">
           <!-- Schema Field -->
-          <span
-            class="bg-primary-soft px-2 py-0.5 rounded-card font-mono text-xs font-semibold text-primary overflow-hidden text-ellipsis whitespace-nowrap max-w-[45%] inline-block cursor-pointer"
-            @mouseenter="hoverIdx = i"
-            @mouseleave="hoverIdx = -1"
-          >
-            {{ m.schema_field }}
-            <span v-if="schemaFieldTypes?.[m.schema_field]" class="text-content-subtle"
-              >({{ schemaFieldTypes[m.schema_field] }})</span
-            >
-            <!-- Tooltip (shows on hover) -->
+          <Tooltip :text="schemaFieldTooltip(m)" title="Schema field" class="max-w-[45%] min-w-0">
             <span
-              v-if="hoverIdx === i"
-              class="absolute z-40 left-2 top-9 w-max max-w-[300px] bg-surface text-primary rounded-modal px-4 py-2 border border-default shadow-xl font-mono text-xs pointer-events-none"
-              style="white-space: pre-line"
+              class="bg-primary-soft px-2 py-0.5 rounded-card font-mono text-xs font-semibold text-primary overflow-hidden text-ellipsis whitespace-nowrap max-w-full inline-block cursor-default"
             >
-              <strong>Schema field:</strong><br />
               {{ m.schema_field }}
-              <template v-if="schemaFieldTypes?.[m.schema_field]">
-                <span class="text-content-subtle">({{ schemaFieldTypes[m.schema_field] }})</span>
-              </template>
+              <span v-if="schemaFieldTypes?.[m.schema_field]" class="text-content-subtle"
+                >({{ schemaFieldTypes[m.schema_field] }})</span
+              >
             </span>
-          </span>
+          </Tooltip>
           <!-- Arrow Icon -->
           <ArrowRight class="w-4 h-4 text-content-subtle flex-shrink-0" />
           <!-- Ground Truth Field -->
-          <span
-            class="bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded-card font-mono text-xs font-semibold text-purple-800 dark:text-purple-300 overflow-hidden text-ellipsis whitespace-nowrap max-w-[45%] inline-block cursor-pointer"
-            @mouseenter="hoverIdx2 = i"
-            @mouseleave="hoverIdx2 = -1"
-          >
-            {{ m.ground_truth_field }}
-            <span v-if="groundTruthFieldTypes?.[m.ground_truth_field]" class="text-content-subtle"
-              >({{ groundTruthFieldTypes[m.ground_truth_field] }})</span
-            >
-            <!-- Tooltip (shows on hover) -->
+          <Tooltip :text="gtFieldTooltip(m)" title="GT field" class="max-w-[45%] min-w-0">
             <span
-              v-if="hoverIdx2 === i"
-              class="absolute z-40 left-2 top-9 w-max max-w-[300px] bg-surface text-purple-700 dark:text-purple-300 rounded-modal px-4 py-2 border border-default shadow-xl font-mono text-xs pointer-events-none"
-              style="white-space: pre-line"
+              class="bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded-card font-mono text-xs font-semibold text-purple-800 dark:text-purple-300 overflow-hidden text-ellipsis whitespace-nowrap max-w-full inline-block cursor-default"
             >
-              <strong>GT field:</strong><br />
               {{ m.ground_truth_field }}
-              <template v-if="groundTruthFieldTypes?.[m.ground_truth_field]">
-                <span class="text-content-subtle"
-                  >({{ groundTruthFieldTypes[m.ground_truth_field] }})</span
-                >
-              </template>
+              <span v-if="groundTruthFieldTypes?.[m.ground_truth_field]" class="text-content-subtle"
+                >({{ groundTruthFieldTypes[m.ground_truth_field] }})</span
+              >
             </span>
-          </span>
+          </Tooltip>
           <!-- Comparison method selector -->
           <select
             :value="m.comparison_method || 'exact'"
@@ -105,6 +79,14 @@
           :title="getComparisonMethodDescription(m.comparison_method || 'exact')"
         >
           {{ getComparisonMethodDescription(m.comparison_method || 'exact') }}
+        </p>
+        <!-- Type / method mismatch hints -->
+        <p
+          v-if="mappingHints(m).length"
+          class="mt-1 text-[10px] text-amber-600 dark:text-amber-400 leading-snug flex items-start gap-1"
+        >
+          <AlertTriangle class="w-3 h-3 shrink-0 mt-px" />
+          <span>{{ mappingHints(m).join(' · ') }}</span>
         </p>
         <!-- Tunable options for fuzzy / numeric -->
         <div
@@ -171,7 +153,8 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ArrowRight, SlidersHorizontal, X } from '@lucide/vue'
+import { AlertTriangle, ArrowRight, SlidersHorizontal, X } from '@lucide/vue'
+import Tooltip from '@/components/common/Tooltip.vue'
 import { getComparisonMethodDescription } from '@/utils/metricsDefinitions'
 import { selectClass, inputClass } from '@/utils/formStyles'
 import type { ComparisonMethod } from '@/types'
@@ -203,9 +186,61 @@ const emit = defineEmits<{
   'update-options': [payload: { index: number; options: Record<string, unknown> }]
 }>()
 
-const hoverIdx = ref(-1) // For schema
-const hoverIdx2 = ref(-1) // For GT
 const optionsOpen = ref<Record<number, boolean>>({}) // { [index]: true }
+
+// ---- Tooltips (common Tooltip component) ----
+function schemaFieldTooltip(m: MappingItem): string {
+  const type = props.schemaFieldTypes?.[m.schema_field]
+  return `${m.schema_field}${type ? ` (${type})` : ''}`
+}
+function gtFieldTooltip(m: MappingItem): string {
+  const type = props.groundTruthFieldTypes?.[m.ground_truth_field]
+  return `${m.ground_truth_field}${type ? ` (${type})` : ''}`
+}
+
+// ---- Type / method mismatch hints ----
+/** Collapse type aliases so e.g. integer/float compare as "number". */
+function baseType(t: string | null | undefined): string {
+  const v = String(t || '').toLowerCase()
+  if (v === 'integer' || v === 'float') return 'number'
+  if (v === 'bool') return 'boolean'
+  if (v === 'str' || v === 'text') return 'string'
+  return v
+}
+
+/** Types considered interchangeable for the mismatch hint (category is a string). */
+function comparableType(t: string | null | undefined): string {
+  const v = baseType(t)
+  return v === 'category' ? 'string' : v
+}
+
+/** Comparison methods that make sense per schema field type. */
+const SUITABLE_METHODS: Record<string, string[]> = {
+  string: ['exact', 'fuzzy', 'category', 'date'],
+  number: ['numeric', 'exact'],
+  boolean: ['boolean', 'exact'],
+  date: ['date', 'exact', 'fuzzy'],
+  category: ['category', 'exact', 'fuzzy'],
+  array: ['exact'],
+  object: ['exact'],
+}
+
+/** Amber warnings for a mapping row (empty array = no issues). */
+function mappingHints(m: MappingItem): string[] {
+  const hints: string[] = []
+  const schemaType = props.schemaFieldTypes?.[m.schema_field]
+  const gtType = props.groundTruthFieldTypes?.[m.ground_truth_field]
+  if (schemaType && gtType && comparableType(schemaType) !== comparableType(gtType)) {
+    hints.push(`Type mismatch: schema field is ${schemaType}, GT column is ${gtType}`)
+  }
+  const fieldType = baseType(schemaType ?? m.field_type)
+  const method = String(m.comparison_method || 'exact')
+  const suitable = SUITABLE_METHODS[fieldType]
+  if (suitable && !suitable.includes(method)) {
+    hints.push(`"${method}" comparison is unusual for a ${fieldType} field`)
+  }
+  return hints
+}
 
 function toggleOptions(i: number) {
   optionsOpen.value = { ...optionsOpen.value, [i]: !optionsOpen.value[i] }

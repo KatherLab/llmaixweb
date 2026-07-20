@@ -129,6 +129,19 @@ export function accuracyColor(acc: number | null | undefined): string {
 }
 
 /**
+ * Tailwind background-colour class for an accuracy value (0–1) — the bar/fill
+ * equivalent of {@link accuracyColor}, using the same green/yellow/red tiers.
+ * @param {number|null|undefined} acc
+ * @returns {string}
+ */
+export function accuracyBarColor(acc: number | null | undefined): string {
+  if (acc === null || acc === undefined || isNaN(acc)) return 'bg-slate-300 dark:bg-slate-600'
+  if (acc >= ACCURACY_THRESHOLDS.HIGH) return 'bg-green-500 dark:bg-green-400'
+  if (acc < ACCURACY_THRESHOLDS.LOW) return 'bg-red-500 dark:bg-red-400'
+  return 'bg-yellow-500 dark:bg-yellow-400'
+}
+
+/**
  * Short human label for a document's accuracy tier.
  *   ≥0.9 → 'OK', <0.5 → 'Low', else → 'Partial'.
  * Documents that failed to score (`has_error`/`error`) → 'Error'.

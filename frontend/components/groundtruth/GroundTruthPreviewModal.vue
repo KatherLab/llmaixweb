@@ -44,8 +44,8 @@
           @change="onSchemaChange"
         >
           <option value="" disabled>Select schema…</option>
-          <option v-for="s in schemas" :key="s.id" :value="s.id">
-            {{ s.schema_name }} ({{ s.id }})
+          <option v-for="s in schemas" :key="s.id" :value="String(s.id)">
+            {{ s.schema_name }} ({{ s.id }}){{ schemaOptionSuffix(s.id) }}
           </option>
         </select>
       </div>
@@ -287,6 +287,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { schemasApi } from '@/services/schemasApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
+import { extractErrorMessage } from '@/utils/errors'
 import type { ComparisonMethod, FieldType, GroundTruth, Schema, SchemaDefinition } from '@/types'
 
 interface MappingItem {
@@ -386,8 +387,17 @@ watch(
   async (isOpen) => {
     if (isOpen) {
       loading.value = true
-      await Promise.all([loadSchemas(), loadGroundTruthPreview()])
-      loading.value = false
+      try {
+        await Promise.all([loadSchemas(), loadGroundTruthPreview()])
+        // Preselect a schema so reopening doesn't look like the saved mappings
+        // were lost: prefer the schema the saved mappings belong to, otherwise
+        // auto-select when there's only one schema to choose from.
+        await preselectSchema()
+      } catch (err) {
+        toast.error(`Failed to load ground truth preview: ${extractErrorMessage(err)}`)
+      } finally {
+        loading.value = false
+      }
     } else {
       // Reset user-editable mapping state so a reopen starts fresh.
       selectedSchemaId.value = ''
@@ -407,6 +417,42 @@ watch(
 async function loadSchemas() {
   const res = await schemasApi.list(props.projectId!)
   schemas.value = res.data
+}
+
+// Saved-mapping counts per schema id (from the ground truth's persisted
+// field_mappings), used to annotate the schema dropdown and preselect.
+const savedMappingCounts = computed<Record<number, number>>(() => {
+  const counts: Record<number, number> = {}
+  for (const m of props.groundTruth?.field_mappings ?? []) {
+    counts[m.schema_id] = (counts[m.schema_id] || 0) + 1
+  }
+  return counts
+})
+
+function schemaOptionSuffix(schemaId: number): string {
+  const n = savedMappingCounts.value[schemaId]
+  if (!n) return ''
+  return ` — ${n} mapping${n === 1 ? '' : 's'}`
+}
+
+/**
+ * Preselect a schema on open: the one the saved mappings reference if any,
+ * otherwise the only schema when exactly one exists. Loads its fields and
+ * saved mappings via onSchemaChange.
+ */
+async function preselectSchema() {
+  if (selectedSchemaId.value) return
+  const savedSchemaId = props.groundTruth?.field_mappings?.[0]?.schema_id
+  const onlySchema = schemas.value.length === 1 ? schemas.value[0] : undefined
+  let target = ''
+  if (savedSchemaId != null && schemas.value.some((s) => s.id === savedSchemaId)) {
+    target = String(savedSchemaId)
+  } else if (onlySchema) {
+    target = String(onlySchema.id)
+  }
+  if (!target) return
+  selectedSchemaId.value = target
+  await onSchemaChange()
 }
 
 async function loadGroundTruthPreview() {
@@ -466,16 +512,21 @@ async function loadGroundTruthPreview() {
 async function onSchemaChange() {
   if (!selectedSchemaId.value) return
   loading.value = true
-  const schemaFieldRes = await schemasApi.getFieldTypes(props.projectId!, selectedSchemaId.value)
-  schemaFieldTypes.value = schemaFieldRes.data || {}
-  schemaFieldPaths.value = Object.keys(schemaFieldTypes.value)
-  schemaFieldTree.value = buildTree(schemaFieldPaths.value)
-  const schemaRes = await schemasApi.get(props.projectId!, selectedSchemaId.value)
-  requiredFields.value = extractRequiredFields(schemaRes.data.schema_definition)
-  await loadExistingMappings()
-  selectedSchemaField.value = ''
-  selectedGroundTruthField.value = ''
-  loading.value = false
+  try {
+    const schemaFieldRes = await schemasApi.getFieldTypes(props.projectId!, selectedSchemaId.value)
+    schemaFieldTypes.value = schemaFieldRes.data || {}
+    schemaFieldPaths.value = Object.keys(schemaFieldTypes.value)
+    schemaFieldTree.value = buildTree(schemaFieldPaths.value)
+    const schemaRes = await schemasApi.get(props.projectId!, selectedSchemaId.value)
+    requiredFields.value = extractRequiredFields(schemaRes.data.schema_definition)
+    await loadExistingMappings()
+    selectedSchemaField.value = ''
+    selectedGroundTruthField.value = ''
+  } catch (err) {
+    toast.error(`Failed to load schema fields: ${extractErrorMessage(err)}`)
+  } finally {
+    loading.value = false
+  }
 }
 
 // --- Build tree structure from dot-paths
@@ -586,21 +637,46 @@ const mappedGtPaths = computed(() => mappings.value.map((m) => m.ground_truth_fi
 const highlightRequiredUnmapped = (p: string): boolean =>
   requiredFields.value.includes(p) && !mappings.value.some((m) => m.schema_field === p)
 
+/** Normalize a field path for auto-mapping: lowercase, strip `_`, `-`, spaces. */
+function normalizeFieldName(name: string): string {
+  return name.toLowerCase().replace(/[_\-\s]+/g, '')
+}
+
 function autoMap() {
   if (!selectedSchemaId.value) return
-  mappings.value = []
-  for (const schemaField of schemaFieldPaths.value) {
-    if (groundTruthFieldPaths.value.includes(schemaField)) {
-      const fieldType = (schemaFieldTypes.value[schemaField] || 'string') as FieldType
-      mappings.value.push({
-        schema_id: Number(selectedSchemaId.value),
-        schema_field: schemaField,
-        ground_truth_field: schemaField,
-        field_type: fieldType,
-        comparison_method: defaultMethodFor(fieldType),
-        comparison_options: {},
-      })
-    }
+  // Index GT fields by normalized name (first occurrence wins on collision).
+  const gtByNorm = new Map<string, string>()
+  for (const gtField of groundTruthFieldPaths.value) {
+    const key = normalizeFieldName(gtField)
+    if (!gtByNorm.has(key)) gtByNorm.set(key, gtField)
+  }
+  const mappedGt = new Set(mappings.value.map((m) => m.ground_truth_field))
+  // Merge with existing mappings: only consider schema fields not yet mapped.
+  const unmappedFields = schemaFieldPaths.value.filter((f) => !isMapped(f))
+  let mappedCount = 0
+  for (const schemaField of unmappedFields) {
+    const gtField = gtByNorm.get(normalizeFieldName(schemaField))
+    if (!gtField || mappedGt.has(gtField)) continue
+    const fieldType = (schemaFieldTypes.value[schemaField] || 'string') as FieldType
+    mappings.value.push({
+      schema_id: Number(selectedSchemaId.value),
+      schema_field: schemaField,
+      ground_truth_field: gtField,
+      field_type: fieldType,
+      comparison_method: defaultMethodFor(fieldType),
+      comparison_options: {},
+    })
+    mappedGt.add(gtField)
+    mappedCount++
+  }
+  if (unmappedFields.length === 0) {
+    toast.info('All schema fields are already mapped.')
+  } else if (mappedCount > 0) {
+    toast.success(`Mapped ${mappedCount} of ${unmappedFields.length} unmapped fields`)
+  } else {
+    toast.info(
+      `Mapped 0 of ${unmappedFields.length} unmapped fields — no matching column names found`,
+    )
   }
 }
 const canSave = computed(() => {
@@ -613,26 +689,31 @@ const canSave = computed(() => {
   return true
 })
 async function saveMappings() {
-  // Always update idColumn before mappings, if changed
-  if (isTabularFormat.value) {
-    if (idColumn.value && idColumn.value !== currentIdColumn.value) {
-      await saveIdColumn()
+  try {
+    // Always update idColumn before mappings, if changed
+    if (isTabularFormat.value) {
+      if (idColumn.value && idColumn.value !== currentIdColumn.value) {
+        await saveIdColumn()
+      }
+    } else if (isJsonFormat.value) {
+      if (idColumn.value === '__field__' && jsonIdField.value !== currentIdColumn.value) {
+        await saveIdColumn()
+      } else if (!idColumn.value && currentIdColumn.value) {
+        // User switched to "filename"
+        await saveIdColumn()
+      }
     }
-  } else if (isJsonFormat.value) {
-    if (idColumn.value === '__field__' && jsonIdField.value !== currentIdColumn.value) {
-      await saveIdColumn()
-    } else if (!idColumn.value && currentIdColumn.value) {
-      // User switched to "filename"
-      await saveIdColumn()
-    }
+    // Save mappings
+    await groundtruthApi.setMappings(
+      props.projectId!,
+      props.groundTruth!.id,
+      selectedSchemaId.value,
+      mappings.value,
+    )
+  } catch (err) {
+    toast.error(`Failed to save mappings: ${extractErrorMessage(err)}`)
+    return
   }
-  // Save mappings
-  await groundtruthApi.setMappings(
-    props.projectId!,
-    props.groundTruth!.id,
-    selectedSchemaId.value,
-    mappings.value,
-  )
   toast.success('Mappings saved')
   justSaved.value = true
   setTimeout(() => {
@@ -691,11 +772,12 @@ function onGroundTruthFieldSelect(path: string) {
   if (!selectedSchemaId.value) return
   selectedGroundTruthField.value = path
 }
+// All sample-doc fields, with id-like candidates sorted first. Never hide
+// fields entirely — the real key may not match the id/name/number heuristic.
 const idCandidates = computed(() => {
   if (!sampleDoc.value) return []
-  const allFields = Object.keys(sampleDoc.value)
-  const idLike = allFields.filter((k) => /id|name|number/i.test(k))
-  return idLike.length ? idLike : allFields
+  const isIdLike = (k: string) => /id|name|number/i.test(k)
+  return [...Object.keys(sampleDoc.value)].sort((a, b) => Number(isIdLike(b)) - Number(isIdLike(a)))
 })
 const displayedColumns = computed(() => {
   const cols = availableColumns.value || []
@@ -710,11 +792,8 @@ function updateIdColumn(val: string) {
 function updateJsonIdField(val: string) {
   jsonIdField.value = val
 }
-watch(idColumn, (val) => {
-  if (isTabularFormat.value && val && val !== currentIdColumn.value) {
-    saveIdColumn()
-  }
-})
+// Note: the ID column intentionally is NOT persisted on change — saveMappings
+// persists it on Save, so Cancel discards a changed ID like everything else.
 function close() {
   emit('close')
 }

@@ -245,10 +245,13 @@
                 </template>
                 <template #cell-accuracy="{ row: evaluation }">
                   <div class="flex items-center">
-                    <div class="mr-2 text-content">{{ getAccuracyPercentage(evaluation) }}%</div>
+                    <div class="mr-2 text-content tabular-nums">
+                      {{ getAccuracyPercentage(evaluation) }}%
+                    </div>
                     <div class="w-16 bg-surface-sunken rounded-full h-2">
                       <div
-                        class="bg-primary h-2 rounded-full"
+                        class="h-2 rounded-full"
+                        :class="accuracyBarColor(getEvaluationAccuracy(evaluation))"
                         :style="{ width: `${getAccuracyPercentage(evaluation)}%` }"
                       ></div>
                     </div>
@@ -329,6 +332,8 @@
       :open="showExportModal"
       :project-id="projectId"
       :evaluations="evaluations"
+      :preselected-ids="exportPreselectedIds"
+      :ground-truth-name="selectedGroundTruth?.name || ''"
       @close="showExportModal = false"
     />
     <ConfirmationDialog
@@ -353,6 +358,7 @@ import { evaluationsApi } from '@/services/evaluationsApi'
 import { formatDate } from '@/utils/formatters'
 import { useToast } from '@/composables/useToast'
 import {
+  accuracyBarColor,
   getEvaluationAccuracy,
   getEvaluationDocumentCount,
   getEvaluationDocuments,
@@ -423,6 +429,13 @@ const router = useRouter()
 const analysisEvaluationId = computed(() => (route.query.evaluationId as string) || null)
 const analysisTrialName = computed(() => (route.query.trialName as string) || '')
 const analysisGroundTruthName = computed(() => (route.query.gtName as string) || '')
+
+// When Export is opened from an evaluation's analysis page, pre-check that
+// evaluation in the export modal (nothing was preselected before, which read
+// as "export is broken" from that context).
+const exportPreselectedIds = computed<number[]>(() =>
+  analysisEvaluationId.value ? [Number(analysisEvaluationId.value)] : [],
+)
 
 const clearAnalysisView = (): void => {
   const query = { ...route.query }

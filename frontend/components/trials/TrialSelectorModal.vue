@@ -209,6 +209,17 @@
     @close="showMappingModal = false"
     @configured="onMappingConfigured"
   />
+
+  <!-- Re-evaluation confirmation (re-evaluating creates another evaluation) -->
+  <ConfirmationDialog
+    :open="showReEvaluateConfirm"
+    title="Trial already evaluated"
+    :message="reEvaluateMessage"
+    confirm-text="Create another evaluation"
+    confirm-variant="primary"
+    @confirm="confirmReEvaluate"
+    @cancel="showReEvaluateConfirm = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -222,6 +233,7 @@ import { trialLabel } from '@/utils/trialLabel'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import Callout from '@/components/common/Callout.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import GroundTruthPreviewModal from '@/components/groundtruth/GroundTruthPreviewModal.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -352,6 +364,18 @@ const goToPage = async (page: number | string): Promise<void> => {
 // Utility functions
 const isAlreadyEvaluated = (trial: AvailableTrial): boolean => {
   return existingEvaluations.value.some((evaluation) => evaluation.trial_id === trial.id)
+}
+
+/** ISO date of the most recent existing evaluation for a trial (null if none). */
+const lastEvaluationDate = (trialId: number): string | null => {
+  let latest: string | null = null
+  for (const evaluation of existingEvaluations.value) {
+    if (evaluation.trial_id !== trialId) continue
+    if (!latest || new Date(evaluation.created_at) > new Date(latest)) {
+      latest = evaluation.created_at
+    }
+  }
+  return latest
 }
 
 const getSchemaName = (schemaId: number): string => {
@@ -519,6 +543,23 @@ const validateEvaluationPrerequisites = (): string[] => {
   return errors
 }
 
+// Re-evaluation confirmation: re-evaluating a trial is allowed but creates
+// another, near-indistinguishable evaluation row — so confirm it first.
+const showReEvaluateConfirm = ref(false)
+
+const reEvaluateMessage = computed(() => {
+  const trial = selectedTrial.value
+  if (!trial) return ''
+  const date = lastEvaluationDate(trial.id)
+  const when = date ? ` on ${formatDate(date)}` : ''
+  return `This trial was already evaluated${when} against this ground truth. Create another evaluation?`
+})
+
+const confirmReEvaluate = async (): Promise<void> => {
+  showReEvaluateConfirm.value = false
+  await runEvaluation()
+}
+
 // Evaluate
 const evaluateTrialWithValidation = async (): Promise<void> => {
   const validationErrors = validateEvaluationPrerequisites()
@@ -528,7 +569,16 @@ const evaluateTrialWithValidation = async (): Promise<void> => {
     return
   }
 
-  lastFailedOperation.value = evaluateTrialWithValidation
+  if (selectedTrial.value && isAlreadyEvaluated(selectedTrial.value)) {
+    showReEvaluateConfirm.value = true
+    return
+  }
+
+  await runEvaluation()
+}
+
+const runEvaluation = async (): Promise<void> => {
+  lastFailedOperation.value = runEvaluation
   loadingStates.value.evaluation = true
   error.value = null
 

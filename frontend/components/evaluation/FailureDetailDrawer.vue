@@ -200,6 +200,17 @@
                         <div class="font-medium text-content-muted">
                           {{ prettifyField(fieldName) }}
                         </div>
+                        <!-- Which comparison method judged this field -->
+                        <Tooltip
+                          v-if="comparisonChip(String(fieldName))"
+                          :text="comparisonChipTooltip(String(fieldName))"
+                        >
+                          <span
+                            class="mt-0.5 inline-block text-[9px] font-mono px-1 py-px rounded bg-surface-muted border border-default text-content-subtle cursor-help"
+                          >
+                            {{ comparisonChip(String(fieldName)) }}
+                          </span>
+                        </Tooltip>
                         <div v-if="!detail.is_correct" class="mt-1 space-y-0.5">
                           <Tooltip :text="getErrorSuggestion(detail.error_type)">
                             <span
@@ -329,6 +340,7 @@ import {
   formatMetricPercent,
   getErrorTypeDescription,
   getErrorSuggestion,
+  getComparisonMethodDescription,
 } from '@/utils/metricsDefinitions'
 import {
   prettifyField,
@@ -337,7 +349,7 @@ import {
   documentStatusLabel,
   ACCURACY_THRESHOLDS,
 } from '@/utils/evaluationHelpers'
-import type { DocumentEvaluationDetail, TrialResultItem } from '@/types'
+import type { DocumentEvaluationDetail, FieldMapping, TrialResultItem } from '@/types'
 
 /** Original file attached to a document (subset used here). */
 interface OriginalFile {
@@ -367,6 +379,12 @@ const props = defineProps({
   documents: { type: Array as PropType<DocumentEvaluationDetail[]>, default: () => [] },
   /** Index of the open doc within `documents` (-1 if not found). */
   currentDocIndex: { type: Number, default: -1 },
+  /** Ground-truth field mappings keyed by schema field path — drives the
+   * per-field comparison-method chips in the Expected-vs-Got table. */
+  fieldMappings: {
+    type: Object as PropType<Record<string, FieldMapping>>,
+    default: () => ({}),
+  },
 })
 
 defineEmits<{
@@ -462,6 +480,31 @@ const originalImageUrl = computed(() => props.originalFileUrl)
 
 const toggleOriginalView = (): void => {
   showOriginal.value = !showOriginal.value
+}
+
+// ---- Per-field comparison-method chip ----
+// e.g. "exact", "fuzzy ≥85", "numeric ±0.001" — sourced from the evaluation's
+// ground-truth field mappings, so users see which rule judged each field.
+const comparisonChip = (fieldName: string): string => {
+  const mapping = props.fieldMappings[fieldName]
+  if (!mapping) return ''
+  const method = String(mapping.comparison_method || 'exact')
+  const opts = mapping.comparison_options || {}
+  if (method === 'fuzzy') {
+    const threshold = opts.threshold ?? 85
+    return `fuzzy ≥${threshold}`
+  }
+  if (method === 'numeric') {
+    const tolerance = opts.tolerance ?? 0.001
+    return `numeric ±${tolerance}${opts.relative ? '%' : ''}`
+  }
+  return method
+}
+
+const comparisonChipTooltip = (fieldName: string): string => {
+  const mapping = props.fieldMappings[fieldName]
+  if (!mapping) return ''
+  return getComparisonMethodDescription(mapping.comparison_method)
 }
 
 const formatValue = (value: unknown): string => {

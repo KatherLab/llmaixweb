@@ -56,7 +56,7 @@
                   <Info class="h-3.5 w-3.5 text-content-subtle hover:text-content-muted" />
                 </Tooltip>
               </div>
-              <div class="text-lg font-bold text-content mt-0.5">
+              <div class="text-lg font-bold text-content mt-0.5 tabular-nums">
                 {{ m.value }}
               </div>
               <div v-if="m.sub" class="text-[10px] text-content-subtle mt-0.5 truncate">
@@ -122,9 +122,11 @@
                   class="text-[10px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
                   >{{ field.errorCount }}</span
                 >
-                <span class="text-xs font-medium" :class="accuracyColor(field.accuracy)">{{
-                  formatMetricPercent(field.accuracy)
-                }}</span>
+                <span
+                  class="text-xs font-medium tabular-nums"
+                  :class="accuracyColor(field.accuracy)"
+                  >{{ formatMetricPercent(field.accuracy) }}</span
+                >
               </div>
             </li>
             <li v-if="!fieldList.length" class="text-xs text-content-subtle italic px-2 py-1">
@@ -152,8 +154,15 @@
             <option value="low">Low (&lt;50%)</option>
           </select>
           <div v-if="selectedFieldFilter" class="flex items-center gap-1">
+            <!-- Without a confusion-cell selection the field filter shows
+                 errors-only, so say so; with one, the confusion chip is the
+                 actual doc filter and this chip just names the field. -->
             <FilterChip
-              :label="`Field: ${prettifyField(selectedFieldFilter)}`"
+              :label="
+                confusionFilter
+                  ? `Field: ${prettifyField(selectedFieldFilter)}`
+                  : `Errors in: ${prettifyField(selectedFieldFilter)}`
+              "
               color="blue"
               @remove="selectedFieldFilter = ''"
             />
@@ -190,7 +199,7 @@
                   <Info class="h-3 w-3 text-content-subtle hover:text-content-muted" />
                 </Tooltip>
               </div>
-              <div class="text-base font-bold" :class="accuracyColor(m.value)">
+              <div class="text-base font-bold tabular-nums" :class="accuracyColor(m.value)">
                 {{ formatMetricPercent(m.value) }}
               </div>
             </div>
@@ -241,7 +250,7 @@
               </span>
             </template>
             <template #cell-accuracy="{ row }">
-              <span class="text-sm font-medium" :class="accuracyColor(row.accuracy)">{{
+              <span class="text-sm font-medium tabular-nums" :class="accuracyColor(row.accuracy)">{{
                 formatMetricPercent(row.accuracy)
               }}</span>
             </template>
@@ -287,6 +296,7 @@
       :doc-position="docPositionLabel"
       :documents="filteredDocs"
       :current-doc-index="currentDocIndex"
+      :field-mappings="fieldMappings"
       @close="closeDrawer"
       @prev="moveDoc(-1)"
       @next="moveDoc(1)"
@@ -299,6 +309,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { ArrowDownWideNarrow, ChevronLeft, Download, Info, Tags } from '@lucide/vue'
 import { evaluationsApi } from '@/services/evaluationsApi'
+import { groundtruthApi } from '@/services/groundtruthApi'
 import { trialsApi } from '@/services/trialsApi'
 import { documentsApi } from '@/services/documentsApi'
 import { schemasApi } from '@/services/schemasApi'
@@ -338,6 +349,7 @@ import type {
   DocumentEvaluationDetail,
   TrialResultItem,
   FieldEvaluationSummary,
+  FieldMapping,
 } from '@/types'
 
 interface Props {
@@ -392,6 +404,9 @@ const loadedTrialModel = ref('')
 
 // Field types: { dot_path: 'category' | 'string' | ... }
 const fieldTypes = ref<Record<string, string>>({})
+// Ground-truth field mappings keyed by schema field path — lets the failure
+// drawer show which comparison method (+ threshold/tolerance) judged a field.
+const fieldMappings = ref<Record<string, FieldMapping>>({})
 // Trial results keyed by document_id (source of reasoning + result)
 const resultMap = ref<Record<number, TrialResultItem>>({})
 const resultsLoaded = ref(false)
@@ -440,10 +455,9 @@ const overallMetrics = computed(() => {
       key: 'precision',
       label: 'Precision',
       value: formatMetricPercent(m.precision),
-      sub:
-        m.matched_document_count != null
-          ? `${m.matched_document_count}/${m.total_documents} docs matched`
-          : '',
+      // No "docs matched" sub here — that info belongs to the header/footnote,
+      // and under the Precision tile it reads as part of the precision metric.
+      sub: '',
       tooltipTitle: 'Precision',
       tooltip: getMetricTooltip('precision'),
     },
@@ -735,6 +749,20 @@ const loadAll = async (): Promise<void> => {
         fieldTypes.value = (ft.data as Record<string, string>) || {}
       } catch {
         /* field types optional */
+      }
+      // Field mappings (comparison method + options per schema field) for the
+      // failure drawer's per-field method chips — best-effort.
+      try {
+        const fm = await groundtruthApi.getMappings(
+          props.projectId,
+          data.groundtruth_id,
+          trial.data.schema_id,
+        )
+        const map: Record<string, FieldMapping> = {}
+        for (const m of fm.data || []) map[m.schema_field] = m
+        fieldMappings.value = map
+      } catch {
+        /* mappings optional */
       }
     }
     // Load trial results (paginated) to build a {document_id → result} map.

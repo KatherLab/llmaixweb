@@ -56,6 +56,9 @@
       <!-- Evaluation selection -->
       <div>
         <label :class="labelClass">Select Evaluations</label>
+        <p v-if="groundTruthName" class="text-xs text-content-subtle mb-2">
+          Showing evaluations for ground truth "{{ groundTruthName }}".
+        </p>
         <div class="max-h-64 overflow-y-auto border border-default rounded-card">
           <div class="p-3 border-b border-default bg-surface-muted">
             <label class="flex items-center">
@@ -232,9 +235,17 @@ interface Props {
   open: boolean
   projectId: string | number
   evaluations: Evaluation[]
+  /** Evaluation ids to pre-check when the modal opens (e.g. the evaluation
+   * whose analysis page the export was launched from). */
+  preselectedIds?: number[]
+  /** Name of the ground truth the listed evaluations are scoped to. */
+  groundTruthName?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  preselectedIds: () => [],
+  groundTruthName: '',
+})
 
 const emit = defineEmits<{ close: [] }>()
 const toast = useToast()
@@ -249,12 +260,17 @@ const includeErrors = ref(false)
 const includeDocumentContent = ref(false)
 const includeGroundTruthContent = ref(false)
 
-// Reset export selections when the modal closes so a reopen starts fresh
-// (component stays mounted to enable the close transition).
+// On open, apply the caller's preselection (only ids that are actually in the
+// listed evaluations). On close, reset export selections so a reopen starts
+// fresh (component stays mounted to enable the close transition).
 watch(
   () => props.open,
   (isOpen) => {
-    if (!isOpen) {
+    if (isOpen) {
+      selectedEvaluations.value = props.preselectedIds.filter((id) =>
+        props.evaluations.some((e) => e.id === id),
+      )
+    } else {
       exportFormat.value = 'csv'
       selectedEvaluations.value = []
       includeDetails.value = true
