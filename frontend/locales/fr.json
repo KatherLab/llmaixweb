@@ -447,8 +447,8 @@
     "tagline": "Extrayez des informations de documents à l'aide de LLM.",
     "form": {
       "email": "Adresse e-mail",
-      "email_placeholder": "ex. votre@email.com",
-      "email_admin_placeholder": "admin@votreentreprise.com",
+      "email_placeholder": "ex. votre{'@'}email.com",
+      "email_admin_placeholder": "admin{'@'}votreentreprise.com",
       "password": "Mot de passe",
       "password_placeholder": "Mot de passe",
       "full_name": "Nom complet",
@@ -553,7 +553,7 @@
       "full_name": "Nom complet",
       "full_name_placeholder": "Nom complet",
       "email": "E-mail",
-      "email_placeholder": "admin@votreentreprise.com",
+      "email_placeholder": "admin{'@'}votreentreprise.com",
       "save": "Enregistrer le profil",
       "saved": "Enregistré."
     },

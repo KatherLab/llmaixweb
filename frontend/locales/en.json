@@ -447,8 +447,8 @@
     "tagline": "Extract information from documents using LLMs.",
     "form": {
       "email": "Email address",
-      "email_placeholder": "e.g. your@email.com",
-      "email_admin_placeholder": "admin@yourcompany.com",
+      "email_placeholder": "e.g. your{'@'}email.com",
+      "email_admin_placeholder": "admin{'@'}yourcompany.com",
       "password": "Password",
       "password_placeholder": "Password",
       "full_name": "Full Name",
@@ -553,7 +553,7 @@
       "full_name": "Full Name",
       "full_name_placeholder": "Full name",
       "email": "Email",
-      "email_placeholder": "admin@yourcompany.com",
+      "email_placeholder": "admin{'@'}yourcompany.com",
       "save": "Save profile",
       "saved": "Saved."
     },
