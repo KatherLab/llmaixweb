@@ -1110,7 +1110,7 @@ wheels = [
 
 [[package]]
 name = "llmaixweb"
-version = "0.6.8"
+version = "0.7.0"
 source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
