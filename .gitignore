@@ -4,6 +4,9 @@
 .env.local
 backend/.env
 frontend/.env
+# Exception: the e2e backend env holds only fake/test values (no real secrets)
+# and is needed to run the Playwright smoke in CI.
+!backend/.env.e2e
 
 # Database
 database.db
@@ -43,3 +46,13 @@ test_local_storage/
 .claude
 # MkDocs local build output
 /site/
+
+# Playwright e2e (ephemeral backend state + reports)
+/e2e_test.db
+/e2e_test.db-wal
+/e2e_test.db-shm
+/e2e_local_storage/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

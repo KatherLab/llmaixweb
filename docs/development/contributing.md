@@ -44,7 +44,15 @@ ENV_PATH=backend/.env.localtest uv run pytest --verbose
 
 # Frontend (Vitest — utils/ helpers and composables)
 npm test
+
+# End-to-end smoke (Playwright — core workflow in a real browser)
+npm run test:e2e
 ```
+
+The e2e smoke boots a fake LLM, a broker-free backend, and the dev server, then
+drives login → project → upload → preprocess → trial → evaluation. See
+[`e2e/README.md`](https://github.com/KatherLab/llmaixweb/blob/main/e2e/README.md)
+for details and prerequisites.
 
 ## Conventions
 

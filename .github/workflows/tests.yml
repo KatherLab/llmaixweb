@@ -207,3 +207,39 @@ jobs:
         run: >-
           ENV_PATH=backend/tests/.env uv run pytest
           backend/tests/test_celery_integration.py -v
+
+  frontend-e2e:
+    name: Frontend e2e smoke (Playwright)
+    runs-on: ubuntu-latest
+
+    # Drives the core workflow (login → project → upload → preprocess → schema →
+    # prompt → trial → evaluation) through a real browser. Playwright boots a
+    # fake OpenAI server, the broker-free backend (SQLite, DISABLE_CELERY), and
+    # the Vite dev server — no Redis/Postgres/OCR needed.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install Python dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e smoke
+        run: npm run test:e2e

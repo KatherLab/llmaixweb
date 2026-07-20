@@ -26,6 +26,9 @@ that point forward.
 - `THIRD_PARTY_NOTICES` generation and a license-compatibility check in CI.
 - Frontend unit test suite (Vitest + Vue Test Utils) covering the shared
   `utils/` helpers and logic-heavy composables, run in CI.
+- Playwright end-to-end smoke test driving the core workflow (login → project →
+  upload → preprocess → trial → evaluation) against a broker-free backend and a
+  fake LLM, run in CI.
 
 ### Changed
 
