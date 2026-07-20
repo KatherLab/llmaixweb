@@ -245,10 +245,11 @@ class Document(Base):
         ForeignKey("files.id"), nullable=True
     )
 
-    # Version tracking (for document history)
-    is_latest: Mapped[bool] = mapped_column(
-        Boolean, default=True, nullable=False, index=True
-    )
+    # Version tracking (for document history). The single-column index lives in
+    # __table_args__ below as ix_documents_latest (created by the
+    # add_document_versioning migration); index=True here would declare a second,
+    # redundant index on the same column.
+    is_latest: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     version_of: Mapped[int | None] = mapped_column(
         ForeignKey("documents.id", ondelete="SET NULL"), nullable=True
     )  # Links to the "root" document for version chains

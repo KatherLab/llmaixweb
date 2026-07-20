@@ -1,6 +1,14 @@
+# Image tags: the LLMAIx images default to :latest for easy evaluation. For
+# production deployments pin them to a release, e.g. LLMAIXWEB_IMAGE_TAG=0.6.6
+# in .env, so a restart can't silently pull a different version. The same goes
+# for the third-party images below (docling-serve, rustfs) — pin them once your
+# deployment is validated.
 services:
   # Downloads docling's OCR/layout models into the docling-models volume
   # before docling-serve starts (runs as root to avoid volume permission issues).
+  # A marker file skips the download once models are present, so restarts work
+  # offline/air-gapped. Delete .models-complete in the docling-models volume to
+  # force a re-download (e.g. after an image upgrade).
   docling-models-init:
     image: quay.io/docling-project/docling-serve-cpu:latest
     restart: "no"
@@ -10,7 +18,12 @@ services:
     command: >
       sh -c "
         set -e;
-        docling-tools models download --output-dir /models;
+        if [ -f /models/.models-complete ]; then
+          echo 'Docling models already downloaded, skipping.';
+        else
+          docling-tools models download --output-dir /models;
+          touch /models/.models-complete;
+        fi;
       "
 
   # Separate service for PDF/image OCR and conversion, kept out of the
@@ -52,9 +65,11 @@ services:
       dockerfile: Dockerfile.backend
       args:
         - GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
-    image: ghcr.io/katherlab/llmaixweb-backend:latest
+    image: ghcr.io/katherlab/llmaixweb-backend:${LLMAIXWEB_IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - local-storage:/data/local-storage
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DISABLE_CELERY=false
@@ -83,9 +98,11 @@ services:
         condition: service_completed_successfully
 
   worker_default:
-    image: ghcr.io/katherlab/llmaixweb-backend:latest
+    image: ghcr.io/katherlab/llmaixweb-backend:${LLMAIXWEB_IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - local-storage:/data/local-storage
     environment:
       # Only set this when running a single worker per role (the stock
       # deployment); leave unset if you scale this queue to multiple workers.
@@ -95,14 +112,19 @@ services:
     command: >
       /app/.venv/bin/python -m celery -A backend.src.celery.celery_config
       worker -Q default -c 4 --loglevel=info -B -s /tmp/celerybeat-schedule
+    # service_healthy (not service_started): the backend runs Alembic migrations
+    # before serving, so waiting for its healthcheck keeps workers from racing
+    # a half-migrated schema on first boot.
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
 
   worker_preprocess:
-    image: ghcr.io/katherlab/llmaixweb-backend:latest
+    image: ghcr.io/katherlab/llmaixweb-backend:${LLMAIXWEB_IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - local-storage:/data/local-storage
     environment:
       - DOCLING_SERVE_URL=http://docling-serve:5001
       - DOCLING_SERVE_ENABLED=${DOCLING_SERVE_ENABLED:-true}
@@ -113,7 +135,7 @@ services:
       worker -Q preprocess -c 1 --loglevel=info
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
       docling-serve:
         condition: service_healthy
 
@@ -123,17 +145,24 @@ services:
       dockerfile: Dockerfile.frontend
       args:
         - GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
-    image: ghcr.io/katherlab/llmaixweb-frontend:latest
+    image: ghcr.io/katherlab/llmaixweb-frontend:${LLMAIXWEB_IMAGE_TAG:-latest}
     restart: unless-stopped
     ports: ["5173:8080"]
     depends_on:
       backend:
         condition: service_healthy
 
+  # The sidecar services below get only the variables they need (interpolated
+  # from .env by compose), NOT the full env_file — the .env also holds
+  # SECRET_KEY, SMTP and LLM API credentials that don't belong in every
+  # container's environment.
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
-    env_file: .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-llmaixweb}
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
@@ -159,7 +188,9 @@ services:
     image: rustfs/rustfs:latest
     restart: unless-stopped
     command: server /data --console-address ":9001"
-    env_file: .env
+    environment:
+      - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY:-rustfsadmin}
+      - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY:-rustfsadmin}
     volumes:
       - minio-data:/data
     healthcheck:
@@ -174,12 +205,24 @@ services:
     depends_on:
       rustfs:
         condition: service_healthy
-    env_file: .env
+    environment:
+      - RUSTFS_ACCESS_KEY=${RUSTFS_ACCESS_KEY:-rustfsadmin}
+      - RUSTFS_SECRET_KEY=${RUSTFS_SECRET_KEY:-rustfsadmin}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-llmaixweb}
     entrypoint: >
       /bin/sh -c "
         set -e;
-        export S3_BUCKET_NAME="$${S3_BUCKET_NAME:-llmaixweb}";
-        until rc alias set local http://rustfs:9000 ${RUSTFS_ACCESS_KEY} ${RUSTFS_SECRET_KEY}; do
+        if [ -z \"$${RUSTFS_ACCESS_KEY}\" ] || [ -z \"$${RUSTFS_SECRET_KEY}\" ]; then
+          echo 'RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY are empty — set them in .env' >&2;
+          exit 1;
+        fi;
+        tries=0;
+        until rc alias set local http://rustfs:9000 \"$${RUSTFS_ACCESS_KEY}\" \"$${RUSTFS_SECRET_KEY}\"; do
+          tries=$$((tries + 1));
+          if [ \"$$tries\" -ge 20 ]; then
+            echo 'Could not authenticate to rustfs after 20 attempts — check RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY' >&2;
+            exit 1;
+          fi;
           echo 'Waiting for rustfs...' >&2;
           sleep 3;
         done;
@@ -197,3 +240,7 @@ volumes:
   minio-data:
   docling-models:
   docling-scratch:
+  # Shared file storage for LOCAL_DIRECTORY=/data/local-storage (storage
+  # Option C in .env.example) — mounted into backend + both workers so all
+  # processes see the same files.
+  local-storage:

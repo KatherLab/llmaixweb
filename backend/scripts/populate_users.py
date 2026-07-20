@@ -31,11 +31,28 @@ from backend.src.models.user import User, UserRole
 
 
 def init_db():
-    """Initialize the database by creating all tables if they don't exist"""
+    """Create tables on a FRESH database and stamp it at the alembic head.
+
+    On an already-initialized database this is a no-op — the schema is managed
+    by alembic migrations there. Creating tables via create_all() WITHOUT
+    stamping would leave the database without an alembic_version row, so the
+    next `alembic upgrade head` would try to re-create everything and fail.
+    """
+    from sqlalchemy import inspect
+
     try:
-        # Create tables
+        if inspect(engine).has_table("users"):
+            return
         Base.metadata.create_all(bind=engine)
-        print("Database tables created successfully.")
+
+        from alembic import command
+        from alembic.config import Config as AlembicConfig
+
+        repo_root = Path(__file__).resolve().parents[2]
+        alembic_cfg = AlembicConfig(str(repo_root / "alembic.ini"))
+        alembic_cfg.set_main_option("script_location", str(repo_root / "alembic"))
+        command.stamp(alembic_cfg, "head")
+        print("Database tables created and stamped at alembic head.")
     except Exception as e:
         print(f"Error creating database tables: {e}")
         sys.exit(1)

@@ -29,10 +29,15 @@
 #   VLLM_PORT=8000
 
 services:
+  # No env_file here: the VLLM_* knobs below are interpolated from .env by
+  # compose itself, and the app's secrets (SECRET_KEY, API keys, SMTP…) have
+  # no business inside the GPU sidecar.
   vllm:
     image: vllm/vllm-openai:latest
-    env_file:
-      - .env
+    environment:
+      # For gated models (e.g. Gemma) set HF_TOKEN in .env; the mounted
+      # ~/.cache/huggingface token also works if you are logged in locally.
+      - HF_TOKEN=${HF_TOKEN:-}
     ipc: host
     # Shared memory needed for GPU IPC communication between PyTorch processes
     shm_size: "8gb"

@@ -35,9 +35,13 @@ COPY --chown=app:app alembic ./alembic
 COPY --chown=app:app alembic.ini ./alembic.ini
 COPY --chown=app:app backend/scripts/run_migrations.sh /app/run_migrations.sh
 
+# The app code is COPYed with --chown=app:app above and the read-only .venv
+# (owned by root) is world-readable, so a recursive `chown -R app:app /app`
+# is unnecessary — and would duplicate the entire multi-hundred-MB venv into a
+# new layer, roughly doubling the image. The runtime user only needs read
+# access to /app (it writes to /data and /tmp).
 RUN echo "${GIT_COMMIT_HASH}" > /app/backend/src/_git_commit.txt && \
-    chmod +x /app/run_migrations.sh && \
-    chown -R app:app /app
+    chmod +x /app/run_migrations.sh
 
 USER 10001:10001
 

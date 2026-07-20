@@ -20,12 +20,16 @@
 #   KATDOCEXTRACT_PORT=3001
 
 services:
+  # No env_file here: the VLLM_* knobs below are interpolated from .env by
+  # compose itself, and the app's secrets (SECRET_KEY, API keys, SMTP…) have
+  # no business inside the GPU sidecars.
   vllm:
     image: vllm/vllm-openai:latest
-    env_file:
-      - .env
     environment:
       TRITON_PTXAS_PATH: /usr/local/cuda/bin/ptxas
+      # For gated models set HF_TOKEN in .env; the mounted ~/.cache/huggingface
+      # token also works if you are logged in locally.
+      HF_TOKEN: ${HF_TOKEN:-}
     ipc: host
     # Shared memory needed for GPU IPC communication between PyTorch processes
     shm_size: "8gb"
@@ -56,10 +60,11 @@ services:
 
   ocr-api:
     image: ghcr.io/katherlab/katdocextract:latest
-    env_file:
-      - .env
+    # KatDocExtract has no authentication — bind to loopback only so it is
+    # reachable for local debugging but not exposed on the network. The backend
+    # reaches it via the compose network at http://ocr-api:8001.
     ports:
-      - "${KATDOCEXTRACT_PORT:-3001}:8001"
+      - "127.0.0.1:${KATDOCEXTRACT_PORT:-3001}:8001"
     depends_on:
       vllm:
         condition: service_healthy

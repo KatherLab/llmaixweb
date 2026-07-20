@@ -1,6 +1,6 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import create_engine, pool
 
 from alembic import context
 from backend.src.db.base import Base
@@ -29,6 +29,19 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
+
+# PostgreSQL-only trigram indexes (add_perf_indexes_2026_06_16) are created by
+# migration but intentionally NOT declared on the models — SQLite databases
+# bootstrapped via create_all() can't build GIN/pg_trgm indexes. Hide them from
+# autogenerate / `alembic check` so they aren't proposed for removal.
+_MIGRATION_ONLY_INDEXES = {"ix_documents_text_trgm", "ix_files_file_name_trgm"}
+
+
+def include_object(obj, name, type_, reflected, compare_to):
+    if type_ == "index" and name in _MIGRATION_ONLY_INDEXES:
+        return False
+    return True
 
 
 def get_url():
@@ -62,6 +75,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -77,20 +91,29 @@ def run_migrations_online() -> None:
     """
     url = get_url()
 
-    # Override the sqlalchemy.url config option with our dynamically generated URL
-    config.set_main_option("sqlalchemy.url", url)
-
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    # Build the engine directly from the URL. Routing it through
+    # config.set_main_option() would hand it to ConfigParser, which treats a
+    # "%" in the DB password as an interpolation marker and crashes.
+    connectable = create_engine(url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
+        # Serialize concurrent `alembic upgrade head` runs (e.g. several
+        # backend replicas booting at once) with a session-level advisory
+        # lock; it is released automatically when this connection closes.
+        if connection.dialect.name == "postgresql":
+            connection.exec_driver_sql(
+                "SELECT pg_advisory_lock(hashtext('llmaixweb_alembic_migrations'))"
+            )
+            # End the transaction the lock statement auto-began — otherwise
+            # alembic sees an "external" transaction and never commits the
+            # migrations. The session-level advisory lock survives the commit
+            # and is held until this connection closes.
+            connection.commit()
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            include_object=include_object,
         )
 
         with context.begin_transaction():

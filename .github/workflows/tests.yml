@@ -41,7 +41,8 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          # Match the frontend build image (Dockerfile.frontend → node:26-alpine).
+          node-version: "26"
           cache: npm
 
       - name: Install dependencies
@@ -95,7 +96,8 @@ jobs:
     # migration chain against a real PostgreSQL here.
     services:
       postgres:
-        image: postgres:16
+        # Match the production database (compose.yml → postgres:18-alpine).
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -127,6 +129,27 @@ jobs:
           SQLALCHEMY_DATABASE_URI: postgresql+psycopg://postgres:postgres@localhost:5432/llmaixweb
         run: uv run alembic upgrade head
 
+      - name: Check for model/migration drift
+        # `alembic check` autogenerates against the just-migrated schema and
+        # fails if the models and migrations have drifted apart (a migration was
+        # forgotten). Migration-only Postgres indexes are excluded via
+        # include_object in alembic/env.py.
+        env:
+          SKIP_RUNTIME_CHECKS: "true"
+          SQLALCHEMY_DATABASE_URI: postgresql+psycopg://postgres:postgres@localhost:5432/llmaixweb
+        run: uv run alembic check
+
+      - name: Verify downgrade path
+        # A migration with a broken/missing downgrade only surfaces when someone
+        # needs to roll back in an incident. Exercise the full chain down to base
+        # and back up to head so downgrades stay runnable.
+        env:
+          SKIP_RUNTIME_CHECKS: "true"
+          SQLALCHEMY_DATABASE_URI: postgresql+psycopg://postgres:postgres@localhost:5432/llmaixweb
+        run: |
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+
   celery-integration:
     name: Celery + Redis integration (real broker)
     runs-on: ubuntu-latest
@@ -137,7 +160,8 @@ jobs:
     # service containers; the test reads TEST_REDIS_URL + TEST_DATABASE_URL.
     services:
       redis:
-        image: redis:7
+        # Match production (compose.yml → redis:8-alpine).
+        image: redis:8
         ports:
           - 6379:6379
         options: >-
@@ -146,7 +170,8 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       postgres:
-        image: postgres:16
+        # Match production (compose.yml → postgres:18-alpine).
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

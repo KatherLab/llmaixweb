@@ -1,8 +1,15 @@
 name: Build and Push Docker Images
 
+# On pull requests and pushes to main the images are BUILT (both platforms) to
+# catch Dockerfile/build breakage early, but not pushed. On a published release
+# the same build is tagged and pushed to the registry.
 on:
   release:
     types: [published]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
@@ -34,7 +41,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      # Only publish on a release; PR/push runs are build-only validation.
       - name: Log in to Container Registry
+        if: github.event_name == 'release'
         uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
@@ -57,10 +66,12 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.platforms }}
-          push: true
+          # Push only on release; PR/push builds validate without publishing.
+          push: ${{ github.event_name == 'release' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             GIT_COMMIT_HASH=${{ github.sha }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/katherlab/${{ matrix.image }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/katherlab/${{ matrix.image }}:buildcache,mode=max
+          # Writing the build cache needs registry push access, so only on release.
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}/katherlab/{1}:buildcache,mode=max', env.REGISTRY, matrix.image) || '' }}
