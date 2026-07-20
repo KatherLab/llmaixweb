@@ -1,7 +1,9 @@
 <!-- src/components/CreateProjectButton.vue -->
 <template>
   <!-- Compact button matching Invite User style -->
-  <BaseButton size="sm" @click="isModalOpen = true">+ Create Project</BaseButton>
+  <BaseButton size="sm" data-testid="create-project-open" @click="isModalOpen = true"
+    >+ Create Project</BaseButton
+  >
 
   <BaseModal
     :open="isModalOpen"
@@ -46,7 +48,12 @@
       </transition>
       <div class="flex justify-end gap-2 pt-2">
         <BaseButton variant="secondary" @click="closeModal"> Cancel </BaseButton>
-        <BaseButton type="submit" :loading="isLoading" :disabled="isLoading">
+        <BaseButton
+          type="submit"
+          :loading="isLoading"
+          :disabled="isLoading"
+          data-testid="create-project-submit"
+        >
           {{ isLoading ? 'Creating...' : 'Create Project' }}
         </BaseButton>
       </div>

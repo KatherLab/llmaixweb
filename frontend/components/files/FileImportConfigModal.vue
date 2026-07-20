@@ -98,7 +98,12 @@
         <label :class="labelClass">Import Strategy</label>
         <div class="flex items-center gap-4">
           <label class="text-content-muted">
-            <input v-model="preprocessingStrategy" type="radio" value="row_by_row" />
+            <input
+              v-model="preprocessingStrategy"
+              type="radio"
+              value="row_by_row"
+              data-testid="import-strategy-row-by-row"
+            />
             <span class="ml-1 text-sm">One document per row</span>
           </label>
           <label class="text-content-muted">
@@ -145,6 +150,7 @@
                 :checked="textColumns.includes(col)"
                 type="checkbox"
                 class="mt-0.5 rounded border-strong text-primary focus:ring-ring"
+                :data-testid="`import-text-column-${col}`"
                 @change="toggleTextColumn(col)"
               />
               <div class="min-w-0 flex-1">
@@ -259,6 +265,7 @@
           (preprocessingStrategy === 'row_by_row' && textColumns.length === 0)
         "
         :loading="saving"
+        data-testid="import-save"
         @click="saveConfig"
       >
         {{ saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Save' }}

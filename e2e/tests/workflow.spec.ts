@@ -32,16 +32,19 @@ async function ensureLoggedIn(page: Page): Promise<void> {
   await page.goto('/projects')
   await page.waitForURL(/\/(first-admin|login)/)
 
+  const fill = (testid: string, value: string) =>
+    page.getByTestId(testid).locator('input').fill(value)
+
   if (page.url().includes('first-admin')) {
-    await page.getByPlaceholder('Full name').fill(ADMIN.fullName)
-    await page.locator('input[type="email"]').fill(ADMIN.email)
-    await page.getByPlaceholder('Password', { exact: true }).fill(ADMIN.password)
-    await page.getByPlaceholder('Confirm password', { exact: true }).fill(ADMIN.password)
-    await page.getByRole('button', { name: 'Create Admin Account' }).click()
+    await fill('first-admin-name', ADMIN.fullName)
+    await fill('first-admin-email', ADMIN.email)
+    await fill('first-admin-password', ADMIN.password)
+    await fill('first-admin-confirm', ADMIN.password)
+    await page.getByTestId('first-admin-submit').click()
   } else {
-    await page.locator('input[type="email"]').fill(ADMIN.email)
-    await page.locator('input[type="password"]').fill(ADMIN.password)
-    await page.getByRole('button', { name: 'Sign in' }).click()
+    await fill('login-email', ADMIN.email)
+    await fill('login-password', ADMIN.password)
+    await page.getByTestId('login-submit').click()
   }
 
   await expect
@@ -51,10 +54,10 @@ async function ensureLoggedIn(page: Page): Promise<void> {
 }
 
 async function createProject(page: Page, name: string): Promise<number> {
-  await page.getByRole('button', { name: '+ Create Project' }).first().click()
+  await page.getByTestId('create-project-open').first().click()
   const dialog = page.getByRole('dialog')
   await dialog.locator('#projectName').fill(name)
-  await dialog.getByRole('button', { name: 'Create Project', exact: true }).click()
+  await dialog.getByTestId('create-project-submit').click()
   await page.waitForURL(/\/projects\/\d+/)
   const match = page.url().match(/\/projects\/(\d+)/)
   if (!match) throw new Error(`no project id in URL: ${page.url()}`)
@@ -74,41 +77,37 @@ async function configureImport(page: Page, projectId: number): Promise<void> {
   await page.goto(`/projects/${projectId}?tab=files`)
   await expect(page.getByText(CSV_NAME)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Configure' }).first().click()
+  await page.getByTestId('file-configure').first().click()
   const dialog = page.getByRole('dialog')
-  await dialog.locator('input[type="radio"][value="row_by_row"]').check()
-  // Text-column checkboxes are label-wrapped with sample text (no clean
-  // accessible name); pick the label that holds a checkbox and the `report` name.
-  await dialog
-    .locator('label:has(input[type="checkbox"])')
-    .filter({ hasText: 'report' })
-    .click()
+  await dialog.getByTestId('import-strategy-row-by-row').check()
+  await dialog.getByTestId('import-text-column-report').check()
   // Option value is the bare column name; the visible label may add " (Recommended)".
   await dialog.locator('#import-case-id').selectOption('id')
-  await dialog.getByRole('button', { name: /^Save/ }).click()
+  await dialog.getByTestId('import-save').click()
   await expect(dialog).toBeHidden()
 }
 
 async function createSchema(page: Page, projectId: number): Promise<void> {
   await page.goto(`/projects/${projectId}?tab=schemas`)
-  await page.getByRole('button', { name: 'Create Schema' }).first().click()
+  await page.getByTestId('create-schema-open').click()
   const dialog = page.getByRole('dialog')
   await dialog.locator('#schema-name').fill('Lung Embolism')
+  // Mode / tab labels are stable UI copy — target them by role.
   await dialog.getByRole('button', { name: 'Advanced' }).click()
   await dialog.getByRole('button', { name: 'Raw JSON' }).click()
-  await dialog.locator('textarea').first().fill(JSON.stringify(SCHEMA_DEFINITION, null, 2))
-  await dialog.getByRole('button', { name: 'Create', exact: true }).click()
+  await dialog.getByTestId('schema-raw-json').fill(JSON.stringify(SCHEMA_DEFINITION, null, 2))
+  await dialog.getByTestId('schema-submit').click()
   await expect(dialog).toBeHidden()
 }
 
 async function createPrompt(page: Page, projectId: number): Promise<void> {
   await page.goto(`/projects/${projectId}?tab=schemas`)
   await page.getByRole('button', { name: 'Extraction Prompts' }).click()
-  await page.getByRole('button', { name: 'Create Prompt' }).first().click()
+  await page.getByTestId('create-prompt-open').click()
   const dialog = page.getByRole('dialog')
   await dialog.locator('#prompt-name').fill('Lung Embolism Extraction')
   await dialog.locator('#simple-prompt').fill(USER_PROMPT)
-  await dialog.getByRole('button', { name: 'Create', exact: true }).click()
+  await dialog.getByTestId('prompt-submit').click()
   await expect(dialog).toBeHidden()
 }
 

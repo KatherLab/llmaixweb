@@ -40,6 +40,7 @@
         placeholder="e.g. your@email.com"
         autocomplete="email"
         :spellcheck="false"
+        data-testid="login-email"
       />
       <FormField
         v-model="password"
@@ -48,6 +49,7 @@
         required
         placeholder="Password"
         autocomplete="current-password"
+        data-testid="login-password"
       >
         <template #trailing>
           <router-link to="/forgot-password" class="text-xs text-primary hover:underline">
@@ -60,6 +62,7 @@
         size="lg"
         :loading="isLoading"
         :disabled="isLoading"
+        data-testid="login-submit"
         class="w-full py-2.5"
       >
         <Lock v-if="!isLoading" class="h-5 w-5" aria-hidden="true" />

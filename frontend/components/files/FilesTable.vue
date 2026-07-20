@@ -50,6 +50,7 @@
               variant="ghost"
               size="sm"
               class="text-xs underline"
+              data-testid="file-configure"
               @click.stop="onConfigureImport(file)"
             >
               {{ file.preprocessing_strategy ? 'Edit' : 'Configure' }}

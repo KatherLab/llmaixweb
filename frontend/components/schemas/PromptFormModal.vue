@@ -281,6 +281,7 @@
             variant="primary"
             :loading="isSubmitting"
             :disabled="!isPromptValid"
+            data-testid="prompt-submit"
             @click="isEdit ? updatePrompt() : createPrompt()"
           >
             {{ isEdit ? 'Update' : 'Create' }}

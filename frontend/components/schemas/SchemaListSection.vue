@@ -7,7 +7,7 @@
           Define the structure for information extraction
         </p>
       </div>
-      <BaseButton @click="emit('create')">
+      <BaseButton data-testid="create-schema-open" @click="emit('create')">
         <Plus class="h-5 w-5" />
         Create Schema
       </BaseButton>

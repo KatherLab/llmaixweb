@@ -20,6 +20,7 @@
         type="text"
         required
         placeholder="Full name"
+        data-testid="first-admin-name"
       />
       <FormField
         v-model="email"
@@ -28,8 +29,15 @@
         required
         maxlength="254"
         placeholder="admin@yourcompany.com"
+        data-testid="first-admin-email"
       />
-      <PasswordInput v-model="password" label="Password" required placeholder="Password" />
+      <PasswordInput
+        v-model="password"
+        label="Password"
+        required
+        placeholder="Password"
+        data-testid="first-admin-password"
+      />
       <FormField
         v-model="confirmPassword"
         label="Confirm Password"
@@ -37,6 +45,7 @@
         required
         placeholder="Confirm password"
         :invalid="!!confirmPassword && confirmPassword !== password"
+        data-testid="first-admin-confirm"
       >
         <template v-if="!!confirmPassword && confirmPassword !== password" #error>
           Passwords do not match
@@ -47,6 +56,7 @@
         size="lg"
         :loading="isLoading"
         :disabled="isLoading || !isFormValid"
+        data-testid="first-admin-submit"
         class="w-full py-2.5"
       >
         {{ isLoading ? 'Creating admin...' : 'Create Admin Account' }}

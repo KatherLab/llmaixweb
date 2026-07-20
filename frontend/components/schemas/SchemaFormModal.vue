@@ -170,6 +170,7 @@
                   :class="[inputClass, 'h-full font-mono resize-none']"
                   placeholder='{"type": "object", "properties": {...}}'
                   required
+                  data-testid="schema-raw-json"
                   @input="onRawSchemaChange"
                   @keydown="preserveCursorPosition"
                 ></textarea>
@@ -205,6 +206,7 @@
             ? 'Fix the highlighted field names first (empty or duplicate names).'
             : undefined
         "
+        data-testid="schema-submit"
         @click="isEdit ? updateSchema() : createSchema()"
       >
         {{ isEdit ? 'Update' : 'Create' }}

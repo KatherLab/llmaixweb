@@ -7,7 +7,7 @@
           Configure how the LLM extracts information from documents
         </p>
       </div>
-      <BaseButton @click="emit('create')">
+      <BaseButton data-testid="create-prompt-open" @click="emit('create')">
         <Plus class="h-5 w-5" />
         Create Prompt
       </BaseButton>
