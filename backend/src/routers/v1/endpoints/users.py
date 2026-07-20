@@ -8,7 +8,6 @@ from fastapi import (
     Body,
     Depends,
     Form,
-    HTTPException,
     Path,
     Query,
     Request,
@@ -29,6 +28,7 @@ from ....core.security import (
 )
 from ....dependencies import get_db, remove_file
 from ....schemas import PasswordSet
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.email_service import (
     is_configured as is_email_configured,
@@ -86,20 +86,28 @@ def create_first_admin(
 
     # Only allow if config enabled and NO admin exists
     if not settings.ALLOW_FIRST_ADMIN_SETUP or any_admin_exists(db):
-        raise HTTPException(status_code=403, detail="First admin creation not allowed.")
+        raise api_error(
+            "users.first_admin_not_allowed",
+            403,
+            "First admin creation not allowed.",
+        )
 
     # Validate and create admin user (role must be 'admin')
     if user_in.role != UserRole.admin:
-        raise HTTPException(
-            status_code=400, detail="Role must be admin for this endpoint."
+        raise api_error(
+            "users.role_must_be_admin",
+            400,
+            "Role must be admin for this endpoint.",
         )
 
     validate_password(user_in.password)
 
     user = db.query(models.User).filter(models.User.email == user_in.email).first()
     if user:
-        raise HTTPException(
-            status_code=400, detail="User with this email already exists."
+        raise api_error(
+            "users.email_already_exists",
+            400,
+            "User with this email already exists.",
         )
 
     new_user = models.User(
@@ -133,14 +141,16 @@ def change_password(
     if not verify_password(
         password_data.old_password, str(current_user.hashed_password)
     ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Old password is incorrect.",
+        raise api_error(
+            "users.old_password_incorrect",
+            status.HTTP_400_BAD_REQUEST,
+            "Old password is incorrect.",
         )
     if password_data.old_password == password_data.new_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be different from the old password.",
+        raise api_error(
+            "users.new_password_same_as_old",
+            status.HTTP_400_BAD_REQUEST,
+            "New password must be different from the old password.",
         )
     validate_password(password_data.new_password)
     current_user.hashed_password = get_password_hash(password_data.new_password)
@@ -167,14 +177,16 @@ def admin_set_user_password(
     """Set a new password for any user (admin only)."""
     user = db.get(models.User, user_id)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
+        raise api_error(
+            "users.not_found",
+            status.HTTP_404_NOT_FOUND,
+            "User not found",
         )
     if user.role == UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot change password of other admin users",
+        raise api_error(
+            "users.cannot_change_other_admin_password",
+            status.HTTP_400_BAD_REQUEST,
+            "Cannot change password of other admin users",
         )
     validate_password(password_data.new_password)
     user.hashed_password = get_password_hash(password_data.new_password)
@@ -200,18 +212,20 @@ def create_user(
 ) -> schemas.UserResponse:
     # Prevent creating admin users via API
     if user_in.role == UserRole.admin:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot create admin user via API!",
+        raise api_error(
+            "users.cannot_create_admin",
+            400,
+            "Cannot create admin user via API!",
         )
 
     # Check if invitation is required by app settings
     if settings.REQUIRE_INVITATION:
         # Ensure invitation token is provided
         if not user_in.invitation_token:
-            raise HTTPException(
-                status_code=400,
-                detail="Unable to create account. Please check your invitation and try again.",
+            raise api_error(
+                "users.account_creation_failed",
+                400,
+                "Unable to create account. Please check your invitation and try again.",
             )
 
     # If an invitation token is provided, validate and mark it as used
@@ -226,22 +240,25 @@ def create_user(
             .first()
         )
         if not invitation:
-            raise HTTPException(
-                status_code=400,
-                detail="Unable to create account. Please check your invitation and try again.",
+            raise api_error(
+                "users.account_creation_failed",
+                400,
+                "Unable to create account. Please check your invitation and try again.",
             )
 
         if _invitation_expired(invitation):
-            raise HTTPException(
-                status_code=400,
-                detail="Unable to create account. Please check your invitation and try again.",
+            raise api_error(
+                "users.account_creation_failed",
+                400,
+                "Unable to create account. Please check your invitation and try again.",
             )
 
         # Check if the email matches the invitation
         if invitation.email and invitation.email != user_in.email:
-            raise HTTPException(
-                status_code=400,
-                detail="Unable to create account. Please check your invitation and try again.",
+            raise api_error(
+                "users.account_creation_failed",
+                400,
+                "Unable to create account. Please check your invitation and try again.",
             )
 
         # Mark the invitation as used
@@ -251,9 +268,10 @@ def create_user(
     # Check if user already exists
     user = db.query(models.User).filter(models.User.email == user_in.email).first()
     if user:
-        raise HTTPException(
-            status_code=400,
-            detail="Unable to create account. Please check your invitation and try again.",
+        raise api_error(
+            "users.account_creation_failed",
+            400,
+            "Unable to create account. Please check your invitation and try again.",
         )
 
     validate_password(user_in.password)
@@ -339,8 +357,10 @@ def delete_my_identity(
     """
     identity = db.get(models.UserIdentity, identity_id)
     if not identity or identity.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Identity not found."
+        raise api_error(
+            "users.identity_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Identity not found.",
         )
     remaining = (
         db.query(models.UserIdentity)
@@ -348,9 +368,10 @@ def delete_my_identity(
         .all()
     )
     if len(remaining) <= 1 and not current_user.hashed_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot disconnect your last sign-in method without a password set on the account.",
+        raise api_error(
+            "users.cannot_disconnect_last_identity",
+            status.HTTP_400_BAD_REQUEST,
+            "Cannot disconnect your last sign-in method without a password set on the account.",
         )
     db.delete(identity)
     db.commit()
@@ -366,23 +387,26 @@ def delete_user(
     """Delete a user (admin only)."""
     # Prevent admin from deleting themselves
     if user_id == current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You cannot delete your own user account",
+        raise api_error(
+            "users.cannot_delete_self",
+            status.HTTP_400_BAD_REQUEST,
+            "You cannot delete your own user account",
         )
 
     user = db.get(models.User, user_id)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
+        raise api_error(
+            "users.not_found",
+            status.HTTP_404_NOT_FOUND,
+            "User not found",
         )
 
     # Prevent deleting admin users
     if user.role == UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete admin users",
+        raise api_error(
+            "users.cannot_delete_admin",
+            status.HTTP_400_BAD_REQUEST,
+            "Cannot delete admin users",
         )
 
     # Collect all stored-file UUIDs (uploaded files + ground truth) from the
@@ -439,16 +463,18 @@ def admin_update_user(
     """Update user details (admin only). Only provided fields will be updated."""
     user = db.get(models.User, user_id)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
+        raise api_error(
+            "users.not_found",
+            status.HTTP_404_NOT_FOUND,
+            "User not found",
         )
 
     # Prevent modifying other admin users (except setting self)
     if user.role == UserRole.admin and user.id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot modify other admin users",
+        raise api_error(
+            "users.cannot_modify_other_admin",
+            status.HTTP_400_BAD_REQUEST,
+            "Cannot modify other admin users",
         )
 
     # Track if we need to revoke tokens (on role/active changes)
@@ -466,24 +492,27 @@ def admin_update_user(
             .first()
         )
         if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already in use",
+            raise api_error(
+                "users.email_in_use",
+                status.HTTP_400_BAD_REQUEST,
+                "Email already in use",
             )
         user.email = str(update_data.email)
     if update_data.role is not None:
         if update_data.role != UserRole.admin and current_user.id == user.id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You cannot demote yourself from admin",
+            raise api_error(
+                "users.cannot_demote_self",
+                status.HTTP_400_BAD_REQUEST,
+                "You cannot demote yourself from admin",
             )
         user.role = update_data.role
         revoke_tokens = True
     if update_data.is_active is not None:
         if current_user.id == user.id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You cannot change your own active status",
+            raise api_error(
+                "users.cannot_change_own_status",
+                status.HTTP_400_BAD_REQUEST,
+                "You cannot change your own active status",
             )
         user.is_active = update_data.is_active
         revoke_tokens = True
@@ -526,15 +555,17 @@ def toggle_user_status(
     """Toggle user active status (admin only)."""
     user = db.get(models.User, user_id)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
+        raise api_error(
+            "users.not_found",
+            status.HTTP_404_NOT_FOUND,
+            "User not found",
         )
 
     if user.role == UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot change status of admin users",
+        raise api_error(
+            "users.cannot_change_admin_status",
+            status.HTTP_400_BAD_REQUEST,
+            "Cannot change status of admin users",
         )
 
     user.is_active = not user.is_active
@@ -584,9 +615,10 @@ def invite(
     # Check if email is already registered
     existing_user = db.query(models.User).filter(models.User.email == email).first()
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists.",
+        raise api_error(
+            "users.email_already_exists",
+            status.HTTP_400_BAD_REQUEST,
+            "User with this email already exists.",
         )
 
     # Generate a unique token
@@ -654,9 +686,10 @@ def delete_invitation(
     """Delete an invitation (admin only)."""
     invitation = db.get(models.Invitation, invitation_id)
     if not invitation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invitation not found",
+        raise api_error(
+            "users.invitation_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Invitation not found",
         )
     db.delete(invitation)
     db.commit()
@@ -677,9 +710,10 @@ def validate_invitation(
         .first()
     )
     if not invitation or _invitation_expired(invitation):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invalid or expired invitation token",
+        raise api_error(
+            "users.invitation_invalid_or_expired",
+            status.HTTP_404_NOT_FOUND,
+            "Invalid or expired invitation token",
         )
     return schemas.InvitationInfo(valid=True, email=str(invitation.email))
 
@@ -768,9 +802,10 @@ def validate_reset_token(
     if not reset_token or reset_token.expires_at < datetime.now(timezone.utc).replace(
         tzinfo=None
     ):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invalid or expired reset token",
+        raise api_error(
+            "users.reset_token_invalid",
+            status.HTTP_404_NOT_FOUND,
+            "Invalid or expired reset token",
         )
     return schemas.PasswordResetValidate(valid=True)
 
@@ -786,9 +821,10 @@ def reset_password(
     """Reset password using a valid reset token."""
     # Validate token in URL matches body
     if body.token != token:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Token mismatch",
+        raise api_error(
+            "users.token_mismatch",
+            status.HTTP_400_BAD_REQUEST,
+            "Token mismatch",
         )
 
     reset_token = (
@@ -799,17 +835,19 @@ def reset_password(
     if not reset_token or reset_token.expires_at < datetime.now(timezone.utc).replace(
         tzinfo=None
     ):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invalid or expired reset token",
+        raise api_error(
+            "users.reset_token_invalid",
+            status.HTTP_404_NOT_FOUND,
+            "Invalid or expired reset token",
         )
 
     # Update user password
     user = db.get(models.User, reset_token.user_id)
     if not user or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invalid or expired reset token",
+        raise api_error(
+            "users.reset_token_invalid",
+            status.HTTP_404_NOT_FOUND,
+            "Invalid or expired reset token",
         )
 
     validate_password(body.new_password)

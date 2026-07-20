@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Body, Depends, Path, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,7 @@ from ....dependencies import get_db
 from ....models import User
 from ....models.sso import IdentityProvider
 from ....services import oidc_service
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.crypto import encrypt
 from ....utils.enums import AuditAction
@@ -62,9 +63,10 @@ def create_provider(
             (IdentityProvider.slug == slug) | (IdentityProvider.name == payload.name)
         )
     ).scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A provider with this name already exists.",
+        raise api_error(
+            "sso.provider_name_exists",
+            status.HTTP_400_BAD_REQUEST,
+            "A provider with this name already exists.",
         )
     # Validate the issuer/discovery up front so misconfig is caught at save.
     oidc_service.discover(payload.issuer_url)
@@ -102,8 +104,10 @@ def update_provider(
 ) -> schemas.IdentityProviderResponse:
     provider = db.get(IdentityProvider, provider_id)
     if not provider:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Provider not found."
+        raise api_error(
+            "sso.provider_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Provider not found.",
         )
 
     if payload.name is not None and payload.name != provider.name:
@@ -115,9 +119,10 @@ def update_provider(
                 IdentityProvider.id != provider.id,
             )
         ).scalar_one_or_none():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A provider with this name already exists.",
+            raise api_error(
+                "sso.provider_name_exists",
+                status.HTTP_400_BAD_REQUEST,
+                "A provider with this name already exists.",
             )
         provider.name = payload.name
         provider.slug = new_slug
@@ -157,8 +162,10 @@ def delete_provider(
 ):
     provider = db.get(IdentityProvider, provider_id)
     if not provider:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Provider not found."
+        raise api_error(
+            "sso.provider_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Provider not found.",
         )
     slug = provider.slug
     db.delete(provider)
@@ -178,8 +185,9 @@ def _slugify(name: str) -> str:
 
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     if not slug:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Provider name must contain alphanumeric characters.",
+        raise api_error(
+            "sso.slug_no_alphanumeric",
+            status.HTTP_400_BAD_REQUEST,
+            "Provider name must contain alphanumeric characters.",
         )
     return slug[:100]

@@ -1,6 +1,6 @@
 # backend/src/routers/v1/endpoints/admin.py
 from celery.result import AsyncResult
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.orm import Session
 
 from backend.src.models import PreprocessingTask
@@ -11,6 +11,7 @@ from ....core.dynamic_settings import reload_settings_cache
 from ....core.security import get_admin_user
 from ....dependencies import get_db
 from ....models import AppSetting
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.crypto import encrypt
 from ....utils.enums import AuditAction
@@ -74,7 +75,9 @@ def update_settings(
     for key, value in updates.items():
         meta = SETTINGS_META.get(key)
         if not meta or meta.get("readonly", False):
-            raise HTTPException(400, f"Cannot edit setting: {key}")
+            raise api_error(
+                "core.cannot_edit_setting", 400, f"Cannot edit setting: {key}", key=key
+            )
         if meta.get("secret", False):
             # Secret overrides are stored ENCRYPTED at rest (Fernet) and never
             # compared against the env default (we can't read the env secret
@@ -109,7 +112,13 @@ def update_settings(
             else:
                 value = str(value)
         except Exception:
-            raise HTTPException(422, f"Invalid value for {key}: {value}")
+            raise api_error(
+                "core.invalid_setting_value",
+                422,
+                f"Invalid value for {key}: {value}",
+                key=key,
+                value=value,
+            )
         # Only store if overridden. Canonicalize bool storage to lowercase
         # "true"/"false" so it round-trips consistently — Python's str(True) is
         # "True", which the frontend's lowercase comparison would parse as false.
@@ -148,10 +157,12 @@ def delete_setting(
 ):
     meta = SETTINGS_META.get(key)
     if not meta or meta.get("readonly", False):
-        raise HTTPException(400, f"Cannot delete setting: {key}")
+        raise api_error(
+            "core.cannot_delete_setting", 400, f"Cannot delete setting: {key}", key=key
+        )
     row = db.get(AppSetting, key)
     if not row:
-        raise HTTPException(status_code=404, detail="Setting not found")
+        raise api_error("core.setting_not_found", 404, "Setting not found")
     db.delete(row)
     db.commit()
     reload_settings_cache()

@@ -6,7 +6,7 @@ import io
 import logging
 
 import pandas as pd
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, Query
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, load_only, selectinload
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, load_only, selectinload
 from .... import models, schemas
 from ....core.security import can_access_project, get_current_user
 from ....dependencies import get_db
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.csv_safety import SafeCsvWriter
 from ....utils.enums import AuditAction
@@ -134,12 +135,13 @@ def get_evaluations(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("evaluations.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's evaluations",
+        raise api_error(
+            "evaluations.not_authorized_access",
+            403,
+            "Not authorized to access this project's evaluations",
         )
 
     # Verify ground truth exists for this project
@@ -151,7 +153,9 @@ def get_evaluations(
     ).scalar_one_or_none()
 
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error(
+            "evaluations.groundtruth_not_found", 404, "Ground truth not found"
+        )
 
     # Get all evaluations for this ground truth. Load only the columns the
     # summary needs; field_metrics / document_metrics / confusion_matrices
@@ -206,10 +210,13 @@ def compare_evaluations(
     # side-by-side matrix and per-eval queries.
     max_evaluations = 10
     if len(evaluation_ids) > max_evaluations:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot compare more than {max_evaluations} evaluations at once "
+        raise api_error(
+            "evaluations.too_many_compare",
+            400,
+            f"Cannot compare more than {max_evaluations} evaluations at once "
             f"(requested {len(evaluation_ids)}).",
+            max_evaluations=max_evaluations,
+            requested=len(evaluation_ids),
         )
 
     project: models.Project | None = db.execute(
@@ -217,12 +224,13 @@ def compare_evaluations(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("evaluations.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's evaluations",
+        raise api_error(
+            "evaluations.not_authorized_access",
+            403,
+            "Not authorized to access this project's evaluations",
         )
 
     # Get evaluations
@@ -245,7 +253,7 @@ def compare_evaluations(
                 evaluations.append((eval_obj, trial))
 
     if not evaluations:
-        raise HTTPException(status_code=404, detail="No evaluations found")
+        raise api_error("evaluations.no_evaluations_found", 404, "No evaluations found")
 
     # Build comparison
     comparison = {
@@ -337,12 +345,13 @@ def get_evaluation_detail(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("evaluations.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's evaluations",
+        raise api_error(
+            "evaluations.not_authorized_access",
+            403,
+            "Not authorized to access this project's evaluations",
         )
 
     evaluation: models.Evaluation | None = db.execute(
@@ -350,7 +359,7 @@ def get_evaluation_detail(
     ).scalar_one_or_none()
 
     if not evaluation:
-        raise HTTPException(status_code=404, detail="Evaluation not found")
+        raise api_error("evaluations.evaluation_not_found", 404, "Evaluation not found")
 
     # Ensure the evaluation belongs to a trial in this project
     trial: models.Trial | None = db.execute(
@@ -361,8 +370,10 @@ def get_evaluation_detail(
     ).scalar_one_or_none()
 
     if not trial:
-        raise HTTPException(
-            status_code=404, detail="Evaluation not found for this project"
+        raise api_error(
+            "evaluations.evaluation_not_found_for_project",
+            404,
+            "Evaluation not found for this project",
         )
 
     # Get detailed evaluation data
@@ -401,12 +412,13 @@ def delete_evaluation(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("evaluations.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to delete this project's evaluations",
+        raise api_error(
+            "evaluations.not_authorized_delete",
+            403,
+            "Not authorized to delete this project's evaluations",
         )
 
     evaluation: models.Evaluation | None = db.execute(
@@ -414,7 +426,7 @@ def delete_evaluation(
     ).scalar_one_or_none()
 
     if not evaluation:
-        raise HTTPException(status_code=404, detail="Evaluation not found")
+        raise api_error("evaluations.evaluation_not_found", 404, "Evaluation not found")
 
     # Ensure the evaluation belongs to a trial in this project
     trial: models.Trial | None = db.execute(
@@ -425,8 +437,10 @@ def delete_evaluation(
     ).scalar_one_or_none()
 
     if not trial:
-        raise HTTPException(
-            status_code=404, detail="Evaluation not found for this project"
+        raise api_error(
+            "evaluations.evaluation_not_found_for_project",
+            404,
+            "Evaluation not found for this project",
         )
 
     db.delete(evaluation)
@@ -458,18 +472,19 @@ def get_document_evaluation(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("evaluations.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's evaluations",
+        raise api_error(
+            "evaluations.not_authorized_access",
+            403,
+            "Not authorized to access this project's evaluations",
         )
     # Get evaluation
     evaluation: models.Evaluation | None = db.execute(
         select(models.Evaluation).where(models.Evaluation.id == evaluation_id)
     ).scalar_one_or_none()
     if not evaluation:
-        raise HTTPException(status_code=404, detail="Evaluation not found")
+        raise api_error("evaluations.evaluation_not_found", 404, "Evaluation not found")
     # Verify evaluation belongs to project
     trial: models.Trial | None = db.execute(
         select(models.Trial).where(
@@ -478,8 +493,10 @@ def get_document_evaluation(
         )
     ).scalar_one_or_none()
     if not trial:
-        raise HTTPException(
-            status_code=404, detail="Evaluation not found for this project"
+        raise api_error(
+            "evaluations.evaluation_not_found_for_project",
+            404,
+            "Evaluation not found for this project",
         )
     # Find document metrics
     doc_metrics = None
@@ -488,7 +505,9 @@ def get_document_evaluation(
             doc_metrics = metrics
             break
     if not doc_metrics:
-        raise HTTPException(status_code=404, detail="Document not found in evaluation")
+        raise api_error(
+            "evaluations.document_not_found", 404, "Document not found in evaluation"
+        )
     # Get detailed metrics
     field_details = {}
     details = (
@@ -554,18 +573,25 @@ def download_evaluations_report(
             if part.strip()
         ]
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid evaluation_ids")
+        raise api_error(
+            "evaluations.invalid_evaluation_ids", 400, "Invalid evaluation_ids"
+        )
     if not evaluation_ids_list:
-        raise HTTPException(status_code=400, detail="No evaluation_ids provided")
+        raise api_error(
+            "evaluations.no_evaluation_ids", 400, "No evaluation_ids provided"
+        )
 
     # Cap the batch: the gather loop issues two DB queries per evaluation (N+1).
     # Compare with compare_evaluations (cap = 10).
     max_evaluations = 50
     if len(evaluation_ids_list) > max_evaluations:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot download more than {max_evaluations} evaluations at once "
+        raise api_error(
+            "evaluations.too_many_download",
+            400,
+            f"Cannot download more than {max_evaluations} evaluations at once "
             f"(requested {len(evaluation_ids_list)}).",
+            max_evaluations=max_evaluations,
+            requested=len(evaluation_ids_list),
         )
 
     # Fetch project and permission check
@@ -573,11 +599,12 @@ def download_evaluations_report(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("evaluations.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's evaluations",
+        raise api_error(
+            "evaluations.not_authorized_access",
+            403,
+            "Not authorized to access this project's evaluations",
         )
 
     # Gather evaluations (and their trials)
@@ -596,7 +623,7 @@ def download_evaluations_report(
             if trial:
                 evaluations.append((eval_obj, trial))
     if not evaluations:
-        raise HTTPException(status_code=404, detail="No evaluations found")
+        raise api_error("evaluations.no_evaluations_found", 404, "No evaluations found")
 
     # Audit the export before streaming. This endpoint can bundle raw document
     # text and ground-truth values (PHI) into the file via the *_content flags,
@@ -936,19 +963,24 @@ def batch_evaluate_trials(
     # across all its documents).
     max_trials = 200
     if len(trial_ids) > max_trials:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot evaluate more than {max_trials} trials at once "
+        raise api_error(
+            "evaluations.too_many_trials",
+            400,
+            f"Cannot evaluate more than {max_trials} trials at once "
             f"(requested {len(trial_ids)}).",
+            max_trials=max_trials,
+            requested=len(trial_ids),
         )
     project: models.Project | None = db.execute(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("evaluations.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to evaluate trials for this project"
+        raise api_error(
+            "evaluations.not_authorized_evaluate",
+            403,
+            "Not authorized to evaluate trials for this project",
         )
     # Verify ground truth
     groundtruth: models.GroundTruth | None = db.execute(
@@ -958,7 +990,9 @@ def batch_evaluate_trials(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error(
+            "evaluations.groundtruth_not_found", 404, "Ground truth not found"
+        )
     # Evaluate trials
     from ....utils.evaluation import EvaluationEngine
 
@@ -988,8 +1022,11 @@ def batch_evaluate_trials(
             logger.warning("Error evaluating trial %s: %s", trial_id, e, exc_info=True)
             errors.append(f"Error evaluating trial {trial_id}")
     if errors and not results:
-        raise HTTPException(
-            status_code=400, detail=f"All evaluations failed: {'; '.join(errors)}"
+        raise api_error(
+            "evaluations.all_evaluations_failed",
+            400,
+            f"All evaluations failed: {'; '.join(errors)}",
+            errors="; ".join(errors),
         )
     record_audit(
         AuditAction.CREATE,
@@ -1023,12 +1060,13 @@ def get_evaluation_errors(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("evaluations.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's evaluations",
+        raise api_error(
+            "evaluations.not_authorized_access",
+            403,
+            "Not authorized to access this project's evaluations",
         )
 
     # Get evaluation
@@ -1037,7 +1075,7 @@ def get_evaluation_errors(
     ).scalar_one_or_none()
 
     if not evaluation:
-        raise HTTPException(status_code=404, detail="Evaluation not found")
+        raise api_error("evaluations.evaluation_not_found", 404, "Evaluation not found")
 
     # Verify evaluation belongs to project
     trial: models.Trial | None = db.execute(
@@ -1048,8 +1086,10 @@ def get_evaluation_errors(
     ).scalar_one_or_none()
 
     if not trial:
-        raise HTTPException(
-            status_code=404, detail="Evaluation not found for this project"
+        raise api_error(
+            "evaluations.evaluation_not_found_for_project",
+            404,
+            "Evaluation not found for this project",
         )
 
     # Get errors from detailed metrics

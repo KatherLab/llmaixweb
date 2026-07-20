@@ -41,6 +41,7 @@ from ....middleware.error_handlers import (
     record_internal_error,
 )
 from ....models.project import document_set_association
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.deletion import (
     cascade_clear_document_references,
@@ -64,7 +65,7 @@ def check_project_access(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("files.project_not_found", 404, "Project not found")
 
     # Admin has full access only when cross-user project access is enabled
     if admin_has_global_project_access(current_user):
@@ -76,8 +77,11 @@ def check_project_access(
 
     # For non-owners, check specific permissions if needed
     # You could extend this with a project_members table for shared projects
-    raise HTTPException(
-        status_code=403, detail=f"Not authorized to {permission} this project"
+    raise api_error(
+        "files.project_forbidden_action",
+        403,
+        f"Not authorized to {permission} this project",
+        permission=permission,
     )
 
 
@@ -378,11 +382,13 @@ def get_project_file(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("files.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's files"
+        raise api_error(
+            "files.project_forbidden",
+            403,
+            "Not authorized to access this project's files",
         )
 
     file: models.File | None = db.execute(
@@ -392,7 +398,7 @@ def get_project_file(
     ).scalar_one_or_none()
 
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise api_error("files.not_found", 404, "File not found")
 
     return schemas.File.model_validate(file)
 
@@ -412,11 +418,13 @@ def get_project_file_content(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("files.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's files"
+        raise api_error(
+            "files.project_forbidden",
+            403,
+            "Not authorized to access this project's files",
         )
 
     file: models.File | None = db.execute(
@@ -426,7 +434,7 @@ def get_project_file_content(
     ).scalar_one_or_none()
 
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise api_error("files.not_found", 404, "File not found")
 
     # Stream the file from storage so a large PDF/image never has to be held in
     # memory in full before being sent to the client.
@@ -478,9 +486,11 @@ def upload_file(
     try:
         file_create = schemas.FileCreate.model_validate_json(file_info)
     except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON in file_info")
+        raise api_error(
+            "files.invalid_file_info_json", 400, "Invalid JSON in file_info"
+        )
     except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise api_error("files.invalid_file_info", 400, str(e), error=str(e))
 
     check_project_access(project_id, current_user, db, permission="write")
 
@@ -743,7 +753,7 @@ def validate_id_column(
         )
     ).scalar_one_or_none()
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise api_error("files.not_found", 404, "File not found")
 
     return _validate_id_column(file, config)
 
@@ -769,7 +779,7 @@ def configure_file_import(
     ).scalar_one_or_none()
 
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise api_error("files.not_found", 404, "File not found")
 
     # Accept "preprocessing_strategy" and/or "file_metadata"
     if "preprocessing_strategy" in config:
@@ -837,7 +847,7 @@ def preview_structured_file(
         )
     ).scalar_one_or_none()
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise api_error("files.not_found", 404, "File not found")
 
     file_content = get_file(file.file_uuid)
     filename = (file.file_name or "").lower()
@@ -965,9 +975,10 @@ def preview_structured_file(
             # The bytes are not parseable as CSV (e.g. a binary file mislabeled
             # as .csv/.xlsx that is neither a valid ZIP nor OLE archive, so it
             # reached here as a fallback). Return a clean 400 instead of a 500.
-            raise HTTPException(
-                status_code=400,
-                detail=(
+            raise api_error(
+                "files.csv_unreadable",
+                400,
+                (
                     "This file could not be read as CSV. It may be binary, "
                     "corrupted, or in an unsupported format. Please re-export it "
                     "as .csv or .xlsx and try again."
@@ -1044,21 +1055,24 @@ def preview_structured_file(
                 # visibility and hand the correlation id to the user, while still
                 # returning a clean 400 (not a 500).
                 error_id = record_internal_error(exc, actor=current_user)
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
+                raise api_error(
+                    "files.xlsx_unreadable",
+                    400,
+                    (
                         "This file is labeled as .xlsx but could not be read as "
                         "an Excel workbook. It may be corrupted. Please re-export "
                         "the file as .xlsx or .csv and try again. Quote this ID to "
                         f"your administrator for support: {error_id}"
                     ),
+                    error_id=error_id,
                 ) from exc
             if _is_ole_xls(head):
                 # Legacy binary .xls (OLE2) with an .xlsx name — Excel opens it,
                 # openpyxl cannot.
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
+                raise api_error(
+                    "files.xlsx_is_legacy_xls",
+                    400,
+                    (
                         "This looks like a legacy binary Excel file (.xls) even "
                         "though it is named .xlsx. Preview of binary .xls is not "
                         "supported — please re-save it as .xlsx or .csv."
@@ -1128,16 +1142,19 @@ def preview_structured_file(
 
     # --------------- Legacy XLS (binary) ----------------
     if decided == "xls":
-        raise HTTPException(
-            status_code=400,
-            detail=(
+        raise api_error(
+            "files.xls_preview_unsupported",
+            400,
+            (
                 "Preview for legacy .xls (binary) files is not supported. "
                 "Please convert the file to .xlsx or .csv and try again."
             ),
         )
 
-    raise HTTPException(
-        status_code=400, detail="Preview not supported for this file type"
+    raise api_error(
+        "files.preview_unsupported_type",
+        400,
+        "Preview not supported for this file type",
     )
 
 
@@ -1250,7 +1267,7 @@ def delete_file(
     ).scalar_one_or_none()
 
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise api_error("files.not_found", 404, "File not found")
 
     doc_count = len(file.documents_as_original) + len(file.documents_as_preprocessed)
 
@@ -1448,10 +1465,13 @@ def batch_delete_files(
     # selectinload + storage removal). Matches the download-zip cap.
     max_files = 200
     if len(file_ids) > max_files:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot delete more than {max_files} files at once "
+        raise api_error(
+            "files.batch_delete_too_many",
+            400,
+            f"Cannot delete more than {max_files} files at once "
             f"(requested {len(file_ids)}).",
+            max_files=max_files,
+            requested=len(file_ids),
         )
 
     deleted = []
@@ -1511,10 +1531,13 @@ def download_files_as_zip(
     # Cap the number of files to bound memory/time for ZIP assembly.
     max_files = 200
     if len(file_ids) > max_files:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot zip more than {max_files} files at once "
+        raise api_error(
+            "files.zip_too_many",
+            400,
+            f"Cannot zip more than {max_files} files at once "
             f"(requested {len(file_ids)}).",
+            max_files=max_files,
+            requested=len(file_ids),
         )
 
     # Batch-load all requested files in one query instead of one per id (N+1).
@@ -1608,8 +1631,10 @@ def move_files(
     check_project_access(target_project_id, current_user, db, permission="write")
 
     if project_id == target_project_id:
-        raise HTTPException(
-            status_code=400, detail="Source and target projects cannot be the same"
+        raise api_error(
+            "files.same_project",
+            400,
+            "Source and target projects cannot be the same",
         )
 
     # Cap the batch: the move loop issues a DB query per file (N+1). An
@@ -1617,10 +1642,13 @@ def move_files(
     # Mirrors batch_delete_files / download_files_as_zip (cap = 200).
     max_files = 200
     if len(file_ids) > max_files:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot move more than {max_files} files at once "
+        raise api_error(
+            "files.move_too_many",
+            400,
+            f"Cannot move more than {max_files} files at once "
             f"(requested {len(file_ids)}).",
+            max_files=max_files,
+            requested=len(file_ids),
         )
 
     # Pre-flight: collect the IDs of all documents that would move, then block
@@ -1810,7 +1838,7 @@ def check_file_links(
     ).scalar_one_or_none()
 
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise api_error("files.not_found", 404, "File not found")
 
     return {
         "file_id": file_id,

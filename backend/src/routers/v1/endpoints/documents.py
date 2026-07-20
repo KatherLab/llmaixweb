@@ -6,7 +6,7 @@ import logging
 import urllib.parse
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, or_, select
@@ -20,6 +20,7 @@ from ....core.security import (
 )
 from ....dependencies import get_db, get_file, remove_file
 from ....models.project import document_set_association
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.deletion import (
     cascade_clear_document_references,
@@ -44,7 +45,7 @@ def check_project_access(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("documents.project_not_found", 404, "Project not found")
 
     # Admin has full access only when cross-user project access is enabled
     if admin_has_global_project_access(current_user):
@@ -55,8 +56,11 @@ def check_project_access(
         return project
 
     # For non-owners, check specific permissions if needed
-    raise HTTPException(
-        status_code=403, detail=f"Not authorized to {permission} this project"
+    raise api_error(
+        "documents.project_forbidden",
+        403,
+        f"Not authorized to {permission} this project",
+        permission=permission,
     )
 
 
@@ -268,10 +272,12 @@ def get_document(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("documents.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's documents"
+        raise api_error(
+            "documents.project_documents_forbidden",
+            403,
+            "Not authorized to access this project's documents",
         )
 
     document: models.Document | None = db.execute(
@@ -281,7 +287,7 @@ def get_document(
         )
     ).scalar_one_or_none()
     if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise api_error("documents.document_not_found", 404, "Document not found")
 
     record_audit(
         AuditAction.DOCUMENT_VIEW,
@@ -317,10 +323,12 @@ def restore_document_version(
         )
     ).scalar_one_or_none()
     if not target:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise api_error("documents.document_not_found", 404, "Document not found")
     if target.is_latest:
-        raise HTTPException(
-            status_code=400, detail="This version is already the latest."
+        raise api_error(
+            "documents.version_already_latest",
+            400,
+            "This version is already the latest.",
         )
 
     # Current latest version(s) sharing the same versioning key (file/config/name).
@@ -508,7 +516,7 @@ def delete_document(
     ).scalar_one_or_none()
 
     if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise api_error("documents.document_not_found", 404, "Document not found")
 
     cascade_counts: dict[str, int] = {}
     if cascade:
@@ -528,9 +536,11 @@ def delete_document(
         referencing = trials_referencing_docs(db, project_id, [document_id])
         if referencing:
             trial_id, trial_name, _ = referencing[0]
-            raise HTTPException(
-                status_code=400,
-                detail=f"Document is referenced in trial '{trial_name or trial_id}'. Remove from trial(s) first.",
+            raise api_error(
+                "documents.document_in_trial",
+                400,
+                f"Document is referenced in trial '{trial_name or trial_id}'. Remove from trial(s) first.",
+                trial=trial_name or trial_id,
             )
 
         # --- Check if document is used in any trial results ---
@@ -546,9 +556,10 @@ def delete_document(
             .first()
         )
         if trial_result:
-            raise HTTPException(
-                status_code=400,
-                detail="Document is referenced in a trial result. Remove results/trials first.",
+            raise api_error(
+                "documents.document_in_trial_result",
+                400,
+                "Document is referenced in a trial result. Remove results/trials first.",
             )
 
         # --- (Optional) Check if document is used in any evaluation metric ---
@@ -562,16 +573,19 @@ def delete_document(
             .first()
         )
         if metric:
-            raise HTTPException(
-                status_code=400,
-                detail="Document is referenced in evaluation metrics. Remove related evaluation/trial first.",
+            raise api_error(
+                "documents.document_in_evaluation_metric",
+                400,
+                "Document is referenced in evaluation metrics. Remove related evaluation/trial first.",
             )
 
         # --- Existing check: Document sets ---
         if document.document_sets:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Document is part of {len(document.document_sets)} document sets. Remove from sets first.",
+            raise api_error(
+                "documents.document_in_sets",
+                400,
+                f"Document is part of {len(document.document_sets)} document sets. Remove from sets first.",
+                count=len(document.document_sets),
             )
 
     # Store file_preprocessing_task_id before deletion for cleanup
@@ -638,12 +652,13 @@ def create_document_set(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("documents.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to create document sets for this project",
+        raise api_error(
+            "documents.create_set_forbidden",
+            403,
+            "Not authorized to create document sets for this project",
         )
 
     # Create the document set
@@ -667,8 +682,10 @@ def create_document_set(
         ).scalar_one_or_none()
 
         if not trial:
-            raise HTTPException(
-                status_code=404, detail="Trial not found in this project"
+            raise api_error(
+                "documents.trial_not_found_in_project",
+                404,
+                "Trial not found in this project",
             )
 
         document_ids = trial.document_ids
@@ -819,7 +836,9 @@ def get_document_set(
     ).scalar_one_or_none()
 
     if not doc_set:
-        raise HTTPException(status_code=404, detail="Document set not found")
+        raise api_error(
+            "documents.document_set_not_found", 404, "Document set not found"
+        )
 
     document_count = (
         db.execute(
@@ -859,7 +878,9 @@ def update_document_set(
     ).scalar_one_or_none()
 
     if not doc_set:
-        raise HTTPException(status_code=404, detail="Document set not found")
+        raise api_error(
+            "documents.document_set_not_found", 404, "Document set not found"
+        )
 
     # Update fields
     for field, value in update_data.model_dump(exclude_unset=True).items():
@@ -938,13 +959,16 @@ def delete_document_set(
     ).scalar_one_or_none()
 
     if not doc_set:
-        raise HTTPException(status_code=404, detail="Document set not found")
+        raise api_error(
+            "documents.document_set_not_found", 404, "Document set not found"
+        )
 
     # 3. Prevent deletion if any trial references this set
     if doc_set.trials and len(doc_set.trials) > 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete document set: one or more trials reference it.",
+        raise api_error(
+            "documents.set_referenced_by_trials",
+            400,
+            "Cannot delete document set: one or more trials reference it.",
         )
 
     # 4. Optionally delete documents first. All reference checks are batched —
@@ -1143,7 +1167,9 @@ def download_all_documents(
     ).scalar_one_or_none()
 
     if not doc_set:
-        raise HTTPException(status_code=404, detail="Document set not found")
+        raise api_error(
+            "documents.document_set_not_found", 404, "Document set not found"
+        )
 
     # Collect only (file_name, file_uuid) for the set's members — do not load
     # the Document rows (and especially not the `text` column). File contents
@@ -1203,7 +1229,9 @@ def get_document_set_stats(
     ).scalar_one_or_none()
 
     if not doc_set:
-        raise HTTPException(status_code=404, detail="Document set not found")
+        raise api_error(
+            "documents.document_set_not_found", 404, "Document set not found"
+        )
 
     # Get document IDs in this set directly from the association table — avoids
     # loading every member Document (incl. the `text` column) as an ORM object.
@@ -1272,7 +1300,7 @@ def create_document_set_from_trial(
     ).scalar_one_or_none()
 
     if not trial:
-        raise HTTPException(status_code=404, detail="Trial not found")
+        raise api_error("documents.trial_not_found", 404, "Trial not found")
 
     # Create document set
     db_set = models.DocumentSet(

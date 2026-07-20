@@ -73,7 +73,7 @@ def test_get_project(client, api_url):
 
     response = client.get(f"{api_url}/project/372849078", headers=headers)
     assert response.status_code == 404
-    assert response.json()["detail"] == "Project not found"
+    assert response.json()["detail"]["code"] == "projects.not_found"
 
 
 # Test Update Project
@@ -1255,7 +1255,7 @@ def test_project_access_control(client, api_url):
     # Try to get the project as another user
     response = client.get(f"{api_url}/project/{project_id}", headers=another_headers)
     assert response.status_code == 403
-    assert response.json()["detail"] == "Not authorized to access this project"
+    assert response.json()["detail"]["code"] == "projects.not_authorized"
 
     # Try to update the project as another user
     updated_project_data = {
@@ -1268,12 +1268,12 @@ def test_project_access_control(client, api_url):
         json=updated_project_data,
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "Not authorized to update this project"
+    assert response.json()["detail"]["code"] == "projects.not_authorized"
 
     # Try to delete the project as another user
     response = client.delete(f"{api_url}/project/{project_id}", headers=another_headers)
     assert response.status_code == 403
-    assert response.json()["detail"] == "Not authorized to delete this project"
+    assert response.json()["detail"]["code"] == "projects.not_authorized"
 
 
 def test_document_set_crud_and_stats(client, api_url):
@@ -1836,7 +1836,7 @@ def test_delete_schema_referenced_by_trial(client, api_url):
         f"{api_url}/project/{project_id}/schema/{schema_id}", headers=headers
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "Cannot delete schema referenced by a trial"
+    assert response.json()["detail"]["code"] == "schemas.referenced_by_trial"
 
 
 # Test Get Available LLM Models

@@ -23,6 +23,7 @@ from ....core.security import (
 )
 from ....dependencies import get_db, get_file
 from ....middleware.error_handlers import internal_error_message
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.csv_safety import SafeDictCsvWriter
 from ....utils.deletion import cascade_delete_trials
@@ -103,7 +104,7 @@ def check_project_access(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("trials.project_not_found", 404, "Project not found")
 
     # Admin has full access only when cross-user project access is enabled
     if admin_has_global_project_access(current_user):
@@ -113,8 +114,11 @@ def check_project_access(
     if project.owner_id == current_user.id:
         return project
 
-    raise HTTPException(
-        status_code=403, detail=f"Not authorized to {permission} this project"
+    raise api_error(
+        "trials.not_authorized_project_action",
+        403,
+        f"Not authorized to {permission} this project",
+        permission=permission,
     )
 
 
@@ -130,10 +134,12 @@ def create_trial(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("trials.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to create trials for this project"
+        raise api_error(
+            "trials.not_authorized_create",
+            403,
+            "Not authorized to create trials for this project",
         )
 
     schema: models.Schema | None = db.execute(
@@ -143,7 +149,7 @@ def create_trial(
         )
     ).scalar_one_or_none()
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error("trials.schema_not_found", 404, "Schema not found")
 
     prompt: models.Prompt | None = db.execute(
         select(models.Prompt).where(
@@ -152,7 +158,7 @@ def create_trial(
         )
     ).scalar_one_or_none()
     if not prompt:
-        raise HTTPException(status_code=404, detail="Prompt not found")
+        raise api_error("trials.prompt_not_found", 404, "Prompt not found")
 
     # 2. Decide document IDs to use: either direct list, or from document set
     document_ids: list[int] = []
@@ -166,8 +172,10 @@ def create_trial(
             )
         ).scalar_one_or_none()
         if not document_set:
-            raise HTTPException(
-                status_code=404, detail="Document set not found in this project"
+            raise api_error(
+                "trials.document_set_not_found",
+                404,
+                "Document set not found in this project",
             )
         # Fetch doc IDs from the set without materializing full Document rows
         # (the relationship would load 100k ORM objects incl. the text column).
@@ -183,7 +191,7 @@ def create_trial(
             .all()
         )
         if not document_ids:
-            raise HTTPException(status_code=400, detail="Document set is empty")
+            raise api_error("trials.document_set_empty", 400, "Document set is empty")
     elif trial.document_ids:
         # Explicit document IDs
         document_ids = trial.document_ids
@@ -201,14 +209,18 @@ def create_trial(
         )
         missing_ids = [doc_id for doc_id in document_ids if doc_id not in found_ids]
         if missing_ids:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Document(s) with id(s) {missing_ids} not found in project {project_id}",
+            raise api_error(
+                "trials.documents_not_found",
+                404,
+                f"Document(s) with id(s) {missing_ids} not found in project {project_id}",
+                missing_ids=missing_ids,
+                project_id=project_id,
             )
     else:
-        raise HTTPException(
-            status_code=400,
-            detail="Either document_ids or document_set_id must be provided",
+        raise api_error(
+            "trials.no_documents_specified",
+            400,
+            "Either document_ids or document_set_id must be provided",
         )
 
     # Dedupe (order-preserving): a duplicated id would inflate the trial's
@@ -222,7 +234,9 @@ def create_trial(
     base_url = trial.base_url or settings.OPENAI_API_BASE
 
     if llm_model is None or api_key is None or base_url is None:
-        raise HTTPException(status_code=400, detail="LLM configuration is incomplete")
+        raise api_error(
+            "trials.llm_config_incomplete", 400, "LLM configuration is incomplete"
+        )
 
     # Validate the user-supplied endpoint against the SSRF policy (blocks cloud
     # metadata hosts / non-http schemes). The extraction clients also disable
@@ -232,8 +246,10 @@ def create_trial(
         validate_user_endpoint(base_url)
         enforce_endpoint_allowlist(base_url, settings.ALLOWED_LLM_ENDPOINTS)
     except UnsafeEndpointError:
-        raise HTTPException(
-            status_code=400, detail="The provided LLM endpoint URL is not allowed."
+        raise api_error(
+            "trials.llm_endpoint_not_allowed",
+            400,
+            "The provided LLM endpoint URL is not allowed.",
         )
 
     # Only admins may run extraction synchronously in the request thread
@@ -243,16 +259,21 @@ def create_trial(
     # through Celery. Mirrors the preprocessing router's guard. Checked before
     # any DB writes so a 403 doesn't leave an orphaned PROCESSING row behind.
     if trial.bypass_celery and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins may set bypass_celery")
+        raise api_error(
+            "trials.bypass_celery_admin_only",
+            403,
+            "Only admins may set bypass_celery",
+        )
 
     # With Celery disabled there is no worker, no queue, and no sweeper — a
     # non-bypass trial could only ever fail at dispatch. Refuse it up front
     # with an explicit reason instead of committing a trial row that
     # immediately dies with an opaque "could not queue" error.
     if settings.DISABLE_CELERY and not trial.bypass_celery:
-        raise HTTPException(
-            status_code=503,
-            detail="Background processing is disabled on this server "
+        raise api_error(
+            "trials.celery_disabled",
+            503,
+            "Background processing is disabled on this server "
             "(DISABLE_CELERY). Enable Celery, or run the trial with "
             "bypass_celery (admins only).",
         )
@@ -501,9 +522,10 @@ def create_trial(
                 e,
                 exc_info=True,
             )
-            raise HTTPException(
-                status_code=503,
-                detail="Could not queue trial for background processing. "
+            raise api_error(
+                "trials.dispatch_failed",
+                503,
+                "Could not queue trial for background processing. "
                 "Please try again later.",
             )
 
@@ -545,7 +567,7 @@ def retry_trial(
         )
     ).scalar_one_or_none()
     if not source:
-        raise HTTPException(status_code=404, detail="Trial not found")
+        raise api_error("trials.trial_not_found", 404, "Trial not found")
 
     # Re-run against the same source of documents the original used: the set (so
     # current membership is picked up) if it was set-based, otherwise the exact
@@ -561,9 +583,10 @@ def retry_trial(
             int(key) for key in failures if isinstance(key, str) and key.isdigit()
         )
         if not document_ids:
-            raise HTTPException(
-                status_code=400,
-                detail="Trial has no failed documents to retry",
+            raise api_error(
+                "trials.no_failed_documents",
+                400,
+                "Trial has no failed documents to retry",
             )
         document_set_id = None
 
@@ -773,10 +796,12 @@ def get_trial(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("trials.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's trials"
+        raise api_error(
+            "trials.not_authorized_access",
+            403,
+            "Not authorized to access this project's trials",
         )
 
     # noload keeps serialization from lazy-loading every result anyway when
@@ -803,7 +828,7 @@ def get_trial(
         )
 
     if not trial:
-        raise HTTPException(status_code=404, detail="Trial not found")
+        raise api_error("trials.trial_not_found", 404, "Trial not found")
     return schemas.Trial.model_validate(trial)
 
 
@@ -838,7 +863,7 @@ def list_trial_results(
         )
     ).scalar_one_or_none()
     if not trial:
-        raise HTTPException(status_code=404, detail="Trial not found")
+        raise api_error("trials.trial_not_found", 404, "Trial not found")
 
     TR = models.TrialResult
     Doc = models.Document
@@ -850,8 +875,11 @@ def list_trial_results(
         try:
             status_enum = TrialResultStatus(status)
         except ValueError:
-            raise HTTPException(
-                status_code=400, detail=f"Invalid status filter: {status}"
+            raise api_error(
+                "trials.invalid_status_filter",
+                400,
+                f"Invalid status filter: {status}",
+                status=status,
             )
         base = base.where(TR.status == status_enum)
 
@@ -944,10 +972,12 @@ def update_trial(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("trials.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to update trials for this project"
+        raise api_error(
+            "trials.not_authorized_update",
+            403,
+            "Not authorized to update trials for this project",
         )
 
     trial = db.execute(
@@ -956,7 +986,7 @@ def update_trial(
         )
     ).scalar_one_or_none()
     if not trial:
-        raise HTTPException(status_code=404, detail="Trial not found")
+        raise api_error("trials.trial_not_found", 404, "Trial not found")
 
     updated = False
     if trial_update.name is not None:
@@ -967,7 +997,9 @@ def update_trial(
         updated = True
 
     if not updated:
-        raise HTTPException(status_code=400, detail="No updatable fields provided")
+        raise api_error(
+            "trials.no_updatable_fields", 400, "No updatable fields provided"
+        )
 
     db.commit()
     db.refresh(trial)
@@ -991,9 +1023,9 @@ def cancel_trial(
     check_project_access(project_id, current_user, db)
     trial = db.get(models.Trial, trial_id)
     if not trial or trial.project_id != project_id:
-        raise HTTPException(status_code=404, detail="Trial not found")
+        raise api_error("trials.trial_not_found", 404, "Trial not found")
     if trial.is_cancelled or trial.status in ("completed", "failed", "cancelled"):
-        raise HTTPException(status_code=400, detail="Trial cannot be cancelled")
+        raise api_error("trials.cannot_cancel", 400, "Trial cannot be cancelled")
 
     trial.is_cancelled = True
     trial.status = models.TrialStatus.CANCELLED
@@ -1024,10 +1056,12 @@ def delete_trial(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("trials.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to delete trials for this project"
+        raise api_error(
+            "trials.not_authorized_delete",
+            403,
+            "Not authorized to delete trials for this project",
         )
 
     trial: models.Trial | None = db.execute(
@@ -1036,15 +1070,16 @@ def delete_trial(
         )
     ).scalar_one_or_none()
     if not trial:
-        raise HTTPException(status_code=404, detail="Trial not found")
+        raise api_error("trials.trial_not_found", 404, "Trial not found")
 
     # Deleting a running trial doesn't stop its worker: the task keeps
     # calling the LLM and writing results against a vanished row. Require
     # cancellation (which the task observes) before deletion.
     if trial.status in (models.TrialStatus.PENDING, models.TrialStatus.PROCESSING):
-        raise HTTPException(
-            status_code=409,
-            detail="Trial is still running. Cancel it before deleting.",
+        raise api_error(
+            "trials.still_running",
+            409,
+            "Trial is still running. Cancel it before deleting.",
         )
 
     trial_data = schemas.Trial.model_validate(trial)
@@ -1096,10 +1131,12 @@ def download_trial_results(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("trials.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's trials"
+        raise api_error(
+            "trials.not_authorized_access",
+            403,
+            "Not authorized to access this project's trials",
         )
     trial = db.execute(
         select(models.Trial).where(
@@ -1107,7 +1144,7 @@ def download_trial_results(
         )
     ).scalar_one_or_none()
     if not trial:
-        raise HTTPException(status_code=404, detail="Trial not found")
+        raise api_error("trials.trial_not_found", 404, "Trial not found")
 
     # Prefer the user-set trial name for the download filename, falling back to
     # the project-wise "trial_N" number so it still matches the UI when unnamed.
@@ -1133,7 +1170,7 @@ def download_trial_results(
         .all()
     )
     if not results:
-        raise HTTPException(status_code=404, detail="No results found for this trial")
+        raise api_error("trials.no_results", 404, "No results found for this trial")
 
     # Exporting a trial's extracted results (PHI leaving the system as a file).
     record_audit(
@@ -1493,7 +1530,7 @@ def download_trial_results(
                 },
             )
 
-    raise HTTPException(status_code=404, detail="No results found for this trial")
+    raise api_error("trials.no_results", 404, "No results found for this trial")
 
 
 @router.post("/{trial_id}/evaluate", response_model=schemas.EvaluationSummary)
@@ -1512,10 +1549,12 @@ def evaluate_trial(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("trials.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to evaluate trials for this project"
+        raise api_error(
+            "trials.not_authorized_evaluate",
+            403,
+            "Not authorized to evaluate trials for this project",
         )
 
     trial: models.Trial | None = db.execute(
@@ -1524,7 +1563,7 @@ def evaluate_trial(
         )
     ).scalar_one_or_none()
     if not trial:
-        raise HTTPException(status_code=404, detail="Trial not found")
+        raise api_error("trials.trial_not_found", 404, "Trial not found")
 
     groundtruth: models.GroundTruth | None = db.execute(
         select(models.GroundTruth).where(
@@ -1533,7 +1572,7 @@ def evaluate_trial(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("trials.groundtruth_not_found", 404, "Ground truth not found")
 
     from ....utils.evaluation import EvaluationEngine
 
@@ -1571,8 +1610,10 @@ def evaluate_trial(
         # Don't echo the internal exception string to the client — it can
         # contain DB error messages, file paths, or library internals.
         logger.warning("Evaluation validation failed for trial %s: %s", trial_id, e)
-        raise HTTPException(
-            status_code=400, detail="Validation failed. See server logs for details."
+        raise api_error(
+            "trials.validation_failed",
+            400,
+            "Validation failed. See server logs for details.",
         )
 
     try:
@@ -1582,7 +1623,7 @@ def evaluate_trial(
             force_recalculate=force_recalculate,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise api_error("trials.evaluation_value_error", 400, str(e), error=str(e))
     except Exception as e:
         logger.error(
             "Evaluation failed for trial %s / ground truth %s: %s",

@@ -39,8 +39,15 @@ that point forward.
   ground-truth, landing, and shared-component views are now translated via
   `$t()` (~2,250 keys per locale in en/de/fr/es). A second CI guard,
   `npm run i18n:usage`, statically verifies every referenced message key exists
-  in the source catalog. Backend error-message localization follows in a later
-  phase.
+  in the source catalog.
+- Localized backend error messages (frontend rendering): user-facing API errors
+  now carry a stable machine code plus an English fallback (`detail = { code,
+  message, params }`); the frontend renders the message in the user's chosen
+  language via the new `errors.*` catalog namespace, falling back to the English
+  text for any un-migrated endpoint or missing translation. ~300 error sites
+  across the auth, users, projects, files, documents, preprocessing, schemas,
+  prompts, trials, evaluation, ground-truth, and SSO domains were migrated.
+  Audit-log entries and server logs remain English by design.
 
 ### Changed
 

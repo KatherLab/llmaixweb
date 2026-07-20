@@ -140,7 +140,8 @@ def test_restore_already_latest_returns_400(client, api_url):
         headers=headers,
     )
     assert resp.status_code == 400
-    assert "already the latest" in resp.json()["detail"].lower()
+    assert resp.json()["detail"]["code"] == "documents.version_already_latest"
+    assert "already the latest" in resp.json()["detail"]["message"].lower()
 
 
 def test_restore_unknown_document_returns_404(client, api_url):

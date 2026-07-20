@@ -157,7 +157,7 @@ def test_batch_delete_rejects_oversized_batch(client, api_url):
         json={"file_ids": list(range(1, 202)), "force": False},
     )
     assert resp.status_code == 400
-    assert "200" in resp.json()["detail"]
+    assert "200" in resp.json()["detail"]["message"]
 
     client.delete(f"{api_url}/project/{project_id}", headers=headers)
 
@@ -185,7 +185,7 @@ def test_batch_delete_isolates_per_file_errors(client, api_url):
     errors_by_id = {e["file_id"]: e for e in body["errors"]}
     assert linked["id"] in errors_by_id
     assert "linked" in errors_by_id[linked["id"]]["error"]["message"]
-    assert errors_by_id[99999999]["error"] == "File not found"
+    assert errors_by_id[99999999]["error"]["message"] == "File not found"
 
     # The linked file must still exist after the refused delete.
     assert _file_uuid(linked["id"]) is not None
@@ -456,7 +456,7 @@ def test_move_rejects_same_project_and_oversized_batch(client, api_url):
         json={"file_ids": [1], "target_project_id": source_id},
     )
     assert resp.status_code == 400
-    assert "same" in resp.json()["detail"]
+    assert "same" in resp.json()["detail"]["message"]
 
     resp = client.post(
         f"{api_url}/project/{source_id}/file/move",
@@ -464,7 +464,7 @@ def test_move_rejects_same_project_and_oversized_batch(client, api_url):
         json={"file_ids": list(range(1, 202)), "target_project_id": target_id},
     )
     assert resp.status_code == 400
-    assert "200" in resp.json()["detail"]
+    assert "200" in resp.json()["detail"]["message"]
 
     client.delete(f"{api_url}/project/{source_id}", headers=headers)
     client.delete(f"{api_url}/project/{target_id}", headers=headers)

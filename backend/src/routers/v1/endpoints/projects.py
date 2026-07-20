@@ -2,7 +2,7 @@
 import datetime
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session, load_only, noload, selectinload
 
@@ -13,6 +13,7 @@ from ....core.security import (
     get_current_user,
 )
 from ....dependencies import get_db, remove_file
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.deletion import cascade_delete_project
 from ....utils.enums import AuditAction
@@ -253,7 +254,7 @@ def check_project_access(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("projects.not_found", 404, "Project not found")
 
     # Admin has full access only when cross-user project access is enabled
     if admin_has_global_project_access(current_user):
@@ -265,8 +266,11 @@ def check_project_access(
 
     # For non-owners, check specific permissions if needed
     # You could extend this with a project_members table for shared projects
-    raise HTTPException(
-        status_code=403, detail=f"Not authorized to {permission} this project"
+    raise api_error(
+        "projects.not_authorized",
+        403,
+        f"Not authorized to {permission} this project",
+        permission=permission,
     )
 
 
@@ -440,12 +444,15 @@ def get_project(
     ).first()
 
     if row is None:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("projects.not_found", 404, "Project not found")
     project, doc_count, schema_count, prompt_count, trial_count, eval_count = row
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project"
+        raise api_error(
+            "projects.not_authorized",
+            403,
+            "Not authorized to access this project",
+            permission="access",
         )
 
     project_dict = {
@@ -511,11 +518,14 @@ def update_project(
     ).scalar_one_or_none()
 
     if not existing_project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("projects.not_found", 404, "Project not found")
 
     if not can_access_project(current_user, existing_project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to update this project"
+        raise api_error(
+            "projects.not_authorized",
+            403,
+            "Not authorized to update this project",
+            permission="update",
         )
 
     update_data = project.model_dump(exclude_unset=True)
@@ -554,11 +564,14 @@ def delete_project(
     ).scalar_one_or_none()
 
     if not existing_project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("projects.not_found", 404, "Project not found")
 
     if not can_access_project(current_user, existing_project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to delete this project"
+        raise api_error(
+            "projects.not_authorized",
+            403,
+            "Not authorized to delete this project",
+            permission="delete",
         )
 
     # Collect stored-file UUIDs (uploaded files + ground truth) before the

@@ -56,3 +56,6 @@ test_local_storage/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# i18n Phase 3 temp catalog fragments
+.i18n-phase3/

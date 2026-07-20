@@ -1,7 +1,7 @@
 # backend/src/routers/v1/endpoints/prompts.py
 """Prompt endpoints for projects."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,7 @@ from ....core.security import (
     get_current_user,
 )
 from ....dependencies import get_db
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
 from ....utils.helpers import validate_prompt
@@ -28,7 +29,7 @@ def check_project_access(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("prompts.project_not_found", 404, "Project not found")
 
     # Admin has full access only when cross-user project access is enabled
     if admin_has_global_project_access(current_user):
@@ -38,8 +39,11 @@ def check_project_access(
     if project.owner_id == current_user.id:
         return project
 
-    raise HTTPException(
-        status_code=403, detail=f"Not authorized to {permission} this project"
+    raise api_error(
+        "prompts.project_forbidden",
+        403,
+        f"Not authorized to {permission} this project",
+        permission=permission,
     )
 
 
@@ -54,10 +58,12 @@ def create_prompt(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("prompts.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to create prompts for this project"
+        raise api_error(
+            "prompts.create_forbidden",
+            403,
+            "Not authorized to create prompts for this project",
         )
 
     # Validate prompt
@@ -91,10 +97,12 @@ def get_prompts(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("prompts.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's prompts"
+        raise api_error(
+            "prompts.access_forbidden",
+            403,
+            "Not authorized to access this project's prompts",
         )
 
     prompts_list = list(
@@ -122,10 +130,12 @@ def get_prompt(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("prompts.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's prompts"
+        raise api_error(
+            "prompts.access_forbidden",
+            403,
+            "Not authorized to access this project's prompts",
         )
 
     prompt: models.Prompt | None = db.execute(
@@ -134,7 +144,7 @@ def get_prompt(
         )
     ).scalar_one_or_none()
     if not prompt:
-        raise HTTPException(status_code=404, detail="Prompt not found")
+        raise api_error("prompts.not_found", 404, "Prompt not found")
     return schemas.Prompt.model_validate(prompt)
 
 
@@ -150,10 +160,12 @@ def update_prompt(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("prompts.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to update prompts for this project"
+        raise api_error(
+            "prompts.update_forbidden",
+            403,
+            "Not authorized to update prompts for this project",
         )
 
     existing_prompt: models.Prompt | None = db.execute(
@@ -162,7 +174,7 @@ def update_prompt(
         )
     ).scalar_one_or_none()
     if not existing_prompt:
-        raise HTTPException(status_code=404, detail="Prompt not found")
+        raise api_error("prompts.not_found", 404, "Prompt not found")
 
     # Create a temporary object to validate
     temp_prompt = schemas.PromptUpdate(
@@ -203,10 +215,12 @@ def delete_prompt(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("prompts.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to delete prompts from this project"
+        raise api_error(
+            "prompts.delete_forbidden",
+            403,
+            "Not authorized to delete prompts from this project",
         )
 
     prompt: models.Prompt | None = db.execute(
@@ -215,7 +229,7 @@ def delete_prompt(
         )
     ).scalar_one_or_none()
     if not prompt:
-        raise HTTPException(status_code=404, detail="Prompt not found")
+        raise api_error("prompts.not_found", 404, "Prompt not found")
 
     # Check if the prompt is referenced by any trials
     trial = (
@@ -224,8 +238,10 @@ def delete_prompt(
         .first()
     )
     if trial:
-        raise HTTPException(
-            status_code=400, detail="Cannot delete prompt referenced by a trial"
+        raise api_error(
+            "prompts.referenced_by_trial",
+            400,
+            "Cannot delete prompt referenced by a trial",
         )
 
     db.delete(prompt)

@@ -498,7 +498,7 @@ def test_celery_trial_dispatch_failure_marks_failed_not_stuck(
         },
     )
     assert resp.status_code == 503, resp.text
-    assert "disabled" in resp.json()["detail"].lower()
+    assert resp.json()["detail"]["code"] == "trials.celery_disabled"
     trials = client.get(
         f"{api_url}/project/{project_id}/trial", headers=headers
     ).json()["items"]

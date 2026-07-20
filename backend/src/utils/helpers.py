@@ -8,12 +8,12 @@ from datetime import datetime, timezone
 from typing import Any
 
 import requests
-from fastapi import HTTPException
 from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from backend.src import models, schemas
+from backend.src.utils.api_errors import api_error
 
 # If your enums/constants are here:
 
@@ -787,9 +787,10 @@ def validate_prompt(prompt: schemas.PromptCreate | schemas.PromptUpdate) -> None
     """
     # Check that at least one prompt is provided
     if not prompt.system_prompt and not prompt.user_prompt:
-        raise HTTPException(
-            status_code=400,
-            detail="At least one of system_prompt or user_prompt must be provided",
+        raise api_error(
+            "core.prompt_required",
+            400,
+            "At least one of system_prompt or user_prompt must be provided",
         )
 
     # Placeholder validation removed - document is auto-injected if placeholder is missing

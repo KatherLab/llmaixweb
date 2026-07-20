@@ -208,7 +208,7 @@ def test_legacy_ole_xls_rejected_with_clear_message(client, api_url, project_id)
 
     resp = _preview(client, api_url, headers, project_id, file_id)
     assert resp.status_code == 400, resp.text
-    assert ".xls (binary)" in resp.json()["detail"]
+    assert ".xls (binary)" in resp.json()["detail"]["message"]
 
 
 def test_textual_bytes_named_xlsx_fall_back_to_csv(client, api_url, project_id):
@@ -251,7 +251,7 @@ def test_zip_but_not_workbook_xlsx_returns_400_with_error_id(
 
     resp = _preview(client, api_url, headers, project_id, file_id)
     assert resp.status_code == 400, resp.text
-    detail = resp.json()["detail"]
+    detail = resp.json()["detail"]["message"]
     assert "could not be read as an Excel workbook" in detail
     assert "Quote this ID" in detail
 

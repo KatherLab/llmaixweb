@@ -1,7 +1,7 @@
 # backend/src/routers/v1/endpoints/llm.py
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from ....schemas.other import (
     LLMModelTestRequest,
     LLMVlmImageSupportRequest,
 )
+from ....utils.api_errors import api_error
 from ....utils.helpers import test_remote_image_support
 from ....utils.info_extraction import (
     get_available_models,
@@ -156,9 +157,9 @@ def test_model_with_schema_endpoint(
         select(models.Project).where(models.Project.id == body.project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("core.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise api_error("core.not_authorized", 403, "Not authorized")
 
     schema = db.execute(
         select(models.Schema).where(

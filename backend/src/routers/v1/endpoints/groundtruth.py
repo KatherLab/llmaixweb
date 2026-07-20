@@ -29,6 +29,7 @@ from ....dependencies import (
     save_file,
     save_upload_stream_checked,
 )
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction, ComparisonMethod
 from ....utils.helpers import extract_field_types_from_schema
@@ -91,16 +92,19 @@ async def upload_groundtruth(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to upload ground truth to this project",
+        raise api_error(
+            "groundtruth.not_authorized_upload",
+            403,
+            "Not authorized to upload ground truth to this project",
         )
     # Validate format
     if format not in ["json", "csv", "xlsx", "zip"]:
-        raise HTTPException(
-            status_code=400, detail="Invalid format. Must be json, csv, xlsx, or zip"
+        raise api_error(
+            "groundtruth.invalid_format",
+            400,
+            "Invalid format. Must be json, csv, xlsx, or zip",
         )
     # Save the file
     if multiple_json and files:
@@ -108,10 +112,13 @@ async def upload_groundtruth(
         # BytesIO ZIP buffer, so an unbounded count could exhaust memory.
         max_files = 100
         if len(files) > max_files:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Cannot upload more than {max_files} JSON files at once "
+            raise api_error(
+                "groundtruth.too_many_files",
+                400,
+                f"Cannot upload more than {max_files} JSON files at once "
                 f"(requested {len(files)}).",
+                max_files=max_files,
+                requested=len(files),
             )
         # Create a ZIP file in memory containing all JSON files
         import io
@@ -125,9 +132,11 @@ async def upload_groundtruth(
                 try:
                     json.loads(content)
                 except json.JSONDecodeError:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"File {json_file.filename} is not valid JSON",
+                    raise api_error(
+                        "groundtruth.invalid_json_file",
+                        400,
+                        f"File {json_file.filename} is not valid JSON",
+                        filename=json_file.filename,
                     )
                 zf.writestr(json_file.filename or "", content)
 
@@ -143,15 +152,17 @@ async def upload_groundtruth(
         # ground-truth file can't exhaust process memory.
         upload_file = file or (files[0] if files else None)
         if not upload_file:
-            raise HTTPException(status_code=400, detail="No file provided")
+            raise api_error("groundtruth.no_file_provided", 400, "No file provided")
         file_uuid = await run_in_threadpool(save_upload_stream_checked, upload_file)
     # Derive a name safely: ``file`` may be None in the multiple_json path
     # (where the caller must pass ``name`` explicitly).
     fallback_name = file.filename if file else None
     gt_name = name or fallback_name
     if not gt_name:
-        raise HTTPException(
-            status_code=400, detail="A name is required when no single file is provided"
+        raise api_error(
+            "groundtruth.name_required",
+            400,
+            "A name is required when no single file is provided",
         )
     # GroundTruth.name is String(100); a long filename would fail the insert
     # with a DataError. Sanitize + truncate instead.
@@ -201,12 +212,13 @@ def get_groundtruth(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's ground truth",
+        raise api_error(
+            "groundtruth.not_authorized_access",
+            403,
+            "Not authorized to access this project's ground truth",
         )
 
     groundtruth: models.GroundTruth | None = db.execute(
@@ -217,7 +229,7 @@ def get_groundtruth(
     ).scalar_one_or_none()
 
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     return schemas.GroundTruth.model_validate(groundtruth)
 
@@ -236,12 +248,13 @@ def delete_groundtruth(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to delete this project's ground truth",
+        raise api_error(
+            "groundtruth.not_authorized_delete",
+            403,
+            "Not authorized to delete this project's ground truth",
         )
 
     groundtruth: models.GroundTruth | None = db.execute(
@@ -252,7 +265,7 @@ def delete_groundtruth(
     ).scalar_one_or_none()
 
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     # Capture the storage UUID before the row is deleted, then commit the DB
     # deletion first and only remove the stored bytes afterwards. If we remove
@@ -313,11 +326,12 @@ def get_groundtruth_files(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to access this project's ground truth files",
+        raise api_error(
+            "groundtruth.not_authorized_access_files",
+            403,
+            "Not authorized to access this project's ground truth files",
         )
     ground_truths = list(
         db.execute(
@@ -348,12 +362,13 @@ def update_groundtruth(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to update this project's ground truth",
+        raise api_error(
+            "groundtruth.not_authorized_update",
+            403,
+            "Not authorized to update this project's ground truth",
         )
 
     groundtruth: models.GroundTruth | None = db.execute(
@@ -364,7 +379,7 @@ def update_groundtruth(
     ).scalar_one_or_none()
 
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     if name:
         # GroundTruth.name is String(100) — sanitize + truncate (see upload)
@@ -441,10 +456,12 @@ def update_ground_truth_id_column(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to update this project"
+        raise api_error(
+            "groundtruth.not_authorized_update_project",
+            403,
+            "Not authorized to update this project",
         )
 
     # Get ground truth
@@ -455,15 +472,16 @@ def update_ground_truth_id_column(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     # Update ID column/field (column is String(200) — reject rather than
     # truncate, since a silently-shortened name would never match a header)
     id_column = strip_nul(id_column).strip()
     if len(id_column) > 200:
-        raise HTTPException(
-            status_code=400,
-            detail="ID column name is too long (max 200 characters).",
+        raise api_error(
+            "groundtruth.id_column_too_long",
+            400,
+            "ID column name is too long (max 200 characters).",
         )
     groundtruth.id_column_name = id_column
 
@@ -498,9 +516,9 @@ def preview_groundtruth(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise api_error("groundtruth.not_authorized", 403, "Not authorized")
 
     groundtruth: models.GroundTruth | None = db.execute(
         select(models.GroundTruth).where(
@@ -509,7 +527,7 @@ def preview_groundtruth(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     from ....utils.evaluation import EvaluationEngine
 
@@ -594,10 +612,12 @@ def configure_field_mapping(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to configure field mappings"
+        raise api_error(
+            "groundtruth.not_authorized_configure_mappings",
+            403,
+            "Not authorized to configure field mappings",
         )
 
     # Validate groundtruth exists
@@ -608,7 +628,7 @@ def configure_field_mapping(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     # Validate schema exists
     schema: models.Schema | None = db.execute(
@@ -618,7 +638,7 @@ def configure_field_mapping(
         )
     ).scalar_one_or_none()
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error("groundtruth.schema_not_found", 404, "Schema not found")
 
     # Validate that every mapped schema_field is an actual leaf path in the
     # schema. A typo'd path would otherwise silently yield None predictions
@@ -631,13 +651,15 @@ def configure_field_mapping(
         m.schema_field for m in mappings if m.schema_field not in valid_schema_paths
     ]
     if invalid_paths:
-        raise HTTPException(
-            status_code=422,
-            detail=(
+        raise api_error(
+            "groundtruth.invalid_schema_paths",
+            422,
+            (
                 "Schema field path(s) not found in schema: "
                 f"{', '.join(invalid_paths)}. Use a leaf path from the schema "
                 "(e.g. 'patient.age' or 'lab_results[].value')."
             ),
+            paths=", ".join(invalid_paths),
         )
 
     # Delete existing mappings for this groundtruth-schema combination
@@ -686,10 +708,12 @@ def get_field_mappings(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access field mappings"
+        raise api_error(
+            "groundtruth.not_authorized_access_mappings",
+            403,
+            "Not authorized to access field mappings",
         )
 
     # Validate groundtruth exists
@@ -700,7 +724,7 @@ def get_field_mappings(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     # Validate schema exists
     schema: models.Schema | None = db.execute(
@@ -710,7 +734,7 @@ def get_field_mappings(
         )
     ).scalar_one_or_none()
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error("groundtruth.schema_not_found", 404, "Schema not found")
 
     # Get mappings for this groundtruth-schema combination
     mappings = (
@@ -744,10 +768,12 @@ def delete_field_mappings(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to delete field mappings"
+        raise api_error(
+            "groundtruth.not_authorized_delete_mappings",
+            403,
+            "Not authorized to delete field mappings",
         )
 
     # Validate groundtruth exists
@@ -758,7 +784,7 @@ def delete_field_mappings(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     # Validate schema exists
     schema: models.Schema | None = db.execute(
@@ -768,7 +794,7 @@ def delete_field_mappings(
         )
     ).scalar_one_or_none()
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error("groundtruth.schema_not_found", 404, "Schema not found")
 
     # Delete mappings for this groundtruth-schema combination
     from sqlalchemy.engine import CursorResult
@@ -814,10 +840,12 @@ def suggest_field_mappings(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project"
+        raise api_error(
+            "groundtruth.not_authorized_access_project",
+            403,
+            "Not authorized to access this project",
         )
 
     # Get schema
@@ -827,7 +855,7 @@ def suggest_field_mappings(
         )
     ).scalar_one_or_none()
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error("groundtruth.schema_not_found", 404, "Schema not found")
 
     # Get ground truth
     groundtruth: models.GroundTruth | None = db.execute(
@@ -837,7 +865,7 @@ def suggest_field_mappings(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     # Load ground truth data
     from ....utils.evaluation import EvaluationEngine
@@ -978,9 +1006,9 @@ def validate_json_ground_truth(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise api_error("groundtruth.not_authorized", 403, "Not authorized")
 
     # Fetch by (id, project_id) — a bare-PK lookup would let a caller pass
     # another project's groundtruth/schema id and read cross-project data.
@@ -991,7 +1019,9 @@ def validate_json_ground_truth(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth file not found")
+        raise api_error(
+            "groundtruth.file_not_found", 404, "Ground truth file not found"
+        )
 
     schema = db.execute(
         select(models.Schema).where(
@@ -999,7 +1029,7 @@ def validate_json_ground_truth(
         )
     ).scalar_one_or_none()
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error("groundtruth.schema_not_found", 404, "Schema not found")
 
     # Only for JSON format
     if groundtruth.format not in ["json", "zip"]:
@@ -1072,10 +1102,12 @@ def auto_map_fields(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project"
+        raise api_error(
+            "groundtruth.not_authorized_access_project",
+            403,
+            "Not authorized to access this project",
         )
 
     # Get schema and ground truth
@@ -1085,7 +1117,7 @@ def auto_map_fields(
         )
     ).scalar_one_or_none()
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error("groundtruth.schema_not_found", 404, "Schema not found")
 
     groundtruth: models.GroundTruth | None = db.execute(
         select(models.GroundTruth).where(
@@ -1094,7 +1126,7 @@ def auto_map_fields(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     # Load ground truth data
     from ....utils.evaluation import EvaluationEngine
@@ -1186,10 +1218,12 @@ def check_mapping_status(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project"
+        raise api_error(
+            "groundtruth.not_authorized_access_project",
+            403,
+            "Not authorized to access this project",
         )
 
     # Validate groundtruth and schema exist
@@ -1200,7 +1234,7 @@ def check_mapping_status(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
 
     schema: models.Schema | None = db.execute(
         select(models.Schema).where(
@@ -1209,7 +1243,7 @@ def check_mapping_status(
         )
     ).scalar_one_or_none()
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error("groundtruth.schema_not_found", 404, "Schema not found")
 
     # Check mapping status
     mapping_count = db.execute(
@@ -1252,10 +1286,12 @@ def configure_field_mapping_legacy(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to configure ground truth mappings"
+        raise api_error(
+            "groundtruth.not_authorized_configure_gt_mappings",
+            403,
+            "Not authorized to configure ground truth mappings",
         )
     groundtruth: models.GroundTruth | None = db.execute(
         select(models.GroundTruth).where(
@@ -1264,7 +1300,7 @@ def configure_field_mapping_legacy(
         )
     ).scalar_one_or_none()
     if not groundtruth:
-        raise HTTPException(status_code=404, detail="Ground truth not found")
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
     # Delete existing mappings
     db.execute(
         delete(models.FieldMapping).where(

@@ -15,9 +15,8 @@ from __future__ import annotations
 
 import string
 
-from fastapi import HTTPException, status
-
 from ..core.config import settings
+from .api_errors import api_error
 
 
 def _missing_rules(password: str) -> list[str]:
@@ -59,7 +58,10 @@ def validate_password(password: str) -> None:
     """
     errors = _missing_rules(password)
     if errors:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Password must {' and '.join(errors)}.",
+        rules = " and ".join(errors)
+        raise api_error(
+            "core.password_policy",
+            400,
+            f"Password must {rules}.",
+            rules=rules,
         )

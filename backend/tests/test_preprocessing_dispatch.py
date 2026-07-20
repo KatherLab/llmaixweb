@@ -77,7 +77,7 @@ def test_disable_celery_fails_fast_without_creating_rows(client, api_url):
         },
     )
     assert resp.status_code == 503, resp.text
-    assert "disabled" in resp.json()["detail"].lower()
+    assert resp.json()["detail"]["code"] == "preprocess.celery_disabled"
 
     # No task rows were created at all.
     tasks = client.get(

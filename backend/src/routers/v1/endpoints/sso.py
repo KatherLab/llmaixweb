@@ -40,6 +40,7 @@ from ....dependencies import get_db
 from ....models import User, UserIdentity
 from ....models.sso import IdentityProvider
 from ....services import oidc_service
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.crypto import decrypt
 from ....utils.enums import AuditAction, UserRole
@@ -57,9 +58,10 @@ _STATE_MAX_AGE = 600  # 10 minutes (matches the state JWT exp)
 def _slugify(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     if not slug:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Provider name must contain alphanumeric characters.",
+        raise api_error(
+            "sso.slug_no_alphanumeric",
+            status.HTTP_400_BAD_REQUEST,
+            "Provider name must contain alphanumeric characters.",
         )
     return slug[:100]
 
@@ -69,17 +71,20 @@ def _get_provider_by_slug(db: Session, slug: str) -> IdentityProvider:
         select(IdentityProvider).where(IdentityProvider.slug == slug)
     ).scalar_one_or_none()
     if not provider:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Unknown SSO provider."
+        raise api_error(
+            "sso.unknown_provider",
+            status.HTTP_404_NOT_FOUND,
+            "Unknown SSO provider.",
         )
     return provider
 
 
 def _sso_enabled_guard() -> None:
     if not settings.SSO_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="SSO is not enabled on this server.",
+        raise api_error(
+            "sso.not_enabled",
+            status.HTTP_403_FORBIDDEN,
+            "SSO is not enabled on this server.",
         )
 
 
@@ -134,9 +139,10 @@ def sso_login(
     _sso_enabled_guard()
     provider = _get_provider_by_slug(db, slug)
     if not provider.enabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This SSO provider is disabled.",
+        raise api_error(
+            "sso.provider_disabled",
+            status.HTTP_403_FORBIDDEN,
+            "This SSO provider is disabled.",
         )
 
     redirect_uri = _redirect_uri(slug, request)
@@ -153,9 +159,10 @@ def sso_login(
         raise
     except Exception as e:
         logger.warning("Failed to start SSO flow for provider %s: %s", slug, e)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Failed to start the SSO flow. Please try again later.",
+        raise api_error(
+            "sso.start_failed",
+            status.HTTP_502_BAD_GATEWAY,
+            "Failed to start the SSO flow. Please try again later.",
         )
 
     resp = RedirectResponse(url=authorize_url, status_code=status.HTTP_302_FOUND)
@@ -184,32 +191,37 @@ def sso_callback(
     _sso_enabled_guard()
 
     if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"SSO provider returned an error: {error}",
+        raise api_error(
+            "sso.provider_error",
+            status.HTTP_400_BAD_REQUEST,
+            f"SSO provider returned an error: {error}",
+            error=error,
         )
     if not code or not state:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing authorization code or state.",
+        raise api_error(
+            "sso.missing_code_or_state",
+            status.HTTP_400_BAD_REQUEST,
+            "Missing authorization code or state.",
         )
 
     # Verify the state JWT. This proves the callback came from a flow we
     # started (CSRF protection) and carries the PKCE verifier + redirect target.
     state_payload = oidc_service.decode_state(state)
     if state_payload.get("provider") != slug:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="SSO state provider mismatch.",
+        raise api_error(
+            "sso.state_provider_mismatch",
+            status.HTTP_400_BAD_REQUEST,
+            "SSO state provider mismatch.",
         )
 
     # The cookie must match the state query param (defense in depth vs. a
     # stolen state JWT injected into a different browser).
     cookie_state = request.cookies.get(_STATE_COOKIE)
     if not cookie_state or cookie_state != state:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="SSO state cookie mismatch.",
+        raise api_error(
+            "sso.state_cookie_mismatch",
+            status.HTTP_400_BAD_REQUEST,
+            "SSO state cookie mismatch.",
         )
 
     provider = _get_provider_by_slug(db, slug)
@@ -253,9 +265,10 @@ def sso_callback(
     subject = userinfo.get("sub") or verified_claims.get("sub")
     email = userinfo.get("email") or verified_claims.get("email")
     if not subject:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OIDC provider did not return a subject identifier.",
+        raise api_error(
+            "sso.no_subject",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC provider did not return a subject identifier.",
         )
 
     # Email is only trustworthy if a trusted source asserts email_verified.
@@ -320,9 +333,10 @@ def _resolve_or_provision_user(
     if identity:
         user = identity.user
         if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User account is deactivated.",
+            raise api_error(
+                "sso.account_deactivated",
+                status.HTTP_403_FORBIDDEN,
+                "User account is deactivated.",
             )
         identity.last_login_at = datetime.now(timezone.utc)
         db.commit()
@@ -331,9 +345,10 @@ def _resolve_or_provision_user(
     # Anything below links or creates an account keyed on the email claim, so
     # gate it on a verified email to prevent takeover / impersonation.
     if email and settings.SSO_REQUIRE_VERIFIED_EMAIL and not email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
+        raise api_error(
+            "sso.email_not_verified",
+            status.HTTP_403_FORBIDDEN,
+            (
                 "The identity provider did not verify this email address, so it "
                 "cannot be linked to an account. Contact your administrator."
             ),
@@ -346,9 +361,10 @@ def _resolve_or_provision_user(
             select(User).where(User.email == email)
         ).scalar_one_or_none()
         if user_by_email and not user_by_email.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User account is deactivated.",
+            raise api_error(
+                "sso.account_deactivated",
+                status.HTTP_403_FORBIDDEN,
+                "User account is deactivated.",
             )
 
     if user_by_email:
@@ -356,14 +372,16 @@ def _resolve_or_provision_user(
     else:
         # JIT provisioning.
         if not email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="OIDC provider did not return an email; cannot create account.",
+            raise api_error(
+                "sso.no_email",
+                status.HTTP_400_BAD_REQUEST,
+                "OIDC provider did not return an email; cannot create account.",
             )
         if not settings.SSO_BYPASS_INVITATION and settings.REQUIRE_INVITATION:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No existing account for this email, and SSO registration is gated by invitation.",
+            raise api_error(
+                "sso.invitation_required",
+                status.HTTP_403_FORBIDDEN,
+                "No existing account for this email, and SSO registration is gated by invitation.",
             )
         # No password — JIT users authenticate via SSO only. An empty
         # hashed_password is the "no password" sentinel: verify_password

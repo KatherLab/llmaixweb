@@ -6,7 +6,7 @@ from typing import Any
 
 import bcrypt
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import PyJWTError
 from sqlalchemy import select, update
@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from ..core.config import settings
 from ..dependencies import get_db
 from ..models.user import RefreshToken, User
+from ..utils.api_errors import api_error
 from ..utils.enums import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
@@ -220,9 +221,10 @@ def get_password_hash(password: str) -> str:
 def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
 ) -> User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+    credentials_exception = api_error(
+        "core.could_not_validate_credentials",
+        status.HTTP_401_UNAUTHORIZED,
+        "Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -243,16 +245,18 @@ def get_current_user(
         raise credentials_exception
     if not user.is_active:
         # Deactivated users cannot use any tokens
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account is deactivated",
+        raise api_error(
+            "core.account_deactivated",
+            status.HTTP_401_UNAUTHORIZED,
+            "User account is deactivated",
         )
     # Validate token version — a newer version means old tokens are revoked
     token_version = payload.get("tkn_v", 0)
     if token_version < user.token_version:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has been revoked. Please log in again.",
+        raise api_error(
+            "core.token_revoked",
+            status.HTTP_401_UNAUTHORIZED,
+            "Token has been revoked. Please log in again.",
         )
     return user
 
@@ -268,8 +272,9 @@ def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
             return {"message": "Hello Admin!"}
     """
     if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions. Admin role required.",
+        raise api_error(
+            "core.admin_required",
+            status.HTTP_403_FORBIDDEN,
+            "Not enough permissions. Admin role required.",
         )
     return current_user

@@ -1,7 +1,7 @@
 # backend/src/routers/v1/endpoints/schemas.py
 """Schema endpoints for projects."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,7 @@ from ....core.security import (
     get_current_user,
 )
 from ....dependencies import get_db
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
 from ....utils.helpers import extract_field_types_from_schema
@@ -28,7 +29,11 @@ def check_project_access(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error(
+            "schemas.project_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Project not found",
+        )
 
     # Admin has full access only when cross-user project access is enabled
     if admin_has_global_project_access(current_user):
@@ -38,8 +43,11 @@ def check_project_access(
     if project.owner_id == current_user.id:
         return project
 
-    raise HTTPException(
-        status_code=403, detail=f"Not authorized to {permission} this project"
+    raise api_error(
+        "schemas.not_authorized_project",
+        status.HTTP_403_FORBIDDEN,
+        f"Not authorized to {permission} this project",
+        permission=permission,
     )
 
 
@@ -54,13 +62,23 @@ def create_schema(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error(
+            "schemas.project_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Project not found",
+        )
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to create schemas for this project"
+        raise api_error(
+            "schemas.not_authorized_create",
+            status.HTTP_403_FORBIDDEN,
+            "Not authorized to create schemas for this project",
         )
     if not isinstance(schema.schema_definition, dict):
-        raise HTTPException(status_code=400, detail="Invalid JSON schema")
+        raise api_error(
+            "schemas.invalid_json_schema",
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid JSON schema",
+        )
     schema_db = models.Schema(**schema.model_dump(), project_id=project_id)
     db.add(schema_db)
     db.commit()
@@ -87,10 +105,16 @@ def get_schemas(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error(
+            "schemas.project_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Project not found",
+        )
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's schemas"
+        raise api_error(
+            "schemas.not_authorized_access",
+            status.HTTP_403_FORBIDDEN,
+            "Not authorized to access this project's schemas",
         )
 
     schemas_list = list(
@@ -118,10 +142,16 @@ def get_schema(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error(
+            "schemas.project_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Project not found",
+        )
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's schemas"
+        raise api_error(
+            "schemas.not_authorized_access",
+            status.HTTP_403_FORBIDDEN,
+            "Not authorized to access this project's schemas",
         )
 
     schema: models.Schema | None = db.execute(
@@ -130,7 +160,11 @@ def get_schema(
         )
     ).scalar_one_or_none()
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error(
+            "schemas.not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Schema not found",
+        )
     return schemas.Schema.model_validate(schema)
 
 
@@ -146,10 +180,16 @@ def update_schema(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error(
+            "schemas.project_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Project not found",
+        )
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to update schemas for this project"
+        raise api_error(
+            "schemas.not_authorized_update",
+            status.HTTP_403_FORBIDDEN,
+            "Not authorized to update schemas for this project",
         )
 
     existing_schema: models.Schema | None = db.execute(
@@ -158,10 +198,18 @@ def update_schema(
         )
     ).scalar_one_or_none()
     if not existing_schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error(
+            "schemas.not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Schema not found",
+        )
 
     if not isinstance(schema.schema_definition, dict):
-        raise HTTPException(status_code=400, detail="Invalid JSON schema")
+        raise api_error(
+            "schemas.invalid_json_schema",
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid JSON schema",
+        )
 
     for key, value in schema.model_dump(exclude_unset=True).items():
         setattr(existing_schema, key, value)
@@ -191,10 +239,16 @@ def delete_schema(
         select(models.Project).where(models.Project.id == project_id)
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error(
+            "schemas.project_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Project not found",
+        )
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to delete schemas from this project"
+        raise api_error(
+            "schemas.not_authorized_delete",
+            status.HTTP_403_FORBIDDEN,
+            "Not authorized to delete schemas from this project",
         )
 
     schema: models.Schema | None = db.execute(
@@ -203,7 +257,11 @@ def delete_schema(
         )
     ).scalar_one_or_none()
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error(
+            "schemas.not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Schema not found",
+        )
 
     # Check if the schema is referenced by any trials
     trials: list[models.Trial] = list(
@@ -213,8 +271,10 @@ def delete_schema(
     )
 
     if trials:
-        raise HTTPException(
-            status_code=400, detail="Cannot delete schema referenced by a trial"
+        raise api_error(
+            "schemas.referenced_by_trial",
+            status.HTTP_400_BAD_REQUEST,
+            "Cannot delete schema referenced by a trial",
         )
 
     db.delete(schema)
@@ -242,11 +302,17 @@ def get_schema_field_types(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error(
+            "schemas.project_not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Project not found",
+        )
 
     if not can_access_project(current_user, project):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to access this project's schemas"
+        raise api_error(
+            "schemas.not_authorized_access",
+            status.HTTP_403_FORBIDDEN,
+            "Not authorized to access this project's schemas",
         )
 
     schema: models.Schema | None = db.execute(
@@ -256,7 +322,11 @@ def get_schema_field_types(
     ).scalar_one_or_none()
 
     if not schema:
-        raise HTTPException(status_code=404, detail="Schema not found")
+        raise api_error(
+            "schemas.not_found",
+            status.HTTP_404_NOT_FOUND,
+            "Schema not found",
+        )
 
     field_types = {}
     extract_field_types_from_schema(schema.schema_definition, field_types)

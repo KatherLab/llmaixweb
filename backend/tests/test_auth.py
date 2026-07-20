@@ -34,7 +34,7 @@ def test_register_user(client, api_url):
         f"{api_url}/user/invite", headers=headers, data=invitation_data
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User with this email already exists."
+    assert response.json()["detail"]["code"] == "users.email_already_exists"
 
     invitation_data = {"email": "inviteduser@example.com"}
     response = client.post(
@@ -53,10 +53,7 @@ def test_register_user(client, api_url):
     }
     response = client.post(f"{api_url}/user", json=user_data)
     assert response.status_code == 400
-    assert (
-        response.json()["detail"]
-        == "Unable to create account. Please check your invitation and try again."
-    )
+    assert response.json()["detail"]["code"] == "users.account_creation_failed"
 
     user_data = {
         "email": "inviteduser@example.com",
@@ -149,7 +146,7 @@ def test_invite_user(client, api_url):
         f"{api_url}/user/invite", headers=admin_headers, data=invitation_data
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User with this email already exists."
+    assert response.json()["detail"]["code"] == "users.email_already_exists"
     # Test with user role
     user_data = {
         "username": "test@example.com",
@@ -187,7 +184,7 @@ def test_validate_invitation(client, api_url):
     # Test with invalid token
     response = client.get(f"{api_url}/user/validate-invitation/invalid_token_748")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Invalid or expired invitation token"
+    assert response.json()["detail"]["code"] == "users.invitation_invalid_or_expired"
 
 
 # Test List Invitations (admin only)
@@ -253,7 +250,7 @@ def test_delete_invitation(client, api_url):
     # Test with invalid invitation id
     response = client.delete(f"{api_url}/user/invitations/99999", headers=admin_headers)
     assert response.status_code == 404
-    assert response.json()["detail"] == "Invitation not found"
+    assert response.json()["detail"]["code"] == "users.invitation_not_found"
 
 
 # Test Toggle User Status (admin only)
@@ -321,7 +318,7 @@ def test_toggle_user_status(client, api_url):
         f"{api_url}/user/{invalid_user_id}/toggle-status", headers=admin_headers
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
+    assert response.json()["detail"]["code"] == "users.not_found"
 
     # Test with user role (should fail)
     # Log in as the test user
@@ -465,7 +462,7 @@ def test_delete_user(client, api_url):
     # Test with invalid user id
     response = client.delete(f"{api_url}/user/99999", headers=admin_headers)
     assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
+    assert response.json()["detail"]["code"] == "users.not_found"
     # Test with user role
     user_data = {
         "username": "test@example.com",

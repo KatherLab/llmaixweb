@@ -17,9 +17,10 @@ import secrets
 
 import httpx
 import jwt
-from fastapi import HTTPException, status
+from fastapi import status
 
 from ..core.config import settings
+from ..utils.api_errors import api_error
 from ..utils.url_safety import UnsafeEndpointError, validate_user_endpoint
 
 logger = logging.getLogger(__name__)
@@ -42,14 +43,17 @@ def _validate_issuer(issuer_url: str) -> str:
     try:
         validated = validate_user_endpoint(issuer_url)
     except UnsafeEndpointError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsafe OIDC issuer URL: {e}",
+        raise api_error(
+            "sso.unsafe_issuer_url",
+            status.HTTP_400_BAD_REQUEST,
+            f"Unsafe OIDC issuer URL: {e}",
+            error=str(e),
         )
     if not validated:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OIDC issuer URL is required.",
+        raise api_error(
+            "sso.issuer_url_required",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC issuer URL is required.",
         )
     return validated.rstrip("/")
 
@@ -68,16 +72,18 @@ def discover(issuer_url: str) -> dict:
         # Don't echo the raw httpx error: it can embed the internal host/port a
         # misconfigured issuer resolved to. Log it, tell the client generically.
         logger.warning("OIDC discovery failed for %s: %s", issuer, e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to reach the OIDC discovery endpoint. Check the issuer URL.",
+        raise api_error(
+            "sso.discovery_unreachable",
+            status.HTTP_400_BAD_REQUEST,
+            "Failed to reach the OIDC discovery endpoint. Check the issuer URL.",
         )
     doc = resp.json()
     # Minimal sanity check — these are the endpoints we actually use.
     if not all(doc.get(k) for k in ("authorization_endpoint", "token_endpoint")):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OIDC discovery document is missing required endpoints.",
+        raise api_error(
+            "sso.discovery_missing_endpoints",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC discovery document is missing required endpoints.",
         )
     _DISCOVERY_CACHE[issuer] = doc
     return doc
@@ -116,9 +122,10 @@ def _verify_state(state: str) -> dict:
         )
     except jwt.PyJWTError as e:
         logger.info("SSO state rejected: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired SSO state. Please restart the sign-in.",
+        raise api_error(
+            "sso.invalid_state",
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid or expired SSO state. Please restart the sign-in.",
         )
     return payload
 
@@ -174,9 +181,10 @@ def exchange_code(
         resp = httpx.post(doc["token_endpoint"], data=data, timeout=_TOKEN_TIMEOUT)
     except httpx.HTTPError as e:
         logger.warning("OIDC token endpoint unreachable (%s): %s", issuer_url, e)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Failed to contact the OIDC token endpoint.",
+        raise api_error(
+            "sso.token_endpoint_unreachable",
+            status.HTTP_502_BAD_GATEWAY,
+            "Failed to contact the OIDC token endpoint.",
         )
     if resp.status_code != 200:
         # The IdP's response body can contain sensitive details — log it, don't
@@ -187,9 +195,10 @@ def exchange_code(
             resp.status_code,
             resp.text[:300],
         )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OIDC token exchange failed.",
+        raise api_error(
+            "sso.token_exchange_failed",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC token exchange failed.",
         )
     return resp.json()
 
@@ -210,9 +219,10 @@ def fetch_userinfo(issuer_url: str, access_token: str) -> dict:
         )
     except httpx.HTTPError as e:
         logger.warning("OIDC userinfo endpoint unreachable (%s): %s", issuer_url, e)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Failed to contact the OIDC userinfo endpoint.",
+        raise api_error(
+            "sso.userinfo_endpoint_unreachable",
+            status.HTTP_502_BAD_GATEWAY,
+            "Failed to contact the OIDC userinfo endpoint.",
         )
     if resp.status_code != 200:
         logger.warning(
@@ -221,17 +231,19 @@ def fetch_userinfo(issuer_url: str, access_token: str) -> dict:
             resp.status_code,
             resp.text[:300],
         )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OIDC userinfo request failed.",
+        raise api_error(
+            "sso.userinfo_request_failed",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC userinfo request failed.",
         )
     info = resp.json()
     # `iss` claim validation guards against token mix-up across providers.
     expected_issuer = _validate_issuer(issuer_url)
     if info.get("iss") and info["iss"] != expected_issuer:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OIDC userinfo issuer mismatch.",
+        raise api_error(
+            "sso.userinfo_issuer_mismatch",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC userinfo issuer mismatch.",
         )
     return info
 
@@ -255,9 +267,10 @@ def verify_id_token(
     jwks_uri = doc.get("jwks_uri")
     issuer = doc.get("issuer") or _validate_issuer(issuer_url)
     if not jwks_uri:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OIDC discovery document has no jwks_uri; cannot verify id_token.",
+        raise api_error(
+            "sso.no_jwks_uri",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC discovery document has no jwks_uri; cannot verify id_token.",
         )
     try:
         jwk_client = jwt.PyJWKClient(jwks_uri)
@@ -271,14 +284,16 @@ def verify_id_token(
         )
     except jwt.PyJWTError as e:
         logger.warning("OIDC id_token verification failed (%s): %s", issuer_url, e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OIDC id_token verification failed.",
+        raise api_error(
+            "sso.id_token_verification_failed",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC id_token verification failed.",
         )
     if nonce is not None and payload.get("nonce") != nonce:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OIDC id_token nonce mismatch.",
+        raise api_error(
+            "sso.id_token_nonce_mismatch",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC id_token nonce mismatch.",
         )
     return payload
 

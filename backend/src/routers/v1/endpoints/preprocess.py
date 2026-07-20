@@ -15,6 +15,7 @@ from ....core.security import admin_has_global_project_access, get_current_user
 from ....dependencies import get_db
 from ....middleware.error_handlers import internal_error_message
 from ....models.project import document_set_association
+from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
 
@@ -35,7 +36,7 @@ def check_project_access(
     ).scalar_one_or_none()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise api_error("preprocess.project_not_found", 404, "Project not found")
 
     # Admin has full access only when cross-user project access is enabled
     if admin_has_global_project_access(current_user):
@@ -46,8 +47,11 @@ def check_project_access(
         return project
 
     # For non-owners, check specific permissions if needed
-    raise HTTPException(
-        status_code=403, detail=f"Not authorized to {permission} this project"
+    raise api_error(
+        "preprocess.not_authorized",
+        403,
+        f"Not authorized to {permission} this project",
+        permission=permission,
     )
 
 
@@ -74,9 +78,10 @@ async def preview_preprocessing_duplicates(
     check_project_access(project_id, current_user, db, "read")
 
     if not preprocessing_task.inline_config:
-        raise HTTPException(
-            status_code=400,
-            detail="inline_config is required",
+        raise api_error(
+            "preprocess.inline_config_required",
+            400,
+            "inline_config is required",
         )
 
     # Validate files exist and belong to project
@@ -92,9 +97,11 @@ async def preview_preprocessing_duplicates(
     )
     if len(files) != len(preprocessing_task.file_ids):
         missing_ids = set(preprocessing_task.file_ids) - {f.id for f in files}
-        raise HTTPException(
-            status_code=404,
-            detail=f"Files not found or don't belong to project: {missing_ids}",
+        raise api_error(
+            "preprocess.files_not_found",
+            404,
+            f"Files not found or don't belong to project: {missing_ids}",
+            missing_ids=sorted(missing_ids),
         )
 
     # Check if any OCR engine is enabled when processing image files (PNG/JPEG).
@@ -351,9 +358,10 @@ async def preprocess_project_data(
     check_project_access(project_id, current_user, db, "write")
 
     if not preprocessing_task.inline_config:
-        raise HTTPException(
-            status_code=400,
-            detail="inline_config is required",
+        raise api_error(
+            "preprocess.inline_config_required",
+            400,
+            "inline_config is required",
         )
 
     # Get config settings from inline config
@@ -436,9 +444,11 @@ async def preprocess_project_data(
     )
     if len(files) != len(preprocessing_task.file_ids):
         missing_ids = set(preprocessing_task.file_ids) - {f.id for f in files}
-        raise HTTPException(
-            status_code=404,
-            detail=f"Files not found or don't belong to project: {missing_ids}",
+        raise api_error(
+            "preprocess.files_not_found",
+            404,
+            f"Files not found or don't belong to project: {missing_ids}",
+            missing_ids=sorted(missing_ids),
         )
 
     # Validate CSV/XLSX files have preprocessing strategy configured
@@ -507,9 +517,10 @@ async def preprocess_project_data(
                         _endpoint, settings.ALLOWED_OCR_ENDPOINTS
                     )
         except UnsafeEndpointError:
-            raise HTTPException(
-                status_code=400,
-                detail="The provided OCR endpoint URL is not allowed.",
+            raise api_error(
+                "preprocess.ocr_endpoint_not_allowed",
+                400,
+                "The provided OCR endpoint URL is not allowed.",
             )
 
     image_types = {
@@ -680,15 +691,20 @@ async def preprocess_project_data(
         elif isinstance(inline_cfg, dict):
             bypass_celery = inline_cfg.get("bypass_celery", False)
     if bypass_celery and current_user.role != "admin":
-        raise HTTPException(403, "Only admins may set bypass_celery")
+        raise api_error(
+            "preprocess.bypass_celery_admin_only",
+            403,
+            "Only admins may set bypass_celery",
+        )
     # With Celery disabled there is no worker, no queue, and no sweeper — a
     # non-bypass submission could only ever fail at dispatch. Refuse it up
     # front with an explicit reason instead of creating task rows that
     # immediately die with an opaque "could not queue" error.
     if settings.DISABLE_CELERY and not bypass_celery:
-        raise HTTPException(
-            status_code=503,
-            detail="Background processing is disabled on this server "
+        raise api_error(
+            "preprocess.celery_disabled",
+            503,
+            "Background processing is disabled on this server "
             "(DISABLE_CELERY). Enable Celery, or run with bypass_celery "
             "(admins only).",
         )
@@ -809,9 +825,10 @@ async def preprocess_project_data(
                 e,
                 exc_info=True,
             )
-            raise HTTPException(
-                status_code=503,
-                detail="Could not queue preprocessing for background processing. "
+            raise api_error(
+                "preprocess.queue_failed",
+                503,
+                "Could not queue preprocessing for background processing. "
                 "Please try again later.",
             )
         task.celery_task_id = result.id
@@ -875,7 +892,12 @@ def get_preprocessing_tasks(
             status_enum = models.PreprocessingStatus(status)
             query = query.where(models.PreprocessingTask.status == status_enum)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+            raise api_error(
+                "preprocess.invalid_status",
+                400,
+                f"Invalid status: {status}",
+                status=status,
+            )
 
     query = query.order_by(models.PreprocessingTask.created_at.desc())
     query = query.limit(limit).offset(offset)
@@ -910,7 +932,7 @@ def get_preprocessing_task(
     ).scalar_one_or_none()
 
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise api_error("preprocess.task_not_found", 404, "Task not found")
 
     return schemas.PreprocessingTask.model_validate(task)
 
@@ -946,14 +968,17 @@ def cancel_preprocessing_task(
     )
 
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise api_error("preprocess.task_not_found", 404, "Task not found")
 
     if task.status in [
         models.PreprocessingStatus.COMPLETED,
         models.PreprocessingStatus.CANCELLED,
     ]:
-        raise HTTPException(
-            status_code=400, detail=f"Cannot cancel task in {task.status} status"
+        raise api_error(
+            "preprocess.cannot_cancel_status",
+            400,
+            f"Cannot cancel task in {task.status} status",
+            status=task.status,
         )
 
     # Set cancellation flag
@@ -1087,7 +1112,7 @@ def get_preprocessing_progress(
     ).scalar_one_or_none()
 
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise api_error("preprocess.task_not_found", 404, "Task not found")
 
     # Calculate estimated completion time if in progress
     if (
@@ -1140,7 +1165,7 @@ def retry_failed_files(
     ).scalar_one_or_none()
 
     if not original_task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise api_error("preprocess.task_not_found", 404, "Task not found")
 
     # Refuse to retry while the original task is still running — its worker
     # may still write to the same file tasks/documents.
@@ -1148,9 +1173,10 @@ def retry_failed_files(
         models.PreprocessingStatus.PENDING,
         models.PreprocessingStatus.IN_PROGRESS,
     ):
-        raise HTTPException(
-            status_code=409,
-            detail="Task is still running. Wait for it to finish (or cancel it) "
+        raise api_error(
+            "preprocess.task_still_running",
+            409,
+            "Task is still running. Wait for it to finish (or cancel it) "
             "before retrying failed files.",
         )
 
@@ -1162,7 +1188,7 @@ def retry_failed_files(
     ]
 
     if not failed_file_ids:
-        raise HTTPException(status_code=400, detail="No failed files to retry")
+        raise api_error("preprocess.no_failed_files", 400, "No failed files to retry")
 
     # In-flight guard: a double-click (or a second client) would spawn a
     # second retry over the same files; both workers then upsert the same
@@ -1187,9 +1213,10 @@ def retry_failed_files(
         .limit(1)
     ).first()
     if in_flight:
-        raise HTTPException(
-            status_code=409,
-            detail="A retry for these files is already in progress.",
+        raise api_error(
+            "preprocess.retry_in_progress",
+            409,
+            "A retry for these files is already in progress.",
         )
 
     # Create new task with same configuration. Carry over custom OCR
@@ -1198,9 +1225,10 @@ def retry_failed_files(
     from ....core.dynamic_settings import get_settings
 
     if get_settings().DISABLE_CELERY:
-        raise HTTPException(
-            status_code=503,
-            detail="Background processing is disabled on this server "
+        raise api_error(
+            "preprocess.celery_disabled_retry",
+            503,
+            "Background processing is disabled on this server "
             "(DISABLE_CELERY), so failed files cannot be retried. "
             "Enable Celery, or start a new run with bypass_celery (admins only).",
         )
@@ -1254,9 +1282,10 @@ def retry_failed_files(
             e,
             exc_info=True,
         )
-        raise HTTPException(
-            status_code=503,
-            detail="Could not queue preprocessing for background processing. "
+        raise api_error(
+            "preprocess.queue_failed",
+            503,
+            "Could not queue preprocessing for background processing. "
             "Please try again later.",
         )
     new_task.celery_task_id = result.id

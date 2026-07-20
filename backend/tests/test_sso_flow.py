@@ -312,7 +312,7 @@ def test_unverified_email_cannot_link_existing_account(
 
     resp = _callback(client, api_url, provider["slug"], state)
     assert resp.status_code == 403, resp.text
-    assert "verify" in resp.json()["detail"].lower()
+    assert "verify" in resp.json()["detail"]["message"].lower()
 
     # No identity was linked; the victim's password login is untouched.
     victim_headers = _login_headers(
@@ -367,7 +367,7 @@ def test_callback_rejects_missing_or_mismatched_state_cookie(
     client.cookies.delete("sso_state")
     resp = _callback(client, api_url, provider["slug"], state)
     assert resp.status_code == 400
-    assert "cookie" in resp.json()["detail"].lower()
+    assert "cookie" in resp.json()["detail"]["message"].lower()
 
     # Cookie present but holding a DIFFERENT state than the query param.
     _start_login(client, api_url, provider["slug"])  # sets a fresh cookie
@@ -397,7 +397,7 @@ def test_callback_rejects_state_from_other_provider(
     # State minted for provider A must not be accepted on B's callback.
     resp = _callback(client, api_url, provider_b["slug"], state_a)
     assert resp.status_code == 400
-    assert "provider" in resp.json()["detail"].lower()
+    assert "provider" in resp.json()["detail"]["message"].lower()
 
 
 def test_open_redirect_target_is_whitelisted(
@@ -437,7 +437,7 @@ def test_jit_gated_by_invitation(
 
     resp = _callback(client, api_url, provider["slug"], state)
     assert resp.status_code == 403
-    assert "invitation" in resp.json()["detail"].lower()
+    assert "invitation" in resp.json()["detail"]["message"].lower()
 
     # No account was created.
     from backend.src.db.session import SessionLocal
@@ -464,7 +464,7 @@ def test_missing_subject_or_email_rejected(
     _mock_idp_user(monkeypatch, {"sub": "no-email-subject"})
     resp = _callback(client, api_url, provider["slug"], state)
     assert resp.status_code == 400
-    assert "email" in resp.json()["detail"].lower()
+    assert "email" in resp.json()["detail"]["message"].lower()
 
 
 def test_deactivated_user_cannot_sso_login(
@@ -498,4 +498,4 @@ def test_deactivated_user_cannot_sso_login(
     )
     resp = _callback(client, api_url, provider["slug"], state)
     assert resp.status_code == 403
-    assert "deactivated" in resp.json()["detail"].lower()
+    assert "deactivated" in resp.json()["detail"]["message"].lower()

@@ -11,6 +11,7 @@ from botocore.exceptions import ClientError
 
 from .core.dynamic_settings import get_settings
 from .db.session import SessionLocal
+from .utils.api_errors import api_error
 
 settings = get_settings()
 
@@ -82,16 +83,16 @@ def read_upload_with_limit(file, max_bytes: int | None = None) -> bytes:
     Synchronous variant — use in ``def`` endpoints. For ``async def`` endpoints
     use :func:`read_upload_with_limit_async`.
     """
-    from fastapi import HTTPException
-
     limit = max_bytes if max_bytes is not None else settings.MAX_UPLOAD_SIZE_BYTES
 
     # Fast path: trust the declared content length when present.
     declared = getattr(file, "size", None)
     if declared is not None and declared > limit:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+        raise api_error(
+            "core.upload_too_large",
+            413,
+            f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+            limit=limit,
         )
 
     chunks: list[bytes] = []
@@ -103,9 +104,11 @@ def read_upload_with_limit(file, max_bytes: int | None = None) -> bytes:
             break
         total += len(chunk)
         if total > limit:
-            raise HTTPException(
-                status_code=413,
-                detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+            raise api_error(
+                "core.upload_too_large",
+                413,
+                f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+                limit=limit,
             )
         chunks.append(chunk)
     return b"".join(chunks)
@@ -118,15 +121,15 @@ async def read_upload_with_limit_async(file, max_bytes: int | None = None) -> by
     reading from a ``def``-style SpooledTemporaryFile in an ``async def``
     endpoint. Same size-cap behaviour and 413 on overflow.
     """
-    from fastapi import HTTPException
-
     limit = max_bytes if max_bytes is not None else settings.MAX_UPLOAD_SIZE_BYTES
 
     declared = getattr(file, "size", None)
     if declared is not None and declared > limit:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+        raise api_error(
+            "core.upload_too_large",
+            413,
+            f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+            limit=limit,
         )
 
     chunks: list[bytes] = []
@@ -138,9 +141,11 @@ async def read_upload_with_limit_async(file, max_bytes: int | None = None) -> by
             break
         total += len(chunk)
         if total > limit:
-            raise HTTPException(
-                status_code=413,
-                detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+            raise api_error(
+                "core.upload_too_large",
+                413,
+                f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+                limit=limit,
             )
         chunks.append(chunk)
     return b"".join(chunks)
@@ -162,15 +167,15 @@ def hash_measure_and_head(
     for a fully streamed upload path (hash/dedup, then store, never buffering the
     whole file).
     """
-    from fastapi import HTTPException
-
     limit = max_bytes if max_bytes is not None else settings.MAX_UPLOAD_SIZE_BYTES
 
     declared = getattr(file, "size", None)
     if declared is not None and declared > limit:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+        raise api_error(
+            "core.upload_too_large",
+            413,
+            f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+            limit=limit,
         )
 
     hasher = hashlib.sha256()
@@ -185,9 +190,11 @@ def hash_measure_and_head(
             break
         total += len(chunk)
         if total > limit:
-            raise HTTPException(
-                status_code=413,
-                detail=f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+            raise api_error(
+                "core.upload_too_large",
+                413,
+                f"Uploaded file exceeds the maximum allowed size of {limit} bytes.",
+                limit=limit,
             )
         hasher.update(chunk)
         if len(head) < head_len:
