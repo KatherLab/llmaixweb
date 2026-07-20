@@ -1,6 +1,6 @@
 {
   "name": "llmaixwebui",
-  "version": "0.6.7",
+  "version": "0.6.8",
   "private": true,
   "type": "module",
   "//pinia": "Pinned to 3.x: pinia 4.0.1 ships a broken package.json 'exports' map (no 'types' condition), so vue-tsc/Bundler resolution can't find its declarations (TS7016). Revisit once pinia publishes a fixed exports map.",
