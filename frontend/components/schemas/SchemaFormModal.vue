@@ -100,9 +100,24 @@
               <span class="text-content-muted">Developer options</span>
             </label>
 
-            <!-- Split View Toggle -->
-            <label class="flex items-center space-x-2 text-sm">
-              <input v-model="splitView" type="checkbox" :class="checkboxClass" />
+            <!-- Split View Toggle (visual editor + raw JSON side by side; only
+                 meaningful on the Visual Editor tab — the Raw tab is already
+                 the JSON pane) -->
+            <label
+              class="flex items-center space-x-2 text-sm"
+              :class="{ 'opacity-50 cursor-not-allowed': activeTab === 'raw' }"
+              :title="
+                activeTab === 'raw'
+                  ? 'Split view shows the visual editor and raw JSON side by side — switch to the Visual Editor tab to use it.'
+                  : 'Show the visual editor and raw JSON side by side.'
+              "
+            >
+              <input
+                v-model="splitView"
+                type="checkbox"
+                :class="checkboxClass"
+                :disabled="activeTab === 'raw'"
+              />
               <span class="text-content-muted">Split view</span>
             </label>
           </div>
@@ -112,7 +127,11 @@
         <div class="flex-1 min-h-0 overflow-hidden flex flex-col">
           <!-- Simple Mode Editor -->
           <div v-if="simpleMode" class="h-full">
-            <SimpleSchemaEditor :schema="simpleSchema" @update:schema="updateSimpleSchema" />
+            <SimpleSchemaEditor
+              :schema="simpleSchema"
+              @update:schema="updateSimpleSchema"
+              @update:valid="simpleEditorValid = $event"
+            />
           </div>
 
           <!-- Advanced Mode: Visual/Raw Tabs -->
@@ -180,7 +199,12 @@
       <BaseButton
         variant="primary"
         :loading="isSubmitting"
-        :disabled="!isSchemaValid"
+        :disabled="!isSchemaValid || (simpleMode && !simpleEditorValid)"
+        :title="
+          simpleMode && !simpleEditorValid
+            ? 'Fix the highlighted field names first (empty or duplicate names).'
+            : undefined
+        "
         @click="isEdit ? updateSchema() : createSchema()"
       >
         {{ isEdit ? 'Update' : 'Create' }}
@@ -249,7 +273,6 @@ const toast = useToast()
 
 const isEdit = computed(() => !!props.schema)
 
-const hasUnsavedChanges = ref(false)
 const rawJsonTextarea = ref<HTMLTextAreaElement | null>(null)
 const cursorPosition = ref(0)
 const isSubmitting = ref(false)
@@ -263,7 +286,30 @@ const schemaForm = ref<{
   schema_definition: '',
 })
 
-const isUpdating = false
+// --- Unsaved-changes tracking (snapshot compare) ---
+// A snapshot of the form is captured right after modal-open initialization and
+// compared structurally on close. A "dirty" flag set from a watcher would fire
+// during initialization itself (the props.open watcher writes schemaForm),
+// producing a spurious "Discard unsaved changes?" on open → Cancel.
+const initialSnapshot = ref('')
+const normalizeDefinition = (def: string): string => {
+  try {
+    // Structural comparison: mode/tab switches re-serialize the same schema,
+    // and formatting differences must not count as user edits.
+    return JSON.stringify(JSON.parse(def))
+  } catch {
+    return def
+  }
+}
+const currentSnapshot = (): string =>
+  JSON.stringify({
+    name: schemaForm.value.schema_name,
+    def: normalizeDefinition(schemaForm.value.schema_definition),
+  })
+const hasUnsavedChanges = computed(
+  () => initialSnapshot.value !== '' && currentSnapshot() !== initialSnapshot.value,
+)
+
 let isUpdatingFromWatch = false
 let updateTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -286,6 +332,9 @@ const simpleSchema = ref<SchemaDefinition>({
   type: 'object',
   properties: {},
 })
+// Row-level validity reported by SimpleSchemaEditor (empty/duplicate field
+// names). Blocks save in Simple mode instead of silently dropping fields.
+const simpleEditorValid = ref(true)
 
 const formatJsonInput = () => {
   try {
@@ -312,6 +361,11 @@ const confirmDiscard = () => {
 }
 
 const createSchema = async () => {
+  if (simpleMode.value && !simpleEditorValid.value) {
+    schemaError.value = 'Fix the highlighted field names first (empty or duplicate names).'
+    toast.error(schemaError.value)
+    return
+  }
   schemaError.value = ''
   isSubmitting.value = true
   let response
@@ -334,7 +388,7 @@ const createSchema = async () => {
       schema_name: schemaForm.value.schema_name,
       schema_definition: schemaDefinition,
     })
-    hasUnsavedChanges.value = false
+    initialSnapshot.value = currentSnapshot() // saved — no longer dirty
     emit('created', response.data)
     emit('close')
     toast.success(`Schema "${schemaForm.value.schema_name}" created successfully`)
@@ -348,6 +402,11 @@ const createSchema = async () => {
 }
 
 const updateSchema = async () => {
+  if (simpleMode.value && !simpleEditorValid.value) {
+    schemaError.value = 'Fix the highlighted field names first (empty or duplicate names).'
+    toast.error(schemaError.value)
+    return
+  }
   schemaError.value = ''
   isSubmitting.value = true
   let response
@@ -370,7 +429,7 @@ const updateSchema = async () => {
       schema_name: schemaForm.value.schema_name,
       schema_definition: schemaDefinition,
     })
-    hasUnsavedChanges.value = false
+    initialSnapshot.value = currentSnapshot() // saved — no longer dirty
     emit('updated', response.data)
     emit('close')
     toast.success(`Schema "${schemaForm.value.schema_name}" updated successfully`)
@@ -535,6 +594,7 @@ watch(
   (isOpen) => {
     if (isOpen) {
       simpleMode.value = true // Default to simple mode
+      simpleEditorValid.value = true
       if (props.schema) {
         // Edit mode
         const formattedJson = formatJSON(props.schema.schema_definition)
@@ -560,6 +620,9 @@ watch(
           schema_definition: JSON.stringify(STARTER_SCHEMA, null, 2),
         }
       }
+      // Baseline for unsaved-changes detection: everything written above is
+      // initialization, not a user edit.
+      initialSnapshot.value = currentSnapshot()
     } else {
       // Reset on close
       schemaError.value = ''
@@ -569,19 +632,9 @@ watch(
         schema_definition: '',
       }
       visualSchema.value = { type: 'object', properties: {} }
-      hasUnsavedChanges.value = false
+      initialSnapshot.value = ''
     }
   },
-)
-
-// Watch for changes to track unsaved state
-watch(
-  [schemaForm, visualSchema],
-  () => {
-    if (isUpdating) return
-    hasUnsavedChanges.value = true
-  },
-  { deep: true },
 )
 
 // Watch visual schema changes (advanced mode only).

@@ -76,8 +76,43 @@
               @input="validatePromptPlaceholder"
             />
             <p class="mt-2 text-xs text-content-muted">
-              This will be used as the user prompt. The schema is automatically included.
+              This will be used as the user prompt. The document text and the selected schema are
+              appended automatically when the trial runs.
             </p>
+            <p
+              v-if="promptForm.system_prompt"
+              class="mt-1 text-xs text-amber-700 dark:text-amber-400"
+            >
+              This prompt has a system prompt from Advanced mode. It is kept while you edit, but
+              will not be saved while Simple mode is selected.
+            </p>
+            <div class="flex justify-end mt-2">
+              <button
+                v-if="promptForm.user_prompt"
+                type="button"
+                class="px-3 py-1 text-xs font-medium bg-surface border border-strong rounded hover:bg-surface-muted text-primary"
+                @click="showPreviewSimple = !showPreviewSimple"
+              >
+                {{ showPreviewSimple ? 'Hide' : 'Preview' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Simple mode preview: what is actually sent to the model -->
+          <div v-if="showPreviewSimple && promptForm.user_prompt" class="space-y-2">
+            <h4 class="text-sm font-medium text-content">Preview with Sample Document</h4>
+            <p class="text-xs text-content-muted">
+              In Simple mode no system message is sent — your instruction becomes the user message,
+              with the document and the trial's schema appended:
+            </p>
+            <div class="bg-primary-soft rounded-card p-4 border border-default">
+              <span class="text-xs font-semibold text-primary uppercase tracking-wider"
+                >User Message Preview</span
+              >
+              <div class="mt-2 whitespace-pre-wrap text-sm text-content-muted font-mono">
+                {{ simplePreview }}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -198,8 +233,11 @@
           </div>
         </div>
 
-        <!-- Preview Section -->
-        <div v-if="showPreviewSystem || showPreviewUser" class="mt-4 space-y-4">
+        <!-- Preview Section (Advanced mode; Simple mode has its own preview above) -->
+        <div
+          v-if="!simplePromptMode && (showPreviewSystem || showPreviewUser)"
+          class="mt-4 space-y-4"
+        >
           <h4 class="text-sm font-medium text-content">Preview with Sample Document</h4>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div
@@ -210,7 +248,7 @@
                 >System Message Preview</span
               >
               <div class="mt-2 whitespace-pre-wrap text-sm text-content-muted font-mono">
-                {{ promptForm.system_prompt.replace('{document_content}', sampleDocument) }}
+                {{ promptForm.system_prompt.replaceAll('{document_content}', sampleDocument) }}
               </div>
             </div>
             <div
@@ -221,7 +259,7 @@
                 >User Message Preview</span
               >
               <div class="mt-2 whitespace-pre-wrap text-sm text-content-muted font-mono">
-                {{ promptForm.user_prompt.replace('{document_content}', sampleDocument) }}
+                {{ promptForm.user_prompt.replaceAll('{document_content}', sampleDocument) }}
               </div>
             </div>
           </div>
@@ -251,6 +289,30 @@
       </div>
     </template>
   </BaseModal>
+
+  <!-- Discard unsaved changes confirmation -->
+  <ConfirmationDialog
+    :open="showConfirm"
+    title="Discard unsaved changes?"
+    message="Your prompt edits will be lost."
+    confirm-text="Discard"
+    cancel-text="Keep editing"
+    confirm-variant="danger"
+    @confirm="confirmDiscard"
+    @cancel="showConfirm = false"
+  />
+
+  <!-- Template-overwrite confirmation -->
+  <ConfirmationDialog
+    :open="showTemplateConfirm"
+    title="Apply template?"
+    message="Applying the template replaces the current name, description, and prompts."
+    confirm-text="Apply template"
+    cancel-text="Cancel"
+    confirm-variant="warning"
+    @confirm="applyTemplate"
+    @cancel="showTemplateConfirm = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -262,6 +324,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
 import Callout from '@/components/common/Callout.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
@@ -292,6 +355,7 @@ const isEdit = computed(() => !!props.prompt)
 const promptError = ref('')
 const showPreviewSystem = ref(false)
 const showPreviewUser = ref(false)
+const showPreviewSimple = ref(false)
 
 const systemPromptRef = ref<HTMLTextAreaElement | null>(null)
 const userPromptRef = ref<HTMLTextAreaElement | null>(null)
@@ -310,6 +374,18 @@ const promptForm = ref<{
 
 const isSubmitting = ref(false)
 const simplePromptMode = ref(true)
+
+// What Simple mode actually sends: no system message; the instruction becomes
+// the user message with the document auto-appended between markers and the
+// trial's schema appended after it (mirrors backend _build_messages).
+const simplePreview = computed(() => {
+  return (
+    `${promptForm.value.user_prompt}\n\n` +
+    `--- DOCUMENT CONTENT ---\n${sampleDocument}\n--- END DOCUMENT ---\n\n` +
+    'Extract the data according to this JSON schema:\n' +
+    '```json\n{ …the schema selected when the trial runs… }\n```'
+  )
+})
 
 // Computed property for prompt validation
 const isPromptValid = computed(() => {
@@ -389,8 +465,9 @@ const validatePromptPlaceholder = (): boolean => {
       promptError.value = 'Please enter an extraction instruction'
       return false
     }
-    // In simple mode, system_prompt is empty (schema & document auto-injected by backend)
-    promptForm.value.system_prompt = ''
+    // NOTE: the system prompt is intentionally NOT cleared here. It stays in
+    // memory so toggling Advanced → Simple → Advanced doesn't destroy it; it's
+    // only dropped from the payload at save time (see buildPayload).
     promptError.value = ''
     return true
   }
@@ -416,6 +493,16 @@ const validatePromptPlaceholder = (): boolean => {
   return true
 }
 
+// Payload for save. In Simple mode the system prompt is not part of the
+// prompt (schema & document are auto-injected by the backend), so it's
+// dropped here — not wiped from the form while editing.
+const buildPayload = () => ({
+  name: promptForm.value.name,
+  description: promptForm.value.description,
+  system_prompt: simplePromptMode.value ? '' : promptForm.value.system_prompt,
+  user_prompt: promptForm.value.user_prompt,
+})
+
 const createPrompt = async () => {
   // Check if name is provided
   if (!promptForm.value.name || promptForm.value.name.trim() === '') {
@@ -432,7 +519,7 @@ const createPrompt = async () => {
   isSubmitting.value = true
   try {
     const response = await promptsApi.create(props.projectId, {
-      ...promptForm.value,
+      ...buildPayload(),
       project_id: Number(props.projectId),
     })
     emit('created', response.data)
@@ -455,7 +542,7 @@ const updatePrompt = async () => {
 
   isSubmitting.value = true
   try {
-    const response = await promptsApi.update(props.projectId, props.prompt!.id, promptForm.value)
+    const response = await promptsApi.update(props.projectId, props.prompt!.id, buildPayload())
     emit('updated', response.data)
     emit('close')
     resetPromptForm()
@@ -476,7 +563,21 @@ const togglePreview = (type: 'system' | 'user') => {
   }
 }
 
+// "Use Template" overwrites name/description/both prompts — confirm first
+// when the user has already typed anything.
+const showTemplateConfirm = ref(false)
 const useTemplate = () => {
+  const f = promptForm.value
+  const hasContent = !!(f.name || f.description || f.system_prompt || f.user_prompt)
+  if (hasContent) {
+    showTemplateConfirm.value = true
+    return
+  }
+  applyTemplate()
+}
+
+const applyTemplate = () => {
+  showTemplateConfirm.value = false
   const template = promptTemplates.medical
   if (!template) return
   promptForm.value = {
@@ -484,6 +585,11 @@ const useTemplate = () => {
     description: template.description,
     system_prompt: template.system_prompt,
     user_prompt: template.user_prompt,
+  }
+  // The template uses a system prompt + explicit {document_content} — switch
+  // to Advanced mode so nothing it sets is hidden or dropped on save.
+  if (template.system_prompt || template.user_prompt.includes('{document_content}')) {
+    simplePromptMode.value = false
   }
   validatePromptPlaceholder()
   toast.info('Medical extraction template applied')
@@ -500,9 +606,27 @@ const resetPromptForm = () => {
   promptError.value = ''
   showPreviewSystem.value = false
   showPreviewUser.value = false
+  showPreviewSimple.value = false
 }
 
+// --- Unsaved-changes guard (snapshot compare, same pattern as CreateTrialModal) ---
+// Baseline captured after modal-open initialization; only *user* edits count.
+const initialSnapshot = ref('')
+const currentSnapshot = (): string => JSON.stringify(promptForm.value)
+const isDirty = computed(
+  () => initialSnapshot.value !== '' && currentSnapshot() !== initialSnapshot.value,
+)
+
+const showConfirm = ref(false)
 const cancelPromptModal = () => {
+  if (isDirty.value) {
+    showConfirm.value = true
+    return
+  }
+  emit('close')
+}
+const confirmDiscard = () => {
+  showConfirm.value = false
   emit('close')
 }
 
@@ -531,8 +655,12 @@ watch(
         // Create mode
         resetPromptForm()
       }
+      // Baseline for the unsaved-changes guard: everything written above is
+      // initialization, not a user edit.
+      initialSnapshot.value = currentSnapshot()
     } else {
       resetPromptForm()
+      initialSnapshot.value = ''
     }
   },
 )

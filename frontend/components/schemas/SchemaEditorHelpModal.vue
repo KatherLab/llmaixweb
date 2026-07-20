@@ -33,8 +33,11 @@
         <ul class="text-sm text-content-muted space-y-1">
           <li>• Click on any field block to edit its properties</li>
           <li>• Use the navigation breadcrumb to move between nested structures</li>
-          <li>• Drag and drop to reorder fields (coming soon)</li>
-          <li>• Enable "Advanced features" to access more JSON Schema options</li>
+          <li>
+            • Press <kbd class="px-1 py-0.5 bg-surface-sunken rounded text-xs">N</kbd> to add a new
+            field (when not typing in an input)
+          </li>
+          <li>• Enable "Developer options" to access more JSON Schema options</li>
         </ul>
       </div>
     </div>

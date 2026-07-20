@@ -21,10 +21,17 @@
             id="add-property-name"
             ref="propertyNameInput"
             v-model="form.name"
-            :class="inputClass"
+            :class="[inputClass, nameError ? 'border-red-400 dark:border-red-600' : '']"
             placeholder="e.g., patient_name"
             required
+            :aria-invalid="!!nameError"
           />
+          <p v-if="nameError" class="mt-1 text-xs text-red-600 dark:text-red-400">
+            {{ nameError }}
+          </p>
+          <p v-else class="mt-1 text-xs text-content-muted">
+            Use lowercase with underscores (e.g., patient_name)
+          </p>
         </div>
 
         <div>
@@ -76,7 +83,7 @@
     </form>
     <template #footer>
       <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
-      <BaseButton variant="primary" @click="submit"
+      <BaseButton variant="primary" :disabled="!!nameError" @click="submit"
         >Add {{ advancedMode ? 'Property' : 'Field' }}</BaseButton
       >
     </template>
@@ -84,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, type Component } from 'vue'
+import { ref, computed, watch, nextTick, type Component } from 'vue'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -123,12 +130,28 @@ const form = ref({
 // Template ref for the name input — Phase 0 auto-focus fix (preserved)
 const propertyNameInput = ref<HTMLInputElement | null>(null)
 
+// Property keys must be valid identifiers (they become JSON schema property
+// names). Shown inline; the `pattern` attribute alone never fires because the
+// footer button bypasses native form submission.
+const KEY_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+const submitAttempted = ref(false)
+
+const nameError = computed<string | null>(() => {
+  const name = form.value.name.trim()
+  if (!name) return submitAttempted.value ? 'Name is required' : null
+  if (!KEY_PATTERN.test(name)) {
+    return 'Only letters, numbers and underscores — must not start with a number (e.g., patient_name)'
+  }
+  return null
+})
+
 watch(
   () => props.open,
   async (isOpen) => {
     if (isOpen) {
       // Reset form on open
       form.value = { name: '', type: 'string', title: '', description: '' }
+      submitAttempted.value = false
       // Auto-focus the name input (Phase 0 fix: template ref + nextTick)
       await nextTick()
       propertyNameInput.value?.focus()
@@ -137,6 +160,9 @@ watch(
 )
 
 const submit = () => {
-  emit('add', { ...form.value })
+  submitAttempted.value = true
+  const name = form.value.name.trim()
+  if (!name || nameError.value) return
+  emit('add', { ...form.value, name })
 }
 </script>

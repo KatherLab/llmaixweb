@@ -74,7 +74,8 @@
             <div class="flex-shrink-0 w-8"></div>
           </div>
 
-          <!-- Editable row -->
+          <!-- Editable row. Only draggable while the grip handle is pressed —
+               a permanently-draggable row hijacks text selection in the inputs. -->
           <div
             v-else
             :data-index="index"
@@ -82,19 +83,22 @@
               'group flex flex-wrap items-center gap-3 p-3 rounded-modal border transition-all duration-200',
               draggingIndex === index
                 ? 'border-primary bg-primary-soft shadow-md scale-[1.02]'
-                : 'border-default hover:border-primary hover:shadow-sm bg-surface-muted hover:bg-surface',
+                : fieldError(field)
+                  ? 'border-red-300 dark:border-red-700 bg-surface-muted'
+                  : 'border-default hover:border-primary hover:shadow-sm bg-surface-muted hover:bg-surface',
             ]"
-            draggable
+            :draggable="dragArmedIndex === index"
             @dragstart="handleDragStart"
             @dragend="handleDragEnd"
             @dragover="handleDragOver"
             @dragleave="handleDragLeave"
             @drop="handleDrop"
           >
-            <!-- Drag Handle -->
+            <!-- Drag Handle (arms dragging for this row) -->
             <div
               class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-content-subtle hover:text-content-muted hover:bg-surface-sunken rounded-card transition-all"
               title="Drag to reorder"
+              @mousedown="dragArmedIndex = index"
             >
               <GripVertical class="h-5 w-5" />
             </div>
@@ -115,10 +119,18 @@
             <div class="flex-1 min-w-0">
               <input
                 v-model="field.name"
-                class="w-full bg-transparent border-0 border-b border-strong focus:border-primary focus:ring-0 text-sm font-medium text-content placeholder-content-subtle transition-colors py-1.5"
+                :class="[
+                  'w-full bg-transparent border-0 border-b focus:ring-0 text-sm font-medium text-content placeholder-content-subtle transition-colors py-1.5',
+                  fieldError(field)
+                    ? 'border-red-400 dark:border-red-600 focus:border-red-500'
+                    : 'border-strong focus:border-primary',
+                ]"
                 placeholder="field_name (e.g., patient_name)"
                 @input="emitChange"
               />
+              <p v-if="fieldError(field)" class="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                {{ fieldError(field) }}
+              </p>
             </div>
 
             <!-- Type Selector with Icon -->
@@ -264,7 +276,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { ChevronDown, GripVertical, Info, Lock, Plus, Star, Trash2, X } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
@@ -280,6 +292,9 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'update:schema': [schema: SchemaDefinition]
+  /** Row-level validity: false when any field name is empty or duplicated.
+   *  The parent uses this to block save instead of silently dropping fields. */
+  'update:valid': [valid: boolean]
 }>()
 
 // Field types used in the simple editor
@@ -309,6 +324,9 @@ type Field = SimpleField | ReadonlyField
 const fields = ref<Field[]>([])
 const draggingIndex = ref(-1)
 const dragOverIndex = ref(-1)
+// Row index whose grip handle is currently pressed. Only that row is
+// `draggable`, so dragging text inside the inputs still works.
+const dragArmedIndex = ref(-1)
 const isInternalChange = ref(false)
 
 // Last schema received from the parent (external). Kept so `buildSchema` can
@@ -377,6 +395,38 @@ const readonlyTypeLabel = (field: ReadonlyField): string => {
 }
 
 const hasReadonlyFields = computed(() => fields.value.some((f) => f.kind === 'readonly'))
+
+// --- Row validation (empty / duplicate names) ---
+// `buildSchema` keys properties by name, so unnamed fields would be silently
+// dropped and duplicate names would overwrite each other (last wins). Surface
+// both inline and report validity to the parent so save is blocked instead.
+const nameCounts = computed<Record<string, number>>(() => {
+  const counts: Record<string, number> = {}
+  for (const f of fields.value) {
+    const name = (f.name || '').trim()
+    if (!name) continue
+    counts[name] = (counts[name] || 0) + 1
+  }
+  return counts
+})
+
+const fieldError = (field: Field): string | null => {
+  if (field.kind !== 'simple') return null
+  const name = (field.name || '').trim()
+  if (!name) return 'Name this field or remove it'
+  if ((nameCounts.value[name] || 0) > 1) return `Duplicate field name "${name}"`
+  return null
+}
+
+const isValid = computed(() => fields.value.every((f) => !fieldError(f)))
+
+watch(
+  isValid,
+  (valid) => {
+    emit('update:valid', valid)
+  },
+  { immediate: true },
+)
 
 // Convert JSON Schema → Simple fields
 const parseSchema = (schema: SchemaDefinition): Field[] => {
@@ -607,7 +657,20 @@ const handleDragEnd = (e: DragEvent) => {
   target.style.opacity = '1'
   draggingIndex.value = -1
   dragOverIndex.value = -1
+  dragArmedIndex.value = -1
 }
+
+// Disarm dragging when the mouse is released without a drag having started
+// (mousedown on the grip handle, mouseup anywhere).
+const disarmDrag = () => {
+  if (draggingIndex.value === -1) dragArmedIndex.value = -1
+}
+onMounted(() => {
+  window.addEventListener('mouseup', disarmDrag)
+})
+onUnmounted(() => {
+  window.removeEventListener('mouseup', disarmDrag)
+})
 
 const handleDragOver = (e: DragEvent) => {
   e.preventDefault()

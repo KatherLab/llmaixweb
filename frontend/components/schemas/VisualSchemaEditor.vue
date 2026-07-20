@@ -230,7 +230,7 @@ watch(
   { deep: true },
 )
 
-// Keyboard shortcuts (Ctrl/Cmd+N, Escape)
+// Keyboard shortcuts (plain "N" adds a property; Escape is owned by BaseModal)
 useSchemaKeyboard({
   showAddPropertyModal,
   showEditPropertyModal,

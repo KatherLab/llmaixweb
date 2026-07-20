@@ -5,16 +5,21 @@
       <div class="absolute left-0 top-0 -ml-3 mt-2.5 h-full w-0.5 bg-surface-sunken"></div>
       <div class="absolute left-0 top-2.5 -ml-3 w-3 h-0.5 bg-surface-sunken"></div>
 
-      <!-- Node button -->
-      <button
-        type="button"
+      <!-- Node row. A div with button semantics rather than a <button>: the
+           expand/collapse caret inside is a real button, and nesting buttons
+           is invalid HTML with ambiguous keyboard behavior. -->
+      <div
+        role="button"
+        tabindex="0"
         :class="[
-          'w-full text-left px-3 py-1.5 rounded-card text-sm transition-colors flex items-center justify-between group',
+          'w-full cursor-pointer text-left px-3 py-1.5 rounded-card text-sm transition-colors flex items-center justify-between group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           isActive
             ? 'bg-primary-soft text-primary font-medium'
             : 'hover:bg-surface-muted text-content-muted',
         ]"
         @click="navigate"
+        @keydown.enter.prevent="navigate"
+        @keydown.space.prevent="navigate"
       >
         <div class="flex items-center space-x-2">
           <!-- Expand/Collapse icon for containers -->
@@ -24,7 +29,10 @@
             class="h-3 w-3 text-content-subtle transition-transform cursor-pointer p-0 hover:text-content-muted"
             :class="{ 'rotate-90': isExpanded }"
             :aria-label="isExpanded ? 'Collapse' : 'Expand'"
+            :aria-expanded="isExpanded"
             @click.stop="toggleExpanded"
+            @keydown.enter.stop
+            @keydown.space.stop
           >
             <ChevronRight />
           </button>
@@ -45,7 +53,7 @@
         <span class="text-xs text-content-muted ml-2">
           {{ nodeSchema.type }}
         </span>
-      </button>
+      </div>
     </div>
 
     <!-- Children -->

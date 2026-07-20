@@ -15,12 +15,15 @@
         <input
           :id="`${uid}-key`"
           :value="propertyKey"
-          :class="[inputClass, 'font-mono']"
+          :class="[inputClass, 'font-mono', keyError ? 'border-red-400 dark:border-red-600' : '']"
           placeholder="property_name"
-          pattern="^[a-zA-Z_][a-zA-Z0-9_]*$"
-          @input="$emit('update-key', ($event.target as HTMLInputElement).value)"
+          :aria-invalid="!!keyError"
+          @input="onKeyInput(($event.target as HTMLInputElement).value)"
         />
-        <p class="mt-1 text-xs text-content-muted">
+        <p v-if="keyError" class="mt-1 text-xs text-red-600 dark:text-red-400">
+          {{ keyError }}
+        </p>
+        <p v-else class="mt-1 text-xs text-content-muted">
           Use lowercase with underscores (e.g., patient_name)
         </p>
       </div>
@@ -493,6 +496,32 @@ const uid = useId()
 
 const localProperty = ref<SchemaProperty>(JSON.parse(JSON.stringify(props.property)))
 const showPatternHelp = ref(false)
+
+// --- Property key validation ---
+// Keys become JSON schema property names, so they must be valid identifiers.
+// The old `pattern` attribute never ran (no native form submit) — validate
+// inline instead. The draft mirrors what the user typed; the `propertyKey`
+// prop itself only changes when the parent commits the rename on save.
+const KEY_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+const keyDraft = ref(props.propertyKey)
+watch(
+  () => props.propertyKey,
+  (v) => {
+    keyDraft.value = v
+  },
+)
+const onKeyInput = (value: string) => {
+  keyDraft.value = value
+  emit('update-key', value)
+}
+const keyError = computed<string | null>(() => {
+  const key = keyDraft.value.trim()
+  if (!key) return 'A key is required'
+  if (!KEY_PATTERN.test(key)) {
+    return 'Only letters, numbers and underscores — must not start with a number (e.g., patient_name)'
+  }
+  return null
+})
 const enumValues = ref<string[]>(props.property.enum ? [...(props.property.enum as string[])] : [])
 const examplesText = ref(
   (props.property.examples as string[]) ? (props.property.examples as string[]).join('\n') : '',

@@ -156,13 +156,25 @@ const confirmDiscard = () => {
   emit('close')
 }
 
+// Property keys become JSON schema property names — must be valid identifiers.
+// Mirrors the inline validation in PropertyDetailsEditor / AddPropertyModal.
+const KEY_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+
 // Save — emits payload to parent, parent applies mutation
 const save = () => {
   if (!localEditingProperty.value) return
 
+  const key = localEditingProperty.value.key
+  const newKey = (localEditingProperty.value.newKey ?? key).trim()
+
+  // Block invalid renamed keys; PropertyDetailsEditor shows the inline error.
+  if (key !== '__root__' && key !== 'items' && (!newKey || !KEY_PATTERN.test(newKey))) {
+    return
+  }
+
   emit('save', {
-    key: localEditingProperty.value.key,
-    newKey: localEditingProperty.value.newKey || localEditingProperty.value.key,
+    key,
+    newKey: newKey || key,
     schema: localEditingProperty.value.schema,
   })
 }
