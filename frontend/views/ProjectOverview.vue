@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen bg-surface flex flex-col">
+  <div class="bg-surface flex flex-col">
     <PageHeader
       title="Projects"
       subtitle="Create and manage your extraction projects."

@@ -1,7 +1,7 @@
 ![Tests](https://github.com/KatherLab/llmaixweb/actions/workflows/tests.yml/badge.svg?branch=main)
 
 > [!IMPORTANT]
-> This application is an early preview. It may not run stably and extracted results can be inaccurate. Always check outputs for validity before using them in practice.
+> This application is a research prototype. It may not run stably and extracted results can be inaccurate. Always check outputs for validity before using them in practice.
 
 # LLMAIx (v2) Web
 

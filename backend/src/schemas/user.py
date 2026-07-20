@@ -68,6 +68,10 @@ class UserResponse(BaseModel):
     # True if the user has at least one linked SSO identity. Populated by the
     # list endpoint (not a DB column) so the admin grid can show SSO vs local.
     has_sso: bool | None = None
+    # Whether this user may access projects they don't own (admins, and only
+    # when ADMIN_ALL_PROJECT_ACCESS is enabled). Not a DB column — populated by
+    # /me so the frontend can gate the "show all users' projects" toggle.
+    can_access_all_projects: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

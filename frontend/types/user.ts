@@ -17,6 +17,9 @@ export interface UserResponse {
   is_active: boolean
   last_login_at: ISODateString | null
   has_sso?: boolean | null
+  // Whether this user may access projects they don't own (admin + the
+  // ADMIN_ALL_PROJECT_ACCESS deployment flag). Populated by `/me`.
+  can_access_all_projects?: boolean
 }
 
 export interface UserCreate {

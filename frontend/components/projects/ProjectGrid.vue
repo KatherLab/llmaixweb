@@ -3,7 +3,7 @@
     <!-- Header with title and admin toggle -->
     <div class="flex items-center justify-between mb-3 pb-3 border-b border-default">
       <h2 class="text-lg font-semibold text-content">Your Projects</h2>
-      <div v-if="isAdmin" class="flex items-center">
+      <div v-if="canShowAllProjects" class="flex items-center">
         <label class="inline-flex items-center gap-2 cursor-pointer select-none">
           <input
             v-model="showAllProjects"
@@ -183,6 +183,11 @@ const authStore = useAuthStore()
 const router = useRouter()
 
 const isAdmin = computed(() => authStore.user?.role === 'admin')
+// The "show all users' projects" toggle only makes sense when the deployment
+// enables cross-user admin access (ADMIN_ALL_PROJECT_ACCESS). The backend
+// reports this per-user via `/me`; with the flag off it silently scopes admins
+// to their own projects, so hide the toggle.
+const canShowAllProjects = computed(() => authStore.user?.can_access_all_projects === true)
 const showAllProjects = ref(false)
 const isLoading = ref(true)
 const loadError = ref<string>('')
@@ -305,7 +310,8 @@ const loadProjects = async (): Promise<void> => {
   isLoading.value = true
   loadError.value = ''
   try {
-    const params: QueryParams = isAdmin.value && showAllProjects.value ? { all: true } : {}
+    const params: QueryParams =
+      canShowAllProjects.value && showAllProjects.value ? { all: true } : {}
     const response = await projectsApi.list(params)
     projects.value = response.data.map((project: Project): ProjectRow => {
       const fullName = project.owner?.full_name || 'N/A'

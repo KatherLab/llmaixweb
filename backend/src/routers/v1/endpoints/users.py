@@ -21,6 +21,7 @@ from ....core.config import settings
 from ....core.rate_limit import limiter
 from ....core.security import (
     _hash_token,
+    admin_has_global_project_access,
     get_admin_user,
     get_current_user,
     get_password_hash,
@@ -297,7 +298,9 @@ def read_current_user(
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.UserResponse:
     """Get current user."""
-    return schemas.UserResponse.model_validate(current_user)
+    resp = schemas.UserResponse.model_validate(current_user)
+    resp.can_access_all_projects = admin_has_global_project_access(current_user)
+    return resp
 
 
 @router.get("/me/identities", response_model=list[schemas.UserIdentityResponse])
