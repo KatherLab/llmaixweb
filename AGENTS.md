@@ -309,7 +309,7 @@ Build locally: `uv run --only-group docs mkdocs build` (or `mkdocs serve`). **Wh
 - `LICENSE` — **AGPL-3.0-or-later**. Note: `pymupdf` is AGPL, which currently blocks any future MIT relicense.
 - `THIRD_PARTY_NOTICES.md` — bundled OSS components and their licenses.
 - `CITATION.cff` — academic citation metadata (links the npj Precision Oncology 2025 paper).
-- `CHANGELOG.md` — Keep a Changelog format; update it when you ship user-visible changes.
+- `CHANGELOG.md` — Keep a Changelog format; update it on every version bump (see Release Checklist below). Keep entries brief and focused on what affects setup or end users (new features, config/env changes, breaking changes, notable fixes); skip purely internal changes (tests, CI, refactors, dependency bumps).
 - `.github/SECURITY.md` — vulnerability-disclosure policy (points to `docs/SECURITY.md`).
 
 ### CI Workflows (`.github/workflows/`)
@@ -407,8 +407,9 @@ logic-heavy composables; component/e2e coverage is not set up yet.
 1. **Bump frontend version** in `package.json` (root) — the `prebuild` script auto-syncs to `frontend/version.js` at build time
 2. **Bump backend version** in `pyproject.toml` (e.g. `version = "0.3.3"`)
 3. **Lock dependencies** — run `uv lock` if any dependencies changed; the `uv.lock` file also tracks the `llmaixweb` version and will update automatically
-4. **Build and push images** — handled by GitHub Actions on release tag
-5. **Tag the release:**
+4. **Update `CHANGELOG.md`** — move `[Unreleased]` entries into a new `[x.y.z] — YYYY-MM-DD` section (add the compare links at the bottom). Keep it brief and user/setup-focused; leave out internal-only changes (tests, CI, refactors).
+5. **Build and push images** — handled by GitHub Actions on release tag
+6. **Tag the release:**
    ```bash
    git tag v0.3.3
    git push origin v0.3.3

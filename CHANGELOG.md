@@ -14,46 +14,22 @@ that point forward.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-07-20
+
 ### Added
 
-- Project metadata: SPDX license, authors, keywords, classifiers, and project
-  URLs in `pyproject.toml` and `package.json`.
-- `SECURITY.md` vulnerability-disclosure policy (GitHub Security tab).
-- `CITATION.cff` for academic citation.
-- This `CHANGELOG.md`.
-- Documentation site (MkDocs Material) with a per-page feature reference,
-  including dedicated OCR-engines and troubleshooting pages.
-- `THIRD_PARTY_NOTICES` generation and a license-compatibility check in CI.
-- Frontend unit test suite (Vitest + Vue Test Utils) covering the shared
-  `utils/` helpers and logic-heavy composables, run in CI.
-- Playwright end-to-end smoke test driving the core workflow (login → project →
-  upload → preprocess → trial → evaluation) against a broker-free backend and a
-  fake LLM, run in CI.
-- Localization (i18n) foundation (frontend): `vue-i18n` with lazy-loaded
-  message catalogs for English, German, French, and Spanish, a navbar language
-  switcher, and system-language auto-detection (persisted on explicit switch).
-  Date/number formatting now follows the active locale. Catalog key-parity is
-  enforced in CI via `npm run i18n:check`.
-- Localized the full application UI (frontend): hardcoded strings across the
-  auth, admin, projects, files, documents, schemas/prompts, trials, evaluation,
-  ground-truth, landing, and shared-component views are now translated via
-  `$t()` (~2,250 keys per locale in en/de/fr/es). A second CI guard,
-  `npm run i18n:usage`, statically verifies every referenced message key exists
-  in the source catalog.
-- Localized backend error messages (frontend rendering): user-facing API errors
-  now carry a stable machine code plus an English fallback (`detail = { code,
-  message, params }`); the frontend renders the message in the user's chosen
-  language via the new `errors.*` catalog namespace, falling back to the English
-  text for any un-migrated endpoint or missing translation. ~300 error sites
-  across the auth, users, projects, files, documents, preprocessing, schemas,
-  prompts, trials, evaluation, ground-truth, and SSO domains were migrated.
-  Audit-log entries and server logs remain English by design.
+- Localization (i18n): the full UI is now available in English, German,
+  French, and Spanish, with a language switcher and automatic system-language
+  detection. Backend error messages are localized too.
+- Documentation site: https://katherlab.github.io/llmaixweb/, with setup,
+  usage, and troubleshooting guides.
+- `SECURITY.md` vulnerability-disclosure policy and `CITATION.cff` for
+  academic citation.
 
 ### Changed
 
-- Trimmed `README.md` to a landing page; the preprocessing/OCR guide, the
-  environment-variable reference, and troubleshooting now live in the docs site
-  (single source of truth).
+- `README.md` trimmed to a landing page; detailed setup/usage guides moved to
+  the documentation site.
 
 ### Fixed
 
@@ -86,5 +62,6 @@ that point forward.
 See the [GitHub Releases page](https://github.com/KatherLab/llmaixweb/releases)
 and the git commit history for details.
 
-[Unreleased]: https://github.com/KatherLab/llmaixweb/compare/v0.6.8...HEAD
+[Unreleased]: https://github.com/KatherLab/llmaixweb/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/KatherLab/llmaixweb/compare/v0.6.8...v0.7.0
 [0.6.8]: https://github.com/KatherLab/llmaixweb/compare/v0.6.7...v0.6.8
