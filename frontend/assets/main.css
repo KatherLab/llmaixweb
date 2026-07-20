@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 @import './ag-grid.css';
+/* Inter variable font (registers the 'Inter Variable' family used below). */
+@import '@fontsource-variable/inter';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -35,7 +37,7 @@
   /* Text */
   --color-content: #0f172a; /* slate-900 — headings */
   --color-content-muted: #475569; /* slate-600 — body */
-  --color-content-subtle: #94a3b8; /* slate-400 — placeholders, captions */
+  --color-content-subtle: #64748b; /* slate-500 — placeholders, captions (slate-400 was ~3:1 on white) */
 
   /* Accent (blue) */
   --color-primary: #2563eb; /* blue-600 */
@@ -96,7 +98,7 @@
 
   --color-content: #f1f5f9; /* slate-100 */
   --color-content-muted: #cbd5e1; /* slate-300 */
-  --color-content-subtle: #64748b; /* slate-500 */
+  --color-content-subtle: #94a3b8; /* slate-400 (slate-500 was too low-contrast on slate-900) */
 
   --color-primary: #3b82f6; /* blue-500 */
   --color-primary-hover: #60a5fa; /* blue-400 */
@@ -123,6 +125,7 @@ body {
     background-color 0.5s;
   line-height: 1.6;
   font-family:
+    'Inter Variable',
     Inter,
     -apple-system,
     BlinkMacSystemFont,
@@ -139,6 +142,19 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Respect the user's reduced-motion preference: collapse all animations and
+   transitions to a near-zero duration (0.01ms instead of 0 so
+   animation/transition end events still fire for code that awaits them). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Shared fade transition. Previously duplicated as <style scoped> in

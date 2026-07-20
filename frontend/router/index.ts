@@ -39,30 +39,38 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: AppLayout,
     children: [
-      { path: 'projects', component: ProjectOverview, meta: { requiresAuth: true } },
+      {
+        path: 'projects',
+        component: ProjectOverview,
+        meta: { requiresAuth: true, title: 'Projects' },
+      },
       {
         path: 'account',
         component: AccountSettings,
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, title: 'Account Settings' },
       },
       {
         path: 'projects/:projectId',
         component: ProjectDetail,
         props: true,
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, title: 'Project' },
       },
       // Admin routes — all nested under /admin so they share the AdminDashboard
       // tab layout (single entry point: the gear "Admin" link in the navbar).
       {
         path: 'admin',
         component: AdminDashboard,
-        meta: { requiresAuth: true, adminOnly: true },
+        meta: { requiresAuth: true, adminOnly: true, title: 'Admin' },
         children: [
-          { path: 'user-management', component: AdminUserManagement },
-          { path: 'settings', component: AdminSettings },
-          { path: 'sso', component: AdminSSO },
-          { path: 'audit', component: AdminAudit },
-          { path: 'celery', component: AdminCelery },
+          {
+            path: 'user-management',
+            component: AdminUserManagement,
+            meta: { title: 'User Management' },
+          },
+          { path: 'settings', component: AdminSettings, meta: { title: 'Admin Settings' } },
+          { path: 'sso', component: AdminSSO, meta: { title: 'SSO Providers' } },
+          { path: 'audit', component: AdminAudit, meta: { title: 'Audit Log' } },
+          { path: 'celery', component: AdminCelery, meta: { title: 'Task Monitor' } },
           { path: '', redirect: '/admin/user-management' },
         ],
       },
@@ -74,18 +82,22 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: AuthLayout,
     children: [
-      { path: 'login', component: Login },
-      { path: 'register', component: Register },
-      { path: 'forgot-password', component: ForgotPassword },
-      { path: 'reset-password/:token', component: ResetPassword },
-      { path: 'invitation/:token', component: InvitationLanding },
-      { path: 'auth/sso/complete', component: SsoComplete },
-      { path: 'first-admin', component: FirstAdminSetup },
+      { path: 'login', component: Login, meta: { title: 'Sign in' } },
+      { path: 'register', component: Register, meta: { title: 'Register' } },
+      { path: 'forgot-password', component: ForgotPassword, meta: { title: 'Forgot Password' } },
+      {
+        path: 'reset-password/:token',
+        component: ResetPassword,
+        meta: { title: 'Reset Password' },
+      },
+      { path: 'invitation/:token', component: InvitationLanding, meta: { title: 'Invitation' } },
+      { path: 'auth/sso/complete', component: SsoComplete, meta: { title: 'Signing in' } },
+      { path: 'first-admin', component: FirstAdminSetup, meta: { title: 'First Admin Setup' } },
     ],
   },
 
   // 404 fallback
-  { path: '/:pathMatch(.*)*', component: NotFound },
+  { path: '/:pathMatch(.*)*', component: NotFound, meta: { title: 'Page Not Found' } },
 ]
 
 // Router creation
@@ -140,9 +152,15 @@ router.beforeEach(async (to, _from, next) => {
       to.path === '/forgot-password' ||
       to.path.startsWith('/reset-password/'))
   ) {
-    return next('/')
+    return next('/projects')
   }
   return next()
+})
+
+// Per-route document titles from `meta.title` (child meta wins over parent).
+router.afterEach((to) => {
+  const title = typeof to.meta.title === 'string' ? to.meta.title : ''
+  document.title = title ? `${title} · LLMAIx` : 'LLMAIx'
 })
 
 export default router

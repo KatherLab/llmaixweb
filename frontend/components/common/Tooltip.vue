@@ -49,7 +49,7 @@ watchEffect(() => {
 <template>
   <span
     ref="reference"
-    class="relative inline-block focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded"
+    class="relative inline-block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface rounded"
     tabindex="0"
     :aria-describedby="show && text ? tooltipId : undefined"
     @mouseenter="show = !!text"

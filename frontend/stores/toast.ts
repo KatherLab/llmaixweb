@@ -36,17 +36,48 @@ export const useToastStore = defineStore('toast', () => {
 
   // Monotonic id counter — deterministic, no Math.random/Date.now.
   let seq = 0
+
+  interface TimerEntry {
+    /** Absent while the timer is paused. */
+    handle?: ReturnType<typeof setTimeout>
+    startedAt: number
+    remaining: number
+  }
   /** Pending dismissal timers keyed by toast id, so dismiss() can cancel them. */
-  const timers = new Map<number, ReturnType<typeof setTimeout>>()
+  const timers = new Map<number, TimerEntry>()
+
+  function startTimer(id: number, ms: number) {
+    timers.set(id, {
+      handle: setTimeout(() => dismiss(id), ms),
+      startedAt: Date.now(),
+      remaining: ms,
+    })
+  }
 
   function dismiss(id: number) {
-    const handle = timers.get(id)
-    if (handle) {
-      clearTimeout(handle)
+    const entry = timers.get(id)
+    if (entry) {
+      if (entry.handle) clearTimeout(entry.handle)
       timers.delete(id)
     }
     const idx = toasts.value.findIndex((t) => t.id === id)
     if (idx !== -1) toasts.value.splice(idx, 1)
+  }
+
+  /** Pause the auto-dismiss countdown (e.g. while the toast is hovered/focused). */
+  function pause(id: number) {
+    const entry = timers.get(id)
+    if (!entry?.handle) return
+    clearTimeout(entry.handle)
+    entry.handle = undefined
+    entry.remaining -= Date.now() - entry.startedAt
+  }
+
+  /** Resume a paused countdown with the time it had left. */
+  function resume(id: number) {
+    const entry = timers.get(id)
+    if (!entry || entry.handle) return
+    startTimer(id, Math.max(entry.remaining, 500))
   }
 
   /**
@@ -63,18 +94,17 @@ export const useToastStore = defineStore('toast', () => {
       if (oldest) dismiss(oldest.id)
     }
 
-    if (timeout > 0) {
-      const handle = setTimeout(() => dismiss(id), timeout)
-      timers.set(id, handle)
-    }
+    if (timeout > 0) startTimer(id, timeout)
     return id
   }
 
   function clear() {
-    for (const handle of timers.values()) clearTimeout(handle)
+    for (const entry of timers.values()) {
+      if (entry.handle) clearTimeout(entry.handle)
+    }
     timers.clear()
     toasts.value = []
   }
 
-  return { toasts, add, dismiss, clear }
+  return { toasts, add, dismiss, pause, resume, clear }
 })

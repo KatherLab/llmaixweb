@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen bg-surface flex flex-col">
+  <div class="bg-surface flex flex-col">
     <PageHeader
       title="User Management"
       subtitle="Manage user accounts, roles, and invitations."
@@ -15,7 +15,7 @@
       </template>
     </PageHeader>
 
-    <main class="flex-1 max-w-7xl mx-auto w-full px-2 py-2 sm:px-6 min-h-0">
+    <div class="flex-1 max-w-7xl mx-auto w-full px-2 py-2 sm:px-6 min-h-0">
       <div class="h-full flex flex-col gap-4">
         <!-- Users Section -->
         <GlassCard>
@@ -96,7 +96,7 @@
           </div>
         </GlassCard>
       </div>
-    </main>
+    </div>
 
     <!-- Invite User Modal -->
     <InviteUserModal

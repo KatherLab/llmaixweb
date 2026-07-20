@@ -188,7 +188,7 @@ async function handleSubmit(): Promise<void> {
     await authStore.setSession(loginResponse.data.access_token, loginResponse.data.refresh_token)
 
     toast.success('Registration successful! Logging you in...')
-    router.push(authStore.isAdmin ? '/' : '/')
+    router.push('/projects')
   } catch (err) {
     error.value = extractErrorMessage(err, 'Registration failed. Please try again.')
     toast.error(error.value)

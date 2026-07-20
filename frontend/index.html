@@ -1,11 +1,27 @@
-<!DOCTYPE html>
-<html lang="">
+<!doctype html>
+<html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <link href="assets/main.css">
-    <title>LLMAIx v2</title>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Apply dark mode before first paint to avoid a light-mode flash.
+      // Mirrors AppLayout.vue's logic: localStorage['darkMode'] stores '1'/'0';
+      // when unset, fall back to the OS preference.
+      ;(function () {
+        try {
+          var saved = localStorage.getItem('darkMode')
+          var dark =
+            saved !== null
+              ? saved === '1'
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+          if (dark) document.documentElement.classList.add('dark')
+        } catch (e) {
+          /* localStorage/matchMedia unavailable — default to light */
+        }
+      })()
+    </script>
+    <title>LLMAIx</title>
   </head>
   <body>
     <div id="app"></div>

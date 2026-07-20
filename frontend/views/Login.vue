@@ -91,6 +91,7 @@ import { useFirstAdminStore } from '@/stores/firstAdmin'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FormField from '@/components/common/FormField.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { extractErrorMessage } from '@/utils/errors'
 import type { SsoProviderPublic } from '@/types'
 
 const router = useRouter()
@@ -104,7 +105,7 @@ const password = ref<string>('')
 const isLoading = ref<boolean>(false)
 const error = ref<string | null>(null)
 const ssoProviders = ref<SsoProviderPublic[]>([])
-const redirectTarget = ref<string>('/')
+const redirectTarget = ref<string>('/projects')
 
 onMounted(async () => {
   // If first-admin flow is needed, redirect to it (extra safe)
@@ -141,10 +142,21 @@ async function handleSubmit(): Promise<void> {
     const response = await authApi.login(formData.toString())
 
     await authStore.setSession(response.data.access_token, response.data.refresh_token)
-    router.push(redirectTarget.value || '/')
+    router.push(redirectTarget.value || '/projects')
   } catch (err) {
-    error.value = 'Invalid email or password'
-    toast.error('Invalid email or password', {
+    const status = (err as { response?: { status?: number } })?.response?.status
+    let message: string
+    if (status === 401) {
+      // Deliberately generic to avoid account enumeration.
+      message = 'Invalid email or password'
+    } else if (status) {
+      // Lockout (423), rate limit (429), etc. — surface the backend's message.
+      message = extractErrorMessage(err, 'Sign-in failed. Please try again.')
+    } else {
+      message = 'Cannot reach the server. Please check your connection and try again.'
+    }
+    error.value = message
+    toast.error(message, {
       timeout: 3500,
     })
     console.error('Login error:', err)

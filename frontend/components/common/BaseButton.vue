@@ -46,7 +46,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const baseClass =
-  'inline-flex items-center justify-center gap-2 font-medium rounded-card transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed'
+  'inline-flex items-center justify-center gap-2 font-medium rounded-card transition-all duration-150 active:scale-[0.98] motion-reduce:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:opacity-50 disabled:cursor-not-allowed'
 
 const sizeClass = computed(() => {
   // Link + icon buttons are inline actions — no horizontal padding, inherit
@@ -72,7 +72,7 @@ const linkToneClass = computed(() => {
     case 'gray':
       return 'text-content-muted hover:text-content'
     default:
-      return 'text-primary hover:bg-primary-hover'
+      return 'text-primary hover:text-primary-hover'
   }
 })
 
@@ -95,26 +95,29 @@ const iconToneClass = computed(() => {
 const variantClass = computed(() => {
   switch (props.variant) {
     case 'secondary':
-      return 'text-content bg-surface border border-strong hover:bg-surface-muted focus:ring-ring'
+      return 'text-content bg-surface border border-strong hover:bg-surface-muted'
     case 'danger':
-      return 'text-white bg-red-600 hover:bg-red-700 focus:ring-red-500'
+      return 'text-white bg-red-600 hover:bg-red-700'
     case 'warning':
-      return 'text-white bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500'
+      // Dark-on-amber: white-on-yellow-600 failed WCAG contrast.
+      return 'text-amber-950 bg-amber-400 hover:bg-amber-500 dark:bg-amber-400 dark:hover:bg-amber-300'
     case 'success':
-      return 'text-white bg-green-600 hover:bg-green-700 focus:ring-green-500'
+      return 'text-white bg-green-600 hover:bg-green-700'
     case 'ghost':
-      return 'text-content-muted hover:text-content hover:bg-surface-muted focus:ring-ring'
+      return 'text-content-muted hover:text-content hover:bg-surface-muted'
     case 'link':
       return linkToneClass.value
     case 'icon':
       return ['text-content-subtle transition-colors', iconToneClass.value].join(' ')
     default:
-      return 'text-white bg-primary hover:bg-primary-hover focus:ring-ring'
+      return 'text-white bg-primary hover:bg-primary-hover'
   }
 })
 
 // Spinner icon inherits currentColor; on light variants use a darker tone.
 const loadingIconColor = computed(() => {
-  return props.variant === 'secondary' || props.variant === 'ghost' ? 'gray' : 'white'
+  return props.variant === 'secondary' || props.variant === 'ghost' || props.variant === 'warning'
+    ? 'gray'
+    : 'white'
 })
 </script>

@@ -11,6 +11,8 @@
           :type="t.type"
           :timeout="t.timeout"
           @dismiss="dismiss(t.id)"
+          @pause="pause(t.id)"
+          @resume="resume(t.id)"
         />
       </div>
     </TransitionGroup>
@@ -23,7 +25,7 @@ import ToastItem from '@/components/common/ToastItem.vue'
 import { useToastStore } from '@/stores/toast'
 
 const store = useToastStore()
-const { toasts, dismiss, clear } = store
+const { toasts, dismiss, pause, resume, clear } = store
 
 // Clear any pending timers when the app unmounts (HMR / tests).
 onUnmounted(() => clear())

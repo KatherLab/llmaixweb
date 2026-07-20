@@ -112,6 +112,7 @@
                 v-for="column in columns"
                 :key="column.key"
                 :class="t.td"
+                class="tabular-nums"
                 :style="column.width ? { width: column.width } : null"
               >
                 <slot :name="`cell-${column.key}`" :row="row">

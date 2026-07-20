@@ -47,7 +47,7 @@ const emit = defineEmits<{ (e: 'dismiss'): void; (e: 'retry'): void }>()
         <button
           v-if="retryText"
           type="button"
-          class="text-sm font-medium text-red-700 hover:text-red-800 dark:text-red-300 dark:hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
+          class="text-sm font-medium text-red-700 hover:text-red-800 dark:text-red-300 dark:hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface rounded"
           :disabled="retryLoading"
           @click="emit('retry')"
         >
@@ -56,7 +56,7 @@ const emit = defineEmits<{ (e: 'dismiss'): void; (e: 'retry'): void }>()
         <button
           v-if="dismissable"
           type="button"
-          class="inline-flex text-red-400 hover:text-red-500 dark:text-red-300 dark:hover:text-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
+          class="inline-flex text-red-400 hover:text-red-500 dark:text-red-300 dark:hover:text-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface rounded"
           aria-label="Dismiss error"
           @click="emit('dismiss')"
         >

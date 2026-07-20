@@ -40,7 +40,7 @@ function parseFragment(): FragmentTokens {
   return {
     accessToken: params.get('access_token'),
     refreshToken: params.get('refresh_token'),
-    redirect: params.get('redirect') || '/',
+    redirect: params.get('redirect') || '/projects',
   }
 }
 
@@ -56,7 +56,7 @@ onMounted(async () => {
     await authStore.setSession(accessToken, refreshToken)
     toast.success('Signed in')
     // Whitelist redirect to an absolute path on this origin (open-redirect guard).
-    const safe = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/'
+    const safe = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/projects'
     router.replace(safe)
   } catch {
     statusMessage.value = 'Sign-in failed.'

@@ -14,17 +14,19 @@
 -->
 <template>
   <div class="border-b border-default">
-    <nav class="-mb-px flex space-x-8" role="tablist">
+    <nav
+      class="-mb-px flex space-x-8 overflow-x-auto no-scrollbar scroll-fade-x"
+      :aria-label="ariaLabel"
+    >
       <component
         :is="tab.to ? 'router-link' : 'button'"
         v-for="tab in tabs"
         :key="tab.value"
         :type="tab.to ? undefined : 'button'"
         :to="tab.to"
-        role="tab"
-        :aria-selected="modelValue === tab.value"
+        :aria-current="modelValue === tab.value ? 'page' : undefined"
         :class="[
-          'py-2 px-1 border-b-2 font-medium text-sm transition-colors',
+          'py-2 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0',
           modelValue === tab.value ? activeClass : inactiveClass,
         ]"
         @click="!tab.to && emit('update:modelValue', tab.value)"
@@ -59,10 +61,13 @@ export interface TabItem {
 interface Props {
   modelValue: string | number
   tabs?: TabItem[]
+  // Accessible name for the <nav> landmark wrapping the tab strip.
+  ariaLabel?: string
 }
 
 withDefaults(defineProps<Props>(), {
   tabs: () => [],
+  ariaLabel: 'Tabs',
 })
 
 const emit = defineEmits<{ (e: 'update:modelValue', value: string | number): void }>()

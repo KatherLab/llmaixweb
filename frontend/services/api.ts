@@ -61,7 +61,12 @@ api.interceptors.response.use(
         toast.error('Session expired. Please sign in again.', {
           timeout: 4000,
         })
-        router.push('/login')
+        // Preserve the current location so login can return the user there
+        // (matches the router guard's redirect pattern).
+        router.push({
+          path: '/login',
+          query: { redirect: router.currentRoute.value.fullPath },
+        })
       }
     } else if (status === 401) {
       // An unrefreshable 401 (the refresh endpoint itself, or an
@@ -75,7 +80,10 @@ api.interceptors.response.use(
         toast.error('Session expired. Please sign in again.', {
           timeout: 4000,
         })
-        router.push('/login')
+        router.push({
+          path: '/login',
+          query: { redirect: router.currentRoute.value.fullPath },
+        })
       }
     }
     // All errors are still available to the calling code

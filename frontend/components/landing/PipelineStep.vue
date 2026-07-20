@@ -1,20 +1,22 @@
 <template>
-  <div
+  <button
     ref="stepEl"
-    class="pipeline-step group relative cursor-pointer transform transition-all hover:scale-105"
+    type="button"
+    :aria-expanded="active"
+    class="pipeline-step group relative cursor-pointer transform transition-all hover:scale-105 rounded-modal focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
     @click="$emit('toggle')"
   >
-    <div class="relative z-10 flex flex-col items-center text-center">
-      <div
+    <span class="relative z-10 flex flex-col items-center text-center">
+      <span
         class="mb-4 flex h-20 w-20 items-center justify-center rounded-modal shadow-lg transition-all duration-300"
         :class="[step.gradient, step.shadow, active ? 'scale-110 shadow-xl' : '']"
       >
         <component :is="step.icon" class="h-10 w-10 text-white" />
-      </div>
-      <h3 class="font-bold text-content mb-2">{{ step.title }}</h3>
-      <p class="text-sm text-content-muted">{{ step.subtitle }}</p>
-    </div>
-  </div>
+      </span>
+      <span class="block font-bold text-content mb-2">{{ step.title }}</span>
+      <span class="block text-sm text-content-muted">{{ step.subtitle }}</span>
+    </span>
+  </button>
 </template>
 
 <script setup lang="ts">

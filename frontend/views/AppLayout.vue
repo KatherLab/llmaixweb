@@ -1,5 +1,12 @@
 <template>
   <div class="min-h-screen flex flex-col bg-surface-muted">
+    <!-- Skip link: visually hidden until focused, first focusable element -->
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:rounded-card focus:bg-surface focus:text-primary focus:font-medium focus:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      Skip to main content
+    </a>
     <!-- Navigation -->
     <nav class="w-full bg-surface shadow-sm border-b border-default sticky top-0 z-40">
       <div
@@ -92,14 +99,12 @@
             <nav
               v-else-if="projectNav"
               class="hidden md:flex items-center gap-1 overflow-x-auto max-w-full no-scrollbar scroll-fade-x"
-              role="tablist"
               aria-label="Project workflow"
             >
               <button
                 v-for="(step, idx) in projectNav.steps"
                 :key="step.id"
-                role="tab"
-                :aria-selected="projectNav.currentStep === step.id"
+                :aria-current="projectNav.currentStep === step.id ? 'page' : undefined"
                 class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium whitespace-nowrap rounded-card transition-all flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                 :class="[
                   projectNav.currentStep === step.id
@@ -155,13 +160,15 @@
               <Sun v-if="!isDark" class="w-5 h-5 text-content-muted" />
               <Moon v-else class="w-5 h-5 text-content-muted" />
             </button>
-            <div v-if="authReady && isAuthenticated" class="relative">
+            <div v-if="authReady && isAuthenticated" ref="userMenuContainer" class="relative">
               <button
+                ref="userMenuButton"
+                type="button"
                 aria-label="Open user menu"
                 :aria-expanded="showUserMenu"
                 aria-haspopup="true"
                 aria-controls="user-menu"
-                class="group flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-ring"
+                class="group flex items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                 @click="toggleUserMenu"
               >
                 <div
@@ -184,7 +191,6 @@
                   v-if="showUserMenu"
                   id="user-menu"
                   class="absolute right-0 mt-3 w-64 rounded-modal shadow-xl bg-surface ring-1 ring-default-border z-50 animate-dropdown"
-                  @click.outside="showUserMenu = false"
                 >
                   <div class="px-5 py-3 border-b border-default">
                     <div class="flex items-center gap-2">
@@ -209,21 +215,21 @@
                     <Settings class="inline-block w-5 h-5 mr-2 text-primary" />
                     Account settings
                   </router-link>
-                  <a
-                    class="block px-5 py-3 text-base text-content-muted hover:bg-primary-soft hover:text-primary font-medium transition-colors"
-                    href="#"
-                    @click.prevent="openChangePasswordModal"
+                  <button
+                    type="button"
+                    class="block w-full text-left px-5 py-3 text-base text-content-muted hover:bg-primary-soft hover:text-primary font-medium transition-colors"
+                    @click="openChangePasswordModal"
                   >
                     <Lock class="inline-block w-5 h-5 mr-2 text-primary" />
                     Change Password
-                  </a>
-                  <a
-                    class="block px-5 py-3 text-base text-content-muted hover:bg-primary-soft hover:text-primary font-medium rounded-b-modal transition-colors"
-                    href="#"
-                    @click.prevent="logout"
+                  </button>
+                  <button
+                    type="button"
+                    class="block w-full text-left px-5 py-3 text-base text-content-muted hover:bg-primary-soft hover:text-primary font-medium rounded-b-modal transition-colors"
+                    @click="logout"
                   >
                     Logout
-                  </a>
+                  </button>
                 </div>
               </transition>
             </div>
@@ -329,26 +335,26 @@
             >
               Account settings
             </router-link>
-            <a
-              class="block px-4 py-3 text-sm font-medium text-content-muted hover:bg-surface-sunken"
-              href="#"
-              @click.prevent="openChangePasswordFromMobile"
+            <button
+              type="button"
+              class="block w-full text-left px-4 py-3 text-sm font-medium text-content-muted hover:bg-surface-sunken"
+              @click="openChangePasswordFromMobile"
             >
               Change Password
-            </a>
-            <a
-              class="block px-4 py-3 text-sm font-medium text-content-muted hover:bg-surface-sunken"
-              href="#"
-              @click.prevent="logout"
+            </button>
+            <button
+              type="button"
+              class="block w-full text-left px-4 py-3 text-sm font-medium text-content-muted hover:bg-surface-sunken"
+              @click="logout"
             >
               Logout
-            </a>
+            </button>
           </div>
         </div>
       </transition>
     </nav>
     <div class="flex-1">
-      <main class="w-full">
+      <main id="main-content" tabindex="-1" class="w-full focus:outline-none">
         <router-view v-slot="{ Component }">
           <transition mode="out-in" name="fade">
             <component :is="Component" />
@@ -461,10 +467,13 @@ import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { getBannerClass } from '@/utils/statusStyles'
 import { extractErrorMessage } from '@/utils/errors'
 import { navContext as projectNavContext } from '@/composables/useNavContext'
+import { useClickOutside } from '@/composables/useClickOutside'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const showUserMenu = ref<boolean>(false)
+const userMenuContainer = ref<HTMLElement | null>(null)
+const userMenuButton = ref<HTMLButtonElement | null>(null)
 const backendVersion = ref<string>('')
 const backendGitCommit = ref<string>('')
 const isBackendDown = ref<boolean>(false)
@@ -564,6 +573,21 @@ function toggleUserMenu(): void {
   showUserMenu.value = !showUserMenu.value
 }
 
+// Close the user menu on outside click (wrapper contains trigger + panel).
+useClickOutside(userMenuContainer, () => {
+  showUserMenu.value = false
+})
+
+// Escape closes the user menu and returns focus to the trigger button.
+function handleUserMenuKeydown(e: KeyboardEvent): void {
+  if (e.key === 'Escape' && showUserMenu.value) {
+    showUserMenu.value = false
+    userMenuButton.value?.focus()
+  }
+}
+onMounted(() => document.addEventListener('keydown', handleUserMenuKeydown))
+onUnmounted(() => document.removeEventListener('keydown', handleUserMenuKeydown))
+
 // Hide user menu + mobile menu on route change
 watch(
   () => router.currentRoute.value.fullPath,
@@ -595,6 +619,7 @@ function openChangePasswordModal(): void {
   currentPassword.value = ''
   newPassword.value = ''
   confirmPassword.value = ''
+  showUserMenu.value = false
   showChangePasswordModal.value = true
 }
 

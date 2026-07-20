@@ -1,10 +1,13 @@
 <template>
-  <div class="relative">
+  <div ref="bellRoot" class="relative">
     <!-- Bell Button -->
     <button
       ref="bellButton"
+      type="button"
       aria-label="View activity"
-      class="relative p-2 rounded-full hover:bg-surface-sunken transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+      :aria-expanded="showDropdown"
+      aria-haspopup="true"
+      class="relative p-2 rounded-full hover:bg-surface-sunken transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
       :class="{ 'text-primary': hasActiveTasks }"
       @click="toggleDropdown"
     >
@@ -30,9 +33,7 @@
     <transition name="fade-slide">
       <div
         v-if="showDropdown"
-        ref="dropdown"
         class="absolute right-0 mt-2 w-[420px] bg-surface border border-default rounded-modal shadow-2xl z-50 max-h-[500px] flex flex-col"
-        @click.outside="closeDropdown"
       >
         <!-- Header -->
         <div class="px-4 py-3 border-b border-default flex items-center justify-between">
@@ -43,6 +44,7 @@
             </span>
             <button
               v-if="displayTasks.length > 0"
+              type="button"
               class="text-xs text-content-subtle hover:text-content-muted"
               title="Dismiss all"
               @click="dismissAll"
@@ -81,8 +83,13 @@
                 <div
                   v-for="task in preprocessingTasks"
                   :key="`preprocess-${task.id}`"
-                  class="px-4 py-3 hover:bg-surface-muted transition-colors cursor-pointer group"
+                  role="button"
+                  tabindex="0"
+                  :aria-label="`View preprocessing task ${task.configuration?.name || `#${task.id}`}`"
+                  class="px-4 py-3 hover:bg-surface-muted transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                   @click="navigateToPreprocessing(task)"
+                  @keydown.enter.self.prevent="navigateToPreprocessing(task)"
+                  @keydown.space.self.prevent="navigateToPreprocessing(task)"
                 >
                   <div class="flex items-start gap-3">
                     <!-- Status indicator -->
@@ -114,16 +121,20 @@
                         <!-- Cancel button (visible on hover, active tasks only) -->
                         <button
                           v-if="isTaskActive(task)"
-                          class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
+                          type="button"
+                          class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 transition-opacity p-0.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
                           title="Cancel task"
+                          aria-label="Cancel task"
                           @click.stop="cancelPreprocessing(task)"
                         >
                           <CircleStop class="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
                         </button>
-                        <!-- Dismiss button (visible on hover) -->
+                        <!-- Dismiss button (visible on hover/focus) -->
                         <button
-                          class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-surface-sunken rounded"
+                          type="button"
+                          class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 transition-opacity p-0.5 hover:bg-surface-sunken rounded"
                           title="Dismiss"
+                          aria-label="Dismiss task"
                           @click.stop="dismissTask('preprocess', task.id)"
                         >
                           <X class="w-3.5 h-3.5 text-content-subtle" />
@@ -181,8 +192,13 @@
                 <div
                   v-for="task in trialTasks"
                   :key="`trial-${task.id}`"
-                  class="px-4 py-3 hover:bg-surface-muted transition-colors cursor-pointer group"
+                  role="button"
+                  tabindex="0"
+                  :aria-label="`View trial ${trialLabel(task, task.id)}`"
+                  class="px-4 py-3 hover:bg-surface-muted transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                   @click="navigateToTrial(task)"
+                  @keydown.enter.self.prevent="navigateToTrial(task)"
+                  @keydown.space.self.prevent="navigateToTrial(task)"
                 >
                   <div class="flex items-start gap-3">
                     <!-- Status indicator -->
@@ -211,10 +227,12 @@
                         <p class="text-sm font-medium text-content truncate">
                           {{ trialLabel(task, task.id) }}
                         </p>
-                        <!-- Dismiss button (visible on hover) -->
+                        <!-- Dismiss button (visible on hover/focus) -->
                         <button
-                          class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-surface-sunken rounded"
+                          type="button"
+                          class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 transition-opacity p-0.5 hover:bg-surface-sunken rounded"
                           title="Dismiss"
+                          aria-label="Dismiss trial"
                           @click.stop="dismissTask('trial', task.id)"
                         >
                           <X class="w-3.5 h-3.5 text-content-subtle" />
@@ -252,12 +270,13 @@
           </div>
         </div>
 
-        <!-- Footer -->
+        <!-- Footer (admin only: /admin/celery is behind the adminOnly guard) -->
         <div
-          v-if="displayTasks.length > 0"
+          v-if="displayTasks.length > 0 && isAdmin"
           class="px-4 py-2 border-t border-default bg-surface-muted rounded-b-xl"
         >
           <button
+            type="button"
             class="w-full text-center text-sm text-primary font-medium hover:underline"
             @click="viewAllActivity"
           >
@@ -283,6 +302,8 @@ import type {
 import { projectsApi } from '@/services/projectsApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { useToast } from '@/composables/useToast'
+import { useClickOutside } from '@/composables/useClickOutside'
+import { useAuthStore } from '@/stores/auth'
 import { websocketService } from '@/services/websocket'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { formatRelativeTime } from '@/utils/formatters'
@@ -291,6 +312,8 @@ import { mergeWsEntity } from '@/composables/useWsEntityUpdates'
 
 const router = useRouter()
 const toast = useToast()
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.isAdmin)
 
 interface DismissedTasks {
   preprocess: Set<number>
@@ -299,6 +322,8 @@ interface DismissedTasks {
 
 // State
 const showDropdown = ref(false)
+const bellRoot = ref<HTMLElement | null>(null)
+const bellButton = ref<HTMLButtonElement | null>(null)
 const preprocessingTasks = ref<PreprocessingTask[]>([])
 const trialTasks = ref<TrialSummary[]>([])
 const isLoading = ref(false)
@@ -367,6 +392,17 @@ const toggleDropdown = (): void => {
 
 const closeDropdown = (): void => {
   showDropdown.value = false
+}
+
+// Close on outside click (wrapper contains both the bell button and the panel).
+useClickOutside(bellRoot, closeDropdown)
+
+// Escape closes the dropdown and returns focus to the bell button.
+const handleKeydown = (e: KeyboardEvent): void => {
+  if (e.key === 'Escape' && showDropdown.value) {
+    closeDropdown()
+    bellButton.value?.focus()
+  }
 }
 
 const isTaskActive = (task: PreprocessingTask): boolean => {
@@ -620,11 +656,13 @@ onMounted(() => {
   loadDismissedTasks()
   fetchAllTasks()
   wsCleanup = startWebSocket()
+  document.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   if (wsCleanup) wsCleanup()
   stopWebSocket()
+  document.removeEventListener('keydown', handleKeydown)
 })
 </script>
 

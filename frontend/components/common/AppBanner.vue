@@ -25,7 +25,7 @@ const COLOR_CLASSES: Record<string, string> = {
   red: 'bg-red-600 text-white',
   blue: 'bg-blue-600 text-white',
   green: 'bg-green-600 text-white',
-  gray: 'bg-gray-700 text-white',
+  gray: 'bg-inverse-surface text-inverse-content',
 }
 
 const visible = computed(

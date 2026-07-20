@@ -90,9 +90,12 @@
               <div class="text-sm text-content-muted">output.json</div>
             </div>
             <button
+              type="button"
+              aria-label="Copy example JSON"
               class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200 transition-colors dark:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30"
+              @click="copyJson"
             >
-              Copy
+              {{ copied ? 'Copied!' : 'Copy' }}
             </button>
           </div>
           <div class="p-4 overflow-auto max-h-64">
@@ -104,7 +107,7 @@
               or reproduce the dark syntax-highlighted flat layout without a risky extension.
               See deviation note in the refactor report.
             -->
-            <pre class="font-mono text-xs text-content-muted"><code>{
+            <pre class="font-mono text-xs text-content-muted"><code ref="jsonCode">{
   <span class="text-emerald-600 dark:text-emerald-400">"patient"</span>: {
     <span class="text-emerald-600 dark:text-emerald-400">"name"</span>: <span class="text-yellow-700 dark:text-yellow-300 highlight-target-patient">"Sarah Lee"</span>,
     <span class="text-emerald-600 dark:text-emerald-400">"date_of_birth"</span>: <span class="text-yellow-700 dark:text-yellow-300 highlight-target-dob">"1961-04-03"</span>,
@@ -173,6 +176,11 @@
           </div>
         </div>
 
+        <!-- Disclaimer: the metrics above are demo values, not real results -->
+        <p class="mt-2 text-center text-xs text-content-subtle italic">
+          Illustrative example — the data and metrics shown are fabricated for demonstration.
+        </p>
+
         <!-- Visual Flow Indicator -->
         <div class="mt-4 flex items-center justify-center gap-2 text-xs text-content-muted">
           <FileText class="w-4 h-4 text-primary" />
@@ -191,7 +199,30 @@
 
 <script setup lang="ts">
 import { FileText, Zap, BarChart3, ChevronRight, CircleCheckBig } from '@lucide/vue'
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+
+const jsonCode = ref<HTMLElement | null>(null)
+const copied = ref(false)
+let copiedTimer: ReturnType<typeof setTimeout> | null = null
+
+async function copyJson(): Promise<void> {
+  const text = jsonCode.value?.textContent
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+    copied.value = true
+    if (copiedTimer) clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => {
+      copied.value = false
+    }, 1500)
+  } catch {
+    // Clipboard unavailable (permissions / non-secure context) — ignore.
+  }
+}
+
+onUnmounted(() => {
+  if (copiedTimer) clearTimeout(copiedTimer)
+})
 
 onMounted(() => {
   // Interactive hover effects for demo section
