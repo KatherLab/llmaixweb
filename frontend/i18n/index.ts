@@ -38,16 +38,21 @@ function isSupported(value: string | null | undefined): value is SupportedLocale
  * language (matched on its primary subtag), then the default.
  */
 export function detectInitialLocale(): SupportedLocale {
-  const saved = localStorage.getItem(STORAGE_KEY)
+  // Guard the browser globals: this runs at module-load time (via the
+  // `createI18n` call below), which may happen in non-DOM contexts (e.g. a
+  // test worker whose environment lacks `localStorage`/`navigator`).
+  const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
   if (isSupported(saved)) return saved
 
-  const navLang = (navigator.language || '').slice(0, 2).toLowerCase()
+  const navLang =
+    typeof navigator !== 'undefined' ? (navigator.language || '').slice(0, 2).toLowerCase() : ''
   if (isSupported(navLang)) return navLang
 
   return DEFAULT_LOCALE
 }
 
 export function persistLocale(locale: SupportedLocale): void {
+  if (typeof localStorage === 'undefined') return
   localStorage.setItem(STORAGE_KEY, locale)
 }
 
