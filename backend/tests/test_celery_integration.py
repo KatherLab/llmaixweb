@@ -54,36 +54,61 @@ def _run_migrations(env: dict) -> None:
     )
 
 
+def _integration_env(svc, **overrides) -> dict:
+    storage = tempfile.mkdtemp(prefix="itest_storage_")
+    return {
+        **os.environ,
+        "SKIP_RUNTIME_CHECKS": "true",
+        "DISABLE_CELERY": "false",
+        "OPENAI_NO_API_CHECK": "true",
+        "SECRET_KEY": "integration-secret-key-1234567890",
+        "CELERY_BROKER_URL": svc.redis_url,
+        "SQLALCHEMY_DATABASE_URI": svc.database_url,
+        "LOCAL_DIRECTORY": storage,
+        "DOCLING_SERVE_ENABLED": "false",
+        "DISABLE_RATE_LIMIT": "true",
+        **overrides,
+    }
+
+
+def _run_integration_module(module: str, env: dict) -> None:
+    # Real schema via the actual migration chain, then drive real worker+broker.
+    _run_migrations(env)
+    result = subprocess.run(
+        [sys.executable, "-m", module],
+        cwd=_REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert result.returncode == 0 and "PASS ✅" in result.stdout, (
+        f"integration run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    )
+
+
 def test_chunked_preprocessing_over_real_broker():
     with running_services() as svc:
         if svc is None:
             pytest.skip("no container runtime / external services available")
 
-        storage = tempfile.mkdtemp(prefix="itest_storage_")
-        env = {
-            **os.environ,
-            "SKIP_RUNTIME_CHECKS": "true",
-            "DISABLE_CELERY": "false",
-            "OPENAI_NO_API_CHECK": "true",
-            "SECRET_KEY": "integration-secret-key-1234567890",
-            "CELERY_BROKER_URL": svc.redis_url,
-            "SQLALCHEMY_DATABASE_URI": svc.database_url,
-            "LOCAL_DIRECTORY": storage,
-            "PREPROCESS_CHUNK_SIZE": "2",
-            "DOCLING_SERVE_ENABLED": "false",
-            "DISABLE_RATE_LIMIT": "true",
-        }
-
-        # Real schema via the actual migration chain, then drive real worker+broker.
-        _run_migrations(env)
-        result = subprocess.run(
-            [sys.executable, "-m", "backend.tests.integration.celery_worker_runner"],
-            cwd=_REPO_ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=300,
+        _run_integration_module(
+            "backend.tests.integration.celery_worker_runner",
+            _integration_env(svc, PREPROCESS_CHUNK_SIZE="2"),
         )
-        assert result.returncode == 0 and "PASS ✅" in result.stdout, (
-            f"integration run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+
+def test_trial_extraction_over_real_broker():
+    """Celery-mode trial e2e: the API dispatches extract_info_celery through a
+    real Redis broker; a real worker on the default queue runs the extraction
+    against a local fake OpenAI-compatible server. Covers completion, failure,
+    and mid-run cancellation finalization (see trial_worker_runner.py)."""
+    with running_services() as svc:
+        if svc is None:
+            pytest.skip("no container runtime / external services available")
+
+        _run_integration_module(
+            "backend.tests.integration.trial_worker_runner",
+            # The runner starts its own worker; the app must not spawn one.
+            _integration_env(svc, INITIALIZE_CELERY="false"),
         )
