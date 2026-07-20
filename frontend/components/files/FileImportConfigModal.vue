@@ -479,13 +479,11 @@ const loadPreview = async (): Promise<void> => {
       caseIdColumn.value = guessed || ''
     }
 
-    // Text columns default
-    if (
-      (!textColumns.value.length || textColumns.value.some((tc) => !labels.includes(tc))) &&
-      labels.length
-    ) {
-      const firstLabel = labels[0]
-      if (firstLabel) textColumns.value = [firstLabel]
+    // Drop any previously selected text columns that no longer exist under the
+    // current settings (e.g. after a header/delimiter change), but don't
+    // auto-pick one — the user chooses which column(s) hold the report text.
+    if (textColumns.value.some((tc) => !labels.includes(tc))) {
+      textColumns.value = textColumns.value.filter((tc) => labels.includes(tc))
     }
 
     // XLSX sheet default
