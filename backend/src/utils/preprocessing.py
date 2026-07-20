@@ -11,7 +11,7 @@ import pandas as pd
 from openai import OpenAI
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 from .. import models
 from ..core.config import settings
@@ -733,9 +733,18 @@ class PreprocessingPipeline:
             # gracefully if control reached here before it was set.
             secs = timeout_seconds if "timeout_seconds" in dir() else 0
             logger.error("Timeout processing file %s after %ds: %s", file_name, secs, e)
-            msg = (
-                f"Processing timed out after {secs} seconds. "
-                "The file may be too large or the OCR service is unresponsive."
+            # Record the timeout in the central error log under a correlation id
+            # so an admin can trace which file/engine timed out — previously the
+            # timeout left no ErrorLog row at all.
+            msg = operational_error_message(
+                detail=(
+                    f"File task {file_task_id} ({file_name}) in preprocessing "
+                    f"task {self.task.id} timed out after {secs}s: {e}"
+                ),
+                prefix=(
+                    f"Processing timed out after {secs} seconds. "
+                    "The file may be too large or the OCR service is unresponsive."
+                ),
             )
             self._fail_file_task_fresh(file_task_id, msg)
             return
@@ -1781,6 +1790,7 @@ class PreprocessingPipeline:
         text: str,
         document_name: str,
         meta_data: dict,
+        prefetched_existing: dict[str, list[models.Document]] | None = None,
     ) -> models.Document:
         """Get existing document or create new one with versioning.
 
@@ -1792,6 +1802,11 @@ class PreprocessingPipeline:
 
         Uses database-level locking (FOR UPDATE) to prevent race conditions
         when concurrent tasks process the same file with the same config.
+
+        ``prefetched_existing`` (name → existing docs for this file+config,
+        built by :meth:`_prefetch_existing_documents`) skips the per-call
+        locked SELECT — one query per file instead of one per row for a
+        row-by-row table. Entries are consumed (popped) as they're used.
         """
         # Sanitize before anything touches the DB: PostgreSQL rejects NUL
         # bytes in text/varchar columns, and document_name is String(500) —
@@ -1799,6 +1814,17 @@ class PreprocessingPipeline:
         # and would otherwise fail the whole batch commit with a DataError.
         text = _strip_nul(text)
         document_name = _strip_nul(document_name)[:500]
+
+        if prefetched_existing is not None:
+            all_existing_docs = prefetched_existing.pop(document_name, [])
+            return self._archive_and_create_document(
+                file=file,
+                file_task=file_task,
+                text=text,
+                document_name=document_name,
+                meta_data=meta_data,
+                all_existing_docs=all_existing_docs,
+            )
 
         # Use database-level locking to prevent race conditions
         max_retries = 3
@@ -1852,6 +1878,30 @@ class PreprocessingPipeline:
 
                 time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
 
+        return self._archive_and_create_document(
+            file=file,
+            file_task=file_task,
+            text=text,
+            document_name=document_name,
+            meta_data=meta_data,
+            all_existing_docs=all_existing_docs,
+        )
+
+    def _archive_and_create_document(
+        self,
+        *,
+        file: models.File,
+        file_task: models.FilePreprocessingTask,
+        text: str,
+        document_name: str,
+        meta_data: dict,
+        all_existing_docs: list[models.Document],
+    ) -> models.Document:
+        """Archive any latest version among ``all_existing_docs`` and add a new one.
+
+        Shared tail of :meth:`_get_or_create_document` (inputs already
+        sanitized there).
+        """
         # Separate latest from archived
         latest_docs = [d for d in all_existing_docs if d.is_latest]
 
@@ -1898,6 +1948,58 @@ class PreprocessingPipeline:
         )
         self.db.add(doc)
         return doc
+
+    def _prefetch_existing_documents(
+        self, file: models.File
+    ) -> dict[str, list[models.Document]]:
+        """Load ALL existing documents for this file+config, keyed by name.
+
+        Row-by-row tables call :meth:`_get_or_create_document` once per row;
+        without this, every row issues its own locked SELECT (100k queries for
+        a 100k-row CSV). One locked query up front preserves the versioning
+        semantics — the ``text``/``meta_data`` payloads are deferred since the
+        archive path never reads them. Falls back to an unlocked read after
+        lock contention (the endpoint's in-flight 409 and the pipeline's
+        conflicting-task check already prevent true concurrent same-file+config
+        runs; the lock is a belt-and-braces net, and batch commits release it
+        mid-file anyway).
+        """
+        query = (
+            self.db.query(models.Document)
+            .filter(
+                models.Document.original_file_id == file.id,
+                models.Document.preprocessing_config_id == self.config.id,
+            )
+            .options(defer(models.Document.text), defer(models.Document.meta_data))
+        )
+
+        max_retries = 3
+        retry_delay = 0.1  # seconds
+        existing_docs: list[models.Document] = []
+        for attempt in range(max_retries):
+            try:
+                existing_docs = query.with_for_update(nowait=True).all()
+                break
+            except OperationalError as e:
+                logger.warning(
+                    "Document prefetch lock conflict for file %s (attempt %d/%d): %s",
+                    file.file_name,
+                    attempt + 1,
+                    max_retries,
+                    e,
+                )
+                self.db.rollback()
+                if attempt == max_retries - 1:
+                    existing_docs = query.all()
+                    break
+                import time
+
+                time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+
+        by_name: dict[str, list[models.Document]] = {}
+        for doc in existing_docs:
+            by_name.setdefault(doc.document_name, []).append(doc)
+        return by_name
 
     def _mistral_ocr_usable(self) -> bool:
         """Whether Mistral OCR can actually run for this task.
@@ -2316,6 +2418,12 @@ class PreprocessingPipeline:
             # Check for duplicate case IDs
             self._check_duplicate_case_ids(file, df)
 
+            # One locked query for ALL existing docs of this file+config instead
+            # of one per row (see _prefetch_existing_documents). Done BEFORE the
+            # document-set creation below: its contention fallback may roll the
+            # session back, which must not discard a freshly flushed set.
+            prefetched_existing = self._prefetch_existing_documents(file)
+
             # Create an auto-generated document set for this file's row-by-row documents
             document_set = self._create_row_by_row_document_set(
                 file, df, case_id_column
@@ -2400,6 +2508,7 @@ class PreprocessingPipeline:
                         # the JSON serialization of meta_data at commit time.
                         "all_row_data": _json_safe(row.to_dict()),
                     },
+                    prefetched_existing=prefetched_existing,
                 )
 
                 # Add document to the auto-generated set (O(1) membership check)
@@ -2411,18 +2520,23 @@ class PreprocessingPipeline:
 
                 # Commit in batches for performance
                 if len(batch_documents) >= self.BATCH_SIZE:
-                    self.db.commit()
-                    documents.extend(batch_documents)
-                    batch_documents = []
-
-                    # Update progress
                     file_task.progress = (row_idx + 1) / total_rows * 100
                     self.db.commit()
+                    documents.extend(batch_documents)
+                    # Drop each committed doc's text + row payload from memory
+                    # (ids stay loaded for the caller's document_ids tally).
+                    # Without this a 100k-row CSV holds every row's text AND
+                    # its full all_row_data dict in RAM until the file ends.
+                    for d in batch_documents:
+                        self.db.expire(d, ["text", "meta_data"])
+                    batch_documents = []
 
             # Save remaining documents
             if batch_documents:
                 self.db.commit()
                 documents.extend(batch_documents)
+                for d in batch_documents:
+                    self.db.expire(d, ["text", "meta_data"])
 
             if skipped_empty_rows:
                 self._add_file_task_warnings(

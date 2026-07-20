@@ -43,6 +43,30 @@ class TestSanitizeArcname:
             assert zf.namelist() == ["evil.txt"]
             assert zf.read("evil.txt") == b"payload"
 
+    def test_iter_zip_chunked_entry_round_trips(self):
+        """An entry given as an iterable of chunks (streamed CSV) must produce
+        a valid archive whose member equals the concatenated chunks, alongside
+        plain bytes entries."""
+        chunks = [b"col_a,col_b\r\n", b"1,hello\r\n", b"2,world\r\n"]
+        data = b"".join(
+            iter_zip(
+                [
+                    ("files/source.bin", b"rawbytes"),
+                    ("results.csv", iter(chunks)),
+                ]
+            )
+        )
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            assert zf.testzip() is None
+            assert zf.namelist() == ["files/source.bin", "results.csv"]
+            assert zf.read("files/source.bin") == b"rawbytes"
+            assert zf.read("results.csv") == b"".join(chunks)
+
+    def test_iter_zip_chunked_entry_sanitizes_name(self):
+        data = b"".join(iter_zip([("../../evil.csv", iter([b"a,b\r\n"]))]))
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            assert zf.namelist() == ["evil.csv"]
+
 
 class TestContentDisposition:
     def test_plain_filename(self):

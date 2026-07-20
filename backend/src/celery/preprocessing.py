@@ -182,8 +182,26 @@ if celery_app:
                 # This also handles any edge cases where tasks get stuck
                 # in IN_PROGRESS due to unhandled exceptions or crashes.
                 now = dt.datetime.now(dt.UTC)
+                # ``resume_dispatched`` is set at the chunk boundary just before
+                # the continuation message is enqueued. If the worker crashes in
+                # the requeue-to-ack window, the broker redelivers the ORIGINAL
+                # message (resumed=False) even though a healthy resume chain is
+                # (or will be) running — failing the whole task here would kill
+                # it. Treat such a redelivery as a resume continuation instead:
+                # worst case both messages run briefly in parallel, which the
+                # per-file PENDING checks and the conflicting-task guard make
+                # benign (and if the crash happened before the enqueue, this
+                # redelivery IS the only continuation left).
+                resume_pending = bool((task.meta or {}).get("resume_dispatched"))
+                if not resumed and resume_pending:
+                    log.info(
+                        "PreprocessingTask %s: original message redelivered "
+                        "during an active resume chain; continuing as resume",
+                        task_id,
+                    )
                 if (
                     not resumed
+                    and not resume_pending
                     and task.started_at is not None
                     and task.status
                     in (
@@ -191,8 +209,13 @@ if celery_app:
                         models.PreprocessingStatus.IN_PROGRESS,
                     )
                 ):
-                    # Check how long ago the task started
-                    time_since_start = (now - task.started_at).total_seconds()
+                    # Check how long ago the task started. Coerce to tz-aware:
+                    # SQLite (dev) returns naive datetimes, which can't be
+                    # subtracted from the aware `now`.
+                    started_at = task.started_at
+                    if started_at.tzinfo is None:
+                        started_at = started_at.replace(tzinfo=dt.UTC)
+                    time_since_start = (now - started_at).total_seconds()
                     task.status = models.PreprocessingStatus.FAILED
                     task.completed_at = now
                     # Record the crash/stale-detection detail (timing + likely
@@ -235,6 +258,13 @@ if celery_app:
                 task.status = models.PreprocessingStatus.IN_PROGRESS
                 if task.started_at is None:
                     task.started_at = now
+                # This execution is now the active continuation — consume the
+                # resume marker so a FUTURE (unrelated) redelivery isn't
+                # mistaken for part of a resume chain.
+                if (task.meta or {}).get("resume_dispatched"):
+                    task.meta = {
+                        k: v for k, v in task.meta.items() if k != "resume_dispatched"
+                    }
                 db.commit()
 
                 # Get configuration to determine appropriate concurrency
@@ -293,11 +323,23 @@ if celery_app:
 
                 # Process at most chunk_size PENDING files this execution; the
                 # finalization block re-enqueues the task to continue the rest.
-                file_tasks = [
-                    ft
-                    for ft in task.file_tasks
-                    if ft.status == models.PreprocessingStatus.PENDING
-                ][:chunk_size]
+                # Select ids directly instead of iterating ``task.file_tasks`` —
+                # the collection would hydrate EVERY file-task row (all chunks,
+                # incl. warnings/metadata) on every chunk execution, O(N²/chunk)
+                # over the batch.
+                file_task_ids = list(
+                    db.execute(
+                        select(models.FilePreprocessingTask.id)
+                        .where(
+                            models.FilePreprocessingTask.preprocessing_task_id
+                            == task_id,
+                            models.FilePreprocessingTask.status
+                            == models.PreprocessingStatus.PENDING,
+                        )
+                        .order_by(models.FilePreprocessingTask.id)
+                        .limit(chunk_size)
+                    ).scalars()
+                )
 
                 log.info(
                     "Starting preprocessing task %s with concurrency limit %d, "
@@ -426,8 +468,8 @@ if celery_app:
                         db.commit()
 
             # --- Launch all file_tasks (concurrent up to limit) ---
-            for ft in file_tasks:
-                running_tasks[ft.id] = asyncio.create_task(process_file(ft.id))
+            for ft_id in file_task_ids:
+                running_tasks[ft_id] = asyncio.create_task(process_file(ft_id))
 
             # --- Heartbeat: update progress/meta/ETA for frontend + WebSocket broadcast ---
             async def progress_heartbeat():
@@ -630,6 +672,12 @@ if celery_app:
                     task.meta = (task.meta or {}) | {
                         "total_files": sum(counts.values()),
                         "completed_files": completed,
+                        # Marks that a continuation message is about to be
+                        # enqueued — lets the stale-task guard tell a benign
+                        # redelivery-during-resume apart from a real crash
+                        # (see the guard above). Cleared when the next
+                        # execution starts.
+                        "resume_dispatched": True,
                     }
                     db.commit()
                     _broadcast_preprocessing_update(task, "progress")

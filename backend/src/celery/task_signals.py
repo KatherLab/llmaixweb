@@ -281,15 +281,26 @@ def sweep_orphans():
         # Generic user-facing text (no "sweeper/worker lost" infra detail); the
         # real cause is recorded once per finalized parent below, and its error
         # id is carried on the parent's message.
+        stale_ft_ids: list[int] = []
         for ft in q.all():
             ft.status = models.PreprocessingStatus.FAILED
             ft.error_message = (
                 "Preprocessing was interrupted before it completed. Please retry."
             )
             affected += 1
+            stale_ft_ids.append(ft.id)
             parent_ids.add(ft.preprocessing_task_id)
 
         db.commit()
+
+        if stale_ft_ids:
+            logger.warning(
+                "Orphan sweeper: marked %d stale file task(s) FAILED "
+                "(ids=%s, parent task(s)=%s)",
+                len(stale_ft_ids),
+                stale_ft_ids[:50],
+                sorted(parent_ids),
+            )
 
         # 2) refresh parent tasks so their summary & message are accurate.
         # Only finalize a parent here when it has NO file tasks still in
@@ -328,8 +339,22 @@ def sweep_orphans():
                 # Some files are still being processed by a live worker; leave
                 # the parent's status alone and let the normal completion path
                 # set the final FAILED/COMPLETED tally once they finish.
+                logger.info(
+                    "Orphan sweeper: PreprocessingTask %s has %d file task(s) "
+                    "still in flight; leaving status untouched",
+                    pid,
+                    in_flight,
+                )
                 continue
 
+            logger.warning(
+                "Orphan sweeper: finalizing PreprocessingTask %s as FAILED "
+                "(%d/%d completed, %d failed)",
+                pid,
+                completed,
+                total,
+                failed,
+            )
             finalized_parent_ids.add(pid)
             parent.status = models.PreprocessingStatus.FAILED
             # Keep the factual counts (not sensitive), but move the "worker
@@ -374,6 +399,13 @@ def sweep_orphans():
             .all()
         )
         for trial in stuck_trials:
+            logger.warning(
+                "Orphan sweeper: marking stuck Trial %s FAILED "
+                "(status=PROCESSING, last updated_at=%s, cutoff=%s)",
+                trial.id,
+                trial.updated_at,
+                trial_cutoff,
+            )
             trial.status = models.TrialStatus.FAILED
             trial.finished_at = datetime.datetime.now(datetime.UTC)
             trial.meta = (trial.meta or {}) | {

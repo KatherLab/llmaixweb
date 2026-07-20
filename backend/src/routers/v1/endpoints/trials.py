@@ -211,6 +211,11 @@ def create_trial(
             detail="Either document_ids or document_set_id must be provided",
         )
 
+    # Dedupe (order-preserving): a duplicated id would inflate the trial's
+    # total while results are unique per (trial, document) — done == total
+    # would then be unreachable and the trial could never COMPLETE.
+    document_ids = list(dict.fromkeys(document_ids))
+
     # 3. Use default config values if not set
     llm_model = trial.llm_model or settings.OPENAI_API_MODEL
     api_key = trial.api_key or settings.OPENAI_API_KEY
@@ -731,9 +736,9 @@ def get_trial(
     include_results: Annotated[
         bool,
         Query(
-            description="Embed all results (default true). Set false to fetch via /results."
+            description="Embed all results (default false). Fetch pages via /results."
         ),
-    ] = True,
+    ] = False,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.Trial:
@@ -747,10 +752,13 @@ def get_trial(
             status_code=403, detail="Not authorized to access this project's trials"
         )
 
+    # noload keeps serialization from lazy-loading every result anyway when
+    # include_results is false — previously the flag only skipped the explicit
+    # query while schemas.Trial.model_validate still hydrated the relationship.
     trial: models.Trial | None = db.execute(
-        select(models.Trial).where(
-            models.Trial.project_id == project_id, models.Trial.id == trial_id
-        )
+        select(models.Trial)
+        .where(models.Trial.project_id == project_id, models.Trial.id == trial_id)
+        .options(noload(models.Trial.results))
     ).scalar_one_or_none()
 
     if trial and include_results:
@@ -858,16 +866,21 @@ def list_trial_results(
         items.append(item)
 
     # Aggregate token usage across ALL results for this trial (for the meta
-    # header). Lightweight: selects only the additional_content column, no joins
-    # or heavy `result`/`text` hydration. Dialect-agnostic (summed in Python).
+    # header). Extract just the `usage` sub-object DB-side (JSON path works on
+    # both PostgreSQL and SQLite) so the full additional_content — raw LLM
+    # output, reasoning traces — is never hydrated per page. Summed in Python
+    # to stay lenient about junk/missing values.
     usage_rows = db.execute(
-        select(TR.additional_content).where(TR.trial_id == trial_id)
+        select(TR.additional_content["usage"]).where(TR.trial_id == trial_id)
     ).all()
     total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-    for (ac,) in usage_rows:
-        if not isinstance(ac, dict):
-            continue
-        usage = ac.get("usage")
+    for (usage,) in usage_rows:
+        if isinstance(usage, str):
+            # Some dialect/driver combinations return the extracted JSON as text.
+            try:
+                usage = json.loads(usage)
+            except ValueError:
+                continue
         if not isinstance(usage, dict):
             continue
         total_usage["prompt_tokens"] += _to_int(usage.get("prompt_tokens"))
@@ -1080,9 +1093,14 @@ def download_trial_results(
         select(models.Schema).where(models.Schema.id == trial.schema_id)
     ).scalar_one_or_none()
 
+    # additional_content (raw LLM output, reasoning traces — the bulk of a
+    # result row) is never read by this export; defer it so a large trial
+    # doesn't hydrate it all into memory.
     results = list(
         db.execute(
-            select(models.TrialResult).where(models.TrialResult.trial_id == trial_id)
+            select(models.TrialResult)
+            .where(models.TrialResult.trial_id == trial_id)
+            .options(defer(models.TrialResult.additional_content))
         )
         .scalars()
         .all()
@@ -1311,136 +1329,41 @@ def download_trial_results(
         prompt_keys = sorted(_extract_keys(prompt_dict))
         schema_keys = sorted(_extract_keys(schema_dict))
 
+        base_columns = ["document_id", "document_name", "file_name", "created_at"]
         if include_content:
-            header = (
-                [
-                    "document_id",
-                    "document_name",
-                    "file_name",
-                    "created_at",
-                    "document_content",
-                ]
-                + [f"meta.{k}" for k in meta_keys]
-                + [f"preprocessing.{k}" for k in prep_keys]
-                + [f"trial.{k}" for k in trial_keys]
-                + [f"prompt.{k}" for k in prompt_keys]
-                + [f"schema.{k}" for k in schema_keys]
-                + [f"result.{k}" for k in result_keys]
-            )
+            base_columns.append("document_content")
+        header = (
+            base_columns
+            + [f"meta.{k}" for k in meta_keys]
+            + [f"preprocessing.{k}" for k in prep_keys]
+            + [f"trial.{k}" for k in trial_keys]
+            + [f"prompt.{k}" for k in prompt_keys]
+            + [f"schema.{k}" for k in schema_keys]
+            + [f"result.{k}" for k in result_keys]
+        )
 
-            def _csv_content_entries():
-                """Stream embedded original files one at a time, then the CSV.
+        def _iter_csv_rows():
+            """Yield the CSV as encoded chunks, one row at a time.
 
-                The CSV text itself is accumulated (it's the extracted data, far
-                smaller than the file bytes), but the original file payloads —
-                the memory-dominant part — are yielded and drained per file
-                instead of all held in a single in-memory archive buffer.
-                """
-                csv_output = io.StringIO()
-                writer = SafeDictCsvWriter(
-                    csv.DictWriter(csv_output, fieldnames=header)
-                )
-                writer.writeheader()
-                added_files = set()
-                for result in results:
-                    row = {
-                        "document_id": result.document_id,
-                        "document_name": "",
-                        "file_name": "",
-                        "created_at": result.created_at.isoformat(),
-                        "document_content": "",
-                    }
-                    document = document_cache.get(result.document_id)
-                    file = None
-                    document_name = ""
-                    file_name = ""
-                    prep_conf = {}
-                    if document:
-                        document_name = document.document_name
-                        if document.original_file_id:
-                            file = file_cache.get(document.original_file_id)
-                            if not document_name and file:
-                                document_name = file.file_name
-                        file_name = file.file_name if file else ""
-                        row["document_content"] = document.text or ""
-                        if document.preprocessing_config_id:
-                            prep_obj = preprocessing_config_cache.get(
-                                document.preprocessing_config_id
-                            )
-                            if prep_obj:
-                                prep_conf = filter_sensitive_keys(
-                                    {
-                                        k: v
-                                        for k, v in prep_obj.__dict__.items()
-                                        if not k.startswith("_")
-                                        and isinstance(
-                                            v,
-                                            (
-                                                str,
-                                                int,
-                                                float,
-                                                bool,
-                                                dict,
-                                                list,
-                                                type(None),
-                                            ),
-                                        )
-                                    }
-                                )
-                        file_id = (
-                            document.preprocessed_file_id or document.original_file_id
-                        )
-                        if file_id:
-                            # Batch-loaded into file_cache above (no per-result query).
-                            file_to_add = file_cache.get(file_id)
-                            if file_to_add and file_id not in added_files:
-                                added_files.add(file_id)
-                                file_content = get_file(file_to_add.file_uuid)
-                                file_path = f"files/{file_to_add.file_uuid}_{file_to_add.file_name}"
-                                yield (file_path, file_content)
-                    row["document_name"] = document_name or ""
-                    row["file_name"] = file_name or ""
-                    meta_flat = flatten_dict(document.meta_data if document else {})
-                    for k in meta_keys:
-                        row[f"meta.{k}"] = meta_flat.get(k, "")
-                    prep_flat = flatten_dict(prep_conf)
-                    for k in prep_keys:
-                        row[f"preprocessing.{k}"] = prep_flat.get(k, "")
-                    trial_flat = flatten_dict(trial_dict)
-                    for k in trial_keys:
-                        row[f"trial.{k}"] = trial_flat.get(k, "")
-                    prompt_flat = flatten_dict(prompt_dict)
-                    for k in prompt_keys:
-                        row[f"prompt.{k}"] = prompt_flat.get(k, "")
-                    schema_flat = flatten_dict(schema_dict)
-                    for k in schema_keys:
-                        row[f"schema.{k}"] = schema_flat.get(k, "")
-                    res_flat = flatten_dict(result.result)
-                    for k in result_keys:
-                        row[f"result.{k}"] = res_flat.get(k, "")
-                    writer.writerow(row)
-                yield ("results.csv", csv_output.getvalue().encode("utf-8"))
+            The whole body is never accumulated — a trial over thousands of
+            documents with embedded content would otherwise buffer every
+            document text in one StringIO.
+            """
+            buf = io.StringIO()
+            writer = SafeDictCsvWriter(csv.DictWriter(buf, fieldnames=header))
+            # Constant per export — flattened once, not per row.
+            trial_flat = flatten_dict(trial_dict)
+            prompt_flat = flatten_dict(prompt_dict)
+            schema_flat = flatten_dict(schema_dict)
 
-            return StreamingResponse(
-                iter_zip(_csv_content_entries()),
-                media_type="application/zip",
-                headers={
-                    "Content-Disposition": f'attachment; filename="{download_basename}.zip"'
-                },
-            )
-        else:
-            output = io.StringIO()
-            header = (
-                ["document_id", "document_name", "file_name", "created_at"]
-                + [f"meta.{k}" for k in meta_keys]
-                + [f"preprocessing.{k}" for k in prep_keys]
-                + [f"trial.{k}" for k in trial_keys]
-                + [f"prompt.{k}" for k in prompt_keys]
-                + [f"schema.{k}" for k in schema_keys]
-                + [f"result.{k}" for k in result_keys]
-            )
-            writer = SafeDictCsvWriter(csv.DictWriter(output, fieldnames=header))
+            def _drain() -> bytes:
+                data = buf.getvalue().encode("utf-8")
+                buf.seek(0)
+                buf.truncate(0)
+                return data
+
             writer.writeheader()
+            yield _drain()
             for result in results:
                 row = {
                     "document_id": result.document_id,
@@ -1448,6 +1371,8 @@ def download_trial_results(
                     "file_name": "",
                     "created_at": result.created_at.isoformat(),
                 }
+                if include_content:
+                    row["document_content"] = ""
                 document = document_cache.get(result.document_id)
                 file = None
                 document_name = ""
@@ -1460,6 +1385,8 @@ def download_trial_results(
                         if not document_name and file:
                             document_name = file.file_name
                     file_name = file.file_name if file else ""
+                    if include_content:
+                        row["document_content"] = document.text or ""
                     if document.preprocessing_config_id:
                         prep_obj = preprocessing_config_cache.get(
                             document.preprocessing_config_id
@@ -1484,21 +1411,55 @@ def download_trial_results(
                 prep_flat = flatten_dict(prep_conf)
                 for k in prep_keys:
                     row[f"preprocessing.{k}"] = prep_flat.get(k, "")
-                trial_flat = flatten_dict(trial_dict)
                 for k in trial_keys:
                     row[f"trial.{k}"] = trial_flat.get(k, "")
-                prompt_flat = flatten_dict(prompt_dict)
                 for k in prompt_keys:
                     row[f"prompt.{k}"] = prompt_flat.get(k, "")
-                schema_flat = flatten_dict(schema_dict)
                 for k in schema_keys:
                     row[f"schema.{k}"] = schema_flat.get(k, "")
                 res_flat = flatten_dict(result.result)
                 for k in result_keys:
                     row[f"result.{k}"] = res_flat.get(k, "")
                 writer.writerow(row)
-            return Response(
-                content=output.getvalue(),
+                yield _drain()
+
+        if include_content:
+
+            def _csv_content_entries():
+                """Stream embedded source files one at a time, then the CSV.
+
+                Each file's bytes are read from storage on demand and drained
+                before the next; the CSV member itself is written chunk-wise
+                (see _iter_csv_rows), so neither part is held in memory whole.
+                """
+                added_files = set()
+                for result in results:
+                    document = document_cache.get(result.document_id)
+                    if not document:
+                        continue
+                    file_id = document.preprocessed_file_id or document.original_file_id
+                    if file_id:
+                        # Batch-loaded into file_cache above (no per-result query).
+                        file_to_add = file_cache.get(file_id)
+                        if file_to_add and file_id not in added_files:
+                            added_files.add(file_id)
+                            file_content = get_file(file_to_add.file_uuid)
+                            file_path = (
+                                f"files/{file_to_add.file_uuid}_{file_to_add.file_name}"
+                            )
+                            yield (file_path, file_content)
+                yield ("results.csv", _iter_csv_rows())
+
+            return StreamingResponse(
+                iter_zip(_csv_content_entries()),
+                media_type="application/zip",
+                headers={
+                    "Content-Disposition": f'attachment; filename="{download_basename}.zip"'
+                },
+            )
+        else:
+            return StreamingResponse(
+                _iter_csv_rows(),
                 media_type="text/csv",
                 headers={
                     "Content-Disposition": f'attachment; filename="{download_basename}.csv"'

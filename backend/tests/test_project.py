@@ -2261,7 +2261,8 @@ Carol,Cold,Hamburg,2024-07-03
 
     # Results: all docs should have a result
     result = client.get(
-        f"{api_url}/project/{project_id}/trial/{trial_id}", headers=headers
+        f"{api_url}/project/{project_id}/trial/{trial_id}?include_results=true",
+        headers=headers,
     ).json()
     assert result["status"] == "completed"
     assert len(result["results"]) == 3
@@ -2390,7 +2391,8 @@ def test_create_trial_with_mixed_preprocessing(client, api_url, files_base_path)
     ).json()["id"]
 
     result = client.get(
-        f"{api_url}/project/{project_id}/trial/{trial_id}", headers=headers
+        f"{api_url}/project/{project_id}/trial/{trial_id}?include_results=true",
+        headers=headers,
     ).json()
     assert result["status"] == "completed"
     assert len(result["results"]) == 2
@@ -2496,7 +2498,8 @@ def test_ocr_preprocessing_for_extraction(client, api_url, files_base_path):
     ).json()["id"]
 
     result = client.get(
-        f"{api_url}/project/{project_id}/trial/{trial_id}", headers=headers
+        f"{api_url}/project/{project_id}/trial/{trial_id}?include_results=true",
+        headers=headers,
     ).json()
     assert result["status"] == "completed"
     assert len(result["results"]) == 1

@@ -87,6 +87,12 @@ if celery_app:
         project_id: int,
         advanced_options: Dict[str, Any] | None = None,
     ) -> None:
+        # Dedupe (order-preserving), mirroring create_trial: results are unique
+        # per (trial, document), so a duplicated id would make done == total
+        # unreachable and the trial would always finalize FAILED. Trials created
+        # before the endpoint deduped may still carry duplicates.
+        document_ids = list(dict.fromkeys(document_ids))
+
         async def _run():
             # Stale-task / re-delivery guard. With task_acks_late=True and a
             # Redis visibility_timeout, a message can be redelivered after a
@@ -154,14 +160,33 @@ if celery_app:
                                 if trial and trial.is_cancelled:
                                     raise asyncio.CancelledError("Trial was cancelled")
 
-                                exists = db.scalar(
-                                    select(models.TrialResult.id).where(
+                                # Skip only docs whose stored result succeeded.
+                                # On a re-delivery after a mid-run crash, docs
+                                # with a failed/incomplete/invalid result get
+                                # re-extracted (_store_result updates the row in
+                                # place — same rule it applies itself). Legacy
+                                # rows without a status carry it in
+                                # additional_content; if neither is set, skip
+                                # conservatively rather than re-spend LLM cost.
+                                existing = db.execute(
+                                    select(
+                                        models.TrialResult.status,
+                                        models.TrialResult.additional_content,
+                                    ).where(
                                         models.TrialResult.trial_id == trial_id,
                                         models.TrialResult.document_id == doc_id,
                                     )
-                                )
-                                if exists:
-                                    return
+                                ).first()
+                                if existing is not None:
+                                    existing_status = (
+                                        existing.status.value
+                                        if existing.status
+                                        else (existing.additional_content or {}).get(
+                                            "status"
+                                        )
+                                    )
+                                    if existing_status in ("success", None):
+                                        return
 
                             # LLM call + store result. extract_info_single_doc_async
                             # opens its own short-lived sessions for load/store
@@ -282,7 +307,10 @@ if celery_app:
                 )  # ensure docs_done/progress are up to date
                 if trial:
                     trial.finished_at = dt.datetime.now(dt.UTC)
-                    total = len(trial.document_ids or [])
+                    # Distinct ids: results are unique per (trial, document), so
+                    # a legacy trial with duplicated document_ids must not have
+                    # its total inflated (done == total would be unreachable).
+                    total = len(set(trial.document_ids or []))
                     done = db.scalar(
                         select(func.count())
                         .select_from(models.TrialResult)

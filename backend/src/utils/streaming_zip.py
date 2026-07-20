@@ -11,6 +11,7 @@ in memory before the first byte ships.
 from __future__ import annotations
 
 import io
+import time
 import zipfile
 from collections.abc import Iterable, Iterator
 from typing import Any, cast
@@ -68,18 +69,37 @@ class StreamingZipSink:
         return data
 
 
-def iter_zip(entries: Iterable[tuple[str, bytes]]) -> Iterator[bytes]:
+def iter_zip(
+    entries: Iterable[tuple[str, bytes | Iterable[bytes]]],
+) -> Iterator[bytes]:
     """Yield a ZIP byte-stream for ``(arcname, data)`` entries.
 
     ``entries`` is consumed lazily, so a producer that reads each file's bytes
     from storage on demand keeps at most one entry's payload in memory at a
     time. The archive's own compression buffers are drained after every entry.
+
+    ``data`` may also be an iterable of byte chunks: the entry is then written
+    incrementally (draining after every chunk), so even a single huge member —
+    e.g. a CSV generated row by row — is never fully buffered. The sink is
+    forward-only, which ``zipfile`` detects at construction and handles by
+    emitting data descriptors instead of seeking back to patch headers.
     """
     sink = StreamingZipSink()
     zf = zipfile.ZipFile(cast(Any, sink), "w", zipfile.ZIP_DEFLATED)
     try:
         for arcname, data in entries:
-            zf.writestr(sanitize_arcname(arcname), data)
+            name = sanitize_arcname(arcname)
+            if isinstance(data, (bytes, bytearray, memoryview)):
+                zf.writestr(name, data)
+            else:
+                info = zipfile.ZipInfo(name, date_time=time.localtime()[:6])
+                info.compress_type = zipfile.ZIP_DEFLATED
+                with zf.open(info, mode="w") as member:
+                    for piece in data:
+                        member.write(piece)
+                        chunk = sink.drain()
+                        if chunk:
+                            yield chunk
             chunk = sink.drain()
             if chunk:
                 yield chunk

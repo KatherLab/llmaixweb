@@ -1094,9 +1094,12 @@ def get_preprocessing_progress(
         task.status == models.PreprocessingStatus.IN_PROGRESS
         and task.processed_files > 0
     ):
-        elapsed = datetime.datetime.now(datetime.UTC) - (
-            task.started_at or datetime.datetime.now(datetime.UTC)
-        )
+        # Coerce to tz-aware: SQLite (dev) returns naive datetimes, which can't
+        # be subtracted from the aware `now`.
+        started_at = task.started_at or datetime.datetime.now(datetime.UTC)
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=datetime.UTC)
+        elapsed = datetime.datetime.now(datetime.UTC) - started_at
         avg_time_per_file = elapsed.total_seconds() / task.processed_files
         remaining_files = task.total_files - task.processed_files - task.failed_files
 

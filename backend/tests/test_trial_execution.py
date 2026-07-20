@@ -505,3 +505,113 @@ def test_celery_trial_dispatch_failure_marks_failed_not_stuck(
     assert len(trials) == 1  # still only the earlier dispatch-failure trial
 
     client.delete(f"{api_url}/project/{project_id}", headers=headers)
+
+
+def test_trial_duplicate_document_ids_deduped_and_results_default_excluded(
+    client, api_url, monkeypatch
+):
+    """Duplicated document_ids must be deduped at creation (a duplicate would
+    inflate the total: results are unique per (trial, document), so done ==
+    total could never be reached and progress would stick below 1.0). Also
+    covers the GET /trial default: results are no longer embedded unless
+    include_results=true is passed."""
+    headers = _admin_headers(client, api_url)
+
+    expected = {"field1": "x"}
+    monkeypatch.setattr(
+        "backend.src.utils.info_extraction.OpenAI",
+        _make_fake_openai(json.dumps(expected)),
+    )
+
+    project_id = client.post(
+        f"{api_url}/project", headers=headers, json={"name": "Dup Ids Trial Project"}
+    ).json()["id"]
+
+    prompt_id = client.post(
+        f"{api_url}/project/{project_id}/prompt",
+        headers=headers,
+        json={
+            "name": "P",
+            "system_prompt": "Extract as JSON.",
+            "user_prompt": "Doc: {document_content}",
+            "project_id": project_id,
+        },
+    ).json()["id"]
+
+    schema_id = client.post(
+        f"{api_url}/project/{project_id}/schema",
+        headers=headers,
+        json={
+            "schema_name": "S",
+            "schema_definition": {
+                "type": "object",
+                "properties": {"field1": {"type": "string"}},
+                "required": ["field1"],
+            },
+        },
+    ).json()["id"]
+
+    file_id = client.post(
+        f"{api_url}/project/{project_id}/file",
+        headers=headers,
+        files={
+            "file": ("doc.txt", b"some clinical text", "text/plain"),
+            "file_info": (
+                "",
+                '{"file_name": "doc.txt", "file_type": "text/plain"}',
+                "application/json",
+            ),
+        },
+    ).json()["id"]
+
+    assert (
+        client.post(
+            f"{api_url}/project/{project_id}/preprocess",
+            headers=headers,
+            json={
+                "file_ids": [file_id],
+                "inline_config": {"name": "cfg", "description": "d"},
+                "bypass_celery": True,
+            },
+        ).status_code
+        == 200
+    )
+
+    document_id = client.get(
+        f"{api_url}/project/{project_id}/document", headers=headers
+    ).json()["items"][0]["id"]
+
+    trial_resp = client.post(
+        f"{api_url}/project/{project_id}/trial",
+        headers=headers,
+        json={
+            "schema_id": schema_id,
+            "prompt_id": prompt_id,
+            "document_ids": [document_id, document_id, document_id],
+            "bypass_celery": True,
+            "llm_model": "mock-model",
+            "api_key": "test-key",
+            "base_url": "http://localhost:11434/v1",
+        },
+    )
+    assert trial_resp.status_code == 200, trial_resp.text
+    trial = trial_resp.json()
+    assert trial["status"] == "completed"
+    assert trial["document_ids"] == [document_id]
+    assert trial["docs_done"] == 1
+    assert trial["progress"] == 1.0
+
+    # GET default: no embedded results (fetch pages via /results instead)…
+    detail = client.get(
+        f"{api_url}/project/{project_id}/trial/{trial['id']}", headers=headers
+    ).json()
+    assert detail["results"] == []
+    # …but include_results=true still embeds them.
+    detail = client.get(
+        f"{api_url}/project/{project_id}/trial/{trial['id']}?include_results=true",
+        headers=headers,
+    ).json()
+    assert len(detail["results"]) == 1
+    assert detail["results"][0]["result"] == expected
+
+    client.delete(f"{api_url}/project/{project_id}", headers=headers)

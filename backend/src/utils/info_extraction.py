@@ -516,7 +516,10 @@ def update_trial_progress(db, trial_id: int) -> None:
     if trial is None:
         # Trial row vanished (e.g. deleted mid-run) — nothing to update.
         return
-    total = len(trial.document_ids or [])
+    # Distinct ids: results are unique per (trial, document), so duplicated
+    # document_ids (possible on legacy trials) must not inflate the total or
+    # progress would never reach 1.0.
+    total = len(set(trial.document_ids or []))
     progress = done / total if total else 1.0
 
     trial.docs_done = done
