@@ -49,16 +49,29 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 # (table, column, referenced_table, referenced_column, new_constraint_name,
-#  ondelete). ``new_constraint_name`` is what we (re)create the constraint as,
-#  so downstream is deterministic regardless of the original name.
+#  orig_constraint_name, ondelete). ``new_constraint_name`` is what upgrade
+#  (re)creates the constraint as, so downstream is deterministic regardless of
+#  the original name. ``orig_constraint_name`` is what downgrade restores —
+#  earlier migrations reference these names (add_document_versioning's
+#  downgrade drops ``fk_documents_version_of`` by name), so recreating with
+#  the NEW name on downgrade would break the rest of the downgrade chain.
 _FKS = [
-    ("projects", "owner_id", "users", "id", "projects_owner_id_fkey", "CASCADE"),
+    (
+        "projects",
+        "owner_id",
+        "users",
+        "id",
+        "projects_owner_id_fkey",
+        "projects_owner_id_fkey",
+        "CASCADE",
+    ),
     (
         "documents",
         "version_of",
         "documents",
         "id",
         "documents_version_of_fkey",
+        "fk_documents_version_of",
         "SET NULL",
     ),
     (
@@ -67,6 +80,7 @@ _FKS = [
         "documents",
         "id",
         "trial_results_document_id_fkey",
+        "trial_results_document_id_fkey",
         "RESTRICT",
     ),
     (
@@ -74,6 +88,7 @@ _FKS = [
         "document_id",
         "documents",
         "id",
+        "evaluation_metrics_document_id_fkey",
         "evaluation_metrics_document_id_fkey",
         "RESTRICT",
     ),
@@ -102,7 +117,7 @@ def _find_fk(inspector, table: str, column: str, ref_table: str) -> dict | None:
 def upgrade() -> None:
     bind = op.get_bind()
 
-    for table, column, ref_table, ref_col, new_name, ondelete in _FKS:
+    for table, column, ref_table, ref_col, new_name, _orig_name, ondelete in _FKS:
         # Re-inspect per table: a fresh inspector reflects the current DB
         # state (previous loop iterations may have already altered a table;
         # inspectors can cache reflected metadata).
@@ -134,16 +149,18 @@ def upgrade() -> None:
 def downgrade() -> None:
     bind = op.get_bind()
 
-    for table, column, ref_table, ref_col, new_name, _ondelete in _FKS:
+    for table, column, ref_table, ref_col, _new_name, orig_name, _ondelete in _FKS:
         inspector = sa.inspect(bind)
         fk = _find_fk(inspector, table, column, ref_table)
         if fk is None:
             continue
-        old_name = fk.get("name")
+        current_name = fk.get("name")
         with op.batch_alter_table(table, schema=None) as batch_op:
-            batch_op.drop_constraint(old_name, type_="foreignkey")
+            batch_op.drop_constraint(current_name, type_="foreignkey")
+            # Restore the pre-upgrade name (NOT new_name): earlier migrations'
+            # downgrades drop these constraints by their original names.
             batch_op.create_foreign_key(
-                new_name,
+                orig_name,
                 ref_table,
                 [column],
                 [ref_col],
