@@ -611,7 +611,11 @@ def delete_project(
         actor=current_user,
         resource_type="project",
         resource_id=project_id,
-        project_id=project_id,
+        # project_id deliberately omitted: the projects row is already gone, so
+        # the FK on audit_logs.project_id would reject the insert and the audit
+        # row would be silently dropped (record_audit is best-effort). The
+        # ondelete=SET NULL FK would have nulled it anyway; resource_id keeps
+        # the deleted project's id.
         detail={"stored_files_removed": len(file_uuids), "deleted": counts},
     )
 

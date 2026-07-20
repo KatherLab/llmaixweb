@@ -655,7 +655,15 @@ def apply_runtime_overrides(overrides: dict) -> None:
         # No active overrides — effective settings are exactly the base.
         _settings_instance = base
         return
-    merged = {**base.model_dump(), **overrides}
+    # SKIP_RUNTIME_CHECKS=True is load-bearing: ``model_validate`` DOES invoke
+    # the custom ``__init__``, so without it every admin settings save would
+    # re-run the OpenAI/S3 network validation — and its ``sys.exit(1)`` on a
+    # bad key or transient API outage would kill the whole backend process
+    # from a request handler. The base instance already passed full validation
+    # at startup; overrides only need type coercion here. (The flag is only
+    # ever read inside ``__init__``, so carrying it on the effective instance
+    # changes nothing else.)
+    merged = {**base.model_dump(), **overrides, "SKIP_RUNTIME_CHECKS": True}
     _settings_instance = Settings.model_validate(merged)
 
 
