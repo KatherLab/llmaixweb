@@ -484,3 +484,87 @@ def test_delete_user(client, api_url):
     from .helpers import restore_user
 
     restore_user("delete@example.com", "Testpassword1", UserRole.user, True)
+
+
+# Regression: deleting a user must free the stored bytes for BOTH uploaded files
+# AND ground-truth files in their owned projects. delete_user previously
+# collected only File.file_uuid, orphaning ground-truth blobs in storage and
+# breaking the erasure promise in docs/DATA_RETENTION.md.
+def test_delete_user_removes_ground_truth_blobs(client, api_url):
+    import os
+
+    from backend.src import models
+    from backend.src.db.session import SessionLocal
+    from backend.src.dependencies import save_file
+    from backend.src.models.user import User
+
+    storage_dir = os.environ["LOCAL_DIRECTORY"]
+
+    db = SessionLocal()
+    try:
+        owner = User(
+            email="gt-blob-owner@example.com",
+            full_name="GT Blob Owner",
+            hashed_password="not-a-real-hash",
+            role=UserRole.user,
+            is_active=True,
+        )
+        db.add(owner)
+        db.flush()
+
+        project = models.Project(name="GT Blob Cleanup", owner_id=owner.id)
+        db.add(project)
+        db.flush()
+
+        upload_uuid = save_file(b"uploaded file bytes")
+        db.add(
+            models.File(
+                project_id=project.id,
+                file_uuid=upload_uuid,
+                file_name="report.pdf",
+            )
+        )
+
+        gt_uuid = save_file(b"ground truth bytes")
+        db.add(
+            models.GroundTruth(
+                project_id=project.id,
+                name="gt.csv",
+                format="csv",
+                file_uuid=gt_uuid,
+            )
+        )
+        db.commit()
+        owner_id = owner.id
+    finally:
+        db.close()
+
+    upload_path = os.path.join(storage_dir, upload_uuid)
+    gt_path = os.path.join(storage_dir, gt_uuid)
+    assert os.path.exists(upload_path)
+    assert os.path.exists(gt_path)
+
+    login = client.post(
+        f"{api_url}/auth/login",
+        data={"username": "admin@example.com", "password": "Adminpassword1"},
+    )
+    assert login.status_code == 200, login.text
+    admin_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    resp = client.delete(f"{api_url}/user/{owner_id}", headers=admin_headers)
+    assert resp.status_code == 200, resp.text
+
+    # Both blobs must be gone from storage — the ground-truth one is the regression.
+    assert not os.path.exists(upload_path), "uploaded-file blob leaked"
+    assert not os.path.exists(gt_path), "ground-truth blob leaked (regression)"
+
+    # The user and their cascaded project rows are gone.
+    db = SessionLocal()
+    try:
+        assert db.get(User, owner_id) is None
+        assert (
+            db.query(models.Project).filter(models.Project.owner_id == owner_id).count()
+            == 0
+        )
+    finally:
+        db.close()

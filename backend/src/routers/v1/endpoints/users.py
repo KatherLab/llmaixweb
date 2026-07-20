@@ -385,14 +385,23 @@ def delete_user(
             detail="Cannot delete admin users",
         )
 
-    # Collect all file UUIDs from the user's projects before cascade-delete
-    file_uuids = (
-        db.query(models.File.file_uuid)
+    # Collect all stored-file UUIDs (uploaded files + ground truth) from the
+    # user's projects before cascade-delete removes their DB rows, so we can
+    # still free the bytes in local/S3 storage afterwards. Mirrors delete_project.
+    file_uuids = [
+        row[0]
+        for row in db.query(models.File.file_uuid)
         .join(models.Project, models.File.project_id == models.Project.id)
         .filter(models.Project.owner_id == user.id)
         .all()
+    ]
+    file_uuids.extend(
+        row[0]
+        for row in db.query(models.GroundTruth.file_uuid)
+        .join(models.Project, models.GroundTruth.project_id == models.Project.id)
+        .filter(models.Project.owner_id == user.id)
+        .all()
     )
-    file_uuids = [row[0] for row in file_uuids]
 
     # Delete physical files from storage
     for file_uuid in file_uuids:

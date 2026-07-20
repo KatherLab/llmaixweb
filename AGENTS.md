@@ -17,25 +17,33 @@ A web application for extracting structured JSON data from unstructured medical/
 ```
 llmaixweb/
 ├── backend/src/              # FastAPI Python backend
-│   ├── main.py               # App entry point, CORS, Celery worker spawn
-│   ├── core/                 # Config, security, dynamic settings
+│   ├── main.py               # App entry point, CORS, middleware, Celery worker spawn
+│   ├── core/                 # Config, security, dynamic settings, rate limiting
 │   ├── db/                   # SQLAlchemy engine, session, base
-│   ├── models/               # SQLAlchemy ORM models
+│   ├── models/               # SQLAlchemy ORM models (project, user, sso, admin, audit)
 │   ├── schemas/              # Pydantic request/response schemas
+│   ├── middleware/           # Security headers, request-context/correlation-id, global error handlers
 │   ├── routers/v1/endpoints/ # FastAPI route handlers
-│   ├── services/             # External service integrations (OCR)
+│   ├── services/             # External service integrations (OCR engines, OIDC)
 │   ├── celery/               # Celery app config + tasks
-│   └── utils/                # Enums, helpers, evaluation logic
+│   └── utils/                # Enums, helpers, evaluation, audit, structured logging
 ├── frontend/                 # Vue 3 frontend
 │   ├── views/                # Page-level components (routed)
 │   ├── components/           # Reusable UI components (common/, + per-domain folders)
-│   ├── composables/          # Reusable composition functions (download, pagination, WS updates, theme…)
-│   ├── stores/               # Pinia stores (auth, firstAdmin)
+│   ├── composables/          # Reusable composition functions (download, pagination, WS updates, toasts…)
+│   ├── stores/               # Pinia stores (auth, firstAdmin, publicSettings, toast)
 │   ├── services/             # Axios client (`api.ts`) + per-resource API modules (`*Api.ts`)
 │   ├── router/               # Vue Router config
 │   ├── types/                # Hand-written TS domain types mirroring backend Pydantic schemas
 │   └── utils/                # Formatters, date/err/markdown/schema helpers
 ├── alembic/                  # Database migrations
+├── docs/                     # MkDocs documentation source (see "Documentation Site" below)
+├── mkdocs.yml                # MkDocs Material config (site → GitHub Pages)
+├── .github/workflows/        # CI: tests.yml, docs.yml, security.yml, docker-publish.yml
+├── LICENSE                   # AGPL-3.0-or-later
+├── THIRD_PARTY_NOTICES.md    # Bundled OSS components + licenses
+├── CITATION.cff              # Academic citation metadata
+├── CHANGELOG.md              # Keep a Changelog format
 ├── pyproject.toml            # Python deps, Ruff config, project metadata
 ├── compose.yml               # Docker Compose (CPU)
 ├── compose.dev.yml           # Docker Compose (dev hot-reload)
@@ -146,19 +154,28 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - `/api/v1/auth/sso/*` — OIDC SSO flow (login redirect + callback with JIT provisioning)
 - `/api/v1/user/*` — user CRUD, invitations, self-service linked identities (`/me/identities`)
 - `/api/v1/project/*` — projects (with sub-routers for files, documents, trials, etc.)
-- `/api/v1/admin/*` — admin settings, Celery monitoring
+- `/api/v1/admin/*` — admin settings, Celery monitoring, audit log + error log (`/admin/audit`, `/admin/audit/export`, `/admin/errors`)
 - `/api/v1/admin/sso/*` — admin CRUD for OIDC identity providers
 
-**Projects router** (`routers/v1/endpoints/projects.py`) has nested sub-routers via `APIRouter.include_router`. Each sub-resource (files, preprocess, documents, schemas, prompts, trials, groundtruth, evaluations) is a separate module with its own prefix.
+**Projects router** (`routers/v1/endpoints/projects.py`) has nested sub-routers via `APIRouter.include_router`. Each sub-resource (files, preprocess, documents, schemas, prompts, trials, groundtruth, evaluations, and `llm` — model listing / connection & model testing) is a separate module with its own prefix.
 
 ### Key Backend Files & Their Roles
 
 | File | Purpose |
 |------|---------|
-| `main.py` | FastAPI app, lifespan (DB init + Celery worker spawn), CORS |
+| `main.py` | FastAPI app, lifespan (DB init + Celery worker spawn), CORS, middleware wiring (security headers, request-context, error handlers), rate limiter, audit router, Redis subscriber (task updates + settings-cache invalidation) |
 | `core/config.py` | Pydantic `Settings` class with lazy init, all env vars, runtime validation |
-| `core/security.py` | JWT token create/verify, password hashing, OAuth2 scheme, admin guard, refresh-token create/verify/revoke |
+| `core/security.py` | JWT token create/verify, password hashing, OAuth2 scheme, admin guard, refresh-token create/verify/revoke, account lockout |
 | `core/dynamic_settings.py` | DB-backed runtime settings override (cached via `lru_cache`) |
+| `core/rate_limit.py` | Shared slowapi `Limiter` (Redis-backed when broker is Redis); gated by `DISABLE_RATE_LIMIT` |
+| `middleware/security_headers.py` | `SecurityHeadersMiddleware` (X-Frame-Options, CSP, Referrer-Policy, conditional HSTS, etc.) |
+| `middleware/request_context.py` | `RequestContextMiddleware` — stamps per-request correlation id |
+| `middleware/error_handlers.py` | Global exception handlers → `error_logs` row + safe `{error_id, message}` response |
+| `utils/logging_config.py` | `setup_logging()` — text or `LOG_FORMAT=json` structured logs with correlation id (wired into API + Celery workers) |
+| `utils/audit.py` | `record_audit(...)` — append-only audit trail helper |
+| `models/audit.py` | `AuditLog` (append-only trail) + `ErrorLog` (one row per unhandled error, keyed by user-facing `error_id`) |
+| `utils/deletion.py` | `cascade_delete_project` and related cascade cleanup |
+| `utils/csv_safety.py` | CSV-injection-safe writer (used by audit/metrics export) |
 | `db/session.py` | SQLAlchemy engine + session factory, `init_db()` |
 | `dependencies.py` | OpenAI client, S3 client, file get/save/remove, `get_db()` |
 | `celery/celery_config.py` | Celery app with 2 queues (`default`, `preprocess`) |
@@ -173,13 +190,14 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 | `services/oidc_service.py` | OIDC discovery, authorize URL (PKCE + signed state), code exchange, userinfo |
 | `routers/v1/endpoints/sso.py` | OIDC SSO login/callback flow + JIT user provisioning |
 | `routers/v1/endpoints/admin_sso.py` | Admin CRUD for OIDC identity providers |
-| `utils/enums.py` | All shared enums (FileType, PreprocessingStrategy, etc.) |
+| `utils/enums.py` | All shared enums (FileType, PreprocessingStrategy, `AuditAction`, `AuditOutcome`, etc.) |
 | `utils/url_safety.py` | SSRF guardrails for user-supplied custom API endpoints (blocks cloud-metadata, restricts schemes, disables redirect-following) |
 
 ### Configuration System
 - **`Settings` class** (`core/config.py`): Uses Pydantic `BaseSettings`. Reads from `.env` file (path in `ENV_PATH` env var, defaults to `backend/.env`) or environment variables. Validates OpenAI API connection and storage on init.
 - **Runtime overrides**: Admin panel changes are stored in `app_settings` DB table and loaded via `dynamic_settings.py` with LRU cache. Only non-readonly settings can be overridden.
 - **Skip runtime checks**: Set `SKIP_RUNTIME_CHECKS=true` for Alembic migrations (bypasses OpenAI/S3 validation).
+- **Security / ops env vars** (documented in `.env.example`, worth knowing): account lockout (`LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCKOUT_MINUTES`), egress allowlists for PHI destinations (`ALLOWED_LLM_ENDPOINTS`, `ALLOWED_OCR_ENDPOINTS`), admin cross-project visibility (`ADMIN_ALL_PROJECT_ACCESS`), structured logging (`LOG_FORMAT`), rate limiting (`DISABLE_RATE_LIMIT`), short access tokens + refresh (`ACCESS_TOKEN_EXPIRE_MINUTES` now 60, `REFRESH_TOKEN_EXPIRE_DAYS`), password policy (`PASSWORD_POLICY_*`), SSO (`SSO_*`), site banner (`BANNER_ENABLED`/`BANNER_TEXT`/`BANNER_COLOR`), `MAX_UPLOAD_SIZE_BYTES`.
 
 ### Database
 - Uses SQLAlchemy ORM with `declarative_base`
@@ -192,6 +210,8 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - Workers are spawned as `multiprocessing.Process` objects in the FastAPI lifespan
 - Pool type configurable via `CELERY_DEV_POOL` (default: `threads`) and `CELERY_PREPROCESS_POOL`
 - Task safety: `task_acks_late=True`, `task_reject_on_worker_lost=True`, `worker_prefetch_multiplier=1`
+- **Celery beat** runs embedded in the single `default` worker (`with_beat=True`) to drive the periodic orphan/stuck-task sweeper
+- `CELERY_PREPROCESS_POOL` defaults to `auto` (→ `solo` on macOS, `prefork` elsewhere); soft/hard time limits from `CELERY_TASK_SOFT_TIME_LIMIT_SECONDS` (6h)
 
 ---
 
@@ -208,6 +228,7 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
     /admin/settings         → AdminSettings
     /admin/sso              → AdminSSO (OIDC provider management)
     /admin/celery           → AdminCelery
+    /admin/audit            → AdminAudit (audit log + error log viewer)
   /admin/user-management    → AdminUserManagement (admin only)
 /                           → AuthLayout (no navbar)
   /login                    → Login (shows SSO "Continue with…" buttons when enabled)
@@ -226,9 +247,11 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - Logged-in users are redirected away from `/login`, `/register`, `/invitation/*`, `/forgot-password`, `/reset-password/*`
 
 ### State Management
-- **Pinia stores** in `stores/`:
-  - `auth.js` — user session, token (localStorage), login/logout, `isAuthenticated`/`isAdmin` computed properties
-  - `firstAdmin.js` — checks if any admin user exists (for first-run setup flow)
+- **Pinia stores** in `stores/` (all `.ts`):
+  - `auth.ts` — user session, token (localStorage), login/logout, `isAuthenticated`/`isAdmin` computed properties
+  - `firstAdmin.ts` — checks if any admin user exists (for first-run setup flow)
+  - `publicSettings.ts` — public config (SSO providers, banner, registration flags) fetched pre-login
+  - `toast.ts` — global toast queue (paired with `useToast` + `ToastContainer`/`ToastItem`)
 
 ### API Client (`services/api.ts`)
 - Axios instance with dynamic base URL (runtime config > build-time env var > default)
@@ -236,15 +259,15 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - Response interceptor: auto-logout on 401/403, toast notification
 
 ### API Service Layer (`services/*Api.ts`)
-Per-resource modules wrap the raw `api` instance — **components import functions from these, not the raw `api` instance**. One module per backend resource: `authApi`, `usersApi`, `ssoApi`, `projectsApi`, `llmApi`, `filesApi`, `preprocessingApi`, `documentsApi`, `documentSetsApi`, `schemasApi`, `promptsApi`, `trialsApi`, `groundtruthApi`, `evaluationsApi`, `adminApi`, `versionApi`. Each exports typed functions (e.g. `trialsApi.list(projectId, params)`, `documentsApi.delete(projectId, docId)`) with `Promise<AxiosResponse<T>>` returns tied to the `@/types` domain interfaces. The only legitimate direct `api` import outside `services/` is `stores/auth.ts` (for the auth-header config).
+Per-resource modules wrap the raw `api` instance — **components import functions from these, not the raw `api` instance**. One module per backend resource: `authApi`, `usersApi`, `ssoApi`, `projectsApi`, `llmApi`, `filesApi`, `preprocessingApi`, `documentsApi`, `documentSetsApi`, `schemasApi`, `promptsApi`, `trialsApi`, `groundtruthApi`, `evaluationsApi`, `adminApi`, `auditApi`, `versionApi`. Each exports typed functions (e.g. `trialsApi.list(projectId, params)`, `documentsApi.delete(projectId, docId)`) with `Promise<AxiosResponse<T>>` returns tied to the `@/types` domain interfaces. The only legitimate direct `api` import outside `services/` is `stores/auth.ts` (for the auth-header config). `services/websocket.ts` holds the shared WebSocket client that the live-update composables build on.
 
 ### Shared Primitives & Composables
 The frontend has a layer of reusable building blocks — prefer these over re-implementing:
 
-- **`components/common/`** — `BaseModal` (Teleport + ref-counted scroll lock + ESC/backdrop close; the keystone most `*Modal.vue` components build on), `BaseButton`, `ConfirmationDialog`, `StatusBadge` (+ `utils/statusStyles.ts`), `FilterChip`, `SearchInput`, `PaginationControls`, `JsonViewer`, `LoadingSpinner`, `EmptyState`, `ErrorBanner`, `Tooltip`, `FileIcon`, `PasswordInput` (password field w/ strength meter + show/hide, used by all auth/admin password flows), `FormField`.
-- **`composables/`** — `useScrollLock` (ref-counted body scroll lock for stacked modals), `useFileDownload` (blob→objectURL→revoke), `usePagination` / `useDocumentPagination`, `useGridTheme` (shared ag-grid theme + dark-mode reactivity), `usePreprocessingUpdates` / `useTrialUpdates` (WebSocket subscribe + project-id filtering for live task progress), `useModelTesting`, `useSchemaKeyboard`.
+- **`components/common/`** — `BaseModal` (Teleport + ref-counted scroll lock + ESC/backdrop close; the keystone most `*Modal.vue` components build on), `SlideOver`/`PanelLayout`/`SplitPane` (drawer/panel/split layouts), `BaseButton`, `BaseSegmentedControl`, `BaseTabGroup`, `DataTable` (the shared sortable/filterable table — replaced the former ag-grid usage), `ConfirmationDialog`, `StatusBadge` (+ `utils/statusStyles.ts`), `FilterChip`, `FilterBar`, `SearchInput`, `PaginationControls`, `PageHeader`, `BatchActionBar`, `Callout`, `GlassCard`, `JsonViewer`, `LoadingSpinner`, `SkeletonRow`/`SkeletonTable`, `EmptyState`, `ErrorBanner`, `Tooltip`, `FileIcon`, `AppBanner`, `AppBrand`, `PasswordInput` (password field w/ strength meter + show/hide, used by all auth/admin password flows), `FormField`, `ToastContainer`/`ToastItem` (global toast UI).
+- **`composables/`** — `useScrollLock` (ref-counted body scroll lock for stacked modals), `useFileDownload` (blob→objectURL→revoke), `usePagination` / `useDocumentPagination`, `usePreprocessingUpdates` / `useTrialUpdates` / `useWsEntityUpdates` (WebSocket subscribe + project-id filtering for live task/entity progress), `useModelTesting`, `useSchemaKeyboard`, `useToast` (toast store wrapper), `useClickOutside`, `useDebouncedSearch`, `useNavContext` (contextual navbar state), `useTableClasses` (shared `DataTable` styling).
 - **`utils/`** — `formatters.ts` (dates, file sizes, durations), `dateRange.ts`, `errors.ts` (`extractErrorMessage`), `markdown.ts`, `schemaTypeIcons.ts` (shared type→icon/color maps for the schema editor), `schemaTemplates.ts` + `promptTemplates.ts`, `ocrLabels.ts`.
-- **`types/`** — hand-written TypeScript domain types mirroring the backend Pydantic schemas (`@/types` barrel). One file per domain (auth, user, sso, project, file, document, documentSet, schema, prompt, trial, preprocessing, groundtruth, evaluation, admin, llm, enums, api helpers, websocket payloads). Import these for API responses, props, and composable signatures.
+- **`types/`** — hand-written TypeScript domain types mirroring the backend Pydantic schemas (`@/types` barrel). One file per domain (auth, user, sso, project, file, document, documentSet, schema, prompt, trial, preprocessing, groundtruth, evaluation, admin, audit, llm, enums, api helpers, websocket payloads). Import these for API responses, props, and composable signatures.
 
 ### Key UI Components
 
@@ -254,9 +277,10 @@ Large components are **orchestration shells** — they compose smaller sibling c
 - **`Landing.vue`** — landing page; composes the 10 components in `components/landing/` (hero, pipeline visualization, interactive demo, feature grid)
 - **`ProjectOverview.vue`** — project list grid
 - **`ProjectDetail.vue`** — project detail with tabbed workflow interface (Files → Preprocessing → Documents → Schemas → Trials → Evaluation)
-- **`AdminUserManagement.vue`** — user and invitation management (composes `InviteUserModal`/`EditUserModal` + ag-grid `UserGrid`/`InvitationGrid`)
+- **`AdminUserManagement.vue`** — user and invitation management (composes `InviteUserModal`/`EditUserModal` + `UserGrid`/`InvitationGrid`, built on `common/DataTable`)
 - **`AdminSettings.vue`** — system settings configuration
 - **`AdminSSO.vue`** — OIDC identity provider CRUD (admin tab under `/admin/sso`)
+- **`AdminAudit.vue`** — audit-log + error-log viewer with filtering and export (`/admin/audit`)
 - **`AccountSettings.vue`** — self-service profile, change password, connected SSO accounts, sign out (`/account`)
 - **`AdminCelery.vue`** — Celery task monitoring
 
@@ -267,8 +291,33 @@ Large components are **orchestration shells** — they compose smaller sibling c
 - **`trials/`** — `TrialsManagement.vue` (list/filter shell, batch select+delete) with `TrialCard`, `TrialFiltersPanel`, `CreateTrialModal` (+ `TrialMetadataCard`, `TrialSchemaSelect`/`TrialPromptSelect`/`TrialModelSelect`, `DocumentSelectionPanel` + pickers, `AdvancedSettingsPanel`, `CustomApiSettingsPanel`, `ModelTestCard`), `TrialResults` (+ `TrialResultCard`, `TrialMetaHeader`, `ResultReasoningPanel`, `ResultDocumentPreview`, `TrialDocumentErrors`), `RenameTrialModal`, `DownloadModal`, `TrialSelectorModal`, `TrialSchemaModal`, `TrialPromptModal`
 - **`evaluation/`** — `EvaluationView.vue` / `EvaluationOverview.vue` (metrics + per-field accuracy), `FieldErrorAnalysis`, `DocumentAnalysis`, `EvaluationAnalysisModal`, `MetricsExportModal`
 - **`groundtruth/`** — `GroundTruthManager.vue` / `GroundTruthUploadModal.vue` / `GroundTruthPreviewModal.vue`, `FieldTree`, `MappingList`, `IdFieldSelector`, `GroundTruthSample`, `ValidationBanner`
-- **`admin/`** — `UserGrid` / `InvitationGrid` (ag-grid, themed via `useGridTheme`), `ActivityBell`, `InviteUserModal`, `EditUserModal`
-- **`projects/`** — `ProjectGrid.vue` (ag-grid), `ProjectSettingsModal`, `CreateProjectButton`
+- **`admin/`** — `UserGrid` / `InvitationGrid` (built on `common/DataTable`), `ActivityBell`, `InviteUserModal`, `EditUserModal`
+- **`projects/`** — `ProjectGrid.vue` (built on `common/DataTable`), `ProjectSettingsModal`, `DeleteProjectDialog`, `CreateProjectButton`
+
+---
+
+## Documentation Site & Governance
+
+### Documentation Site (MkDocs)
+User-facing and operator documentation lives in `docs/` and is built with **MkDocs Material** (`mkdocs.yml`). It is the single source of truth — the root `README.md` was trimmed to a landing page that links into the site. The site auto-deploys to **GitHub Pages** (https://katherlab.github.io/llmaixweb/) via `.github/workflows/docs.yml` on push to `main`.
+
+The `docs/` tree is organized by nav section: Getting started (installation, quickstart, concepts), User guide (files, preprocessing, ocr-engines, documents, schemas-and-prompts, trials, ground-truth, evaluation, account), Administration (settings, user-management, sso, celery), Operations (deployment, configuration, upgrading, backup-restore, troubleshooting), Security & governance (`SECURITY.md`, `THREAT_MODEL.md`, `DATA_FLOW.md`, `DATA_RETENTION.md`, `AUDIT_LOGGING.md`, `RISK_REGISTER.md`, `DPIA_TEMPLATE.md`), and Development (contributing, developer-guide, architecture).
+
+Build locally: `uv run --only-group docs mkdocs build` (or `mkdocs serve`). **When you change user-facing behavior, config, or the workflow, update the relevant page under `docs/`** — that is where end users and operators read it, not the README.
+
+### Licensing & Governance Files (repo root)
+- `LICENSE` — **AGPL-3.0-or-later**. Note: `pymupdf` is AGPL, which currently blocks any future MIT relicense.
+- `THIRD_PARTY_NOTICES.md` — bundled OSS components and their licenses.
+- `CITATION.cff` — academic citation metadata (links the npj Precision Oncology 2025 paper).
+- `CHANGELOG.md` — Keep a Changelog format; update it when you ship user-visible changes.
+- `.github/SECURITY.md` — vulnerability-disclosure policy (points to `docs/SECURITY.md`).
+
+### CI Workflows (`.github/workflows/`)
+- `tests.yml` — backend ruff lint/format, frontend lint + types + build + **Vitest**, backend pytest with a coverage floor, Alembic migration round-trip against real PostgreSQL, and a Celery+Redis integration test.
+- `docs.yml` — builds the MkDocs site (PR) and deploys to GitHub Pages (push to `main`).
+- `security.yml` — CodeQL SAST, dependency audit (pip-audit + npm audit), Trivy fs scan, license-compliance scan; weekly cron. Most gates are informational.
+- `docker-publish.yml` — builds backend + frontend images (amd64+arm64) on PR/push; pushes to `ghcr.io/katherlab/*` only on published release.
+- `.github/dependabot.yml` — weekly updates for github-actions, uv, and npm.
 
 ---
 
@@ -282,9 +331,9 @@ Large components are **orchestration shells** — they compose smaller sibling c
 ### Frontend Patterns
 - **Build modals on `BaseModal`** (Teleport + ref-counted scroll lock + ESC/backdrop). Don't hand-roll Teleport/backdrop/scroll-lock — nested modals will break.
 - **Call the API through `services/*Api.ts`**, not the raw `api` instance. Add a function to the relevant module if one is missing.
-- **Reuse `composables/` and `components/common/`** before duplicating: downloads (`useFileDownload`), pagination (`usePagination` + `PaginationControls`), live task progress (`usePreprocessingUpdates`/`useTrialUpdates`), grid theming (`useGridTheme`), status pills (`StatusBadge`), error messages (`utils/errors.ts` `extractErrorMessage`), dates/sizes (`utils/formatters.ts`).
+- **Reuse `composables/` and `components/common/`** before duplicating: downloads (`useFileDownload`), pagination (`usePagination` + `PaginationControls`), live task progress (`usePreprocessingUpdates`/`useTrialUpdates`), tables (`common/DataTable`), status pills (`StatusBadge`), toasts (`useToast`), error messages (`utils/errors.ts` `extractErrorMessage`), dates/sizes (`utils/formatters.ts`).
 - **`defineProps` style**: use the TypeScript generic form `defineProps<Props>()` + `withDefaults(defineProps<Props>(), {...})` where defaults exist. Define a `Props` interface per component, importing shared domain types from `@/types` (e.g. `Trial`, `Document`, `File`). For string-literal-union props (the ones that previously used `validator:`), declare a union type. `defineEmits` uses `defineEmits<{ (e: 'event', payload: T): void }>()`; `defineModel` uses `defineModel<T>()`.
-- **Dark mode**: AppLayout owns the `darkMode` toggle (writes `localStorage['darkMode']` + toggles the `dark` class on `<html>`). Tailwind is `darkMode: 'class'`. ag-grids theme via `useGridTheme`, which re-themes on the class change.
+- **Dark mode**: AppLayout owns the `darkMode` toggle (writes `localStorage['darkMode']` + toggles the `dark` class on `<html>`). Tailwind is `darkMode: 'class'`. Components style dark variants directly via Tailwind `dark:` utilities (no grid-theme layer — the former ag-grid/`useGridTheme` setup was replaced by `common/DataTable`).
 - **Verification gate**: `npm run check` (prettier + eslint + `vue-tsc --noEmit`, 0 errors required) and `npm run build` must pass before committing.
 
 ### Linting & Formatting
@@ -329,7 +378,16 @@ Backend:
 ENV_PATH=backend/.env.localtest uv run pytest --verbose --cov=backend --cov-report=html
 ```
 
-Frontend tests are currently not set up.
+Frontend (Vitest + Vue Test Utils, jsdom environment):
+```bash
+npm test          # vitest run (one-shot, used in CI)
+npm run test:watch  # vitest watch mode
+```
+Specs live next to the code they cover as `*.test.ts` (e.g. `utils/*.test.ts`,
+`composables/*.test.ts`). Config is in `vitest.config.ts` at the repo root
+(separate from `frontend/vite.config.js` so the test toolchain stays out of the
+production bundle). Current coverage is the pure `utils/` helpers and
+logic-heavy composables; component/e2e coverage is not set up yet.
 
 ### Docker
 - Four compose files compose together via `-f` flag pattern:
@@ -362,7 +420,7 @@ Frontend tests are currently not set up.
 - **Storage abstraction**: `dependencies.py` provides `get_file()`/`save_file()`/`remove_file()` that work with both local and S3 storage — always use these, never access storage directly
 - **Cancellation pattern**: Both `PreprocessingTask` and `Trial` have `is_cancelled` + `rollback_on_cancel` flags. The Celery task checks `is_cancelled` periodically. Rollback deletes produced documents/results.
 - **DB session**: Use `get_db()` dependency injection in routes, or `db_session()` context manager for standalone operations
-- **Frontend token**: Stored in `localStorage` under key `"token"`, managed by `auth.js` Pinia store
+- **Frontend token**: Stored in `localStorage` under key `"token"`, managed by the `auth.ts` Pinia store (refresh token handled alongside it)
 - **File UUIDs**: Storage uses UUID-based filenames, the `file_uuid` field links DB records to stored files
 - **Docling-serve**: For PDFs, docling-serve is tried first for embedded text. If insufficient (< 100 chars by default), falls back to configured OCR engine. Set `force_ocr=true` to skip.
 

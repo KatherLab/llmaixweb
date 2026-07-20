@@ -108,7 +108,7 @@ See [OCR engines](../user-guide/ocr-engines.md) for what each engine does.
 | `POSTGRES_PASSWORD` | Database password | `postgres` |
 | `POSTGRES_DB` | Database name | `llmaixweb` |
 | `CELERY_BROKER_URL` | Redis broker URL | `redis://redis:6379/0` |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access-token expiry (minutes) | `60*24*8` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access-token expiry (minutes) — short-lived, paired with refresh tokens | `60` |
 | `RUSTFS_ACCESS_KEY` | RustFS access key | `rustfsadmin` |
 | `RUSTFS_SECRET_KEY` | RustFS secret key | `rustfsadmin` |
 

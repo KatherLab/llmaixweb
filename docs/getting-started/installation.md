@@ -11,7 +11,7 @@ self-hosted GPU services only when you need them.
   (OpenAI, Mistral, …) or a self-hosted endpoint (vLLM, llama.cpp, Ollama, …).
 - For self-hosted OCR / vision models: an NVIDIA **GPU** with the appropriate
   drivers.
-- For local development from source: **Node.js 18+** and **Python 3.13+**.
+- For local development from source: **Node.js 20+** (22+ recommended; the build image uses Node 26) and **Python 3.13**.
 
 ## Quick start
 

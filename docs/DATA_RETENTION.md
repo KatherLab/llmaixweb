@@ -10,7 +10,8 @@ Deleting a **project** (or a **user**, which cascades their projects) removes:
 
 - All DB rows for the project: files, documents, document sets, preprocessing
   tasks/configs, schemas, prompts, trials + results, ground truth, evaluations +
-  metrics (SQLAlchemy `cascade="all, delete-orphan"` + FK `ON DELETE`).
+  metrics (removed by a cascading delete that clears child rows in FK order;
+  deleting a user cascades to their owned projects).
 - The stored **bytes** for uploaded files and ground-truth files in local/S3
   storage (`remove_file`), performed after the DB commit.
 

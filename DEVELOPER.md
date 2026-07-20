@@ -207,10 +207,10 @@ npm run format          # Auto-format all frontend files with Prettier
 npm run format:check    # Check formatting without changing files
 npm run lint            # Lint frontend with ESLint
 npm run lint:fix        # Lint + auto-fix where possible
-npm run check           # Full check: format:check + lint
+npm run check           # Full check: format:check + lint + type-check (vue-tsc --noEmit)
 ```
 
-**Pre-commit hook:** `simple-git-hooks` + `lint-staged` automatically runs `eslint --fix` and `prettier --write` on staged `.js`/`.vue` files before every commit.
+**Pre-commit hook:** `simple-git-hooks` + `lint-staged` automatically runs `eslint --fix` and `prettier --write` on staged `.js`/`.ts`/`.vue` files (and `prettier --write` on `.css`) before every commit.
 
 **Preferred Prettier settings** (`.prettierrc`):
 - No semicolons
@@ -428,7 +428,7 @@ npm run dev
 ```
 
 **Requirements:**
-- Node.js 18+
+- Node.js 20+ (22+ recommended; the build image uses Node 26)
 
 ### Hot-Reload with Docker
 
@@ -448,17 +448,21 @@ This mounts local code directories into the containers, so changes are picked up
 
 ```
 backend/src/
-├── main.py               # FastAPI app, CORS, Celery worker spawn
+├── main.py               # FastAPI app, CORS, middleware, Celery worker spawn
 ├── core/
 │   ├── config.py         # Pydantic Settings, lazy loading, validation
-│   ├── security.py       # JWT, password hashing, OAuth2
-│   └── dynamic_settings.py  # DB-backed runtime settings
+│   ├── security.py       # JWT, password hashing, OAuth2, refresh tokens, lockout
+│   ├── dynamic_settings.py  # DB-backed runtime settings
+│   └── rate_limit.py     # slowapi limiter (Redis-backed)
+├── middleware/           # Security headers, request-context, global error handlers
 ├── db/
 │   └── session.py        # SQLAlchemy engine, session factory
 ├── models/
 │   ├── project.py        # SQLAlchemy ORM models
 │   ├── user.py           # User, Invitation, PasswordResetToken, RefreshToken
-│   └── sso.py            # IdentityProvider, UserIdentity (OIDC)
+│   ├── sso.py            # IdentityProvider, UserIdentity (OIDC)
+│   ├── admin.py          # App settings (runtime overrides)
+│   └── audit.py          # AuditLog (append-only trail) + ErrorLog
 ├── schemas/
 │   └── project.py        # Pydantic request/response schemas
 ├── routers/v1/endpoints/ # API route handlers

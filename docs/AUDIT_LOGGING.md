@@ -16,9 +16,9 @@ Recorded actions (`AuditAction` in `backend/src/utils/enums.py`):
 
 | Group | Actions |
 |-------|---------|
-| Authentication | `login_success`, `login_failure`, `logout`, `account_locked`, `password_change`, `password_reset`, `sso_login` |
+| Authentication | `login_success`, `login_failure`, `logout`, `token_refresh`, `account_locked`, `password_change`, `password_reset`, `sso_login` |
 | Access (PHI) | `document_view`, `document_download`, `file_download`, `trial_result_view`, `export` |
-| Mutations | `create`, `update`, `delete` (discriminated by `resource_type`) |
+| Mutations | `create`, `update`, `delete`, `cancel` (discriminated by `resource_type`) |
 | Egress (PHI leaves) | `llm_extraction_call`, `ocr_external_call` — records endpoint host, model, document count |
 | Administration | `setting_change`, `user_create` (incl. the **first-admin bootstrap**, flagged `first_admin: true`), `user_role_change`, `user_deactivate`, `invitation_send`, `sso_provider_change` |
 

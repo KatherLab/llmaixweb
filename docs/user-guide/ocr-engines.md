@@ -2,9 +2,10 @@
 
 Before an LLM can extract data, your files must be turned into plain text —
 [preprocessing](preprocessing.md). For PDFs and images this is done by an **OCR
-/ text-extraction engine**. The app offers four; pick whichever suits your
-document type. Your administrator enables the ones available in the
-[preprocessing panel](preprocessing.md#choosing-an-ocr-engine).
+/ text-extraction engine**. The app offers **three selectable engines** (below),
+plus an optional local Docling fallback your administrator can enable. Pick
+whichever suits your document type; your administrator controls which appear in
+the [preprocessing panel](preprocessing.md#choosing-an-ocr-engine).
 
 ## 1. Quick (Local OCR) — no API needed
 
