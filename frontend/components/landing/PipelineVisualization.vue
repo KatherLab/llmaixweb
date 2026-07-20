@@ -1,6 +1,8 @@
 <template>
   <div class="mb-24">
-    <h2 class="text-center text-3xl font-bold mb-12 text-content">How It Works</h2>
+    <h2 class="text-center text-3xl font-bold mb-12 text-content">
+      {{ $t('landing.pipeline.heading') }}
+    </h2>
 
     <!-- Pipeline Container -->
     <div class="relative">
@@ -32,9 +34,12 @@
 
 <script setup lang="ts">
 import { ref, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { UploadCloud, FileText, FolderOpen, Database, Zap, BarChart3 } from '@lucide/vue'
 import PipelineStep from '@/components/landing/PipelineStep.vue'
 import PipelineStepDetails from '@/components/landing/PipelineStepDetails.vue'
+
+const { t } = useI18n({ useScope: 'global' })
 
 interface Step {
   id: number
@@ -50,48 +55,48 @@ const activeStep = ref<number | null>(null)
 const steps: Step[] = [
   {
     id: 1,
-    title: 'Upload Files',
-    subtitle: 'Multiple formats supported',
+    title: t('landing.pipeline.steps.upload.title'),
+    subtitle: t('landing.pipeline.steps.upload.subtitle'),
     gradient: 'bg-gradient-to-br from-primary to-primary-hover',
     shadow: 'shadow-primary/30',
     icon: UploadCloud,
   },
   {
     id: 2,
-    title: 'Preprocess',
-    subtitle: 'Extract & OCR text',
+    title: t('landing.pipeline.steps.preprocess.title'),
+    subtitle: t('landing.pipeline.steps.preprocess.subtitle'),
     gradient: 'bg-gradient-to-br from-primary to-primary-hover',
     shadow: 'shadow-primary/30',
     icon: FileText,
   },
   {
     id: 3,
-    title: 'Documents',
-    subtitle: 'Organize & group',
+    title: t('landing.pipeline.steps.documents.title'),
+    subtitle: t('landing.pipeline.steps.documents.subtitle'),
     gradient: 'bg-gradient-to-br from-purple-500 to-purple-600',
     shadow: 'shadow-purple-500/30',
     icon: FolderOpen,
   },
   {
     id: 4,
-    title: 'Schemas',
-    subtitle: 'Define structure',
+    title: t('landing.pipeline.steps.schemas.title'),
+    subtitle: t('landing.pipeline.steps.schemas.subtitle'),
     gradient: 'bg-gradient-to-br from-pink-500 to-pink-600',
     shadow: 'shadow-pink-500/30',
     icon: Database,
   },
   {
     id: 5,
-    title: 'Run Trials',
-    subtitle: 'LLM extraction',
+    title: t('landing.pipeline.steps.trials.title'),
+    subtitle: t('landing.pipeline.steps.trials.subtitle'),
     gradient: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
     shadow: 'shadow-emerald-500/30',
     icon: Zap,
   },
   {
     id: 6,
-    title: 'Evaluation',
-    subtitle: 'Accuracy metrics',
+    title: t('landing.pipeline.steps.evaluation.title'),
+    subtitle: t('landing.pipeline.steps.evaluation.subtitle'),
     gradient: 'bg-gradient-to-br from-teal-500 to-teal-600',
     shadow: 'shadow-teal-500/30',
     icon: BarChart3,

@@ -3,8 +3,8 @@
     <input
       :value="inputValue"
       type="text"
-      :placeholder="placeholder"
-      :aria-label="placeholder"
+      :placeholder="placeholder || $t('common.search.placeholder')"
+      :aria-label="placeholder || $t('common.search.placeholder')"
       :class="[inputClass, 'pl-10 pr-4']"
       @input="onInput"
     />
@@ -27,7 +27,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
-  placeholder: 'Search...',
+  placeholder: '',
   debounceMs: 250,
 })
 

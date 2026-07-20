@@ -2,7 +2,7 @@
   <div class="h-full flex flex-col min-h-0">
     <!-- Header with title and admin toggle -->
     <div class="flex items-center justify-between mb-3 pb-3 border-b border-default">
-      <h2 class="text-lg font-semibold text-content">Your Projects</h2>
+      <h2 class="text-lg font-semibold text-content">{{ $t('projects.grid.heading') }}</h2>
       <div v-if="canShowAllProjects" class="flex items-center">
         <label class="inline-flex items-center gap-2 cursor-pointer select-none">
           <input
@@ -10,7 +10,7 @@
             type="checkbox"
             class="rounded border-strong text-primary shadow-sm focus:ring-ring"
           />
-          <span class="text-sm text-content-muted">Show all users' projects</span>
+          <span class="text-sm text-content-muted">{{ $t('projects.grid.show_all') }}</span>
         </label>
       </div>
     </div>
@@ -26,7 +26,7 @@
       <ErrorBanner
         v-else-if="loadError"
         :message="loadError"
-        retry-text="Try again"
+        :retry-text="$t('projects.grid.retry')"
         @retry="loadProjects"
       />
 
@@ -38,10 +38,9 @@
         <div class="bg-primary-soft text-primary rounded-card p-4 mb-4">
           <FolderPlus class="h-10 w-10" aria-hidden="true" />
         </div>
-        <h3 class="text-lg font-semibold text-content">No projects yet</h3>
+        <h3 class="text-lg font-semibold text-content">{{ $t('projects.grid.empty_title') }}</h3>
         <p class="mt-2 max-w-md text-sm text-content-muted">
-          Create your first project to start uploading documents, running OCR preprocessing, and
-          extracting structured data with LLMs.
+          {{ $t('projects.grid.empty_body') }}
         </p>
         <CreateProjectButton class="mt-6" />
         <!-- 6 workflow steps: 2 / 3 / 6 columns keep the grid balanced (no orphan) -->
@@ -52,13 +51,13 @@
             class="flex flex-col gap-1 p-3 rounded-card border border-default bg-surface-muted"
           >
             <component :is="step.icon" class="h-5 w-5 text-primary" aria-hidden="true" />
-            <span class="text-xs font-semibold text-content">{{ step.label }}</span>
+            <span class="text-xs font-semibold text-content">{{ $t(step.label) }}</span>
           </div>
         </div>
       </div>
 
       <div v-else class="h-full flex flex-col min-h-0 gap-3">
-        <SearchInput v-model="searchQuery" placeholder="Search projects..." />
+        <SearchInput v-model="searchQuery" :placeholder="$t('projects.grid.search_placeholder')" />
 
         <DataTable
           class="flex-1 min-h-0"
@@ -70,10 +69,12 @@
           :sort-order="sortOrder"
           :pagination="tablePagination"
           :page-size-options="[20, 50, 100]"
-          item-label="projects"
-          empty-title="No projects found"
+          :item-label="$t('projects.grid.item_label')"
+          :empty-title="$t('projects.grid.no_results_title')"
           :empty-description="
-            searchQuery ? 'Try a different search term' : 'Create a project to get started'
+            searchQuery
+              ? $t('projects.grid.no_results_search')
+              : $t('projects.grid.no_results_create')
           "
           @sort="handleSort"
           @row-click="goToProject"
@@ -90,7 +91,13 @@
             <span
               class="px-2.5 py-1 inline-flex text-xs leading-4 font-medium rounded-full bg-primary-soft text-primary border border-default"
             >
-              {{ project.document_count }} document{{ project.document_count !== 1 ? 's' : '' }}
+              {{
+                $t(
+                  'projects.grid.document_count',
+                  { count: project.document_count },
+                  project.document_count,
+                )
+              }}
             </span>
           </template>
 
@@ -122,7 +129,7 @@
               size="sm"
               @click.stop="goToProject(project as ProjectRow)"
             >
-              View
+              {{ $t('projects.grid.view') }}
             </BaseButton>
           </template>
         </DataTable>
@@ -133,6 +140,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, type ComputedRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   FolderPlus,
   FileUp,
@@ -181,6 +189,7 @@ interface TablePagination {
 
 const authStore = useAuthStore()
 const router = useRouter()
+const { t } = useI18n({ useScope: 'global' })
 
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 // The "show all users' projects" toggle only makes sense when the deployment
@@ -194,12 +203,12 @@ const loadError = ref<string>('')
 
 // Onboarding workflow map shown in the first-run empty state.
 const workflowSteps = [
-  { label: 'Upload files', icon: FileUp },
-  { label: 'Preprocess', icon: ScanText },
-  { label: 'Documents', icon: FileText },
-  { label: 'Schemas', icon: Braces },
-  { label: 'Run trials', icon: FlaskConical },
-  { label: 'Evaluate', icon: ClipboardCheck },
+  { label: 'projects.grid.workflow.upload', icon: FileUp },
+  { label: 'projects.grid.workflow.preprocess', icon: ScanText },
+  { label: 'projects.grid.workflow.documents', icon: FileText },
+  { label: 'projects.grid.workflow.schemas', icon: Braces },
+  { label: 'projects.grid.workflow.trials', icon: FlaskConical },
+  { label: 'projects.grid.workflow.evaluate', icon: ClipboardCheck },
 ]
 
 const projects = ref<ProjectRow[]>([])
@@ -292,13 +301,13 @@ function handlePageSizeChange(size: number): void {
 
 const columns: ComputedRef<TableColumn[]> = computed(() => {
   const cols: TableColumn[] = [
-    { key: 'name', label: 'Project', sortable: true },
-    { key: 'document_count', label: 'Documents', sortable: true },
+    { key: 'name', label: t('projects.grid.columns.project'), sortable: true },
+    { key: 'document_count', label: t('projects.grid.columns.documents'), sortable: true },
   ]
   if (isAdmin.value) {
-    cols.push({ key: 'user', label: 'User', sortable: true })
+    cols.push({ key: 'user', label: t('projects.grid.columns.user'), sortable: true })
   }
-  cols.push({ key: 'created_at', label: 'Created', sortable: true })
+  cols.push({ key: 'created_at', label: t('projects.grid.columns.created'), sortable: true })
   return cols
 })
 
@@ -332,7 +341,7 @@ const loadProjects = async (): Promise<void> => {
     currentPage.value = 1
   } catch (err) {
     console.error('Error loading projects:', err)
-    loadError.value = extractErrorMessage(err, 'Failed to load projects.')
+    loadError.value = extractErrorMessage(err, t('projects.grid.load_failed'))
   } finally {
     isLoading.value = false
   }

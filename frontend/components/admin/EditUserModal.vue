@@ -2,7 +2,7 @@
   <BaseModal :open="open" size="md" @close="emit('close')">
     <template #header>
       <div>
-        <h3 class="text-lg font-semibold text-content">Edit User</h3>
+        <h3 class="text-lg font-semibold text-content">{{ $t('admin.edit_modal.title') }}</h3>
         <p class="text-sm text-content-muted mt-0.5">#{{ user?.id }} &middot; {{ user?.email }}</p>
       </div>
     </template>
@@ -13,18 +13,22 @@
         {{ editError }}
       </Callout>
       <Callout v-if="editSuccess" variant="success" class="text-xs">
-        User updated successfully!
+        {{ $t('admin.edit_modal.updated_success') }}
       </Callout>
       <Callout v-if="setPasswordSuccessMsg" variant="success" class="text-xs">
-        Password updated successfully!
+        {{ $t('admin.edit_modal.password_updated_success') }}
       </Callout>
 
       <!-- === General Settings === -->
       <div>
-        <h4 class="text-xs font-bold text-content-subtle uppercase tracking-wider mb-3">General</h4>
+        <h4 class="text-xs font-bold text-content-subtle uppercase tracking-wider mb-3">
+          {{ $t('admin.edit_modal.general') }}
+        </h4>
         <div class="space-y-4">
           <div>
-            <label :class="labelClass" for="edit-user-full-name">Full Name</label>
+            <label :class="labelClass" for="edit-user-full-name">{{
+              $t('admin.edit_modal.full_name')
+            }}</label>
             <input
               id="edit-user-full-name"
               v-model="editForm.full_name"
@@ -33,7 +37,9 @@
             />
           </div>
           <div>
-            <label :class="labelClass" for="edit-user-email">Email</label>
+            <label :class="labelClass" for="edit-user-email">{{
+              $t('admin.edit_modal.email')
+            }}</label>
             <input
               id="edit-user-email"
               v-model="editForm.email"
@@ -44,31 +50,37 @@
           </div>
           <div class="flex gap-4">
             <div class="flex-1">
-              <label :class="labelClass" for="edit-user-role">Role</label>
+              <label :class="labelClass" for="edit-user-role">{{
+                $t('admin.edit_modal.role')
+              }}</label>
               <select
                 id="edit-user-role"
                 v-model="editForm.role"
                 :class="selectClass"
                 :disabled="user?.id === currentUserId"
               >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
+                <option value="user">{{ $t('admin.edit_modal.role_user') }}</option>
+                <option value="admin">{{ $t('common.admin') }}</option>
               </select>
               <p
                 v-if="user?.id === currentUserId"
                 class="text-xs text-amber-600 dark:text-amber-400 mt-1"
               >
-                You cannot change your own role.
+                {{ $t('admin.edit_modal.cannot_change_own_role') }}
               </p>
             </div>
             <div class="flex-1">
-              <label :class="labelClass">Status</label>
+              <label :class="labelClass">{{ $t('admin.edit_modal.status') }}</label>
               <div class="flex items-center gap-3 mt-2">
                 <button
                   type="button"
                   role="switch"
                   :aria-checked="editForm.is_active"
-                  :aria-label="`User account ${editForm.is_active ? 'active' : 'inactive'}`"
+                  :aria-label="
+                    editForm.is_active
+                      ? $t('admin.edit_modal.account_active_aria')
+                      : $t('admin.edit_modal.account_inactive_aria')
+                  "
                   :disabled="user?.id === currentUserId"
                   class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
                   :class="[
@@ -90,7 +102,11 @@
                       : 'text-red-600 dark:text-red-400'
                   "
                 >
-                  {{ editForm.is_active ? 'Active' : 'Inactive' }}
+                  {{
+                    editForm.is_active
+                      ? $t('admin.users.status.active')
+                      : $t('admin.users.status.inactive')
+                  }}
                 </span>
               </div>
             </div>
@@ -104,7 +120,7 @@
       <!-- === Set Password === -->
       <div>
         <h4 class="text-xs font-bold text-content-subtle uppercase tracking-wider mb-3">
-          Set Password
+          {{ $t('admin.edit_modal.set_password') }}
         </h4>
         <div class="flex gap-2 items-start">
           <div class="flex-1">
@@ -112,7 +128,7 @@
               v-model="editPassword"
               type="password"
               :class="inputClass"
-              placeholder="Enter new password (optional)"
+              :placeholder="$t('admin.edit_modal.new_password_placeholder')"
             />
           </div>
           <BaseButton
@@ -123,7 +139,7 @@
             :loading="isSettingPassword"
             @click="setPasswordForEditUser"
           >
-            Set
+            {{ $t('admin.edit_modal.set') }}
           </BaseButton>
         </div>
       </div>
@@ -132,10 +148,10 @@
       <hr class="border-default" />
 
       <!-- === Danger Zone === -->
-      <Callout variant="danger" title="Danger Zone">
-        <p class="text-xs mt-1">Delete this user and all associated data. This cannot be undone.</p>
+      <Callout variant="danger" :title="$t('admin.edit_modal.danger_zone')">
+        <p class="text-xs mt-1">{{ $t('admin.edit_modal.delete_warning') }}</p>
         <BaseButton variant="danger" size="sm" class="mt-3" @click="confirmDeleteFromModal">
-          Delete User
+          {{ $t('admin.edit_modal.delete_user') }}
         </BaseButton>
       </Callout>
     </div>
@@ -146,7 +162,7 @@
         class="dark:bg-surface dark:text-content-muted dark:border-strong dark:hover:bg-surface-sunken"
         @click="emit('close')"
       >
-        Cancel
+        {{ $t('admin.edit_modal.cancel') }}
       </BaseButton>
       <BaseButton
         variant="primary"
@@ -154,7 +170,7 @@
         class="dark:bg-primary dark:hover:bg-primary-hover"
         @click="saveEditUser"
       >
-        {{ isSavingEdit ? 'Saving...' : 'Save Changes' }}
+        {{ isSavingEdit ? $t('admin.edit_modal.saving') : $t('admin.edit_modal.save_changes') }}
       </BaseButton>
     </template>
   </BaseModal>
@@ -162,6 +178,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { UserResponse, UserUpdateAdmin, UserRole } from '@/types'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -189,6 +206,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { t } = useI18n({ useScope: 'global' })
 
 interface EditForm {
   full_name: string
@@ -259,10 +277,10 @@ async function saveEditUser(): Promise<void> {
     const response = await usersApi.update(props.user.id, payload)
     const updatedUser = response.data
     editSuccess.value = true
-    toast.success(`User "${updatedUser.full_name}" updated.`)
+    toast.success(t('admin.edit_modal.toast.updated', { name: updatedUser.full_name }))
     emit('saved', updatedUser)
   } catch (error) {
-    editError.value = extractErrorMessage(error, 'Failed to update user.')
+    editError.value = extractErrorMessage(error, t('admin.edit_modal.errors.update_failed'))
   } finally {
     isSavingEdit.value = false
   }
@@ -276,9 +294,9 @@ async function setPasswordForEditUser(): Promise<void> {
     await usersApi.setPassword(props.user.id, { new_password: editPassword.value })
     setPasswordSuccessMsg.value = true
     editPassword.value = ''
-    toast.success('Password updated')
+    toast.success(t('admin.edit_modal.toast.password_updated'))
   } catch (error) {
-    editError.value = extractErrorMessage(error, 'Failed to set password')
+    editError.value = extractErrorMessage(error, t('admin.edit_modal.errors.set_password_failed'))
   } finally {
     isSettingPassword.value = false
   }

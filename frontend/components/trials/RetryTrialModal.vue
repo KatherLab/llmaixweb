@@ -1,11 +1,11 @@
 <template>
   <BaseModal :open="open" size="sm" body-class="p-6" @close="$emit('close')">
     <template #header>
-      <h3 class="text-lg font-semibold text-content">Retry Trial</h3>
+      <h3 class="text-lg font-semibold text-content">{{ $t('trials.retry_modal.title') }}</h3>
     </template>
 
     <p class="text-sm text-content-muted">
-      Start a new trial run with the same configuration? This will consume LLM credits.
+      {{ $t('trials.retry_modal.message') }}
     </p>
 
     <div class="mt-4 space-y-3">
@@ -13,28 +13,30 @@
         <input v-model="scope" type="radio" value="failed" :class="[radioClass, 'mt-0.5']" />
         <span>
           <span class="font-medium text-content">
-            Retry failed documents only{{ failedCount ? ` (${failedCount})` : '' }}
+            {{ $t('trials.retry_modal.failed_only') }}{{ failedCount ? ` (${failedCount})` : '' }}
           </span>
           <span class="block text-xs text-content-muted mt-0.5">
-            Creates a new trial that processes just the documents that failed.
+            {{ $t('trials.retry_modal.failed_only_desc') }}
           </span>
         </span>
       </label>
       <label class="flex items-start gap-2 text-sm cursor-pointer">
         <input v-model="scope" type="radio" value="all" :class="[radioClass, 'mt-0.5']" />
         <span>
-          <span class="font-medium text-content">Re-run all documents</span>
+          <span class="font-medium text-content">{{ $t('trials.retry_modal.all') }}</span>
           <span class="block text-xs text-content-muted mt-0.5">
-            Processes every document again, including the ones that already succeeded.
+            {{ $t('trials.retry_modal.all_desc') }}
           </span>
         </span>
       </label>
     </div>
 
     <template #footer>
-      <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
+      <BaseButton variant="secondary" @click="$emit('close')">{{
+        $t('trials.retry_modal.cancel')
+      }}</BaseButton>
       <BaseButton variant="primary" @click="$emit('confirm', scope === 'failed')">
-        Retry Trial
+        {{ $t('trials.retry_modal.confirm') }}
       </BaseButton>
     </template>
   </BaseModal>

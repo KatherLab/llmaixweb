@@ -1,7 +1,7 @@
 <template>
   <BaseModal
     :open="open"
-    title="Export Evaluation Report"
+    :title="$t('evaluation.export.title')"
     size="lg"
     body-class="p-6"
     @close="$emit('close')"
@@ -9,7 +9,7 @@
     <div class="space-y-6">
       <!-- Export format selection -->
       <div>
-        <label :class="labelClass">Export Format</label>
+        <label :class="labelClass">{{ $t('evaluation.export.format_label') }}</label>
         <div class="grid grid-cols-3 gap-3">
           <div
             class="relative flex cursor-pointer rounded-card border p-4 focus:outline-none"
@@ -21,7 +21,9 @@
             </div>
             <div class="ml-3">
               <div class="text-sm font-medium text-content">CSV</div>
-              <div class="text-sm text-content-subtle">Comma-separated values</div>
+              <div class="text-sm text-content-subtle">
+                {{ $t('evaluation.export.csv_desc') }}
+              </div>
             </div>
           </div>
           <div
@@ -34,7 +36,9 @@
             </div>
             <div class="ml-3">
               <div class="text-sm font-medium text-content">Excel</div>
-              <div class="text-sm text-content-subtle">Excel spreadsheet</div>
+              <div class="text-sm text-content-subtle">
+                {{ $t('evaluation.export.xlsx_desc') }}
+              </div>
             </div>
           </div>
           <div
@@ -47,7 +51,9 @@
             </div>
             <div class="ml-3">
               <div class="text-sm font-medium text-content">ZIP</div>
-              <div class="text-sm text-content-subtle">ZIP archive (advanced)</div>
+              <div class="text-sm text-content-subtle">
+                {{ $t('evaluation.export.zip_desc') }}
+              </div>
             </div>
           </div>
         </div>
@@ -55,9 +61,9 @@
 
       <!-- Evaluation selection -->
       <div>
-        <label :class="labelClass">Select Evaluations</label>
+        <label :class="labelClass">{{ $t('evaluation.export.select_label') }}</label>
         <p v-if="groundTruthName" class="text-xs text-content-subtle mb-2">
-          Showing evaluations for ground truth "{{ groundTruthName }}".
+          {{ $t('evaluation.export.showing_for_gt', { name: groundTruthName }) }}
         </p>
         <div class="max-h-64 overflow-y-auto border border-default rounded-card">
           <div class="p-3 border-b border-default bg-surface-muted">
@@ -68,7 +74,9 @@
                 :class="checkboxClass"
                 @change="toggleSelectAll"
               />
-              <span class="ml-2 text-sm font-medium text-content-muted">Select All</span>
+              <span class="ml-2 text-sm font-medium text-content-muted">{{
+                $t('evaluation.export.select_all')
+              }}</span>
             </label>
           </div>
           <div class="divide-y divide-default">
@@ -97,8 +105,20 @@
                     }}
                   </div>
                   <div class="text-sm text-content-subtle">
-                    {{ getEvaluationAccuracyPct(evaluation) }} accuracy •
-                    {{ getEvaluationDocumentCount(evaluation) }} documents •
+                    {{
+                      $t('evaluation.export.accuracy_label', {
+                        value: getEvaluationAccuracyPct(evaluation),
+                      })
+                    }}
+                    •
+                    {{
+                      $t(
+                        'evaluation.export.documents_label',
+                        { count: getEvaluationDocumentCount(evaluation) },
+                        getEvaluationDocumentCount(evaluation),
+                      )
+                    }}
+                    •
                     {{ formatDate(evaluation.created_at) }}
                   </div>
                 </div>
@@ -110,13 +130,13 @@
           v-if="selectedEvaluations.length === 0"
           class="mt-2 text-sm text-red-600 dark:text-red-400"
         >
-          Please select at least one evaluation to export.
+          {{ $t('evaluation.export.select_one') }}
         </div>
       </div>
 
       <!-- Export options -->
       <div>
-        <label :class="labelClass">Export Options</label>
+        <label :class="labelClass">{{ $t('evaluation.export.options_label') }}</label>
         <div class="space-y-3">
           <div class="flex items-center">
             <input
@@ -126,7 +146,7 @@
               :class="checkboxClass"
             />
             <label for="include-details" class="ml-2 text-sm text-content-muted">
-              Include detailed document-level metrics
+              {{ $t('evaluation.export.opt_details') }}
             </label>
           </div>
           <div class="flex items-center">
@@ -137,7 +157,7 @@
               :class="checkboxClass"
             />
             <label for="include-field-details" class="ml-2 text-sm text-content-muted">
-              Include field-by-field comparison data
+              {{ $t('evaluation.export.opt_field_details') }}
             </label>
           </div>
           <div class="flex items-center">
@@ -148,7 +168,7 @@
               :class="checkboxClass"
             />
             <label for="include-errors" class="ml-2 text-sm text-content-muted">
-              Include error analysis and examples
+              {{ $t('evaluation.export.opt_errors') }}
             </label>
           </div>
           <div v-if="exportFormat === 'zip'" class="flex items-center">
@@ -159,7 +179,7 @@
               :class="checkboxClass"
             />
             <label for="include-document-content" class="ml-2 text-sm text-content-muted">
-              Include document content (in docs/)
+              {{ $t('evaluation.export.opt_document_content') }}
             </label>
           </div>
           <div v-if="exportFormat === 'zip'" class="flex items-center">
@@ -170,7 +190,7 @@
               :class="checkboxClass"
             />
             <label for="include-gt-content" class="ml-2 text-sm text-content-muted">
-              Include ground truth content (in docs/)
+              {{ $t('evaluation.export.opt_gt_content') }}
             </label>
           </div>
         </div>
@@ -178,28 +198,45 @@
 
       <!-- Preview of export content -->
       <div v-if="selectedEvaluations.length > 0" class="bg-surface-muted rounded-card p-4">
-        <h4 class="text-sm font-medium text-content-muted mb-2">Export Preview</h4>
+        <h4 class="text-sm font-medium text-content-muted mb-2">
+          {{ $t('evaluation.export.preview_title') }}
+        </h4>
         <div class="text-sm text-content-muted space-y-1">
-          <div>• {{ selectedEvaluations.length }} evaluation(s) selected</div>
-          <div>• {{ totalDocuments }} total documents</div>
-          <div v-if="includeDetails">• Document-level metrics included</div>
-          <div v-if="includeFieldDetails">• Field comparison data included</div>
-          <div v-if="includeErrors">• Error analysis included</div>
+          <div>
+            •
+            {{
+              $t(
+                'evaluation.export.preview_evaluations',
+                { count: selectedEvaluations.length },
+                selectedEvaluations.length,
+              )
+            }}
+          </div>
+          <div>
+            • {{ $t('evaluation.export.preview_total_documents', { count: totalDocuments }) }}
+          </div>
+          <div v-if="includeDetails">• {{ $t('evaluation.export.preview_details') }}</div>
+          <div v-if="includeFieldDetails">
+            • {{ $t('evaluation.export.preview_field_details') }}
+          </div>
+          <div v-if="includeErrors">• {{ $t('evaluation.export.preview_errors') }}</div>
           <div v-if="exportFormat === 'zip' && includeDocumentContent">
-            • Document content files included
+            • {{ $t('evaluation.export.preview_document_content') }}
           </div>
           <div v-if="exportFormat === 'zip' && includeGroundTruthContent">
-            • Ground truth files included
+            • {{ $t('evaluation.export.preview_gt_content') }}
           </div>
           <div v-if="includesLargeContent" class="text-xs text-amber-600 dark:text-amber-400 mt-2">
-            Includes original document/ground-truth files — the archive may be large.
+            {{ $t('evaluation.export.large_warning') }}
           </div>
         </div>
       </div>
     </div>
 
     <template #footer>
-      <BaseButton variant="secondary" @click="$emit('close')"> Cancel </BaseButton>
+      <BaseButton variant="secondary" @click="$emit('close')">
+        {{ $t('evaluation.export.cancel') }}
+      </BaseButton>
       <BaseButton
         :loading="isExporting"
         :disabled="isExporting || selectedEvaluations.length === 0"
@@ -207,9 +244,9 @@
       >
         <span v-if="!isExporting" class="flex items-center gap-1.5">
           <Upload class="w-4 h-4" />
-          Export Report
+          {{ $t('evaluation.export.export_button') }}
         </span>
-        <span v-else>Exporting...</span>
+        <span v-else>{{ $t('evaluation.export.exporting') }}</span>
       </BaseButton>
     </template>
   </BaseModal>
@@ -217,6 +254,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Upload } from '@lucide/vue'
 import { evaluationsApi } from '@/services/evaluationsApi'
 import { formatDate } from '@/utils/formatters'
@@ -248,6 +286,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{ close: [] }>()
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 const { downloadFromApi } = useFileDownload()
 const isExporting = ref(false)
@@ -315,7 +354,7 @@ const toggleSelectAll = (): void => {
 
 const exportReport = async (): Promise<void> => {
   if (selectedEvaluations.value.length === 0) {
-    toast.warning('Please select at least one evaluation to export')
+    toast.warning(t('evaluation.export.select_one_toast'))
     return
   }
   isExporting.value = true
@@ -346,10 +385,10 @@ const exportReport = async (): Promise<void> => {
       filename,
     )
 
-    toast.success('Report exported')
+    toast.success(t('evaluation.export.export_success'))
     emit('close')
   } catch (err: unknown) {
-    toast.error(`Failed to export report: ${(err as Error)?.message}`)
+    toast.error(t('evaluation.export.export_failed', { error: (err as Error)?.message }))
     console.error(err)
   } finally {
     isExporting.value = false

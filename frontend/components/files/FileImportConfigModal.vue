@@ -1,7 +1,11 @@
 <template>
   <BaseModal
     :open="open"
-    :title="`${isEdit ? 'Edit Import Settings' : 'Configure Import'}: ${file?.file_name || ''}`"
+    :title="
+      isEdit
+        ? $t('files.import.title_edit', { name: file?.file_name || '' })
+        : $t('files.import.title_new', { name: file?.file_name || '' })
+    "
     size="xl"
     panel-class="sm:max-w-3xl lg:max-w-[90vw] max-h-[95vh]"
     body-class="px-8 py-6"
@@ -9,14 +13,14 @@
   >
     <!-- Content -->
     <!-- Preview -->
-    <h3 class="font-semibold text-content text-sm mb-3">Preview (first 25 rows)</h3>
+    <h3 class="font-semibold text-content text-sm mb-3">{{ $t('files.import.preview_title') }}</h3>
 
     <!-- Preview load error: surface the backend detail inline with a retry
          (mirrors FilePreviewModal's error handling). -->
     <ErrorBanner
       v-if="previewError"
       :message="previewError"
-      retry-text="Retry"
+      :retry-text="$t('files.actions.retry')"
       :retry-loading="previewLoading"
       class="!mb-5"
       @retry="loadPreview"
@@ -41,27 +45,27 @@
         <tbody>
           <tr v-for="(row, ridx) in preview.rows" :key="ridx">
             <td v-for="(cell, cidx) in row" :key="cidx" class="px-2 py-1 text-content-muted">
-              <span v-if="cell === '' || cell == null" class="text-content-subtle italic"
-                >empty</span
-              >
+              <span v-if="cell === '' || cell == null" class="text-content-subtle italic">{{
+                $t('files.preview.empty')
+              }}</span>
               <span v-else>{{ cell }}</span>
             </td>
           </tr>
         </tbody>
       </table>
       <div v-else class="text-xs text-content-muted py-3 text-center">
-        No preview data available.
+        {{ $t('files.import.no_preview') }}
       </div>
     </div>
     <div v-if="!previewError" class="text-xs text-content-subtle mb-4">
-      Previewing first {{ preview.rows.length }} rows
+      {{ $t('files.import.previewing_rows', { count: preview.rows.length }) }}
     </div>
 
     <!-- Config form -->
     <div class="space-y-6">
       <div class="flex flex-wrap gap-4">
         <div>
-          <label for="import-encoding" :class="labelClass">Encoding</label>
+          <label for="import-encoding" :class="labelClass">{{ $t('files.import.encoding') }}</label>
           <select id="import-encoding" v-model="encoding" :class="selectClass">
             <option v-for="enc in detectedEncodings" :key="enc" :value="enc">
               {{ enc }}
@@ -70,7 +74,9 @@
         </div>
 
         <div v-if="isCSV">
-          <label for="import-delimiter" :class="labelClass">Delimiter</label>
+          <label for="import-delimiter" :class="labelClass">{{
+            $t('files.import.delimiter')
+          }}</label>
           <select id="import-delimiter" v-model="delimiter" :class="selectClass">
             <option v-for="d in detectedDelimiters" :key="d" :value="d">
               {{ displayDelimiter(d) }}
@@ -79,15 +85,17 @@
         </div>
 
         <div v-if="isCSV || isXLSX">
-          <label for="import-has-header" :class="labelClass">Header Row</label>
+          <label for="import-has-header" :class="labelClass">{{
+            $t('files.import.header_row')
+          }}</label>
           <input id="import-has-header" v-model="hasHeader" type="checkbox" />
-          <label for="import-has-header" class="text-sm text-content-muted"
-            >File contains header row</label
-          >
+          <label for="import-has-header" class="text-sm text-content-muted">{{
+            $t('files.import.has_header')
+          }}</label>
         </div>
 
         <div v-if="isXLSX && sheets.length">
-          <label for="import-sheet" :class="labelClass">Sheet</label>
+          <label for="import-sheet" :class="labelClass">{{ $t('files.import.sheet') }}</label>
           <select id="import-sheet" v-model="sheet" :class="selectClass">
             <option v-for="s in sheets" :key="s" :value="s">{{ s }}</option>
           </select>
@@ -95,7 +103,7 @@
       </div>
 
       <div>
-        <label :class="labelClass">Import Strategy</label>
+        <label :class="labelClass">{{ $t('files.import.strategy') }}</label>
         <div class="flex items-center gap-4">
           <label class="text-content-muted">
             <input
@@ -104,11 +112,11 @@
               value="row_by_row"
               data-testid="import-strategy-row-by-row"
             />
-            <span class="ml-1 text-sm">One document per row</span>
+            <span class="ml-1 text-sm">{{ $t('files.import.strategy_row') }}</span>
           </label>
           <label class="text-content-muted">
             <input v-model="preprocessingStrategy" type="radio" value="full_document" />
-            <span class="ml-1 text-sm">Treat whole file as one document</span>
+            <span class="ml-1 text-sm">{{ $t('files.import.strategy_full') }}</span>
           </label>
         </div>
       </div>
@@ -117,7 +125,9 @@
         <!-- Text columns (checkbox list with sample values) -->
         <div>
           <div class="flex items-center justify-between">
-            <label :class="labelClass">Text Columns <span class="text-red-500">*</span></label>
+            <label :class="labelClass"
+              >{{ $t('files.import.text_columns') }} <span class="text-red-500">*</span></label
+            >
             <BaseButton
               variant="link"
               tone="blue"
@@ -126,12 +136,11 @@
               :disabled="textColumns.length === headerLabels.length"
               @click="textColumns = [...headerLabels]"
             >
-              Select all
+              {{ $t('files.import.select_all') }}
             </BaseButton>
           </div>
           <p class="text-xs text-content-muted mb-2">
-            Pick the column(s) whose text the LLM should extract. Their contents are concatenated
-            into each document. Typically the report, notes, or findings column.
+            {{ $t('files.import.text_columns_help') }}
           </p>
           <div
             class="grid sm:grid-cols-2 gap-1.5 max-h-64 overflow-y-auto p-2 border border-default rounded-card bg-surface-muted"
@@ -156,7 +165,7 @@
               <div class="min-w-0 flex-1">
                 <div class="text-sm font-medium text-content truncate">{{ col }}</div>
                 <div v-if="sampleValue(idx)" class="text-xs text-content-subtle truncate">
-                  e.g. {{ sampleValue(idx) }}
+                  {{ $t('files.import.sample_eg', { value: sampleValue(idx) }) }}
                 </div>
               </div>
             </label>
@@ -167,21 +176,23 @@
             </StatusBadge>
           </div>
           <p v-else class="text-xs text-red-600 dark:text-red-400 mt-2">
-            Select at least one text column to extract.
+            {{ $t('files.import.text_columns_required') }}
           </p>
         </div>
 
         <!-- ID column -->
         <div>
-          <label for="import-case-id" :class="labelClass">Case/Document ID Column</label>
+          <label for="import-case-id" :class="labelClass">{{ $t('files.import.id_column') }}</label>
           <select id="import-case-id" v-model="caseIdColumn" :class="selectClass">
-            <option value="">(Row number)</option>
+            <option value="">{{ $t('files.import.row_number') }}</option>
             <option v-for="(col, idx) in headerLabels" :key="idx" :value="col">
-              {{ col }}<span v-if="isRecommendedId(col)"> (Recommended)</span>
+              {{ col
+              }}<span v-if="isRecommendedId(col)"> {{ $t('files.import.recommended') }}</span>
             </option>
           </select>
           <div class="text-xs text-content-subtle mt-1">
-            Optional: names each document (e.g. <code>CASE-001</code>). Defaults to row number.
+            {{ $t('files.import.id_help_before') }} <code>CASE-001</code
+            >{{ $t('files.import.id_help_after') }}
           </div>
 
           <!-- ID uniqueness validation -->
@@ -190,15 +201,15 @@
             class="mt-2 text-xs text-content-muted flex items-center gap-1.5"
           >
             <LoadingSpinner inline size="small" color="current" label="" />
-            Checking that IDs are unique…
+            {{ $t('files.import.checking_unique') }}
           </div>
 
           <div
             v-else-if="idColumnMissing"
             class="mt-2 rounded-card border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300"
           >
-            Column <strong>{{ caseIdColumn }}</strong> was not found with the current settings.
-            Adjust the header/sheet options or pick another column.
+            {{ $t('files.import.id_missing_before') }} <strong>{{ caseIdColumn }}</strong>
+            {{ $t('files.import.id_missing_after') }}
           </div>
 
           <div
@@ -206,22 +217,22 @@
             class="mt-2 rounded-card border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300"
           >
             <p class="font-medium">
-              This column is not unique — {{ idValidation?.duplicate_rows }} rows share a duplicate
-              ID. Each document needs a unique ID, so saving is disabled.
+              {{ $t('files.import.not_unique', { rows: idValidation?.duplicate_rows }) }}
             </p>
             <ul class="mt-1.5 space-y-0.5 list-disc pl-4">
               <li v-for="dup in idValidation?.duplicates || []" :key="dup.value">
-                <span v-if="dup.is_empty" class="italic">(empty)</span>
+                <span v-if="dup.is_empty" class="italic">{{ $t('files.import.empty_value') }}</span>
                 <code v-else>{{ dup.value }}</code>
-                — appears {{ dup.count }}×
+                — {{ $t('files.import.appears', { count: dup.count }) }}
               </li>
             </ul>
             <p v-if="extraDuplicateCount > 0" class="mt-1">
-              …and {{ extraDuplicateCount }} more duplicate value(s).
+              {{ $t('files.import.more_duplicates', { count: extraDuplicateCount }) }}
             </p>
             <p class="mt-1.5">
-              Pick a different ID column, or use <strong>(Row number)</strong> to name documents
-              automatically.
+              {{ $t('files.import.pick_different_before') }}
+              <strong>{{ $t('files.import.row_number') }}</strong>
+              {{ $t('files.import.pick_different_after') }}
             </p>
           </div>
 
@@ -236,7 +247,7 @@
                 clip-rule="evenodd"
               />
             </svg>
-            All {{ idValidation?.total_rows }} IDs in this column are unique.
+            {{ $t('files.import.all_unique', { count: idValidation?.total_rows }) }}
           </div>
         </div>
       </div>
@@ -245,17 +256,19 @@
     <!-- Discard unsaved changes confirmation -->
     <ConfirmationDialog
       :open="showConfirm"
-      title="Discard unsaved changes?"
-      message="Your changes to import configuration will be lost."
-      confirm-text="Discard"
-      cancel-text="Keep editing"
+      :title="$t('files.import.discard_title')"
+      :message="$t('files.import.discard_message')"
+      :confirm-text="$t('files.import.discard_confirm')"
+      :cancel-text="$t('files.import.discard_cancel')"
       confirm-variant="danger"
       @confirm="confirmClose"
       @cancel="showConfirm = false"
     />
 
     <template #footer>
-      <BaseButton variant="secondary" @click="tryClose">Cancel</BaseButton>
+      <BaseButton variant="secondary" @click="tryClose">{{
+        $t('files.actions.cancel')
+      }}</BaseButton>
       <BaseButton
         :disabled="
           saving ||
@@ -268,7 +281,13 @@
         data-testid="import-save"
         @click="saveConfig"
       >
-        {{ saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Save' }}
+        {{
+          saving
+            ? $t('files.import.saving')
+            : isEdit
+              ? $t('files.import.save_changes')
+              : $t('files.import.save')
+        }}
       </BaseButton>
     </template>
   </BaseModal>
@@ -276,6 +295,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { filesApi } from '@/services/filesApi'
 import type { IdColumnValidation } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
@@ -301,6 +321,7 @@ const emit = defineEmits<{
   saved: []
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 
 const isEdit = ref(false)
@@ -375,16 +396,16 @@ const extraDuplicateCount = computed(() => {
 const headerLabels = computed(() =>
   (preview.value.headers || []).map((h, idx) => {
     if (h == null || (typeof h === 'string' && h.trim() === '')) {
-      return `Column ${idx + 1}`
+      return t('files.preview.column', { n: idx + 1 })
     }
     return String(h)
   }),
 )
 
 function displayDelimiter(d: string): string {
-  if (d === '\t') return 'Tab'
-  if (d === ',') return 'Comma (,)'
-  if (d === ';') return 'Semicolon (;)'
+  if (d === '\t') return t('files.import.delim_tab')
+  if (d === ',') return t('files.import.delim_comma')
+  if (d === ';') return t('files.import.delim_semicolon')
   return d
 }
 
@@ -501,7 +522,7 @@ const loadPreview = async (): Promise<void> => {
 
     previewError.value = ''
   } catch (err) {
-    previewError.value = extractErrorMessage(err, 'Failed to load preview')
+    previewError.value = extractErrorMessage(err, t('files.preview.load_failed'))
     preview.value = { headers: [], rows: [] }
   } finally {
     previewLoading.value = false
@@ -630,7 +651,7 @@ const saveConfig = async (): Promise<void> => {
     }
 
     await filesApi.configure(props.projectId, props.file.id, payload)
-    toast.success('Import configuration saved')
+    toast.success(t('files.import.saved'))
     emit('saved')
     doClose()
   } catch (err: unknown) {
@@ -640,9 +661,9 @@ const saveConfig = async (): Promise<void> => {
       ?.response
     if (resp?.status === 422 && resp.data?.detail?.duplicates) {
       idValidation.value = resp.data.detail
-      toast.error('This ID column is not unique — pick a different column or fix the file.')
+      toast.error(t('files.import.not_unique_toast'))
     } else {
-      toast.error('Failed to save import configuration')
+      toast.error(t('files.import.save_failed'))
     }
   } finally {
     saving.value = false

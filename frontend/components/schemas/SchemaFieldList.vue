@@ -26,11 +26,11 @@
             <span
               v-if="field.required"
               class="text-[10px] font-semibold uppercase tracking-wide text-pink-600 dark:text-pink-400"
-              >required</span
+              >{{ $t('schemaEditor.field_list.required') }}</span
             >
-            <span v-if="field.enum.length" class="text-[10px] text-content-muted"
-              >{{ field.enum.length }} options</span
-            >
+            <span v-if="field.enum.length" class="text-[10px] text-content-muted">{{
+              $t('schemaEditor.field_list.options_count', { count: field.enum.length })
+            }}</span>
             <span v-if="field.format" class="text-[10px] text-content-muted">{{
               field.format
             }}</span>
@@ -41,12 +41,14 @@
         </div>
       </li>
     </ul>
-    <p v-else class="text-sm text-content-muted italic">No fields defined.</p>
+    <p v-else class="text-sm text-content-muted italic">
+      {{ $t('schemaEditor.field_list.no_fields') }}
+    </p>
 
     <!-- Optional raw JSON for advanced users (collapsed by default) -->
     <details v-if="showRawJsonToggle" class="mt-4">
       <summary class="text-xs text-primary cursor-pointer hover:underline">
-        Show raw JSON (advanced)
+        {{ $t('schemaEditor.field_list.show_raw_json') }}
       </summary>
       <pre
         class="bg-surface-muted border border-default rounded p-2 mt-1 max-h-64 overflow-auto font-mono text-xs text-content-muted"
@@ -57,6 +59,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { flattenSchemaFields } from '@/utils/schemaFieldList'
 import { formatJSON } from '@/utils/schemaTemplates'
 import { getTypeIcon, getTypePillClass } from '@/utils/schemaTypeIcons'
@@ -72,17 +75,19 @@ const props = withDefaults(defineProps<Props>(), {
   showRawJsonToggle: false,
 })
 
+const { t } = useI18n({ useScope: 'global' })
+
 const fields = computed(() => flattenSchemaFields(props.schemaDefinition))
 
 const typeLabel = (type: string): string => {
   const labels: Record<string, string> = {
-    string: 'Text',
-    number: 'Number',
-    integer: 'Integer',
-    boolean: 'Yes/No',
-    object: 'Group',
-    array: 'List',
-    any: 'Any',
+    string: t('schemaEditor.types.text'),
+    number: t('schemaEditor.types.number'),
+    integer: t('schemaEditor.types.integer'),
+    boolean: t('schemaEditor.types.yes_no'),
+    object: t('schemaEditor.types.group'),
+    array: t('schemaEditor.types.list'),
+    any: t('schemaEditor.types.any'),
   }
   return labels[type] || type
 }

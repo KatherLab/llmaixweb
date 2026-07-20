@@ -3,7 +3,7 @@
     <template #header>
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-2">
-          <h3 class="text-lg font-semibold text-content">Start New Trial</h3>
+          <h3 class="text-lg font-semibold text-content">{{ $t('trials.create.title') }}</h3>
           <Tooltip :text="trialHelpText">
             <Info class="h-4 w-4 text-content-subtle hover:text-content-muted" />
           </Tooltip>
@@ -12,22 +12,16 @@
         <BaseSegmentedControl
           v-model="simpleMode"
           :options="[
-            { label: 'Simple', value: true },
-            { label: 'Advanced', value: false },
+            { label: $t('trials.create.mode_simple'), value: true },
+            { label: $t('trials.create.mode_advanced'), value: false },
           ]"
         />
       </div>
     </template>
 
     <!-- Orientation: shown in both modes so first-time users get the primer -->
-    <Callout variant="info" title="What is a trial?" class="mb-6">
-      <p class="mt-1">
-        A trial runs an AI model over your documents to extract structured data. You need four
-        things: a <strong>Schema</strong> (the fields to extract), a
-        <strong>Prompt</strong> (extraction instructions), a <strong>Model</strong> (the AI), and
-        the <strong>Documents</strong> to process. Your schema is automatically included with the
-        prompt — you don't need to describe the fields manually.
-      </p>
+    <Callout variant="info" :title="$t('trials.create.what_is_title')" class="mb-6">
+      <p class="mt-1" v-html="$t('trials.create.what_is_body')"></p>
     </Callout>
 
     <div class="grid md:grid-cols-2 gap-8">
@@ -47,7 +41,11 @@
             class="text-sm flex items-center"
             @click="metadataVisible = !metadataVisible"
           >
-            <span>{{ metadataVisible ? 'Hide' : 'Add' }} name / notes</span>
+            <span>{{
+              metadataVisible
+                ? $t('trials.create.name_notes_hide')
+                : $t('trials.create.name_notes_add')
+            }}</span>
             <ChevronDown
               :class="{ 'rotate-180': metadataVisible }"
               class="h-4 w-4 ml-1 transition-transform"
@@ -94,7 +92,11 @@
               class="text-sm flex items-center"
               @click="advancedSettingsVisible = !advancedSettingsVisible"
             >
-              <span>{{ advancedSettingsVisible ? 'Hide' : 'Show' }} Advanced Settings</span>
+              <span>{{
+                advancedSettingsVisible
+                  ? $t('trials.create.advanced_settings_hide')
+                  : $t('trials.create.advanced_settings_show')
+              }}</span>
               <ChevronDown
                 :class="{ 'rotate-180': advancedSettingsVisible }"
                 class="h-4 w-4 ml-1 transition-transform"
@@ -107,7 +109,11 @@
               class="text-sm flex items-center"
               @click="advancedOptionsVisible = !advancedOptionsVisible"
             >
-              <span>{{ advancedOptionsVisible ? 'Hide' : 'Use' }} Custom API Settings</span>
+              <span>{{
+                advancedOptionsVisible
+                  ? $t('trials.create.custom_api_hide')
+                  : $t('trials.create.custom_api_use')
+              }}</span>
               <ChevronDown
                 :class="{ 'rotate-180': advancedOptionsVisible }"
                 class="h-4 w-4 ml-1 transition-transform"
@@ -140,12 +146,11 @@
           <Callout
             v-if="!hasValidConfig && !hasCustomApiSettings"
             variant="warning"
-            title="No default model configured"
+            :title="$t('trials.create.no_model_title')"
             class="mb-3"
           >
             <p class="mt-1">
-              This server has no system-wide LLM configured. You can still run a trial by pointing
-              at any OpenAI-compatible API (OpenAI, Ollama, vLLM, llama.cpp…).
+              {{ $t('trials.create.no_model_body') }}
             </p>
           </Callout>
           <BaseButton
@@ -156,10 +161,10 @@
           >
             <span>{{
               advancedOptionsVisible
-                ? 'Hide custom API settings'
+                ? $t('trials.create.custom_api_simple_hide')
                 : hasCustomApiSettings
-                  ? 'Edit custom API settings'
-                  : 'Use a different API'
+                  ? $t('trials.create.custom_api_simple_edit')
+                  : $t('trials.create.custom_api_simple_use')
             }}</span>
             <ChevronDown
               :class="{ 'rotate-180': advancedOptionsVisible }"
@@ -203,10 +208,13 @@
       <div class="flex items-center gap-3">
         <LoadingSpinner size="small" color="blue" inline label="" />
         <div class="text-sm">
-          <p class="font-medium">Checking model compatibility…</p>
+          <p class="font-medium">{{ $t('trials.create.checking_title') }}</p>
           <p class="mt-0.5">
-            Verifying that {{ trialData.llm_model || 'the model' }} works with your schema before
-            starting the trial.
+            {{
+              $t('trials.create.checking_body', {
+                model: trialData.llm_model || $t('trials.create.the_model'),
+              })
+            }}
           </p>
         </div>
       </div>
@@ -219,24 +227,26 @@
     </div>
 
     <template #footer>
-      <BaseButton variant="secondary" :disabled="submitting" @click="tryClose">Cancel</BaseButton>
+      <BaseButton variant="secondary" :disabled="submitting" @click="tryClose">{{
+        $t('trials.create.cancel')
+      }}</BaseButton>
       <BaseButton
         variant="primary"
         :disabled="!canSubmit || submitting"
         :loading="submitting"
         @click="handleStartTrial"
       >
-        {{ submitting ? 'Verifying…' : 'Start Trial' }}
+        {{ submitting ? $t('trials.create.verifying') : $t('trials.create.start_trial') }}
       </BaseButton>
     </template>
 
     <!-- Discard unsaved changes confirmation -->
     <ConfirmationDialog
       :open="showConfirm"
-      title="Discard unsaved changes?"
-      message="Your trial configuration will be lost."
-      confirm-text="Discard"
-      cancel-text="Keep editing"
+      :title="$t('trials.create.discard_title')"
+      :message="$t('trials.create.discard_message')"
+      :confirm-text="$t('trials.create.discard_confirm')"
+      :cancel-text="$t('trials.create.discard_cancel')"
       confirm-variant="danger"
       @confirm="confirmDiscard"
       @cancel="showConfirm = false"
@@ -246,6 +256,7 @@
 
 <script setup lang="ts">
 import { computed, ref, toRef, watch, type Component, type PropType } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CheckCircle2, ChevronDown, CircleAlert, Info, Loader2 } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -293,6 +304,7 @@ interface TrialCreatePayload {
 }
 
 const toast = useToast()
+const { t } = useI18n({ useScope: 'global' })
 
 const props = defineProps({
   open: { type: Boolean, required: true },
@@ -310,8 +322,7 @@ const emit = defineEmits<{
   'create-group': []
 }>()
 
-const trialHelpText =
-  'A trial runs an AI model over your documents to extract structured data. You need a Schema, a Prompt, a Model, and the Documents to process. The schema is automatically included with the prompt.'
+const trialHelpText = t('trials.create.help_text')
 
 /* -------------------------------------------------------
  * General trial state
@@ -392,16 +403,16 @@ const canSubmit = computed(() => {
  * Inline status line
  * -----------------------------------------------------*/
 const statusMessage = computed(() => {
-  if (submitting.value) return 'Verifying model works with your schema…'
+  if (submitting.value) return t('trials.create.status.verifying')
   if (isTestingModel.value) return modelTestStatus.value.message
-  if (!trialData.value.llm_model) return 'Choose a model to continue.'
+  if (!trialData.value.llm_model) return t('trials.create.status.choose_model')
   if (!hasValidConfig.value) return configStatus.value.message
-  if ((trialData.value.document_ids?.length ?? 0) === 0) return 'Select documents to continue.'
-  if (modelTested.value && modelValid.value)
-    return 'Model verified with this schema — ready to start.'
+  if ((trialData.value.document_ids?.length ?? 0) === 0)
+    return t('trials.create.status.select_documents')
+  if (modelTested.value && modelValid.value) return t('trials.create.status.verified_ready')
   if (modelTested.value && !modelValid.value)
-    return `Verification failed: ${modelTestStatus.value.message}`
-  return 'Model will be checked when you start the trial.'
+    return t('trials.create.status.verification_failed', { message: modelTestStatus.value.message })
+  return t('trials.create.status.will_check')
 })
 
 const statusIcon = computed<Component | null>(() => {
@@ -516,7 +527,7 @@ const handleStartTrial = async (): Promise<void> => {
       if (!success) submitting.value = false
     })
   } catch {
-    toast.error('Could not start the trial. Please try again.')
+    toast.error(t('trials.create.toast.start_failed'))
     submitting.value = false
   }
 }

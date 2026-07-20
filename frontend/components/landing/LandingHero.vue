@@ -4,16 +4,14 @@
       class="mb-6 inline-block rounded-card border border-default bg-primary-soft p-3 backdrop-blur-sm"
     >
       <span class="text-sm font-semibold tracking-wider uppercase text-primary">
-        Document-to-JSON Extraction Platform
+        {{ $t('landing.hero.badge') }}
       </span>
     </div>
     <h1 class="mb-6 text-5xl font-extrabold text-content sm:text-7xl">
       <AppBrand :as-link="false" size="lg" variant="hero" />
     </h1>
     <p class="mx-auto max-w-3xl text-xl leading-relaxed text-content-muted">
-      Turn unstructured medical and lab documents into validated structured JSON. Define your
-      schema, run LLM extraction trials, and measure accuracy against ground-truth data — with any
-      OpenAI-compatible model, local or hosted.
+      {{ $t('landing.hero.description') }}
     </p>
   </div>
 </template>

@@ -5,9 +5,10 @@
       <div class="flex items-center justify-between">
         <p class="text-sm text-primary">
           <span class="font-medium">{{ totalSelected }}</span>
-          {{ totalSelected === 1 ? itemLabelSingular : itemLabel }} selected
+          {{ totalSelected === 1 ? itemLabelSingular : itemLabel }}
+          {{ $t('common.data_table.selected') }}
           <span v-if="(totalSelected ?? 0) < (pagination?.total ?? 0)" class="text-primary">
-            out of {{ pagination?.total }} total
+            {{ $t('common.data_table.out_of_total', { total: pagination?.total }) }}
           </span>
         </p>
         <BaseButton
@@ -18,10 +19,17 @@
           :disabled="selectAllBusy"
           @click="$emit('select-all')"
         >
-          {{ selectAllBusy ? 'Selecting…' : `Select all ${pagination?.total} ${itemLabel}` }}
+          {{
+            selectAllBusy
+              ? $t('common.data_table.selecting')
+              : $t('common.data_table.select_all_count', {
+                  count: pagination?.total,
+                  label: itemLabel,
+                })
+          }}
         </BaseButton>
         <BaseButton v-else variant="ghost" size="sm" @click="$emit('clear-selection')">
-          Clear selection
+          {{ $t('common.data_table.clear_selection') }}
         </BaseButton>
       </div>
     </div>
@@ -36,7 +44,7 @@
                 type="checkbox"
                 :checked="allSelected"
                 :indeterminate="someSelected"
-                :aria-label="`Select all ${itemLabel} on this page`"
+                :aria-label="$t('common.data_table.select_all_page', { label: itemLabel })"
                 class="h-4 w-4 text-primary border-strong rounded focus:ring-ring"
                 @change="$emit('toggle-all')"
               />
@@ -78,7 +86,9 @@
                 {{ column.label }}
               </div>
             </th>
-            <th v-if="hasRowActions" scope="col" :class="[t.th, 'text-right']">Actions</th>
+            <th v-if="hasRowActions" scope="col" :class="[t.th, 'text-right']">
+              {{ $t('common.data_table.actions') }}
+            </th>
             <th v-if="expandable" scope="col" :class="[t.th, 'w-10']"></th>
           </tr>
         </thead>
@@ -103,7 +113,12 @@
                 <input
                   type="checkbox"
                   :checked="isRowSelected(row)"
-                  :aria-label="`Select ${itemLabelSingular} ${rowLabel(row)}`"
+                  :aria-label="
+                    $t('common.data_table.select_row', {
+                      label: itemLabelSingular,
+                      name: rowLabel(row),
+                    })
+                  "
                   class="h-4 w-4 text-primary border-strong rounded focus:ring-ring"
                   @click.stop="$emit('toggle-selection', getRowKeyValue(row))"
                 />
@@ -128,7 +143,11 @@
                 <button
                   type="button"
                   class="p-1 rounded text-content-subtle hover:text-content hover:bg-surface-muted transition-colors"
-                  :aria-label="isRowExpanded(row) ? 'Collapse' : 'Expand'"
+                  :aria-label="
+                    isRowExpanded(row)
+                      ? $t('common.data_table.collapse')
+                      : $t('common.data_table.expand')
+                  "
                   @click.stop="$emit('expand', getRowKeyValue(row))"
                 >
                   <ChevronDown
@@ -155,7 +174,7 @@
     <!-- Empty State -->
     <EmptyState
       v-if="items.length === 0 && !loading"
-      :title="emptyTitle ?? ''"
+      :title="emptyTitle ?? $t('common.data_table.empty_title')"
       :description="emptyDescription"
     >
       <template v-if="$slots['empty-icon']" #icon>
@@ -269,7 +288,6 @@ const props = withDefaults(defineProps<Props>(), {
   expandable: false,
   expandedKeys: () => [],
   density: 'default',
-  emptyTitle: 'No items found',
   emptyDescription: '',
   loading: false,
 })

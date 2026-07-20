@@ -2,21 +2,22 @@
   <BaseModal :open="open" size="lg" @close="tryClose">
     <template #header>
       <h3 class="text-lg font-semibold text-content">
-        {{ group ? 'Edit Document Group' : 'Create Document Group' }}
+        {{
+          group ? $t('documents.group_form.edit_title') : $t('documents.group_form.create_title')
+        }}
       </h3>
     </template>
 
     <!-- Body -->
     <!-- Purpose hint -->
     <p v-if="!group" class="mb-4 text-sm text-content-muted">
-      A group is a named set of documents you can run a trial against — use it to run an extraction
-      on a specific selection of documents.
+      {{ $t('documents.group_form.purpose_hint') }}
     </p>
 
     <!-- Group Name -->
     <div class="mb-4">
       <label :class="labelClass" for="doc-group-name">
-        Group Name <span class="text-red-500">*</span>
+        {{ $t('documents.group_form.name_label') }} <span class="text-red-500">*</span>
       </label>
       <input
         id="doc-group-name"
@@ -24,26 +25,28 @@
         type="text"
         :class="inputClass"
         maxlength="100"
-        placeholder="e.g., Q4 Financial Reports"
+        :placeholder="$t('documents.group_form.name_placeholder')"
       />
     </div>
 
     <!-- Description -->
     <div class="mb-4">
-      <label :class="labelClass" for="doc-group-description">Description</label>
+      <label :class="labelClass" for="doc-group-description">{{
+        $t('documents.group_form.description_label')
+      }}</label>
       <textarea
         id="doc-group-description"
         v-model="formData.description"
         rows="3"
         :class="textareaClass"
         maxlength="500"
-        placeholder="Describe the purpose of this document group..."
+        :placeholder="$t('documents.group_form.description_placeholder')"
       />
     </div>
 
     <!-- Tags -->
     <div class="mb-4">
-      <label :class="labelClass">Tags</label>
+      <label :class="labelClass">{{ $t('documents.group_form.tags_label') }}</label>
       <div class="flex flex-wrap gap-2 mb-2">
         <StatusBadge
           v-for="(tag, index) in formData.tags"
@@ -56,7 +59,7 @@
             variant="link"
             tone="blue"
             class="ml-2"
-            aria-label="Remove tag"
+            :aria-label="$t('documents.group_form.remove_tag')"
             @click="removeTag(index)"
           >
             <X class="h-3 w-3" aria-hidden="true" />
@@ -68,20 +71,26 @@
           v-model="newTag"
           type="text"
           :class="[inputClass, 'flex-1']"
-          placeholder="Add a tag..."
+          :placeholder="$t('documents.group_form.tag_placeholder')"
           @keyup.enter="addTag"
         />
-        <BaseButton :disabled="!newTag.trim()" variant="primary" @click="addTag"> Add </BaseButton>
+        <BaseButton :disabled="!newTag.trim()" variant="primary" @click="addTag">
+          {{ $t('documents.group_form.add') }}
+        </BaseButton>
       </div>
     </div>
 
     <!-- Document Selection -->
     <div class="mb-4">
       <div class="flex justify-between items-center mb-2">
-        <label :class="labelClass"> Select Documents <span class="text-red-500">*</span> </label>
+        <label :class="labelClass">
+          {{ $t('documents.group_form.select_documents') }} <span class="text-red-500">*</span>
+        </label>
         <span class="text-sm text-content-muted">
-          {{ selectedCount }} selected
-          <span v-if="loadingExisting" class="text-content-subtle">(loading existing…)</span>
+          {{ $t('documents.group_form.selected_count', { count: selectedCount }) }}
+          <span v-if="loadingExisting" class="text-content-subtle">{{
+            $t('documents.group_form.loading_existing')
+          }}</span>
         </span>
       </div>
 
@@ -89,16 +98,18 @@
       <div class="flex gap-2 mb-2">
         <SearchInput
           v-model="searchTerm"
-          placeholder="Search documents..."
+          :placeholder="$t('documents.filters.search_placeholder')"
           @input="onSearchInput"
         />
       </div>
 
       <!-- Document List -->
       <div class="border border-default rounded-card overflow-hidden max-h-64 overflow-y-auto">
-        <div v-if="searchLoading" class="p-4 text-center text-content-muted">Searching…</div>
+        <div v-if="searchLoading" class="p-4 text-center text-content-muted">
+          {{ $t('documents.group_form.searching') }}
+        </div>
         <div v-else-if="searchResults.length === 0" class="p-4 text-center text-content-muted">
-          No documents found
+          {{ $t('documents.table.empty_title') }}
         </div>
         <div v-else>
           <div
@@ -119,10 +130,15 @@
             />
             <div class="flex-1">
               <div class="font-medium text-sm">
-                {{ doc.original_file?.file_name || `Document #${doc.id}` }}
+                {{
+                  doc.original_file?.file_name ||
+                  $t('documents.common.document_number', { id: doc.id })
+                }}
               </div>
               <div class="text-xs text-content-muted">
-                Config: {{ doc.preprocessing_config?.name || 'N/A' }} • Created:
+                {{ $t('documents.group_form.config_label') }}
+                {{ doc.preprocessing_config?.name || $t('documents.common.na') }} •
+                {{ $t('documents.group_form.created_label') }}
                 {{ formatDate(doc.created_at) }}
               </div>
             </div>
@@ -134,11 +150,11 @@
       <div class="flex items-center justify-between gap-2 mt-2">
         <div class="flex gap-2">
           <BaseButton variant="link" tone="blue" class="text-sm" @click="selectAll">
-            Select All Visible
+            {{ $t('documents.group_form.select_all_visible') }}
           </BaseButton>
           <span class="text-content-subtle">|</span>
           <BaseButton variant="link" tone="blue" class="text-sm" @click="clearSelection">
-            Clear Selection
+            {{ $t('documents.group_form.clear_selection') }}
           </BaseButton>
         </div>
         <div v-if="searchTotalPages > 1" class="flex items-center gap-2">
@@ -148,14 +164,14 @@
             :disabled="searchPage <= 1"
             @click="prevSearchPage"
           >
-            Prev
+            {{ $t('documents.group_form.prev') }}
           </button>
           <button
             class="px-2 py-1 text-sm border border-strong text-content rounded-card disabled:opacity-50"
             :disabled="searchPage >= searchTotalPages"
             @click="nextSearchPage"
           >
-            Next
+            {{ $t('documents.group_form.next') }}
           </button>
         </div>
       </div>
@@ -163,19 +179,21 @@
 
     <!-- Footer -->
     <template #footer>
-      <BaseButton variant="secondary" @click="tryClose">Cancel</BaseButton>
+      <BaseButton variant="secondary" @click="tryClose">{{
+        $t('documents.actions.cancel')
+      }}</BaseButton>
       <BaseButton :disabled="!isFormValid" variant="primary" @click="handleSave">
-        {{ group ? 'Update' : 'Create' }} Group
+        {{ group ? $t('documents.group_form.update_group') : $t('documents.actions.create_group') }}
       </BaseButton>
     </template>
 
     <!-- Discard unsaved changes confirmation -->
     <ConfirmationDialog
       :open="showConfirm"
-      title="Discard unsaved changes?"
-      message="Your changes to this document group will be lost."
-      confirm-text="Discard"
-      cancel-text="Keep editing"
+      :title="$t('documents.group_form.discard_title')"
+      :message="$t('documents.group_form.discard_message')"
+      :confirm-text="$t('documents.group_form.discard_confirm')"
+      :cancel-text="$t('documents.group_form.keep_editing')"
       confirm-variant="danger"
       @confirm="confirmDiscard"
       @cancel="showConfirm = false"

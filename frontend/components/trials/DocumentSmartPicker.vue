@@ -1,24 +1,31 @@
 <template>
   <div class="mt-4 flex-1 flex flex-col gap-4">
     <div>
-      <h4 class="text-sm font-medium text-content-muted mb-2">Load from Previous Trial</h4>
+      <h4 class="text-sm font-medium text-content-muted mb-2">
+        {{ $t('trials.smart.load_from_trial') }}
+      </h4>
       <select
         v-model="selectedTrialId"
         :class="selectClass"
         @change="emit('load-from-trial', selectedTrialId)"
       >
-        <option value="">Select a previous trial...</option>
+        <option value="">{{ $t('trials.smart.select_trial') }}</option>
         <option v-for="trial in previousTrials" :key="trial.id" :value="trial.id">
-          {{ trialLabel(trial, trial.id) }} - {{ formatDate(trial.created_at) }} ({{
-            trial.document_ids.length
+          {{
+            $t('trials.smart.trial_option', {
+              name: trialLabel(trial, trial.id),
+              date: formatDate(trial.created_at),
+              count: trial.document_ids.length,
+            })
           }}
-          docs)
         </option>
       </select>
     </div>
 
     <div>
-      <h4 class="text-sm font-medium text-content-muted mb-2">Filter by Date Range</h4>
+      <h4 class="text-sm font-medium text-content-muted mb-2">
+        {{ $t('trials.smart.filter_by_date') }}
+      </h4>
       <div class="grid grid-cols-2 gap-2">
         <input v-model="dateRange.start" :class="inputClass" type="date" />
         <input v-model="dateRange.end" :class="inputClass" type="date" />
@@ -26,26 +33,26 @@
     </div>
 
     <div class="flex flex-wrap gap-2 pt-2">
-      <BaseButton variant="secondary" size="sm" @click="emit('select-recent', 7)"
-        >Last 7 days</BaseButton
-      >
-      <BaseButton variant="secondary" size="sm" @click="emit('select-recent', 30)"
-        >Last 30 days</BaseButton
-      >
+      <BaseButton variant="secondary" size="sm" @click="emit('select-recent', 7)">{{
+        $t('trials.smart.last_7_days')
+      }}</BaseButton>
+      <BaseButton variant="secondary" size="sm" @click="emit('select-recent', 30)">{{
+        $t('trials.smart.last_30_days')
+      }}</BaseButton>
       <BaseButton
         variant="primary"
         size="sm"
         :disabled="!dateRange.start && !dateRange.end"
-        title="Apply explicit date range"
+        :title="$t('trials.smart.apply_title')"
         @click="emit('apply-date-range', { start: dateRange.start, end: dateRange.end })"
-        >Apply Date Range</BaseButton
+        >{{ $t('trials.smart.apply_range') }}</BaseButton
       >
     </div>
 
     <div v-if="selectedIds.length > 0" class="mt-4 p-3 bg-primary-soft rounded-card">
       <div class="flex items-center justify-between">
         <span class="text-sm font-medium text-primary">
-          {{ selectedIds.length }} document{{ selectedIds.length > 1 ? 's' : '' }} selected
+          {{ $t('trials.smart.n_selected', { count: selectedIds.length }, selectedIds.length) }}
         </span>
         <div class="flex items-center gap-2">
           <BaseButton
@@ -54,8 +61,8 @@
             class="text-sm flex items-center gap-1"
             @click="showSelectedDocs = !showSelectedDocs"
           >
-            <span v-if="!showSelectedDocs">Show</span>
-            <span v-else>Hide</span>
+            <span v-if="!showSelectedDocs">{{ $t('trials.smart.show') }}</span>
+            <span v-else>{{ $t('trials.smart.hide') }}</span>
             <ChevronDown
               :class="{ 'rotate-180': showSelectedDocs }"
               class="w-4 h-4 transition-transform"
@@ -63,7 +70,7 @@
             />
           </BaseButton>
           <BaseButton variant="link" tone="blue" class="text-sm" @click="emit('clear')">
-            Clear
+            {{ $t('trials.smart.clear') }}
           </BaseButton>
         </div>
       </div>

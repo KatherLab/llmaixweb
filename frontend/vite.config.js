@@ -13,9 +13,18 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [vue(), tailwindcss()],
+    // vue-i18n feature flags: strip legacy/devtools code and silence the
+    // "runtime-only build" warnings. We alias to the full (esm-bundler) build
+    // below so message strings can be compiled at runtime.
+    define: {
+      __VUE_I18N_FULL_INSTALL__: true,
+      __VUE_I18N_LEGACY_API__: false,
+      __INTLIFY_PROD_DEVTOOLS__: false,
+    },
     resolve: {
       alias: {
         '@': frontendDir,
+        'vue-i18n': 'vue-i18n/dist/vue-i18n.esm-bundler.js',
       },
     },
     root: frontendDir,

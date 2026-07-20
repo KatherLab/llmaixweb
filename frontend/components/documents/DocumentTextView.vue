@@ -10,22 +10,26 @@
         ref="inputRef"
         v-model="query"
         type="search"
-        placeholder="Find in document…"
+        :placeholder="$t('documents.text_view.find_placeholder')"
         class="flex-1 min-w-0 bg-transparent border-0 text-sm text-content placeholder-content-subtle focus:outline-none"
         @input="onQueryInput"
         @keydown.enter.prevent="onEnter($event)"
         @keydown.escape.prevent="clearSearch"
       />
       <span v-if="query" class="text-xs text-content-muted tabular-nums whitespace-nowrap">
-        {{ matchCount === 0 ? 'No results' : `${currentIndex + 1} / ${matchCount}` }}
+        {{
+          matchCount === 0
+            ? $t('documents.text_view.no_results')
+            : `${currentIndex + 1} / ${matchCount}`
+        }}
       </span>
       <BaseButton
         v-if="query"
         variant="icon"
         size="sm"
         :disabled="matchCount === 0"
-        title="Previous match (Shift+Enter)"
-        aria-label="Previous match"
+        :title="$t('documents.text_view.prev_match')"
+        :aria-label="$t('documents.text_view.prev_match_aria')"
         @click="prevMatch"
       >
         <ChevronUp class="h-4 w-4" />
@@ -35,8 +39,8 @@
         variant="icon"
         size="sm"
         :disabled="matchCount === 0"
-        title="Next match (Enter)"
-        aria-label="Next match"
+        :title="$t('documents.text_view.next_match')"
+        :aria-label="$t('documents.text_view.next_match_aria')"
         @click="nextMatch"
       >
         <ChevronDown class="h-4 w-4" />
@@ -45,8 +49,8 @@
         v-if="query"
         variant="icon"
         size="sm"
-        title="Clear search (Esc)"
-        aria-label="Clear search"
+        :title="$t('documents.text_view.clear_search')"
+        :aria-label="$t('documents.text_view.clear_search_aria')"
         @click="clearSearch"
       >
         <X class="h-4 w-4" />
@@ -56,7 +60,7 @@
     <div class="p-6 overflow-y-auto flex-1 min-h-0">
       <div v-if="textLoading" class="flex items-center justify-center py-12 text-content-subtle">
         <span class="mr-2"><LoadingSpinner size="small" color="current" inline label="" /></span>
-        <span>Loading text…</span>
+        <span>{{ $t('documents.text_view.loading_text') }}</span>
       </div>
       <div
         v-else

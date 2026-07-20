@@ -17,16 +17,18 @@
  * establishes the session, then redirects to the originally-requested path.
  */
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
+const { t } = useI18n({ useScope: 'global' })
 const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()
 
-const statusMessage = ref<string>('Completing sign-in…')
+const statusMessage = ref<string>(t('auth.sso.completing'))
 
 interface FragmentTokens {
   accessToken: string | null
@@ -47,19 +49,19 @@ function parseFragment(): FragmentTokens {
 onMounted(async () => {
   const { accessToken, refreshToken, redirect } = parseFragment()
   if (!accessToken) {
-    statusMessage.value = 'Sign-in failed: no token received from the provider.'
-    toast.error('SSO sign-in failed.')
+    statusMessage.value = t('auth.sso.no_token')
+    toast.error(t('auth.sso.failed_toast'))
     setTimeout(() => router.replace('/login'), 1500)
     return
   }
   try {
     await authStore.setSession(accessToken, refreshToken)
-    toast.success('Signed in')
+    toast.success(t('auth.sso.signed_in_toast'))
     // Whitelist redirect to an absolute path on this origin (open-redirect guard).
     const safe = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/projects'
     router.replace(safe)
   } catch {
-    statusMessage.value = 'Sign-in failed.'
+    statusMessage.value = t('auth.sso.failed')
     setTimeout(() => router.replace('/login'), 1500)
   }
 })

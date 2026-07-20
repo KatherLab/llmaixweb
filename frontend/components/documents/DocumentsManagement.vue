@@ -2,8 +2,8 @@
   <div class="p-6 space-y-6">
     <!-- Header -->
     <PageHeader
-      title="Documents"
-      subtitle="View and manage processed documents and document groups"
+      :title="$t('documents.management.title')"
+      :subtitle="$t('documents.management.subtitle')"
       :sticky="false"
       class="mb-6"
     />
@@ -36,7 +36,7 @@
       <!-- Batch Actions -->
       <div class="flex justify-between items-center mb-4">
         <span class="text-sm text-content-muted">
-          {{ totalCount }} document{{ totalCount !== 1 ? 's' : '' }}
+          {{ $t('documents.management.count', { count: totalCount }, totalCount) }}
         </span>
       </div>
 
@@ -48,7 +48,7 @@
       <ErrorBanner
         v-else-if="fetchError"
         :message="fetchError"
-        retry-text="Retry"
+        :retry-text="$t('documents.actions.retry')"
         :retry-loading="isLoading"
         @retry="fetchDocuments"
       />
@@ -59,13 +59,21 @@
            actionable CTA each way.) -->
       <EmptyState
         v-else-if="hasLoadedDocuments && serverItems.length === 0"
-        :title="hasActiveFilters ? 'No documents match your filters' : 'No documents yet'"
+        :title="
+          hasActiveFilters
+            ? $t('documents.management.empty_filtered_title')
+            : $t('documents.management.empty_title')
+        "
         :description="
           hasActiveFilters
-            ? 'Try adjusting or clearing your filters to see more results'
-            : 'Process some files in the Files & Preprocessing tab to see documents here'
+            ? $t('documents.management.empty_filtered_description')
+            : $t('documents.management.empty_description')
         "
-        :action-text="hasActiveFilters ? 'Clear All Filters' : 'Go to Files & Preprocessing'"
+        :action-text="
+          hasActiveFilters
+            ? $t('documents.management.clear_all_filters')
+            : $t('documents.management.go_to_files')
+        "
         @action="handleEmptyStateAction"
       >
         <template #icon>
@@ -113,26 +121,26 @@
       <!-- Floating Batch Toolbar -->
       <BatchActionBar
         :count="selectedDocuments.length"
-        count-label="document"
+        :count-label="$t('documents.management.batch_count_label')"
         @clear="selectedDocuments = []"
       >
         <BaseButton variant="secondary" size="sm" @click="createGroupFromSelection">
           <FolderPlus class="w-4 h-4" />
-          Create Group
+          {{ $t('documents.actions.create_group') }}
         </BaseButton>
         <BaseButton variant="secondary" size="sm" @click="performBatchAction('reprocess')">
           <RefreshCw class="w-4 h-4" />
-          Reprocess
+          {{ $t('documents.actions.reprocess') }}
         </BaseButton>
-        <Tooltip text="Export is coming soon">
+        <Tooltip :text="$t('documents.management.export_coming_soon')">
           <BaseButton variant="secondary" size="sm" disabled>
             <Download class="w-4 h-4" />
-            Export
+            {{ $t('documents.actions.export') }}
           </BaseButton>
         </Tooltip>
         <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
           <Trash2 class="w-4 h-4" />
-          Delete
+          {{ $t('documents.actions.delete') }}
         </BaseButton>
       </BatchActionBar>
 
@@ -182,6 +190,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { isAxiosError } from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 import { Download, FileText, FolderPlus, RefreshCw, Search, Trash2 } from '@lucide/vue'
@@ -226,6 +235,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const { t } = useI18n({ useScope: 'global' })
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
@@ -256,8 +266,12 @@ const documentGroupsCount = ref<number>(0) // count of document groups
 
 // Tab config for BaseTabGroup (badges rendered via #tab scoped slot to keep StatusBadge styling)
 const tabs = computed(() => [
-  { label: 'All Documents', value: 'documents', badge: totalCount.value },
-  { label: 'Document Groups', value: 'groups', badge: documentGroupsCount.value },
+  { label: t('documents.management.tab_all'), value: 'documents', badge: totalCount.value },
+  {
+    label: t('documents.management.tab_groups'),
+    value: 'groups',
+    badge: documentGroupsCount.value,
+  },
 ])
 
 // Filters
@@ -381,7 +395,7 @@ const handleHighlight = async (): Promise<void> => {
     }
   } catch (error) {
     console.error('Failed to load highlighted document:', error)
-    toast.error('Failed to load document')
+    toast.error(t('documents.toasts.load_document_failed'))
     // Strip the param so a remount/refresh doesn't retry the failed lookup.
     clearHighlightParam()
   }
@@ -462,10 +476,10 @@ const openGroupById = async (groupId: string | number): Promise<void> => {
     // already gone.)
     if (isAxiosError(error) && error.response?.status === 404) {
       activeTab.value = 'documents'
-      toast.info('That document group no longer exists — showing all documents instead.')
+      toast.info(t('documents.toasts.group_no_longer_exists'))
     } else {
       console.error('Failed to load document group:', error)
-      toast.error('Failed to load document group')
+      toast.error(t('documents.toasts.load_group_failed'))
     }
     // Nothing to close on failure — strip the param so a refresh doesn't retry.
     clearGroupParam()
@@ -537,7 +551,7 @@ const fetchDocuments = async (): Promise<void> => {
 
     fetchError.value = ''
   } catch (error) {
-    fetchError.value = extractErrorMessage(error, 'Failed to load documents')
+    fetchError.value = extractErrorMessage(error, t('documents.toasts.load_documents_failed'))
     console.error(error)
   } finally {
     isLoading.value = false
@@ -606,10 +620,10 @@ const selectAllDocuments = async (): Promise<void> => {
       offset += PAGE_SIZE
     }
     selectedDocuments.value = allIds
-    toast.success(`Selected all ${allIds.length} documents`)
+    toast.success(t('documents.toasts.selected_all', { count: allIds.length }))
   } catch (error) {
     console.error('Failed to select all documents:', error)
-    toast.error('Failed to select all documents')
+    toast.error(t('documents.toasts.select_all_failed'))
   } finally {
     isSelectingAllDocs.value = false
   }
@@ -666,7 +680,7 @@ const downloadDocument = async (doc: DocumentListItem): Promise<void> => {
   try {
     const fileId = doc.preprocessed_file?.id || doc.original_file?.id
     if (!fileId) {
-      toast.error('No file available for download')
+      toast.error(t('documents.toasts.no_file_for_download'))
       return
     }
 
@@ -675,14 +689,14 @@ const downloadDocument = async (doc: DocumentListItem): Promise<void> => {
       doc.original_file?.file_name || `document_${doc.id}.pdf`,
     )
   } catch (error) {
-    toast.error('Failed to download document')
+    toast.error(t('documents.toasts.download_failed'))
     console.error(error)
   }
 }
 
 const performBatchAction = (action: string): void => {
   if (selectedDocuments.value.length === 0) {
-    toast.warning('Please select documents first')
+    toast.warning(t('documents.toasts.select_documents_first'))
     return
   }
 
@@ -692,7 +706,7 @@ const performBatchAction = (action: string): void => {
 
 const createGroupFromSelection = (): void => {
   if (selectedDocuments.value.length === 0) {
-    toast.warning('Please select documents first')
+    toast.warning(t('documents.toasts.select_documents_first'))
     return
   }
   createGroupWithDocs.value = [...selectedDocuments.value]
@@ -707,12 +721,12 @@ const handleCreateGroupModalClose = (): void => {
 const handleCreateGroupModalSave = async (groupData: DocumentSetCreate): Promise<void> => {
   try {
     await documentSetsApi.create(props.projectId, groupData)
-    toast.success('Document group created')
+    toast.success(t('documents.toasts.group_created'))
     showCreateGroupModal.value = false
     createGroupWithDocs.value = []
     selectedDocuments.value = []
   } catch (error) {
-    toast.error('Failed to create document group')
+    toast.error(t('documents.toasts.create_group_failed'))
     console.error(error)
   }
 }
@@ -775,7 +789,7 @@ const reprocessDocument = async (doc: Partial<DocumentListItem>): Promise<void> 
     const fileId = doc.original_file?.id
     if (!fileId) {
       console.error('Original file id not found for this document!')
-      toast.error('Original file id not found for this document!')
+      toast.error(t('documents.toasts.original_file_not_found'))
       return
     }
     // Reuse the document's original OCR engine/settings so the reprocess doesn't
@@ -789,10 +803,10 @@ const reprocessDocument = async (doc: Partial<DocumentListItem>): Promise<void> 
       force_reprocess: true,
     }
     await preprocessingApi.create(props.projectId, payload)
-    toast.success('Document reprocessing started')
+    toast.success(t('documents.toasts.reprocessing_started'))
     fetchDocuments()
   } catch (error) {
-    toast.error(extractErrorMessage(error, 'Failed to start reprocessing'))
+    toast.error(extractErrorMessage(error, t('documents.toasts.start_reprocessing_failed')))
     console.error(error)
   }
 }

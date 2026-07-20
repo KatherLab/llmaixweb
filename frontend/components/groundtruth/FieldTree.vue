@@ -18,7 +18,9 @@
 
           'pointer-events-none': disabled,
         }"
-        :title="isLeaf(key) && isMapped(path(key)) ? 'Already mapped — click to reselect' : ''"
+        :title="
+          isLeaf(key) && isMapped(path(key)) ? $t('groundtruth.field_tree.already_mapped') : ''
+        "
         @click="!disabled && isLeaf(key) && $emit('select', path(key))"
       >
         <!-- Expand/collapse indicator for objects -->
@@ -54,7 +56,7 @@
         <span
           v-if="highlight && highlight(path(key))"
           class="ml-auto text-pink-700 dark:text-pink-300 font-bold"
-          title="Required and not mapped"
+          :title="$t('groundtruth.field_tree.required_not_mapped')"
           >*</span
         >
 
@@ -67,7 +69,7 @@
           ]"
         >
           <Check class="w-2.5 h-2.5" />
-          <span class="sr-only">Mapped</span>
+          <span class="sr-only">{{ $t('groundtruth.field_tree.mapped') }}</span>
         </span>
         <!-- selected badge -->
         <span
@@ -81,7 +83,7 @@
           ]"
         >
           <ArrowRight class="w-3 h-3" />
-          <span class="sr-only">Selected</span>
+          <span class="sr-only">{{ $t('groundtruth.field_tree.selected') }}</span>
         </span>
       </div>
 

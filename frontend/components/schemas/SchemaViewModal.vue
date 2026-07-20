@@ -14,8 +14,8 @@
         <span
           v-if="isSnapshot"
           :class="['text-[10px] uppercase tracking-wide px-2 py-0.5 rounded', getPillClass('blue')]"
-          title="Frozen copy of the schema as it was when the trial ran"
-          >Snapshot</span
+          :title="$t('schema.view.snapshot_title')"
+          >{{ $t('schema.view.snapshot') }}</span
         >
       </div>
     </template>
@@ -25,13 +25,18 @@
     </div>
 
     <template #footer>
-      <BaseButton v-if="copyable" variant="primary" @click="copyToClipboard">Copy</BaseButton>
-      <BaseButton variant="secondary" @click="emit('close')">Close</BaseButton>
+      <BaseButton v-if="copyable" variant="primary" @click="copyToClipboard">{{
+        $t('schema.view.copy')
+      }}</BaseButton>
+      <BaseButton variant="secondary" @click="emit('close')">{{
+        $t('schema.view.close')
+      }}</BaseButton>
     </template>
   </BaseModal>
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -56,11 +61,12 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 
 function copyToClipboard() {
   if (!props.schema) return
   navigator.clipboard.writeText(JSON.stringify(props.schema.schema_definition, null, 2))
-  toast.success('Schema copied')
+  toast.success(t('schema.view.copied'))
 }
 </script>

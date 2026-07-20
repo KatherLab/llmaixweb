@@ -1,9 +1,9 @@
 <template>
   <FilterBar
     :search="search"
-    search-placeholder="Search documents..."
+    :search-placeholder="$t('documents.filters.search_placeholder')"
     :total-count="totalCount"
-    item-label="documents"
+    :item-label="$t('documents.filters.item_label')"
     :active-filters="activeFilters"
     class="mb-4"
     @update:search="(v) => (search = v)"
@@ -13,21 +13,21 @@
     <template #filters>
       <!-- OCR Engine Filter -->
       <select v-model="ocrEngine" :class="inlineSelectClass" @change="emit('fetch')">
-        <option value="">All OCR Engines</option>
-        <option value="pypdf">Embedded Text (pypdf)</option>
-        <option value="tesseract">Local OCR (Tesseract)</option>
+        <option value="">{{ $t('documents.filters.ocr_all') }}</option>
+        <option value="pypdf">{{ $t('documents.filters.ocr_pypdf') }}</option>
+        <option value="tesseract">{{ $t('documents.filters.ocr_tesseract') }}</option>
         <option value="mistral_ocr">Mistral OCR</option>
         <option value="llm_vision">Vision LLM</option>
       </select>
 
       <!-- Date Range Filter -->
       <select v-model="dateRange" :class="inlineSelectClass" @change="emit('date-range-change')">
-        <option value="">All Time</option>
-        <option value="today">Today</option>
-        <option value="yesterday">Yesterday</option>
-        <option value="week">Last 7 Days</option>
-        <option value="month">Last 30 Days</option>
-        <option value="custom">Custom Range...</option>
+        <option value="">{{ $t('documents.filters.date_all') }}</option>
+        <option value="today">{{ $t('documents.filters.date_today') }}</option>
+        <option value="yesterday">{{ $t('documents.filters.date_yesterday') }}</option>
+        <option value="week">{{ $t('documents.filters.date_week') }}</option>
+        <option value="month">{{ $t('documents.filters.date_month') }}</option>
+        <option value="custom">{{ $t('documents.filters.date_custom') }}</option>
       </select>
 
       <!-- Archived Toggle (inline with other filters) -->
@@ -39,9 +39,9 @@
           @change="emit('fetch')"
         />
         <span class="text-sm text-content-muted">
-          Include archived versions
+          {{ $t('documents.filters.include_archived') }}
           <span v-if="includeArchived" class="text-xs text-content-muted ml-1">
-            (showing document history)
+            {{ $t('documents.filters.showing_history') }}
           </span>
         </span>
       </label>
@@ -51,7 +51,9 @@
          on every input change — picking a range means touching both fields). -->
     <template v-if="dateRange === 'custom'" #custom-range>
       <div class="flex items-center gap-2">
-        <label :class="labelClass" for="documents-filter-date-from">From:</label>
+        <label :class="labelClass" for="documents-filter-date-from">{{
+          $t('documents.filters.from')
+        }}</label>
         <input
           id="documents-filter-date-from"
           v-model="customDateFrom"
@@ -60,7 +62,9 @@
         />
       </div>
       <div class="flex items-center gap-2">
-        <label :class="labelClass" for="documents-filter-date-to">To:</label>
+        <label :class="labelClass" for="documents-filter-date-to">{{
+          $t('documents.filters.to')
+        }}</label>
         <input
           id="documents-filter-date-to"
           v-model="customDateTo"
@@ -72,7 +76,7 @@
         class="px-3 py-1.5 text-sm text-primary hover:text-primary transition-colors"
         @click="emit('apply-custom-range')"
       >
-        Apply
+        {{ $t('documents.filters.apply') }}
       </button>
     </template>
   </FilterBar>
@@ -80,6 +84,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getDateRangeLabel } from '@/utils/dateRange'
 import FilterBar from '@/components/common/FilterBar.vue'
 import type { ActiveFilter } from '@/components/common/FilterBar.vue'
@@ -92,6 +97,8 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   totalCount: 0,
 })
+
+const { t } = useI18n({ useScope: 'global' })
 
 const emit = defineEmits<{
   fetch: []
@@ -116,8 +123,8 @@ const inlineSelectClass = selectClass.replace('w-full', 'w-auto min-w-[9rem]')
 
 // OCR engine labels mapping (for filter chip display)
 const ocrEngineLabels: Record<string, string> = {
-  pypdf: 'Embedded Text',
-  tesseract: 'Local OCR',
+  pypdf: t('documents.filters.ocr_label_pypdf'),
+  tesseract: t('documents.filters.ocr_label_tesseract'),
   mistral_ocr: 'Mistral OCR',
   llm_vision: 'Vision LLM',
 }
@@ -127,27 +134,39 @@ const getOcrEngineLabel = (engine: string): string => ocrEngineLabels[engine] ||
 // Active filter chips (unified rendering via FilterBar's activeFilters prop)
 const activeFilters = computed<ActiveFilter[]>(() => {
   const chips: ActiveFilter[] = []
-  if (search.value) chips.push({ key: 'search', label: `Search: "${search.value}"`, color: 'blue' })
+  if (search.value)
+    chips.push({
+      key: 'search',
+      label: t('documents.filters.chip_search', { query: search.value }),
+      color: 'blue',
+    })
   if (ocrEngine.value)
     chips.push({
       key: 'ocrEngine',
-      label: `OCR: ${getOcrEngineLabel(ocrEngine.value)}`,
+      label: t('documents.filters.chip_ocr', { label: getOcrEngineLabel(ocrEngine.value) }),
       color: 'purple',
     })
   if (dateRange.value && dateRange.value !== 'custom')
     chips.push({
       key: 'dateRange',
-      label: `Date: ${getDateRangeLabel(dateRange.value)}`,
+      label: t('documents.filters.chip_date', { label: getDateRangeLabel(dateRange.value) }),
       color: 'orange',
     })
   if (dateRange.value === 'custom' && customDateFrom.value)
     chips.push({
       key: 'customDate',
-      label: `Date: ${customDateFrom.value} → ${customDateTo.value || 'present'}`,
+      label: t('documents.filters.chip_custom_date', {
+        from: customDateFrom.value,
+        to: customDateTo.value || t('documents.filters.present'),
+      }),
       color: 'orange',
     })
   if (includeArchived.value)
-    chips.push({ key: 'includeArchived', label: 'Archived', color: 'gray' })
+    chips.push({
+      key: 'includeArchived',
+      label: t('documents.filters.chip_archived'),
+      color: 'gray',
+    })
   return chips
 })
 </script>

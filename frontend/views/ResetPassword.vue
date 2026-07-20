@@ -4,7 +4,7 @@
       <h1 class="text-4xl font-extrabold text-content tracking-tight">
         <AppBrand :as-link="false" size="md" />
       </h1>
-      <p class="text-base text-content-muted mt-2">Set a new password</p>
+      <p class="text-base text-content-muted mt-2">{{ $t('auth.reset.header_subtitle') }}</p>
     </div>
 
     <!-- Loading: validating token -->
@@ -15,7 +15,7 @@
       <div class="mx-auto mb-4 w-12 h-12">
         <LoadingSpinner size="medium" />
       </div>
-      <p class="text-sm text-content-muted">Validating your reset link...</p>
+      <p class="text-sm text-content-muted">{{ $t('auth.reset.validating') }}</p>
     </div>
 
     <!-- Invalid / Expired token -->
@@ -28,45 +28,46 @@
       >
         <TriangleAlert class="w-6 h-6 text-red-600 dark:text-red-400" aria-hidden="true" />
       </div>
-      <h2 class="text-lg font-bold text-content mb-2">Invalid or Expired Link</h2>
+      <h2 class="text-lg font-bold text-content mb-2">{{ $t('auth.reset.invalid_title') }}</h2>
       <p class="text-sm text-content-muted mb-6">
-        This password reset link is no longer valid. It may have expired (links are valid for 24
-        hours) or already been used.
+        {{ $t('auth.reset.invalid_description') }}
       </p>
-      <BaseButton to="/forgot-password">Request New Reset Link</BaseButton>
+      <BaseButton to="/forgot-password">{{ $t('auth.reset.request_new') }}</BaseButton>
       <br />
       <router-link to="/login" class="inline-block mt-3 text-primary hover:underline text-sm">
-        Back to login
+        {{ $t('auth.actions.back_to_login') }}
       </router-link>
     </div>
 
     <!-- Password form -->
     <div v-else class="bg-surface border border-default rounded-modal p-8 shadow-sm">
-      <h2 class="text-lg font-bold text-content mb-2">Set new password</h2>
-      <p class="text-sm text-content-muted mb-6">Enter your new password below.</p>
+      <h2 class="text-lg font-bold text-content mb-2">{{ $t('auth.reset.form_title') }}</h2>
+      <p class="text-sm text-content-muted mb-6">{{ $t('auth.reset.form_description') }}</p>
       <form @submit.prevent="handleResetPassword">
         <div class="mb-4">
           <PasswordInput
             v-model="newPassword"
-            label="New Password"
+            :label="$t('auth.form.new_password')"
             required
             :minlength="8"
-            placeholder="At least 8 characters"
+            :placeholder="$t('auth.reset.new_password_placeholder')"
             autocomplete="new-password"
           />
         </div>
         <div class="mb-5">
           <FormField
             v-model="confirmPassword"
-            label="Confirm Password"
+            :label="$t('auth.form.confirm_password')"
             type="password"
             required
             :minlength="8"
             :invalid="passwordsMismatch"
-            placeholder="Repeat your password"
+            :placeholder="$t('auth.reset.confirm_password_placeholder')"
             autocomplete="new-password"
           >
-            <template v-if="passwordsMismatch" #error>Passwords do not match.</template>
+            <template v-if="passwordsMismatch" #error>{{
+              $t('auth.errors.passwords_mismatch_period')
+            }}</template>
           </FormField>
         </div>
         <ErrorBanner v-if="error" :message="error" class="mb-4" />
@@ -78,11 +79,13 @@
           class="w-full py-2.5"
         >
           <Lock v-if="!isLoading" class="h-5 w-5" aria-hidden="true" />
-          <span>{{ isLoading ? 'Resetting...' : 'Reset Password' }}</span>
+          <span>{{
+            isLoading ? $t('auth.reset.resetting') : $t('auth.reset.reset_password')
+          }}</span>
         </BaseButton>
       </form>
       <router-link to="/login" class="block mt-5 text-center text-primary hover:underline text-sm">
-        Back to login
+        {{ $t('auth.actions.back_to_login') }}
       </router-link>
     </div>
   </div>
@@ -91,6 +94,7 @@
 <script setup lang="ts">
 import AppBrand from '@/components/common/AppBrand.vue'
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { TriangleAlert, Lock } from '@lucide/vue'
 import { useRouter, useRoute } from 'vue-router'
 import { usersApi } from '@/services/usersApi'
@@ -104,6 +108,7 @@ import { extractErrorMessage } from '@/utils/errors'
 
 type ResetState = 'loading' | 'invalid' | 'form' | 'success'
 
+const { t } = useI18n({ useScope: 'global' })
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
@@ -149,7 +154,7 @@ async function handleResetPassword(): Promise<void> {
       new_password: newPassword.value,
     }
     await usersApi.resetPassword(String(token), body)
-    toast.success('Password reset', {
+    toast.success(t('auth.reset.success_toast'), {
       timeout: 3000,
     })
     setTimeout(() => {
@@ -160,7 +165,7 @@ async function handleResetPassword(): Promise<void> {
     if (axiosErr.response?.status === 404) {
       state.value = 'invalid'
     } else {
-      error.value = extractErrorMessage(err, 'An unexpected error occurred. Please try again.')
+      error.value = extractErrorMessage(err, t('auth.errors.unexpected'))
     }
     console.error('Reset password error:', err)
   } finally {

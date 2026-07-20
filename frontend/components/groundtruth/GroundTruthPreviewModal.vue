@@ -11,10 +11,12 @@
     <template #header>
       <div>
         <h2 class="text-lg font-semibold tracking-tight text-content">
-          Configure Ground Truth Mapping
+          {{ $t('groundtruth.preview.title') }}
         </h2>
         <div class="flex items-center gap-2 mt-1 text-[11px] text-content-muted">
-          <span class="font-mono text-primary">Project {{ projectId }}</span>
+          <span class="font-mono text-primary">{{
+            $t('groundtruth.preview.project', { id: projectId })
+          }}</span>
           <span
             v-if="selectedSchemaId"
             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-card bg-primary-soft text-primary font-medium"
@@ -24,9 +26,11 @@
           </span>
         </div>
         <p class="mt-1.5 text-[13px] text-content-muted leading-snug">
-          Pick a schema field (left) and its matching ground-truth column (right), then
-          <span class="font-medium text-content">Create mapping</span>. Set the ID field to link
-          each document to its correct row.
+          {{ $t('groundtruth.preview.help_before') }}
+          <span class="font-medium text-content">{{
+            $t('groundtruth.preview.help_create_mapping')
+          }}</span
+          >. {{ $t('groundtruth.preview.help_after') }}
         </p>
       </div>
     </template>
@@ -36,14 +40,16 @@
       class="flex flex-wrap md:flex-nowrap items-center gap-x-6 gap-y-3 px-6 py-3 border-b border-default bg-surface z-10 text-sm"
     >
       <div class="flex items-center gap-2">
-        <label class="text-sm font-medium text-content" for="gt-preview-schema">Schema</label>
+        <label class="text-sm font-medium text-content" for="gt-preview-schema">{{
+          $t('groundtruth.preview.schema_label')
+        }}</label>
         <select
           id="gt-preview-schema"
           v-model="selectedSchemaId"
           class="px-2.5 py-1.5 rounded-card border border-strong bg-surface text-sm text-content shadow-sm focus:ring-2 focus:ring-ring transition min-w-[180px]"
           @change="onSchemaChange"
         >
-          <option value="" disabled>Select schema…</option>
+          <option value="" disabled>{{ $t('groundtruth.preview.select_schema') }}</option>
           <option v-for="s in schemas" :key="s.id" :value="String(s.id)">
             {{ s.schema_name }} ({{ s.id }}){{ schemaOptionSuffix(s.id) }}
           </option>
@@ -51,7 +57,7 @@
       </div>
       <div v-if="schemaFieldPaths.length" class="text-xs text-content-subtle">
         <span class="font-mono text-primary">{{ schemaFieldPaths.length }}</span>
-        schema fields
+        {{ $t('groundtruth.preview.schema_fields_label') }}
       </div>
       <div class="flex-1"></div>
       <IdFieldSelector
@@ -75,16 +81,16 @@
         <div class="mb-2 flex items-center justify-between">
           <div class="text-sm font-semibold text-primary flex items-center gap-2">
             <span class="inline-block w-2 h-2 rounded-full bg-primary"></span>
-            Schema Fields
+            {{ $t('groundtruth.preview.schema_fields_heading') }}
           </div>
           <span
             v-if="requiredFields.length"
             class="px-2 py-0.5 rounded-full text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-900/30 text-xs font-medium"
-            >{{ requiredFields.length }} required</span
+            >{{ $t('groundtruth.preview.required_count', { count: requiredFields.length }) }}</span
           >
         </div>
         <p v-if="!selectedSchemaId" class="text-xs text-content-muted mb-2">
-          Select a schema above to load its fields.
+          {{ $t('groundtruth.preview.select_schema_hint') }}
         </p>
         <div class="flex-1 overflow-auto pr-1.5 min-w-0 text-[13px]">
           <FieldTree
@@ -118,7 +124,7 @@
                   ? 'bg-primary-soft text-primary'
                   : 'bg-surface-muted text-content-subtle italic'
               "
-              >{{ selectedSchemaField || 'pick schema field' }}</span
+              >{{ selectedSchemaField || $t('groundtruth.preview.pick_schema_field') }}</span
             >
             <ArrowRight class="w-4 h-4 text-content-subtle flex-shrink-0" />
             <span
@@ -128,7 +134,7 @@
                   ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300'
                   : 'bg-surface-muted text-content-subtle italic'
               "
-              >{{ selectedGroundTruthField || 'pick GT field' }}</span
+              >{{ selectedGroundTruthField || $t('groundtruth.preview.pick_gt_field') }}</span
             >
           </div>
         </div>
@@ -140,7 +146,11 @@
           >
             <span class="flex items-center justify-center gap-2">
               <Plus class="w-4 h-4" />
-              {{ canAddMapping ? 'Create mapping' : 'Map' }}
+              {{
+                canAddMapping
+                  ? $t('groundtruth.preview.create_mapping')
+                  : $t('groundtruth.preview.map')
+              }}
             </span>
           </BaseButton>
           <BaseButton
@@ -151,7 +161,7 @@
           >
             <span class="flex items-center justify-center gap-2">
               <Sparkles class="w-4 h-4" />
-              Auto-map matching names
+              {{ $t('groundtruth.preview.auto_map') }}
             </span>
           </BaseButton>
         </div>
@@ -173,7 +183,7 @@
           class="mt-2 text-xs text-red-600 dark:text-red-400 font-semibold hover:underline hover:text-red-700 dark:hover:text-red-300"
           @click="clearMappings"
         >
-          Clear all mappings
+          {{ $t('groundtruth.preview.clear_all_mappings') }}
         </BaseButton>
       </section>
 
@@ -184,10 +194,14 @@
             class="text-sm font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-2"
           >
             <span class="inline-block w-2 h-2 rounded-full bg-purple-500"></span>
-            Ground Truth Fields
+            {{ $t('groundtruth.preview.gt_fields_heading') }}
           </div>
-          <span v-if="groundTruthFieldPaths.length" class="text-content-subtle text-xs font-medium"
-            >{{ groundTruthFieldPaths.length }} fields</span
+          <span
+            v-if="groundTruthFieldPaths.length"
+            class="text-content-subtle text-xs font-medium"
+            >{{
+              $t('groundtruth.preview.fields_count', { count: groundTruthFieldPaths.length })
+            }}</span
           >
         </div>
         <div class="flex-1 overflow-auto pr-1.5 min-w-0 text-[13px]">
@@ -218,41 +232,41 @@
       class="absolute inset-0 bg-surface/80 backdrop-blur-sm flex flex-col items-center justify-center z-20 rounded-modal"
     >
       <LoadingSpinner size="large" />
-      <div class="mt-3 text-primary font-bold text-lg">Loading...</div>
+      <div class="mt-3 text-primary font-bold text-lg">{{ $t('groundtruth.preview.loading') }}</div>
     </div>
 
     <template #footer>
       <div>
         <span v-if="!selectedSchemaId" class="text-content-muted">
-          Please select a schema to start mapping fields.
+          {{ $t('groundtruth.preview.footer_select_schema') }}
         </span>
         <span
           v-else-if="mappings.length && !mappingComplete"
           class="text-yellow-700 dark:text-yellow-400 font-medium flex items-center gap-2"
         >
           <CircleAlert class="w-5 h-5 text-yellow-500" />
-          Warning: not all required fields are mapped!
+          {{ $t('groundtruth.preview.warning_required_unmapped') }}
         </span>
         <span
           v-if="isTabularFormat && !idColumn"
           class="block mt-1 text-xs text-red-600 dark:text-red-400 font-semibold flex items-center gap-2"
         >
           <CircleAlert class="w-4 h-4" />
-          Please select the ID column before saving.
+          {{ $t('groundtruth.preview.select_id_before_save') }}
         </span>
       </div>
       <div class="flex items-center gap-5">
         <BaseButton variant="secondary" class="px-5 py-2 font-semibold text-sm" @click="close">
-          Cancel
+          {{ $t('groundtruth.preview.cancel') }}
         </BaseButton>
 
         <!-- Save button — uses BaseButton; disabled state shows a tooltip with the reason. -->
         <Tooltip v-if="saveDisabled" :text="saveDisabledReason">
           <BaseButton :disabled="true" class="px-7 py-2 font-bold text-base">
-            <span v-if="!justSaved">Save Mappings</span>
+            <span v-if="!justSaved">{{ $t('groundtruth.preview.save_mappings') }}</span>
             <span v-else class="flex items-center gap-2">
               <Check class="w-5 h-5 text-green-300" />
-              Saved!
+              {{ $t('groundtruth.preview.saved') }}
             </span>
           </BaseButton>
         </Tooltip>
@@ -262,10 +276,10 @@
           :loading="justSaved"
           @click="saveMappings"
         >
-          <span v-if="!justSaved">Save Mappings</span>
+          <span v-if="!justSaved">{{ $t('groundtruth.preview.save_mappings') }}</span>
           <span v-else class="flex items-center gap-2">
             <Check class="w-5 h-5 text-green-300" />
-            Saved!
+            {{ $t('groundtruth.preview.saved') }}
           </span>
         </BaseButton>
       </div>
@@ -275,6 +289,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
 import { ArrowRight, Check, CircleAlert, FileText, Plus, Sparkles } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -310,6 +325,7 @@ const props = withDefaults(defineProps<Props>(), {
   groundTruth: () => ({}) as GroundTruth,
 })
 const emit = defineEmits<{ close: []; configured: [] }>()
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 
 // --- State
@@ -354,18 +370,18 @@ function mergeColumns(rawCols: string[], sample: Record<string, unknown> | null)
 
 const saveDisabledReason = computed(() => {
   if (!selectedSchemaId.value) {
-    return 'Please select a schema.'
+    return t('groundtruth.preview.reason_select_schema')
   }
   if (!mappings.value.length) {
-    return 'At least one field mapping is required.'
+    return t('groundtruth.preview.reason_no_mappings')
   }
   if (isTabularFormat.value && !idColumn.value) {
-    return 'You must select an ID column for CSV/XLSX files.'
+    return t('groundtruth.preview.reason_no_id_column')
   }
   if (isJsonFormat.value && idColumn.value === '__field__' && !jsonIdField.value) {
-    return 'You must select an ID field for JSON data.'
+    return t('groundtruth.preview.reason_no_id_field')
   }
-  return 'Cannot save right now.'
+  return t('groundtruth.preview.reason_generic')
 })
 
 const schemaDisplayName = computed(
@@ -394,7 +410,9 @@ watch(
         // auto-select when there's only one schema to choose from.
         await preselectSchema()
       } catch (err) {
-        toast.error(`Failed to load ground truth preview: ${extractErrorMessage(err)}`)
+        toast.error(
+          t('groundtruth.preview.toast_load_preview_failed', { error: extractErrorMessage(err) }),
+        )
       } finally {
         loading.value = false
       }
@@ -432,7 +450,7 @@ const savedMappingCounts = computed<Record<number, number>>(() => {
 function schemaOptionSuffix(schemaId: number): string {
   const n = savedMappingCounts.value[schemaId]
   if (!n) return ''
-  return ` — ${n} mapping${n === 1 ? '' : 's'}`
+  return ` — ${t('groundtruth.preview.mapping_count', { count: n }, n)}`
 }
 
 /**
@@ -523,7 +541,9 @@ async function onSchemaChange() {
     selectedSchemaField.value = ''
     selectedGroundTruthField.value = ''
   } catch (err) {
-    toast.error(`Failed to load schema fields: ${extractErrorMessage(err)}`)
+    toast.error(
+      t('groundtruth.preview.toast_load_schema_failed', { error: extractErrorMessage(err) }),
+    )
   } finally {
     loading.value = false
   }
@@ -670,13 +690,16 @@ function autoMap() {
     mappedCount++
   }
   if (unmappedFields.length === 0) {
-    toast.info('All schema fields are already mapped.')
+    toast.info(t('groundtruth.preview.toast_all_mapped'))
   } else if (mappedCount > 0) {
-    toast.success(`Mapped ${mappedCount} of ${unmappedFields.length} unmapped fields`)
-  } else {
-    toast.info(
-      `Mapped 0 of ${unmappedFields.length} unmapped fields — no matching column names found`,
+    toast.success(
+      t('groundtruth.preview.toast_mapped_some', {
+        count: mappedCount,
+        total: unmappedFields.length,
+      }),
     )
+  } else {
+    toast.info(t('groundtruth.preview.toast_mapped_none', { total: unmappedFields.length }))
   }
 }
 const canSave = computed(() => {
@@ -711,10 +734,10 @@ async function saveMappings() {
       mappings.value,
     )
   } catch (err) {
-    toast.error(`Failed to save mappings: ${extractErrorMessage(err)}`)
+    toast.error(t('groundtruth.preview.toast_save_failed', { error: extractErrorMessage(err) }))
     return
   }
-  toast.success('Mappings saved')
+  toast.success(t('groundtruth.preview.toast_saved'))
   justSaved.value = true
   setTimeout(() => {
     justSaved.value = false

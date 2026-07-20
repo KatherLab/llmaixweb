@@ -1,17 +1,23 @@
 <template>
   <div class="mt-4 flex-1 flex flex-col">
     <div class="flex gap-2 mb-3">
-      <SearchInput v-model="searchTerm" placeholder="Search documents (text or filename)…" />
+      <SearchInput v-model="searchTerm" :placeholder="$t('trials.individual.search_placeholder')" />
       <BaseButton
         variant="secondary"
         size="sm"
-        title="Select all matching documents"
+        :title="$t('trials.individual.select_all_title')"
         :disabled="isSelectingAll || isLoadingDocs"
         @click="emit('select-all')"
-        >{{ isSelectingAll ? 'Selecting…' : 'Select All' }}</BaseButton
+        >{{
+          isSelectingAll ? $t('trials.individual.selecting') : $t('trials.individual.select_all')
+        }}</BaseButton
       >
-      <BaseButton variant="secondary" size="sm" title="Clear selection" @click="emit('clear')"
-        >Clear</BaseButton
+      <BaseButton
+        variant="secondary"
+        size="sm"
+        :title="$t('trials.individual.clear_title')"
+        @click="emit('clear')"
+        >{{ $t('trials.individual.clear') }}</BaseButton
       >
     </div>
 
@@ -25,7 +31,7 @@
       </div>
 
       <div v-else-if="(docsPage ?? []).length === 0" class="p-4 text-center text-content-muted">
-        No documents match your criteria
+        {{ $t('trials.individual.no_match') }}
       </div>
 
       <div v-else class="max-h-[400px] overflow-y-auto">
@@ -48,7 +54,11 @@
 
           <div class="flex-1">
             <div class="font-medium">
-              {{ doc.document_name || doc.original_file?.file_name || `Document #${doc.id}` }}
+              {{
+                doc.document_name ||
+                doc.original_file?.file_name ||
+                $t('trials.individual.doc_fallback', { id: doc.id })
+              }}
             </div>
 
             <div
@@ -59,12 +69,16 @@
               "
               class="text-xs text-content-subtle italic"
             >
-              (Original: {{ doc.original_file.file_name }})
+              {{ $t('trials.individual.original', { name: doc.original_file.file_name }) }}
             </div>
 
             <div class="text-xs text-content-muted">
-              Config: {{ doc.preprocessing_config?.name || 'N/A' }} • Created:
-              {{ formatDate(doc.created_at) }}
+              {{
+                $t('trials.individual.config_created', {
+                  config: doc.preprocessing_config?.name || $t('trials.individual.na'),
+                  date: formatDate(doc.created_at),
+                })
+              }}
             </div>
           </div>
         </div>
@@ -73,9 +87,9 @@
       <!-- Pager -->
       <div class="px-3 py-2 flex items-center justify-between text-sm bg-surface">
         <div>
-          <span class="font-medium">{{ totalDocs }}</span> total
+          <span class="font-medium">{{ totalDocs }}</span> {{ $t('trials.individual.total') }}
           <span class="text-content-subtle">•</span>
-          page <span class="font-medium">{{ page }}</span>
+          {{ $t('trials.individual.page') }} <span class="font-medium">{{ page }}</span>
           /
           {{ Math.max(1, Math.ceil((totalDocs ?? 0) / (pageSize ?? 1))) }}
         </div>
@@ -85,7 +99,7 @@
             size="sm"
             :disabled="(page ?? 1) <= 1 || isLoadingDocs"
             @click="emit('prev-page')"
-            >Prev</BaseButton
+            >{{ $t('trials.individual.prev') }}</BaseButton
           >
           <BaseButton
             variant="secondary"
@@ -94,7 +108,7 @@
               (page ?? 1) >= Math.ceil((totalDocs ?? 0) / (pageSize ?? 1)) || isLoadingDocs
             "
             @click="emit('next-page')"
-            >Next</BaseButton
+            >{{ $t('trials.individual.next') }}</BaseButton
           >
         </div>
       </div>

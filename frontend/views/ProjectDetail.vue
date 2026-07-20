@@ -4,7 +4,7 @@
       <!-- Loading, Error, Main Content -->
       <div v-if="isLoading" class="flex flex-col items-center py-24">
         <LoadingSpinner size="large" />
-        <span class="mt-4 text-content-subtle text-lg">Loading project...</span>
+        <span class="mt-4 text-content-subtle text-lg">{{ $t('projects.detail.loading') }}</span>
       </div>
 
       <ErrorBanner v-else-if="error" :message="error" class="mb-4 rounded-modal" />
@@ -26,7 +26,7 @@
             class="mt-2 p-0 h-auto"
             @click="goToStep(prerequisiteHint.targetStep)"
           >
-            Go to {{ prerequisiteHint.targetLabel }} →
+            {{ $t('projects.detail.go_to', { label: prerequisiteHint.targetLabel }) }} →
           </BaseButton>
         </Callout>
         <transition name="fade" mode="out-in">
@@ -87,6 +87,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, provide, watch, defineAsyncComponent } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { projectsApi } from '@/services/projectsApi'
 import type { Project, ProjectUpdate } from '@/types'
@@ -121,6 +122,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const { t } = useI18n({ useScope: 'global' })
 
 const projectId = computed<string | number>(() => route.params.projectId as string | number)
 const project = ref<Project>({} as Project)
@@ -138,19 +140,27 @@ const validSteps = ['files', 'documents', 'schemas', 'trials', 'evaluation']
 const steps = computed(() => [
   {
     id: 'files',
-    name: 'Files & Preprocessing',
+    name: t('projects.steps.files'),
     isComplete: (project.value.document_count ?? 0) > 0,
   },
-  { id: 'documents', name: 'Documents', isComplete: (project.value.document_count ?? 0) > 0 },
+  {
+    id: 'documents',
+    name: t('projects.steps.documents'),
+    isComplete: (project.value.document_count ?? 0) > 0,
+  },
   {
     id: 'schemas',
-    name: 'Schemas & Prompts',
+    name: t('projects.steps.schemas'),
     isComplete: (project.value.schema_count ?? 0) > 0 && (project.value.prompt_count ?? 0) > 0,
   },
-  { id: 'trials', name: 'Run Trials', isComplete: (project.value.trial_count ?? 0) > 0 },
+  {
+    id: 'trials',
+    name: t('projects.steps.trials'),
+    isComplete: (project.value.trial_count ?? 0) > 0,
+  },
   {
     id: 'evaluation',
-    name: 'Evaluation',
+    name: t('projects.steps.evaluation'),
     isComplete: (project.value.evaluation_count ?? 0) > 0,
   },
 ])
@@ -159,11 +169,11 @@ const defaultStep = 'files'
 // Per-step prerequisite guidance. Returns null when the current step's inputs
 // are ready (so no hint shows). Drives the Callout above the workspace.
 const stepLabels: Record<string, string> = {
-  files: 'Files & Preprocessing',
-  documents: 'Documents',
-  schemas: 'Schemas & Prompts',
-  trials: 'Run Trials',
-  evaluation: 'Evaluation',
+  files: t('projects.steps.files'),
+  documents: t('projects.steps.documents'),
+  schemas: t('projects.steps.schemas'),
+  trials: t('projects.steps.trials'),
+  evaluation: t('projects.steps.evaluation'),
 }
 const prerequisiteHint = computed<{
   title: string
@@ -180,8 +190,8 @@ const prerequisiteHint = computed<{
     case 'documents':
       if (docCount === 0)
         return {
-          title: 'No documents yet',
-          body: 'Preprocess your uploaded files to generate documents. Documents are the extracted text the LLM reads during a trial.',
+          title: t('projects.hints.no_documents.title'),
+          body: t('projects.hints.no_documents.body'),
           targetStep: 'files',
           targetLabel: stepLabels.files,
         }
@@ -191,15 +201,18 @@ const prerequisiteHint = computed<{
     case 'trials':
       if (docCount === 0)
         return {
-          title: 'No documents to run a trial on',
-          body: 'A trial extracts structured data from your documents. Preprocess files first to generate documents.',
+          title: t('projects.hints.no_trial_documents.title'),
+          body: t('projects.hints.no_trial_documents.body'),
           targetStep: 'files',
           targetLabel: stepLabels.files,
         }
       if (schemaCount === 0 || promptCount === 0)
         return {
-          title: schemaCount === 0 ? 'No schema yet' : 'No prompt yet',
-          body: 'A trial needs a schema (the fields to extract) and a prompt (extraction instructions). Create both before running a trial.',
+          title:
+            schemaCount === 0
+              ? t('projects.hints.no_schema.title')
+              : t('projects.hints.no_prompt.title'),
+          body: t('projects.hints.schema_prompt.body'),
           targetStep: 'schemas',
           targetLabel: stepLabels.schemas,
         }
@@ -207,8 +220,8 @@ const prerequisiteHint = computed<{
     case 'evaluation':
       if (trialCount === 0)
         return {
-          title: 'No trials to evaluate',
-          body: 'Evaluation compares trial results against ground-truth data. Run a trial first to produce results to evaluate.',
+          title: t('projects.hints.no_trials.title'),
+          body: t('projects.hints.no_trials.body'),
           targetStep: 'trials',
           targetLabel: stepLabels.trials,
         }
@@ -251,7 +264,7 @@ watch(
   [() => project.value.name, steps, currentStep],
   () => {
     setNavContext({
-      projectName: project.value.name || 'Project',
+      projectName: project.value.name || t('projects.detail.project_fallback'),
       steps: steps.value,
       currentStep: currentStep.value,
       onStepChange: handleStepChange,
@@ -357,7 +370,7 @@ const fetchProject = async ({
     error.value = ''
   } catch (err) {
     if (String(requestedId) !== String(projectId.value)) return
-    error.value = 'Failed to load project details'
+    error.value = t('projects.detail.load_failed')
     console.error(err)
   } finally {
     if (!background && String(requestedId) === String(projectId.value)) {
@@ -398,11 +411,11 @@ const saveProjectEdits = async (payload: ProjectUpdate): Promise<void> => {
   try {
     const response = await projectsApi.update(projectId.value, payload)
     project.value = response.data
-    toast.success('Project updated')
+    toast.success(t('projects.detail.update_success'))
     showSettingsModal.value = false
   } catch {
-    error.value = 'Failed to update project'
-    toast.error('Failed to update project')
+    error.value = t('projects.detail.update_failed')
+    toast.error(t('projects.detail.update_failed'))
   } finally {
     isSaving.value = false
   }
@@ -415,10 +428,10 @@ const deleteProject = async (): Promise<void> => {
   isDeleting.value = true
   try {
     await projectsApi.delete(projectId.value)
-    toast.success('Project deleted')
+    toast.success(t('projects.detail.delete_success'))
     router.push('/projects')
   } catch {
-    toast.error('Failed to delete project')
+    toast.error(t('projects.detail.delete_failed'))
   } finally {
     isDeleting.value = false
     showDeleteConfirmation.value = false

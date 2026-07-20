@@ -2,9 +2,11 @@
   <div class="bg-surface border border-default rounded-modal p-6 shadow flex flex-col h-full">
     <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
       <span class="block text-sm font-semibold text-content-muted"
-        >Select Documents <span class="text-red-500">*</span></span
+        >{{ $t('trials.docsel.select_documents') }} <span class="text-red-500">*</span></span
       >
-      <span class="text-xs text-content-muted">{{ selectedIds.length }} selected</span>
+      <span class="text-xs text-content-muted">{{
+        $t('trials.docsel.n_selected', { count: selectedIds.length })
+      }}</span>
     </div>
 
     <div class="mb-4">
@@ -56,6 +58,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch, type PropType } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
 import { trialsApi } from '@/services/trialsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
@@ -89,11 +92,13 @@ const props = defineProps({
 const mode = defineModel<SelectionMode>('mode', { default: 'individual' })
 const selectedIds = defineModel<number[]>('selectedIds', { default: () => [] })
 
+const { t } = useI18n({ useScope: 'global' })
+
 // Tab config for BaseTabGroup
 const tabs = [
-  { label: 'Individual', value: 'individual' },
-  { label: 'Groups', value: 'groups' },
-  { label: 'Smart', value: 'smart' },
+  { label: t('trials.docsel.tab_individual'), value: 'individual' },
+  { label: t('trials.docsel.tab_groups'), value: 'groups' },
+  { label: t('trials.docsel.tab_smart'), value: 'smart' },
 ]
 
 const toast = useToast()
@@ -114,7 +119,7 @@ const loadDocumentGroups = async (): Promise<void> => {
     const response = await documentSetsApi.list(props.projectId)
     documentGroups.value = response.data.items || []
   } catch (error) {
-    toast.error('Failed to load document groups')
+    toast.error(t('trials.docsel.toast.load_groups_failed'))
     console.error(error)
   } finally {
     loadingGroups.value = false
@@ -147,11 +152,11 @@ const toggleGroupSelection = async (group: DocumentSetSummary): Promise<void> =>
     const ids = await fetchAllDocumentIds({ document_set_id: group.id })
     selectedIds.value = ids
     if (ids.length === 0) {
-      toast.warning(`"${group.name}" has no documents`)
+      toast.warning(t('trials.docsel.toast.group_empty', { name: group.name }))
     }
   } catch (error) {
     console.error(error)
-    toast.error('Failed to load documents for this group')
+    toast.error(t('trials.docsel.toast.load_group_docs_failed'))
     selectedIds.value = []
   } finally {
     loadingGroupDocs.value = false
@@ -163,7 +168,7 @@ const loadDocumentsFromTrial = (trialId: string | number): void => {
   const trial = previousTrials.value.find((t) => t.id === Number(trialId))
   if (trial && trial.document_ids) {
     selectedIds.value = [...trial.document_ids]
-    toast.success(`Loaded ${trial.document_ids.length} documents from previous trial`)
+    toast.success(t('trials.docsel.toast.loaded_from_trial', { count: trial.document_ids.length }))
   }
 }
 
@@ -203,10 +208,10 @@ const selectAllDocuments = async (): Promise<void> => {
     // Use the backend to fetch ALL matching IDs (ignores pagination)
     const ids = await fetchAllDocumentIds({ search: searchTerm.value })
     selectedIds.value = Array.from(new Set([...selectedIds.value, ...ids]))
-    toast.success(`Selected all ${ids.length} matching documents`)
+    toast.success(t('trials.docsel.toast.selected_all', { count: ids.length }))
   } catch (e) {
     console.error(e)
-    toast.error('Could not select all documents')
+    toast.error(t('trials.docsel.toast.select_all_failed'))
   } finally {
     isSelectingAll.value = false
   }
@@ -221,7 +226,7 @@ const selectRecentDocuments = async (days: number): Promise<void> => {
   cutoff.setDate(cutoff.getDate() - days)
   const ids = await fetchAllDocumentIds({ date_from: cutoff.toISOString() })
   selectedIds.value = ids
-  toast.success(`Selected ${ids.length} documents from the last ${days} days`)
+  toast.success(t('trials.docsel.toast.selected_recent', { count: ids.length, days }))
 }
 
 const applySmartDateRange = async ({ start, end }: DateRangePayload): Promise<void> => {
@@ -232,7 +237,7 @@ const applySmartDateRange = async ({ start, end }: DateRangePayload): Promise<vo
     date_to: toISO,
   })
   selectedIds.value = ids
-  toast.success(`Selected ${ids.length} documents in date range`)
+  toast.success(t('trials.docsel.toast.selected_range', { count: ids.length }))
 }
 
 /* -------------------------------------------------------

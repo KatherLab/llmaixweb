@@ -12,8 +12,8 @@
     :sort-order="sortOrder"
     :pagination="pagination"
     :page-size-options="[25, 50, 100, 250]"
-    item-label="files"
-    empty-title="No files found"
+    :item-label="$t('files.filter.item_label')"
+    :empty-title="$t('files.table.empty_title')"
     @toggle-selection="onToggleSelection"
     @toggle-all="$emit('toggle-all')"
     @select-all="$emit('select-all-files')"
@@ -37,13 +37,17 @@
               v-if="isCSVXLSX(file) && !file.preprocessing_strategy"
               class="inline-flex items-center px-1.5 py-0.5 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs font-medium"
             >
-              Needs Import Config
+              {{ $t('files.table.needs_import_config') }}
             </span>
             <span
               v-else-if="isCSVXLSX(file) && file.preprocessing_strategy"
               class="inline-flex items-center px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium"
             >
-              {{ file.preprocessing_strategy === 'row_by_row' ? 'Row-by-Row' : 'Full Table' }}
+              {{
+                file.preprocessing_strategy === 'row_by_row'
+                  ? $t('files.table.row_by_row')
+                  : $t('files.table.full_table')
+              }}
             </span>
             <BaseButton
               v-if="isCSVXLSX(file)"
@@ -53,7 +57,11 @@
               data-testid="file-configure"
               @click.stop="onConfigureImport(file)"
             >
-              {{ file.preprocessing_strategy ? 'Edit' : 'Configure' }}
+              {{
+                file.preprocessing_strategy
+                  ? $t('files.actions.edit')
+                  : $t('files.actions.configure')
+              }}
             </BaseButton>
           </div>
         </div>
@@ -68,7 +76,7 @@
 
     <template #cell-file_size="{ row: file }">
       <span class="text-sm text-content-muted">
-        {{ formatFileSize(file.file_size, 'Unknown') }}
+        {{ formatFileSize(file.file_size, $t('files.common.unknown')) }}
       </span>
     </template>
 
@@ -88,8 +96,8 @@
       <BaseButton
         variant="icon"
         tone="purple"
-        title="Preprocessing History"
-        aria-label="Preprocessing History"
+        :title="$t('files.actions.preprocessing_history')"
+        :aria-label="$t('files.actions.preprocessing_history')"
         @click.stop="onViewHistory(file)"
       >
         <Clock class="w-4 h-4" aria-hidden="true" />
@@ -97,8 +105,8 @@
       <BaseButton
         variant="icon"
         tone="blue"
-        title="Preview"
-        aria-label="Preview"
+        :title="$t('files.actions.preview')"
+        :aria-label="$t('files.actions.preview')"
         @click.stop="onPreview(file)"
       >
         <Eye class="w-4 h-4" aria-hidden="true" />
@@ -106,8 +114,8 @@
       <BaseButton
         variant="icon"
         tone="green"
-        title="Download"
-        aria-label="Download"
+        :title="$t('files.actions.download')"
+        :aria-label="$t('files.actions.download')"
         @click.stop="onDownload(file)"
       >
         <CloudDownload class="w-4 h-4" aria-hidden="true" />
@@ -115,8 +123,8 @@
       <BaseButton
         variant="icon"
         tone="red"
-        title="Delete"
-        aria-label="Delete"
+        :title="$t('files.actions.delete')"
+        :aria-label="$t('files.actions.delete')"
         @click.stop="onDelete(file)"
       >
         <Trash2 class="w-4 h-4" aria-hidden="true" />
@@ -131,6 +139,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Clock, CloudDownload, Eye, FilePlus, Trash2 } from '@lucide/vue'
 import FileIcon from '@/components/common/FileIcon.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -181,6 +190,8 @@ const props = withDefaults(defineProps<Props>(), {
   selectAllBusy: false,
 })
 
+const { t } = useI18n({ useScope: 'global' })
+
 const emit = defineEmits<{
   'toggle-selection': [fileId: number]
   'toggle-all': []
@@ -227,13 +238,13 @@ const allSelected = computed(() => {
   return props.files.every((f) => selected.has(f.id))
 })
 
-const columns = [
-  { key: 'file_name', label: 'File', sortable: true },
-  { key: 'file_type', label: 'Type', sortable: true },
-  { key: 'file_size', label: 'Size', sortable: true },
-  { key: 'created_at', label: 'Uploaded', sortable: true },
-  { key: 'status', label: 'Status', sortable: true },
-]
+const columns = computed(() => [
+  { key: 'file_name', label: t('files.table.col_file'), sortable: true },
+  { key: 'file_type', label: t('files.table.col_type'), sortable: true },
+  { key: 'file_size', label: t('files.table.col_size'), sortable: true },
+  { key: 'created_at', label: t('files.table.col_uploaded'), sortable: true },
+  { key: 'status', label: t('files.table.col_status'), sortable: true },
+])
 
 function isCSVXLSX(file: FileRow): boolean {
   if (!file || !file.file_type) return false
@@ -249,23 +260,23 @@ function getFileTypeLabel(mimeType: string | null | undefined): string {
     'application/pdf': 'PDF',
     'image/jpeg': 'JPEG',
     'image/png': 'PNG',
-    'text/plain': 'Text',
+    'text/plain': t('files.type.text'),
     'text/csv': 'CSV',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
     'application/vnd.ms-excel': 'Excel',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word',
   }
-  return (mimeType && typeMap[mimeType]) || 'File'
+  return (mimeType && typeMap[mimeType]) || t('files.type.file')
 }
 
 function getStatusLabel(file: FileRow): string {
   const status = file._status || 'not_preprocessed'
   const labelMap: Record<string, string> = {
-    completed: 'Processed',
-    processing: 'Processing',
-    failed: 'Failed',
-    not_preprocessed: 'Not preprocessed',
+    completed: t('files.status.processed'),
+    processing: t('files.status.processing'),
+    failed: t('files.status.failed'),
+    not_preprocessed: t('files.status.not_preprocessed'),
   }
-  return labelMap[status] || 'Not preprocessed'
+  return labelMap[status] || t('files.status.not_preprocessed')
 }
 </script>

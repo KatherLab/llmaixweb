@@ -18,7 +18,7 @@
       <button
         v-if="showClear && hasActiveFilters"
         class="px-3 py-2 text-sm text-content-muted hover:text-red-600 dark:hover:text-red-400 transition-colors"
-        title="Clear all filters"
+        :title="$t('common.filter_bar.clear_all')"
         @click="$emit('clear-all')"
       >
         <X class="w-4 h-4" />
@@ -43,7 +43,7 @@
       v-if="hasActiveFilters"
       class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-default"
     >
-      <span class="text-xs text-content-muted">Active filters:</span>
+      <span class="text-xs text-content-muted">{{ $t('common.filter_bar.active_filters') }}</span>
       <FilterChip
         v-for="filter in activeFilters"
         :key="filter.key"
@@ -88,7 +88,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   search: '',
   searchable: true,
-  searchPlaceholder: 'Search...',
+  searchPlaceholder: '',
   totalCount: 0,
   showCount: true,
   itemLabel: 'items',

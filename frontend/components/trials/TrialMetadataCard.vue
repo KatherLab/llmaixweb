@@ -9,26 +9,32 @@
       <div class="grid grid-cols-1 gap-4">
         <div>
           <label :class="[labelClass, 'tracking-wide']" for="trial-meta-name"
-            >Trial Name <span class="text-content-subtle font-normal">(optional)</span></label
+            >{{ $t('trials.metadata.name_label') }}
+            <span class="text-content-subtle font-normal">{{
+              $t('trials.metadata.optional')
+            }}</span></label
           >
           <input
             id="trial-meta-name"
             v-model="name"
             :class="inputClass"
             maxlength="100"
-            placeholder="E.g. Contract Extraction Run Q3"
+            :placeholder="$t('trials.metadata.name_placeholder')"
           />
         </div>
         <div>
           <label :class="[labelClass, 'tracking-wide']" for="trial-meta-description"
-            >Description <span class="text-content-subtle font-normal">(optional)</span></label
+            >{{ $t('trials.metadata.description_label') }}
+            <span class="text-content-subtle font-normal">{{
+              $t('trials.metadata.optional')
+            }}</span></label
           >
           <textarea
             id="trial-meta-description"
             v-model="description"
             :class="textareaClass"
             maxlength="512"
-            placeholder="Short summary for this trial (e.g. doc type, goal, changes etc)"
+            :placeholder="$t('trials.metadata.description_placeholder')"
             rows="2"
           ></textarea>
         </div>

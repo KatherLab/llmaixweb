@@ -5,7 +5,7 @@
       href="#main-content"
       class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:rounded-card focus:bg-surface focus:text-primary focus:font-medium focus:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      Skip to main content
+      {{ $t('nav.skip_to_content') }}
     </a>
     <!-- Navigation -->
     <nav class="w-full bg-surface shadow-sm border-b border-default sticky top-0 z-40">
@@ -13,7 +13,7 @@
         v-if="isBackendDown"
         class="bg-red-600 text-white text-center py-1.5 text-xs font-medium animate-pulse"
       >
-        Backend connection failed. Please check if the backend server is running.
+        {{ $t('nav.backend_down') }}
       </div>
       <div class="w-full px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-[1fr_auto_1fr] h-14 items-center">
@@ -22,7 +22,7 @@
             <button
               v-if="authReady && isAuthenticated"
               type="button"
-              aria-label="Open menu"
+              :aria-label="$t('nav.open_menu')"
               :aria-expanded="mobileMenuOpen"
               aria-controls="mobile-menu"
               class="md:hidden mr-2 p-2 rounded-card text-content-muted hover:bg-surface-sunken transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
@@ -44,7 +44,7 @@
                 to="/projects"
                 class="text-sm font-medium text-content-muted hover:text-content transition-colors flex-shrink-0"
               >
-                Projects
+                {{ $t('common.projects') }}
               </router-link>
               <ChevronRight class="w-4 h-4 text-content-subtle flex-shrink-0" />
               <span
@@ -73,7 +73,7 @@
                 to="/projects"
                 :aria-current="$route.path.startsWith('/projects') ? 'page' : undefined"
               >
-                Projects
+                {{ $t('common.projects') }}
               </router-link>
 
               <router-link
@@ -87,19 +87,20 @@
                 to="/admin"
                 :aria-current="$route.path.startsWith('/admin') ? 'page' : undefined"
               >
-                Admin
+                {{ $t('common.admin') }}
                 <span
                   class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-primary-soft text-primary border border-primary/30"
                 >
-                  Admin
+                  {{ $t('common.admin') }}
                 </span>
               </router-link>
             </div>
             <!-- Contextual: centered workflow pill tabs (desktop; mobile uses the slide-down menu) -->
             <nav
               v-else-if="projectNav"
+              ref="projectNavStrip"
               class="hidden md:flex items-center gap-1 overflow-x-auto max-w-full no-scrollbar scroll-fade-x"
-              aria-label="Project workflow"
+              :aria-label="$t('nav.project_workflow')"
             >
               <button
                 v-for="(step, idx) in projectNav.steps"
@@ -140,7 +141,7 @@
             <button
               v-if="projectNav"
               class="p-2 text-content-muted hover:text-content hover:bg-surface-sunken rounded-card transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
-              aria-label="Project Settings"
+              :aria-label="$t('nav.project_settings')"
               @click="projectNav.onOpenSettings()"
             >
               <Settings class="w-5 h-5" />
@@ -151,9 +152,12 @@
               <ActivityBell />
             </div>
 
+            <!-- Language switcher -->
+            <LanguageSwitcher />
+
             <!-- Dark mode toggle -->
             <button
-              :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+              :aria-label="isDark ? $t('theme.switch_to_light') : $t('theme.switch_to_dark')"
               class="mr-1 sm:mr-3 p-2 rounded-full hover:bg-surface-sunken transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               @click="toggleDarkMode"
             >
@@ -164,7 +168,7 @@
               <button
                 ref="userMenuButton"
                 type="button"
-                aria-label="Open user menu"
+                :aria-label="$t('nav.open_user_menu')"
                 :aria-expanded="showUserMenu"
                 aria-haspopup="true"
                 aria-controls="user-menu"
@@ -177,7 +181,11 @@
                   <span class="font-semibold text-lg text-primary select-none">{{
                     userInitials
                   }}</span>
-                  <span v-if="isAdmin" class="absolute -bottom-1 -right-1" title="Admin">
+                  <span
+                    v-if="isAdmin"
+                    class="absolute -bottom-1 -right-1"
+                    :title="$t('common.admin')"
+                  >
                     <ShieldCheck class="w-4 h-4 text-amber-400 drop-shadow" />
                   </span>
                 </div>
@@ -200,7 +208,7 @@
                         v-if="isAdmin"
                         class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700"
                       >
-                        Admin
+                        {{ $t('common.admin') }}
                       </span>
                     </div>
                     <div class="text-xs text-content-muted mt-1 truncate">
@@ -213,7 +221,7 @@
                     @click="showUserMenu = false"
                   >
                     <Settings class="inline-block w-5 h-5 mr-2 text-primary" />
-                    Account settings
+                    {{ $t('common.account_settings') }}
                   </router-link>
                   <button
                     type="button"
@@ -221,20 +229,20 @@
                     @click="openChangePasswordModal"
                   >
                     <Lock class="inline-block w-5 h-5 mr-2 text-primary" />
-                    Change Password
+                    {{ $t('common.change_password') }}
                   </button>
                   <button
                     type="button"
                     class="block w-full text-left px-5 py-3 text-base text-content-muted hover:bg-primary-soft hover:text-primary font-medium rounded-b-modal transition-colors"
                     @click="logout"
                   >
-                    Logout
+                    {{ $t('common.logout') }}
                   </button>
                 </div>
               </transition>
             </div>
             <div v-else-if="authReady">
-              <BaseButton to="/login">Login</BaseButton>
+              <BaseButton to="/login">{{ $t('common.login') }}</BaseButton>
             </div>
           </div>
         </div>
@@ -299,7 +307,7 @@
             :aria-current="$route.path.startsWith('/projects') ? 'page' : undefined"
             @click="mobileMenuOpen = false"
           >
-            Projects
+            {{ $t('common.projects') }}
           </router-link>
           <router-link
             v-if="!projectNav && isAdmin"
@@ -313,7 +321,7 @@
             :aria-current="$route.path.startsWith('/admin') ? 'page' : undefined"
             @click="mobileMenuOpen = false"
           >
-            Admin
+            {{ $t('common.admin') }}
           </router-link>
           <!-- Inside a project: show a back-to-projects link -->
           <router-link
@@ -322,7 +330,7 @@
             to="/projects"
             @click="mobileMenuOpen = false"
           >
-            ← All Projects
+            ← {{ $t('nav.all_projects') }}
           </router-link>
           <div class="border-t border-default">
             <div class="px-4 py-2 text-xs text-content-subtle truncate">
@@ -333,21 +341,21 @@
               to="/account"
               @click="mobileMenuOpen = false"
             >
-              Account settings
+              {{ $t('common.account_settings') }}
             </router-link>
             <button
               type="button"
               class="block w-full text-left px-4 py-3 text-sm font-medium text-content-muted hover:bg-surface-sunken"
               @click="openChangePasswordFromMobile"
             >
-              Change Password
+              {{ $t('common.change_password') }}
             </button>
             <button
               type="button"
               class="block w-full text-left px-4 py-3 text-sm font-medium text-content-muted hover:bg-surface-sunken"
               @click="logout"
             >
-              Logout
+              {{ $t('common.logout') }}
             </button>
           </div>
         </div>
@@ -366,7 +374,7 @@
       class="w-full bg-surface border-t border-default py-4 text-center text-sm text-content-muted"
     >
       <div>
-        &copy; {{ currentYear }} KatherLab. Licensed under
+        {{ $t('footer.copyright', { year: currentYear }) }}
         <a
           class="underline hover:text-primary"
           href="https://www.gnu.org/licenses/agpl-3.0.de.html"
@@ -378,46 +386,46 @@
       </div>
       <div class="space-x-4">
         <span :title="`Commit: ${frontendGitCommit}`" class="cursor-help">
-          Frontend Version: {{ frontendVersion }}
+          {{ $t('footer.frontend_version', { version: frontendVersion }) }}
         </span>
         <span :title="`Commit: ${backendGitCommit}`" class="cursor-help">
-          Backend Version: {{ backendVersion }}
+          {{ $t('footer.backend_version', { version: backendVersion }) }}
         </span>
       </div>
     </footer>
     <!-- Change Password Modal -->
     <BaseModal
       :open="showChangePasswordModal"
-      title="Change Password"
+      :title="$t('change_password.title')"
       size="sm"
       @close="closeChangePasswordModal"
     >
       <form class="flex flex-col gap-5" @submit.prevent="handleChangePassword">
         <FormField
           v-model="currentPassword"
-          label="Current Password"
+          :label="$t('change_password.current')"
           type="password"
           required
-          placeholder="Enter current password"
+          :placeholder="$t('change_password.current_placeholder')"
           autocomplete="current-password"
         />
         <PasswordInput
           v-model="newPassword"
-          label="New Password"
+          :label="$t('change_password.new')"
           required
           :minlength="8"
           :maxlength="128"
-          placeholder="New password (8–128 chars)"
+          :placeholder="$t('change_password.new_placeholder')"
           autocomplete="new-password"
         />
         <FormField
           v-model="confirmPassword"
-          label="Confirm New Password"
+          :label="$t('change_password.confirm')"
           type="password"
           required
           :minlength="8"
           :maxlength="128"
-          placeholder="Repeat new password"
+          :placeholder="$t('change_password.confirm_placeholder')"
           autocomplete="new-password"
         />
         <ErrorBanner v-if="passwordError" :message="passwordError" />
@@ -430,7 +438,7 @@
           :disabled="isChangingPassword"
           class="mt-2 w-full"
         >
-          {{ isChangingPassword ? 'Updating...' : 'Update Password' }}
+          {{ isChangingPassword ? $t('change_password.updating') : $t('change_password.update') }}
         </BaseButton>
       </form>
     </BaseModal>
@@ -439,6 +447,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   Settings,
   Sun,
@@ -459,6 +468,7 @@ import { usersApi } from '@/services/usersApi'
 import { useToast } from '@/composables/useToast'
 import ActivityBell from '@/components/admin/ActivityBell.vue'
 import AppBrand from '@/components/common/AppBrand.vue'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FormField from '@/components/common/FormField.vue'
@@ -468,8 +478,10 @@ import { getBannerClass } from '@/utils/statusStyles'
 import { extractErrorMessage } from '@/utils/errors'
 import { navContext as projectNavContext } from '@/composables/useNavContext'
 import { useClickOutside } from '@/composables/useClickOutside'
+import { useScrollFade } from '@/composables/useScrollFade'
 
 const router = useRouter()
+const { t } = useI18n({ useScope: 'global' })
 const authStore = useAuthStore()
 const showUserMenu = ref<boolean>(false)
 const userMenuContainer = ref<HTMLElement | null>(null)
@@ -482,6 +494,10 @@ const authReady = ref<boolean>(false)
 const toast = useToast()
 
 const mobileMenuOpen = ref<boolean>(false)
+
+// Only fade the project workflow tab strip on the side that has off-screen tabs.
+const projectNavStrip = ref<HTMLElement | null>(null)
+useScrollFade(projectNavStrip)
 
 // Initialize dark mode state from localStorage or system preference
 const getInitialDarkMode = (): boolean => {
@@ -637,15 +653,15 @@ async function handleChangePassword(): Promise<void> {
   passwordError.value = ''
   passwordSuccess.value = ''
   if (!currentPassword.value || !newPassword.value) {
-    passwordError.value = 'Please fill in all fields.'
+    passwordError.value = t('change_password.fill_all')
     return
   }
   if (!isPasswordValid.value) {
-    passwordError.value = 'Password must be 8–128 characters.'
+    passwordError.value = t('change_password.invalid_length')
     return
   }
   if (!doPasswordsMatch.value) {
-    passwordError.value = "Passwords don't match."
+    passwordError.value = t('change_password.mismatch')
     return
   }
   isChangingPassword.value = true
@@ -654,13 +670,13 @@ async function handleChangePassword(): Promise<void> {
       old_password: currentPassword.value,
       new_password: newPassword.value,
     })
-    passwordSuccess.value = 'Password updated successfully!'
-    toast.success('Password updated')
+    passwordSuccess.value = t('change_password.success')
+    toast.success(t('change_password.toast_success'))
     setTimeout(() => {
       closeChangePasswordModal()
     }, 1100)
   } catch (err) {
-    passwordError.value = extractErrorMessage(err, 'Password change failed.')
+    passwordError.value = extractErrorMessage(err, t('change_password.failed'))
     toast.error(passwordError.value)
   } finally {
     isChangingPassword.value = false

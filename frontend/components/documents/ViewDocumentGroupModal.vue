@@ -8,7 +8,7 @@
 <template>
   <SlideOver
     :open="open"
-    aria-label="Document group"
+    :aria-label="$t('documents.group_view.aria_label')"
     max-width="max-w-[95rem]"
     body-class="!p-0 overflow-hidden"
     @close="$emit('close')"
@@ -21,7 +21,7 @@
             <span
               class="text-[11px] text-content-subtle bg-surface px-2 py-0.5 rounded-full border border-default"
             >
-              {{ docTotal }} document{{ docTotal === 1 ? '' : 's' }}
+              {{ $t('documents.group_view.document_count', { count: docTotal }, docTotal) }}
             </span>
           </div>
           <p v-if="group.description" class="text-xs text-content-subtle mt-0.5 truncate">
@@ -37,15 +37,17 @@
             @click="exportDocumentList"
           >
             <Download class="h-4 w-4" />
-            {{ isExporting ? 'Exporting…' : 'Export' }}
+            {{
+              isExporting ? $t('documents.group_view.exporting') : $t('documents.actions.export')
+            }}
           </BaseButton>
           <BaseButton variant="link" tone="blue" size="sm" @click="downloadAllDocuments">
             <Package class="h-4 w-4" />
-            Download all
+            {{ $t('documents.group_view.download_all') }}
           </BaseButton>
           <BaseButton variant="secondary" size="sm" @click="$emit('edit', group)">
             <SquarePen class="h-4 w-4" />
-            Edit
+            {{ $t('documents.actions.edit') }}
           </BaseButton>
         </div>
       </div>
@@ -65,7 +67,7 @@
           <div class="p-3 border-b border-default shrink-0">
             <SearchInput
               v-model="search"
-              placeholder="Search documents…"
+              :placeholder="$t('documents.filters.search_placeholder')"
               @input="debouncedFetchDocuments"
             />
           </div>
@@ -87,12 +89,14 @@
               <div class="flex items-center gap-2 min-w-0">
                 <FileIcon :file-type="d.original_file?.file_type ?? ''" :size="16" />
                 <span class="text-sm text-content truncate flex-1">{{
-                  d.document_name || d.original_file?.file_name || `Document #${d.id}`
+                  d.document_name ||
+                  d.original_file?.file_name ||
+                  $t('documents.common.document_number', { id: d.id })
                 }}</span>
               </div>
               <div class="flex items-center gap-2 mt-0.5 pl-6">
                 <span class="text-[10px] uppercase tracking-wide text-content-subtle truncate">
-                  {{ d.preprocessing_config?.name || 'N/A' }}
+                  {{ d.preprocessing_config?.name || $t('documents.common.na') }}
                 </span>
               </div>
             </button>
@@ -103,13 +107,15 @@
               v-else-if="documents.length === 0"
               class="flex flex-col items-center justify-center py-8 px-3 text-center"
             >
-              <p class="text-xs text-content-subtle">No documents match your search.</p>
+              <p class="text-xs text-content-subtle">
+                {{ $t('documents.group_view.no_match') }}
+              </p>
               <button
                 type="button"
                 class="mt-2 text-xs font-medium text-primary hover:underline"
                 @click="resetFilters"
               >
-                Reset filters
+                {{ $t('documents.group_view.reset_filters') }}
               </button>
             </div>
           </div>
@@ -148,14 +154,19 @@
           <BaseButton
             variant="ghost"
             size="sm"
-            :title="leftRailOpen ? 'Hide document list' : 'Show document list'"
+            :title="
+              leftRailOpen
+                ? $t('documents.group_view.hide_list')
+                : $t('documents.group_view.show_list')
+            "
             @click="leftRailOpen = !leftRailOpen"
           >
             <PanelLeft class="h-4 w-4" />
           </BaseButton>
           <p class="text-xs text-content-subtle pr-2">
             <kbd class="px-1 py-0.5 bg-surface-sunken rounded">←</kbd> /
-            <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd> to move between documents
+            <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd>
+            {{ $t('documents.group_view.move_hint') }}
           </p>
         </div>
 
@@ -173,7 +184,9 @@
             class="flex flex-col items-center justify-center h-full py-16"
           >
             <LoadingSpinner size="medium" inline label="" />
-            <span class="mt-2 text-content-muted">Loading documents…</span>
+            <span class="mt-2 text-content-muted">{{
+              $t('documents.group_view.loading_documents')
+            }}</span>
           </div>
           <!-- No active doc and not loading: quiet placeholder. The rail stays
                visible with its own empty-list/reset UI, so we don't repeat a
@@ -185,7 +198,9 @@
             <FileText class="h-10 w-10 mb-2 opacity-40" />
             <p class="text-sm">
               {{
-                hasActiveFilters ? 'No documents match your search.' : 'Select a document to view.'
+                hasActiveFilters
+                  ? $t('documents.group_view.no_match')
+                  : $t('documents.group_view.select_to_view')
               }}
             </p>
           </div>
@@ -197,10 +212,10 @@
     <!-- Download all documents confirmation -->
     <ConfirmationDialog
       :open="showDownloadAllConfirm"
-      title="Download all documents?"
-      :message="`This will download all ${docTotal} documents as a ZIP archive.`"
-      confirm-text="Download"
-      cancel-text="Cancel"
+      :title="$t('documents.group_view.download_all_title')"
+      :message="$t('documents.group_view.download_all_message', { count: docTotal })"
+      :confirm-text="$t('documents.actions.download')"
+      :cancel-text="$t('documents.actions.cancel')"
       confirm-variant="primary"
       @confirm="executeDownloadAll"
       @cancel="showDownloadAllConfirm = false"
@@ -210,6 +225,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { debounce } from 'perfect-debounce'
 import {
   ChevronLeft,
@@ -252,6 +268,7 @@ defineEmits<{
   edit: [group: ViewGroup]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 const { downloadBlob, downloadFromApi } = useFileDownload()
 
@@ -474,10 +491,12 @@ const exportDocumentList = async (): Promise<void> => {
       'text/csv',
     )
 
-    toast.success(`Exported ${allDocs.length} document${allDocs.length === 1 ? '' : 's'}`)
+    toast.success(
+      t('documents.group_view.exported_count', { count: allDocs.length }, allDocs.length),
+    )
   } catch (error) {
     console.error('Failed to export document list:', error)
-    toast.error('Failed to export document list')
+    toast.error(t('documents.group_view.export_failed'))
   } finally {
     isExporting.value = false
   }
@@ -495,9 +514,9 @@ const executeDownloadAll = async (): Promise<void> => {
       `${props.group.name.replace(/[^a-z0-9]/gi, '_')}_documents.zip`,
     )
 
-    toast.success('Download started')
+    toast.success(t('documents.group_view.download_started'))
   } catch (error) {
-    toast.error('Failed to download documents')
+    toast.error(t('documents.group_view.download_failed'))
     console.error(error)
   }
 }

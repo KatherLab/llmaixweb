@@ -1,8 +1,8 @@
 <template>
   <div>
     <PageHeader
-      title="Audit Log"
-      subtitle="Accountability trail: who did what, when, and from where. Append-only."
+      :title="$t('admin.audit.title')"
+      :subtitle="$t('admin.audit.subtitle')"
       class="mb-6"
     >
       <template #icon>
@@ -15,9 +15,11 @@
           :loading="exporting"
           @click="exportCsv"
         >
-          Export CSV
+          {{ $t('admin.audit.export_csv') }}
         </BaseButton>
-        <BaseButton variant="primary" :loading="loading" @click="refresh">Refresh</BaseButton>
+        <BaseButton variant="primary" :loading="loading" @click="refresh">{{
+          $t('admin.audit.refresh')
+        }}</BaseButton>
       </template>
     </PageHeader>
 
@@ -43,50 +45,58 @@
     <div v-if="mode === 'activity'">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <div>
-          <label :class="labelClass" for="audit-filter-action">Action</label>
+          <label :class="labelClass" for="audit-filter-action">{{
+            $t('admin.audit.filters.action')
+          }}</label>
           <select
             id="audit-filter-action"
             v-model="filters.action"
             :class="inputClass"
             @change="applyFilters"
           >
-            <option :value="undefined">All actions</option>
+            <option :value="undefined">{{ $t('admin.audit.filters.all_actions') }}</option>
             <optgroup v-for="group in actionGroups" :key="group.label" :label="group.label">
               <option v-for="a in group.actions" :key="a" :value="a">{{ actionLabel(a) }}</option>
             </optgroup>
           </select>
         </div>
         <div>
-          <label :class="labelClass" for="audit-filter-outcome">Outcome</label>
+          <label :class="labelClass" for="audit-filter-outcome">{{
+            $t('admin.audit.filters.outcome')
+          }}</label>
           <select
             id="audit-filter-outcome"
             v-model="filters.outcome"
             :class="inputClass"
             @change="applyFilters"
           >
-            <option :value="undefined">All outcomes</option>
-            <option value="success">Success</option>
-            <option value="failure">Failure</option>
-            <option value="denied">Denied</option>
+            <option :value="undefined">{{ $t('admin.audit.filters.all_outcomes') }}</option>
+            <option value="success">{{ $t('admin.audit.outcome.success') }}</option>
+            <option value="failure">{{ $t('admin.audit.outcome.failure') }}</option>
+            <option value="denied">{{ $t('admin.audit.outcome.denied') }}</option>
           </select>
         </div>
         <div>
-          <label :class="labelClass" for="audit-filter-resource-type">Resource type</label>
+          <label :class="labelClass" for="audit-filter-resource-type">{{
+            $t('admin.audit.filters.resource_type')
+          }}</label>
           <input
             id="audit-filter-resource-type"
             v-model.trim="filters.resource_type"
             :class="inputClass"
-            placeholder="e.g. document, trial"
+            :placeholder="$t('admin.audit.filters.resource_type_placeholder')"
             @keyup.enter="applyFilters"
           />
         </div>
         <div>
-          <label :class="labelClass" for="audit-filter-request-id">Request / error ID</label>
+          <label :class="labelClass" for="audit-filter-request-id">{{
+            $t('admin.audit.filters.request_id')
+          }}</label>
           <input
             id="audit-filter-request-id"
             v-model.trim="filters.request_id"
             :class="inputClass"
-            placeholder="Correlation ID"
+            :placeholder="$t('admin.audit.filters.request_id_placeholder')"
             @keyup.enter="applyFilters"
           />
         </div>
@@ -96,19 +106,29 @@
       <ErrorBanner v-else-if="error" :message="error" class="mb-4" />
       <EmptyState
         v-else-if="!auditRows.length"
-        title="No audit events"
-        description="No events match the current filters."
+        :title="$t('admin.audit.empty_title')"
+        :description="$t('admin.audit.empty_description')"
       />
       <div v-else class="bg-surface border border-default rounded-card overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-surface-sunken text-content-muted">
             <tr>
-              <th class="text-left px-3 py-2 font-semibold">Time</th>
-              <th class="text-left px-3 py-2 font-semibold">Actor</th>
-              <th class="text-left px-3 py-2 font-semibold">Action</th>
-              <th class="text-left px-3 py-2 font-semibold">Resource</th>
-              <th class="text-left px-3 py-2 font-semibold">Outcome</th>
-              <th class="text-left px-3 py-2 font-semibold">IP</th>
+              <th class="text-left px-3 py-2 font-semibold">
+                {{ $t('admin.audit.columns.time') }}
+              </th>
+              <th class="text-left px-3 py-2 font-semibold">
+                {{ $t('admin.audit.columns.actor') }}
+              </th>
+              <th class="text-left px-3 py-2 font-semibold">
+                {{ $t('admin.audit.columns.action') }}
+              </th>
+              <th class="text-left px-3 py-2 font-semibold">
+                {{ $t('admin.audit.columns.resource') }}
+              </th>
+              <th class="text-left px-3 py-2 font-semibold">
+                {{ $t('admin.audit.columns.outcome') }}
+              </th>
+              <th class="text-left px-3 py-2 font-semibold">{{ $t('admin.audit.columns.ip') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-default-border">
@@ -122,7 +142,10 @@
                 {{ formatTime(row.created_at) }}
               </td>
               <td class="px-3 py-2 text-content">
-                {{ row.actor_email || (row.actor_user_id ? `#${row.actor_user_id}` : 'system') }}
+                {{
+                  row.actor_email ||
+                  (row.actor_user_id ? `#${row.actor_user_id}` : $t('admin.audit.system'))
+                }}
               </td>
               <td class="px-3 py-2">
                 <span class="font-medium text-content">{{ actionLabel(row.action) }}</span>
@@ -152,7 +175,7 @@
         :visible-pages="visiblePages"
         :total-items="total"
         :page-size="pageSize"
-        item-label="events"
+        :item-label="$t('admin.audit.events_label')"
         @update:model-value="goToPage"
       />
     </div>
@@ -163,33 +186,43 @@
         <input
           v-model.trim="errorIdQuery"
           :class="inputClass"
-          placeholder="Look up an error ID a user reported…"
+          :placeholder="$t('admin.audit.error_lookup_placeholder')"
           @keyup.enter="fetchErrors"
         />
-        <BaseButton variant="primary" @click="fetchErrors">Find</BaseButton>
-        <BaseButton v-if="errorIdQuery" variant="ghost" @click="clearErrorSearch">Clear</BaseButton>
+        <BaseButton variant="primary" @click="fetchErrors">{{ $t('admin.audit.find') }}</BaseButton>
+        <BaseButton v-if="errorIdQuery" variant="ghost" @click="clearErrorSearch">{{
+          $t('admin.audit.clear')
+        }}</BaseButton>
       </div>
 
       <div v-if="loading" class="py-10 flex justify-center"><LoadingSpinner size="medium" /></div>
       <ErrorBanner v-else-if="error" :message="error" class="mb-4" />
       <EmptyState
         v-else-if="!errorRows.length"
-        title="No errors logged"
+        :title="$t('admin.audit.no_errors_title')"
         :description="
-          errorIdQuery
-            ? 'No error matches that ID.'
-            : 'The server has not logged any unhandled errors.'
+          errorIdQuery ? $t('admin.audit.no_error_match') : $t('admin.audit.no_errors_logged')
         "
       />
       <div v-else class="bg-surface border border-default rounded-card overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-surface-sunken text-content-muted">
             <tr>
-              <th class="text-left px-3 py-2 font-semibold">Time</th>
-              <th class="text-left px-3 py-2 font-semibold">Error ID</th>
-              <th class="text-left px-3 py-2 font-semibold">Endpoint</th>
-              <th class="text-left px-3 py-2 font-semibold">Type</th>
-              <th class="text-left px-3 py-2 font-semibold">Actor</th>
+              <th class="text-left px-3 py-2 font-semibold">
+                {{ $t('admin.audit.columns.time') }}
+              </th>
+              <th class="text-left px-3 py-2 font-semibold">
+                {{ $t('admin.audit.columns.error_id') }}
+              </th>
+              <th class="text-left px-3 py-2 font-semibold">
+                {{ $t('admin.audit.columns.endpoint') }}
+              </th>
+              <th class="text-left px-3 py-2 font-semibold">
+                {{ $t('admin.audit.columns.type') }}
+              </th>
+              <th class="text-left px-3 py-2 font-semibold">
+                {{ $t('admin.audit.columns.actor') }}
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-default-border">
@@ -215,46 +248,53 @@
     </div>
 
     <!-- Audit detail drawer -->
-    <BaseModal v-if="selected" :open="true" title="Audit event" @close="selected = null">
+    <BaseModal
+      v-if="selected"
+      :open="true"
+      :title="$t('admin.audit.detail.audit_event')"
+      @close="selected = null"
+    >
       <dl class="text-sm space-y-2">
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Time</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.columns.time') }}</dt>
           <dd class="text-content">{{ formatTime(selected.created_at) }}</dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Actor</dt>
-          <dd class="text-content">{{ selected.actor_email || 'system' }}</dd>
+          <dt class="text-content-subtle">{{ $t('admin.audit.columns.actor') }}</dt>
+          <dd class="text-content">{{ selected.actor_email || $t('admin.audit.system') }}</dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Action</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.columns.action') }}</dt>
           <dd class="text-content">{{ actionLabel(selected.action) }}</dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Resource</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.columns.resource') }}</dt>
           <dd class="text-content">
             {{ selected.resource_type || '—'
             }}{{ selected.resource_id ? `#${selected.resource_id}` : '' }}
           </dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Project</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.detail.project') }}</dt>
           <dd class="text-content">{{ selected.project_id ?? '—' }}</dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Outcome</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.columns.outcome') }}</dt>
           <dd class="text-content">{{ selected.outcome }}</dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">IP</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.columns.ip') }}</dt>
           <dd class="text-content font-mono text-xs">{{ selected.actor_ip || '—' }}</dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Correlation ID</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.detail.correlation_id') }}</dt>
           <dd class="text-content font-mono text-xs">{{ selected.request_id || '—' }}</dd>
         </div>
       </dl>
       <div v-if="selected.detail" class="mt-4">
-        <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Detail</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">
+          {{ $t('admin.audit.detail.detail') }}
+        </p>
         <pre
           class="bg-surface-sunken p-3 rounded-card border border-default overflow-x-auto text-xs"
           >{{ pretty(selected.detail) }}</pre>
@@ -262,40 +302,45 @@
     </BaseModal>
 
     <!-- Error detail drawer -->
-    <BaseModal v-if="selectedError" :open="true" title="Server error" @close="selectedError = null">
+    <BaseModal
+      v-if="selectedError"
+      :open="true"
+      :title="$t('admin.audit.detail.server_error')"
+      @close="selectedError = null"
+    >
       <dl class="text-sm space-y-2">
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Error ID</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.columns.error_id') }}</dt>
           <dd class="text-content font-mono text-xs">{{ selectedError.error_id }}</dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Time</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.columns.time') }}</dt>
           <dd class="text-content">{{ formatTime(selectedError.created_at) }}</dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Endpoint</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.columns.endpoint') }}</dt>
           <dd class="text-content font-mono text-xs">
             {{ selectedError.method }} {{ selectedError.path }}
           </dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Exception</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.detail.exception') }}</dt>
           <dd class="text-content">{{ selectedError.exception_type }}</dd>
         </div>
         <div class="flex justify-between gap-4">
-          <dt class="text-content-subtle">Actor</dt>
+          <dt class="text-content-subtle">{{ $t('admin.audit.columns.actor') }}</dt>
           <dd class="text-content">{{ selectedError.actor_email || '—' }}</dd>
         </div>
       </dl>
       <div v-if="selectedError.message" class="mt-4">
         <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">
-          Message
+          {{ $t('admin.audit.detail.message') }}
         </p>
         <p class="text-sm text-content">{{ selectedError.message }}</p>
       </div>
       <div v-if="selectedError.traceback" class="mt-4">
         <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">
-          Traceback
+          {{ $t('admin.audit.detail.traceback') }}
         </p>
         <pre
           class="bg-surface-sunken p-3 rounded-card border border-default overflow-x-auto text-xs max-h-96"
@@ -307,6 +352,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ScrollText } from '@lucide/vue'
 import { computeVisiblePages } from '@/composables/usePagination'
 import { auditApi } from '@/services/auditApi'
@@ -326,14 +372,16 @@ import type { AuditAction, AuditLogEntry, AuditLogQuery, ErrorLogEntry } from '@
 
 type Mode = 'activity' | 'errors'
 
-const modes: { label: string; value: Mode }[] = [
-  { label: 'Activity', value: 'activity' },
-  { label: 'Errors', value: 'errors' },
-]
+const { t } = useI18n({ useScope: 'global' })
 
-const actionGroups: { label: string; actions: AuditAction[] }[] = [
+const modes = computed<{ label: string; value: Mode }[]>(() => [
+  { label: t('admin.audit.modes.activity'), value: 'activity' },
+  { label: t('admin.audit.modes.errors'), value: 'errors' },
+])
+
+const actionGroups = computed<{ label: string; actions: AuditAction[] }[]>(() => [
   {
-    label: 'Authentication',
+    label: t('admin.audit.action_groups.authentication'),
     actions: [
       'login_success',
       'login_failure',
@@ -345,13 +393,19 @@ const actionGroups: { label: string; actions: AuditAction[] }[] = [
     ],
   },
   {
-    label: 'Access (PHI)',
+    label: t('admin.audit.action_groups.access_phi'),
     actions: ['document_view', 'document_download', 'file_download', 'trial_result_view', 'export'],
   },
-  { label: 'Mutations', actions: ['create', 'update', 'delete', 'cancel'] },
-  { label: 'Egress', actions: ['llm_extraction_call', 'ocr_external_call'] },
   {
-    label: 'Administration',
+    label: t('admin.audit.action_groups.mutations'),
+    actions: ['create', 'update', 'delete', 'cancel'],
+  },
+  {
+    label: t('admin.audit.action_groups.egress'),
+    actions: ['llm_extraction_call', 'ocr_external_call'],
+  },
+  {
+    label: t('admin.audit.action_groups.administration'),
     actions: [
       'setting_change',
       'user_create',
@@ -361,7 +415,7 @@ const actionGroups: { label: string; actions: AuditAction[] }[] = [
       'sso_provider_change',
     ],
   },
-]
+])
 
 const { downloadBlob } = useFileDownload()
 const toast = useToast()
@@ -429,7 +483,7 @@ async function fetchAudit(): Promise<void> {
     auditRows.value = res.data.items
     total.value = res.data.total
   } catch (e) {
-    error.value = extractErrorMessage(e, 'Failed to load audit log')
+    error.value = extractErrorMessage(e, t('admin.audit.errors.load_audit'))
   } finally {
     loading.value = false
   }
@@ -444,7 +498,7 @@ async function fetchErrors(): Promise<void> {
     )
     errorRows.value = res.data.items
   } catch (e) {
-    error.value = extractErrorMessage(e, 'Failed to load error log')
+    error.value = extractErrorMessage(e, t('admin.audit.errors.load_errors'))
   } finally {
     loading.value = false
   }
@@ -486,7 +540,7 @@ async function exportCsv(): Promise<void> {
     const res = await auditApi.exportCsv(params)
     downloadBlob(res.data, 'audit-log.csv', 'text/csv')
   } catch (e) {
-    toast.error(extractErrorMessage(e, 'Export failed'))
+    toast.error(extractErrorMessage(e, t('admin.audit.errors.export_failed')))
   } finally {
     exporting.value = false
   }

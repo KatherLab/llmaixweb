@@ -11,7 +11,7 @@
             label=""
           />
           <div>
-            <h4 class="font-medium text-content">Model &amp; Schema Compatibility</h4>
+            <h4 class="font-medium text-content">{{ $t('trials.model_test.title') }}</h4>
             <p class="text-sm text-content-muted">
               {{ status.message }}
             </p>
@@ -23,7 +23,7 @@
           variant="secondary"
           :disabled="!llmModel || !schemaId"
           @click="emit('test')"
-          >Test now</BaseButton
+          >{{ $t('trials.model_test.test_now') }}</BaseButton
         >
       </div>
       <div
@@ -31,8 +31,7 @@
         class="mt-3 p-3 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-card"
       >
         <p class="text-yellow-800 dark:text-yellow-300 text-sm">
-          The model is checked automatically when you start the trial — or test it now to confirm
-          compatibility beforehand.
+          {{ $t('trials.model_test.warning_help') }}
         </p>
       </div>
     </Callout>

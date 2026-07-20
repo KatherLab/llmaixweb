@@ -1,11 +1,11 @@
 <template>
   <BaseModal :open="open" size="sm" :close-on-backdrop="!isInviting" @close="emit('close')">
     <template #header>
-      <h3 class="text-lg font-semibold text-content">Invite New User</h3>
+      <h3 class="text-lg font-semibold text-content">{{ $t('admin.invite_modal.title') }}</h3>
     </template>
     <form @submit.prevent="sendInvitation">
       <div class="mb-5">
-        <label for="email" :class="labelClass">Email address</label>
+        <label for="email" :class="labelClass">{{ $t('admin.invite_modal.email_label') }}</label>
         <input
           id="email"
           v-model="inviteEmail"
@@ -13,13 +13,15 @@
           required
           :class="inputClass"
           maxlength="254"
-          placeholder="Enter email address"
+          :placeholder="$t('admin.invite_modal.email_placeholder')"
         />
       </div>
       <div class="mb-5">
         <label class="flex items-center gap-2 cursor-pointer">
           <input v-model="sendInviteEmail" type="checkbox" :class="checkboxClass" />
-          <span class="text-sm text-content-muted">Send invitation via email</span>
+          <span class="text-sm text-content-muted">{{
+            $t('admin.invite_modal.send_via_email')
+          }}</span>
         </label>
       </div>
       <Callout v-if="inviteError" variant="danger" class="mb-4 text-xs">
@@ -27,9 +29,11 @@
       </Callout>
       <div v-if="inviteSuccess" class="mb-4">
         <Callout class="mb-2 text-xs" :variant="inviteEmailSent ? 'success' : 'warning'">
-          <template v-if="inviteEmailSent"> Invitation sent to email successfully! </template>
+          <template v-if="inviteEmailSent">
+            {{ $t('admin.invite_modal.sent_success') }}
+          </template>
           <template v-else>
-            Invitation created but email delivery is not configured. Copy the link manually.
+            {{ $t('admin.invite_modal.created_no_email') }}
           </template>
         </Callout>
         <div class="flex items-center mt-2 gap-2">
@@ -41,7 +45,7 @@
           />
           <button
             type="button"
-            aria-label="Copy invitation link"
+            :aria-label="$t('admin.invite_modal.copy_link')"
             class="p-1.5 rounded-card border border-default text-primary hover:bg-primary-soft transition-all relative"
             @click="copyGeneratedLink"
           >
@@ -49,7 +53,7 @@
               v-if="copySuccess"
               class="absolute bg-surface text-white text-xs px-2 py-1 rounded -top-8 left-1/2 -translate-x-1/2 z-10"
             >
-              Copied!
+              {{ $t('admin.invite_modal.copied') }}
             </span>
             <ClipboardCopy class="h-4 w-4" />
           </button>
@@ -58,7 +62,7 @@
     </form>
     <template #footer>
       <BaseButton variant="secondary" :disabled="isInviting" @click="emit('close')">
-        Cancel
+        {{ $t('admin.invite_modal.cancel') }}
       </BaseButton>
       <BaseButton
         variant="primary"
@@ -66,7 +70,7 @@
         :disabled="isInviting"
         @click="sendInvitation"
       >
-        {{ isInviting ? 'Sending...' : 'Send Invitation' }}
+        {{ isInviting ? $t('admin.invite_modal.sending') : $t('admin.invite_modal.send') }}
       </BaseButton>
     </template>
   </BaseModal>
@@ -74,6 +78,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ClipboardCopy } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -94,6 +99,7 @@ const emit = defineEmits<{
   (e: 'invited'): void
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 
 const inviteEmail = ref('')
@@ -138,7 +144,7 @@ async function sendInvitation(): Promise<void> {
     inviteSuccess.value = true
     emit('invited')
   } catch (error) {
-    inviteError.value = extractErrorMessage(error, 'Failed to send invitation. Please try again.')
+    inviteError.value = extractErrorMessage(error, t('admin.invite_modal.errors.send_failed'))
   } finally {
     isInviting.value = false
   }
@@ -183,7 +189,7 @@ function copyGeneratedLink(): void {
             copySuccess.value = false
           }, 2000)
         } else {
-          toast.error('Failed to copy. Please copy the link manually.')
+          toast.error(t('admin.invite_modal.errors.copy_failed'))
         }
       })
   } else {
@@ -194,7 +200,7 @@ function copyGeneratedLink(): void {
         copySuccess.value = false
       }, 2000)
     } else {
-      toast.error('Failed to copy. Please copy the link manually.')
+      toast.error(t('admin.invite_modal.errors.copy_failed'))
     }
   }
 }

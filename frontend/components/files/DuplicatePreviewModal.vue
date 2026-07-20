@@ -11,12 +11,12 @@
         <AlertTriangle v-else class="w-6 h-6 text-amber-600 dark:text-amber-400" />
         <h3 class="text-lg font-semibold text-content">
           <template v-if="hasPdfsWithEmbeddedText && !hasSameConfigDuplicates">
-            PDF Embedded Text Detected
+            {{ $t('files.duplicate.title_embedded') }}
           </template>
           <template v-else-if="hasSameConfigDuplicates">
-            Existing Documents Will Be Archived
+            {{ $t('files.duplicate.title_archived') }}
           </template>
-          <template v-else> Existing Documents Found </template>
+          <template v-else> {{ $t('files.duplicate.title_found') }} </template>
         </h3>
       </div>
     </template>
@@ -26,25 +26,23 @@
       <!-- Different messages based on situation -->
       <template v-if="hasPdfsWithEmbeddedText && !hasSameConfigDuplicates">
         <p class="text-sm text-content-muted">
-          The following PDF file(s) have embedded text. Since "Force OCR" is not enabled, the
-          embedded text will be extracted directly regardless of the selected OCR engine. The result
-          will be identical to previous extractions.
+          {{ $t('files.duplicate.embedded_desc') }}
         </p>
         <Callout :icon="CircleCheckBig" variant="info">
           <p class="text-xs">
-            <strong>Tip:</strong> Enable
+            <strong>{{ $t('files.duplicate.tip_label') }}</strong>
+            {{ $t('files.duplicate.tip_before') }}
             <code class="bg-primary-soft px-1 rounded">Force OCR for PDFs</code>
-            in Advanced Options to force OCR on all pages, ignoring embedded text.
+            {{ $t('files.duplicate.tip_after') }}
           </p>
         </Callout>
       </template>
 
       <template v-else-if="hasSameConfigDuplicates">
         <p class="text-sm text-content-muted">
-          The following files have existing documents with the
-          <strong>same OCR configuration</strong>. Running preprocessing will create new versions
-          and archive the old ones. Archived documents are hidden by default but can be viewed in
-          the document history.
+          {{ $t('files.duplicate.same_config_before') }}
+          <strong>{{ $t('files.duplicate.same_config_emphasis') }}</strong
+          >{{ $t('files.duplicate.same_config_after') }}
         </p>
 
         <!-- Option to skip existing -->
@@ -54,11 +52,10 @@
           <input v-model="skipExisting" type="checkbox" :class="[checkboxClass, 'mt-0.5']" />
           <div class="flex-1">
             <p class="text-sm font-medium text-primary">
-              Only process files without existing documents
+              {{ $t('files.duplicate.skip_existing_label') }}
             </p>
             <p class="text-xs text-primary mt-1">
-              Skip files that already have documents for this OCR configuration. Useful if you want
-              to process only new files or re-process files where OCR quality was poor.
+              {{ $t('files.duplicate.skip_existing_desc') }}
             </p>
           </div>
         </label>
@@ -66,9 +63,7 @@
 
       <template v-else>
         <p class="text-sm text-content-muted">
-          The following files have existing documents with a different OCR configuration. Running
-          preprocessing will create additional documents (not replace existing ones). Both versions
-          will be preserved.
+          {{ $t('files.duplicate.diff_config_desc') }}
         </p>
       </template>
 
@@ -90,16 +85,19 @@
                   class="text-xs text-amber-700 dark:text-amber-300 mt-1 inline-flex items-center gap-1"
                 >
                   <AlertTriangle class="w-3 h-3 inline" />
-                  {{ item.existing_document_count }} existing document{{
-                    item.existing_document_count !== 1 ? 's' : ''
+                  {{
+                    $t(
+                      'files.duplicate.existing_same_config',
+                      { count: item.existing_document_count },
+                      item.existing_document_count,
+                    )
                   }}
-                  with same config will be archived
                 </p>
               </div>
               <span
                 class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 text-amber-700 flex-shrink-0 ml-3"
               >
-                Same config
+                {{ $t('files.duplicate.badge_same_config') }}
               </span>
             </div>
           </div>
@@ -119,16 +117,21 @@
                 </p>
                 <p class="text-xs text-primary mt-1 inline-flex items-center gap-1">
                   <Info class="w-3 h-3 inline" />
-                  Has embedded text
+                  {{ $t('files.duplicate.has_embedded_text') }}
                   <span v-if="pdf.existing_document_ocr_method" class="text-content-muted">
-                    • Previously extracted with: {{ pdf.existing_document_ocr_method }}
+                    •
+                    {{
+                      $t('files.duplicate.previously_extracted', {
+                        method: pdf.existing_document_ocr_method,
+                      })
+                    }}
                   </span>
                 </p>
               </div>
               <span
                 class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-primary-soft text-primary flex-shrink-0 ml-3"
               >
-                Embedded text
+                {{ $t('files.duplicate.badge_embedded_text') }}
               </span>
             </div>
           </div>
@@ -147,19 +150,22 @@
                   {{ item.file_name }}
                 </p>
                 <p class="text-xs text-content-muted mt-1">
-                  {{ item.existing_document_count }} existing document{{
-                    item.existing_document_count !== 1 ? 's' : ''
+                  {{
+                    $t(
+                      'files.duplicate.existing_diff_config',
+                      { count: item.existing_document_count },
+                      item.existing_document_count,
+                    )
                   }}
-                  with different config
                   <span v-if="item.config_name" class="text-content-subtle">
-                    • Config: {{ item.config_name }}
+                    • {{ $t('files.duplicate.config_name', { name: item.config_name }) }}
                   </span>
                 </p>
               </div>
               <span
                 class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-surface-sunken text-content-muted flex-shrink-0 ml-3"
               >
-                Different config
+                {{ $t('files.duplicate.badge_diff_config') }}
               </span>
             </div>
           </div>
@@ -172,23 +178,28 @@
           <span class="font-semibold text-content">{{
             duplicatePreview?.files_with_duplicates?.length || 0
           }}</span>
-          file{{ (duplicatePreview?.files_with_duplicates?.length || 0) !== 1 ? 's' : '' }}
-          with existing documents
+          {{
+            $t(
+              'files.duplicate.summary_existing',
+              duplicatePreview?.files_with_duplicates?.length || 0,
+            )
+          }}
         </span>
         <span class="text-content-muted">
           <span class="font-semibold text-content">{{
             duplicatePreview?.files_without_duplicates
           }}</span>
-          new file{{ duplicatePreview?.files_without_duplicates !== 1 ? 's' : '' }}
+          {{ $t('files.duplicate.summary_new', duplicatePreview?.files_without_duplicates || 0) }}
         </span>
       </div>
 
       <!-- Info note about document versioning (only for same-config duplicates) -->
       <Callout v-if="hasSameConfigDuplicates" variant="info">
         <p class="text-xs">
-          <strong>Document versioning:</strong> Previous versions are preserved with
-          <code class="bg-primary-soft px-1 rounded">is_latest=false</code> and can be restored if
-          needed. Only the latest version is shown in the document list by default.
+          <strong>{{ $t('files.duplicate.versioning_label') }}</strong>
+          {{ $t('files.duplicate.versioning_before') }}
+          <code class="bg-primary-soft px-1 rounded">is_latest=false</code>
+          {{ $t('files.duplicate.versioning_after') }}
         </p>
       </Callout>
     </div>
@@ -196,7 +207,7 @@
     <!-- Footer Actions -->
     <template #footer>
       <BaseButton variant="secondary" :disabled="submitting" @click="emit('cancel')">
-        Cancel
+        {{ $t('files.actions.cancel') }}
       </BaseButton>
       <BaseButton
         class="flex items-center gap-2"
@@ -204,9 +215,11 @@
         @click="emit('confirm', { skipExisting: skipExisting })"
       >
         <Check class="w-4 h-4" />
-        <template v-if="skipExisting">Process New Files Only</template>
-        <template v-else-if="hasSameConfigDuplicates">Archive & Continue</template>
-        <template v-else>Continue</template>
+        <template v-if="skipExisting">{{ $t('files.duplicate.process_new_only') }}</template>
+        <template v-else-if="hasSameConfigDuplicates">{{
+          $t('files.duplicate.archive_continue')
+        }}</template>
+        <template v-else>{{ $t('files.duplicate.continue') }}</template>
       </BaseButton>
     </template>
   </BaseModal>

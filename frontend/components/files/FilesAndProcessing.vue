@@ -2,15 +2,15 @@
   <div class="p-6 space-y-6">
     <!-- Header -->
     <PageHeader
-      title="Files"
-      subtitle="Upload files and run OCR preprocessing"
+      :title="$t('files.page.title')"
+      :subtitle="$t('files.page.subtitle')"
       :sticky="false"
       class="mb-6"
     >
       <template #actions>
         <BaseButton variant="secondary" @click="showUploadModal = true">
           <Upload class="w-5 h-5 text-content-muted" />
-          Upload Files
+          {{ $t('files.actions.upload_files') }}
         </BaseButton>
       </template>
     </PageHeader>
@@ -20,7 +20,7 @@
     <ErrorBanner
       v-if="fetchError"
       :message="fetchError"
-      retry-text="Retry"
+      :retry-text="$t('files.actions.retry')"
       :retry-loading="isLoading"
       @retry="retryFetchFiles"
     />
@@ -57,9 +57,10 @@
       class="flex items-center gap-2"
     >
       <p class="text-sm">
-        <strong>Next step:</strong> Select files from the table below, then click
-        <span class="font-semibold">Configure Preprocessing</span> to extract text from your
-        documents.
+        <strong>{{ $t('files.hint.next_step_label') }}</strong>
+        {{ $t('files.hint.select_files_before') }}
+        <span class="font-semibold">{{ $t('files.hint.configure_preprocessing') }}</span>
+        {{ $t('files.hint.select_files_after') }}
       </p>
       <BaseButton
         variant="ghost"
@@ -68,7 +69,11 @@
         :disabled="isSelectingAll"
         @click="selectAllFiles"
       >
-        {{ isSelectingAll ? 'Selecting…' : `Select all ${pagination.total}` }}
+        {{
+          isSelectingAll
+            ? $t('files.actions.selecting')
+            : $t('files.actions.select_all_count', { count: pagination.total })
+        }}
       </BaseButton>
     </Callout>
 
@@ -81,15 +86,26 @@
       class="mb-4 flex items-center gap-2"
     >
       <p class="text-sm">
-        <strong>Preprocessing complete</strong>
+        <strong>{{ $t('files.completion.title') }}</strong>
         <span v-if="completionNotice.documents > 0">
-          — {{ completionNotice.documents }} document{{
-            completionNotice.documents === 1 ? '' : 's'
-          }}
-          created</span
+          —
+          {{
+            $t(
+              'files.completion.documents_created',
+              { count: completionNotice.documents },
+              completionNotice.documents,
+            )
+          }}</span
         >
         <span v-if="completionNotice.failed > 0" class="text-red-600 dark:text-red-400">
-          · {{ completionNotice.failed }} file{{ completionNotice.failed === 1 ? '' : 's' }} failed
+          ·
+          {{
+            $t(
+              'files.completion.files_failed',
+              { count: completionNotice.failed },
+              completionNotice.failed,
+            )
+          }}
         </span>
       </p>
       <div class="ml-auto flex items-center gap-2 shrink-0">
@@ -100,7 +116,7 @@
           class="font-medium"
           @click="viewCompletionErrors"
         >
-          View errors
+          {{ $t('files.actions.view_errors') }}
         </BaseButton>
         <BaseButton
           v-if="completionNotice.documents > 0"
@@ -109,13 +125,13 @@
           class="font-medium"
           @click="goToDocumentsTab"
         >
-          View documents
+          {{ $t('files.actions.view_documents') }}
         </BaseButton>
         <BaseButton
           variant="icon"
           tone="gray"
-          aria-label="Dismiss"
-          title="Dismiss"
+          :aria-label="$t('files.actions.dismiss')"
+          :title="$t('files.actions.dismiss')"
           @click="completionNotice = null"
         >
           <X class="w-4 h-4" aria-hidden="true" />
@@ -134,15 +150,19 @@
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between gap-2">
             <p class="text-sm font-medium text-content" aria-live="polite">
-              Preprocessing
+              {{ $t('files.progress.preprocessing') }}
               <span class="text-content-muted font-normal">
-                {{ activePreprocessingSummary.processed }} of
-                {{ activePreprocessingSummary.total }} files
+                {{
+                  $t('files.progress.files_of', {
+                    processed: activePreprocessingSummary.processed,
+                    total: activePreprocessingSummary.total,
+                  })
+                }}
                 <span
                   v-if="activePreprocessingSummary.failed > 0"
                   class="text-red-600 dark:text-red-400"
                 >
-                  · {{ activePreprocessingSummary.failed }} failed
+                  · {{ $t('files.progress.failed', { count: activePreprocessingSummary.failed }) }}
                 </span>
               </span>
             </p>
@@ -151,7 +171,7 @@
                 >{{ activePreprocessingSummary.percent }}%</span
               >
               <BaseButton variant="ghost" size="sm" @click="viewActiveTaskDetails">
-                View details
+                {{ $t('files.actions.view_details') }}
               </BaseButton>
               <BaseButton
                 v-if="activePreprocessingSummary.cancelableTask"
@@ -160,14 +180,14 @@
                 class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                 @click="cancelPreprocessingTask(activePreprocessingSummary.cancelableTask)"
               >
-                Cancel
+                {{ $t('files.actions.cancel') }}
               </BaseButton>
             </div>
           </div>
           <div
             class="mt-2 h-1.5 w-full bg-surface-sunken rounded-full overflow-hidden"
             role="progressbar"
-            aria-label="Preprocessing progress"
+            :aria-label="$t('files.progress.aria_label')"
             :aria-valuenow="activePreprocessingSummary.percent"
             aria-valuemin="0"
             aria-valuemax="100"
@@ -227,9 +247,9 @@
     <!-- Empty State: filters active but returned nothing -->
     <EmptyState
       v-if="!files.length && !isDragging && hasLoadedFiles && hasActiveFilters && !fetchError"
-      title="No files match your filters"
-      description="Try adjusting or clearing your filters to see more results"
-      action-text="Clear All Filters"
+      :title="$t('files.empty.no_match_title')"
+      :description="$t('files.empty.no_match_description')"
+      :action-text="$t('files.actions.clear_all_filters')"
       @action="clearFilters"
     >
       <template #icon>
@@ -238,7 +258,11 @@
     </EmptyState>
 
     <!-- Floating Batch Toolbar -->
-    <BatchActionBar :count="selectedFiles.length" count-label="file" @clear="selectedFiles = []">
+    <BatchActionBar
+      :count="selectedFiles.length"
+      :count-label="$t('files.batch.count_label')"
+      @clear="selectedFiles = []"
+    >
       <template #warning>
         <!-- Warning indicator for unconfigured CSV/XLSX — clicking it opens the
              import-config modal for the first offender (and chains to the next
@@ -248,13 +272,14 @@
           type="button"
           class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors cursor-pointer"
           :title="
-            unconfiguredCsvXlsxFiles.map((f) => f.file_name).join(', ') +
-            ' need(s) import configuration — click to configure'
+            $t('files.batch.needs_config_title', {
+              files: unconfiguredCsvXlsxFiles.map((f) => f.file_name).join(', '),
+            })
           "
           @click="startConfigureChain"
         >
           <AlertTriangle class="w-3 h-3 mr-1" />
-          {{ unconfiguredCsvXlsxFiles.length }} needs config
+          {{ $t('files.batch.needs_config_count', { count: unconfiguredCsvXlsxFiles.length }) }}
         </button>
       </template>
 
@@ -266,12 +291,14 @@
         <Settings v-if="unconfiguredCsvXlsxFiles.length === 0" class="w-4 h-4" />
         <AlertTriangle v-else class="w-4 h-4" />
         {{
-          unconfiguredCsvXlsxFiles.length > 0 ? 'Configure Files First' : 'Configure Preprocessing'
+          unconfiguredCsvXlsxFiles.length > 0
+            ? $t('files.actions.configure_files_first')
+            : $t('files.actions.configure_preprocessing')
         }}
       </BaseButton>
       <BaseButton variant="danger" @click="confirmDeleteSelected">
         <Trash2 class="w-4 h-4" />
-        Delete
+        {{ $t('files.actions.delete') }}
       </BaseButton>
     </BatchActionBar>
 
@@ -344,10 +371,10 @@
     <!-- Cancel running upload batch confirmation (X / Cancel mid-batch) -->
     <ConfirmationDialog
       :open="showCancelUploadConfirm"
-      title="Cancel remaining uploads?"
-      message="Files already uploaded will be kept; the rest of the batch will not be uploaded."
-      confirm-text="Cancel uploads"
-      cancel-text="Keep uploading"
+      :title="$t('files.cancel_upload.title')"
+      :message="$t('files.cancel_upload.message')"
+      :confirm-text="$t('files.cancel_upload.confirm')"
+      :cancel-text="$t('files.cancel_upload.cancel')"
       confirm-variant="danger"
       @confirm="confirmUploadCancel"
       @cancel="showCancelUploadConfirm = false"
@@ -356,10 +383,10 @@
     <!-- Cancel preprocessing task confirmation -->
     <ConfirmationDialog
       :open="showCancelTaskConfirm"
-      title="Cancel preprocessing task?"
-      message="Any files still being processed will be marked as failed."
-      confirm-text="Cancel task"
-      cancel-text="Keep running"
+      :title="$t('files.cancel_task.title')"
+      :message="$t('files.cancel_task.message')"
+      :confirm-text="$t('files.cancel_task.confirm')"
+      :cancel-text="$t('files.cancel_task.cancel')"
       confirm-variant="danger"
       @confirm="executeCancelTask"
       @cancel="showCancelTaskConfirm = false"
@@ -369,6 +396,7 @@
 
 <script setup lang="ts">
 import { ref, computed, toRef, watch, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { AlertTriangle, Search, Settings, Trash2, Upload, X } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
@@ -415,6 +443,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'files-changed': []
 }>()
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 const router = useRouter()
 const { downloadBlob } = useFileDownload()
@@ -689,7 +718,7 @@ const fetchFiles = async (options: { forceRefreshTasks?: boolean } = {}): Promis
     fetchError.value = ''
   } catch (err) {
     console.error('Failed to fetch files:', err)
-    fetchError.value = extractErrorMessage(err, 'Failed to load files')
+    fetchError.value = extractErrorMessage(err, t('files.errors.load_failed'))
   } finally {
     isLoading.value = false
   }
@@ -799,10 +828,10 @@ const selectAllFiles = async (): Promise<void> => {
     }
 
     selectedFiles.value = allFileIds
-    toast.success(`Selected all ${allFileIds.length} files`)
+    toast.success(t('files.toast.selected_all', { count: allFileIds.length }))
   } catch (err) {
     console.error('Failed to select all files:', err)
-    toast.error('Failed to select all files')
+    toast.error(t('files.errors.select_all_failed'))
     selectAllMode.value = false
   } finally {
     isSelectingAll.value = false
@@ -904,7 +933,7 @@ const onImportConfigSaved = async (): Promise<void> => {
     }
     configChainActive.value = false
     if (selectedFiles.value.length > 0) {
-      toast.success('All selected files configured — ready to preprocess')
+      toast.success(t('files.toast.all_configured'))
     }
   }
 }
@@ -936,12 +965,12 @@ const processFileAndClosePanel = (file: FileWithTasks): void => {
 const retryFailedFiles = async (taskId: number): Promise<void> => {
   try {
     await preprocessingApi.retryFailed(props.projectId, taskId)
-    toast.success('Retrying failed files...')
+    toast.success(t('files.toast.retrying_failed'))
     // Refresh files to show new task
     await fetchFiles()
   } catch (err) {
     console.error('Failed to retry failed files:', err)
-    toast.error('Failed to retry failed files')
+    toast.error(t('files.errors.retry_failed'))
   }
 }
 
@@ -959,7 +988,7 @@ const executeCancelTask = async (): Promise<void> => {
   if (!task) return
   try {
     await preprocessingApi.cancel(props.projectId, task.id, true)
-    toast.success('Preprocessing cancelled')
+    toast.success(t('files.toast.preprocessing_cancelled'))
     // Close the history panel if open
     showHistoryPanel.value = false
     historyFile.value = null
@@ -970,7 +999,7 @@ const executeCancelTask = async (): Promise<void> => {
     if (trackedActiveTaskIds.size === 0) completionNotice.value = null
   } catch (err) {
     console.error('Failed to cancel preprocessing:', err)
-    toast.error('Failed to cancel preprocessing')
+    toast.error(t('files.errors.cancel_failed'))
   }
 }
 
@@ -991,7 +1020,7 @@ const downloadFile = async (file: FileModel): Promise<void> => {
     const response = await filesApi.getContent(props.projectId, file.id)
     downloadBlob(response.data, file.file_name || 'download')
   } catch {
-    toast.error(`Failed to download ${file.file_name}`)
+    toast.error(t('files.errors.download_named_failed', { name: file.file_name }))
   }
 }
 
@@ -1087,12 +1116,15 @@ const activePreprocessingSummary = computed<ActivePreprocessingSummary | null>((
       processed: 0,
       failed: 0,
       percent: 0,
-      etaLabel: 'Starting…',
+      etaLabel: t('files.progress.starting'),
       cancelableTask,
     }
   }
   const percent = Math.min(100, Math.round((processed / total) * 100))
-  const etaLabel = etaSeconds > 0 ? `≈ ${formatDuration(etaSeconds)} remaining` : ''
+  const etaLabel =
+    etaSeconds > 0
+      ? t('files.progress.eta_remaining', { duration: formatDuration(etaSeconds) })
+      : ''
   return { total, processed, failed, percent, etaLabel, cancelableTask }
 })
 
@@ -1244,7 +1276,7 @@ const startProcessing = async (payload: PreprocessingTaskCreate): Promise<void> 
   } catch (err) {
     console.error('Failed to check for duplicates:', err)
     isSubmitting.value = false
-    const errorMsg = extractErrorMessage(err, 'Failed to check for existing documents')
+    const errorMsg = extractErrorMessage(err, t('files.errors.check_duplicates_failed'))
     toast.error(errorMsg)
     pendingProcessingSettings.value = null
   }
@@ -1280,7 +1312,9 @@ const confirmAndStartProcessing = async (skipExisting = false): Promise<void> =>
     const firstSelectedFileId = pendingProcessingSettings.value.file_ids[0]
 
     toast.success(
-      `Preprocessing started for ${pendingProcessingSettings.value.file_ids.length} file(s)`,
+      t('files.toast.preprocessing_started', {
+        count: pendingProcessingSettings.value.file_ids.length,
+      }),
     )
     showProcessingPanel.value = false
     showDuplicatePreviewModal.value = false
@@ -1304,17 +1338,17 @@ const confirmAndStartProcessing = async (skipExisting = false): Promise<void> =>
   } catch (err) {
     console.error('Failed to start processing:', err)
     const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
-    let errorMsg = 'Failed to start preprocessing'
+    let errorMsg = t('files.errors.start_failed')
 
     // Handle structured error response
     if (detail && typeof detail === 'object') {
       const d = detail as { code?: string; message?: string }
       if (d.code === 'csv_xlsx_needs_config') {
-        errorMsg = d.message || 'CSV/XLSX files need import configuration'
+        errorMsg = d.message || t('files.errors.csv_needs_config')
       } else if (d.code === 'files_already_being_processed') {
-        errorMsg = d.message || 'One or more files are already being processed'
+        errorMsg = d.message || t('files.errors.already_processing')
       } else if (d.code === 'no_ocr_engine_enabled') {
-        errorMsg = d.message || 'No OCR engine enabled'
+        errorMsg = d.message || t('files.errors.no_ocr_engine')
       } else if (d.message) {
         errorMsg = d.message
       }
@@ -1340,7 +1374,7 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
   // modal / reset state out from under the other. Tell the user instead of
   // silently ignoring the drop.
   if (isUploading.value) {
-    toast.info('Upload already in progress')
+    toast.info(t('files.toast.upload_in_progress'))
     return
   }
   isUploading.value = true
@@ -1393,7 +1427,10 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
       // An abort triggered by cancel isn't a failure — just stop the loop.
       if (cancelUploadRequested.value) break
       console.error(`Failed to upload ${file.name}:`, err)
-      failures.push({ name: file.name, message: extractErrorMessage(err, 'Upload failed') })
+      failures.push({
+        name: file.name,
+        message: extractErrorMessage(err, t('files.errors.upload_failed')),
+      })
       progress.completed++
     }
   }
@@ -1407,21 +1444,28 @@ const uploadFiles = async (fileList: File[]): Promise<void> => {
   if (wasCancelled) {
     // Clear summary of what made it vs. what didn't before the cancel.
     const notUploaded = progress.total - succeeded - failures.length
-    toast.info(
-      `Upload cancelled — ${succeeded} file${succeeded === 1 ? '' : 's'} uploaded, ` +
-        `${notUploaded + failures.length} not uploaded` +
-        `${failures.length > 0 ? ` (${failures.length} failed)` : ''}`,
-    )
+    let msg = t('files.toast.upload_cancelled', {
+      uploaded: succeeded,
+      not_uploaded: notUploaded + failures.length,
+    })
+    if (failures.length > 0) {
+      msg += ' ' + t('files.toast.upload_cancelled_failed_suffix', { count: failures.length })
+    }
+    toast.info(msg)
   } else if (succeeded > 0) {
     // One summary toast per batch instead of one per file (50 files ≠ 50 toasts).
-    toast.success(`Uploaded ${succeeded} file${succeeded === 1 ? '' : 's'}`)
+    toast.success(t('files.toast.uploaded', { count: succeeded }, succeeded))
   }
   if (!wasCancelled && failures.length > 0) {
     const first = failures[0]
-    const more = failures.length > 1 ? ` (+${failures.length - 1} more)` : ''
+    const more =
+      failures.length > 1 ? t('files.toast.upload_more', { count: failures.length - 1 }) : ''
     toast.error(
-      `Failed to upload ${failures.length} file${failures.length === 1 ? '' : 's'}: ` +
-        `${first.name} — ${first.message}${more}`,
+      t('files.toast.upload_failed', {
+        count: failures.length,
+        name: first.name,
+        message: first.message,
+      }) + more,
     )
   }
 

@@ -51,13 +51,13 @@ const emit = defineEmits<{ (e: 'dismiss'): void; (e: 'retry'): void }>()
           :disabled="retryLoading"
           @click="emit('retry')"
         >
-          {{ retryLoading ? 'Retrying...' : retryText }}
+          {{ retryLoading ? $t('common.error_banner.retrying') : retryText }}
         </button>
         <button
           v-if="dismissable"
           type="button"
           class="inline-flex text-red-400 hover:text-red-500 dark:text-red-300 dark:hover:text-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface rounded"
-          aria-label="Dismiss error"
+          :aria-label="$t('common.error_banner.dismiss')"
           @click="emit('dismiss')"
         >
           <X class="h-5 w-5" aria-hidden="true" />

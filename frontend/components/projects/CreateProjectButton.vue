@@ -1,9 +1,9 @@
 <!-- src/components/CreateProjectButton.vue -->
 <template>
   <!-- Compact button matching Invite User style -->
-  <BaseButton size="sm" data-testid="create-project-open" @click="isModalOpen = true"
-    >+ Create Project</BaseButton
-  >
+  <BaseButton size="sm" data-testid="create-project-open" @click="isModalOpen = true">{{
+    $t('projects.create.open')
+  }}</BaseButton>
 
   <BaseModal
     :open="isModalOpen"
@@ -14,11 +14,11 @@
   >
     <h3 class="text-lg font-semibold text-content flex items-center gap-2 mb-2">
       <CirclePlus class="w-5 h-5 text-primary" />
-      Create New Project
+      {{ $t('projects.create.title') }}
     </h3>
     <form class="flex flex-col gap-4" @submit.prevent="createProject">
       <div>
-        <label for="projectName" :class="labelClass">Project Name</label>
+        <label for="projectName" :class="labelClass">{{ $t('projects.create.name_label') }}</label>
         <input
           id="projectName"
           v-model="projectData.name"
@@ -27,12 +27,15 @@
           required
           autocomplete="off"
           maxlength="100"
-          placeholder="e.g. Medical Document IE"
+          :placeholder="$t('projects.create.name_placeholder')"
         />
       </div>
       <div>
         <label for="projectDescription" :class="labelClass"
-          >Description <span class="text-content-subtle text-xs">(optional)</span></label
+          >{{ $t('projects.create.description_label') }}
+          <span class="text-content-subtle text-xs">{{
+            $t('projects.create.optional')
+          }}</span></label
         >
         <textarea
           id="projectDescription"
@@ -40,21 +43,23 @@
           rows="3"
           :class="textareaClass"
           maxlength="500"
-          placeholder="Briefly describe your project"
+          :placeholder="$t('projects.create.description_placeholder')"
         ></textarea>
       </div>
       <transition name="fade">
         <p v-if="error" class="text-sm text-red-600 dark:text-red-400 mt-1">{{ error }}</p>
       </transition>
       <div class="flex justify-end gap-2 pt-2">
-        <BaseButton variant="secondary" @click="closeModal"> Cancel </BaseButton>
+        <BaseButton variant="secondary" @click="closeModal">
+          {{ $t('projects.actions.cancel') }}
+        </BaseButton>
         <BaseButton
           type="submit"
           :loading="isLoading"
           :disabled="isLoading"
           data-testid="create-project-submit"
         >
-          {{ isLoading ? 'Creating...' : 'Create Project' }}
+          {{ isLoading ? $t('projects.create.creating') : $t('projects.create.submit') }}
         </BaseButton>
       </div>
     </form>
@@ -63,6 +68,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { CirclePlus } from '@lucide/vue'
 import { projectsApi } from '@/services/projectsApi'
@@ -72,6 +78,7 @@ import { extractErrorMessage } from '@/utils/errors'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 
 const router = useRouter()
+const { t } = useI18n({ useScope: 'global' })
 const isModalOpen = ref(false)
 const isLoading = ref(false)
 const error = ref('')
@@ -88,7 +95,7 @@ const createProject = async (): Promise<void> => {
     isModalOpen.value = false
     router.push(`/projects/${response.data.id}`)
   } catch (err) {
-    error.value = extractErrorMessage(err, 'Failed to create project')
+    error.value = extractErrorMessage(err, t('projects.create.error'))
   } finally {
     isLoading.value = false
   }

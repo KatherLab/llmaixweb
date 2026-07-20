@@ -1,0 +1,2817 @@
+{
+  "common": {
+    "language": "Idioma",
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "admin": "Admin",
+    "projects": "Proyectos",
+    "account_settings": "Ajustes de la cuenta",
+    "change_password": "Cambiar contraseña",
+    "confirm_dialog": {
+      "title": "Confirmar acción",
+      "message": "¿Seguro que desea realizar esta acción?",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar"
+    },
+    "error_banner": {
+      "retrying": "Reintentando…",
+      "dismiss": "Descartar error"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "showing": "Mostrando",
+      "to": "a",
+      "of": "de",
+      "rows_per_page": "Filas por página:",
+      "label": "Paginación",
+      "first": "Primera",
+      "ellipsis": "puntos suspensivos",
+      "page": "Página {page}",
+      "last": "Última"
+    },
+    "search": {
+      "placeholder": "Buscar…"
+    },
+    "filter_bar": {
+      "clear_all": "Borrar todos los filtros",
+      "active_filters": "Filtros activos:"
+    },
+    "filter_chip": {
+      "remove": "Eliminar {label}"
+    },
+    "batch_action_bar": {
+      "item": "elemento",
+      "selected": "seleccionado(s)",
+      "clear_selection": "Borrar selección"
+    },
+    "data_table": {
+      "selected": "seleccionado(s)",
+      "out_of_total": "de {total} en total",
+      "selecting": "Seleccionando…",
+      "select_all_count": "Seleccionar todos {count} {label}",
+      "clear_selection": "Borrar selección",
+      "select_all_page": "Seleccionar todos los {label} de esta página",
+      "actions": "Acciones",
+      "select_row": "Seleccionar {label} {name}",
+      "collapse": "Contraer",
+      "expand": "Expandir",
+      "empty_title": "No se encontraron elementos"
+    },
+    "password": {
+      "label": "Contraseña",
+      "min_length": "Mínimo {count} caracteres",
+      "strength": {
+        "very_weak": "Muy débil",
+        "weak": "Débil",
+        "okay": "Aceptable",
+        "good": "Buena",
+        "strong": "Fuerte"
+      },
+      "show": "Mostrar contraseña",
+      "hide": "Ocultar contraseña"
+    },
+    "close": "Cerrar",
+    "dismiss": "Descartar notificación"
+  },
+  "language": {
+    "en": "English",
+    "de": "Deutsch",
+    "fr": "Français",
+    "es": "Español"
+  },
+  "nav": {
+    "skip_to_content": "Saltar al contenido principal",
+    "open_menu": "Abrir menú",
+    "backend_down": "Error de conexión con el backend. Compruebe si el servidor backend está en ejecución.",
+    "all_projects": "Todos los proyectos",
+    "project_workflow": "Flujo de trabajo del proyecto",
+    "project_settings": "Ajustes del proyecto",
+    "open_user_menu": "Abrir menú de usuario",
+    "select_language": "Seleccionar idioma"
+  },
+  "theme": {
+    "switch_to_light": "Cambiar a modo claro",
+    "switch_to_dark": "Cambiar a modo oscuro"
+  },
+  "footer": {
+    "copyright": "© {year} KatherLab. Con licencia",
+    "frontend_version": "Versión del frontend: {version}",
+    "backend_version": "Versión del backend: {version}"
+  },
+  "change_password": {
+    "title": "Cambiar contraseña",
+    "current": "Contraseña actual",
+    "current_placeholder": "Introduzca la contraseña actual",
+    "new": "Nueva contraseña",
+    "new_placeholder": "Nueva contraseña (8–128 caracteres)",
+    "confirm": "Confirmar nueva contraseña",
+    "confirm_placeholder": "Repita la nueva contraseña",
+    "update": "Actualizar contraseña",
+    "updating": "Actualizando...",
+    "success": "¡Contraseña actualizada correctamente!",
+    "toast_success": "Contraseña actualizada",
+    "fill_all": "Por favor, rellene todos los campos.",
+    "invalid_length": "La contraseña debe tener entre 8 y 128 caracteres.",
+    "mismatch": "Las contraseñas no coinciden.",
+    "failed": "Error al cambiar la contraseña."
+  },
+  "admin": {
+    "dashboard": {
+      "tabs": {
+        "user_management": "Gestión de usuarios",
+        "settings": "Configuración",
+        "audit_log": "Registro de auditoría",
+        "celery_queues": "Celery y colas"
+      }
+    },
+    "activity": {
+      "title": "Actividad",
+      "view_activity": "Ver actividad",
+      "running": "{count} en ejecución",
+      "dismiss_all": "Descartar todo",
+      "no_recent": "Sin actividad reciente",
+      "preprocessing_count": "Preprocesamiento ({count})",
+      "view_preprocessing_task": "Ver tarea de preprocesamiento {name}",
+      "task_number": "Tarea #{id}",
+      "cancel_task": "Cancelar tarea",
+      "dismiss": "Descartar",
+      "dismiss_task": "Descartar tarea",
+      "processing": "Procesando…",
+      "preprocessing_progress": "Progreso del preprocesamiento",
+      "trials_count": "Pruebas ({count})",
+      "view_trial": "Ver prueba {name}",
+      "dismiss_trial": "Descartar prueba",
+      "docs_progress": "{done}/{total} docs",
+      "view_all": "Ver toda la actividad",
+      "files_processing": "{completed}/{total} archivos procesados",
+      "files_done": "✓ {total} archivos procesados",
+      "files_failed": "✗ {failed} de {total} archivos fallidos",
+      "cancelled": "Cancelado",
+      "files_count": "{total} archivos",
+      "docs_extracting": "{completed}/{total} docs extraídos",
+      "docs_done_errors": "✓ {total} docs extraídos ({errors} errores)",
+      "docs_done": "✓ {total} docs extraídos",
+      "extraction_failed": "✗ Error en la extracción",
+      "docs_count": "{total} docs",
+      "just_now": "Justo ahora",
+      "preprocessing_cancelled": "Preprocesamiento cancelado",
+      "errors": {
+        "load_failed": "No se pudo cargar la actividad",
+        "navigate_missing_project": "No se puede navegar: falta información del proyecto",
+        "cancel_missing_project": "No se puede cancelar: falta información del proyecto",
+        "cancel_failed": "No se pudo cancelar el preprocesamiento"
+      }
+    },
+    "users": {
+      "grid": {
+        "item_label": "usuarios",
+        "empty_title": "No se encontraron usuarios",
+        "na": "N/D",
+        "columns": {
+          "user": "Usuario",
+          "status": "Estado",
+          "role": "Rol"
+        }
+      },
+      "status": {
+        "active": "Activo",
+        "inactive": "Inactivo"
+      },
+      "actions": {
+        "edit": "Editar"
+      }
+    },
+    "invitations": {
+      "grid": {
+        "item_label": "invitaciones",
+        "empty_title": "No se encontraron invitaciones",
+        "columns": {
+          "email": "Correo electrónico",
+          "used": "Usada"
+        }
+      },
+      "used_yes": "Sí",
+      "used_no": "No",
+      "actions": {
+        "delete": "Eliminar"
+      }
+    },
+    "invite_modal": {
+      "title": "Invitar a un nuevo usuario",
+      "email_label": "Dirección de correo electrónico",
+      "email_placeholder": "Introduzca la dirección de correo electrónico",
+      "send_via_email": "Enviar invitación por correo electrónico",
+      "sent_success": "¡Invitación enviada por correo electrónico correctamente!",
+      "created_no_email": "Invitación creada, pero el envío de correo no está configurado. Copie el enlace manualmente.",
+      "copy_link": "Copiar enlace de invitación",
+      "copied": "¡Copiado!",
+      "cancel": "Cancelar",
+      "sending": "Enviando…",
+      "send": "Enviar invitación",
+      "errors": {
+        "send_failed": "No se pudo enviar la invitación. Inténtelo de nuevo.",
+        "copy_failed": "No se pudo copiar. Copie el enlace manualmente."
+      }
+    },
+    "edit_modal": {
+      "title": "Editar usuario",
+      "updated_success": "¡Usuario actualizado correctamente!",
+      "password_updated_success": "¡Contraseña actualizada correctamente!",
+      "general": "General",
+      "full_name": "Nombre completo",
+      "email": "Correo electrónico",
+      "role": "Rol",
+      "role_user": "Usuario",
+      "cannot_change_own_role": "No puede cambiar su propio rol.",
+      "status": "Estado",
+      "account_active_aria": "Cuenta de usuario activa",
+      "account_inactive_aria": "Cuenta de usuario inactiva",
+      "set_password": "Establecer contraseña",
+      "new_password_placeholder": "Introduzca la nueva contraseña (opcional)",
+      "set": "Establecer",
+      "danger_zone": "Zona de peligro",
+      "delete_warning": "Eliminar este usuario y todos los datos asociados. Esta acción no se puede deshacer.",
+      "delete_user": "Eliminar usuario",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "save_changes": "Guardar cambios",
+      "toast": {
+        "updated": "Usuario \"{name}\" actualizado.",
+        "password_updated": "Contraseña actualizada"
+      },
+      "errors": {
+        "update_failed": "No se pudo actualizar el usuario.",
+        "set_password_failed": "No se pudo establecer la contraseña"
+      }
+    },
+    "user_management": {
+      "title": "Gestión de usuarios",
+      "subtitle": "Gestione cuentas de usuario, roles e invitaciones.",
+      "invite_user": "Invitar usuario",
+      "users": "Usuarios",
+      "total": "{count} en total",
+      "search_users": "Buscar usuarios…",
+      "try_again": "Reintentar",
+      "invitations": "Invitaciones",
+      "show_used": "Mostrar usadas",
+      "active": "{count} activas",
+      "search_invitations": "Buscar invitaciones…",
+      "delete_user_title": "Eliminar usuario",
+      "permanently_delete": "Eliminar permanentemente",
+      "delete_invitation_title": "Eliminar invitación",
+      "delete": "Eliminar",
+      "delete_user_message": "Esto eliminará permanentemente la cuenta de usuario y todos los datos asociados, incluidos todos los proyectos de este usuario (archivos, documentos, esquemas, prompts, pruebas, evaluaciones), y los archivos subidos se eliminarán del almacenamiento.\n\n¿Seguro que desea eliminar este usuario?\n{name} ({email})",
+      "delete_invitation_message": "¿Seguro que desea eliminar esta invitación? Esta acción no se puede deshacer.\n{email}",
+      "toast": {
+        "user_deleted": "Usuario \"{name}\" eliminado correctamente.",
+        "invitation_deleted": "Invitación para \"{email}\" eliminada."
+      },
+      "errors": {
+        "load_users": "No se pudieron cargar los usuarios.",
+        "load_invitations": "No se pudieron cargar las invitaciones.",
+        "delete_user": "No se pudo eliminar el usuario.",
+        "delete_invitation": "No se pudo eliminar la invitación."
+      }
+    },
+    "settings": {
+      "title": "Configuración de la aplicación",
+      "subtitle": "Configure los ajustes generales del sistema para la aplicación.",
+      "set": "Establecido",
+      "not_set": "Sin establecer",
+      "set_in": "Definido en",
+      "example": "Ejemplo:",
+      "update": "Actualizar",
+      "set_action": "Establecer",
+      "clear": "Borrar",
+      "enter_new_value": "Introduzca un nuevo valor",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "revert": "Revertir",
+      "saving": "Guardando…",
+      "reset": "Restablecer",
+      "saved": "¡Configuración guardada!",
+      "errors": {
+        "save_secret": "No se pudo guardar el secreto",
+        "clear_secret": "No se pudo borrar el secreto",
+        "load": "No se pudo cargar la configuración",
+        "save": "No se pudo guardar la configuración",
+        "remove_override": "No se pudo eliminar la anulación"
+      }
+    },
+    "sso": {
+      "title": "Inicio de sesión único (OIDC)",
+      "subtitle": "Configure los proveedores de identidad OpenID Connect. Los usuarios pueden iniciar sesión con estos proveedores además de las contraseñas locales.",
+      "add_provider": "Añadir proveedor",
+      "globally_disabled_before": "El inicio de sesión único está deshabilitado globalmente. Actívelo en",
+      "admin_settings_link": "Configuración de administración",
+      "globally_disabled_after": "(SSO habilitado) para activar los proveedores configurados.",
+      "empty_title": "No hay proveedores de identidad configurados",
+      "empty_description": "Añada un proveedor OIDC para que los usuarios puedan iniciar sesión con SSO.",
+      "enabled": "Habilitado",
+      "disabled": "Deshabilitado",
+      "no_secret_set": "sin secreto establecido",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "edit_provider": "Editar proveedor",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "create": "Crear",
+      "delete_provider_title": "Eliminar proveedor",
+      "delete_provider_message": "¿Eliminar el proveedor \"{name}\"? Los usuarios vinculados conservan sus cuentas, pero ya no pueden iniciar sesión a través de este proveedor.",
+      "form": {
+        "display_name": "Nombre para mostrar",
+        "display_name_placeholder": "p. ej. Google",
+        "issuer_url": "URL del emisor",
+        "issuer_help": "La URL base del IdP; la detección se obtiene de",
+        "client_id": "ID de cliente",
+        "client_secret": "Secreto de cliente",
+        "client_secret_keep": "Deje en blanco para conservar el actual",
+        "client_secret_placeholder": "Secreto de cliente del proveedor",
+        "scopes": "Ámbitos",
+        "enabled": "Habilitado"
+      },
+      "toast": {
+        "updated": "Proveedor actualizado",
+        "created": "Proveedor creado",
+        "deleted": "Proveedor eliminado"
+      },
+      "errors": {
+        "client_secret_required": "El secreto de cliente es obligatorio.",
+        "load": "No se pudieron cargar los proveedores.",
+        "save": "No se pudo guardar el proveedor.",
+        "delete": "No se pudo eliminar el proveedor."
+      }
+    },
+    "celery": {
+      "title": "Workers y colas de Celery",
+      "subtitle": "Supervise los workers, las colas y las tareas de Celery.",
+      "refresh": "Actualizar",
+      "workers": "Workers",
+      "online": "En línea",
+      "offline": "Fuera de línea",
+      "pool": "Pool",
+      "concurrency": "Concurrencia",
+      "processes": "Procesos",
+      "no_workers": "No se informaron workers.",
+      "show_raw_worker_json": "Mostrar JSON sin procesar de los workers",
+      "queues_tasks": "Colas y tareas",
+      "queue": "Cola",
+      "active": "Activas",
+      "scheduled": "Programadas",
+      "reserved": "Reservadas",
+      "no_queue_data": "No hay datos de cola disponibles.",
+      "show_raw_queue_json": "Mostrar JSON sin procesar de las colas",
+      "inspect_task_by_id": "Inspeccionar tarea por ID:",
+      "paste_task_id": "Pegue aquí el ID de la tarea",
+      "inspect": "Inspeccionar",
+      "task_details_raw_json": "Detalles de la tarea (JSON sin procesar)",
+      "revoke_terminate": "Revocar/Terminar",
+      "task_revoked": "¡Tarea {id} revocada!",
+      "errors": {
+        "fetch_status": "No se pudo obtener el estado de Celery",
+        "inspect_task": "No se pudo inspeccionar la tarea",
+        "revoke_task": "No se pudo revocar la tarea"
+      }
+    },
+    "audit": {
+      "title": "Registro de auditoría",
+      "subtitle": "Rastro de responsabilidad: quién hizo qué, cuándo y desde dónde. Solo se puede añadir.",
+      "export_csv": "Exportar CSV",
+      "refresh": "Actualizar",
+      "modes": {
+        "activity": "Actividad",
+        "errors": "Errores"
+      },
+      "action_groups": {
+        "authentication": "Autenticación",
+        "access_phi": "Acceso (PHI)",
+        "mutations": "Mutaciones",
+        "egress": "Salida",
+        "administration": "Administración"
+      },
+      "filters": {
+        "action": "Acción",
+        "all_actions": "Todas las acciones",
+        "outcome": "Resultado",
+        "all_outcomes": "Todos los resultados",
+        "resource_type": "Tipo de recurso",
+        "resource_type_placeholder": "p. ej. document, trial",
+        "request_id": "ID de solicitud / error",
+        "request_id_placeholder": "ID de correlación"
+      },
+      "outcome": {
+        "success": "Éxito",
+        "failure": "Fallo",
+        "denied": "Denegado"
+      },
+      "empty_title": "Sin eventos de auditoría",
+      "empty_description": "Ningún evento coincide con los filtros actuales.",
+      "columns": {
+        "time": "Hora",
+        "actor": "Actor",
+        "action": "Acción",
+        "resource": "Recurso",
+        "outcome": "Resultado",
+        "ip": "IP",
+        "error_id": "ID de error",
+        "endpoint": "Endpoint",
+        "type": "Tipo"
+      },
+      "system": "sistema",
+      "events_label": "eventos",
+      "error_lookup_placeholder": "Buscar un ID de error informado por un usuario…",
+      "find": "Buscar",
+      "clear": "Borrar",
+      "no_errors_title": "No hay errores registrados",
+      "no_error_match": "Ningún error coincide con ese ID.",
+      "no_errors_logged": "El servidor no ha registrado errores no controlados.",
+      "detail": {
+        "audit_event": "Evento de auditoría",
+        "project": "Proyecto",
+        "correlation_id": "ID de correlación",
+        "detail": "Detalle",
+        "server_error": "Error del servidor",
+        "exception": "Excepción",
+        "message": "Mensaje",
+        "traceback": "Traza"
+      },
+      "errors": {
+        "load_audit": "No se pudo cargar el registro de auditoría",
+        "load_errors": "No se pudo cargar el registro de errores",
+        "export_failed": "Error en la exportación"
+      }
+    }
+  },
+  "auth": {
+    "tagline": "Extraiga información de documentos utilizando LLM.",
+    "form": {
+      "email": "Dirección de correo electrónico",
+      "email_placeholder": "p. ej. su@email.com",
+      "email_admin_placeholder": "admin@suempresa.com",
+      "password": "Contraseña",
+      "password_placeholder": "Contraseña",
+      "full_name": "Nombre completo",
+      "confirm_password": "Confirmar contraseña",
+      "new_password": "Nueva contraseña"
+    },
+    "actions": {
+      "back_to_login": "Volver al inicio de sesión"
+    },
+    "login": {
+      "continue_with": "Continuar con {name}",
+      "or": "o",
+      "forgot_password": "¿Olvidó su contraseña?",
+      "signing_in": "Iniciando sesión...",
+      "sign_in": "Iniciar sesión",
+      "no_account": "¿No tiene una cuenta?",
+      "register_here": "Regístrese aquí"
+    },
+    "register": {
+      "closed": "El registro está cerrado actualmente. Utilice un enlace de invitación.",
+      "full_name_placeholder": "Su nombre completo",
+      "email_placeholder": "Su correo electrónico",
+      "email_from_invitation": "Este correo electrónico está vinculado a su invitación",
+      "password_placeholder": "Crear una contraseña",
+      "confirm_password_placeholder": "Confirme su contraseña",
+      "creating": "Creando cuenta...",
+      "create_account": "Crear cuenta",
+      "have_account": "¿Ya tiene una cuenta?",
+      "sign_in_here": "Inicie sesión aquí",
+      "success_toast": "¡Registro exitoso! Iniciando sesión..."
+    },
+    "first_admin": {
+      "welcome_to": "Bienvenido a",
+      "subtitle": "Configuración inicial: cree su cuenta de administrador",
+      "full_name_placeholder": "Nombre completo",
+      "confirm_password_placeholder": "Confirmar contraseña",
+      "creating": "Creando administrador...",
+      "create_account": "Crear cuenta de administrador",
+      "powered_by": "Desarrollado con LLMAIx (v2)",
+      "success_toast": "¡Cuenta de administrador creada! Bienvenido 👋"
+    },
+    "forgot": {
+      "header_subtitle": "Restablecer su contraseña",
+      "title": "¿Olvidó su contraseña?",
+      "description": "Introduzca su dirección de correo electrónico y le enviaremos un enlace para restablecer su contraseña.",
+      "sending": "Enviando...",
+      "send_link": "Enviar enlace de restablecimiento",
+      "check_email_title": "Revise su correo electrónico",
+      "check_email_description": "Si existe una cuenta con ese correo electrónico, le hemos enviado un enlace para restablecer la contraseña."
+    },
+    "reset": {
+      "header_subtitle": "Establecer una nueva contraseña",
+      "validating": "Validando su enlace de restablecimiento...",
+      "invalid_title": "Enlace inválido o caducado",
+      "invalid_description": "Este enlace para restablecer la contraseña ya no es válido. Es posible que haya caducado (los enlaces son válidos durante 24 horas) o que ya se haya utilizado.",
+      "request_new": "Solicitar un nuevo enlace de restablecimiento",
+      "form_title": "Establecer una nueva contraseña",
+      "form_description": "Introduzca su nueva contraseña a continuación.",
+      "new_password_placeholder": "Al menos 8 caracteres",
+      "confirm_password_placeholder": "Repita su contraseña",
+      "resetting": "Restableciendo...",
+      "reset_password": "Restablecer contraseña",
+      "success_toast": "Contraseña restablecida"
+    },
+    "sso": {
+      "completing": "Completando el inicio de sesión…",
+      "no_token": "Error de inicio de sesión: no se recibió ningún token del proveedor.",
+      "failed_toast": "Error de inicio de sesión SSO.",
+      "signed_in_toast": "Sesión iniciada",
+      "failed": "Error de inicio de sesión."
+    },
+    "invitation": {
+      "verifying": "Verificando su invitación...",
+      "invalid_title": "Invitación inválida",
+      "go_to_login": "Ir a la página de inicio de sesión",
+      "valid_title": "Invitación válida",
+      "sent_to_prefix": "Esta invitación se envió a",
+      "create_account": "Crear su cuenta",
+      "have_account_sign_in": "¿Ya tiene una cuenta? Iniciar sesión"
+    },
+    "errors": {
+      "invalid_credentials": "Correo electrónico o contraseña inválidos",
+      "sign_in_failed": "Error al iniciar sesión. Inténtelo de nuevo.",
+      "server_unreachable": "No se puede acceder al servidor. Compruebe su conexión e inténtelo de nuevo.",
+      "passwords_mismatch": "Las contraseñas no coinciden",
+      "passwords_mismatch_period": "Las contraseñas no coinciden.",
+      "invitation_invalid_or_used": "Esta invitación es inválida o ya se ha utilizado",
+      "invitation_validate_failed": "Error al validar la invitación. Puede que haya caducado o sea inválida.",
+      "registration_failed": "Error en el registro. Inténtelo de nuevo.",
+      "create_admin_failed": "Error al crear el administrador. Inténtelo de nuevo.",
+      "too_many_requests": "Demasiadas solicitudes. Inténtelo de nuevo más tarde.",
+      "unexpected": "Se produjo un error inesperado. Inténtelo de nuevo.",
+      "no_token": "No se proporcionó ningún token de invitación",
+      "invitation_expired": "Este enlace de invitación es inválido o ha caducado"
+    }
+  },
+  "account": {
+    "title": "Configuración de la cuenta",
+    "subtitle": "Gestione su perfil, contraseña y métodos de inicio de sesión conectados.",
+    "profile": {
+      "title": "Perfil",
+      "full_name": "Nombre completo",
+      "full_name_placeholder": "Nombre completo",
+      "email": "Correo electrónico",
+      "email_placeholder": "admin@suempresa.com",
+      "save": "Guardar perfil",
+      "saved": "Guardado."
+    },
+    "password": {
+      "hint": "Déjelo en blanco si inicia sesión exclusivamente a través de SSO — aún puede establecer una contraseña como alternativa.",
+      "current": "Contraseña actual",
+      "current_placeholder": "Su contraseña actual",
+      "new": "Nueva contraseña",
+      "new_placeholder": "Nueva contraseña",
+      "confirm": "Confirmar nueva contraseña",
+      "confirm_placeholder": "Repita la nueva contraseña",
+      "mismatch": "Las contraseñas no coinciden",
+      "update": "Actualizar contraseña",
+      "updated_notice": "Contraseña actualizada. Se cerraron las demás sesiones."
+    },
+    "connected": {
+      "title": "Cuentas conectadas",
+      "subtitle": "Proveedores de identidad externos vinculados a su cuenta.",
+      "empty": "No hay cuentas externas conectadas.",
+      "last_login": "· último inicio de sesión {date}",
+      "disconnect": "Desconectar"
+    },
+    "signout": {
+      "title": "Cerrar sesión",
+      "subtitle": "Cierre la sesión en este dispositivo o en todas las sesiones.",
+      "button": "Cerrar sesión",
+      "everywhere": "Cerrar sesión en todas partes"
+    },
+    "toasts": {
+      "profile_updated": "Perfil actualizado",
+      "password_updated": "Contraseña actualizada",
+      "disconnected": "{name} desconectado",
+      "signed_out": "Sesión cerrada"
+    },
+    "errors": {
+      "profile_update_failed": "Error al actualizar el perfil.",
+      "password_update_failed": "Error al actualizar la contraseña.",
+      "disconnect_failed": "Error al desconectar."
+    }
+  },
+  "documents": {
+    "actions": {
+      "cancel": "Cancelar",
+      "create_group": "Crear grupo",
+      "delete": "Eliminar",
+      "download": "Descargar",
+      "edit": "Editar",
+      "export": "Exportar",
+      "reprocess": "Reprocesar",
+      "retry": "Reintentar",
+      "view": "Ver"
+    },
+    "common": {
+      "document_number": "Documento n.º{id}",
+      "na": "N/D"
+    },
+    "management": {
+      "title": "Documentos",
+      "subtitle": "Consulta y gestiona los documentos procesados y los grupos de documentos",
+      "count": "ningún documento | un documento | {count} documentos",
+      "empty_title": "Aún no hay documentos",
+      "empty_filtered_title": "Ningún documento coincide con tus filtros",
+      "empty_description": "Procesa archivos en la pestaña Archivos y preprocesamiento para ver documentos aquí",
+      "empty_filtered_description": "Prueba a ajustar o borrar tus filtros para ver más resultados",
+      "clear_all_filters": "Borrar todos los filtros",
+      "go_to_files": "Ir a Archivos y preprocesamiento",
+      "batch_count_label": "documento",
+      "export_coming_soon": "La exportación estará disponible pronto",
+      "tab_all": "Todos los documentos",
+      "tab_groups": "Grupos de documentos"
+    },
+    "filters": {
+      "search_placeholder": "Buscar documentos...",
+      "item_label": "documentos",
+      "ocr_all": "Todos los motores de OCR",
+      "ocr_pypdf": "Texto incrustado (pypdf)",
+      "ocr_tesseract": "OCR local (Tesseract)",
+      "date_all": "Todo el tiempo",
+      "date_today": "Hoy",
+      "date_yesterday": "Ayer",
+      "date_week": "Últimos 7 días",
+      "date_month": "Últimos 30 días",
+      "date_custom": "Rango personalizado...",
+      "include_archived": "Incluir versiones archivadas",
+      "showing_history": "(mostrando el historial del documento)",
+      "from": "Desde:",
+      "to": "Hasta:",
+      "apply": "Aplicar",
+      "ocr_label_pypdf": "Texto incrustado",
+      "ocr_label_tesseract": "OCR local",
+      "chip_search": "Búsqueda: «{query}»",
+      "chip_ocr": "OCR: {label}",
+      "chip_date": "Fecha: {label}",
+      "chip_custom_date": "Fecha: {from} → {to}",
+      "chip_archived": "Archivado",
+      "present": "presente"
+    },
+    "table": {
+      "empty_title": "No se encontraron documentos",
+      "custom_config": "Configuración personalizada",
+      "col_document": "Documento",
+      "col_configuration": "Configuración",
+      "col_model": "Modelo",
+      "col_created": "Creado",
+      "ocr_applied": "OCR aplicado"
+    },
+    "groups": {
+      "search_placeholder": "Buscar grupos...",
+      "count": "ningún grupo | un grupo | {count} grupos",
+      "empty_title": "No hay grupos de documentos",
+      "empty_search": "Prueba a ajustar tu búsqueda",
+      "empty_description": "Un grupo es un conjunto de documentos con nombre sobre el que puedes ejecutar una prueba. Crea uno para ejecutar una extracción sobre una selección específica de documentos.",
+      "item_label": "grupos",
+      "auto": "Auto",
+      "auto_generated_tooltip": "Generado automáticamente durante el preprocesamiento",
+      "mixed": "Mixto",
+      "type_auto": "Generado automáticamente",
+      "type_manual": "Manual",
+      "cannot_delete_tooltip": "No se puede eliminar: este grupo lo usa una prueba",
+      "cannot_delete_aria": "No se puede eliminar: usado por una prueba",
+      "delete_title": "Eliminar grupo de documentos",
+      "also_delete_documents": "Eliminar también todos los documentos de este grupo (si no se referencian en otro lugar)",
+      "col_name": "Nombre del grupo",
+      "col_documents": "Documentos",
+      "col_configuration": "Configuración",
+      "col_tags": "Etiquetas",
+      "col_type": "Tipo",
+      "col_created": "Creado",
+      "delete_confirm": "¿Seguro que quieres eliminar «{name}»?",
+      "delete_contains": "Este grupo contiene {count} documento. | Este grupo contiene {count} documentos."
+    },
+    "group_form": {
+      "edit_title": "Editar grupo de documentos",
+      "create_title": "Crear grupo de documentos",
+      "purpose_hint": "Un grupo es un conjunto de documentos con nombre sobre el que puedes ejecutar una prueba: úsalo para ejecutar una extracción sobre una selección específica de documentos.",
+      "name_label": "Nombre del grupo",
+      "name_placeholder": "p. ej., Informes financieros del T4",
+      "description_label": "Descripción",
+      "description_placeholder": "Describe el propósito de este grupo de documentos...",
+      "tags_label": "Etiquetas",
+      "remove_tag": "Eliminar etiqueta",
+      "tag_placeholder": "Añadir una etiqueta...",
+      "add": "Añadir",
+      "select_documents": "Seleccionar documentos",
+      "selected_count": "{count} seleccionados",
+      "loading_existing": "(cargando existentes…)",
+      "searching": "Buscando…",
+      "config_label": "Config.:",
+      "created_label": "Creado:",
+      "select_all_visible": "Seleccionar todo lo visible",
+      "clear_selection": "Borrar selección",
+      "prev": "Ant.",
+      "next": "Sig.",
+      "update_group": "Actualizar grupo",
+      "discard_title": "¿Descartar los cambios sin guardar?",
+      "discard_message": "Se perderán tus cambios en este grupo de documentos.",
+      "discard_confirm": "Descartar",
+      "keep_editing": "Seguir editando"
+    },
+    "group_view": {
+      "aria_label": "Grupo de documentos",
+      "document_count": "ningún documento | un documento | {count} documentos",
+      "exporting": "Exportando…",
+      "download_all": "Descargar todo",
+      "no_match": "Ningún documento coincide con tu búsqueda.",
+      "reset_filters": "Restablecer filtros",
+      "hide_list": "Ocultar la lista de documentos",
+      "show_list": "Mostrar la lista de documentos",
+      "move_hint": "para moverte entre documentos",
+      "loading_documents": "Cargando documentos…",
+      "select_to_view": "Selecciona un documento para verlo.",
+      "download_all_title": "¿Descargar todos los documentos?",
+      "download_all_message": "Esto descargará los {count} documentos como un archivo ZIP.",
+      "exported_count": "{count} documento exportado | {count} documentos exportados",
+      "export_failed": "No se pudo exportar la lista de documentos",
+      "download_started": "Descarga iniciada",
+      "download_failed": "No se pudieron descargar los documentos"
+    },
+    "viewer": {
+      "aria_label": "Visor de documentos",
+      "hide_history": "Ocultar el historial de versiones",
+      "show_history": "Mostrar el historial de versiones",
+      "history": "Historial",
+      "only_text_available": "Solo está disponible la vista de texto",
+      "text_only": "Solo texto",
+      "previous_document": "Documento anterior (←)",
+      "first_document": "Primer documento",
+      "next_document": "Documento siguiente (→)",
+      "last_document": "Último documento",
+      "view_text": "Texto",
+      "view_file": "Archivo",
+      "view_both": "Ambos",
+      "original": "Original",
+      "text": "Texto",
+      "no_original_file": "No hay archivo original disponible",
+      "restore_title": "¿Restaurar la versión archivada?",
+      "restore_message": "Esto vuelve a convertir la versión seleccionada en la más reciente. No se reprocesa nada.",
+      "restore_confirm": "Restaurar",
+      "version_restored": "Versión restaurada",
+      "restore_failed": "No se pudo restaurar la versión",
+      "load_preview_failed": "No se pudo cargar la vista previa del documento."
+    },
+    "text_view": {
+      "find_placeholder": "Buscar en el documento…",
+      "no_results": "Sin resultados",
+      "prev_match": "Coincidencia anterior (Mayús+Intro)",
+      "prev_match_aria": "Coincidencia anterior",
+      "next_match": "Coincidencia siguiente (Intro)",
+      "next_match_aria": "Coincidencia siguiente",
+      "clear_search": "Borrar búsqueda (Esc)",
+      "clear_search_aria": "Borrar búsqueda",
+      "loading_text": "Cargando texto…"
+    },
+    "file_preview": {
+      "original_pdf": "PDF original",
+      "original_document": "Documento original"
+    },
+    "info": {
+      "version_status": "Estado de la versión",
+      "current_version": "Versión actual",
+      "archived_version": "Versión archivada",
+      "document_info": "Información del documento",
+      "created": "Creado",
+      "file_size": "Tamaño del archivo",
+      "text_length": "Longitud del texto",
+      "characters": "{count} carácter | {count} caracteres",
+      "archived": "Archivado",
+      "unknown": "Desconocido",
+      "preprocessing_config": "Configuración de preprocesamiento",
+      "configuration": "Configuración",
+      "custom": "Personalizada",
+      "ocr_engine": "Motor de OCR",
+      "model": "Modelo",
+      "metadata": "Metadatos",
+      "restore_this_version": "Restaurar esta versión",
+      "reprocess_document": "Reprocesar documento"
+    },
+    "version_history": {
+      "title": "Historial de versiones",
+      "loading": "Cargando versiones...",
+      "current": "Actual",
+      "archived": "Archivada",
+      "only_one": "Solo existe una versión"
+    },
+    "extraction": {
+      "text_extraction": "Extracción de texto",
+      "local_ocr": "OCR local",
+      "force_ocr": "Forzar OCR",
+      "desc_text_no_ocr": "Extraído del texto incrustado del PDF (sin OCR)",
+      "desc_local_ocr": "Procesado con Tesseract OCR local",
+      "desc_force_ocr": "OCR de página completa forzado (aunque exista texto incrustado)",
+      "desc_mistral": "Procesado con la API de OCR de Mistral AI",
+      "desc_vision": "Procesado con la API de Vision LLM",
+      "desc_text_embedded": "Extraído del texto incrustado del PDF",
+      "desc_ocr_generic": "Procesado con OCR"
+    },
+    "batch": {
+      "entity_document": "documento | documentos",
+      "entity_trial": "prueba | pruebas",
+      "entity_file": "archivo | archivos",
+      "selected": "{count} {entity} seleccionados",
+      "force_reprocess": "Forzar reprocesamiento (ignorar los resultados existentes)",
+      "reprocess_note": "El reprocesamiento se realiza sobre todo el archivo de origen, no sobre filas individuales: seleccionar documentos de una importación CSV/XLSX fila por fila reprocesa todas las filas de ese archivo.",
+      "export_choose": "Elige el formato y las opciones de exportación:",
+      "export_format_label": "Formato de exportación",
+      "export_format_txt": "Texto sin formato",
+      "export_format_pdf": "PDF (con capa de texto)",
+      "include_metadata": "Incluir metadatos",
+      "include_preprocessing": "Incluir información de preprocesamiento",
+      "warning_title": "Advertencia: esta acción no se puede deshacer",
+      "checking_usage": "Comprobando el uso…",
+      "deps_preview_unavailable": "La vista previa de uso no está disponible para selecciones de más de {limit} {entity}: la opción anterior sigue aplicándose a toda la selección.",
+      "will_also_delete": "Esto también eliminará {impact}.",
+      "not_used_elsewhere": "Estos {entity} no se usan en ningún otro lugar.",
+      "in_use_by": "En uso por {impact}. Activa la opción anterior para eliminarlos también; de lo contrario, la eliminación se bloqueará.",
+      "confirm_permanent": "Entiendo que esta acción es permanente",
+      "progress": "{verb} {done} de {total}…",
+      "verb_resolving": "Resolviendo",
+      "verb_deleting": "Eliminando",
+      "processing": "Procesando...",
+      "title_default": "Acción por lotes",
+      "title_reprocess": "Reprocesar {entity}",
+      "title_export": "Exportar {entity}",
+      "title_delete": "Eliminar {entity}",
+      "button_start_reprocessing": "Iniciar reprocesamiento",
+      "button_export": "Exportar",
+      "button_delete": "Eliminar {entity}",
+      "button_confirm": "Confirmar",
+      "cascade_files": "Eliminar también los documentos generados y sus pruebas y resultados de extracción, y quitarlos de los grupos",
+      "cascade_default": "Eliminar también las pruebas y los resultados de extracción relacionados, y quitar los documentos de los grupos",
+      "warn_trials": "Las pruebas seleccionadas y sus resultados se eliminarán de forma permanente.",
+      "warn_files": "Los archivos seleccionados y sus resultados de preprocesamiento se eliminarán de forma permanente.",
+      "warn_documents": "Los documentos seleccionados y sus resultados de preprocesamiento se eliminarán de forma permanente.",
+      "impact_document": "{count} documento | {count} documentos",
+      "impact_trial": "{count} prueba | {count} pruebas",
+      "impact_group_membership": "{count} pertenencia a grupo | {count} pertenencias a grupos",
+      "impact_extraction_result": "{count} resultado de extracción | {count} resultados de extracción",
+      "impact_evaluation_metric": "{count} métrica de evaluación | {count} métricas de evaluación",
+      "toast_no_files": "No se pudieron asociar los documentos seleccionados a ningún archivo.",
+      "toast_reprocess_started": "Tarea de reprocesamiento iniciada para {count} archivo | Tarea de reprocesamiento iniciada para {count} archivos",
+      "toast_export_stub": "La funcionalidad de exportación se implementaría aquí",
+      "toast_check_usage_failed": "No se pudo comprobar el uso",
+      "toast_action_failed": "No se pudo completar la acción sobre los {entity} seleccionados.",
+      "delete_failed_fallback": "No se pudo eliminar {entity}",
+      "deleted_success": "{count} {entity} eliminados correctamente",
+      "more_count": "(+{count} más)",
+      "hint_manage": "Ve a la pestaña Grupos de documentos para gestionarlos.",
+      "delete_failed_summary": "No se pudieron eliminar {count} {entity}: #{id} — {error}"
+    },
+    "toasts": {
+      "load_document_failed": "No se pudo cargar el documento",
+      "group_no_longer_exists": "Ese grupo de documentos ya no existe: se muestran todos los documentos en su lugar.",
+      "load_group_failed": "No se pudo cargar el grupo de documentos",
+      "selected_all": "Se han seleccionado los {count} documentos",
+      "select_all_failed": "No se pudieron seleccionar todos los documentos",
+      "no_file_for_download": "No hay ningún archivo disponible para descargar",
+      "download_failed": "No se pudo descargar el documento",
+      "select_documents_first": "Primero selecciona documentos",
+      "group_created": "Grupo de documentos creado",
+      "create_group_failed": "No se pudo crear el grupo de documentos",
+      "original_file_not_found": "No se encontró el ID del archivo original de este documento.",
+      "reprocessing_started": "Reprocesamiento del documento iniciado",
+      "start_reprocessing_failed": "No se pudo iniciar el reprocesamiento",
+      "load_documents_failed": "No se pudieron cargar los documentos",
+      "load_groups_failed": "No se pudieron cargar los grupos de documentos",
+      "cannot_delete_group": "No se puede eliminar el grupo: lo usa una prueba",
+      "group_and_docs_deleted": "Grupo y {count} documento eliminados | Grupo y {count} documentos eliminados",
+      "group_deleted_docs_referenced": "Grupo eliminado, pero no se pudieron eliminar los documentos (referenciados en otro lugar).",
+      "group_deleted": "Grupo de documentos eliminado",
+      "delete_group_failed": "No se pudo eliminar el grupo de documentos",
+      "group_updated": "Grupo de documentos actualizado",
+      "save_group_failed": "No se pudo guardar el grupo de documentos"
+    }
+  },
+  "evaluation": {
+    "view": {
+      "retrying": "Reintentando...",
+      "retry": "Reintentar",
+      "title": "Evaluación",
+      "subtitle": "Comparar los resultados de los trials con los datos Ground Truth",
+      "upload_ground_truth": "Subir Ground Truth",
+      "export_results": "Exportar resultados",
+      "loading_ground_truth": "Cargando archivos Ground Truth...",
+      "empty_gt_title": "Aún no hay archivos Ground Truth",
+      "empty_gt_description": "Suba datos Ground Truth para evaluar los resultados de sus trials",
+      "ground_truth_files": "Archivos Ground Truth",
+      "manage": "Gestionar",
+      "ground_truth_number": "Ground Truth #{number}",
+      "field_mappings_configured": "{count} asignación de campo configurada | {count} asignaciones de campo configuradas",
+      "no_field_mappings": "No hay asignaciones de campo configuradas",
+      "select_gt_prompt": "Seleccione un archivo Ground Truth para comenzar la evaluación",
+      "dashboard": "Panel de evaluación",
+      "hide_explainer": "Ocultar la explicación rápida",
+      "show_explainer": "Mostrar cómo funciona la evaluación",
+      "hide_help": "Ocultar ayuda",
+      "how_it_works": "Cómo funciona",
+      "evaluate_trial": "Evaluar el trial",
+      "edit_mappings": "Editar asignaciones",
+      "configure_mappings": "Configurar asignaciones",
+      "hide": "Ocultar",
+      "setup_required": "Configuración necesaria",
+      "no_evaluations": "Aún no hay evaluaciones. Seleccione un trial para evaluar.",
+      "item_label": "evaluaciones"
+    },
+    "concepts": {
+      "title": "Cómo funciona la evaluación",
+      "ground_truth_term": "Ground Truth",
+      "ground_truth_desc": "— un archivo con los valores extraídos correctos con los que comparar los resultados de los trials.",
+      "field_mapping_term": "Asignación de campo",
+      "field_mapping_desc": "— vincula cada columna del Ground Truth con el campo de esquema correspondiente para poder comparar los valores.",
+      "id_field_term": "Campo de ID",
+      "id_field_desc": "— la columna que identifica de forma única cada documento, de modo que cada extracción se asocie con su fila correcta."
+    },
+    "list": {
+      "trial_id": "ID: {id}",
+      "doc_count": "{count} doc | {count} docs",
+      "unmatched_tooltip": "{count} documento(s) no se pudieron asociar con el Ground Truth y se excluyen de la exactitud.",
+      "matched": "{count} asociado(s)",
+      "has_errors": "Tiene errores ({count})",
+      "scored": "Evaluado",
+      "analysis": "Análisis",
+      "delete_tooltip": "Eliminar evaluación",
+      "delete": "Eliminar",
+      "unknown_model": "Desconocido"
+    },
+    "delete": {
+      "title": "¿Eliminar evaluación?",
+      "message": "Esto elimina las métricas calculadas de {trial}. El trial y sus resultados se conservan; puede volver a evaluar en cualquier momento.",
+      "confirm": "Eliminar"
+    },
+    "columns": {
+      "trial": "Trial",
+      "model": "Modelo",
+      "overall_accuracy": "Exactitud global",
+      "documents": "Documentos",
+      "status": "Estado"
+    },
+    "prerequisites": {
+      "select_gt": "Primero seleccione un archivo Ground Truth.",
+      "configure_mappings": "Configure las asignaciones de campos para el archivo Ground Truth seleccionado para habilitar la evaluación.",
+      "resolve_error": "Resuelva el error actual antes de iniciar la evaluación."
+    },
+    "errors": {
+      "details": "Detalles: {details}",
+      "suggestions": "Sugerencias: {suggestions}",
+      "invalid_gt": "Archivo Ground Truth seleccionado no válido",
+      "no_gt_selected": "No hay ningún archivo Ground Truth seleccionado"
+    },
+    "validation": {
+      "select_gt": "Seleccione un archivo Ground Truth",
+      "no_mappings": "El archivo Ground Truth no tiene asignaciones de campo configuradas",
+      "cannot_start": "No se puede iniciar la evaluación: {errors}"
+    },
+    "toast": {
+      "operation_completed": "Operación completada",
+      "gt_uploaded": "Ground Truth subido",
+      "evaluation_completed": "Evaluación de {trial} completada",
+      "mappings_configured": "Asignaciones de campos configuradas",
+      "evaluation_deleted": "Evaluación eliminada de {trial}",
+      "delete_failed": "No se pudo eliminar la evaluación: {error}"
+    },
+    "analysis": {
+      "back": "Volver a las evaluaciones",
+      "trial_number": "Trial #{number}",
+      "export": "Exportar",
+      "overall_metrics": "Métricas globales",
+      "matched_only_tooltip": "La exactitud se calcula solo sobre los documentos asociados. Los documentos no asociados se enumeran en la tabla siguiente.",
+      "unscored_docs": "{errorCount} de {totalCount} documento(s) no se pudieron evaluar (sin asociación Ground Truth) y se excluyen de la exactitud anterior.",
+      "fields": "Campos",
+      "sorted_worst_first": "Ordenados de peor a mejor",
+      "sorted_alphabetically": "Ordenados alfabéticamente",
+      "worst_first": "Peor primero",
+      "clear_filter": "Borrar filtro",
+      "categorical_tooltip": "Campo categórico — selecciónelo para ver su matriz de confusión",
+      "no_fields": "Sin campos.",
+      "search_documents": "Buscar documentos...",
+      "status": {
+        "all": "Todos los estados",
+        "failed": "Fallido",
+        "incorrect": "Valores incorrectos",
+        "missing": "Campos faltantes",
+        "high": "Alto (≥90 %)",
+        "low": "Bajo (<50 %)"
+      },
+      "chip_field": "Campo: {field}",
+      "chip_errors_in": "Errores en: {field}",
+      "field_metrics": "Métricas del campo — {field}",
+      "correct_count": "{correct}/{total} correctos",
+      "errors_label": "Errores:",
+      "confusion_matrix": "Matriz de confusión — {field}",
+      "no_documents_match": "Ningún documento coincide con sus filtros",
+      "document_number": "Documento #{number}",
+      "fields_ratio": "{correct}/{total} campos",
+      "docs_matched": "{matched}/{total} docs asociados",
+      "doc_total": "{count} documento | {count} documentos",
+      "col_document": "Documento",
+      "col_wrong_of_total": "Incorrectos del total",
+      "col_status": "Estado"
+    },
+    "metrics": {
+      "accuracy": "Exactitud",
+      "precision": "Precisión",
+      "recall": "Exhaustividad",
+      "f1": "F1",
+      "f1_title": "Puntuación F1"
+    },
+    "confusion": {
+      "predicted_axis": "Predicho →",
+      "ground_truth_axis": "Ground Truth ↓",
+      "caption_intro": "Cada celda muestra el número de documentos y su proporción en la fila Ground Truth. La diagonal (predicciones correctas) es verde, los errores son rojos — la intensidad escala con el número.",
+      "caption_click": "Haga clic en una celda (o enfóquela con Tab y presione Entrar)",
+      "caption_outro": "para filtrar la tabla de documentos; la celda seleccionada se muestra con un borde azul.",
+      "verdict_correct": "correcto",
+      "verdict_mismatch": "no coincide",
+      "cell_title": "{gt} → {pred}: {count} documento(s) — {pct}% de la fila GT ({verdict}). Haga clic para filtrar."
+    },
+    "drawer": {
+      "aria_label": "Detalles del fallo",
+      "document_number": "Documento #{number}",
+      "fields_correct": "{correct}/{total} campos correctos",
+      "accuracy_suffix": "{value} de exactitud",
+      "hide_doc_list": "Ocultar lista de documentos",
+      "show_doc_list": "Mostrar lista de documentos",
+      "prev_document": "Documento anterior (←)",
+      "first_document": "Primer documento",
+      "next_document": "Documento siguiente (→)",
+      "last_document": "Último documento",
+      "search_documents": "Buscar documentos…",
+      "no_docs_match": "Ningún documento coincide con su búsqueda.",
+      "clear_search": "Borrar búsqueda",
+      "source_document": "Documento fuente",
+      "show_original": "Mostrar archivo original",
+      "show_extracted": "Mostrar texto extraído",
+      "no_preview": "No hay vista previa disponible para este tipo de archivo. Se muestra el texto extraído en su lugar, pero no se extrajo ninguno durante el preprocesamiento.",
+      "expected_vs_predicted": "Esperado vs. predicho",
+      "col_field": "Campo",
+      "col_expected": "Esperado",
+      "col_got": "Obtenido",
+      "no_comparison": "No hay comparación a nivel de campo disponible.",
+      "output": "Salida",
+      "no_result": "No se produjo ningún resultado estructurado para este documento.",
+      "reasoning": "Razonamiento",
+      "no_reasoning": "No se capturó contenido de razonamiento para este documento.",
+      "tip_prefix": "Consejo: use",
+      "tip_suffix": "para moverse entre documentos.",
+      "close": "Cerrar",
+      "status_error": "Error de evaluación",
+      "status_high": "Exactitud alta",
+      "status_low": "Exactitud baja",
+      "status_partial": "Parcial"
+    },
+    "export": {
+      "title": "Exportar informe de evaluación",
+      "format_label": "Formato de exportación",
+      "csv_desc": "Valores separados por comas",
+      "xlsx_desc": "Hoja de cálculo de Excel",
+      "zip_desc": "Archivo ZIP (avanzado)",
+      "select_label": "Seleccionar evaluaciones",
+      "showing_for_gt": "Mostrando evaluaciones para el Ground Truth «{name}».",
+      "select_all": "Seleccionar todo",
+      "accuracy_label": "{value} de exactitud",
+      "documents_label": "{count} documento | {count} documentos",
+      "select_one": "Seleccione al menos una evaluación para exportar.",
+      "options_label": "Opciones de exportación",
+      "opt_details": "Incluir métricas detalladas a nivel de documento",
+      "opt_field_details": "Incluir datos de comparación campo por campo",
+      "opt_errors": "Incluir análisis de errores y ejemplos",
+      "opt_document_content": "Incluir contenido de documentos (en docs/)",
+      "opt_gt_content": "Incluir contenido Ground Truth (en docs/)",
+      "preview_title": "Vista previa de la exportación",
+      "preview_evaluations": "{count} evaluación seleccionada | {count} evaluaciones seleccionadas",
+      "preview_total_documents": "{count} documentos en total",
+      "preview_details": "Métricas a nivel de documento incluidas",
+      "preview_field_details": "Datos de comparación de campos incluidos",
+      "preview_errors": "Análisis de errores incluido",
+      "preview_document_content": "Archivos de contenido de documentos incluidos",
+      "preview_gt_content": "Archivos Ground Truth incluidos",
+      "large_warning": "Incluye archivos originales de documentos/Ground Truth — el archivo puede ser grande.",
+      "cancel": "Cancelar",
+      "export_button": "Exportar informe",
+      "exporting": "Exportando...",
+      "select_one_toast": "Seleccione al menos una evaluación para exportar",
+      "export_success": "Informe exportado",
+      "export_failed": "No se pudo exportar el informe: {error}"
+    }
+  },
+  "files": {
+    "actions": {
+      "cancel": "Cancelar",
+      "clear_all_filters": "Borrar todos los filtros",
+      "close": "Cerrar",
+      "configure": "Configurar",
+      "configure_files_first": "Configurar archivos primero",
+      "configure_preprocessing": "Configurar preprocesamiento",
+      "delete": "Eliminar",
+      "dismiss": "Descartar",
+      "download": "Descargar",
+      "edit": "Editar",
+      "preprocessing_history": "Historial de preprocesamiento",
+      "preview": "Vista previa",
+      "retry": "Reintentar",
+      "select_all_count": "Seleccionar todos ({count})",
+      "selecting": "Seleccionando…",
+      "upload_files": "Subir archivos",
+      "view_details": "Ver detalles",
+      "view_documents": "Ver documentos",
+      "view_errors": "Ver errores"
+    },
+    "batch": {
+      "count_label": "archivo",
+      "needs_config_count": "{count} necesita(n) configuración",
+      "needs_config_title": "{files} necesita(n) configuración de importación — haga clic para configurar"
+    },
+    "cancel_task": {
+      "cancel": "Seguir ejecutando",
+      "confirm": "Cancelar tarea",
+      "message": "Todos los archivos que aún se estén procesando se marcarán como fallidos.",
+      "title": "¿Cancelar la tarea de preprocesamiento?"
+    },
+    "cancel_upload": {
+      "cancel": "Seguir subiendo",
+      "confirm": "Cancelar subidas",
+      "message": "Los archivos ya subidos se conservarán; el resto del lote no se subirá.",
+      "title": "¿Cancelar las subidas restantes?"
+    },
+    "common": {
+      "unknown": "Desconocido"
+    },
+    "completion": {
+      "documents_created": "un documento creado | {count} documentos creados",
+      "files_failed": "{count} archivo fallido | {count} archivos fallidos",
+      "title": "Preprocesamiento completado"
+    },
+    "config": {
+      "advanced_options": "Opciones avanzadas",
+      "api_key": "Clave de API",
+      "base_url": "URL base",
+      "files_to_process": "Archivos a procesar ({count})",
+      "footer_note": "Esto creará un nuevo preprocesamiento. Los preprocesamientos y documentos existentes se conservan.",
+      "force_ocr_desc": "Omitir la extracción de texto incrustado y ejecutar OCR en todas las páginas del PDF",
+      "force_ocr_title": "Forzar OCR en los PDF",
+      "lang_auto": "Detección automática",
+      "lang_chi_sim": "Chino (simplificado)",
+      "lang_deu": "Alemán",
+      "lang_eng": "Inglés",
+      "lang_fra": "Francés",
+      "lang_ita": "Italiano",
+      "lang_lat": "Latín",
+      "lang_nld": "Neerlandés",
+      "lang_pol": "Polaco",
+      "lang_por": "Portugués",
+      "lang_rus": "Ruso",
+      "lang_spa": "Español",
+      "leave_empty_default": "Dejar vacío para usar el valor predeterminado del servidor",
+      "max_image_dim": "Dimensión máxima de imagen (px)",
+      "model": "Modelo",
+      "needs_config_hint": "Haga clic en \"Configurar\" junto a cada archivo de arriba para definir los ajustes de importación antes del preprocesamiento.",
+      "needs_config_title": "{count} archivo(s) necesitan configuración de importación",
+      "no_ocr_desc": "Los archivos CSV, Excel y de texto plano se importan como texto estructurado — no usan un motor OCR. Simplemente inicie el procesamiento.",
+      "no_ocr_title": "No se necesita motor OCR",
+      "ocr_engine": "Motor OCR",
+      "ocr_required_desc": "Los archivos PDF e imagen necesitan un motor OCR. Active Local OCR, Mistral OCR o Vision LLM en la configuración de administración — o quite esos archivos y procese solo archivos CSV/Excel/texto, que no requieren OCR.",
+      "ocr_required_title": "Los archivos seleccionados requieren OCR, pero no hay ningún motor OCR activado.",
+      "processing": "Procesando...",
+      "prompt": "Instrucción",
+      "prompt_placeholder": "Extraer todo el texto como markdown...",
+      "select_different": "Seleccionar otros archivos",
+      "start_processing": "Iniciar procesamiento",
+      "tesseract_language": "Idioma de Tesseract",
+      "unknown": "Desconocido"
+    },
+    "dropzone": {
+      "aria_label": "Subir archivos — suelte los archivos aquí o active para explorar",
+      "browse": "Explorar archivos",
+      "prompt": "Suelte los archivos aquí o haga clic para subir"
+    },
+    "duplicate": {
+      "archive_continue": "Archivar y continuar",
+      "badge_diff_config": "Configuración distinta",
+      "badge_embedded_text": "Texto incrustado",
+      "badge_same_config": "Misma configuración",
+      "config_name": "Configuración: {name}",
+      "continue": "Continuar",
+      "diff_config_desc": "Los siguientes archivos ya tienen documentos con una configuración OCR distinta. El preprocesamiento creará documentos adicionales (sin reemplazar los existentes). Ambas versiones se conservarán.",
+      "embedded_desc": "El o los siguientes archivos PDF contienen texto incrustado. Como \"Forzar OCR\" no está activado, el texto incrustado se extraerá directamente independientemente del motor OCR seleccionado. El resultado será idéntico a las extracciones anteriores.",
+      "existing_diff_config": "{count} documento existente con configuración distinta | {count} documentos existentes con configuración distinta",
+      "existing_same_config": "{count} documento existente con la misma configuración se archivará | {count} documentos existentes con la misma configuración se archivarán",
+      "has_embedded_text": "Contiene texto incrustado",
+      "previously_extracted": "Extraído previamente con: {method}",
+      "process_new_only": "Procesar solo archivos nuevos",
+      "same_config_after": ". El preprocesamiento creará nuevas versiones y archivará las anteriores. Los documentos archivados se ocultan de forma predeterminada, pero pueden consultarse en el historial de documentos.",
+      "same_config_before": "Los siguientes archivos ya tienen documentos con la",
+      "same_config_emphasis": "misma configuración de OCR",
+      "skip_existing_desc": "Omitir los archivos que ya tienen documentos para esta configuración OCR. Útil si solo desea procesar archivos nuevos o volver a procesar archivos cuya calidad OCR fue deficiente.",
+      "skip_existing_label": "Procesar solo archivos sin documentos existentes",
+      "summary_existing": "archivo con documentos existentes | archivos con documentos existentes",
+      "summary_new": "archivo nuevo | archivos nuevos",
+      "tip_after": "en las opciones avanzadas para forzar el OCR en todas las páginas, ignorando el texto incrustado.",
+      "tip_before": "Active",
+      "tip_label": "Consejo:",
+      "title_archived": "Los documentos existentes se archivarán",
+      "title_embedded": "Texto incrustado en el PDF detectado",
+      "title_found": "Documentos existentes encontrados",
+      "versioning_after": "y pueden restaurarse si es necesario. De forma predeterminada, solo se muestra la última versión en la lista de documentos.",
+      "versioning_before": "Las versiones anteriores se conservan con",
+      "versioning_label": "Control de versiones de documentos:"
+    },
+    "empty": {
+      "no_match_description": "Intente ajustar o borrar sus filtros para ver más resultados",
+      "no_match_title": "Ningún archivo coincide con sus filtros"
+    },
+    "errors": {
+      "already_processing": "Uno o más archivos ya se están procesando",
+      "cancel_failed": "No se pudo cancelar el preprocesamiento",
+      "check_duplicates_failed": "No se pudo comprobar la existencia de documentos",
+      "csv_needs_config": "Los archivos CSV/XLSX necesitan configuración de importación",
+      "download_failed": "No se pudo descargar el archivo",
+      "download_named_failed": "No se pudo descargar {name}",
+      "load_failed": "No se pudieron cargar los archivos",
+      "no_ocr_engine": "No hay ningún motor OCR activado",
+      "retry_failed": "No se pudo reintentar los archivos fallidos",
+      "select_all_failed": "No se pudieron seleccionar todos los archivos",
+      "start_failed": "No se pudo iniciar el preprocesamiento",
+      "upload_failed": "Error al subir"
+    },
+    "filter": {
+      "apply": "Aplicar",
+      "chip_date": "Fecha: {value}",
+      "chip_search": "Búsqueda: \"{value}\"",
+      "chip_status": "Estado: {value}",
+      "chip_type": "Tipo: {value}",
+      "date_all": "Todo el tiempo",
+      "date_custom": "Rango personalizado...",
+      "date_from": "Desde:",
+      "date_month": "Últimos 30 días",
+      "date_to": "Hasta:",
+      "date_today": "Hoy",
+      "date_week": "Últimos 7 días",
+      "date_yesterday": "Ayer",
+      "item_label": "archivos",
+      "present": "hoy",
+      "search_placeholder": "Buscar archivos...",
+      "status_all": "Todos los estados",
+      "status_completed": "Completado",
+      "status_failed": "Fallido",
+      "status_not_processed": "Sin procesar",
+      "status_processing": "Procesando",
+      "type_all": "Todos los tipos"
+    },
+    "hint": {
+      "configure_preprocessing": "Configurar preprocesamiento",
+      "next_step_label": "Siguiente paso:",
+      "select_files_after": "para extraer texto de sus documentos.",
+      "select_files_before": "Seleccione archivos de la tabla de abajo y luego haga clic en"
+    },
+    "history": {
+      "and_more": "…y {count} más",
+      "aria_label": "Historial de preprocesamiento",
+      "documents_count": "{count} documento | {count} documentos",
+      "engine_local": "Local OCR",
+      "engine_local_force": "Local OCR + Forzado",
+      "eta_left": "≈ {duration} restante",
+      "files_processed": "{processed} de {total} archivos procesados",
+      "go_to_document": "Ir al documento",
+      "go_to_documents": "Ir a los documentos ({count})",
+      "go_to_group": "Ir al grupo ({count})",
+      "no_file_tasks": "No se registraron tareas de archivo",
+      "no_runs": "Aún no hay preprocesamientos",
+      "process_this_file": "Procesar este archivo",
+      "processing": "Procesando...",
+      "retry_failed": "Reintentar archivos fallidos",
+      "row": "Fila {index}",
+      "run_label": "Ejecución n.º {id}",
+      "run_new": "+ Ejecutar nuevo preprocesamiento",
+      "skipped_rows": "{count} fila omitida | {count} filas omitidas",
+      "started": "Iniciado {time}",
+      "status_cancelled": "Cancelado",
+      "status_done": "Hecho",
+      "status_failed": "Fallido",
+      "status_pending": "Pendiente",
+      "title": "Historial de preprocesamiento",
+      "took": "duración {duration}",
+      "unknown_file": "Archivo desconocido",
+      "view_error": "Ver error",
+      "warnings": "{count} advertencia | {count} advertencias"
+    },
+    "import": {
+      "all_unique": "Los {count} ID de esta columna son únicos.",
+      "appears": "aparece {count}×",
+      "checking_unique": "Comprobando que los ID sean únicos…",
+      "delim_comma": "Coma (,)",
+      "delim_semicolon": "Punto y coma (;)",
+      "delim_tab": "Tabulación",
+      "delimiter": "Delimitador",
+      "discard_cancel": "Seguir editando",
+      "discard_confirm": "Descartar",
+      "discard_message": "Se perderán los cambios en la configuración de importación.",
+      "discard_title": "¿Descartar los cambios no guardados?",
+      "empty_value": "(vacío)",
+      "encoding": "Codificación",
+      "has_header": "El archivo contiene una fila de encabezado",
+      "header_row": "Fila de encabezado",
+      "id_column": "Columna de ID de caso/documento",
+      "id_help_after": "). Por defecto, el número de fila.",
+      "id_help_before": "Opcional: nombra cada documento (p. ej.,",
+      "id_missing_after": "no se encontró con la configuración actual. Ajuste las opciones de encabezado/hoja o elija otra columna.",
+      "id_missing_before": "La columna",
+      "more_duplicates": "…y {count} valor(es) duplicado(s) más.",
+      "no_preview": "No hay datos de vista previa disponibles.",
+      "not_unique": "Esta columna no es única — {rows} filas comparten un ID duplicado. Cada documento necesita un ID único, por lo que se ha desactivado el guardado.",
+      "not_unique_toast": "Esta columna de ID no es única — elija otra columna o corrija el archivo.",
+      "pick_different_after": "para nombrar los documentos automáticamente.",
+      "pick_different_before": "Elija otra columna de ID o use",
+      "preview_title": "Vista previa (primeras 25 filas)",
+      "previewing_rows": "Mostrando las primeras {count} filas",
+      "recommended": "(Recomendado)",
+      "row_number": "(Número de fila)",
+      "sample_eg": "p. ej., {value}",
+      "save": "Guardar",
+      "save_changes": "Guardar cambios",
+      "save_failed": "No se pudo guardar la configuración de importación",
+      "saved": "Configuración de importación guardada",
+      "saving": "Guardando...",
+      "select_all": "Seleccionar todos",
+      "sheet": "Hoja",
+      "strategy": "Estrategia de importación",
+      "strategy_full": "Tratar todo el archivo como un solo documento",
+      "strategy_row": "Un documento por fila",
+      "text_columns": "Columnas de texto",
+      "text_columns_help": "Elija la(s) columna(s) cuyo texto debe extraer el LLM. Su contenido se concatena en cada documento. Normalmente la columna del informe, notas o hallazgos.",
+      "text_columns_required": "Seleccione al menos una columna de texto para extraer.",
+      "title_edit": "Editar ajustes de importación: {name}",
+      "title_new": "Configurar importación: {name}"
+    },
+    "page": {
+      "subtitle": "Suba archivos y ejecute el preprocesamiento OCR",
+      "title": "Archivos"
+    },
+    "preview": {
+      "aria": "Vista previa del archivo",
+      "aria_named": "Vista previa del archivo: {name}",
+      "column": "Columna {n}",
+      "copied": "¡Copiado!",
+      "copy": "Copiar",
+      "created": "Creado: {date}",
+      "download_file": "Descargar archivo",
+      "downloaded": "Archivo descargado",
+      "empty": "vacío",
+      "first_file": "Primer archivo",
+      "hash": "Hash: {hash}...",
+      "header_id": "{name} (ID)",
+      "header_text": "{name} (Texto)",
+      "id_column": "Columna de ID:",
+      "last_file": "Último archivo",
+      "load_failed": "No se pudo cargar la vista previa",
+      "more": "…más",
+      "nav_hint": "Use ← / → para moverse entre archivos",
+      "next_file": "Archivo siguiente (→)",
+      "not_available": "Vista previa no disponible para este tipo de archivo.",
+      "pdf_title": "Vista previa del PDF",
+      "prev_file": "Archivo anterior (←)",
+      "showing_rows": "Mostrando las primeras {shown} de {total} filas",
+      "text_columns": "Columnas de texto:",
+      "to_browse": "para moverse entre archivos",
+      "try_again": "Reintentar"
+    },
+    "progress": {
+      "aria_label": "Progreso del preprocesamiento",
+      "eta_remaining": "≈ {duration} restante",
+      "failed": "{count} fallido(s)",
+      "files_of": "{processed} de {total} archivos",
+      "preprocessing": "Preprocesamiento",
+      "starting": "Iniciando…"
+    },
+    "status": {
+      "failed": "Fallido",
+      "not_preprocessed": "Sin preprocesar",
+      "processed": "Procesado",
+      "processing": "Procesando"
+    },
+    "table": {
+      "col_file": "Archivo",
+      "col_size": "Tamaño",
+      "col_status": "Estado",
+      "col_type": "Tipo",
+      "col_uploaded": "Subido",
+      "empty_title": "No se encontraron archivos",
+      "full_table": "Tabla completa",
+      "needs_import_config": "Necesita configuración de importación",
+      "row_by_row": "Fila por fila"
+    },
+    "toast": {
+      "all_configured": "Todos los archivos seleccionados están configurados — listos para el preprocesamiento",
+      "preprocessing_cancelled": "Preprocesamiento cancelado",
+      "preprocessing_started": "Preprocesamiento iniciado para {count} archivo(s)",
+      "retrying_failed": "Reintentando archivos fallidos...",
+      "selected_all": "{count} archivos seleccionados",
+      "upload_cancelled": "Subida cancelada — {uploaded} archivo(s) subido(s), {not_uploaded} no subido(s)",
+      "upload_cancelled_failed_suffix": "({count} fallido(s))",
+      "upload_failed": "No se pudieron subir {count} archivo(s): {name} — {message}",
+      "upload_in_progress": "Ya hay una subida en curso",
+      "upload_more": " (+{count} más)",
+      "uploaded": "{count} archivo subido | {count} archivos subidos"
+    },
+    "type": {
+      "file": "Archivo",
+      "text": "Texto"
+    },
+    "upload": {
+      "cancel": "Cancelar subida",
+      "cancelling": "Cancelando…",
+      "close": "Cerrar",
+      "complete": "Subida completada",
+      "current_progress_aria": "Progreso de la subida del archivo actual",
+      "failed": "{count} fallido(s)",
+      "failed_uploads": "Subidas fallidas",
+      "overall_progress_aria": "Progreso general de la subida",
+      "succeeded": "{count} correcto(s)",
+      "title": "Subir archivos",
+      "uploading_file": "Subiendo archivo {current} de {total}"
+    }
+  },
+  "groundtruth": {
+    "manager": {
+      "title": "Gestionar archivos Ground Truth",
+      "subtitle": "Los archivos Ground Truth contienen los valores extraídos correctos con los que compara los resultados de las pruebas. Configure las asignaciones de campos para vincular cada columna Ground Truth con un campo del esquema.",
+      "empty_title": "Aún no se han subido archivos Ground Truth",
+      "empty_description": "Suba un archivo con los valores correctos (CSV, XLSX o JSON) para empezar a evaluar la precisión de las pruebas.",
+      "default_name": "Ground Truth n.º {number}",
+      "mappings_count": "{count} asignación | {count} asignaciones",
+      "created": "Creado: {date}",
+      "updated": "Actualizado: {date}",
+      "configure_mappings": "Configurar asignaciones",
+      "rename": "Cambiar nombre",
+      "rename_aria": "Cambiar nombre de {name}",
+      "delete": "Eliminar",
+      "delete_aria": "Eliminar {name}",
+      "fallback_file": "archivo Ground Truth",
+      "configured_field_mappings": "Asignaciones de campos configuradas",
+      "more_count": "+{count} más…",
+      "close": "Cerrar",
+      "rename_title": "Cambiar nombre del Ground Truth",
+      "name_label": "Nombre",
+      "name_placeholder": "Nombre del archivo Ground Truth",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "save": "Guardar",
+      "delete_confirm_title": "¿Eliminar Ground Truth?",
+      "delete_confirm_message": "¿Seguro que desea eliminar «{name}»? Esta acción no se puede deshacer.",
+      "this_file": "este archivo Ground Truth",
+      "toast_updated": "Ground Truth actualizado",
+      "toast_update_failed": "No se pudo actualizar el Ground Truth",
+      "toast_deleted": "Ground Truth eliminado",
+      "toast_delete_failed": "No se pudo eliminar el Ground Truth",
+      "toast_mappings_configured": "Asignaciones de campos configuradas"
+    },
+    "upload": {
+      "title": "Subir Ground Truth",
+      "name_label": "Nombre (opcional)",
+      "name_placeholder": "Nombre del archivo Ground Truth",
+      "format_label": "Formato",
+      "format_csv": "CSV (campos aplanados con puntos)",
+      "format_json": "JSON (archivo único con mapa de documentos o varios archivos)",
+      "format_zip": "ZIP (varios archivos JSON)",
+      "format_xlsx": "Excel (.xlsx, las rutas con puntos crean anidamiento)",
+      "important": "Importante:",
+      "json_id_note": "Cada documento debe tener un campo 'id' que coincida con los identificadores de sus documentos.",
+      "tabular_id_note": "En el siguiente paso elegirá la columna de ID (que coincida con los identificadores de sus documentos).",
+      "files_label": "Archivo(s)",
+      "upload_files": "Subir archivo(s)",
+      "or_drag_and_drop": "o arrastre y suelte",
+      "hint_csv": "Archivo CSV con campos aplanados (puntos para el anidamiento)",
+      "hint_json": "Archivo(s) JSON: un solo archivo o varios archivos",
+      "hint_zip": "Archivo ZIP que contiene archivos JSON",
+      "hint_xlsx": "Archivo Excel (.xlsx/.xls) con campos aplanados (puntos para el anidamiento)",
+      "selected_files": "Archivos seleccionados:",
+      "remove_file": "Quitar archivo",
+      "cancel": "Cancelar",
+      "uploading": "Subiendo…",
+      "upload": "Subir",
+      "toast_switched_json": "Formato cambiado a JSON para coincidir con los archivos soltados.",
+      "toast_drop_single": "Suelte un único archivo CSV, XLSX o ZIP, o varios archivos JSON.",
+      "toast_unsupported_type": "Tipo de archivo no admitido: \"{name}\". Aceptados: CSV, XLSX, JSON, ZIP.",
+      "toast_switched_format": "Formato cambiado a {format} para coincidir con el archivo soltado.",
+      "toast_select_file": "Seleccione al menos un archivo para subir",
+      "default_json_name": "Ground Truth JSON",
+      "toast_no_file": "Ningún archivo seleccionado",
+      "toast_upload_failed": "No se pudo subir el Ground Truth: {error}"
+    },
+    "preview": {
+      "title": "Configurar la asignación de Ground Truth",
+      "project": "Proyecto {id}",
+      "help_before": "Elija un campo del esquema (izquierda) y su columna Ground Truth correspondiente (derecha), luego",
+      "help_create_mapping": "Crear asignación",
+      "help_after": "Establezca el campo de ID para vincular cada documento con su fila correcta.",
+      "schema_label": "Esquema",
+      "select_schema": "Seleccionar esquema…",
+      "schema_fields_label": "campos del esquema",
+      "schema_fields_heading": "Campos del esquema",
+      "required_count": "{count} obligatorio(s)",
+      "select_schema_hint": "Seleccione un esquema arriba para cargar sus campos.",
+      "pick_schema_field": "elegir campo del esquema",
+      "pick_gt_field": "elegir campo GT",
+      "create_mapping": "Crear asignación",
+      "map": "Asignar",
+      "auto_map": "Asignar automáticamente nombres coincidentes",
+      "clear_all_mappings": "Borrar todas las asignaciones",
+      "gt_fields_heading": "Campos Ground Truth",
+      "fields_count": "{count} campos",
+      "loading": "Cargando…",
+      "footer_select_schema": "Seleccione un esquema para empezar a asignar campos.",
+      "warning_required_unmapped": "Advertencia: no todos los campos obligatorios están asignados.",
+      "select_id_before_save": "Seleccione la columna de ID antes de guardar.",
+      "cancel": "Cancelar",
+      "save_mappings": "Guardar asignaciones",
+      "saved": "¡Guardado!",
+      "reason_select_schema": "Seleccione un esquema.",
+      "reason_no_mappings": "Se requiere al menos una asignación de campo.",
+      "reason_no_id_column": "Debe seleccionar una columna de ID para los archivos CSV/XLSX.",
+      "reason_no_id_field": "Debe seleccionar un campo de ID para los datos JSON.",
+      "reason_generic": "No se puede guardar en este momento.",
+      "mapping_count": "{count} asignación | {count} asignaciones",
+      "toast_load_preview_failed": "No se pudo cargar la vista previa del Ground Truth: {error}",
+      "toast_load_schema_failed": "No se pudieron cargar los campos del esquema: {error}",
+      "toast_all_mapped": "Todos los campos del esquema ya están asignados.",
+      "toast_mapped_some": "Se asignaron {count} de {total} campos sin asignar",
+      "toast_mapped_none": "Se asignaron 0 de {total} campos sin asignar: no se encontraron nombres de columna coincidentes",
+      "toast_save_failed": "No se pudieron guardar las asignaciones: {error}",
+      "toast_saved": "Asignaciones guardadas"
+    },
+    "sample": {
+      "title": "Muestra de Ground Truth"
+    },
+    "field_tree": {
+      "already_mapped": "Ya asignado: haga clic para volver a seleccionar",
+      "required_not_mapped": "Obligatorio y sin asignar",
+      "mapped": "Asignado",
+      "selected": "Seleccionado"
+    },
+    "mapping_list": {
+      "empty_line1": "Aún no hay asignaciones.",
+      "empty_line2": "Seleccione un campo del esquema y un campo GT y haga clic en",
+      "map": "Asignar",
+      "schema_field": "Campo del esquema",
+      "gt_field": "Campo GT",
+      "options_for": "Opciones de comparación para {field}",
+      "remove_mapping": "Quitar asignación",
+      "threshold": "Umbral",
+      "higher_stricter": "más alto = coincidencia más estricta",
+      "partial_match_hint": "Desactivado de forma predeterminada. La coincidencia de subcadenas puede invertir el significado en textos médicos (p. ej., «cancer» frente a «non-cancer»), por lo que es opcional.",
+      "allow_partial": "permitir coincidencia parcial / de subcadena",
+      "tolerance": "Tolerancia",
+      "relative": "relativo (±%)",
+      "hint_type_mismatch": "Discrepancia de tipos: el campo del esquema es {schemaType}, la columna GT es {gtType}",
+      "hint_unusual_method": "La comparación \"{method}\" es inusual para un campo {fieldType}"
+    },
+    "id_field": {
+      "document_id": "ID del documento",
+      "select_id_column": "Seleccionar columna de ID...",
+      "select_id_column_hint": "Seleccione una columna de ID para habilitar la evaluación.",
+      "use_filename": "Usar el nombre de archivo del documento",
+      "use_field": "Usar campo:",
+      "select_field": "Seleccionar campo...",
+      "match_hint": "Controla cómo se asocian los documentos con los resultados de las pruebas para la evaluación."
+    }
+  },
+  "landing": {
+    "nav": {
+      "sign_in": "Iniciar sesión",
+      "get_started": "Empezar",
+      "go_to_app": "Ir a la aplicación"
+    },
+    "hero": {
+      "badge": "Plataforma de extracción de documentos a JSON",
+      "description": "Convierta documentos médicos y de laboratorio no estructurados en JSON estructurado y validado. Defina su esquema, ejecute ensayos de extracción con LLM y mida la precisión frente a datos de referencia — con cualquier modelo compatible con OpenAI, local o alojado."
+    },
+    "cta": {
+      "title": "Empiece a extraer datos estructurados",
+      "subtitle": "Suba sus documentos, defina un esquema y ejecute su primer ensayo de extracción.",
+      "go_to_projects": "Ir a los proyectos",
+      "get_started": "Empezar",
+      "login": "Iniciar sesión",
+      "view_on_github": "Ver en KatherLab GitHub"
+    },
+    "features": {
+      "heading": "Lo que puede hacer aquí",
+      "privacy": {
+        "title": "Diseño centrado en la privacidad",
+        "description": "Ejecute totalmente en local o con proveedores de LLM y OCR autoalojados. Sin llamadas externas forzadas — sus datos permanecen en su entorno."
+      },
+      "schema": {
+        "title": "Editor visual de esquemas",
+        "description": "Cree esquemas JSON anidados con un editor de árbol — objetos, arrays y todos los tipos JSON. Sin escribir JSON a mano."
+      },
+      "ocr": {
+        "title": "Cuatro motores OCR",
+        "description": "Extraiga texto de PDF, imágenes u hojas de cálculo con Docling/Tesseract, Mistral OCR, LLM de visión o el respaldo local de Docling."
+      },
+      "evaluation": {
+        "title": "Evaluación de precisión",
+        "description": "Compare los valores extraídos con un archivo de referencia campo por campo, con métricas por campo y por documento y matrices de confusión."
+      },
+      "trials": {
+        "title": "Ensayos reproducibles",
+        "description": "Ejecute la extracción en conjuntos de documentos con prompts, esquemas, modelos, temperatura y límites de tokens configurables. Compare ejecuciones en paralelo."
+      },
+      "api": {
+        "title": "API compatibles con OpenAI",
+        "description": "Dirija los ensayos a cualquier endpoint compatible con OpenAI — OpenAI, Mistral, vLLM, Ollama o llama.cpp. Combínelos como quiera por ensayo."
+      }
+    },
+    "pipeline": {
+      "heading": "Cómo funciona",
+      "steps": {
+        "upload": {
+          "title": "Subir archivos",
+          "subtitle": "Se admiten varios formatos"
+        },
+        "preprocess": {
+          "title": "Preprocesar",
+          "subtitle": "Extraer texto y OCR"
+        },
+        "documents": {
+          "title": "Documentos",
+          "subtitle": "Organizar y agrupar"
+        },
+        "schemas": {
+          "title": "Esquemas",
+          "subtitle": "Definir la estructura"
+        },
+        "trials": {
+          "title": "Ejecutar ensayos",
+          "subtitle": "Extracción con LLM"
+        },
+        "evaluation": {
+          "title": "Evaluación",
+          "subtitle": "Métricas de precisión"
+        }
+      }
+    },
+    "details": {
+      "step1": {
+        "title": "Subir documentos médicos",
+        "supported_formats": "Formatos admitidos",
+        "format_pdf": "Documentos PDF con texto o imágenes escaneadas",
+        "format_doc": "Documentos de Word (DOCX, DOC)",
+        "format_img": "Imágenes (PNG, JPEG) con compatibilidad OCR",
+        "format_csv": "Datos estructurados (CSV, XLSX)",
+        "features": "Funciones",
+        "upload_features": {
+          "batch": "Subir varios archivos por lotes",
+          "detection": "Detección automática de formato",
+          "duplicate": "Detección de duplicados por SHA-256"
+        }
+      },
+      "step2": {
+        "title": "Extracción de texto y OCR",
+        "ocr_engines": "Motores OCR",
+        "document_parsers": "Analizadores de documentos",
+        "methods": {
+          "quick": {
+            "name": "Rápido (OCR local)",
+            "description": "Docling + Tesseract mediante docling-serve. Usa el texto PDF incrustado cuando está disponible; no requiere clave de API."
+          },
+          "mistral": {
+            "name": "API de Mistral OCR",
+            "description": "Mistral en la nube o DeepSeek-OCR-2 autoalojado. Mayor precisión en diseños y tablas complejos."
+          },
+          "vision": {
+            "name": "Vision LLM OCR",
+            "description": "Cualquier modelo de visión compatible con OpenAI (p. ej., GPT-4o, Gemma 4 vía vLLM) para una extracción que tiene en cuenta el diseño."
+          }
+        },
+        "parsers": {
+          "docling": {
+            "name": "Docling",
+            "description": "La biblioteca de comprensión de documentos de IBM — extracción de texto incrustado con respaldo local opcional."
+          },
+          "csv": {
+            "name": "CSV / XLSX",
+            "description": "Análisis de documento completo o fila por fila con columnas de texto e ID de caso configurables."
+          }
+        }
+      },
+      "step3": {
+        "title": "Gestión de documentos",
+        "organization": "Organización",
+        "selection_for_trials": "Selección para ensayos",
+        "choose_documents": "Elija documentos para un ensayo de dos maneras:",
+        "document_features": {
+          "sets": "Agrupar documentos en conjuntos reutilizables",
+          "filter": "Filtrar y buscar por metadatos",
+          "preview": "Previsualizar el texto extraído",
+          "track": "Seguir el motor OCR y el origen por documento"
+        },
+        "selection_options": {
+          "sets": {
+            "name": "Conjuntos de documentos",
+            "description": "Ejecutar un ensayo sobre un grupo entero de una sola vez"
+          },
+          "individual": {
+            "name": "Selección individual",
+            "description": "Elegir manualmente documentos específicos para un ensayo"
+          }
+        }
+      },
+      "step4": {
+        "title": "Editor visual de esquemas",
+        "tree_based_editor": "Editor basado en árbol",
+        "build_nested": "Crear estructuras anidadas visualmente",
+        "schema_features": "Funciones del esquema",
+        "schema_feature_items": {
+          "nested": "Objetos y arrays anidados",
+          "types": "Todos los tipos de datos JSON",
+          "import_export": "Importar / exportar esquemas JSON",
+          "templates": "Plantillas de esquema y validación"
+        }
+      },
+      "step5": {
+        "title": "Extracción impulsada por LLM",
+        "compatible_providers": "Proveedores compatibles",
+        "trial_configuration": "Configuración del ensayo",
+        "flow": {
+          "document": "Documento",
+          "prompt": "Prompt",
+          "schema": "Esquema",
+          "llm_api": "API de LLM",
+          "json_output": "Salida JSON"
+        },
+        "providers": {
+          "openai": {
+            "name": "API de OpenAI",
+            "description": "GPT-4o y otros modelos de OpenAI"
+          },
+          "local": {
+            "name": "Modelos locales",
+            "description": "Ollama, llama.cpp, vLLM — totalmente sin conexión"
+          },
+          "custom": {
+            "name": "Endpoints personalizados",
+            "description": "Cualquier pasarela de API compatible con OpenAI"
+          }
+        },
+        "trial_config": {
+          "limits": "Establecer temperatura y límites de tokens",
+          "sets": "Ejecutar sobre conjuntos de documentos completos",
+          "compare": "Comparar prompts, esquemas y modelos",
+          "tokens": "Seguir el uso de tokens por ensayo"
+        }
+      },
+      "step6": {
+        "title": "Evaluación de precisión",
+        "evaluation_process": "Proceso de evaluación",
+        "metrics_dashboard": "Panel de métricas",
+        "overall_accuracy": "Precisión global",
+        "documents": "Documentos",
+        "field_errors": "Errores de campo",
+        "process": {
+          "upload": {
+            "title": "Subir datos de referencia",
+            "description": "Proporcione un CSV/XLSX de valores validados"
+          },
+          "map": {
+            "title": "Asignar campos",
+            "description": "Vincule las columnas de referencia con los campos del esquema y los métodos de comparación"
+          },
+          "compute": {
+            "title": "Calcular métricas",
+            "description": "Precisión global, por campo y por documento"
+          }
+        }
+      }
+    },
+    "demo": {
+      "heading": "Véalo en acción",
+      "medical_document": "Documento médico",
+      "extracted_data": "Datos estructurados extraídos",
+      "llm_output": "Salida del LLM",
+      "copy_aria": "Copiar el JSON de ejemplo",
+      "copied": "¡Copiado!",
+      "copy": "Copiar",
+      "processing_details": "Detalles del procesamiento",
+      "model": "Modelo",
+      "processing_time": "Tiempo de procesamiento",
+      "tokens_used": "Tokens utilizados",
+      "accuracy_metrics": "Métricas de precisión",
+      "overall_accuracy": "Precisión global",
+      "based_on_documents": "Basado en 8 documentos evaluados",
+      "disclaimer": "Ejemplo ilustrativo — los datos y las métricas mostrados son ficticios, con fines de demostración.",
+      "flow_document": "Documento",
+      "flow_llm_processing": "Procesamiento con LLM",
+      "flow_validated_output": "Salida validada"
+    }
+  },
+  "projects": {
+    "overview": {
+      "subtitle": "Cree y gestione sus proyectos de extracción."
+    },
+    "detail": {
+      "loading": "Cargando proyecto...",
+      "go_to": "Ir a {label}",
+      "project_fallback": "Proyecto",
+      "load_failed": "No se pudieron cargar los detalles del proyecto",
+      "update_success": "Proyecto actualizado",
+      "update_failed": "No se pudo actualizar el proyecto",
+      "delete_success": "Proyecto eliminado",
+      "delete_failed": "No se pudo eliminar el proyecto"
+    },
+    "steps": {
+      "files": "Archivos y preprocesamiento",
+      "documents": "Documentos",
+      "schemas": "Esquemas e instrucciones",
+      "trials": "Ejecutar pruebas",
+      "evaluation": "Evaluación"
+    },
+    "hints": {
+      "no_documents": {
+        "title": "Aún no hay documentos",
+        "body": "Preprocese los archivos cargados para generar documentos. Los documentos son el texto extraído que el LLM lee durante una prueba."
+      },
+      "no_trial_documents": {
+        "title": "No hay documentos para ejecutar una prueba",
+        "body": "Una prueba extrae datos estructurados de sus documentos. Preprocese primero los archivos para generar documentos."
+      },
+      "no_schema": {
+        "title": "Aún no hay esquema"
+      },
+      "no_prompt": {
+        "title": "Aún no hay instrucción"
+      },
+      "schema_prompt": {
+        "body": "Una prueba necesita un esquema (los campos a extraer) y una instrucción (las indicaciones de extracción). Cree ambos antes de ejecutar una prueba."
+      },
+      "no_trials": {
+        "title": "No hay pruebas para evaluar",
+        "body": "La evaluación compara los resultados de las pruebas con los datos de referencia. Ejecute primero una prueba para producir resultados que evaluar."
+      }
+    },
+    "create": {
+      "open": "+ Crear proyecto",
+      "title": "Crear nuevo proyecto",
+      "name_label": "Nombre del proyecto",
+      "name_placeholder": "p. ej. Extracción de documentos médicos",
+      "description_label": "Descripción",
+      "optional": "(opcional)",
+      "description_placeholder": "Describa brevemente su proyecto",
+      "creating": "Creando...",
+      "submit": "Crear proyecto",
+      "error": "No se pudo crear el proyecto"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "delete_project": "Eliminar proyecto",
+      "save_changes": "Guardar cambios"
+    },
+    "delete": {
+      "irreversible": "Esta acción no se puede deshacer",
+      "warning_prefix": "Al eliminar",
+      "warning_including": "se eliminan de forma permanente el proyecto y todo su contenido, incluyendo:",
+      "warning_suffix": "se eliminan de forma permanente el proyecto y todo su contenido.",
+      "confirm_prefix": "Escriba",
+      "confirm_suffix": "para confirmar",
+      "this_project": "este proyecto",
+      "impact_document": "{count} documento | {count} documentos",
+      "impact_schema": "{count} esquema | {count} esquemas",
+      "impact_prompt": "{count} instrucción | {count} instrucciones",
+      "impact_trial": "{count} prueba | {count} pruebas",
+      "impact_evaluation": "{count} evaluación | {count} evaluaciones"
+    },
+    "grid": {
+      "heading": "Sus proyectos",
+      "show_all": "Mostrar los proyectos de todos los usuarios",
+      "retry": "Volver a intentar",
+      "empty_title": "Aún no hay proyectos",
+      "empty_body": "Cree su primer proyecto para empezar a cargar documentos, ejecutar el preprocesamiento OCR y extraer datos estructurados con LLM.",
+      "search_placeholder": "Buscar proyectos...",
+      "item_label": "proyectos",
+      "no_results_title": "No se encontraron proyectos",
+      "no_results_search": "Pruebe con otro término de búsqueda",
+      "no_results_create": "Cree un proyecto para comenzar",
+      "document_count": "{count} documento | {count} documentos",
+      "view": "Ver",
+      "columns": {
+        "project": "Proyecto",
+        "documents": "Documentos",
+        "user": "Usuario",
+        "created": "Creado"
+      },
+      "load_failed": "No se pudieron cargar los proyectos.",
+      "workflow": {
+        "upload": "Cargar archivos",
+        "preprocess": "Preprocesar",
+        "documents": "Documentos",
+        "schemas": "Esquemas",
+        "trials": "Ejecutar pruebas",
+        "evaluate": "Evaluar"
+      }
+    },
+    "settings": {
+      "title": "Configuración del proyecto",
+      "general": "General",
+      "name_placeholder": "Nombre del proyecto",
+      "description_placeholder": "Descripción (opcional)",
+      "danger_zone": "Zona de peligro",
+      "danger_text": "Una vez que elimine un proyecto, no hay vuelta atrás. Asegúrese.",
+      "name_required": "El nombre del proyecto es obligatorio"
+    }
+  },
+  "schema": {
+    "management": {
+      "title": "Esquemas y prompts",
+      "subtitle": "Defina la estructura y las instrucciones para la extracción de información",
+      "tab_schemas": "Esquemas JSON",
+      "tab_prompts": "Prompts de extracción"
+    },
+    "delete": {
+      "title": "Eliminar esquema",
+      "message": "¿Seguro que desea eliminar el esquema \"{name}\"? Esta acción no se puede deshacer."
+    },
+    "actions": {
+      "delete": "Eliminar"
+    },
+    "toasts": {
+      "load_failed": "No se pudieron cargar los esquemas. Vuelva a intentarlo.",
+      "deleted": "Esquema \"{name}\" eliminado correctamente"
+    },
+    "errors": {
+      "delete_failed": "No se pudo eliminar el esquema"
+    },
+    "list": {
+      "title": "Esquemas JSON",
+      "subtitle": "Defina la estructura para la extracción de información",
+      "create": "Crear esquema",
+      "empty_title": "Aún no se han creado esquemas",
+      "empty_description": "Cree un esquema para definir la estructura de la extracción de información",
+      "item_label": "esquemas",
+      "search_placeholder": "Buscar esquemas...",
+      "no_match": "Ningún esquema coincide con su búsqueda",
+      "view": "Ver esquema",
+      "edit": "Editar esquema",
+      "delete": "Eliminar esquema",
+      "col_name": "Nombre",
+      "col_created": "Creado",
+      "search_chip": "Búsqueda: \"{query}\""
+    },
+    "view": {
+      "snapshot": "Instantánea",
+      "snapshot_title": "Copia congelada del esquema tal como estaba cuando se ejecutó la prueba",
+      "copy": "Copiar",
+      "close": "Cerrar",
+      "copied": "Esquema copiado"
+    },
+    "templates": {
+      "title": "Plantillas de esquema",
+      "subtitle": "Seleccione una plantilla para estructuras comunes de documentos médicos",
+      "cancel": "Cancelar"
+    },
+    "form": {
+      "edit_title": "Editar esquema",
+      "create_title": "Crear nuevo esquema",
+      "mode_simple": "Simple",
+      "mode_advanced": "Avanzado",
+      "name_label": "Nombre del esquema",
+      "name_placeholder": "p. ej., Información del paciente",
+      "templates": "Plantillas",
+      "valid": "Válido",
+      "invalid": "No válido",
+      "mode_hint_simple_label": "Simple:",
+      "mode_hint_simple_text": "añada campos de extracción como una lista plana. Cambie a Avanzado para grupos anidados, listas y JSON sin procesar.",
+      "mode_hint_advanced_label": "Avanzado:",
+      "mode_hint_advanced_text": "cree estructuras anidadas en el editor visual o edite directamente el esquema JSON sin procesar.",
+      "developer_options": "Opciones de desarrollador",
+      "developer_options_title": "Usar los nombres de tipo del esquema JSON (String, Object, Array…) y mostrar opciones de campo avanzadas como formatos y restricciones.",
+      "split_view": "Vista dividida",
+      "split_view_disabled_title": "La vista dividida muestra el editor visual y el JSON sin procesar en paralelo — cambie a la pestaña Editor visual para usarla.",
+      "split_view_title": "Mostrar el editor visual y el JSON sin procesar en paralelo.",
+      "format": "Formatear",
+      "format_json_title": "Formatear JSON",
+      "cancel": "Cancelar",
+      "fix_field_names": "Primero corrija los nombres de campo resaltados (nombres vacíos o duplicados).",
+      "update": "Actualizar",
+      "create": "Crear",
+      "discard_title": "¿Descartar los cambios no guardados?",
+      "discard_message": "Se perderán las modificaciones del esquema.",
+      "discard_confirm": "Descartar",
+      "discard_cancel": "Seguir editando",
+      "tab_visual": "Editor visual",
+      "tab_raw": "JSON sin procesar",
+      "invalid_json": "JSON no válido: {message}",
+      "invalid_json_format": "Formato JSON no válido. Verifique la definición de su esquema.",
+      "validation_failed": "Error en la validación del esquema",
+      "must_contain_field": "El esquema debe contener al menos un campo.",
+      "create_failed": "No se pudo crear el esquema",
+      "update_failed": "No se pudo actualizar el esquema",
+      "created": "Esquema \"{name}\" creado correctamente",
+      "updated": "Esquema \"{name}\" actualizado correctamente",
+      "template_applied": "Plantilla \"{name}\" aplicada"
+    }
+  },
+  "prompt": {
+    "delete": {
+      "title": "Eliminar prompt",
+      "message": "¿Seguro que desea eliminar el prompt \"{name}\"? Esta acción no se puede deshacer."
+    },
+    "actions": {
+      "delete": "Eliminar"
+    },
+    "toasts": {
+      "load_failed": "No se pudieron cargar los prompts. Vuelva a intentarlo.",
+      "deleted": "Prompt \"{name}\" eliminado correctamente"
+    },
+    "errors": {
+      "delete_failed": "No se pudo eliminar el prompt"
+    },
+    "common": {
+      "contains_placeholder": "Contiene marcador de posición"
+    },
+    "fields": {
+      "system_prompt": "Prompt del sistema",
+      "user_prompt": "Prompt del usuario"
+    },
+    "list": {
+      "title": "Prompts de extracción",
+      "subtitle": "Configure cómo el LLM extrae información de los documentos",
+      "create": "Crear prompt",
+      "empty_title": "Aún no se han creado prompts",
+      "empty_description": "Cree un prompt para guiar al LLM en la extracción de información",
+      "item_label": "prompts",
+      "search_placeholder": "Buscar prompts...",
+      "no_match": "Ningún prompt coincide con su búsqueda",
+      "auto_injected_tooltip": "Sin marcador de posición {ph} — el texto del documento se añade automáticamente cuando se ejecuta la prueba.",
+      "auto_injected": "Insertado automáticamente",
+      "view": "Ver prompt",
+      "edit": "Editar prompt",
+      "delete": "Eliminar prompt",
+      "col_name": "Nombre",
+      "col_placeholder": "Marcador de posición",
+      "col_created": "Creado",
+      "search_chip": "Búsqueda: \"{query}\""
+    },
+    "view": {
+      "snapshot": "Instantánea",
+      "snapshot_title": "Copia congelada del prompt tal como estaba cuando se ejecutó la prueba",
+      "copy": "Copiar",
+      "close": "Cerrar",
+      "copied": "Prompt copiado"
+    },
+    "form": {
+      "edit_title": "Editar prompt",
+      "create_title": "Crear nuevo prompt",
+      "mode_simple": "Simple",
+      "mode_advanced": "Avanzado",
+      "name_label": "Nombre del prompt",
+      "name_placeholder": "p. ej., Extracción de documentos médicos",
+      "name_required": "Este campo es obligatorio",
+      "description_label": "Descripción",
+      "description_placeholder": "Describa qué debe extraer este prompt...",
+      "instruction_label": "Instrucción de extracción",
+      "instruction_placeholder": "Según el contenido del documento, extraiga estos campos:",
+      "instruction_help": "Esto se usará como prompt del usuario. El texto del documento y el esquema seleccionado se añaden automáticamente cuando se ejecuta la prueba.",
+      "system_from_advanced": "Este prompt tiene un prompt del sistema del modo Avanzado. Se conserva mientras edita, pero no se guardará mientras esté seleccionado el modo Simple.",
+      "hide": "Ocultar",
+      "preview": "Vista previa",
+      "preview_with_sample": "Vista previa con documento de ejemplo",
+      "simple_preview_help": "En el modo Simple no se envía ningún mensaje del sistema — su instrucción se convierte en el mensaje del usuario, con el documento y el esquema de la prueba añadidos:",
+      "user_message_preview": "Vista previa del mensaje del usuario",
+      "system_message_preview": "Vista previa del mensaje del sistema",
+      "callout_title": "Cómo funcionan los prompts",
+      "callout_system_label": "Prompt del sistema",
+      "callout_system_text": "— el rol y las reglas de la IA (se aplica a cada documento).",
+      "callout_user_label": "Prompt del usuario",
+      "callout_user_text": "— instrucciones por documento, donde",
+      "callout_replaced": "se reemplaza por el texto del documento.",
+      "callout_schema_label": "El esquema seleccionado se incluye automáticamente",
+      "callout_schema_text": "cuando se ejecuta la prueba, para que el modelo sepa qué campos extraer. No necesita pegar el JSON del esquema en su prompt — hacerlo lo duplicaría.",
+      "insert_placeholder_title": "Insertar {ph} en el cursor",
+      "insert_placeholder": "+ Insertar {ph}",
+      "system_placeholder": "Eres un asistente de IA especializado en extraer información estructurada de documentos...",
+      "user_placeholder": "Extraiga la siguiente información de este documento:\\n\\n{ph}",
+      "use_template": "Usar plantilla",
+      "cancel": "Cancelar",
+      "update": "Actualizar",
+      "create": "Crear",
+      "discard_title": "¿Descartar los cambios no guardados?",
+      "discard_message": "Se perderán las modificaciones del prompt.",
+      "discard_confirm": "Descartar",
+      "discard_cancel": "Seguir editando",
+      "apply_template_title": "¿Aplicar plantilla?",
+      "apply_template_message": "Aplicar la plantilla reemplaza el nombre, la descripción y los prompts actuales.",
+      "apply_template_confirm": "Aplicar plantilla",
+      "apply_template_cancel": "Cancelar",
+      "error_enter_instruction": "Introduzca una instrucción de extracción",
+      "error_at_least_one": "Debe proporcionarse al menos un prompt (del sistema o del usuario)",
+      "error_placeholder_required": "El marcador de posición {ph} debe estar presente en el prompt del sistema o del usuario",
+      "name_required_toast": "El nombre del prompt es obligatorio",
+      "check_requirements": "Verifique los requisitos del prompt",
+      "created": "Prompt creado",
+      "create_failed": "No se pudo crear el prompt",
+      "updated": "Prompt actualizado",
+      "update_failed": "No se pudo actualizar el prompt",
+      "template_applied": "Plantilla de extracción médica aplicada"
+    }
+  },
+  "schemaEditor": {
+    "structure": "Estructura del esquema",
+    "no_properties": "No hay propiedades definidas",
+    "add_first_property": "Añadir la primera propiedad",
+    "property_exists": "¡La propiedad \"{name}\" ya existe!",
+    "collapse": "Contraer",
+    "expand": "Expandir",
+    "array_items": "Elementos del arreglo",
+    "types": {
+      "text": "Texto",
+      "number": "Número",
+      "integer": "Entero",
+      "yes_no": "Sí/No",
+      "group": "Grupo",
+      "list": "Lista",
+      "date": "Fecha",
+      "datetime": "Fecha y hora",
+      "email": "Correo electrónico",
+      "any": "Cualquiera",
+      "advanced": "Avanzado"
+    },
+    "type_desc": {
+      "string": "Texto de una o varias líneas",
+      "number": "Valores numéricos, se permiten decimales",
+      "boolean": "Valores verdadero o falso",
+      "object": "Grupo de campos relacionados",
+      "array": "Lista de elementos"
+    },
+    "tree": {
+      "root": "Raíz"
+    },
+    "simple": {
+      "title": "Extraer campos",
+      "subtitle": "Arrastre para reordenar • Haga clic en un campo para editarlo",
+      "add_field": "Añadir campo",
+      "empty_title": "Aún no hay campos",
+      "empty_description": "Añada campos para definir qué información extraer de sus documentos",
+      "add_first_field": "Añadir su primer campo",
+      "readonly_notice_before": "Los campos con grupos anidados, listas o ajustes avanzados son de solo lectura aquí — edítelos en el",
+      "advanced_mode": "modo Avanzado",
+      "readonly_row_title": "Solo lectura — edite \"{name}\" en el modo Avanzado",
+      "edit_in_advanced": "Editar en el modo Avanzado",
+      "drag_to_reorder": "Arrastre para reordenar",
+      "name_placeholder": "field_name (p. ej., patient_name)",
+      "required_on": "Obligatorio — haga clic para hacerlo opcional",
+      "required_off": "Opcional — haga clic para hacerlo obligatorio",
+      "toggle_required": "Alternar obligatorio",
+      "description_placeholder": "¿Qué es este campo? (opcional)",
+      "remove_field": "Eliminar campo",
+      "options": "Opciones",
+      "remove_option": "Eliminar opción",
+      "add_option_placeholder": "añadir opción — pulse Enter",
+      "quick_tips": "Consejos rápidos",
+      "tip_names": "Use nombres claros como",
+      "or": "o",
+      "tip_schema": "El esquema se incluye automáticamente en el prompt enviado al LLM",
+      "tip_nested": "¿Necesita objetos o arreglos anidados? Cambie al",
+      "advanced_mode_caps": "modo Avanzado",
+      "error_name_required": "Asigne un nombre a este campo o elimínelo",
+      "error_duplicate": "Nombre de campo duplicado \"{name}\""
+    },
+    "block": {
+      "root_schema": "Esquema raíz",
+      "edit_settings": "Editar ajustes",
+      "add_property": "Añadir propiedad",
+      "hide_details": "Ocultar detalles",
+      "show_details": "Mostrar detalles",
+      "min_length": "Longitud mín.",
+      "max_length": "Longitud máx.",
+      "pattern": "Patrón",
+      "format": "Formato",
+      "minimum": "Mínimo",
+      "maximum": "Máximo",
+      "allowed_values": "Valores permitidos",
+      "required_fields": "Campos obligatorios",
+      "required": "*obligatorio",
+      "default_value": "Valor predeterminado",
+      "edit_property": "Editar propiedad",
+      "navigate_into": "Navegar dentro",
+      "delete_property": "Eliminar propiedad",
+      "options_prefix": "Opciones:",
+      "edit_array_items": "Editar elementos del arreglo",
+      "navigate_into_items": "Navegar dentro de los elementos"
+    },
+    "field_list": {
+      "required": "obligatorio",
+      "options_count": "{count} opciones",
+      "no_fields": "No hay campos definidos.",
+      "show_raw_json": "Mostrar JSON sin procesar (avanzado)"
+    },
+    "property": {
+      "basic_info": "Información básica",
+      "key_label_advanced": "Clave de propiedad",
+      "key_label": "Nombre del campo",
+      "key_placeholder": "property_name",
+      "key_hint": "Use minúsculas con guiones bajos (p. ej., patient_name)",
+      "title_label_advanced": "Título",
+      "title_label": "Nombre para mostrar",
+      "title_placeholder": "Nombre para mostrar de {key}",
+      "type_label_advanced": "Tipo",
+      "type_label": "Tipo de campo",
+      "type_tooltip_string": "Campo de texto para nombres, descripciones, etc.",
+      "type_tooltip_number": "Valores numéricos con decimales opcionales",
+      "type_tooltip_boolean": "Casilla de verificación o interruptor verdadero/falso",
+      "type_tooltip_object": "Contenedor para campos agrupados",
+      "type_tooltip_array": "Lista de elementos repetidos",
+      "description_label": "Descripción",
+      "description_placeholder": "Describa lo que captura este campo...",
+      "text_settings": "Ajustes de texto",
+      "min_length": "Longitud mínima",
+      "max_length": "Longitud máxima",
+      "no_minimum": "Sin mínimo",
+      "no_maximum": "Sin máximo",
+      "format_label": "Formato",
+      "format_none": "Sin formato específico",
+      "format_email": "Correo electrónico",
+      "format_url": "URL",
+      "format_date": "Fecha (AAAA-MM-DD)",
+      "format_datetime": "Fecha y hora",
+      "format_time": "Hora",
+      "format_ipv4": "Dirección IPv4",
+      "format_ipv6": "Dirección IPv6",
+      "format_uuid": "UUID",
+      "pattern_label": "Patrón (expresión regular)",
+      "common_patterns": "Patrones comunes:",
+      "pattern_numbers": "Solo números",
+      "pattern_letters": "Solo letras",
+      "pattern_example": "2 letras mayúsculas + 4 dígitos",
+      "allowed_values": "Valores permitidos (opciones)",
+      "option_placeholder": "Valor de opción",
+      "remove_enum_value": "Eliminar valor de enumeración",
+      "add_option": "+ Añadir opción",
+      "number_settings": "Ajustes numéricos",
+      "min_value": "Valor mínimo",
+      "max_value": "Valor máximo",
+      "multiple_of": "Múltiplo de",
+      "multiple_of_placeholder": "p. ej., 0,01 para céntimos",
+      "integer_only": "Solo enteros",
+      "boolean_settings": "Ajustes Sí/No",
+      "boolean_help": "Este campo capturará valores verdadero/falso. La interfaz lo mostrará como una casilla de verificación o un interruptor.",
+      "list_settings": "Ajustes de lista",
+      "min_items": "Número mínimo de elementos",
+      "max_items": "Número máximo de elementos",
+      "unique_items": "Los elementos deben ser únicos",
+      "group_settings": "Ajustes de grupo",
+      "required_fields": "Campos obligatorios",
+      "add_properties_first": "Primero añada propiedades a este grupo",
+      "allow_additional": "Permitir propiedades adicionales",
+      "additional_settings": "Ajustes adicionales",
+      "default_value": "Valor predeterminado",
+      "no_default": "Sin predeterminado",
+      "true": "Verdadero",
+      "false": "Falso",
+      "no_default_value": "Sin valor predeterminado",
+      "default_raw_json": "Los valores predeterminados para {type} deben establecerse en el modo JSON sin procesar",
+      "advanced_features": "Funciones avanzadas",
+      "read_only": "Campo de solo lectura",
+      "examples": "Ejemplos",
+      "examples_placeholder": "Introduzca ejemplos, uno por línea",
+      "key_required": "Se requiere una clave",
+      "key_invalid": "Solo letras, números y guiones bajos — no debe comenzar con un número (p. ej., patient_name)"
+    },
+    "add_modal": {
+      "title": "Añadir campo",
+      "title_advanced": "Añadir propiedad",
+      "name_label": "Nombre del campo",
+      "name_label_advanced": "Nombre de la propiedad",
+      "name_placeholder": "p. ej., patient_name",
+      "name_required": "El nombre es obligatorio",
+      "display_name_placeholder": "p. ej., Nombre del paciente",
+      "description_placeholder": "Breve descripción de este campo",
+      "cancel": "Cancelar"
+    },
+    "edit_modal": {
+      "title_root": "Editar esquema raíz",
+      "title_property": "Editar propiedad",
+      "title_field": "Editar campo",
+      "cancel": "Cancelar",
+      "save": "Guardar cambios",
+      "discard_title": "¿Descartar los cambios no guardados?",
+      "discard_message": "Se perderán sus modificaciones de esta propiedad.",
+      "discard_confirm": "Descartar",
+      "discard_cancel": "Seguir editando"
+    },
+    "delete_modal": {
+      "title_property": "Eliminar propiedad",
+      "title_field": "Eliminar campo",
+      "message": "¿Seguro que desea eliminar \"{name}\"? Esta acción no se puede deshacer.",
+      "confirm": "Eliminar"
+    },
+    "toolbar": {
+      "help": "Ayuda"
+    },
+    "help": {
+      "title": "Ayuda del editor de esquemas",
+      "field_types": "Tipos de campo",
+      "tips": "Consejos",
+      "tip_click": "Haga clic en cualquier bloque de campo para editar sus propiedades",
+      "tip_breadcrumb": "Use la ruta de navegación para desplazarse entre estructuras anidadas",
+      "tip_key_before": "Pulse",
+      "tip_key_after": "para añadir un nuevo campo (cuando no está escribiendo en un campo)",
+      "tip_developer": "Active «Opciones de desarrollador» para acceder a más opciones del esquema JSON",
+      "close": "Cerrar"
+    }
+  },
+  "trials": {
+    "title": "Ensayos",
+    "subtitle": "Ejecute un modelo de IA sobre sus documentos para extraer datos estructurados y luego compare los resultados entre ensayos.",
+    "count": "{count} ensayo | {count} ensayos",
+    "actions": {
+      "start_new": "Iniciar nuevo ensayo",
+      "delete": "Eliminar"
+    },
+    "batch": {
+      "item_label": "ensayo"
+    },
+    "empty": {
+      "none_title": "Aún no hay ensayos",
+      "none_description": "Ejecute su primer ensayo de extracción para ver los resultados aquí.",
+      "none_action": "Iniciar un ensayo",
+      "no_match_title": "Ningún ensayo coincide con sus filtros",
+      "no_match_description": "Intente ajustar o borrar sus filtros para ver más ensayos.",
+      "clear_all": "Borrar todos los filtros"
+    },
+    "confirm": {
+      "default_confirm": "Confirmar"
+    },
+    "disabled_reason": {
+      "loading": "Cargando recursos del proyecto…",
+      "no_schema": "Necesita al menos un esquema para iniciar un ensayo.",
+      "no_document": "Debe subir al menos un documento para iniciar un ensayo.",
+      "no_prompt": "Debe crear al menos un prompt para iniciar un ensayo."
+    },
+    "errors": {
+      "load_trials": "No se pudieron cargar los ensayos",
+      "load": "No se pudo cargar"
+    },
+    "toast": {
+      "created": "Ensayo creado",
+      "create_failed": "No se pudo crear el ensayo",
+      "renamed": "Ensayo renombrado",
+      "rename_failed": "No se pudo renombrar el ensayo",
+      "cancelled_kept": "Ensayo cancelado — se conservaron los resultados ya procesados",
+      "cancelled_discarded": "Ensayo cancelado — se descartaron los resultados en curso",
+      "cancel_failed": "No se pudo cancelar el ensayo",
+      "deleted": "Ensayo eliminado",
+      "delete_failed": "No se pudo eliminar el ensayo",
+      "retry_failed_docs": "Reintentando los documentos fallidos",
+      "restarted": "Ensayo reiniciado",
+      "restart_failed": "No se pudo reiniciar el ensayo"
+    },
+    "delete_dialog": {
+      "title": "Eliminar ensayo",
+      "message": "Al eliminar este ensayo también se eliminan sus resultados de extracción y todas las evaluaciones basadas en él. Esta acción no se puede deshacer.",
+      "confirm": "Eliminar"
+    },
+    "retry_dialog": {
+      "title": "Reintentar ensayo",
+      "message": "¿Iniciar un nuevo ensayo con la misma configuración? Esto consumirá créditos de LLM y procesará todos los documentos de nuevo.",
+      "confirm": "Reintentar ensayo"
+    },
+    "table": {
+      "item_label": "ensayos",
+      "empty_title": "No se encontraron ensayos",
+      "processed_results": "Resultados procesados",
+      "results_short": "{count} res.",
+      "documents_with_errors": "Documentos con errores",
+      "errors_short": "{count} err.",
+      "progress_aria": "Progreso del ensayo",
+      "ready": "Listo",
+      "failed": "Fallido",
+      "results_action": "Resultados",
+      "col_name": "Ensayo",
+      "col_schema": "Esquema",
+      "col_prompt": "Prompt",
+      "col_model": "Modelo",
+      "col_results": "Resultados",
+      "col_progress": "Progreso",
+      "col_started": "Iniciado"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "processing": "Procesando",
+      "completed": "Completado",
+      "failed": "Fallido",
+      "cancelled": "Cancelado"
+    },
+    "filters": {
+      "search_placeholder": "Buscar ensayos...",
+      "item_label": "ensayos",
+      "all_status": "Todos los estados",
+      "all_schemas": "Todos los esquemas",
+      "all_prompts": "Todos los prompts",
+      "all_groups": "Todos los grupos",
+      "all_models": "Todos los modelos",
+      "all": "Todos",
+      "has_errors": "Con errores",
+      "no_errors": "Sin errores",
+      "all_time": "Todo el tiempo",
+      "today": "Hoy",
+      "yesterday": "Ayer",
+      "last_7_days": "Últimos 7 días",
+      "last_30_days": "Últimos 30 días",
+      "custom_range": "Rango personalizado...",
+      "from": "Desde:",
+      "to": "Hasta:",
+      "apply": "Aplicar",
+      "present": "presente",
+      "chip_search": "Búsqueda: \"{value}\"",
+      "chip_status": "Estado: {value}",
+      "chip_schema": "Esquema: {value}",
+      "chip_prompt": "Prompt: {value}",
+      "chip_group": "Grupo: {value}",
+      "chip_model": "Modelo: {value}",
+      "chip_errors": "Errores: {value}",
+      "chip_date": "Fecha: {value}"
+    },
+    "create": {
+      "title": "Iniciar nuevo ensayo",
+      "mode_simple": "Simple",
+      "mode_advanced": "Avanzado",
+      "what_is_title": "¿Qué es un ensayo?",
+      "what_is_body": "Un ensayo ejecuta un modelo de IA sobre sus documentos para extraer datos estructurados. Necesita cuatro cosas: un <strong>Esquema</strong> (los campos a extraer), un <strong>Prompt</strong> (las instrucciones de extracción), un <strong>Modelo</strong> (la IA) y los <strong>Documentos</strong> a procesar. Su esquema se incluye automáticamente con el prompt — no necesita describir los campos manualmente.",
+      "help_text": "Un ensayo ejecuta un modelo de IA sobre sus documentos para extraer datos estructurados. Necesita un esquema, un prompt, un modelo y los documentos a procesar. El esquema se incluye automáticamente con el prompt.",
+      "name_notes_hide": "Ocultar nombre / notas",
+      "name_notes_add": "Añadir nombre / notas",
+      "advanced_settings_hide": "Ocultar ajustes avanzados",
+      "advanced_settings_show": "Mostrar ajustes avanzados",
+      "custom_api_hide": "Ocultar ajustes de API personalizada",
+      "custom_api_use": "Usar ajustes de API personalizada",
+      "no_model_title": "Ningún modelo predeterminado configurado",
+      "no_model_body": "Este servidor no tiene ningún LLM configurado a nivel de sistema. Aún puede ejecutar un ensayo apuntando a cualquier API compatible con OpenAI (OpenAI, Ollama, vLLM, llama.cpp…).",
+      "custom_api_simple_hide": "Ocultar ajustes de API personalizada",
+      "custom_api_simple_edit": "Editar ajustes de API personalizada",
+      "custom_api_simple_use": "Usar una API diferente",
+      "checking_title": "Comprobando la compatibilidad del modelo…",
+      "checking_body": "Verificando que {model} funciona con su esquema antes de iniciar el ensayo.",
+      "the_model": "el modelo",
+      "cancel": "Cancelar",
+      "verifying": "Verificando…",
+      "start_trial": "Iniciar ensayo",
+      "discard_title": "¿Descartar los cambios no guardados?",
+      "discard_message": "Se perderá la configuración de su ensayo.",
+      "discard_confirm": "Descartar",
+      "discard_cancel": "Seguir editando",
+      "status": {
+        "verifying": "Verificando que el modelo funciona con su esquema…",
+        "choose_model": "Elija un modelo para continuar.",
+        "select_documents": "Seleccione documentos para continuar.",
+        "verified_ready": "Modelo verificado con este esquema — listo para iniciar.",
+        "verification_failed": "Verificación fallida: {message}",
+        "will_check": "El modelo se comprobará cuando inicie el ensayo."
+      },
+      "toast": {
+        "start_failed": "No se pudo iniciar el ensayo. Inténtelo de nuevo."
+      }
+    },
+    "metadata": {
+      "name_label": "Nombre del ensayo",
+      "optional": "(opcional)",
+      "name_placeholder": "Ej.: Extracción de contratos T3",
+      "description_label": "Descripción",
+      "description_placeholder": "Breve resumen de este ensayo (p. ej. tipo de documento, objetivo, cambios, etc.)"
+    },
+    "select": {
+      "schema_label": "Esquema",
+      "schema_placeholder": "Seleccionar un esquema",
+      "preview_fields": "Vista previa de campos",
+      "prompt_label": "Prompt",
+      "prompt_placeholder": "Seleccionar un prompt",
+      "preview_prompt": "Vista previa del prompt",
+      "sys_prefix": "Sist.:",
+      "user_prefix": "Usuario:",
+      "model_label": "Modelo LLM",
+      "model_loading": "Cargando modelos...",
+      "model_none": "No hay modelos disponibles",
+      "model_placeholder": "Seleccionar un modelo",
+      "model_help": "Los modelos se cargan desde su proveedor de LLM configurado. No todos los modelos admiten salida JSON estructurada — la prueba de compatibilidad de abajo verifica que el modelo elegido funciona con el esquema seleccionado antes de ejecutar el ensayo.",
+      "model_help_tooltip": "El modelo de IA utilizado para la extracción. Los modelos se obtienen de su proveedor de LLM (predeterminado del sistema o sus ajustes de API personalizada). La lista muestra los identificadores de modelo sin procesar del proveedor; use la prueba de compatibilidad para confirmar que un modelo puede producir una salida estructurada acorde con su esquema."
+    },
+    "docsel": {
+      "select_documents": "Seleccionar documentos",
+      "n_selected": "{count} seleccionados",
+      "tab_individual": "Individual",
+      "tab_groups": "Grupos",
+      "tab_smart": "Inteligente",
+      "toast": {
+        "load_groups_failed": "No se pudieron cargar los grupos de documentos",
+        "group_empty": "\"{name}\" no tiene documentos",
+        "load_group_docs_failed": "No se pudieron cargar los documentos de este grupo",
+        "loaded_from_trial": "Se cargaron {count} documentos del ensayo anterior",
+        "selected_all": "Se seleccionaron los {count} documentos coincidentes",
+        "select_all_failed": "No se pudieron seleccionar todos los documentos",
+        "selected_recent": "Se seleccionaron {count} documentos de los últimos {days} días",
+        "selected_range": "Se seleccionaron {count} documentos en el rango de fechas"
+      }
+    },
+    "groups": {
+      "empty": "No hay grupos de documentos disponibles",
+      "n_documents": "{count} documentos",
+      "config": "Configuración: {name}",
+      "created": "Creado: {date}"
+    },
+    "individual": {
+      "search_placeholder": "Buscar documentos (texto o nombre de archivo)…",
+      "select_all_title": "Seleccionar todos los documentos coincidentes",
+      "selecting": "Seleccionando…",
+      "select_all": "Seleccionar todo",
+      "clear_title": "Borrar selección",
+      "clear": "Borrar",
+      "no_match": "Ningún documento coincide con sus criterios",
+      "doc_fallback": "Documento n.º {id}",
+      "original": "(Original: {name})",
+      "config_created": "Configuración: {config} • Creado: {date}",
+      "na": "N/D",
+      "total": "en total",
+      "page": "página",
+      "prev": "Ant.",
+      "next": "Sig."
+    },
+    "smart": {
+      "load_from_trial": "Cargar desde un ensayo anterior",
+      "select_trial": "Seleccionar un ensayo anterior...",
+      "trial_option": "{name} - {date} ({count} doc.)",
+      "filter_by_date": "Filtrar por rango de fechas",
+      "last_7_days": "Últimos 7 días",
+      "last_30_days": "Últimos 30 días",
+      "apply_title": "Aplicar rango de fechas explícito",
+      "apply_range": "Aplicar rango de fechas",
+      "n_selected": "{count} documento seleccionado | {count} documentos seleccionados",
+      "show": "Mostrar",
+      "hide": "Ocultar",
+      "clear": "Borrar"
+    },
+    "advanced": {
+      "max_tokens_label": "Máximo de tokens de finalización",
+      "optional": "(opcional)",
+      "max_tokens_placeholder": "ej.: 4096",
+      "max_tokens_help": "Limite el número máximo de tokens para las respuestas del modelo. Déjelo vacío para usar los valores predeterminados del modelo.",
+      "temperature_label": "Temperatura",
+      "temperature_placeholder": "ej.: 0.7",
+      "temperature_help": "Controla la aleatoriedad. Los valores más bajos hacen las salidas más enfocadas; los más altos las hacen más aleatorias. Típico: 0.0–1.0",
+      "reasoning_label": "Esfuerzo de razonamiento",
+      "reasoning_default": "Usar el valor predeterminado del modelo",
+      "reasoning_low": "Bajo",
+      "reasoning_medium": "Medio",
+      "reasoning_high": "Alto",
+      "reasoning_help": "Indica al modelo cuánto cómputo dedicar a la cadena de pensamiento/razonamiento. No todos los modelos/API lo admiten."
+    },
+    "custom_api": {
+      "api_key_label": "Clave API",
+      "api_key_placeholder": "ej.: sk-1234567890abcdef...",
+      "base_url_label": "URL base",
+      "base_url_placeholder": "ej.: https://api.openai.com/v1"
+    },
+    "model_test": {
+      "title": "Compatibilidad de modelo y esquema",
+      "test_now": "Probar ahora",
+      "warning_help": "El modelo se comprueba automáticamente cuando inicia el ensayo — o pruébelo ahora para confirmar la compatibilidad de antemano."
+    },
+    "results": {
+      "aria": "Resultados del ensayo",
+      "n_results": "{count} resultados",
+      "model_label": "Modelo:",
+      "prompt_label": "Prompt:",
+      "unnamed": "[sin nombre]",
+      "set_label": "Conjunto:",
+      "tokens_label": "Tokens:",
+      "schema_button": "Esquema",
+      "prompt_button": "Prompt",
+      "n_errors": "{count} errores",
+      "prev_title": "Documento anterior (←)",
+      "first_result": "Primer resultado",
+      "next_title": "Documento siguiente (→)",
+      "last_result": "Último resultado",
+      "loading": "Cargando los resultados del ensayo…",
+      "not_found": "Ensayo no encontrado",
+      "return": "Volver a los ensayos",
+      "no_results_title": "No hay resultados disponibles para este ensayo.",
+      "wait": "Espere a que finalice el ensayo.",
+      "search_placeholder": "Buscar documentos…",
+      "all_statuses": "Todos los estados",
+      "no_match": "Ningún resultado coincide con sus filtros.",
+      "reset_filters": "Restablecer filtros",
+      "hide_list": "Ocultar la lista de documentos",
+      "show_list": "Mostrar la lista de documentos",
+      "doc_fallback": "Documento n.º {id}",
+      "select_doc": "Seleccione un documento para ver.",
+      "kbd_use": "Use",
+      "kbd_move": "para moverse entre documentos.",
+      "close": "Cerrar",
+      "status_option": {
+        "success": "Éxito",
+        "failed": "Fallido",
+        "incomplete": "Incompleto",
+        "invalid_json": "JSON no válido",
+        "schema_invalid": "Esquema no válido",
+        "refused": "Rechazado",
+        "provider_error": "Error del proveedor"
+      },
+      "status_label": {
+        "success": "OK",
+        "failed": "Error",
+        "incomplete": "Incompleto",
+        "invalid_json": "JSON no válido",
+        "schema_invalid": "Esquema no válido",
+        "refused": "Rechazado",
+        "provider_error": "Error del proveedor"
+      },
+      "toast": {
+        "no_loaded_result": "No hay ningún resultado cargado para este documento — puede que haya fallado antes de producir uno, o esté en otra página."
+      },
+      "errors": {
+        "load_trial": "No se pudieron cargar los datos del ensayo"
+      }
+    },
+    "viewer": {
+      "tokens_label": "Tokens:",
+      "created_label": "Creado:",
+      "file_label": "Archivo:",
+      "no_structured_result": "Este documento no tiene ningún resultado estructurado.",
+      "parser_error": "Error del analizador: {error}",
+      "tuning_advice": "Consejos de ajuste",
+      "source_document": "Documento fuente",
+      "show_extracted": "Mostrar el texto extraído",
+      "show_original": "Mostrar el archivo original",
+      "loading_preview": "Cargando la vista previa…",
+      "no_source": "No hay archivo original ni texto extraído para este documento.",
+      "result": "Resultado",
+      "copied": "¡Copiado!",
+      "copy_json": "Copiar JSON",
+      "no_output": "No hay salida estructurada para este documento.",
+      "reasoning": "Razonamiento",
+      "no_reasoning": "No se capturó contenido de razonamiento para este documento.",
+      "metadata": "Metadatos",
+      "token_usage": "Uso de tokens",
+      "finish_reason": "Motivo de finalización",
+      "json_error": "Error de JSON",
+      "no_metadata": "No hay metadatos para este documento.",
+      "panel_source": "Fuente",
+      "panel_result": "Resultado",
+      "panel_reasoning": "Razonamiento",
+      "panel_metadata": "Metadatos",
+      "no_text_content": "No hay contenido de texto disponible",
+      "load_content_error": "Error al cargar el contenido del documento",
+      "toast": {
+        "copy_failed": "No se pudo copiar",
+        "load_document_failed": "No se pudo cargar el documento"
+      }
+    },
+    "detail": {
+      "schema_label": "Esquema:",
+      "view_schema_title": "Ver esquema",
+      "prompt_label": "Prompt:",
+      "view_prompt_title": "Ver prompt",
+      "llm_label": "LLM:",
+      "started_label": "Iniciado:",
+      "last_result_label": "Último resultado:",
+      "docs_label": "Doc.:",
+      "docs_progress": "{done}/{total} doc.",
+      "elapsed": "{duration} transcurridos",
+      "eta": "• ≈ {duration} restantes",
+      "progress_aria": "Progreso del ensayo",
+      "results_ready": "Resultados listos",
+      "failed_details": "Fallido — ver detalles en Resultados",
+      "cancel": "Cancelar",
+      "results": "Resultados",
+      "download_partial_title": "Este ensayo no finalizó — solo se incluyen los documentos extraídos correctamente.",
+      "download": "Descargar",
+      "download_partial": "Descargar parcial",
+      "retry": "Reintentar",
+      "rename": "Renombrar",
+      "delete": "Eliminar"
+    },
+    "doc_errors": {
+      "count": "{count} error de documento | {count} errores de documento",
+      "view_details": "Ver detalles de los errores",
+      "show_in_viewer_title": "Mostrar este documento en el visor",
+      "trial_name": "Ensayo",
+      "doc_fallback": "Doc. {id}"
+    },
+    "rename": {
+      "title": "Renombrar ensayo",
+      "name_label": "Nombre",
+      "description_label": "Descripción",
+      "cancel": "Cancelar",
+      "save": "Guardar"
+    },
+    "cancel_modal": {
+      "title": "Cancelar ensayo",
+      "message": "¿Cancelar este ensayo en curso? Los documentos que aún se están procesando se detendrán.",
+      "keep_label": "Conservar los resultados ya procesados",
+      "keep_yes": "Los resultados extraídos hasta ahora siguen disponibles (descarga parcial y revisión).",
+      "keep_no": "Los resultados extraídos hasta ahora se descartarán y no podrán recuperarse.",
+      "keep_running": "Seguir ejecutando",
+      "confirm": "Cancelar ensayo"
+    },
+    "retry_modal": {
+      "title": "Reintentar ensayo",
+      "message": "¿Iniciar un nuevo ensayo con la misma configuración? Esto consumirá créditos de LLM.",
+      "failed_only": "Reintentar solo los documentos fallidos",
+      "failed_only_desc": "Crea un nuevo ensayo que procesa únicamente los documentos que fallaron.",
+      "all": "Volver a ejecutar todos los documentos",
+      "all_desc": "Procesa de nuevo cada documento, incluidos los que ya tuvieron éxito.",
+      "cancel": "Cancelar",
+      "confirm": "Reintentar ensayo"
+    },
+    "download": {
+      "title": "Descargar los resultados del ensayo",
+      "partial_note": "Este ensayo no finalizó correctamente. La descarga contiene únicamente los {count} documento(s) que se extrajeron — los documentos que fallaron no están incluidos.",
+      "format_json_zip": "<strong>JSON (por documento):</strong> Descarga un <b>archivo ZIP</b> con un archivo JSON por documento.<span class=\"block\">Cada archivo incluye todos los resultados extraídos, los metadatos completos del documento, la configuración de preprocesamiento y la configuración del ensayo.</span>",
+      "format_csv_zip": "<strong>CSV (con archivos):</strong> Descarga un <b>archivo ZIP</b> con el CSV y los archivos adjuntos.<span class=\"block\">El CSV incluye todos los resultados extraídos, los metadatos completos del documento, la configuración de preprocesamiento y la configuración del ensayo.</span>",
+      "format_csv_flat": "<strong>CSV (plano):</strong> Descarga un único archivo CSV, una fila por documento.<br />Incluye todos los resultados extraídos, los metadatos del documento, la configuración de preprocesamiento y la configuración del ensayo.",
+      "format_label": "Formato",
+      "format_json_option": "JSON (por documento, ZIP)",
+      "format_csv_option": "CSV (tabla, con archivos opcionales)",
+      "options_label": "Opciones",
+      "include_content": "Incluir el contenido del documento",
+      "include_content_title": "Si está marcado: también recibirá el texto original del documento y los archivos dentro del ZIP.",
+      "include_content_hint": "(añade el texto del documento y los archivos fuente)",
+      "note_csv_content": "Incluirá los archivos originales y el texto completo del documento dentro de un ZIP.<br /><b>Nota:</b> La descarga puede ser grande si su ensayo contiene muchos archivos.",
+      "note_csv_only": "Solo se descargará un único CSV (sin archivos/texto incluidos).",
+      "note_json_content": "Cada JSON por documento contendrá el texto extraído del documento, y los archivos fuente originales se agrupan en una carpeta <code>files/</code> dentro del ZIP.<br /><b>Nota:</b> La descarga puede ser grande si su ensayo contiene muchos archivos.",
+      "note_json_only": "Los archivos JSON contienen solo los resultados extraídos y los metadatos — sin texto de documento ni archivos fuente.",
+      "cancel": "Cancelar",
+      "downloading": "Descargando...",
+      "download": "Descargar",
+      "toast": {
+        "downloaded": "Descargado",
+        "failed": "Error en la descarga"
+      }
+    },
+    "selector": {
+      "title": "Evaluar ensayo",
+      "retry": "Reintentar",
+      "eval_error_heading": "Error de evaluación",
+      "mappings_required_title": "Se requieren asignaciones de campos específicas del esquema",
+      "mappings_required_body": "Cada ensayo requiere asignaciones de campos para su esquema específico. Los ensayos sin asignaciones aparecerán atenuados.",
+      "configure_mappings": "Configurar asignaciones",
+      "loading_trials": "Cargando ensayos y comprobando asignaciones...",
+      "empty_title": "No hay ensayos completados disponibles para evaluar",
+      "empty_desc": "Ejecute primero algunos ensayos para evaluarlos con la verdad de referencia",
+      "select_heading": "Seleccione un ensayo para evaluar",
+      "select_desc": "Elija entre los ensayos completados para compararlos con sus datos de verdad de referencia.",
+      "total_trials": "Total de ensayos:",
+      "ready_for_eval": "Listos para evaluar:",
+      "missing_mappings": "Asignaciones faltantes:",
+      "checking_mappings": "Comprobando asignaciones de campos...",
+      "mappings_ready": "✓ Asignaciones listas",
+      "checking": "Comprobando...",
+      "no_mappings": "⚠ Sin asignaciones",
+      "model_label": "Modelo:",
+      "schema_label": "Esquema:",
+      "documents_label": "Documentos:",
+      "results_label": "Resultados:",
+      "created_label": "Creado:",
+      "last_result_label": "Último resultado:",
+      "errors_label": "Errores: {count}",
+      "no_errors": "Sin errores",
+      "configure_to_enable": "Configure las asignaciones de campos para el esquema \"{schema}\" para habilitar la evaluación",
+      "already_evaluated": "Ya evaluado",
+      "n_results": "{count} resultados",
+      "item_label": "ensayos",
+      "cancel": "Cancelar",
+      "evaluating": "Evaluando...",
+      "evaluate_named": "Evaluar {name}",
+      "select_first": "Seleccione primero un ensayo",
+      "already_eval_title": "Ensayo ya evaluado",
+      "create_another": "Crear otra evaluación",
+      "schema_fallback": "Esquema {id}",
+      "op_retry": "Reintentar",
+      "op_loading_data": "Carga de los datos del ensayo",
+      "op_evaluation": "Evaluación del ensayo",
+      "op_refreshing_mappings": "Actualización del estado de las asignaciones",
+      "validation": {
+        "select_trial": "Seleccione un ensayo para evaluar",
+        "requires_mappings": "{name} requiere asignaciones de campos para el esquema \"{schema}\"",
+        "gt_required": "Se requiere un archivo de verdad de referencia",
+        "no_results": "El ensayo seleccionado no tiene resultados para evaluar"
+      },
+      "reeval_on": " el {date}",
+      "reeval_message": "Este ensayo ya se evaluó{when} con esta verdad de referencia. ¿Crear otra evaluación?",
+      "cannot_evaluate": "No se puede evaluar el ensayo: {errors}",
+      "mappings_removed": "Las asignaciones de campos para el esquema \"{schema}\" no están configuradas o se han eliminado",
+      "mappings_missing": "Faltan asignaciones de campos: {detail}",
+      "no_results_run_first": "El ensayo no tiene resultados para evaluar. Ejecute primero el ensayo.",
+      "data_consistency": "Se detectó un problema de coherencia de datos. Faltan algunos documentos o entradas de verdad de referencia.",
+      "eval_failed": "Error en la evaluación: {detail}",
+      "toast": {
+        "operation_completed": "Operación completada",
+        "configure_first": "Configure primero las asignaciones de campos para el esquema \"{schema}\"",
+        "eval_completed": "Evaluación de {name} completada",
+        "mappings_required": "Se requieren asignaciones de campos pero no se encontraron. Configúrelas primero.",
+        "mappings_configured": "Asignaciones de campos configuradas"
+      }
+    }
+  }
+}

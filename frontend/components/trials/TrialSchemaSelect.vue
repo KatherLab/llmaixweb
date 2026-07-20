@@ -1,10 +1,10 @@
 <template>
   <div class="mb-4">
     <label :class="labelClass" for="trial-schema-select"
-      >Schema <span class="text-red-500">*</span></label
+      >{{ $t('trials.select.schema_label') }} <span class="text-red-500">*</span></label
     >
     <select id="trial-schema-select" v-model="model" :class="selectClass" @change="emit('change')">
-      <option disabled value="">Select a schema</option>
+      <option disabled value="">{{ $t('trials.select.schema_placeholder') }}</option>
       <option v-for="schema in schemas" :key="schema.id" :value="schema.id.toString()">
         {{ schema.schema_name }}
       </option>
@@ -14,7 +14,9 @@
         {{ summarizeSchema(selectedSchema.schema_definition) }}
       </p>
       <details>
-        <summary class="text-primary cursor-pointer hover:underline">Preview fields</summary>
+        <summary class="text-primary cursor-pointer hover:underline">
+          {{ $t('trials.select.preview_fields') }}
+        </summary>
         <div
           class="bg-surface-muted border border-default rounded-card p-2 mt-1 max-h-48 overflow-auto"
         >

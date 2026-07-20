@@ -46,7 +46,7 @@
               v-if="closeable"
               type="button"
               class="text-content-subtle hover:text-content transition-colors"
-              aria-label="Close"
+              :aria-label="$t('common.close')"
               @click="emit('close')"
             >
               <X class="h-6 w-6" />

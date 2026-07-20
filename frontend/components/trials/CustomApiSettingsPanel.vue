@@ -2,18 +2,18 @@
   <div class="mt-2 bg-surface-muted border border-default rounded-card p-4 grid gap-6">
     <FormField
       v-model="apiKey"
-      label="API Key"
+      :label="$t('trials.custom_api.api_key_label')"
       type="password"
       maxlength="512"
-      placeholder="e.g., sk-1234567890abcdef..."
+      :placeholder="$t('trials.custom_api.api_key_placeholder')"
       autocomplete="off"
     />
     <FormField
       v-model="baseUrl"
-      label="Base URL"
+      :label="$t('trials.custom_api.base_url_label')"
       type="text"
       maxlength="512"
-      placeholder="e.g., https://api.openai.com/v1"
+      :placeholder="$t('trials.custom_api.base_url_placeholder')"
       autocomplete="off"
     />
   </div>

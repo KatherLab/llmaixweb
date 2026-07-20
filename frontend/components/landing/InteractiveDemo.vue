@@ -1,13 +1,15 @@
 <template>
   <div class="mb-24">
-    <h2 class="text-center text-3xl font-bold mb-12 text-content">See It In Action</h2>
+    <h2 class="text-center text-3xl font-bold mb-12 text-content">
+      {{ $t('landing.demo.heading') }}
+    </h2>
 
     <div class="grid lg:grid-cols-2 gap-8 items-start">
       <!-- Input Document Preview -->
       <div class="space-y-4">
         <h3 class="text-xl font-semibold text-content mb-4 flex items-center gap-2">
           <FileText class="w-6 h-6 text-primary" />
-          Medical Document
+          {{ $t('landing.demo.medical_document') }}
         </h3>
         <div
           class="rounded-card border border-default bg-surface/80 backdrop-blur-sm p-6 font-mono text-sm text-content-muted leading-relaxed overflow-hidden relative"
@@ -68,7 +70,7 @@
       <div class="space-y-4">
         <h3 class="text-xl font-semibold text-content mb-4 flex items-center gap-2">
           <span class="text-2xl font-mono text-emerald-600 dark:text-emerald-400">{}</span>
-          Extracted Structured Data
+          {{ $t('landing.demo.extracted_data') }}
         </h3>
 
         <!-- LLM Extracted Data -->
@@ -84,18 +86,18 @@
               <div class="h-3 w-3 rounded-full bg-green-500"></div>
             </div>
             <div class="flex items-center gap-4">
-              <span class="text-xs text-emerald-600 font-medium dark:text-emerald-400"
-                >LLM Output</span
-              >
+              <span class="text-xs text-emerald-600 font-medium dark:text-emerald-400">{{
+                $t('landing.demo.llm_output')
+              }}</span>
               <div class="text-sm text-content-muted">output.json</div>
             </div>
             <button
               type="button"
-              aria-label="Copy example JSON"
+              :aria-label="$t('landing.demo.copy_aria')"
               class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200 transition-colors dark:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30"
               @click="copyJson"
             >
-              {{ copied ? 'Copied!' : 'Copy' }}
+              {{ copied ? $t('landing.demo.copied') : $t('landing.demo.copy') }}
             </button>
           </div>
           <div class="p-4 overflow-auto max-h-64">
@@ -132,19 +134,23 @@
           <div class="rounded-card bg-surface-muted border border-default p-4">
             <div class="flex items-center gap-2 mb-2">
               <Zap class="w-5 h-5 text-primary" />
-              <h4 class="text-sm font-semibold text-content">Processing Details</h4>
+              <h4 class="text-sm font-semibold text-content">
+                {{ $t('landing.demo.processing_details') }}
+              </h4>
             </div>
             <div class="space-y-1">
               <div class="flex justify-between items-center">
-                <span class="text-xs text-content-muted">Model</span>
+                <span class="text-xs text-content-muted">{{ $t('landing.demo.model') }}</span>
                 <span class="text-xs text-primary font-mono">gpt-4o</span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-xs text-content-muted">Processing Time</span>
+                <span class="text-xs text-content-muted">{{
+                  $t('landing.demo.processing_time')
+                }}</span>
                 <span class="text-xs text-primary font-mono">1.2s</span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-xs text-content-muted">Tokens Used</span>
+                <span class="text-xs text-content-muted">{{ $t('landing.demo.tokens_used') }}</span>
                 <span class="text-xs text-primary font-mono">2,769</span>
               </div>
             </div>
@@ -154,12 +160,16 @@
           <div class="rounded-card bg-surface-muted border border-default p-4">
             <div class="flex items-center gap-2 mb-2">
               <BarChart3 class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              <h4 class="text-sm font-semibold text-content">Accuracy Metrics</h4>
+              <h4 class="text-sm font-semibold text-content">
+                {{ $t('landing.demo.accuracy_metrics') }}
+              </h4>
             </div>
             <div class="space-y-2">
               <div>
                 <div class="flex justify-between items-center mb-1">
-                  <span class="text-xs text-content-muted">Overall Accuracy</span>
+                  <span class="text-xs text-content-muted">{{
+                    $t('landing.demo.overall_accuracy')
+                  }}</span>
                   <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400"
                     >92.2%</span
                   >
@@ -171,26 +181,28 @@
                   ></div>
                 </div>
               </div>
-              <div class="text-xs text-content-subtle italic">Based on 8 documents evaluated</div>
+              <div class="text-xs text-content-subtle italic">
+                {{ $t('landing.demo.based_on_documents') }}
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Disclaimer: the metrics above are demo values, not real results -->
         <p class="mt-2 text-center text-xs text-content-subtle italic">
-          Illustrative example — the data and metrics shown are fabricated for demonstration.
+          {{ $t('landing.demo.disclaimer') }}
         </p>
 
         <!-- Visual Flow Indicator -->
         <div class="mt-4 flex items-center justify-center gap-2 text-xs text-content-muted">
           <FileText class="w-4 h-4 text-primary" />
-          <span>Document</span>
+          <span>{{ $t('landing.demo.flow_document') }}</span>
           <ChevronRight class="w-4 h-4" />
           <Zap class="w-4 h-4 text-primary" />
-          <span>LLM Processing</span>
+          <span>{{ $t('landing.demo.flow_llm_processing') }}</span>
           <ChevronRight class="w-4 h-4" />
           <CircleCheckBig class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span>Validated Output</span>
+          <span>{{ $t('landing.demo.flow_validated_output') }}</span>
         </div>
       </div>
     </div>

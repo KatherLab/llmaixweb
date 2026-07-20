@@ -9,7 +9,8 @@
       class="bg-inverse-surface text-inverse-content border border-inverse-border rounded-modal shadow-2xl px-6 py-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2"
     >
       <span class="font-medium"
-        >{{ count }} {{ countLabel || 'item' }}{{ count !== 1 ? 's' : '' }} selected</span
+        >{{ count }} {{ countLabel || $t('common.batch_action_bar.item')
+        }}{{ count !== 1 ? 's' : '' }} {{ $t('common.batch_action_bar.selected') }}</span
       >
 
       <!-- Optional warning chip (e.g. "needs config") -->
@@ -18,7 +19,7 @@
       <!-- Close / clear affordance -->
       <button
         type="button"
-        aria-label="Clear selection"
+        :aria-label="$t('common.batch_action_bar.clear_selection')"
         class="p-1.5 rounded-card text-inverse-muted hover:text-inverse-content hover:bg-inverse-border/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
         @click="emit('clear')"
       >

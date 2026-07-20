@@ -16,15 +16,21 @@
         v-if="error"
         :message="errorMessage"
         dismissable
-        :retry-text="lastFailedOperation ? (isRetrying ? 'Retrying...' : 'Retry') : ''"
+        :retry-text="
+          lastFailedOperation
+            ? isRetrying
+              ? $t('evaluation.view.retrying')
+              : $t('evaluation.view.retry')
+            : ''
+        "
         :retry-loading="isRetrying"
         @dismiss="clearError"
         @retry="retryLastOperation"
       />
 
       <PageHeader
-        title="Evaluation"
-        subtitle="Compare trial results against ground truth data"
+        :title="$t('evaluation.view.title')"
+        :subtitle="$t('evaluation.view.subtitle')"
         :sticky="false"
         class="mb-6"
       >
@@ -35,7 +41,7 @@
             @click="showUploadModal = true"
           >
             <Upload class="h-4 w-4" />
-            Upload Ground Truth
+            {{ $t('evaluation.view.upload_ground_truth') }}
           </BaseButton>
           <BaseButton
             v-if="evaluations.length > 0"
@@ -44,7 +50,7 @@
             @click="showExportModal = true"
           >
             <Download class="h-4 w-4" />
-            Export Results
+            {{ $t('evaluation.view.export_results') }}
           </BaseButton>
         </template>
       </PageHeader>
@@ -52,15 +58,15 @@
       <!-- Loading States -->
       <div v-if="loadingStates.groundTruthFiles" class="text-center py-8">
         <LoadingSpinner size="medium" />
-        <p class="mt-2 text-content-subtle">Loading ground truth files...</p>
+        <p class="mt-2 text-content-subtle">{{ $t('evaluation.view.loading_ground_truth') }}</p>
       </div>
 
       <!-- No ground truth files yet -->
       <EmptyState
         v-else-if="groundTruthFiles.length === 0"
-        title="No ground truth files yet"
-        description="Upload ground truth data to evaluate your trial results"
-        action-text="Upload Ground Truth"
+        :title="$t('evaluation.view.empty_gt_title')"
+        :description="$t('evaluation.view.empty_gt_description')"
+        :action-text="$t('evaluation.view.upload_ground_truth')"
         @action="showUploadModal = true"
       >
         <template #icon>
@@ -73,12 +79,12 @@
         <!-- Ground truth files panel -->
         <div class="bg-surface shadow-sm rounded-card p-4">
           <div class="flex justify-between items-center mb-3">
-            <h2 class="font-medium text-content">Ground Truth Files</h2>
+            <h2 class="font-medium text-content">{{ $t('evaluation.view.ground_truth_files') }}</h2>
             <button
               class="text-primary hover:text-primary-hover text-sm"
               @click="showGroundTruthManager = true"
             >
-              Manage
+              {{ $t('evaluation.view.manage') }}
             </button>
           </div>
           <div class="space-y-2 max-h-96 overflow-y-auto">
@@ -92,7 +98,7 @@
               @click="selectGroundTruthWithValidation(gt)"
             >
               <div class="font-medium text-sm text-content">
-                {{ gt.name || `Ground Truth #${index + 1}` }}
+                {{ gt.name || $t('evaluation.view.ground_truth_number', { number: index + 1 }) }}
               </div>
               <div class="text-xs text-content-subtle">
                 {{ gt.format?.toUpperCase() }} • {{ formatDate(gt.created_at) }}
@@ -101,10 +107,16 @@
                 v-if="gt.field_mappings?.length"
                 class="text-xs text-green-600 dark:text-green-400 mt-1"
               >
-                {{ gt.field_mappings.length }} field mappings configured
+                {{
+                  $t(
+                    'evaluation.view.field_mappings_configured',
+                    { count: gt.field_mappings.length },
+                    gt.field_mappings.length,
+                  )
+                }}
               </div>
               <div v-else class="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                No field mappings configured
+                {{ $t('evaluation.view.no_field_mappings') }}
               </div>
             </div>
           </div>
@@ -114,19 +126,27 @@
         <div class="bg-surface shadow-sm rounded-card p-4 xl:col-span-3">
           <div v-if="!selectedGroundTruth" class="text-center py-12 text-content-subtle">
             <ClipboardList class="h-16 w-16 mx-auto text-content-subtle mb-3 block" />
-            <p class="text-content-muted">Select a ground truth file to start evaluation</p>
+            <p class="text-content-muted">{{ $t('evaluation.view.select_gt_prompt') }}</p>
           </div>
           <div v-else>
             <div class="flex justify-between items-center mb-4">
               <div class="flex items-center gap-2">
-                <h2 class="font-medium text-content">Evaluation Dashboard</h2>
+                <h2 class="font-medium text-content">{{ $t('evaluation.view.dashboard') }}</h2>
                 <button
                   class="inline-flex items-center gap-1 text-xs text-content-subtle hover:text-content-muted"
-                  :title="showConcepts ? 'Hide the quick explainer' : 'Show how evaluation works'"
+                  :title="
+                    showConcepts
+                      ? $t('evaluation.view.hide_explainer')
+                      : $t('evaluation.view.show_explainer')
+                  "
                   @click="showConcepts = !showConcepts"
                 >
                   <HelpCircle class="h-3.5 w-3.5" />
-                  {{ showConcepts ? 'Hide help' : 'How it works' }}
+                  {{
+                    showConcepts
+                      ? $t('evaluation.view.hide_help')
+                      : $t('evaluation.view.how_it_works')
+                  }}
                 </button>
               </div>
               <div class="flex gap-2">
@@ -135,7 +155,7 @@
                   :disabled="!canStartEvaluation"
                   @click="showTrialSelectorWithValidation"
                 >
-                  Evaluate Trial
+                  {{ $t('evaluation.view.evaluate_trial') }}
                 </BaseButton>
                 <BaseButton
                   v-if="selectedGroundTruth"
@@ -143,7 +163,11 @@
                   size="sm"
                   @click="previewGroundTruth"
                 >
-                  {{ hasMappings ? 'Edit mappings' : 'Configure mappings' }}
+                  {{
+                    hasMappings
+                      ? $t('evaluation.view.edit_mappings')
+                      : $t('evaluation.view.configure_mappings')
+                  }}
                 </BaseButton>
               </div>
             </div>
@@ -153,32 +177,30 @@
             <Callout v-if="showConcepts" variant="info" class="mb-4 relative">
               <button
                 class="absolute top-2 right-2 text-primary hover:text-primary-hover"
-                title="Hide"
+                :title="$t('evaluation.view.hide')"
                 @click="showConcepts = false"
               >
                 <X class="h-4 w-4" />
               </button>
-              <h3 class="font-medium mb-1">How evaluation works</h3>
+              <h3 class="font-medium mb-1">{{ $t('evaluation.concepts.title') }}</h3>
               <dl class="space-y-1 pr-6">
                 <div>
-                  <dt class="inline font-semibold">Ground truth</dt>
-                  <dd class="inline">
-                    — a file with the correct extracted values to compare trial results against.
-                  </dd>
+                  <dt class="inline font-semibold">
+                    {{ $t('evaluation.concepts.ground_truth_term') }}
+                  </dt>
+                  <dd class="inline">{{ $t('evaluation.concepts.ground_truth_desc') }}</dd>
                 </div>
                 <div>
-                  <dt class="inline font-semibold">Field mapping</dt>
-                  <dd class="inline">
-                    — links each ground-truth column to the matching schema field so values can be
-                    compared.
-                  </dd>
+                  <dt class="inline font-semibold">
+                    {{ $t('evaluation.concepts.field_mapping_term') }}
+                  </dt>
+                  <dd class="inline">{{ $t('evaluation.concepts.field_mapping_desc') }}</dd>
                 </div>
                 <div>
-                  <dt class="inline font-semibold">ID field</dt>
-                  <dd class="inline">
-                    — the column that uniquely identifies each document, so each extraction is
-                    matched to its correct row.
-                  </dd>
+                  <dt class="inline font-semibold">
+                    {{ $t('evaluation.concepts.id_field_term') }}
+                  </dt>
+                  <dd class="inline">{{ $t('evaluation.concepts.id_field_desc') }}</dd>
                 </div>
               </dl>
             </Callout>
@@ -187,7 +209,7 @@
             <Callout
               v-if="!canStartEvaluation"
               variant="warning"
-              title="Setup Required"
+              :title="$t('evaluation.view.setup_required')"
               class="mb-4"
             >
               <p class="mt-1">
@@ -200,7 +222,7 @@
                 class="mt-2"
                 @click="previewGroundTruth"
               >
-                Configure mappings
+                {{ $t('evaluation.view.configure_mappings') }}
               </BaseButton>
             </Callout>
 
@@ -210,7 +232,7 @@
             <!-- Evaluation results table -->
             <EmptyState
               v-else-if="evaluations.length === 0"
-              title="No evaluations yet. Select a trial to evaluate."
+              :title="$t('evaluation.view.no_evaluations')"
             >
               <template #icon>
                 <BarChart3 class="h-12 w-12 mx-auto text-content-subtle" />
@@ -222,8 +244,8 @@
                 :items="pagedEvaluations"
                 row-key="id"
                 :pagination="tablePagination"
-                item-label="evaluations"
-                empty-title="No evaluations yet. Select a trial to evaluate."
+                :item-label="$t('evaluation.view.item_label')"
+                :empty-title="$t('evaluation.view.no_evaluations')"
                 @page-change="onPageChange"
                 @page-size-change="onPageSizeChange"
               >
@@ -235,7 +257,8 @@
                     {{ getTrialName(evaluation.trial_id) }}
                   </div>
                   <div class="text-xs text-content-subtle">
-                    ID: {{ evaluation.trial_id }} • {{ formatDate(evaluation.created_at) }}
+                    {{ $t('evaluation.list.trial_id', { id: evaluation.trial_id }) }} •
+                    {{ formatDate(evaluation.created_at) }}
                   </div>
                 </template>
                 <template #cell-model="{ row: evaluation }">
@@ -258,13 +281,25 @@
                   </div>
                 </template>
                 <template #cell-documents="{ row: evaluation }">
-                  <div class="text-sm text-content">{{ getDocumentCount(evaluation) }} docs</div>
+                  <div class="text-sm text-content">
+                    {{
+                      $t(
+                        'evaluation.list.doc_count',
+                        { count: getDocumentCount(evaluation) },
+                        getDocumentCount(evaluation),
+                      )
+                    }}
+                  </div>
                   <div
                     v-if="getUnmatchedDocCount(evaluation) > 0"
                     class="text-xs text-yellow-600 dark:text-yellow-400"
-                    :title="`${getUnmatchedDocCount(evaluation)} document(s) could not be matched to ground truth and are excluded from the accuracy.`"
+                    :title="
+                      $t('evaluation.list.unmatched_tooltip', {
+                        count: getUnmatchedDocCount(evaluation),
+                      })
+                    "
                   >
-                    {{ getMatchedDocCount(evaluation) }} matched
+                    {{ $t('evaluation.list.matched', { count: getMatchedDocCount(evaluation) }) }}
                   </div>
                 </template>
                 <template #cell-status="{ row: evaluation }">
@@ -273,23 +308,25 @@
                     color="red"
                     class="py-1 font-medium"
                   >
-                    Has Errors ({{ getErrorCount(evaluation) }})
+                    {{ $t('evaluation.list.has_errors', { count: getErrorCount(evaluation) }) }}
                   </StatusBadge>
-                  <StatusBadge v-else color="green" class="py-1 font-medium"> Scored </StatusBadge>
+                  <StatusBadge v-else color="green" class="py-1 font-medium">
+                    {{ $t('evaluation.list.scored') }}
+                  </StatusBadge>
                 </template>
                 <template #row-actions="{ row: evaluation }">
                   <button
                     class="text-primary hover:text-primary-hover text-sm underline"
                     @click.stop="viewEvaluationAnalysis(evaluation)"
                   >
-                    Analysis
+                    {{ $t('evaluation.list.analysis') }}
                   </button>
                   <button
                     class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm underline"
-                    title="Delete evaluation"
+                    :title="$t('evaluation.list.delete_tooltip')"
                     @click.stop="confirmDeleteEvaluation(evaluation)"
                   >
-                    Delete
+                    {{ $t('evaluation.list.delete') }}
                   </button>
                 </template>
               </DataTable>
@@ -338,9 +375,13 @@
     />
     <ConfirmationDialog
       :open="!!evaluationToDelete"
-      title="Delete evaluation?"
-      :message="`This removes the computed metrics for ${getTrialName(evaluationToDelete?.trial_id ?? 0)}. The trial and its results are kept; you can re-evaluate anytime.`"
-      confirm-text="Delete"
+      :title="$t('evaluation.delete.title')"
+      :message="
+        $t('evaluation.delete.message', {
+          trial: getTrialName(evaluationToDelete?.trial_id ?? 0),
+        })
+      "
+      :confirm-text="$t('evaluation.delete.confirm')"
       :loading="deletingEvaluation"
       @confirm="deleteEvaluation"
       @cancel="evaluationToDelete = null"
@@ -350,6 +391,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { BarChart3, ClipboardList, Download, HelpCircle, Upload, X } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
@@ -413,6 +455,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const { t } = useI18n({ useScope: 'global' })
 
 // Client-side pagination state for the evaluations list (the API returns all
 // evaluations for the selected ground truth in one shot).
@@ -505,13 +549,13 @@ const canStartEvaluation = computed(() => {
 // DataTable columns for the evaluations list. Cell content for trial, model,
 // accuracy, documents and status is rendered via #cell-<key> slots; the Actions
 // column is rendered via the #row-actions slot.
-const columns: DataTableColumn[] = [
-  { key: 'trial', label: 'Trial' },
-  { key: 'model', label: 'Model' },
-  { key: 'accuracy', label: 'Overall Accuracy' },
-  { key: 'documents', label: 'Documents' },
-  { key: 'status', label: 'Status' },
-]
+const columns = computed<DataTableColumn[]>(() => [
+  { key: 'trial', label: t('evaluation.columns.trial') },
+  { key: 'model', label: t('evaluation.columns.model') },
+  { key: 'accuracy', label: t('evaluation.columns.overall_accuracy') },
+  { key: 'documents', label: t('evaluation.columns.documents') },
+  { key: 'status', label: t('evaluation.columns.status') },
+])
 
 // Client-side pagination of the evaluations list.
 const totalEvaluationPages = computed(() =>
@@ -557,13 +601,13 @@ watch(
 
 const evaluationPrerequisiteMessage = computed(() => {
   if (!selectedGroundTruth.value) {
-    return 'Please select a ground truth file first.'
+    return t('evaluation.prerequisites.select_gt')
   }
   if (!selectedGroundTruth.value.field_mappings?.length) {
-    return 'Configure field mappings for the selected ground truth file to enable evaluation.'
+    return t('evaluation.prerequisites.configure_mappings')
   }
   if (error.value) {
-    return 'Resolve the current error before starting evaluation.'
+    return t('evaluation.prerequisites.resolve_error')
   }
   return ''
 })
@@ -574,10 +618,12 @@ const errorMessage = computed(() => {
   if (typeof error.value === 'string') return error.value
   const parts = [error.value.message].filter(Boolean)
   if (error.value.errors?.length) {
-    parts.push('Details: ' + error.value.errors.join('; '))
+    parts.push(t('evaluation.errors.details', { details: error.value.errors.join('; ') }))
   }
   if (error.value.suggestions?.length) {
-    parts.push('Suggestions: ' + error.value.suggestions.join('; '))
+    parts.push(
+      t('evaluation.errors.suggestions', { suggestions: error.value.suggestions.join('; ') }),
+    )
   }
   return parts.join(' — ')
 })
@@ -604,7 +650,7 @@ const retryLastOperation = async (): Promise<void> => {
 
   try {
     await lastFailedOperation.value()
-    toast.success('Operation completed')
+    toast.success(t('evaluation.toast.operation_completed'))
     lastFailedOperation.value = null
   } catch (err) {
     handleApiError(err, 'Retry')
@@ -687,7 +733,7 @@ const getTrialModel = (trialId: number): string => {
   const tr = trialCache.value[trialId]
   if (tr?.llm_model) return tr.llm_model
   fetchTrialIfMissing(trialId)
-  return 'Unknown'
+  return t('evaluation.list.unknown_model')
 }
 
 const getTrialName = (trialId: number): string => {
@@ -746,11 +792,11 @@ const validateEvaluationPrerequisites = (): string[] => {
   const errors: string[] = []
 
   if (!selectedGroundTruth.value) {
-    errors.push('Please select a ground truth file')
+    errors.push(t('evaluation.validation.select_gt'))
   }
 
   if (selectedGroundTruth.value && !selectedGroundTruth.value.field_mappings?.length) {
-    errors.push('Ground truth file has no field mappings configured')
+    errors.push(t('evaluation.validation.no_mappings'))
   }
 
   return errors
@@ -760,7 +806,7 @@ const showTrialSelectorWithValidation = (): void => {
   const validationErrors = validateEvaluationPrerequisites()
 
   if (validationErrors.length > 0) {
-    toast.error(`Cannot start evaluation: ${validationErrors.join(', ')}`)
+    toast.error(t('evaluation.validation.cannot_start', { errors: validationErrors.join(', ') }))
     return
   }
 
@@ -780,7 +826,7 @@ const selectGroundTruth = async (groundTruth: GroundTruth): Promise<void> => {
 
 const selectGroundTruthWithValidation = async (groundTruth: GroundTruth | null): Promise<void> => {
   if (!groundTruth) {
-    error.value = 'Invalid ground truth file selected'
+    error.value = t('evaluation.errors.invalid_gt')
     return
   }
   await selectGroundTruth(groundTruth)
@@ -832,7 +878,7 @@ const onGroundTruthUploaded = async (groundTruth: GroundTruth): Promise<void> =>
     groundTruthFiles.value.push(groundTruth)
     await selectGroundTruth(groundTruth)
     showUploadModal.value = false
-    toast.success('Ground truth uploaded')
+    toast.success(t('evaluation.toast.gt_uploaded'))
     // Land the user directly in the next step: configure field mappings.
     showGroundTruthPreview.value = true
   } catch (err) {
@@ -863,7 +909,11 @@ const onTrialEvaluate = async (evaluation: Evaluation): Promise<void> => {
 
     evaluations.value.push(row)
     showTrialSelector.value = false
-    toast.success(`${getTrialName(evaluationSummary.trial_id)} evaluation completed`)
+    toast.success(
+      t('evaluation.toast.evaluation_completed', {
+        trial: getTrialName(evaluationSummary.trial_id),
+      }),
+    )
     // Surface non-blocking validation warnings (e.g. low document↔GT match
     // rate) so the researcher knows some documents could not be matched.
     const warnings = evaluationSummary.warnings
@@ -889,7 +939,7 @@ const onMappingConfigured = async (): Promise<void> => {
       }
     }
 
-    toast.success('Field mappings configured')
+    toast.success(t('evaluation.toast.mappings_configured'))
   } catch (err) {
     handleApiError(err, 'Refreshing after mapping configuration')
   }
@@ -898,7 +948,7 @@ const onMappingConfigured = async (): Promise<void> => {
 // Modal actions
 const previewGroundTruth = (): void => {
   if (!selectedGroundTruth.value) {
-    error.value = 'No ground truth file selected'
+    error.value = t('evaluation.errors.no_gt_selected')
     return
   }
   showGroundTruthPreview.value = true
@@ -928,9 +978,11 @@ const deleteEvaluation = async (): Promise<void> => {
     await evaluationsApi.delete(props.projectId, evaluation.id)
     evaluations.value = evaluations.value.filter((e) => e.id !== evaluation.id)
     evaluationToDelete.value = null
-    toast.success(`Deleted evaluation for ${getTrialName(evaluation.trial_id)}`)
+    toast.success(
+      t('evaluation.toast.evaluation_deleted', { trial: getTrialName(evaluation.trial_id) }),
+    )
   } catch (err) {
-    toast.error(`Failed to delete evaluation: ${extractErrorMessage(err)}`)
+    toast.error(t('evaluation.toast.delete_failed', { error: extractErrorMessage(err) }))
   } finally {
     deletingEvaluation.value = false
   }

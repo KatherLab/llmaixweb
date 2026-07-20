@@ -2,23 +2,25 @@
   <div class="mt-2 bg-surface-muted border border-default rounded-card p-4 grid gap-6">
     <div>
       <label :class="labelClass" for="advanced-max-completion-tokens">
-        Max Completion Tokens <span class="text-content-subtle font-normal">(optional)</span>
+        {{ $t('trials.advanced.max_tokens_label') }}
+        <span class="text-content-subtle font-normal">{{ $t('trials.advanced.optional') }}</span>
       </label>
       <input
         id="advanced-max-completion-tokens"
         v-model="maxCompletionTokens"
         :class="inputClass"
         min="1"
-        placeholder="e.g., 4096"
+        :placeholder="$t('trials.advanced.max_tokens_placeholder')"
         type="number"
       />
       <p class="mt-1 text-xs text-content-muted">
-        Limit the maximum tokens for model responses. Leave empty to use model defaults.
+        {{ $t('trials.advanced.max_tokens_help') }}
       </p>
     </div>
     <div>
       <label :class="labelClass" for="advanced-temperature">
-        Temperature <span class="text-content-subtle font-normal">(optional)</span>
+        {{ $t('trials.advanced.temperature_label') }}
+        <span class="text-content-subtle font-normal">{{ $t('trials.advanced.optional') }}</span>
       </label>
       <input
         id="advanced-temperature"
@@ -27,27 +29,26 @@
         min="0"
         max="2"
         step="0.01"
-        placeholder="e.g., 0.7"
+        :placeholder="$t('trials.advanced.temperature_placeholder')"
         type="number"
       />
       <p class="mt-1 text-xs text-content-muted">
-        Controls randomness. Lower values make outputs more focused; higher values make them more
-        random. Typical: 0.0–1.0
+        {{ $t('trials.advanced.temperature_help') }}
       </p>
     </div>
     <div>
       <label :class="labelClass" for="advanced-reasoning-effort">
-        Reasoning Effort <span class="text-content-subtle font-normal">(optional)</span>
+        {{ $t('trials.advanced.reasoning_label') }}
+        <span class="text-content-subtle font-normal">{{ $t('trials.advanced.optional') }}</span>
       </label>
       <select id="advanced-reasoning-effort" v-model="reasoningEffort" :class="selectClass">
-        <option value="">Use model default</option>
-        <option value="low">Low</option>
-        <option value="medium">Medium</option>
-        <option value="high">High</option>
+        <option value="">{{ $t('trials.advanced.reasoning_default') }}</option>
+        <option value="low">{{ $t('trials.advanced.reasoning_low') }}</option>
+        <option value="medium">{{ $t('trials.advanced.reasoning_medium') }}</option>
+        <option value="high">{{ $t('trials.advanced.reasoning_high') }}</option>
       </select>
       <p class="mt-1 text-xs text-content-muted">
-        Hints the model how much compute to spend on chain-of-thought/reasoning. Not all models/APIs
-        support this.
+        {{ $t('trials.advanced.reasoning_help') }}
       </p>
     </div>
   </div>

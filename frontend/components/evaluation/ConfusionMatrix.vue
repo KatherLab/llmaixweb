@@ -9,10 +9,12 @@
               <div
                 class="flex flex-col items-center justify-center gap-0.5 w-[120px] min-h-[64px] p-2"
               >
-                <span class="text-[10px] uppercase tracking-wide text-content-subtle"
-                  >Predicted →</span
-                >
-                <span class="text-[10px] text-content-subtle">Ground truth ↓</span>
+                <span class="text-[10px] uppercase tracking-wide text-content-subtle">{{
+                  $t('evaluation.confusion.predicted_axis')
+                }}</span>
+                <span class="text-[10px] text-content-subtle">{{
+                  $t('evaluation.confusion.ground_truth_axis')
+                }}</span>
               </div>
             </th>
             <th
@@ -69,18 +71,20 @@
       </table>
     </div>
     <p class="mt-2 text-xs text-content-subtle">
-      Each cell shows the document count and its share of the ground-truth row. The diagonal
-      (correct predictions) is green, errors are red — intensity scales with count.
-      <span class="font-medium text-content-muted"
-        >Click a cell (or focus it with Tab and press Enter)</span
-      >
-      to filter the document table; the selected cell is outlined in blue.
+      {{ $t('evaluation.confusion.caption_intro') }}
+      <span class="font-medium text-content-muted">{{
+        $t('evaluation.confusion.caption_click')
+      }}</span>
+      {{ $t('evaluation.confusion.caption_outro') }}
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n({ useScope: 'global' })
 
 /**
  * Confusion matrix for a single categorical field:
@@ -180,8 +184,11 @@ const cellTitle = (gt: string, pred: string): string => {
   const c = count(gt, pred)
   const rt = rowTotal(gt)
   const pct = rt ? Math.round((c / rt) * 100) : 0
-  const verdict = gt === pred ? 'correct' : 'mismatch'
-  return `${gt} → ${pred}: ${c} document(s) — ${pct}% of GT row (${verdict}). Click to filter.`
+  const verdict =
+    gt === pred
+      ? t('evaluation.confusion.verdict_correct')
+      : t('evaluation.confusion.verdict_mismatch')
+  return t('evaluation.confusion.cell_title', { gt, pred, count: c, pct, verdict })
 }
 
 // Intensity-scaled background. Diagonal = green, off-diagonal with count>0 =

@@ -11,8 +11,8 @@
     :highlighted-keys="highlightedTrialId ? [highlightedTrialId] : []"
     :pagination="pagination"
     :page-size-options="[20, 50, 100]"
-    item-label="trials"
-    empty-title="No trials found"
+    :item-label="$t('trials.table.item_label')"
+    :empty-title="$t('trials.table.empty_title')"
     expandable
     :expanded-keys="expandedKeys"
     @toggle-selection="$emit('toggle-selection', $event as number)"
@@ -53,16 +53,20 @@
 
     <template #cell-results="{ row: trial }">
       <div class="flex items-center gap-1.5">
-        <StatusBadge color="gray" class="text-[11px] font-medium" title="Processed results">
-          {{ trial.results_count || 0 }} res
+        <StatusBadge
+          color="gray"
+          class="text-[11px] font-medium"
+          :title="$t('trials.table.processed_results')"
+        >
+          {{ $t('trials.table.results_short', { count: trial.results_count || 0 }) }}
         </StatusBadge>
         <StatusBadge
           v-if="trial.error_count && trial.error_count > 0"
           color="red"
           class="text-[11px]"
-          title="Documents with errors"
+          :title="$t('trials.table.documents_with_errors')"
         >
-          {{ trial.error_count }} err
+          {{ $t('trials.table.errors_short', { count: trial.error_count }) }}
         </StatusBadge>
       </div>
     </template>
@@ -73,7 +77,7 @@
         <div
           class="w-16 h-1 bg-surface-sunken rounded-full overflow-hidden"
           role="progressbar"
-          aria-label="Trial progress"
+          :aria-label="$t('trials.table.progress_aria')"
           :aria-valuenow="progressPercent(trial as unknown as TrialSummary)"
           aria-valuemin="0"
           aria-valuemax="100"
@@ -95,14 +99,14 @@
         class="flex items-center gap-1 text-green-600 dark:text-green-400 text-xs font-medium"
       >
         <CircleCheckBig class="w-4 h-4" />
-        Ready
+        {{ $t('trials.table.ready') }}
       </div>
       <div
         v-else-if="trial.status === 'failed'"
         class="flex items-center gap-1 text-red-600 dark:text-red-400 text-xs font-medium"
       >
         <AlertCircle class="w-4 h-4" />
-        Failed
+        {{ $t('trials.table.failed') }}
       </div>
       <span v-else class="text-xs text-content-muted">{{ trial.status }}</span>
     </template>
@@ -119,7 +123,7 @@
         size="sm"
         @click.stop="$emit('view-results', trial as unknown as TrialSummary)"
       >
-        Results
+        {{ $t('trials.table.results_action') }}
       </BaseButton>
     </template>
 
@@ -143,6 +147,7 @@
 
 <script setup lang="ts">
 import { computed, ref, type PropType } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertCircle, CircleCheckBig } from '@lucide/vue'
 import DataTable from '@/components/common/DataTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -183,6 +188,8 @@ defineEmits<{
   cancel: [trial: TrialSummary]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 const allSelected = computed(
   () => props.trials.length > 0 && props.selectedTrials.length === props.trials.length,
 )
@@ -199,13 +206,13 @@ const toggleExpand = (id: string | number): void => {
 }
 
 const columns = [
-  { key: 'name', label: 'Trial' },
-  { key: 'schema', label: 'Schema' },
-  { key: 'prompt', label: 'Prompt' },
-  { key: 'llm_model', label: 'Model' },
-  { key: 'results', label: 'Results' },
-  { key: 'progress', label: 'Progress' },
-  { key: 'created_at', label: 'Started' },
+  { key: 'name', label: t('trials.table.col_name') },
+  { key: 'schema', label: t('trials.table.col_schema') },
+  { key: 'prompt', label: t('trials.table.col_prompt') },
+  { key: 'llm_model', label: t('trials.table.col_model') },
+  { key: 'results', label: t('trials.table.col_results') },
+  { key: 'progress', label: t('trials.table.col_progress') },
+  { key: 'created_at', label: t('trials.table.col_started') },
 ]
 
 function schemaName(trial: TrialSummary): string {

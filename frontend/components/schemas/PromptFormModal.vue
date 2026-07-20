@@ -8,14 +8,14 @@
     <template #header>
       <div class="flex items-center gap-4">
         <h3 class="text-lg font-semibold text-content">
-          {{ isEdit ? 'Edit Prompt' : 'Create New Prompt' }}
+          {{ isEdit ? $t('prompt.form.edit_title') : $t('prompt.form.create_title') }}
         </h3>
         <!-- Simple/Advanced Mode Toggle -->
         <BaseSegmentedControl
           v-model="simplePromptMode"
           :options="[
-            { label: 'Simple', value: true },
-            { label: 'Advanced', value: false },
+            { label: $t('prompt.form.mode_simple'), value: true },
+            { label: $t('prompt.form.mode_advanced'), value: false },
           ]"
         />
       </div>
@@ -30,7 +30,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label for="prompt-name" :class="labelClass"
-              >Prompt Name <span class="text-red-500">*</span></label
+              >{{ $t('prompt.form.name_label') }} <span class="text-red-500">*</span></label
             >
             <input
               id="prompt-name"
@@ -39,7 +39,7 @@
                 inputClass,
                 { 'border-red-300 dark:border-red-500': !promptForm.name && isSubmitting },
               ]"
-              placeholder="e.g., Medical Document Extraction"
+              :placeholder="$t('prompt.form.name_placeholder')"
               maxlength="100"
               required
             />
@@ -47,18 +47,20 @@
               v-if="!promptForm.name && isSubmitting"
               class="mt-1 text-xs text-red-600 dark:text-red-400"
             >
-              This field is required
+              {{ $t('prompt.form.name_required') }}
             </p>
           </div>
           <div>
-            <label for="prompt-description" :class="labelClass">Description</label>
+            <label for="prompt-description" :class="labelClass">{{
+              $t('prompt.form.description_label')
+            }}</label>
             <textarea
               id="prompt-description"
               v-model="promptForm.description"
               rows="2"
               :class="textareaClass"
               maxlength="500"
-              placeholder="Describe what this prompt is designed to extract..."
+              :placeholder="$t('prompt.form.description_placeholder')"
             />
           </div>
         </div>
@@ -66,25 +68,25 @@
         <!-- Simple Mode Prompt Editor -->
         <div v-if="simplePromptMode" class="space-y-4">
           <div>
-            <label for="simple-prompt" :class="labelClass"> Extraction Instruction </label>
+            <label for="simple-prompt" :class="labelClass">
+              {{ $t('prompt.form.instruction_label') }}
+            </label>
             <textarea
               id="simple-prompt"
               v-model="promptForm.user_prompt"
               rows="6"
               :class="textareaClass"
-              placeholder="Based on the document content, extract these fields:"
+              :placeholder="$t('prompt.form.instruction_placeholder')"
               @input="validatePromptPlaceholder"
             />
             <p class="mt-2 text-xs text-content-muted">
-              This will be used as the user prompt. The document text and the selected schema are
-              appended automatically when the trial runs.
+              {{ $t('prompt.form.instruction_help') }}
             </p>
             <p
               v-if="promptForm.system_prompt"
               class="mt-1 text-xs text-amber-700 dark:text-amber-400"
             >
-              This prompt has a system prompt from Advanced mode. It is kept while you edit, but
-              will not be saved while Simple mode is selected.
+              {{ $t('prompt.form.system_from_advanced') }}
             </p>
             <div class="flex justify-end mt-2">
               <button
@@ -93,22 +95,23 @@
                 class="px-3 py-1 text-xs font-medium bg-surface border border-strong rounded hover:bg-surface-muted text-primary"
                 @click="showPreviewSimple = !showPreviewSimple"
               >
-                {{ showPreviewSimple ? 'Hide' : 'Preview' }}
+                {{ showPreviewSimple ? $t('prompt.form.hide') : $t('prompt.form.preview') }}
               </button>
             </div>
           </div>
 
           <!-- Simple mode preview: what is actually sent to the model -->
           <div v-if="showPreviewSimple && promptForm.user_prompt" class="space-y-2">
-            <h4 class="text-sm font-medium text-content">Preview with Sample Document</h4>
+            <h4 class="text-sm font-medium text-content">
+              {{ $t('prompt.form.preview_with_sample') }}
+            </h4>
             <p class="text-xs text-content-muted">
-              In Simple mode no system message is sent — your instruction becomes the user message,
-              with the document and the trial's schema appended:
+              {{ $t('prompt.form.simple_preview_help') }}
             </p>
             <div class="bg-primary-soft rounded-card p-4 border border-default">
-              <span class="text-xs font-semibold text-primary uppercase tracking-wider"
-                >User Message Preview</span
-              >
+              <span class="text-xs font-semibold text-primary uppercase tracking-wider">{{
+                $t('prompt.form.user_message_preview')
+              }}</span>
               <div class="mt-2 whitespace-pre-wrap text-sm text-content-muted font-mono">
                 {{ simplePreview }}
               </div>
@@ -120,20 +123,21 @@
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <!-- Info Banner - Advanced Mode Only -->
           <div class="md:col-span-2">
-            <Callout variant="info" title="How prompts work" class="p-4">
+            <Callout variant="info" :title="$t('prompt.form.callout_title')" class="p-4">
               <div class="space-y-2">
                 <p>
-                  <strong>System prompt</strong> — the AI's role and rules (applies to every
-                  document). <strong>User prompt</strong> — per-document instructions, where
+                  <strong>{{ $t('prompt.form.callout_system_label') }}</strong>
+                  {{ $t('prompt.form.callout_system_text') }}
+                  <strong>{{ $t('prompt.form.callout_user_label') }}</strong>
+                  {{ $t('prompt.form.callout_user_text') }}
                   <code class="px-1.5 py-0.5 bg-primary-soft text-primary rounded font-mono text-xs"
                     >{document_content}</code
                   >
-                  is replaced with the document text.
+                  {{ $t('prompt.form.callout_replaced') }}
                 </p>
                 <p>
-                  <strong>The selected schema is automatically included</strong> when the trial
-                  runs, so the model knows which fields to extract. You don't need to paste the
-                  schema JSON into your prompt — doing so would duplicate it.
+                  <strong>{{ $t('prompt.form.callout_schema_label') }}</strong>
+                  {{ $t('prompt.form.callout_schema_text') }}
                 </p>
               </div>
             </Callout>
@@ -142,22 +146,24 @@
           <!-- System Prompt -->
           <div>
             <div class="mb-2 flex items-center gap-2">
-              <label for="system-prompt" :class="[labelClass, 'flex-1']">System Prompt</label>
+              <label for="system-prompt" :class="[labelClass, 'flex-1']">{{
+                $t('prompt.fields.system_prompt')
+              }}</label>
               <StatusBadge
                 v-if="promptForm.system_prompt?.includes('{document_content}')"
                 color="green"
               >
                 <Check class="h-3 w-3" />
-                Contains placeholder
+                {{ $t('prompt.common.contains_placeholder') }}
               </StatusBadge>
               <button
                 v-if="!hasDocumentContentPlaceholder"
                 type="button"
                 class="ml-2 px-2 py-0.5 text-xs bg-primary-soft hover:bg-primary-soft rounded text-primary border border-default transition"
-                title="Insert {document_content} at cursor"
+                :title="$t('prompt.form.insert_placeholder_title', { ph: '{document_content}' })"
                 @click="insertPlaceholder('system')"
               >
-                + Insert {document_content}
+                {{ $t('prompt.form.insert_placeholder', { ph: '{document_content}' }) }}
               </button>
             </div>
             <textarea
@@ -175,7 +181,7 @@
                     !promptForm.user_prompt?.includes('{document_content}'),
                 },
               ]"
-              placeholder="You are an AI assistant specialized in extracting structured information from documents..."
+              :placeholder="$t('prompt.form.system_placeholder')"
               @input="validatePromptPlaceholder"
             />
             <div class="flex justify-end mt-2">
@@ -185,7 +191,7 @@
                 class="px-3 py-1 text-xs font-medium bg-surface border border-strong rounded hover:bg-surface-muted text-primary"
                 @click="togglePreview('system')"
               >
-                {{ showPreviewSystem ? 'Hide' : 'Preview' }}
+                {{ showPreviewSystem ? $t('prompt.form.hide') : $t('prompt.form.preview') }}
               </button>
             </div>
           </div>
@@ -193,22 +199,24 @@
           <!-- User Prompt -->
           <div>
             <div class="mb-2 flex items-center gap-2">
-              <label for="user-prompt" :class="[labelClass, 'flex-1']">User Prompt</label>
+              <label for="user-prompt" :class="[labelClass, 'flex-1']">{{
+                $t('prompt.fields.user_prompt')
+              }}</label>
               <StatusBadge
                 v-if="promptForm.user_prompt?.includes('{document_content}')"
                 color="green"
               >
                 <Check class="h-3 w-3" />
-                Contains placeholder
+                {{ $t('prompt.common.contains_placeholder') }}
               </StatusBadge>
               <button
                 v-if="!hasDocumentContentPlaceholder"
                 type="button"
                 class="ml-2 px-2 py-0.5 text-xs bg-primary-soft hover:bg-primary-soft rounded text-primary border border-default transition"
-                title="Insert {document_content} at cursor"
+                :title="$t('prompt.form.insert_placeholder_title', { ph: '{document_content}' })"
                 @click="insertPlaceholder('user')"
               >
-                + Insert {document_content}
+                {{ $t('prompt.form.insert_placeholder', { ph: '{document_content}' }) }}
               </button>
             </div>
             <textarea
@@ -217,7 +225,7 @@
               v-model="promptForm.user_prompt"
               rows="7"
               :class="[textareaClass, 'font-mono']"
-              placeholder="Extract the following information from this document:\n\n{document_content}"
+              :placeholder="$t('prompt.form.user_placeholder', { ph: '{document_content}' })"
               @input="validatePromptPlaceholder"
             />
             <div class="flex justify-end mt-2">
@@ -227,7 +235,7 @@
                 class="px-3 py-1 text-xs font-medium bg-surface border border-strong rounded hover:bg-surface-muted text-primary"
                 @click="togglePreview('user')"
               >
-                {{ showPreviewUser ? 'Hide' : 'Preview' }}
+                {{ showPreviewUser ? $t('prompt.form.hide') : $t('prompt.form.preview') }}
               </button>
             </div>
           </div>
@@ -238,15 +246,17 @@
           v-if="!simplePromptMode && (showPreviewSystem || showPreviewUser)"
           class="mt-4 space-y-4"
         >
-          <h4 class="text-sm font-medium text-content">Preview with Sample Document</h4>
+          <h4 class="text-sm font-medium text-content">
+            {{ $t('prompt.form.preview_with_sample') }}
+          </h4>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div
               v-if="showPreviewSystem && promptForm.system_prompt"
               class="bg-surface-muted rounded-card p-4 border border-default"
             >
-              <span class="text-xs font-semibold text-content-muted uppercase tracking-wider"
-                >System Message Preview</span
-              >
+              <span class="text-xs font-semibold text-content-muted uppercase tracking-wider">{{
+                $t('prompt.form.system_message_preview')
+              }}</span>
               <div class="mt-2 whitespace-pre-wrap text-sm text-content-muted font-mono">
                 {{ promptForm.system_prompt.replaceAll('{document_content}', sampleDocument) }}
               </div>
@@ -255,9 +265,9 @@
               v-if="showPreviewUser && promptForm.user_prompt"
               class="bg-primary-soft rounded-card p-4 border border-default"
             >
-              <span class="text-xs font-semibold text-primary uppercase tracking-wider"
-                >User Message Preview</span
-              >
+              <span class="text-xs font-semibold text-primary uppercase tracking-wider">{{
+                $t('prompt.form.user_message_preview')
+              }}</span>
               <div class="mt-2 whitespace-pre-wrap text-sm text-content-muted font-mono">
                 {{ promptForm.user_prompt.replaceAll('{document_content}', sampleDocument) }}
               </div>
@@ -273,10 +283,12 @@
       <div class="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-3">
         <BaseButton variant="secondary" @click="useTemplate">
           <FileText class="h-4 w-4" />
-          Use Template
+          {{ $t('prompt.form.use_template') }}
         </BaseButton>
         <div class="flex gap-3">
-          <BaseButton variant="secondary" @click="cancelPromptModal">Cancel</BaseButton>
+          <BaseButton variant="secondary" @click="cancelPromptModal">{{
+            $t('prompt.form.cancel')
+          }}</BaseButton>
           <BaseButton
             variant="primary"
             :loading="isSubmitting"
@@ -284,7 +296,7 @@
             data-testid="prompt-submit"
             @click="isEdit ? updatePrompt() : createPrompt()"
           >
-            {{ isEdit ? 'Update' : 'Create' }}
+            {{ isEdit ? $t('prompt.form.update') : $t('prompt.form.create') }}
           </BaseButton>
         </div>
       </div>
@@ -294,10 +306,10 @@
   <!-- Discard unsaved changes confirmation -->
   <ConfirmationDialog
     :open="showConfirm"
-    title="Discard unsaved changes?"
-    message="Your prompt edits will be lost."
-    confirm-text="Discard"
-    cancel-text="Keep editing"
+    :title="$t('prompt.form.discard_title')"
+    :message="$t('prompt.form.discard_message')"
+    :confirm-text="$t('prompt.form.discard_confirm')"
+    :cancel-text="$t('prompt.form.discard_cancel')"
     confirm-variant="danger"
     @confirm="confirmDiscard"
     @cancel="showConfirm = false"
@@ -306,10 +318,10 @@
   <!-- Template-overwrite confirmation -->
   <ConfirmationDialog
     :open="showTemplateConfirm"
-    title="Apply template?"
-    message="Applying the template replaces the current name, description, and prompts."
-    confirm-text="Apply template"
-    cancel-text="Cancel"
+    :title="$t('prompt.form.apply_template_title')"
+    :message="$t('prompt.form.apply_template_message')"
+    :confirm-text="$t('prompt.form.apply_template_confirm')"
+    :cancel-text="$t('prompt.form.apply_template_cancel')"
     confirm-variant="warning"
     @confirm="applyTemplate"
     @cancel="showTemplateConfirm = false"
@@ -318,6 +330,7 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Check, FileText } from '@lucide/vue'
 import { promptsApi } from '@/services/promptsApi'
 import { useToast } from '@/composables/useToast'
@@ -349,6 +362,7 @@ const emit = defineEmits<{
   updated: [prompt: Prompt]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 
 const isEdit = computed(() => !!props.prompt)
@@ -463,7 +477,7 @@ const validatePromptPlaceholder = (): boolean => {
   // Document content is auto-appended by backend
   if (simplePromptMode.value) {
     if (!promptForm.value.user_prompt || !promptForm.value.user_prompt.trim()) {
-      promptError.value = 'Please enter an extraction instruction'
+      promptError.value = t('prompt.form.error_enter_instruction')
       return false
     }
     // NOTE: the system prompt is intentionally NOT cleared here. It stays in
@@ -475,7 +489,7 @@ const validatePromptPlaceholder = (): boolean => {
 
   // Advanced mode validation (original)
   if (!promptForm.value.system_prompt && !promptForm.value.user_prompt) {
-    promptError.value = 'At least one prompt (system or user) must be provided'
+    promptError.value = t('prompt.form.error_at_least_one')
     return false
   }
 
@@ -485,8 +499,7 @@ const validatePromptPlaceholder = (): boolean => {
     (!!promptForm.value.user_prompt && promptForm.value.user_prompt.includes('{document_content}'))
 
   if (!hasPlaceholder) {
-    promptError.value =
-      'The placeholder {document_content} must be present in either system or user prompt'
+    promptError.value = t('prompt.form.error_placeholder_required', { ph: '{document_content}' })
     return false
   }
 
@@ -507,13 +520,13 @@ const buildPayload = () => ({
 const createPrompt = async () => {
   // Check if name is provided
   if (!promptForm.value.name || promptForm.value.name.trim() === '') {
-    toast.error('Prompt name is required')
+    toast.error(t('prompt.form.name_required_toast'))
     return
   }
 
   // Validate prompts
   if (!validatePromptPlaceholder()) {
-    toast.error(promptError.value || 'Please check the prompt requirements')
+    toast.error(promptError.value || t('prompt.form.check_requirements'))
     return
   }
 
@@ -526,10 +539,10 @@ const createPrompt = async () => {
     emit('created', response.data)
     emit('close')
     resetPromptForm()
-    toast.success('Prompt created')
+    toast.success(t('prompt.form.created'))
   } catch (err) {
     console.error('Failed to create prompt:', err)
-    toast.error(extractErrorMessage(err, 'Failed to create prompt'))
+    toast.error(extractErrorMessage(err, t('prompt.form.create_failed')))
   } finally {
     isSubmitting.value = false
   }
@@ -537,7 +550,7 @@ const createPrompt = async () => {
 
 const updatePrompt = async () => {
   if (!validatePromptPlaceholder()) {
-    toast.error(promptError.value || 'Please check the prompt requirements')
+    toast.error(promptError.value || t('prompt.form.check_requirements'))
     return
   }
 
@@ -547,10 +560,10 @@ const updatePrompt = async () => {
     emit('updated', response.data)
     emit('close')
     resetPromptForm()
-    toast.success('Prompt updated')
+    toast.success(t('prompt.form.updated'))
   } catch (err) {
     console.error('Failed to update prompt:', err)
-    toast.error(extractErrorMessage(err, 'Failed to update prompt'))
+    toast.error(extractErrorMessage(err, t('prompt.form.update_failed')))
   } finally {
     isSubmitting.value = false
   }
@@ -593,7 +606,7 @@ const applyTemplate = () => {
     simplePromptMode.value = false
   }
   validatePromptPlaceholder()
-  toast.info('Medical extraction template applied')
+  toast.info(t('prompt.form.template_applied'))
 }
 
 const resetPromptForm = () => {

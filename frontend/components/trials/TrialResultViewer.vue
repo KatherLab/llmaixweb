@@ -29,14 +29,19 @@
         </div>
         <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-content-subtle mt-1">
           <span v-if="tokenUsage !== '—'">
-            <span class="font-medium text-content-muted">Tokens:</span> {{ tokenUsage }}
+            <span class="font-medium text-content-muted">{{
+              $t('trials.viewer.tokens_label')
+            }}</span>
+            {{ tokenUsage }}
           </span>
           <span>
-            <span class="font-medium text-content-muted">Created:</span>
+            <span class="font-medium text-content-muted">{{
+              $t('trials.viewer.created_label')
+            }}</span>
             {{ formatDateSmart(activeResult.created_at) }}
           </span>
           <span v-if="activeResult.original_file_name" class="truncate max-w-[24rem]">
-            <span class="font-medium text-content-muted">File:</span>
+            <span class="font-medium text-content-muted">{{ $t('trials.viewer.file_label') }}</span>
             {{ activeResult.original_file_name }}
           </span>
         </div>
@@ -46,15 +51,17 @@
     <!-- Error banner (failed docs — shown above the split, replaces Result tab) -->
     <div v-if="!activeResult.result || additionalContent?.json_error" class="px-5 pt-4 shrink-0">
       <ErrorBanner class="rounded-card text-sm">
-        <div class="font-semibold mb-1">This document has no structured result.</div>
+        <div class="font-semibold mb-1">{{ $t('trials.viewer.no_structured_result') }}</div>
         <div v-if="additionalContent?.user_guidance?.user_message" class="mb-1">
           {{ additionalContent.user_guidance.user_message }}
         </div>
         <div v-else-if="additionalContent?.json_error" class="mb-1">
-          Parser error: {{ additionalContent.json_error }}
+          {{ $t('trials.viewer.parser_error', { error: additionalContent.json_error }) }}
         </div>
         <details v-if="additionalContent?.tuning_advice" class="mt-2">
-          <summary class="cursor-pointer text-content-muted">Tuning advice</summary>
+          <summary class="cursor-pointer text-content-muted">
+            {{ $t('trials.viewer.tuning_advice') }}
+          </summary>
           <ul class="list-disc list-inside mt-1 text-content-muted">
             <li v-for="(rec, i) in additionalContent.tuning_advice.recommendations" :key="i">
               <span class="font-medium">{{ rec.action }}</span>
@@ -83,14 +90,18 @@
               class="flex items-center justify-between gap-2 px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
             >
               <h4 class="flex items-center gap-2 text-sm font-semibold text-content-muted">
-                <FileText class="h-4 w-4" /> Source Document
+                <FileText class="h-4 w-4" /> {{ $t('trials.viewer.source_document') }}
               </h4>
               <button
                 v-if="hasPreviewableFile"
                 class="text-xs text-primary hover:underline"
                 @click="toggleOriginalView"
               >
-                {{ showOriginal ? 'Show extracted text' : 'Show original file' }}
+                {{
+                  showOriginal
+                    ? $t('trials.viewer.show_extracted')
+                    : $t('trials.viewer.show_original')
+                }}
               </button>
             </div>
             <div class="flex-1 min-h-0 bg-surface-muted">
@@ -99,7 +110,9 @@
                 class="flex flex-col items-center justify-center h-full"
               >
                 <LoadingSpinner size="medium" inline label="" />
-                <span class="mt-2 text-sm text-content-muted">Loading preview…</span>
+                <span class="mt-2 text-sm text-content-muted">{{
+                  $t('trials.viewer.loading_preview')
+                }}</span>
               </div>
               <DocumentFilePreview
                 v-else-if="showOriginal && documentPdfUrl"
@@ -117,7 +130,7 @@
                 v-else
                 class="flex items-center justify-center h-full p-6 text-sm text-content-subtle italic"
               >
-                No original file or extracted text for this document.
+                {{ $t('trials.viewer.no_source') }}
               </div>
             </div>
           </div>
@@ -130,7 +143,7 @@
               class="flex items-center justify-between gap-2 px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
             >
               <h4 class="flex items-center gap-2 text-sm font-semibold text-content-muted">
-                <Braces class="h-4 w-4" /> Result
+                <Braces class="h-4 w-4" /> {{ $t('trials.viewer.result') }}
               </h4>
             </div>
             <div class="relative flex-1 min-h-0 overflow-y-auto bg-surface p-5">
@@ -140,7 +153,7 @@
                 variant="ghost"
                 size="sm"
                 class="absolute top-2 right-2 shadow-sm"
-                :title="copied ? 'Copied!' : 'Copy JSON'"
+                :title="copied ? $t('trials.viewer.copied') : $t('trials.viewer.copy_json')"
                 @click="copyResult"
               >
                 <component :is="copied ? Check : Copy" class="h-4 w-4" />
@@ -150,7 +163,7 @@
                 :data="activeResult.result as Record<string, unknown>"
               />
               <div v-else class="text-sm text-content-muted italic">
-                No structured output for this document.
+                {{ $t('trials.viewer.no_output') }}
               </div>
             </div>
           </div>
@@ -162,7 +175,7 @@
             <h4
               class="flex items-center gap-2 text-sm font-semibold text-content-muted px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
             >
-              <MessageSquare class="h-4 w-4" /> Reasoning
+              <MessageSquare class="h-4 w-4" /> {{ $t('trials.viewer.reasoning') }}
             </h4>
             <div class="flex-1 min-h-0 overflow-y-auto bg-surface p-5">
               <div
@@ -171,7 +184,7 @@
                 v-html="renderMarkdown(reasoningContent)"
               ></div>
               <div v-else class="text-sm text-content-muted italic">
-                No reasoning content was captured for this document.
+                {{ $t('trials.viewer.no_reasoning') }}
               </div>
             </div>
           </div>
@@ -183,12 +196,14 @@
             <h4
               class="flex items-center gap-2 text-sm font-semibold text-content-muted px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
             >
-              <Info class="h-4 w-4" /> Metadata
+              <Info class="h-4 w-4" /> {{ $t('trials.viewer.metadata') }}
             </h4>
             <div class="flex-1 min-h-0 overflow-y-auto bg-surface p-5">
               <dl class="space-y-3 text-sm">
                 <div v-if="additionalContent?.usage">
-                  <dt class="font-semibold text-content mb-1">Token Usage</dt>
+                  <dt class="font-semibold text-content mb-1">
+                    {{ $t('trials.viewer.token_usage') }}
+                  </dt>
                   <ul class="text-xs text-content-muted ml-2 space-y-0.5">
                     <li v-for="(v, k) in additionalContent.usage" :key="k">
                       <span class="font-medium">{{ formatKey(k as string) }}:</span> {{ v }}
@@ -196,13 +211,15 @@
                   </ul>
                 </div>
                 <div v-if="additionalContent?.finish_reason">
-                  <dt class="font-semibold text-content">Finish Reason</dt>
+                  <dt class="font-semibold text-content">
+                    {{ $t('trials.viewer.finish_reason') }}
+                  </dt>
                   <dd class="text-xs text-content-muted">
                     {{ additionalContent.finish_reason }}
                   </dd>
                 </div>
                 <div v-if="additionalContent?.json_error">
-                  <dt class="font-semibold text-content">JSON Error</dt>
+                  <dt class="font-semibold text-content">{{ $t('trials.viewer.json_error') }}</dt>
                   <dd class="text-xs text-red-600 dark:text-red-400">
                     {{ additionalContent.json_error }}
                   </dd>
@@ -215,7 +232,7 @@
                   "
                   class="text-sm text-content-muted italic"
                 >
-                  No metadata for this document.
+                  {{ $t('trials.viewer.no_metadata') }}
                 </div>
               </dl>
             </div>
@@ -228,6 +245,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Braces, Check, Copy, FileText, Info, MessageSquare } from '@lucide/vue'
 import JsonViewer from '@/components/common/JsonViewer.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -272,6 +290,7 @@ const props = defineProps<{
 }>()
 
 const toast = useToast()
+const { t } = useI18n({ useScope: 'global' })
 
 const documentContent = ref('')
 const docLoading = ref(false)
@@ -300,18 +319,22 @@ const hasPreviewableFile = computed(() => documentPreviewable.value && !!documen
 const availablePanels = computed<PanelOption[]>(() => {
   const panels: PanelOption[] = []
   if (hasOriginalContent.value) {
-    panels.push({ key: 'source', label: 'Source', icon: FileText })
+    panels.push({ key: 'source', label: t('trials.viewer.panel_source'), icon: FileText })
   }
-  panels.push({ key: 'result', label: 'Result', icon: Braces })
+  panels.push({ key: 'result', label: t('trials.viewer.panel_result'), icon: Braces })
   if (reasoningContent.value) {
-    panels.push({ key: 'reasoning', label: 'Reasoning', icon: MessageSquare })
+    panels.push({
+      key: 'reasoning',
+      label: t('trials.viewer.panel_reasoning'),
+      icon: MessageSquare,
+    })
   }
   if (
     additionalContent.value?.usage ||
     additionalContent.value?.finish_reason ||
     additionalContent.value?.json_error
   ) {
-    panels.push({ key: 'metadata', label: 'Metadata', icon: Info })
+    panels.push({ key: 'metadata', label: t('trials.viewer.panel_metadata'), icon: Info })
   }
   return panels
 })
@@ -347,17 +370,17 @@ const tokenUsage = computed(() => {
   return usage?.total_tokens ?? '—'
 })
 
-const STATUS_LABELS: Record<string, string> = {
-  success: 'OK',
-  failed: 'Error',
-  incomplete: 'Incomplete',
-  invalid_json: 'Invalid JSON',
-  schema_invalid: 'Schema invalid',
-  refused: 'Refused',
-  provider_error: 'Provider error',
-}
+const statusLabels = (): Record<string, string> => ({
+  success: t('trials.results.status_label.success'),
+  failed: t('trials.results.status_label.failed'),
+  incomplete: t('trials.results.status_label.incomplete'),
+  invalid_json: t('trials.results.status_label.invalid_json'),
+  schema_invalid: t('trials.results.status_label.schema_invalid'),
+  refused: t('trials.results.status_label.refused'),
+  provider_error: t('trials.results.status_label.provider_error'),
+})
 
-const statusLabel = (status: string): string => STATUS_LABELS[status] || (status ? status : '—')
+const statusLabel = (status: string): string => statusLabels()[status] || (status ? status : '—')
 
 const statusPillClass = (status: string): string => {
   if (status === 'success') return getPillClass('green')
@@ -380,7 +403,7 @@ async function copyResult(): Promise<void> {
     copied.value = true
     setTimeout(() => (copied.value = false), 1500)
   } catch {
-    toast.error('Failed to copy')
+    toast.error(t('trials.viewer.toast.copy_failed'))
   }
 }
 
@@ -397,7 +420,7 @@ async function loadDocumentTextAndMeta(seq: number): Promise<void> {
     const r = await documentsApi.get(props.projectId, docId)
     if (seq !== loadSeq) return // superseded by a newer result selection
     const d = r.data
-    documentContent.value = d.text || 'No text content available'
+    documentContent.value = d.text || t('trials.viewer.no_text_content')
     const previewable = analyzeOriginalFile(d.original_file?.file_type)
     documentPreviewable.value = previewable
     documentFileId.value = previewable
@@ -411,7 +434,7 @@ async function loadDocumentTextAndMeta(seq: number): Promise<void> {
     }
   } catch (err) {
     if (seq !== loadSeq) return
-    documentContent.value = 'Error loading document content'
+    documentContent.value = t('trials.viewer.load_content_error')
     console.error(err)
   } finally {
     if (seq === loadSeq) docLoading.value = false
@@ -436,7 +459,7 @@ async function loadOriginalFilePreview(seq: number): Promise<void> {
   } catch (err) {
     if (seq !== loadSeq) return
     console.error(err)
-    toast.error('Failed to load document')
+    toast.error(t('trials.viewer.toast.load_document_failed'))
   } finally {
     if (seq === loadSeq) documentPdfLoading.value = false
   }

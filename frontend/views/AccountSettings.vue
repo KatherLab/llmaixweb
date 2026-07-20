@@ -1,8 +1,8 @@
 <template>
   <div class="max-w-3xl mx-auto px-4 sm:px-6 py-4">
     <PageHeader
-      title="Account settings"
-      subtitle="Manage your profile, password, and connected sign-in methods."
+      :title="$t('account.title')"
+      :subtitle="$t('account.subtitle')"
       max-width="3xl"
       class="mb-6"
     />
@@ -11,20 +11,22 @@
       <!-- Profile -->
       <GlassCard>
         <div class="p-6">
-          <h2 class="text-base font-semibold text-content mb-4">Profile</h2>
+          <h2 class="text-base font-semibold text-content mb-4">
+            {{ $t('account.profile.title') }}
+          </h2>
           <div class="space-y-4">
             <FormField
               v-model="profileForm.full_name"
-              label="Full Name"
+              :label="$t('account.profile.full_name')"
               type="text"
-              placeholder="Full name"
+              :placeholder="$t('account.profile.full_name_placeholder')"
             />
             <FormField
               v-model="profileForm.email"
-              label="Email"
+              :label="$t('account.profile.email')"
               type="email"
               maxlength="254"
-              placeholder="admin@yourcompany.com"
+              :placeholder="$t('account.profile.email_placeholder')"
             />
             <div class="flex items-center gap-3">
               <BaseButton
@@ -33,9 +35,11 @@
                 :loading="savingProfile"
                 @click="saveProfile"
               >
-                Save profile
+                {{ $t('account.profile.save') }}
               </BaseButton>
-              <p v-if="profileSaved" class="text-xs text-green-600 dark:text-green-400">Saved.</p>
+              <p v-if="profileSaved" class="text-xs text-green-600 dark:text-green-400">
+                {{ $t('account.profile.saved') }}
+              </p>
             </div>
           </div>
         </div>
@@ -44,31 +48,32 @@
       <!-- Change password -->
       <GlassCard>
         <div class="p-6">
-          <h2 class="text-base font-semibold text-content mb-1">Change password</h2>
+          <h2 class="text-base font-semibold text-content mb-1">
+            {{ $t('common.change_password') }}
+          </h2>
           <p class="text-xs text-content-subtle mb-4">
-            Leave blank if you sign in exclusively via SSO — you can still set a password as a
-            fallback.
+            {{ $t('account.password.hint') }}
           </p>
           <div class="space-y-4 max-w-md">
             <FormField
               v-model="passwordForm.old_password"
-              label="Current password"
+              :label="$t('account.password.current')"
               type="password"
               autocomplete="current-password"
-              placeholder="Your current password"
+              :placeholder="$t('account.password.current_placeholder')"
             />
             <PasswordInput
               v-model="passwordForm.new_password"
-              label="New password"
+              :label="$t('account.password.new')"
               autocomplete="new-password"
-              placeholder="New password"
+              :placeholder="$t('account.password.new_placeholder')"
             />
             <FormField
               v-model="passwordForm.confirm"
-              label="Confirm new password"
+              :label="$t('account.password.confirm')"
               type="password"
               autocomplete="new-password"
-              placeholder="Repeat new password"
+              :placeholder="$t('account.password.confirm_placeholder')"
               :invalid="
                 !!passwordForm.confirm && passwordForm.confirm !== passwordForm.new_password
               "
@@ -77,7 +82,7 @@
                 v-if="!!passwordForm.confirm && passwordForm.confirm !== passwordForm.new_password"
                 #error
               >
-                Passwords do not match
+                {{ $t('account.password.mismatch') }}
               </template>
             </FormField>
             <div class="flex items-center gap-3">
@@ -87,14 +92,14 @@
                 :loading="savingPassword"
                 @click="changePassword"
               >
-                Update password
+                {{ $t('account.password.update') }}
               </BaseButton>
             </div>
             <p v-if="passwordError" class="text-xs text-red-600 dark:text-red-400">
               {{ passwordError }}
             </p>
             <p v-if="passwordSaved" class="text-xs text-green-600 dark:text-green-400">
-              Password updated. Other sessions were signed out.
+              {{ $t('account.password.updated_notice') }}
             </p>
           </div>
         </div>
@@ -103,15 +108,17 @@
       <!-- Connected accounts (SSO) -->
       <GlassCard v-if="ssoEnabled !== false">
         <div class="p-6">
-          <h2 class="text-base font-semibold text-content mb-1">Connected accounts</h2>
+          <h2 class="text-base font-semibold text-content mb-1">
+            {{ $t('account.connected.title') }}
+          </h2>
           <p class="text-xs text-content-subtle mb-4">
-            External identity providers linked to your account.
+            {{ $t('account.connected.subtitle') }}
           </p>
           <div v-if="loadingIdentities" class="flex justify-center py-6">
             <LoadingSpinner size="medium" />
           </div>
           <div v-else-if="identities.length === 0" class="text-sm text-content-subtle">
-            No external accounts connected.
+            {{ $t('account.connected.empty') }}
           </div>
           <ul v-else class="divide-y divide-default">
             <li
@@ -126,7 +133,9 @@
                 <p class="text-xs text-content-subtle">
                   {{ ident.external_subject }}
                   <span v-if="ident.last_login_at">
-                    · last login {{ formatDate(ident.last_login_at) }}</span
+                    {{
+                      $t('account.connected.last_login', { date: formatDate(ident.last_login_at) })
+                    }}</span
                   >
                 </p>
               </div>
@@ -137,7 +146,7 @@
                 :disabled="disconnectingId === ident.id"
                 @click="disconnectIdentity(ident)"
               >
-                {{ disconnectingId === ident.id ? '...' : 'Disconnect' }}
+                {{ disconnectingId === ident.id ? '...' : $t('account.connected.disconnect') }}
               </BaseButton>
             </li>
           </ul>
@@ -148,17 +157,17 @@
       <GlassCard>
         <div class="p-6 flex items-center justify-between">
           <div>
-            <h2 class="text-base font-semibold text-content">Sign out</h2>
+            <h2 class="text-base font-semibold text-content">{{ $t('account.signout.title') }}</h2>
             <p class="text-xs text-content-subtle mt-1">
-              Sign out of this device, or all sessions.
+              {{ $t('account.signout.subtitle') }}
             </p>
           </div>
           <div class="flex gap-2">
             <BaseButton variant="secondary" :loading="signingOut" @click="signOut(false)">
-              Sign out
+              {{ $t('account.signout.button') }}
             </BaseButton>
             <BaseButton variant="secondary" tone="red" :loading="signingOut" @click="signOut(true)">
-              Sign out everywhere
+              {{ $t('account.signout.everywhere') }}
             </BaseButton>
           </div>
         </div>
@@ -169,6 +178,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
@@ -184,6 +194,7 @@ import GlassCard from '@/components/common/GlassCard.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import type { UserIdentityResponse } from '@/types'
 
+const { t } = useI18n({ useScope: 'global' })
 const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()
@@ -266,9 +277,9 @@ async function saveProfile(): Promise<void> {
     const res = await usersApi.update(authStore.user!.id, payload)
     authStore.user = res.data
     profileSaved.value = true
-    toast.success('Profile updated')
+    toast.success(t('account.toasts.profile_updated'))
   } catch (e) {
-    toast.error(extractErrorMessage(e, 'Failed to update profile.'))
+    toast.error(extractErrorMessage(e, t('account.errors.profile_update_failed')))
   } finally {
     savingProfile.value = false
   }
@@ -288,9 +299,9 @@ async function changePassword(): Promise<void> {
     passwordForm.old_password = ''
     passwordForm.new_password = ''
     passwordForm.confirm = ''
-    toast.success('Password updated')
+    toast.success(t('account.toasts.password_updated'))
   } catch (e) {
-    passwordError.value = extractErrorMessage(e, 'Failed to update password.')
+    passwordError.value = extractErrorMessage(e, t('account.errors.password_update_failed'))
   } finally {
     savingPassword.value = false
   }
@@ -301,9 +312,9 @@ async function disconnectIdentity(ident: UserIdentityResponse): Promise<void> {
   try {
     await usersApi.deleteMyIdentity(ident.id)
     identities.value = identities.value.filter((i) => i.id !== ident.id)
-    toast.success(`Disconnected ${ident.provider_name}`)
+    toast.success(t('account.toasts.disconnected', { name: ident.provider_name }))
   } catch (e) {
-    toast.error(extractErrorMessage(e, 'Failed to disconnect.'))
+    toast.error(extractErrorMessage(e, t('account.errors.disconnect_failed')))
   } finally {
     disconnectingId.value = null
   }
@@ -313,7 +324,7 @@ async function signOut(everywhere: boolean): Promise<void> {
   signingOut.value = true
   try {
     await authStore.logout({ serverSide: true, everywhere })
-    toast.success('Signed out')
+    toast.success(t('account.toasts.signed_out'))
     router.push('/login')
   } finally {
     signingOut.value = false

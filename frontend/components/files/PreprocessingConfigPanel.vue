@@ -1,7 +1,7 @@
 <template>
   <BaseModal
     :open="open"
-    title="Configure Preprocessing"
+    :title="$t('files.actions.configure_preprocessing')"
     placement="right"
     panel-class="w-screen max-w-md"
     body-class="p-6 space-y-6"
@@ -13,7 +13,7 @@
       <!-- Selected Files -->
       <div>
         <h4 class="text-sm font-medium text-content-muted mb-3">
-          Files to Process ({{ selectedFiles.length }})
+          {{ $t('files.config.files_to_process', { count: selectedFiles.length }) }}
         </h4>
         <div class="space-y-2 max-h-40 overflow-y-auto border border-default rounded-card p-3">
           <div
@@ -21,7 +21,9 @@
             :key="fileId"
             class="flex items-center justify-between text-sm"
           >
-            <span class="truncate">{{ getFileById(fileId)?.file_name || 'Unknown' }}</span>
+            <span class="truncate">{{
+              getFileById(fileId)?.file_name || $t('files.config.unknown')
+            }}</span>
             <button
               class="text-content-subtle hover:text-red-500 dark:hover:text-red-400"
               @click="emit('remove-file', fileId)"
@@ -36,7 +38,7 @@
           class="mt-2 font-medium"
           @click="emit('clear-and-close')"
         >
-          Select different files
+          {{ $t('files.config.select_different') }}
         </BaseButton>
       </div>
 
@@ -46,17 +48,15 @@
            section nor force an engine choice for a table/text-only selection. -->
       <template v-if="hasOcrRequiringFiles">
         <div>
-          <label :class="[labelClass, 'mb-3']"> OCR Engine </label>
+          <label :class="[labelClass, 'mb-3']"> {{ $t('files.config.ocr_engine') }} </label>
 
           <!-- Hard error: the selection needs OCR but no engine is enabled. -->
           <Callout v-if="ocrRequiredButUnavailable" variant="danger">
             <p class="text-sm font-medium">
-              Selected files require OCR, but no OCR engine is enabled.
+              {{ $t('files.config.ocr_required_title') }}
             </p>
             <p class="text-xs mt-1">
-              PDF and image files need an OCR engine. Enable Local OCR, Mistral OCR, or Vision LLM
-              in Admin Settings — or remove those files and process only CSV/Excel/text files, which
-              don't require OCR.
+              {{ $t('files.config.ocr_required_desc') }}
             </p>
           </Callout>
 
@@ -143,10 +143,10 @@
             <input v-model="forceOcr" type="checkbox" class="mt-0.5 text-amber-600 rounded" />
             <div>
               <p class="text-sm font-medium text-amber-900 dark:text-amber-300">
-                Force OCR for PDFs
+                {{ $t('files.config.force_ocr_title') }}
               </p>
               <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                Skip embedded text extraction and run OCR on all PDF pages
+                {{ $t('files.config.force_ocr_desc') }}
               </p>
             </div>
           </label>
@@ -155,21 +155,20 @@
 
       <!-- Table/text-only selection: no OCR engine required. -->
       <Callout v-else variant="info">
-        <p class="text-sm font-medium">No OCR engine needed</p>
+        <p class="text-sm font-medium">{{ $t('files.config.no_ocr_title') }}</p>
         <p class="text-xs mt-1">
-          CSV, Excel and plain-text files are imported as structured text — they don't use an OCR
-          engine. Just start processing.
+          {{ $t('files.config.no_ocr_desc') }}
         </p>
       </Callout>
 
       <!-- Vision LLM Prompt (visible when Vision LLM is picked for an OCR file) -->
       <div v-if="hasOcrRequiringFiles && selectedEngine === 'llm_vision'" class="pt-4">
-        <label :class="labelClass" for="vision-ocr-prompt">Prompt</label>
+        <label :class="labelClass" for="vision-ocr-prompt">{{ $t('files.config.prompt') }}</label>
         <textarea
           id="vision-ocr-prompt"
           v-model="visionPrompt"
           rows="2"
-          placeholder="Extract all text as markdown..."
+          :placeholder="$t('files.config.prompt_placeholder')"
           :class="textareaClass"
         ></textarea>
       </div>
@@ -183,26 +182,28 @@
           <ChevronRight
             :class="['w-4 h-4 mr-2 transition-transform', showAdvanced ? 'rotate-90' : '']"
           />
-          Advanced Options
+          {{ $t('files.config.advanced_options') }}
         </button>
 
         <div v-show="showAdvanced" class="mt-4 space-y-4">
           <!-- Tesseract Language -->
           <div v-if="selectedEngine === 'docling_tesseract'">
-            <label :class="labelClass" for="tesseract-language"> Tesseract Language </label>
+            <label :class="labelClass" for="tesseract-language">
+              {{ $t('files.config.tesseract_language') }}
+            </label>
             <select id="tesseract-language" v-model="tesseractLang" :class="selectClass">
-              <option value="auto">Auto-detect</option>
-              <option value="eng">English</option>
-              <option value="deu">German</option>
-              <option value="fra">French</option>
-              <option value="spa">Spanish</option>
-              <option value="ita">Italian</option>
-              <option value="por">Portuguese</option>
-              <option value="nld">Dutch</option>
-              <option value="pol">Polish</option>
-              <option value="rus">Russian</option>
-              <option value="chi-sim">Chinese (Simplified)</option>
-              <option value="lat">Latin</option>
+              <option value="auto">{{ $t('files.config.lang_auto') }}</option>
+              <option value="eng">{{ $t('files.config.lang_eng') }}</option>
+              <option value="deu">{{ $t('files.config.lang_deu') }}</option>
+              <option value="fra">{{ $t('files.config.lang_fra') }}</option>
+              <option value="spa">{{ $t('files.config.lang_spa') }}</option>
+              <option value="ita">{{ $t('files.config.lang_ita') }}</option>
+              <option value="por">{{ $t('files.config.lang_por') }}</option>
+              <option value="nld">{{ $t('files.config.lang_nld') }}</option>
+              <option value="pol">{{ $t('files.config.lang_pol') }}</option>
+              <option value="rus">{{ $t('files.config.lang_rus') }}</option>
+              <option value="chi-sim">{{ $t('files.config.lang_chi_sim') }}</option>
+              <option value="lat">{{ $t('files.config.lang_lat') }}</option>
             </select>
           </div>
 
@@ -210,15 +211,15 @@
           <div v-if="selectedEngine === 'mistral_ocr'" class="space-y-3">
             <PasswordInput
               v-model="mistralApiKey"
-              label="API Key"
+              :label="$t('files.config.api_key')"
               :show-strength="false"
               autocomplete="off"
               maxlength="512"
-              placeholder="Leave empty to use server default"
+              :placeholder="$t('files.config.leave_empty_default')"
             />
             <FormField
               v-model="mistralModel"
-              label="Model"
+              :label="$t('files.config.model')"
               type="text"
               placeholder="mistral-ocr-latest"
             />
@@ -228,28 +229,28 @@
           <div v-if="selectedEngine === 'llm_vision'" class="space-y-3">
             <PasswordInput
               v-model="visionApiKey"
-              label="API Key"
+              :label="$t('files.config.api_key')"
               :show-strength="false"
               autocomplete="off"
               maxlength="512"
-              placeholder="Leave empty to use server default"
+              :placeholder="$t('files.config.leave_empty_default')"
             />
             <FormField
               v-model="visionBaseUrl"
-              label="Base URL"
+              :label="$t('files.config.base_url')"
               type="text"
               maxlength="512"
               placeholder="https://api.openai.com/v1"
             />
             <FormField
               v-model="visionModel"
-              label="Model"
+              :label="$t('files.config.model')"
               type="text"
-              placeholder="Leave empty to use server default"
+              :placeholder="$t('files.config.leave_empty_default')"
             />
             <FormField
               v-model.number="visionMaxImageDim"
-              label="Max Image Dimension (px)"
+              :label="$t('files.config.max_image_dim')"
               type="number"
               :min="400"
               :max="4096"
@@ -263,7 +264,7 @@
       <Callout
         v-if="unconfiguredCsvXlsxFiles.length > 0"
         variant="warning"
-        :title="`${unconfiguredCsvXlsxFiles.length} file(s) need import configuration`"
+        :title="$t('files.config.needs_config_title', { count: unconfiguredCsvXlsxFiles.length })"
       >
         <ul class="mt-1 text-xs list-disc list-inside">
           <li v-for="file in unconfiguredCsvXlsxFiles" :key="file.id" class="truncate">
@@ -271,7 +272,7 @@
           </li>
         </ul>
         <p class="mt-2 text-xs">
-          Click "Configure" next to each file above to set up import settings before preprocessing.
+          {{ $t('files.config.needs_config_hint') }}
         </p>
       </Callout>
     </div>
@@ -282,11 +283,11 @@
     <template #footer>
       <div class="w-full space-y-3">
         <p class="text-xs text-content-muted">
-          This will create a new preprocessing run. Existing runs and documents are preserved.
+          {{ $t('files.config.footer_note') }}
         </p>
         <div class="flex items-center gap-3">
           <BaseButton variant="secondary" class="flex-1" @click="emit('close')">
-            Cancel
+            {{ $t('files.actions.cancel') }}
           </BaseButton>
           <BaseButton
             class="flex-1"
@@ -294,7 +295,7 @@
             :loading="isSubmitting"
             @click="onStart"
           >
-            {{ isSubmitting ? 'Processing...' : 'Start Processing' }}
+            {{ isSubmitting ? $t('files.config.processing') : $t('files.config.start_processing') }}
           </BaseButton>
         </div>
       </div>

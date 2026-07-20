@@ -9,9 +9,17 @@ import path from 'node:path'
 
 export default defineConfig({
   plugins: [vue()],
+  // Match the app build: full vue-i18n bundle + feature flags so specs that
+  // touch i18n (e.g. formatters) behave like production.
+  define: {
+    __VUE_I18N_FULL_INSTALL__: true,
+    __VUE_I18N_LEGACY_API__: false,
+    __INTLIFY_PROD_DEVTOOLS__: false,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'frontend'),
+      'vue-i18n': 'vue-i18n/dist/vue-i18n.esm-bundler.js',
     },
   },
   test: {

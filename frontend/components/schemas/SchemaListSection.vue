@@ -2,14 +2,14 @@
   <div>
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="text-lg font-medium text-content">JSON Schemas</h2>
+        <h2 class="text-lg font-medium text-content">{{ $t('schema.list.title') }}</h2>
         <p class="mt-1 text-sm text-content-muted">
-          Define the structure for information extraction
+          {{ $t('schema.list.subtitle') }}
         </p>
       </div>
       <BaseButton data-testid="create-schema-open" @click="emit('create')">
         <Plus class="h-5 w-5" />
-        Create Schema
+        {{ $t('schema.list.create') }}
       </BaseButton>
     </div>
 
@@ -17,9 +17,9 @@
 
     <EmptyState
       v-else-if="schemas.length === 0"
-      title="No schemas created yet"
-      description="Create a schema to define the structure for information extraction"
-      action-text="Create Schema"
+      :title="$t('schema.list.empty_title')"
+      :description="$t('schema.list.empty_description')"
+      :action-text="$t('schema.list.create')"
       @action="emit('create')"
     />
 
@@ -27,8 +27,8 @@
       <FilterBar
         v-model:search="searchQuery"
         :total-count="schemas.length"
-        item-label="schemas"
-        search-placeholder="Search schemas..."
+        :item-label="$t('schema.list.item_label')"
+        :search-placeholder="$t('schema.list.search_placeholder')"
         :active-filters="activeFilters"
         class="mb-4"
         @clear-filter="clearSearch"
@@ -40,7 +40,7 @@
         row-key="id"
         expandable
         :expanded-keys="expandedKeys"
-        empty-title="No schemas match your search"
+        :empty-title="$t('schema.list.no_match')"
         @expand="toggleExpand"
       >
         <template #cell-schema_name="{ row: schema }">
@@ -60,8 +60,8 @@
           <BaseButton
             variant="icon"
             tone="blue"
-            title="View Schema"
-            aria-label="View Schema"
+            :title="$t('schema.list.view')"
+            :aria-label="$t('schema.list.view')"
             @click.stop="emit('view', schema as Schema)"
           >
             <Eye class="w-5 h-5" aria-hidden="true" />
@@ -69,8 +69,8 @@
           <BaseButton
             variant="icon"
             tone="gray"
-            title="Edit Schema"
-            aria-label="Edit Schema"
+            :title="$t('schema.list.edit')"
+            :aria-label="$t('schema.list.edit')"
             @click.stop="emit('edit', schema as Schema)"
           >
             <Pencil class="w-5 h-5" aria-hidden="true" />
@@ -78,8 +78,8 @@
           <BaseButton
             variant="icon"
             tone="red"
-            title="Delete Schema"
-            aria-label="Delete Schema"
+            :title="$t('schema.list.delete')"
+            :aria-label="$t('schema.list.delete')"
             @click.stop="emit('delete', schema as Schema)"
           >
             <Trash2 class="w-5 h-5" aria-hidden="true" />
@@ -98,6 +98,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { formatDate } from '@/utils/formatters'
 import { summarizeSchema } from '@/utils/schemaFieldList'
 import { Eye, Pencil, Plus, Trash2 } from '@lucide/vue'
@@ -125,6 +126,8 @@ const emit = defineEmits<{
   delete: [schema: Schema]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 const expandedKeys = ref<number[]>([])
 const searchQuery = ref('')
 
@@ -136,7 +139,13 @@ const filteredSchemas = computed(() => {
 
 const activeFilters = computed(() =>
   searchQuery.value
-    ? [{ key: 'search', label: `Search: "${searchQuery.value}"`, color: 'blue' }]
+    ? [
+        {
+          key: 'search',
+          label: t('schema.list.search_chip', { query: searchQuery.value }),
+          color: 'blue',
+        },
+      ]
     : [],
 )
 
@@ -153,8 +162,8 @@ const toggleExpand = (id: string | number) => {
   }
 }
 
-const columns = [
-  { key: 'schema_name', label: 'Name' },
-  { key: 'created_at', label: 'Created' },
-]
+const columns = computed(() => [
+  { key: 'schema_name', label: t('schema.list.col_name') },
+  { key: 'created_at', label: t('schema.list.col_created') },
+])
 </script>

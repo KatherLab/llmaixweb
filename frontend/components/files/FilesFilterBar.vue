@@ -1,9 +1,9 @@
 <template>
   <FilterBar
     :search="search"
-    search-placeholder="Search files..."
+    :search-placeholder="$t('files.filter.search_placeholder')"
     :total-count="totalCount"
-    item-label="files"
+    :item-label="$t('files.filter.item_label')"
     :active-filters="activeFilters"
     @update:search="(v) => (search = v)"
     @search-input="onSearchInput"
@@ -13,16 +13,16 @@
     <template #filters>
       <!-- Status Filter -->
       <select v-model="status" :class="inlineSelectClass" @change="emit('fetch')">
-        <option value="">All Status</option>
-        <option value="not_preprocessed">Not Processed</option>
-        <option value="processing">Processing</option>
-        <option value="completed">Completed</option>
-        <option value="failed">Failed</option>
+        <option value="">{{ $t('files.filter.status_all') }}</option>
+        <option value="not_preprocessed">{{ $t('files.filter.status_not_processed') }}</option>
+        <option value="processing">{{ $t('files.filter.status_processing') }}</option>
+        <option value="completed">{{ $t('files.filter.status_completed') }}</option>
+        <option value="failed">{{ $t('files.filter.status_failed') }}</option>
       </select>
 
       <!-- File Type Filter -->
       <select v-model="fileType" :class="inlineSelectClass" @change="emit('fetch')">
-        <option value="">All Types</option>
+        <option value="">{{ $t('files.filter.type_all') }}</option>
         <option value="application/pdf">PDF</option>
         <option value="image/png">PNG</option>
         <option value="image/jpeg">JPEG</option>
@@ -40,12 +40,12 @@
 
       <!-- Date Range Filter -->
       <select v-model="dateRange" :class="inlineSelectClass" @change="onDateRangeChange">
-        <option value="">All Time</option>
-        <option value="today">Today</option>
-        <option value="yesterday">Yesterday</option>
-        <option value="week">Last 7 Days</option>
-        <option value="month">Last 30 Days</option>
-        <option value="custom">Custom Range...</option>
+        <option value="">{{ $t('files.filter.date_all') }}</option>
+        <option value="today">{{ $t('files.filter.date_today') }}</option>
+        <option value="yesterday">{{ $t('files.filter.date_yesterday') }}</option>
+        <option value="week">{{ $t('files.filter.date_week') }}</option>
+        <option value="month">{{ $t('files.filter.date_month') }}</option>
+        <option value="custom">{{ $t('files.filter.date_custom') }}</option>
       </select>
     </template>
 
@@ -53,7 +53,9 @@
          on every input change — picking a range means touching both fields). -->
     <template v-if="dateRange === 'custom'" #custom-range>
       <div class="flex items-center gap-2">
-        <label :class="labelClass" for="files-filter-date-from">From:</label>
+        <label :class="labelClass" for="files-filter-date-from">{{
+          $t('files.filter.date_from')
+        }}</label>
         <input
           id="files-filter-date-from"
           v-model="customFrom"
@@ -62,7 +64,9 @@
         />
       </div>
       <div class="flex items-center gap-2">
-        <label :class="labelClass" for="files-filter-date-to">To:</label>
+        <label :class="labelClass" for="files-filter-date-to">{{
+          $t('files.filter.date_to')
+        }}</label>
         <input
           id="files-filter-date-to"
           v-model="customTo"
@@ -70,13 +74,16 @@
           :class="[inputClass, 'px-3 py-1.5']"
         />
       </div>
-      <BaseButton variant="ghost" size="sm" @click="emit('fetch')">Apply</BaseButton>
+      <BaseButton variant="ghost" size="sm" @click="emit('fetch')">{{
+        $t('files.filter.apply')
+      }}</BaseButton>
     </template>
   </FilterBar>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getDateRangeLabel } from '@/utils/dateRange'
 import FilterBar from '@/components/common/FilterBar.vue'
 import type { ActiveFilter } from '@/components/common/FilterBar.vue'
@@ -95,6 +102,8 @@ const emit = defineEmits<{
   fetch: []
   'clear-filters': []
 }>()
+
+const { t } = useI18n({ useScope: 'global' })
 
 // Filter state — each is a v-model on the parent so fetchFiles/selectAllFiles can read it.
 const search = defineModel<string>('search', { default: '' })
@@ -127,24 +136,36 @@ const getFileTypeLabel = (type: string): string => fileTypeLabels[type] || type
 // Active filter chips (unified rendering via FilterBar's activeFilters prop)
 const activeFilters = computed<ActiveFilter[]>(() => {
   const chips: ActiveFilter[] = []
-  if (search.value) chips.push({ key: 'search', label: `Search: "${search.value}"`, color: 'blue' })
-  if (status.value) chips.push({ key: 'status', label: `Status: ${status.value}`, color: 'green' })
+  if (search.value)
+    chips.push({
+      key: 'search',
+      label: t('files.filter.chip_search', { value: search.value }),
+      color: 'blue',
+    })
+  if (status.value)
+    chips.push({
+      key: 'status',
+      label: t('files.filter.chip_status', { value: status.value }),
+      color: 'green',
+    })
   if (fileType.value)
     chips.push({
       key: 'fileType',
-      label: `Type: ${getFileTypeLabel(fileType.value)}`,
+      label: t('files.filter.chip_type', { value: getFileTypeLabel(fileType.value) }),
       color: 'purple',
     })
   if (dateRange.value && dateRange.value !== 'custom')
     chips.push({
       key: 'dateRange',
-      label: `Date: ${getDateRangeLabel(dateRange.value)}`,
+      label: t('files.filter.chip_date', { value: getDateRangeLabel(dateRange.value) }),
       color: 'orange',
     })
   if (dateRange.value === 'custom' && customFrom.value)
     chips.push({
       key: 'customDateRange',
-      label: `Date: ${customFrom.value} → ${customTo.value || 'present'}`,
+      label: t('files.filter.chip_date', {
+        value: `${customFrom.value} → ${customTo.value || t('files.filter.present')}`,
+      }),
       color: 'orange',
     })
   return chips

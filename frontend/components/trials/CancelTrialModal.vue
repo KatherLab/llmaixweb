@@ -1,32 +1,32 @@
 <template>
   <BaseModal :open="open" size="sm" body-class="p-6" @close="$emit('close')">
     <template #header>
-      <h3 class="text-lg font-semibold text-content">Cancel Trial</h3>
+      <h3 class="text-lg font-semibold text-content">{{ $t('trials.cancel_modal.title') }}</h3>
     </template>
 
     <p class="text-sm text-content-muted">
-      Cancel this running trial? Documents that are still being processed will be stopped.
+      {{ $t('trials.cancel_modal.message') }}
     </p>
 
     <label class="mt-4 flex items-start gap-2 text-sm cursor-pointer">
       <input v-model="keepProcessed" type="checkbox" :class="[checkboxClass, 'mt-0.5']" />
       <span>
-        <span class="font-medium text-content">Keep already-processed results</span>
+        <span class="font-medium text-content">{{ $t('trials.cancel_modal.keep_label') }}</span>
         <span class="block text-xs text-content-muted mt-0.5">
           {{
-            keepProcessed
-              ? 'Results extracted so far stay available (partial download and review).'
-              : 'Results extracted so far will be discarded and cannot be recovered.'
+            keepProcessed ? $t('trials.cancel_modal.keep_yes') : $t('trials.cancel_modal.keep_no')
           }}
         </span>
       </span>
     </label>
 
     <template #footer>
-      <BaseButton variant="secondary" @click="$emit('close')">Keep Running</BaseButton>
-      <BaseButton variant="warning" @click="$emit('confirm', keepProcessed)"
-        >Cancel Trial</BaseButton
-      >
+      <BaseButton variant="secondary" @click="$emit('close')">{{
+        $t('trials.cancel_modal.keep_running')
+      }}</BaseButton>
+      <BaseButton variant="warning" @click="$emit('confirm', keepProcessed)">{{
+        $t('trials.cancel_modal.confirm')
+      }}</BaseButton>
     </template>
   </BaseModal>
 </template>

@@ -2,7 +2,7 @@
   <div
     role="button"
     tabindex="0"
-    aria-label="Upload files — drop files here or activate to browse"
+    :aria-label="$t('files.dropzone.aria_label')"
     class="border-2 border-dashed rounded-modal text-center hover:border-primary transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     :class="[
       compact ? 'border-strong p-10 bg-surface-muted' : 'border-strong p-12 bg-surface-muted',
@@ -17,14 +17,14 @@
   >
     <UploadCloud class="mx-auto h-12 w-12 text-content-subtle" aria-hidden="true" />
     <p :class="['mt-4 font-medium text-content', compact ? 'text-sm' : 'text-lg']">
-      Drop files here or click to upload
+      {{ $t('files.dropzone.prompt') }}
     </p>
     <p class="mt-2 text-sm text-content-muted">PDF, PNG, JPG, DOC, DOCX, CSV, XLSX, TXT</p>
     <BaseButton
       :class="['mt-6', compact ? 'px-6 py-2.5 text-sm' : 'px-6 py-2']"
       @click.stop="openPicker"
     >
-      Browse Files
+      {{ $t('files.dropzone.browse') }}
     </BaseButton>
     <!-- @click.stop: the programmatic input.click() bubbles back to the
          container's click handler and would re-open the picker in a loop. -->

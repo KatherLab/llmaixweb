@@ -1,7 +1,11 @@
 <template>
   <div class="w-full">
     <div v-if="(mappings ?? []).length === 0" class="text-xs text-content-subtle text-center py-4">
-      No mappings yet.<br />Select a schema field and a GT field and click <b>Map</b>.
+      {{ $t('groundtruth.mapping_list.empty_line1') }}<br />{{
+        $t('groundtruth.mapping_list.empty_line2')
+      }}
+      <b>{{ $t('groundtruth.mapping_list.map') }}</b
+      >.
     </div>
     <ul v-else class="flex flex-col gap-2">
       <li
@@ -11,7 +15,11 @@
       >
         <div class="flex items-center gap-2">
           <!-- Schema Field -->
-          <Tooltip :text="schemaFieldTooltip(m)" title="Schema field" class="max-w-[45%] min-w-0">
+          <Tooltip
+            :text="schemaFieldTooltip(m)"
+            :title="$t('groundtruth.mapping_list.schema_field')"
+            class="max-w-[45%] min-w-0"
+          >
             <span
               class="bg-primary-soft px-2 py-0.5 rounded-card font-mono text-xs font-semibold text-primary overflow-hidden text-ellipsis whitespace-nowrap max-w-full inline-block cursor-default"
             >
@@ -24,7 +32,11 @@
           <!-- Arrow Icon -->
           <ArrowRight class="w-4 h-4 text-content-subtle flex-shrink-0" />
           <!-- Ground Truth Field -->
-          <Tooltip :text="gtFieldTooltip(m)" title="GT field" class="max-w-[45%] min-w-0">
+          <Tooltip
+            :text="gtFieldTooltip(m)"
+            :title="$t('groundtruth.mapping_list.gt_field')"
+            class="max-w-[45%] min-w-0"
+          >
             <span
               class="bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded-card font-mono text-xs font-semibold text-purple-800 dark:text-purple-300 overflow-hidden text-ellipsis whitespace-nowrap max-w-full inline-block cursor-default"
             >
@@ -58,7 +70,7 @@
             v-if="hasOptions(m.comparison_method)"
             class="text-content-subtle hover:text-primary"
             :class="{ 'text-primary': optionsOpen[i] }"
-            :title="`Comparison options for ${m.schema_field}`"
+            :title="$t('groundtruth.mapping_list.options_for', { field: m.schema_field })"
             type="button"
             @click="toggleOptions(i)"
           >
@@ -67,7 +79,7 @@
           <!-- Remove -->
           <button
             class="ml-1 text-red-300 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-            title="Remove mapping"
+            :title="$t('groundtruth.mapping_list.remove_mapping')"
             @click="$emit('remove', i)"
           >
             <X class="h-4 w-4" />
@@ -95,7 +107,7 @@
         >
           <template v-if="m.comparison_method === 'fuzzy'">
             <label class="flex items-center gap-1">
-              Threshold
+              {{ $t('groundtruth.mapping_list.threshold') }}
               <input
                 type="number"
                 min="0"
@@ -108,10 +120,12 @@
                 "
               />
             </label>
-            <span class="text-content-subtle">higher = stricter match</span>
+            <span class="text-content-subtle">{{
+              $t('groundtruth.mapping_list.higher_stricter')
+            }}</span>
             <label
               class="flex items-center gap-1"
-              title="Off by default. Substring matching can invert meaning in medical text (e.g. 'cancer' vs 'non-cancer'), so it is opt-in."
+              :title="$t('groundtruth.mapping_list.partial_match_hint')"
             >
               <input
                 type="checkbox"
@@ -120,12 +134,12 @@
                   setOption(i, 'allow_partial_match', ($event.target as HTMLInputElement).checked)
                 "
               />
-              allow partial / substring match
+              {{ $t('groundtruth.mapping_list.allow_partial') }}
             </label>
           </template>
           <template v-else-if="m.comparison_method === 'numeric'">
             <label class="flex items-center gap-1">
-              Tolerance
+              {{ $t('groundtruth.mapping_list.tolerance') }}
               <input
                 type="number"
                 min="0"
@@ -143,7 +157,7 @@
                 :checked="!!getOption(m, 'relative', false)"
                 @change="setOption(i, 'relative', ($event.target as HTMLInputElement).checked)"
               />
-              relative (±%)
+              {{ $t('groundtruth.mapping_list.relative') }}
             </label>
           </template>
         </div>
@@ -153,6 +167,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertTriangle, ArrowRight, SlidersHorizontal, X } from '@lucide/vue'
 import Tooltip from '@/components/common/Tooltip.vue'
 import { getComparisonMethodDescription } from '@/utils/metricsDefinitions'
@@ -185,6 +200,8 @@ const emit = defineEmits<{
   'update-method': [payload: { index: number; method: string }]
   'update-options': [payload: { index: number; options: Record<string, unknown> }]
 }>()
+
+const { t } = useI18n({ useScope: 'global' })
 
 const optionsOpen = ref<Record<number, boolean>>({}) // { [index]: true }
 
@@ -231,13 +248,18 @@ function mappingHints(m: MappingItem): string[] {
   const schemaType = props.schemaFieldTypes?.[m.schema_field]
   const gtType = props.groundTruthFieldTypes?.[m.ground_truth_field]
   if (schemaType && gtType && comparableType(schemaType) !== comparableType(gtType)) {
-    hints.push(`Type mismatch: schema field is ${schemaType}, GT column is ${gtType}`)
+    hints.push(
+      t('groundtruth.mapping_list.hint_type_mismatch', {
+        schemaType,
+        gtType,
+      }),
+    )
   }
   const fieldType = baseType(schemaType ?? m.field_type)
   const method = String(m.comparison_method || 'exact')
   const suitable = SUITABLE_METHODS[fieldType]
   if (suitable && !suitable.includes(method)) {
-    hints.push(`"${method}" comparison is unusual for a ${fieldType} field`)
+    hints.push(t('groundtruth.mapping_list.hint_unusual_method', { method, fieldType }))
   }
   return hints
 }

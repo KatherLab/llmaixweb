@@ -1,3 +1,13 @@
+import { i18n, INTL_LOCALES, type SupportedLocale } from '@/i18n'
+
+/**
+ * The BCP-47 tag for the currently active app locale, used for all
+ * Intl-based date/number formatting. Falls back to en-US.
+ */
+function activeIntlLocale(): string {
+  return INTL_LOCALES[i18n.global.locale.value as SupportedLocale] ?? 'en-US'
+}
+
 /**
  * Format a date string to a readable format
  * @param {string} dateString - ISO date string
@@ -24,7 +34,7 @@ export function formatDate(dateString: string | null | undefined, includeTime = 
     options.minute = '2-digit'
   }
 
-  return date.toLocaleDateString('en-US', options)
+  return date.toLocaleDateString(activeIntlLocale(), options)
 }
 
 /**
@@ -97,9 +107,10 @@ export function formatDateSmart(dateString: string | null | undefined): string {
 
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  if (diff < 86400000) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  if (diff < 604800000) return date.toLocaleDateString([], { weekday: 'short' })
-  return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  const loc = activeIntlLocale()
+  if (diff < 86400000) return date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })
+  if (diff < 604800000) return date.toLocaleDateString(loc, { weekday: 'short' })
+  return date.toLocaleDateString(loc, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 /**
@@ -112,7 +123,7 @@ export function formatDateFull(dateString: string | null | undefined): string {
   if (!dateString) return ''
   const date = new Date(dateString)
   if (isNaN(date.getTime())) return ''
-  return date.toLocaleString()
+  return date.toLocaleString(activeIntlLocale())
 }
 
 /**

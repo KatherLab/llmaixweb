@@ -4,7 +4,7 @@
   >
     <div class="p-4">
       <div class="flex items-center justify-between mb-4">
-        <h4 class="font-semibold text-content">Version History</h4>
+        <h4 class="font-semibold text-content">{{ $t('documents.version_history.title') }}</h4>
         <button class="text-content-subtle hover:text-content" @click="$emit('close')">
           <X class="w-5 h-5" />
         </button>
@@ -13,7 +13,9 @@
       <!-- Loading State -->
       <div v-if="loadingVersions" class="text-center py-8">
         <LoadingSpinner size="small" />
-        <p class="text-xs text-content-muted mt-2">Loading versions...</p>
+        <p class="text-xs text-content-muted mt-2">
+          {{ $t('documents.version_history.loading') }}
+        </p>
       </div>
 
       <!-- Versions List -->
@@ -38,7 +40,11 @@
                   : 'bg-surface-sunken text-content-muted',
               ]"
             >
-              {{ version.is_latest ? 'Current' : 'Archived' }}
+              {{
+                version.is_latest
+                  ? $t('documents.version_history.current')
+                  : $t('documents.version_history.archived')
+              }}
             </span>
             <span class="text-xs text-content-muted"
               >v{{ (versionCount ?? 0) - (versions ?? []).indexOf(version) }}</span
@@ -59,13 +65,16 @@
       <!-- No Versions -->
       <div v-else class="text-center py-8">
         <FileText class="w-10 h-10 text-content-subtle mx-auto" />
-        <p class="text-sm text-content-muted mt-2">Only one version exists</p>
+        <p class="text-sm text-content-muted mt-2">
+          {{ $t('documents.version_history.only_one') }}
+        </p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { FileText, X } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { formatRelativeTime as sharedFormatRelativeTime } from '@/utils/formatters'
@@ -90,6 +99,8 @@ defineEmits<{
   'select-version': [version: DocumentListItem]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 // Format relative time (e.g., "2 hours ago"). Delegates the just-now/m/h/d
 // tiers to the shared formatter; versions older than a week fall back to a
 // locale date (preserves the original 7-day cutoff vs the shared 30-day one).
@@ -104,11 +115,11 @@ const formatRelativeTime = (dateString: string | null | undefined): string => {
 // Get short extraction method label
 const getShortExtractionMethod = (method: string | null | undefined): string => {
   if (!method) return ''
-  if (method.includes('no_ocr')) return 'Text Extraction'
-  if (method.includes('tesseract')) return 'Local OCR'
+  if (method.includes('no_ocr')) return t('documents.extraction.text_extraction')
+  if (method.includes('tesseract')) return t('documents.extraction.local_ocr')
   if (method.includes('mistral')) return 'Mistral OCR'
   if (method.includes('llm_vision')) return 'Vision LLM'
-  if (method.includes('force_ocr')) return 'Force OCR'
+  if (method.includes('force_ocr')) return t('documents.extraction.force_ocr')
   return method.replace(/_/g, ' ').replace('docling serve', 'Docling')
 }
 </script>

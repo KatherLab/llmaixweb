@@ -9,14 +9,14 @@
     <template #header>
       <div class="flex items-center gap-4">
         <h3 class="text-lg font-semibold text-content">
-          {{ isEdit ? 'Edit Schema' : 'Create New Schema' }}
+          {{ isEdit ? $t('schema.form.edit_title') : $t('schema.form.create_title') }}
         </h3>
         <!-- Simple/Advanced Mode Toggle -->
         <BaseSegmentedControl
           v-model="simpleMode"
           :options="[
-            { label: 'Simple', value: true },
-            { label: 'Advanced', value: false },
+            { label: $t('schema.form.mode_simple'), value: true },
+            { label: $t('schema.form.mode_advanced'), value: false },
           ]"
         />
       </div>
@@ -34,13 +34,13 @@
               <label
                 for="schema-name"
                 class="block text-xs font-semibold text-content-muted uppercase tracking-wide mb-1.5"
-                >Schema Name</label
+                >{{ $t('schema.form.name_label') }}</label
               >
               <input
                 id="schema-name"
                 v-model="schemaForm.schema_name"
                 class="block w-full border-0 border-b-2 border-default bg-transparent text-content px-3 py-2 text-lg font-semibold focus:ring-0 focus:border-primary transition-colors placeholder-content-subtle"
-                placeholder="e.g., Patient Information"
+                :placeholder="$t('schema.form.name_placeholder')"
                 maxlength="100"
                 required
               />
@@ -52,7 +52,7 @@
               @click="showTemplates = true"
             >
               <Layers class="h-4 w-4 mr-1" />
-              Templates
+              {{ $t('schema.form.templates') }}
             </button>
             <!-- Validation Indicator -->
             <div
@@ -62,7 +62,7 @@
             >
               <CircleCheckBig v-if="isSchemaValid" class="h-4 w-4" />
               <CircleAlert v-else class="h-4 w-4" />
-              <span>{{ isSchemaValid ? 'Valid' : 'Invalid' }}</span>
+              <span>{{ isSchemaValid ? $t('schema.form.valid') : $t('schema.form.invalid') }}</span>
             </div>
           </div>
         </div>
@@ -70,13 +70,16 @@
         <!-- Mode explanation: clarifies what Simple vs Advanced actually do -->
         <p class="px-6 pb-2 text-xs text-content-muted flex-shrink-0">
           <template v-if="simpleMode">
-            <span class="font-medium text-content-muted">Simple:</span> add extraction fields as a
-            flat list. Switch to <span class="font-medium">Advanced</span> for nested groups, lists,
-            and raw JSON.
+            <span class="font-medium text-content-muted">{{
+              $t('schema.form.mode_hint_simple_label')
+            }}</span>
+            {{ $t('schema.form.mode_hint_simple_text') }}
           </template>
           <template v-else>
-            <span class="font-medium text-content-muted">Advanced:</span> build nested structures in
-            the visual editor or edit the raw JSON schema directly.
+            <span class="font-medium text-content-muted">{{
+              $t('schema.form.mode_hint_advanced_label')
+            }}</span>
+            {{ $t('schema.form.mode_hint_advanced_text') }}
           </template>
         </p>
 
@@ -94,10 +97,10 @@
             <!-- Developer-terminology toggle: JSON Schema type names + extra field options -->
             <label
               class="flex items-center space-x-2 text-sm"
-              title="Use JSON Schema type names (String, Object, Array…) and expose advanced field options like formats and constraints."
+              :title="$t('schema.form.developer_options_title')"
             >
               <input v-model="advancedMode" type="checkbox" :class="checkboxClass" />
-              <span class="text-content-muted">Developer options</span>
+              <span class="text-content-muted">{{ $t('schema.form.developer_options') }}</span>
             </label>
 
             <!-- Split View Toggle (visual editor + raw JSON side by side; only
@@ -108,8 +111,8 @@
               :class="{ 'opacity-50 cursor-not-allowed': activeTab === 'raw' }"
               :title="
                 activeTab === 'raw'
-                  ? 'Split view shows the visual editor and raw JSON side by side — switch to the Visual Editor tab to use it.'
-                  : 'Show the visual editor and raw JSON side by side.'
+                  ? $t('schema.form.split_view_disabled_title')
+                  : $t('schema.form.split_view_title')
               "
             >
               <input
@@ -118,7 +121,7 @@
                 :class="checkboxClass"
                 :disabled="activeTab === 'raw'"
               />
-              <span class="text-content-muted">Split view</span>
+              <span class="text-content-muted">{{ $t('schema.form.split_view') }}</span>
             </label>
           </div>
         </div>
@@ -177,10 +180,10 @@
                 <button
                   type="button"
                   class="absolute top-8 right-8 px-2 py-1 text-xs bg-surface-sunken hover:bg-surface-sunken rounded text-content-muted"
-                  title="Format JSON"
+                  :title="$t('schema.form.format_json_title')"
                   @click="formatJsonInput"
                 >
-                  Format
+                  {{ $t('schema.form.format') }}
                 </button>
               </div>
             </div>
@@ -196,20 +199,18 @@
       </div>
     </form>
     <template #footer>
-      <BaseButton variant="secondary" @click="cancelSchemaModal">Cancel</BaseButton>
+      <BaseButton variant="secondary" @click="cancelSchemaModal">{{
+        $t('schema.form.cancel')
+      }}</BaseButton>
       <BaseButton
         variant="primary"
         :loading="isSubmitting"
         :disabled="!isSchemaValid || (simpleMode && !simpleEditorValid)"
-        :title="
-          simpleMode && !simpleEditorValid
-            ? 'Fix the highlighted field names first (empty or duplicate names).'
-            : undefined
-        "
+        :title="simpleMode && !simpleEditorValid ? $t('schema.form.fix_field_names') : undefined"
         data-testid="schema-submit"
         @click="isEdit ? updateSchema() : createSchema()"
       >
-        {{ isEdit ? 'Update' : 'Create' }}
+        {{ isEdit ? $t('schema.form.update') : $t('schema.form.create') }}
       </BaseButton>
     </template>
   </BaseModal>
@@ -225,10 +226,10 @@
   <!-- Discard unsaved changes confirmation -->
   <ConfirmationDialog
     :open="showConfirm"
-    title="Discard unsaved changes?"
-    message="Your schema edits will be lost."
-    confirm-text="Discard"
-    cancel-text="Keep editing"
+    :title="$t('schema.form.discard_title')"
+    :message="$t('schema.form.discard_message')"
+    :confirm-text="$t('schema.form.discard_confirm')"
+    :cancel-text="$t('schema.form.discard_cancel')"
     confirm-variant="danger"
     @confirm="confirmDiscard"
     @cancel="showConfirm = false"
@@ -237,6 +238,7 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, watch, nextTick, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ArrowUpDown, BookOpen, CircleAlert, CircleCheckBig, Layers } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
 import { useToast } from '@/composables/useToast'
@@ -271,6 +273,7 @@ const emit = defineEmits<{
   updated: [schema: Schema]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 
 const isEdit = computed(() => !!props.schema)
@@ -317,10 +320,10 @@ let updateTimeout: ReturnType<typeof setTimeout> | null = null
 
 const activeTab = ref('visual')
 // Tab config for BaseTabGroup (lucide icons rendered via #tab scoped slot)
-const tabs = [
-  { label: 'Visual Editor', value: 'visual' },
-  { label: 'Raw JSON', value: 'raw' },
-]
+const tabs = computed(() => [
+  { label: t('schema.form.tab_visual'), value: 'visual' },
+  { label: t('schema.form.tab_raw'), value: 'raw' },
+])
 const visualSchema = ref<SchemaDefinition>({
   type: 'object',
   properties: {},
@@ -345,7 +348,7 @@ const formatJsonInput = () => {
     visualSchema.value = parsedJson
     schemaError.value = ''
   } catch (err) {
-    schemaError.value = 'Invalid JSON: ' + (err as Error).message
+    schemaError.value = t('schema.form.invalid_json', { message: (err as Error).message })
   }
 }
 
@@ -364,7 +367,7 @@ const confirmDiscard = () => {
 
 const createSchema = async () => {
   if (simpleMode.value && !simpleEditorValid.value) {
-    schemaError.value = 'Fix the highlighted field names first (empty or duplicate names).'
+    schemaError.value = t('schema.form.fix_field_names')
     toast.error(schemaError.value)
     return
   }
@@ -376,13 +379,13 @@ const createSchema = async () => {
     try {
       schemaDefinition = JSON.parse(schemaForm.value.schema_definition)
     } catch (err) {
-      schemaError.value = 'Invalid JSON: ' + (err as Error).message
-      toast.error('Invalid JSON format. Please check your schema definition.')
+      schemaError.value = t('schema.form.invalid_json', { message: (err as Error).message })
+      toast.error(t('schema.form.invalid_json_format'))
       isSubmitting.value = false
       return
     }
     if (!validateSchema(schemaDefinition)) {
-      toast.error(schemaError.value || 'Schema validation failed')
+      toast.error(schemaError.value || t('schema.form.validation_failed'))
       isSubmitting.value = false
       return
     }
@@ -393,9 +396,9 @@ const createSchema = async () => {
     initialSnapshot.value = currentSnapshot() // saved — no longer dirty
     emit('created', response.data)
     emit('close')
-    toast.success(`Schema "${schemaForm.value.schema_name}" created successfully`)
+    toast.success(t('schema.form.created', { name: schemaForm.value.schema_name }))
   } catch (err) {
-    schemaError.value = extractErrorMessage(err, 'Failed to create schema')
+    schemaError.value = extractErrorMessage(err, t('schema.form.create_failed'))
     toast.error(schemaError.value)
     console.error(err)
   } finally {
@@ -405,7 +408,7 @@ const createSchema = async () => {
 
 const updateSchema = async () => {
   if (simpleMode.value && !simpleEditorValid.value) {
-    schemaError.value = 'Fix the highlighted field names first (empty or duplicate names).'
+    schemaError.value = t('schema.form.fix_field_names')
     toast.error(schemaError.value)
     return
   }
@@ -417,13 +420,13 @@ const updateSchema = async () => {
     try {
       schemaDefinition = JSON.parse(schemaForm.value.schema_definition)
     } catch (err) {
-      schemaError.value = 'Invalid JSON: ' + (err as Error).message
-      toast.error('Invalid JSON format. Please check your schema definition.')
+      schemaError.value = t('schema.form.invalid_json', { message: (err as Error).message })
+      toast.error(t('schema.form.invalid_json_format'))
       isSubmitting.value = false
       return
     }
     if (!validateSchema(schemaDefinition)) {
-      toast.error(schemaError.value || 'Schema validation failed')
+      toast.error(schemaError.value || t('schema.form.validation_failed'))
       isSubmitting.value = false
       return
     }
@@ -434,9 +437,9 @@ const updateSchema = async () => {
     initialSnapshot.value = currentSnapshot() // saved — no longer dirty
     emit('updated', response.data)
     emit('close')
-    toast.success(`Schema "${schemaForm.value.schema_name}" updated successfully`)
+    toast.success(t('schema.form.updated', { name: schemaForm.value.schema_name }))
   } catch (err) {
-    schemaError.value = extractErrorMessage(err, 'Failed to update schema')
+    schemaError.value = extractErrorMessage(err, t('schema.form.update_failed'))
     toast.error(schemaError.value)
     console.error(err)
   } finally {
@@ -467,7 +470,7 @@ const validateSchema = (schema: unknown): boolean => {
     !(schema as SchemaDefinition).properties ||
     Object.keys((schema as SchemaDefinition).properties as object).length === 0
   ) {
-    schemaError.value = 'Schema must contain at least one field.'
+    schemaError.value = t('schema.form.must_contain_field')
     return false
   }
   return true
@@ -502,7 +505,7 @@ const onRawSchemaChange = () => {
         }
       })
     } catch (err) {
-      schemaError.value = 'Invalid JSON: ' + (err as Error).message
+      schemaError.value = t('schema.form.invalid_json', { message: (err as Error).message })
     }
   }, 300)
 }
@@ -512,7 +515,7 @@ const applyTemplate = (template: SchemaTemplate) => {
   schemaForm.value.schema_definition = JSON.stringify(template.schema, null, 2)
   schemaForm.value.schema_name = template.name
   showTemplates.value = false
-  toast.info(`Template "${template.name}" applied`)
+  toast.info(t('schema.form.template_applied', { name: template.name }))
 }
 
 const updateVisualSchema = (newSchema: SchemaDefinition) => {

@@ -1,0 +1,2817 @@
+{
+  "common": {
+    "language": "Language",
+    "login": "Login",
+    "logout": "Logout",
+    "admin": "Admin",
+    "projects": "Projects",
+    "account_settings": "Account settings",
+    "change_password": "Change Password",
+    "confirm_dialog": {
+      "title": "Confirm Action",
+      "message": "Are you sure you want to perform this action?",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    },
+    "error_banner": {
+      "retrying": "Retrying...",
+      "dismiss": "Dismiss error"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "showing": "Showing",
+      "to": "to",
+      "of": "of",
+      "rows_per_page": "Rows per page:",
+      "label": "Pagination",
+      "first": "First",
+      "ellipsis": "ellipsis",
+      "page": "Page {page}",
+      "last": "Last"
+    },
+    "search": {
+      "placeholder": "Search..."
+    },
+    "filter_bar": {
+      "clear_all": "Clear all filters",
+      "active_filters": "Active filters:"
+    },
+    "filter_chip": {
+      "remove": "Remove {label}"
+    },
+    "batch_action_bar": {
+      "item": "item",
+      "selected": "selected",
+      "clear_selection": "Clear selection"
+    },
+    "data_table": {
+      "selected": "selected",
+      "out_of_total": "out of {total} total",
+      "selecting": "Selecting…",
+      "select_all_count": "Select all {count} {label}",
+      "clear_selection": "Clear selection",
+      "select_all_page": "Select all {label} on this page",
+      "actions": "Actions",
+      "select_row": "Select {label} {name}",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "empty_title": "No items found"
+    },
+    "password": {
+      "label": "Password",
+      "min_length": "Minimum {count} characters",
+      "strength": {
+        "very_weak": "Very weak",
+        "weak": "Weak",
+        "okay": "Okay",
+        "good": "Good",
+        "strong": "Strong"
+      },
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "close": "Close",
+    "dismiss": "Dismiss notification"
+  },
+  "language": {
+    "en": "English",
+    "de": "Deutsch",
+    "fr": "Français",
+    "es": "Español"
+  },
+  "nav": {
+    "skip_to_content": "Skip to main content",
+    "open_menu": "Open menu",
+    "backend_down": "Backend connection failed. Please check if the backend server is running.",
+    "all_projects": "All Projects",
+    "project_workflow": "Project workflow",
+    "project_settings": "Project Settings",
+    "open_user_menu": "Open user menu",
+    "select_language": "Select language"
+  },
+  "theme": {
+    "switch_to_light": "Switch to light mode",
+    "switch_to_dark": "Switch to dark mode"
+  },
+  "footer": {
+    "copyright": "© {year} KatherLab. Licensed under",
+    "frontend_version": "Frontend Version: {version}",
+    "backend_version": "Backend Version: {version}"
+  },
+  "change_password": {
+    "title": "Change Password",
+    "current": "Current Password",
+    "current_placeholder": "Enter current password",
+    "new": "New Password",
+    "new_placeholder": "New password (8–128 chars)",
+    "confirm": "Confirm New Password",
+    "confirm_placeholder": "Repeat new password",
+    "update": "Update Password",
+    "updating": "Updating...",
+    "success": "Password updated successfully!",
+    "toast_success": "Password updated",
+    "fill_all": "Please fill in all fields.",
+    "invalid_length": "Password must be 8–128 characters.",
+    "mismatch": "Passwords don't match.",
+    "failed": "Password change failed."
+  },
+  "admin": {
+    "dashboard": {
+      "tabs": {
+        "user_management": "User Management",
+        "settings": "Settings",
+        "audit_log": "Audit Log",
+        "celery_queues": "Celery & Queues"
+      }
+    },
+    "activity": {
+      "title": "Activity",
+      "view_activity": "View activity",
+      "running": "{count} running",
+      "dismiss_all": "Dismiss all",
+      "no_recent": "No recent activity",
+      "preprocessing_count": "Preprocessing ({count})",
+      "view_preprocessing_task": "View preprocessing task {name}",
+      "task_number": "Task #{id}",
+      "cancel_task": "Cancel task",
+      "dismiss": "Dismiss",
+      "dismiss_task": "Dismiss task",
+      "processing": "Processing...",
+      "preprocessing_progress": "Preprocessing progress",
+      "trials_count": "Trials ({count})",
+      "view_trial": "View trial {name}",
+      "dismiss_trial": "Dismiss trial",
+      "docs_progress": "{done}/{total} docs",
+      "view_all": "View all activity",
+      "files_processing": "{completed}/{total} files processed",
+      "files_done": "✓ {total} files processed",
+      "files_failed": "✗ {failed} of {total} files failed",
+      "cancelled": "Cancelled",
+      "files_count": "{total} files",
+      "docs_extracting": "{completed}/{total} docs extracted",
+      "docs_done_errors": "✓ {total} docs extracted ({errors} errors)",
+      "docs_done": "✓ {total} docs extracted",
+      "extraction_failed": "✗ Extraction failed",
+      "docs_count": "{total} docs",
+      "just_now": "Just now",
+      "preprocessing_cancelled": "Preprocessing cancelled",
+      "errors": {
+        "load_failed": "Failed to load activity",
+        "navigate_missing_project": "Cannot navigate: missing project info",
+        "cancel_missing_project": "Cannot cancel: missing project info",
+        "cancel_failed": "Failed to cancel preprocessing"
+      }
+    },
+    "users": {
+      "grid": {
+        "item_label": "users",
+        "empty_title": "No users found",
+        "na": "N/A",
+        "columns": {
+          "user": "User",
+          "status": "Status",
+          "role": "Role"
+        }
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "actions": {
+        "edit": "Edit"
+      }
+    },
+    "invitations": {
+      "grid": {
+        "item_label": "invitations",
+        "empty_title": "No invitations found",
+        "columns": {
+          "email": "Email",
+          "used": "Used"
+        }
+      },
+      "used_yes": "Yes",
+      "used_no": "No",
+      "actions": {
+        "delete": "Delete"
+      }
+    },
+    "invite_modal": {
+      "title": "Invite New User",
+      "email_label": "Email address",
+      "email_placeholder": "Enter email address",
+      "send_via_email": "Send invitation via email",
+      "sent_success": "Invitation sent to email successfully!",
+      "created_no_email": "Invitation created but email delivery is not configured. Copy the link manually.",
+      "copy_link": "Copy invitation link",
+      "copied": "Copied!",
+      "cancel": "Cancel",
+      "sending": "Sending...",
+      "send": "Send Invitation",
+      "errors": {
+        "send_failed": "Failed to send invitation. Please try again.",
+        "copy_failed": "Failed to copy. Please copy the link manually."
+      }
+    },
+    "edit_modal": {
+      "title": "Edit User",
+      "updated_success": "User updated successfully!",
+      "password_updated_success": "Password updated successfully!",
+      "general": "General",
+      "full_name": "Full Name",
+      "email": "Email",
+      "role": "Role",
+      "role_user": "User",
+      "cannot_change_own_role": "You cannot change your own role.",
+      "status": "Status",
+      "account_active_aria": "User account active",
+      "account_inactive_aria": "User account inactive",
+      "set_password": "Set Password",
+      "new_password_placeholder": "Enter new password (optional)",
+      "set": "Set",
+      "danger_zone": "Danger Zone",
+      "delete_warning": "Delete this user and all associated data. This cannot be undone.",
+      "delete_user": "Delete User",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save_changes": "Save Changes",
+      "toast": {
+        "updated": "User \"{name}\" updated.",
+        "password_updated": "Password updated"
+      },
+      "errors": {
+        "update_failed": "Failed to update user.",
+        "set_password_failed": "Failed to set password"
+      }
+    },
+    "user_management": {
+      "title": "User Management",
+      "subtitle": "Manage user accounts, roles, and invitations.",
+      "invite_user": "Invite User",
+      "users": "Users",
+      "total": "{count} total",
+      "search_users": "Search users…",
+      "try_again": "Try again",
+      "invitations": "Invitations",
+      "show_used": "Show used",
+      "active": "{count} active",
+      "search_invitations": "Search invitations…",
+      "delete_user_title": "Delete User",
+      "permanently_delete": "Permanently Delete",
+      "delete_invitation_title": "Delete Invitation",
+      "delete": "Delete",
+      "delete_user_message": "This will permanently delete the user account and all associated data, including all projects owned by this user (files, documents, schemas, prompts, trials, evaluations) and uploaded files removed from storage.\n\nAre you sure you want to delete this user?\n{name} ({email})",
+      "delete_invitation_message": "Are you sure you want to delete this invitation? This action cannot be undone.\n{email}",
+      "toast": {
+        "user_deleted": "User \"{name}\" deleted successfully.",
+        "invitation_deleted": "Invitation for \"{email}\" deleted."
+      },
+      "errors": {
+        "load_users": "Failed to load users.",
+        "load_invitations": "Failed to load invitations.",
+        "delete_user": "Failed to delete user.",
+        "delete_invitation": "Failed to delete invitation."
+      }
+    },
+    "settings": {
+      "title": "App Settings",
+      "subtitle": "Configure system-wide settings for the application.",
+      "set": "Set",
+      "not_set": "Not Set",
+      "set_in": "Set in",
+      "example": "Example:",
+      "update": "Update",
+      "set_action": "Set",
+      "clear": "Clear",
+      "enter_new_value": "Enter new value",
+      "save": "Save",
+      "cancel": "Cancel",
+      "revert": "Revert",
+      "saving": "Saving...",
+      "reset": "Reset",
+      "saved": "Settings saved!",
+      "errors": {
+        "save_secret": "Failed to save secret",
+        "clear_secret": "Failed to clear secret",
+        "load": "Failed to load settings",
+        "save": "Failed to save settings",
+        "remove_override": "Failed to remove override"
+      }
+    },
+    "sso": {
+      "title": "Single Sign-On (OIDC)",
+      "subtitle": "Configure OpenID Connect identity providers. Users can sign in with these providers in addition to local passwords.",
+      "add_provider": "Add provider",
+      "globally_disabled_before": "SSO is globally disabled. Enable it in",
+      "admin_settings_link": "Admin Settings",
+      "globally_disabled_after": "(SSO Enabled) to activate configured providers.",
+      "empty_title": "No identity providers configured",
+      "empty_description": "Add an OIDC provider so users can sign in with SSO.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "no_secret_set": "no secret set",
+      "edit": "Edit",
+      "delete": "Delete",
+      "edit_provider": "Edit provider",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "delete_provider_title": "Delete provider",
+      "delete_provider_message": "Delete the \"{name}\" provider? Linked users keep their accounts but can no longer sign in via this provider.",
+      "form": {
+        "display_name": "Display name",
+        "display_name_placeholder": "e.g. Google",
+        "issuer_url": "Issuer URL",
+        "issuer_help": "The IdP base URL; discovery is fetched from",
+        "client_id": "Client ID",
+        "client_secret": "Client secret",
+        "client_secret_keep": "Leave blank to keep current",
+        "client_secret_placeholder": "Provider client secret",
+        "scopes": "Scopes",
+        "enabled": "Enabled"
+      },
+      "toast": {
+        "updated": "Provider updated",
+        "created": "Provider created",
+        "deleted": "Provider deleted"
+      },
+      "errors": {
+        "client_secret_required": "Client secret is required.",
+        "load": "Failed to load providers.",
+        "save": "Failed to save provider.",
+        "delete": "Failed to delete provider."
+      }
+    },
+    "celery": {
+      "title": "Celery Workers & Queues",
+      "subtitle": "Monitor Celery workers, queues, and tasks.",
+      "refresh": "Refresh",
+      "workers": "Workers",
+      "online": "Online",
+      "offline": "Offline",
+      "pool": "Pool",
+      "concurrency": "Concurrency",
+      "processes": "Processes",
+      "no_workers": "No workers reported.",
+      "show_raw_worker_json": "Show raw worker JSON",
+      "queues_tasks": "Queues & Tasks",
+      "queue": "Queue",
+      "active": "Active",
+      "scheduled": "Scheduled",
+      "reserved": "Reserved",
+      "no_queue_data": "No queue data available.",
+      "show_raw_queue_json": "Show raw queue JSON",
+      "inspect_task_by_id": "Inspect Task by ID:",
+      "paste_task_id": "Paste task ID here",
+      "inspect": "Inspect",
+      "task_details_raw_json": "Task details (raw JSON)",
+      "revoke_terminate": "Revoke/Terminate",
+      "task_revoked": "Task {id} revoked!",
+      "errors": {
+        "fetch_status": "Failed to fetch celery status",
+        "inspect_task": "Failed to inspect task",
+        "revoke_task": "Failed to revoke task"
+      }
+    },
+    "audit": {
+      "title": "Audit Log",
+      "subtitle": "Accountability trail: who did what, when, and from where. Append-only.",
+      "export_csv": "Export CSV",
+      "refresh": "Refresh",
+      "modes": {
+        "activity": "Activity",
+        "errors": "Errors"
+      },
+      "action_groups": {
+        "authentication": "Authentication",
+        "access_phi": "Access (PHI)",
+        "mutations": "Mutations",
+        "egress": "Egress",
+        "administration": "Administration"
+      },
+      "filters": {
+        "action": "Action",
+        "all_actions": "All actions",
+        "outcome": "Outcome",
+        "all_outcomes": "All outcomes",
+        "resource_type": "Resource type",
+        "resource_type_placeholder": "e.g. document, trial",
+        "request_id": "Request / error ID",
+        "request_id_placeholder": "Correlation ID"
+      },
+      "outcome": {
+        "success": "Success",
+        "failure": "Failure",
+        "denied": "Denied"
+      },
+      "empty_title": "No audit events",
+      "empty_description": "No events match the current filters.",
+      "columns": {
+        "time": "Time",
+        "actor": "Actor",
+        "action": "Action",
+        "resource": "Resource",
+        "outcome": "Outcome",
+        "ip": "IP",
+        "error_id": "Error ID",
+        "endpoint": "Endpoint",
+        "type": "Type"
+      },
+      "system": "system",
+      "events_label": "events",
+      "error_lookup_placeholder": "Look up an error ID a user reported…",
+      "find": "Find",
+      "clear": "Clear",
+      "no_errors_title": "No errors logged",
+      "no_error_match": "No error matches that ID.",
+      "no_errors_logged": "The server has not logged any unhandled errors.",
+      "detail": {
+        "audit_event": "Audit event",
+        "project": "Project",
+        "correlation_id": "Correlation ID",
+        "detail": "Detail",
+        "server_error": "Server error",
+        "exception": "Exception",
+        "message": "Message",
+        "traceback": "Traceback"
+      },
+      "errors": {
+        "load_audit": "Failed to load audit log",
+        "load_errors": "Failed to load error log",
+        "export_failed": "Export failed"
+      }
+    }
+  },
+  "auth": {
+    "tagline": "Extract information from documents using LLMs.",
+    "form": {
+      "email": "Email address",
+      "email_placeholder": "e.g. your@email.com",
+      "email_admin_placeholder": "admin@yourcompany.com",
+      "password": "Password",
+      "password_placeholder": "Password",
+      "full_name": "Full Name",
+      "confirm_password": "Confirm Password",
+      "new_password": "New Password"
+    },
+    "actions": {
+      "back_to_login": "Back to login"
+    },
+    "login": {
+      "continue_with": "Continue with {name}",
+      "or": "or",
+      "forgot_password": "Forgot your password?",
+      "signing_in": "Signing in...",
+      "sign_in": "Sign in",
+      "no_account": "Don’t have an account?",
+      "register_here": "Register here"
+    },
+    "register": {
+      "closed": "Registration is currently closed. Please use an invitation link.",
+      "full_name_placeholder": "Your full name",
+      "email_placeholder": "Your email",
+      "email_from_invitation": "This email is linked to your invitation",
+      "password_placeholder": "Create a password",
+      "confirm_password_placeholder": "Confirm your password",
+      "creating": "Creating account...",
+      "create_account": "Create Account",
+      "have_account": "Already have an account?",
+      "sign_in_here": "Sign in here",
+      "success_toast": "Registration successful! Logging you in..."
+    },
+    "first_admin": {
+      "welcome_to": "Welcome to",
+      "subtitle": "First-time setup: Create your admin account",
+      "full_name_placeholder": "Full name",
+      "confirm_password_placeholder": "Confirm password",
+      "creating": "Creating admin...",
+      "create_account": "Create Admin Account",
+      "powered_by": "Powered by LLMAIx (v2)",
+      "success_toast": "Admin account created! Welcome 👋"
+    },
+    "forgot": {
+      "header_subtitle": "Reset your password",
+      "title": "Forgot your password?",
+      "description": "Enter your email address and we'll send you a link to reset your password.",
+      "sending": "Sending...",
+      "send_link": "Send Reset Link",
+      "check_email_title": "Check your email",
+      "check_email_description": "If an account with that email exists, we've sent a password reset link to it."
+    },
+    "reset": {
+      "header_subtitle": "Set a new password",
+      "validating": "Validating your reset link...",
+      "invalid_title": "Invalid or Expired Link",
+      "invalid_description": "This password reset link is no longer valid. It may have expired (links are valid for 24 hours) or already been used.",
+      "request_new": "Request New Reset Link",
+      "form_title": "Set new password",
+      "form_description": "Enter your new password below.",
+      "new_password_placeholder": "At least 8 characters",
+      "confirm_password_placeholder": "Repeat your password",
+      "resetting": "Resetting...",
+      "reset_password": "Reset Password",
+      "success_toast": "Password reset"
+    },
+    "sso": {
+      "completing": "Completing sign-in…",
+      "no_token": "Sign-in failed: no token received from the provider.",
+      "failed_toast": "SSO sign-in failed.",
+      "signed_in_toast": "Signed in",
+      "failed": "Sign-in failed."
+    },
+    "invitation": {
+      "verifying": "Verifying your invitation...",
+      "invalid_title": "Invalid invitation",
+      "go_to_login": "Go to login page",
+      "valid_title": "Valid invitation",
+      "sent_to_prefix": "This invitation was sent to",
+      "create_account": "Create your account",
+      "have_account_sign_in": "Already have an account? Sign in"
+    },
+    "errors": {
+      "invalid_credentials": "Invalid email or password",
+      "sign_in_failed": "Sign-in failed. Please try again.",
+      "server_unreachable": "Cannot reach the server. Please check your connection and try again.",
+      "passwords_mismatch": "Passwords do not match",
+      "passwords_mismatch_period": "Passwords do not match.",
+      "invitation_invalid_or_used": "This invitation is invalid or has already been used",
+      "invitation_validate_failed": "Failed to validate invitation. It may be expired or invalid.",
+      "registration_failed": "Registration failed. Please try again.",
+      "create_admin_failed": "Failed to create admin. Try again.",
+      "too_many_requests": "Too many requests. Please try again later.",
+      "unexpected": "An unexpected error occurred. Please try again.",
+      "no_token": "No invitation token provided",
+      "invitation_expired": "This invitation link is invalid or has expired"
+    }
+  },
+  "account": {
+    "title": "Account settings",
+    "subtitle": "Manage your profile, password, and connected sign-in methods.",
+    "profile": {
+      "title": "Profile",
+      "full_name": "Full Name",
+      "full_name_placeholder": "Full name",
+      "email": "Email",
+      "email_placeholder": "admin@yourcompany.com",
+      "save": "Save profile",
+      "saved": "Saved."
+    },
+    "password": {
+      "hint": "Leave blank if you sign in exclusively via SSO — you can still set a password as a fallback.",
+      "current": "Current password",
+      "current_placeholder": "Your current password",
+      "new": "New password",
+      "new_placeholder": "New password",
+      "confirm": "Confirm new password",
+      "confirm_placeholder": "Repeat new password",
+      "mismatch": "Passwords do not match",
+      "update": "Update password",
+      "updated_notice": "Password updated. Other sessions were signed out."
+    },
+    "connected": {
+      "title": "Connected accounts",
+      "subtitle": "External identity providers linked to your account.",
+      "empty": "No external accounts connected.",
+      "last_login": "· last login {date}",
+      "disconnect": "Disconnect"
+    },
+    "signout": {
+      "title": "Sign out",
+      "subtitle": "Sign out of this device, or all sessions.",
+      "button": "Sign out",
+      "everywhere": "Sign out everywhere"
+    },
+    "toasts": {
+      "profile_updated": "Profile updated",
+      "password_updated": "Password updated",
+      "disconnected": "Disconnected {name}",
+      "signed_out": "Signed out"
+    },
+    "errors": {
+      "profile_update_failed": "Failed to update profile.",
+      "password_update_failed": "Failed to update password.",
+      "disconnect_failed": "Failed to disconnect."
+    }
+  },
+  "documents": {
+    "actions": {
+      "cancel": "Cancel",
+      "create_group": "Create Group",
+      "delete": "Delete",
+      "download": "Download",
+      "edit": "Edit",
+      "export": "Export",
+      "reprocess": "Reprocess",
+      "retry": "Retry",
+      "view": "View"
+    },
+    "common": {
+      "document_number": "Document #{id}",
+      "na": "N/A"
+    },
+    "management": {
+      "title": "Documents",
+      "subtitle": "View and manage processed documents and document groups",
+      "count": "no documents | one document | {count} documents",
+      "empty_title": "No documents yet",
+      "empty_filtered_title": "No documents match your filters",
+      "empty_description": "Process some files in the Files & Preprocessing tab to see documents here",
+      "empty_filtered_description": "Try adjusting or clearing your filters to see more results",
+      "clear_all_filters": "Clear All Filters",
+      "go_to_files": "Go to Files & Preprocessing",
+      "batch_count_label": "document",
+      "export_coming_soon": "Export is coming soon",
+      "tab_all": "All Documents",
+      "tab_groups": "Document Groups"
+    },
+    "filters": {
+      "search_placeholder": "Search documents...",
+      "item_label": "documents",
+      "ocr_all": "All OCR Engines",
+      "ocr_pypdf": "Embedded Text (pypdf)",
+      "ocr_tesseract": "Local OCR (Tesseract)",
+      "date_all": "All Time",
+      "date_today": "Today",
+      "date_yesterday": "Yesterday",
+      "date_week": "Last 7 Days",
+      "date_month": "Last 30 Days",
+      "date_custom": "Custom Range...",
+      "include_archived": "Include archived versions",
+      "showing_history": "(showing document history)",
+      "from": "From:",
+      "to": "To:",
+      "apply": "Apply",
+      "ocr_label_pypdf": "Embedded Text",
+      "ocr_label_tesseract": "Local OCR",
+      "chip_search": "Search: \"{query}\"",
+      "chip_ocr": "OCR: {label}",
+      "chip_date": "Date: {label}",
+      "chip_custom_date": "Date: {from} → {to}",
+      "chip_archived": "Archived",
+      "present": "present"
+    },
+    "table": {
+      "empty_title": "No documents found",
+      "custom_config": "Custom Config",
+      "col_document": "Document",
+      "col_configuration": "Configuration",
+      "col_model": "Model",
+      "col_created": "Created",
+      "ocr_applied": "OCR Applied"
+    },
+    "groups": {
+      "search_placeholder": "Search groups...",
+      "count": "no groups | one group | {count} groups",
+      "empty_title": "No document groups",
+      "empty_search": "Try adjusting your search",
+      "empty_description": "A group is a named set of documents you can run a trial against. Create one to run an extraction on a specific selection of documents.",
+      "item_label": "groups",
+      "auto": "Auto",
+      "auto_generated_tooltip": "Auto-generated during preprocessing",
+      "mixed": "Mixed",
+      "type_auto": "Auto-generated",
+      "type_manual": "Manual",
+      "cannot_delete_tooltip": "Cannot delete — this group is used by a trial",
+      "cannot_delete_aria": "Cannot delete - used by trial",
+      "delete_title": "Delete Document Group",
+      "also_delete_documents": "Also delete all documents in this group (if not referenced elsewhere)",
+      "col_name": "Group Name",
+      "col_documents": "Documents",
+      "col_configuration": "Configuration",
+      "col_tags": "Tags",
+      "col_type": "Type",
+      "col_created": "Created",
+      "delete_confirm": "Are you sure you want to delete \"{name}\"?",
+      "delete_contains": "This group contains {count} document. | This group contains {count} documents."
+    },
+    "group_form": {
+      "edit_title": "Edit Document Group",
+      "create_title": "Create Document Group",
+      "purpose_hint": "A group is a named set of documents you can run a trial against — use it to run an extraction on a specific selection of documents.",
+      "name_label": "Group Name",
+      "name_placeholder": "e.g., Q4 Financial Reports",
+      "description_label": "Description",
+      "description_placeholder": "Describe the purpose of this document group...",
+      "tags_label": "Tags",
+      "remove_tag": "Remove tag",
+      "tag_placeholder": "Add a tag...",
+      "add": "Add",
+      "select_documents": "Select Documents",
+      "selected_count": "{count} selected",
+      "loading_existing": "(loading existing…)",
+      "searching": "Searching…",
+      "config_label": "Config:",
+      "created_label": "Created:",
+      "select_all_visible": "Select All Visible",
+      "clear_selection": "Clear Selection",
+      "prev": "Prev",
+      "next": "Next",
+      "update_group": "Update Group",
+      "discard_title": "Discard unsaved changes?",
+      "discard_message": "Your changes to this document group will be lost.",
+      "discard_confirm": "Discard",
+      "keep_editing": "Keep editing"
+    },
+    "group_view": {
+      "aria_label": "Document group",
+      "document_count": "no documents | one document | {count} documents",
+      "exporting": "Exporting…",
+      "download_all": "Download all",
+      "no_match": "No documents match your search.",
+      "reset_filters": "Reset filters",
+      "hide_list": "Hide document list",
+      "show_list": "Show document list",
+      "move_hint": "to move between documents",
+      "loading_documents": "Loading documents…",
+      "select_to_view": "Select a document to view.",
+      "download_all_title": "Download all documents?",
+      "download_all_message": "This will download all {count} documents as a ZIP archive.",
+      "exported_count": "Exported {count} document | Exported {count} documents",
+      "export_failed": "Failed to export document list",
+      "download_started": "Download started",
+      "download_failed": "Failed to download documents"
+    },
+    "viewer": {
+      "aria_label": "Document viewer",
+      "hide_history": "Hide version history",
+      "show_history": "Show version history",
+      "history": "History",
+      "only_text_available": "Only text view is available",
+      "text_only": "Text Only",
+      "previous_document": "Previous document (←)",
+      "first_document": "First document",
+      "next_document": "Next document (→)",
+      "last_document": "Last document",
+      "view_text": "Text",
+      "view_file": "File",
+      "view_both": "Both",
+      "original": "Original",
+      "text": "Text",
+      "no_original_file": "No original file available",
+      "restore_title": "Restore archived version?",
+      "restore_message": "This makes the selected version the latest again. Nothing is reprocessed.",
+      "restore_confirm": "Restore",
+      "version_restored": "Version restored",
+      "restore_failed": "Failed to restore version",
+      "load_preview_failed": "Failed to load document preview."
+    },
+    "text_view": {
+      "find_placeholder": "Find in document…",
+      "no_results": "No results",
+      "prev_match": "Previous match (Shift+Enter)",
+      "prev_match_aria": "Previous match",
+      "next_match": "Next match (Enter)",
+      "next_match_aria": "Next match",
+      "clear_search": "Clear search (Esc)",
+      "clear_search_aria": "Clear search",
+      "loading_text": "Loading text…"
+    },
+    "file_preview": {
+      "original_pdf": "Original PDF",
+      "original_document": "Original document"
+    },
+    "info": {
+      "version_status": "Version Status",
+      "current_version": "Current Version",
+      "archived_version": "Archived Version",
+      "document_info": "Document Information",
+      "created": "Created",
+      "file_size": "File Size",
+      "text_length": "Text Length",
+      "characters": "{count} character | {count} characters",
+      "archived": "Archived",
+      "unknown": "Unknown",
+      "preprocessing_config": "Preprocessing Configuration",
+      "configuration": "Configuration",
+      "custom": "Custom",
+      "ocr_engine": "OCR Engine",
+      "model": "Model",
+      "metadata": "Metadata",
+      "restore_this_version": "Restore This Version",
+      "reprocess_document": "Reprocess Document"
+    },
+    "version_history": {
+      "title": "Version History",
+      "loading": "Loading versions...",
+      "current": "Current",
+      "archived": "Archived",
+      "only_one": "Only one version exists"
+    },
+    "extraction": {
+      "text_extraction": "Text Extraction",
+      "local_ocr": "Local OCR",
+      "force_ocr": "Force OCR",
+      "desc_text_no_ocr": "Extracted from embedded PDF text (no OCR)",
+      "desc_local_ocr": "Processed with local Tesseract OCR",
+      "desc_force_ocr": "Full-page OCR forced (even if embedded text exists)",
+      "desc_mistral": "Processed with Mistral AI OCR API",
+      "desc_vision": "Processed with Vision LLM API",
+      "desc_text_embedded": "Extracted from embedded PDF text",
+      "desc_ocr_generic": "Processed with OCR"
+    },
+    "batch": {
+      "entity_document": "document | documents",
+      "entity_trial": "trial | trials",
+      "entity_file": "file | files",
+      "selected": "{count} {entity} selected",
+      "force_reprocess": "Force reprocess (ignore existing results)",
+      "reprocess_note": "Reprocessing runs on the whole source file, not individual rows — selecting documents from a row-by-row CSV/XLSX import reprocesses every row of that file.",
+      "export_choose": "Choose export format and options:",
+      "export_format_label": "Export Format",
+      "export_format_txt": "Plain Text",
+      "export_format_pdf": "PDF (with text layer)",
+      "include_metadata": "Include metadata",
+      "include_preprocessing": "Include preprocessing information",
+      "warning_title": "Warning: This action cannot be undone",
+      "checking_usage": "Checking usage…",
+      "deps_preview_unavailable": "Usage preview is unavailable for selections over {limit} {entity} — the option above still applies to the whole selection.",
+      "will_also_delete": "This will also delete {impact}.",
+      "not_used_elsewhere": "These {entity} aren't used anywhere else.",
+      "in_use_by": "In use by {impact}. Enable the option above to remove them too, otherwise deletion will be blocked.",
+      "confirm_permanent": "I understand that this action is permanent",
+      "progress": "{verb} {done} of {total}…",
+      "verb_resolving": "Resolving",
+      "verb_deleting": "Deleting",
+      "processing": "Processing...",
+      "title_default": "Batch Action",
+      "title_reprocess": "Reprocess {entity}",
+      "title_export": "Export {entity}",
+      "title_delete": "Delete {entity}",
+      "button_start_reprocessing": "Start Reprocessing",
+      "button_export": "Export",
+      "button_delete": "Delete {entity}",
+      "button_confirm": "Confirm",
+      "cascade_files": "Also delete produced documents and their trials and extraction results, and remove them from groups",
+      "cascade_default": "Also delete related trials and extraction results, and remove the documents from groups",
+      "warn_trials": "The selected trials and their results will be permanently deleted.",
+      "warn_files": "The selected files and their preprocessing results will be permanently deleted.",
+      "warn_documents": "The selected documents and their preprocessing results will be permanently deleted.",
+      "impact_document": "{count} document | {count} documents",
+      "impact_trial": "{count} trial | {count} trials",
+      "impact_group_membership": "{count} group membership | {count} group memberships",
+      "impact_extraction_result": "{count} extraction result | {count} extraction results",
+      "impact_evaluation_metric": "{count} evaluation metric | {count} evaluation metrics",
+      "toast_no_files": "Could not resolve the selected documents to any files.",
+      "toast_reprocess_started": "Reprocessing task started for {count} file | Reprocessing task started for {count} files",
+      "toast_export_stub": "Export functionality would be implemented here",
+      "toast_check_usage_failed": "Failed to check usage",
+      "toast_action_failed": "Failed to complete the action on the selected {entity}.",
+      "delete_failed_fallback": "Failed to delete {entity}",
+      "deleted_success": "{count} {entity} deleted successfully",
+      "more_count": "(+{count} more)",
+      "hint_manage": "Go to the Document Groups tab to manage.",
+      "delete_failed_summary": "Failed to delete {count} {entity}: #{id} — {error}"
+    },
+    "toasts": {
+      "load_document_failed": "Failed to load document",
+      "group_no_longer_exists": "That document group no longer exists — showing all documents instead.",
+      "load_group_failed": "Failed to load document group",
+      "selected_all": "Selected all {count} documents",
+      "select_all_failed": "Failed to select all documents",
+      "no_file_for_download": "No file available for download",
+      "download_failed": "Failed to download document",
+      "select_documents_first": "Please select documents first",
+      "group_created": "Document group created",
+      "create_group_failed": "Failed to create document group",
+      "original_file_not_found": "Original file id not found for this document!",
+      "reprocessing_started": "Document reprocessing started",
+      "start_reprocessing_failed": "Failed to start reprocessing",
+      "load_documents_failed": "Failed to load documents",
+      "load_groups_failed": "Failed to load document groups",
+      "cannot_delete_group": "Cannot delete group - it is used by a trial",
+      "group_and_docs_deleted": "Group and {count} document deleted | Group and {count} documents deleted",
+      "group_deleted_docs_referenced": "Group deleted, but documents could not be deleted (referenced elsewhere).",
+      "group_deleted": "Document group deleted",
+      "delete_group_failed": "Failed to delete document group",
+      "group_updated": "Document group updated",
+      "save_group_failed": "Failed to save document group"
+    }
+  },
+  "evaluation": {
+    "view": {
+      "retrying": "Retrying...",
+      "retry": "Retry",
+      "title": "Evaluation",
+      "subtitle": "Compare trial results against ground truth data",
+      "upload_ground_truth": "Upload Ground Truth",
+      "export_results": "Export Results",
+      "loading_ground_truth": "Loading ground truth files...",
+      "empty_gt_title": "No ground truth files yet",
+      "empty_gt_description": "Upload ground truth data to evaluate your trial results",
+      "ground_truth_files": "Ground Truth Files",
+      "manage": "Manage",
+      "ground_truth_number": "Ground Truth #{number}",
+      "field_mappings_configured": "{count} field mapping configured | {count} field mappings configured",
+      "no_field_mappings": "No field mappings configured",
+      "select_gt_prompt": "Select a ground truth file to start evaluation",
+      "dashboard": "Evaluation Dashboard",
+      "hide_explainer": "Hide the quick explainer",
+      "show_explainer": "Show how evaluation works",
+      "hide_help": "Hide help",
+      "how_it_works": "How it works",
+      "evaluate_trial": "Evaluate Trial",
+      "edit_mappings": "Edit mappings",
+      "configure_mappings": "Configure mappings",
+      "hide": "Hide",
+      "setup_required": "Setup Required",
+      "no_evaluations": "No evaluations yet. Select a trial to evaluate.",
+      "item_label": "evaluations"
+    },
+    "concepts": {
+      "title": "How evaluation works",
+      "ground_truth_term": "Ground truth",
+      "ground_truth_desc": "— a file with the correct extracted values to compare trial results against.",
+      "field_mapping_term": "Field mapping",
+      "field_mapping_desc": "— links each ground-truth column to the matching schema field so values can be compared.",
+      "id_field_term": "ID field",
+      "id_field_desc": "— the column that uniquely identifies each document, so each extraction is matched to its correct row."
+    },
+    "list": {
+      "trial_id": "ID: {id}",
+      "doc_count": "{count} doc | {count} docs",
+      "unmatched_tooltip": "{count} document(s) could not be matched to ground truth and are excluded from the accuracy.",
+      "matched": "{count} matched",
+      "has_errors": "Has Errors ({count})",
+      "scored": "Scored",
+      "analysis": "Analysis",
+      "delete_tooltip": "Delete evaluation",
+      "delete": "Delete",
+      "unknown_model": "Unknown"
+    },
+    "delete": {
+      "title": "Delete evaluation?",
+      "message": "This removes the computed metrics for {trial}. The trial and its results are kept; you can re-evaluate anytime.",
+      "confirm": "Delete"
+    },
+    "columns": {
+      "trial": "Trial",
+      "model": "Model",
+      "overall_accuracy": "Overall Accuracy",
+      "documents": "Documents",
+      "status": "Status"
+    },
+    "prerequisites": {
+      "select_gt": "Please select a ground truth file first.",
+      "configure_mappings": "Configure field mappings for the selected ground truth file to enable evaluation.",
+      "resolve_error": "Resolve the current error before starting evaluation."
+    },
+    "errors": {
+      "details": "Details: {details}",
+      "suggestions": "Suggestions: {suggestions}",
+      "invalid_gt": "Invalid ground truth file selected",
+      "no_gt_selected": "No ground truth file selected"
+    },
+    "validation": {
+      "select_gt": "Please select a ground truth file",
+      "no_mappings": "Ground truth file has no field mappings configured",
+      "cannot_start": "Cannot start evaluation: {errors}"
+    },
+    "toast": {
+      "operation_completed": "Operation completed",
+      "gt_uploaded": "Ground truth uploaded",
+      "evaluation_completed": "{trial} evaluation completed",
+      "mappings_configured": "Field mappings configured",
+      "evaluation_deleted": "Deleted evaluation for {trial}",
+      "delete_failed": "Failed to delete evaluation: {error}"
+    },
+    "analysis": {
+      "back": "Back to evaluations",
+      "trial_number": "Trial #{number}",
+      "export": "Export",
+      "overall_metrics": "Overall Metrics",
+      "matched_only_tooltip": "Accuracy is computed over matched documents only. Unmatched documents are listed in the table below.",
+      "unscored_docs": "{errorCount} of {totalCount} document(s) could not be scored (no ground-truth match) and are excluded from the accuracy above.",
+      "fields": "Fields",
+      "sorted_worst_first": "Sorted worst-first",
+      "sorted_alphabetically": "Sorted alphabetically",
+      "worst_first": "Worst first",
+      "clear_filter": "Clear filter",
+      "categorical_tooltip": "Categorical field — select it to view its confusion matrix",
+      "no_fields": "No fields.",
+      "search_documents": "Search documents...",
+      "status": {
+        "all": "All statuses",
+        "failed": "Failed",
+        "incorrect": "Has wrong values",
+        "missing": "Has missing fields",
+        "high": "High (≥90%)",
+        "low": "Low (<50%)"
+      },
+      "chip_field": "Field: {field}",
+      "chip_errors_in": "Errors in: {field}",
+      "field_metrics": "Field metrics — {field}",
+      "correct_count": "{correct}/{total} correct",
+      "errors_label": "Errors:",
+      "confusion_matrix": "Confusion matrix — {field}",
+      "no_documents_match": "No documents match your filters",
+      "document_number": "Document #{number}",
+      "fields_ratio": "{correct}/{total} fields",
+      "docs_matched": "{matched}/{total} docs matched",
+      "doc_total": "{count} doc | {count} docs",
+      "col_document": "Document",
+      "col_wrong_of_total": "Wrong of Total",
+      "col_status": "Status"
+    },
+    "metrics": {
+      "accuracy": "Accuracy",
+      "precision": "Precision",
+      "recall": "Recall",
+      "f1": "F1",
+      "f1_title": "F1 Score"
+    },
+    "confusion": {
+      "predicted_axis": "Predicted →",
+      "ground_truth_axis": "Ground truth ↓",
+      "caption_intro": "Each cell shows the document count and its share of the ground-truth row. The diagonal (correct predictions) is green, errors are red — intensity scales with count.",
+      "caption_click": "Click a cell (or focus it with Tab and press Enter)",
+      "caption_outro": "to filter the document table; the selected cell is outlined in blue.",
+      "verdict_correct": "correct",
+      "verdict_mismatch": "mismatch",
+      "cell_title": "{gt} → {pred}: {count} document(s) — {pct}% of GT row ({verdict}). Click to filter."
+    },
+    "drawer": {
+      "aria_label": "Failure details",
+      "document_number": "Document #{number}",
+      "fields_correct": "{correct}/{total} fields correct",
+      "accuracy_suffix": "{value} accuracy",
+      "hide_doc_list": "Hide document list",
+      "show_doc_list": "Show document list",
+      "prev_document": "Previous document (←)",
+      "first_document": "First document",
+      "next_document": "Next document (→)",
+      "last_document": "Last document",
+      "search_documents": "Search documents…",
+      "no_docs_match": "No documents match your search.",
+      "clear_search": "Clear search",
+      "source_document": "Source Document",
+      "show_original": "Show original file",
+      "show_extracted": "Show extracted text",
+      "no_preview": "No preview available for this file type. Showing extracted text instead — but none was extracted during preprocessing.",
+      "expected_vs_predicted": "Expected vs Predicted",
+      "col_field": "Field",
+      "col_expected": "Expected",
+      "col_got": "Got",
+      "no_comparison": "No field-level comparison available.",
+      "output": "Output",
+      "no_result": "No structured result was produced for this document.",
+      "reasoning": "Reasoning",
+      "no_reasoning": "No reasoning content was captured for this document.",
+      "tip_prefix": "Tip: use",
+      "tip_suffix": "to move between documents.",
+      "close": "Close",
+      "status_error": "Evaluation error",
+      "status_high": "High accuracy",
+      "status_low": "Low accuracy",
+      "status_partial": "Partial"
+    },
+    "export": {
+      "title": "Export Evaluation Report",
+      "format_label": "Export Format",
+      "csv_desc": "Comma-separated values",
+      "xlsx_desc": "Excel spreadsheet",
+      "zip_desc": "ZIP archive (advanced)",
+      "select_label": "Select Evaluations",
+      "showing_for_gt": "Showing evaluations for ground truth \"{name}\".",
+      "select_all": "Select All",
+      "accuracy_label": "{value} accuracy",
+      "documents_label": "{count} document | {count} documents",
+      "select_one": "Please select at least one evaluation to export.",
+      "options_label": "Export Options",
+      "opt_details": "Include detailed document-level metrics",
+      "opt_field_details": "Include field-by-field comparison data",
+      "opt_errors": "Include error analysis and examples",
+      "opt_document_content": "Include document content (in docs/)",
+      "opt_gt_content": "Include ground truth content (in docs/)",
+      "preview_title": "Export Preview",
+      "preview_evaluations": "{count} evaluation selected | {count} evaluations selected",
+      "preview_total_documents": "{count} total documents",
+      "preview_details": "Document-level metrics included",
+      "preview_field_details": "Field comparison data included",
+      "preview_errors": "Error analysis included",
+      "preview_document_content": "Document content files included",
+      "preview_gt_content": "Ground truth files included",
+      "large_warning": "Includes original document/ground-truth files — the archive may be large.",
+      "cancel": "Cancel",
+      "export_button": "Export Report",
+      "exporting": "Exporting...",
+      "select_one_toast": "Please select at least one evaluation to export",
+      "export_success": "Report exported",
+      "export_failed": "Failed to export report: {error}"
+    }
+  },
+  "files": {
+    "actions": {
+      "cancel": "Cancel",
+      "clear_all_filters": "Clear All Filters",
+      "close": "Close",
+      "configure": "Configure",
+      "configure_files_first": "Configure Files First",
+      "configure_preprocessing": "Configure Preprocessing",
+      "delete": "Delete",
+      "dismiss": "Dismiss",
+      "download": "Download",
+      "edit": "Edit",
+      "preprocessing_history": "Preprocessing History",
+      "preview": "Preview",
+      "retry": "Retry",
+      "select_all_count": "Select all {count}",
+      "selecting": "Selecting…",
+      "upload_files": "Upload Files",
+      "view_details": "View details",
+      "view_documents": "View documents",
+      "view_errors": "View errors"
+    },
+    "batch": {
+      "count_label": "file",
+      "needs_config_count": "{count} needs config",
+      "needs_config_title": "{files} need(s) import configuration — click to configure"
+    },
+    "cancel_task": {
+      "cancel": "Keep running",
+      "confirm": "Cancel task",
+      "message": "Any files still being processed will be marked as failed.",
+      "title": "Cancel preprocessing task?"
+    },
+    "cancel_upload": {
+      "cancel": "Keep uploading",
+      "confirm": "Cancel uploads",
+      "message": "Files already uploaded will be kept; the rest of the batch will not be uploaded.",
+      "title": "Cancel remaining uploads?"
+    },
+    "common": {
+      "unknown": "Unknown"
+    },
+    "completion": {
+      "documents_created": "one document created | {count} documents created",
+      "files_failed": "{count} file failed | {count} files failed",
+      "title": "Preprocessing complete"
+    },
+    "config": {
+      "advanced_options": "Advanced Options",
+      "api_key": "API Key",
+      "base_url": "Base URL",
+      "files_to_process": "Files to Process ({count})",
+      "footer_note": "This will create a new preprocessing run. Existing runs and documents are preserved.",
+      "force_ocr_desc": "Skip embedded text extraction and run OCR on all PDF pages",
+      "force_ocr_title": "Force OCR for PDFs",
+      "lang_auto": "Auto-detect",
+      "lang_chi_sim": "Chinese (Simplified)",
+      "lang_deu": "German",
+      "lang_eng": "English",
+      "lang_fra": "French",
+      "lang_ita": "Italian",
+      "lang_lat": "Latin",
+      "lang_nld": "Dutch",
+      "lang_pol": "Polish",
+      "lang_por": "Portuguese",
+      "lang_rus": "Russian",
+      "lang_spa": "Spanish",
+      "leave_empty_default": "Leave empty to use server default",
+      "max_image_dim": "Max Image Dimension (px)",
+      "model": "Model",
+      "needs_config_hint": "Click \"Configure\" next to each file above to set up import settings before preprocessing.",
+      "needs_config_title": "{count} file(s) need import configuration",
+      "no_ocr_desc": "CSV, Excel and plain-text files are imported as structured text — they don't use an OCR engine. Just start processing.",
+      "no_ocr_title": "No OCR engine needed",
+      "ocr_engine": "OCR Engine",
+      "ocr_required_desc": "PDF and image files need an OCR engine. Enable Local OCR, Mistral OCR, or Vision LLM in Admin Settings — or remove those files and process only CSV/Excel/text files, which don't require OCR.",
+      "ocr_required_title": "Selected files require OCR, but no OCR engine is enabled.",
+      "processing": "Processing...",
+      "prompt": "Prompt",
+      "prompt_placeholder": "Extract all text as markdown...",
+      "select_different": "Select different files",
+      "start_processing": "Start Processing",
+      "tesseract_language": "Tesseract Language",
+      "unknown": "Unknown"
+    },
+    "dropzone": {
+      "aria_label": "Upload files — drop files here or activate to browse",
+      "browse": "Browse Files",
+      "prompt": "Drop files here or click to upload"
+    },
+    "duplicate": {
+      "archive_continue": "Archive & Continue",
+      "badge_diff_config": "Different config",
+      "badge_embedded_text": "Embedded text",
+      "badge_same_config": "Same config",
+      "config_name": "Config: {name}",
+      "continue": "Continue",
+      "diff_config_desc": "The following files have existing documents with a different OCR configuration. Running preprocessing will create additional documents (not replace existing ones). Both versions will be preserved.",
+      "embedded_desc": "The following PDF file(s) have embedded text. Since \"Force OCR\" is not enabled, the embedded text will be extracted directly regardless of the selected OCR engine. The result will be identical to previous extractions.",
+      "existing_diff_config": "{count} existing document with different config | {count} existing documents with different config",
+      "existing_same_config": "{count} existing document with same config will be archived | {count} existing documents with same config will be archived",
+      "has_embedded_text": "Has embedded text",
+      "previously_extracted": "Previously extracted with: {method}",
+      "process_new_only": "Process New Files Only",
+      "same_config_after": ". Running preprocessing will create new versions and archive the old ones. Archived documents are hidden by default but can be viewed in the document history.",
+      "same_config_before": "The following files have existing documents with the",
+      "same_config_emphasis": "same OCR configuration",
+      "skip_existing_desc": "Skip files that already have documents for this OCR configuration. Useful if you want to process only new files or re-process files where OCR quality was poor.",
+      "skip_existing_label": "Only process files without existing documents",
+      "summary_existing": "file with existing documents | files with existing documents",
+      "summary_new": "new file | new files",
+      "tip_after": "in Advanced Options to force OCR on all pages, ignoring embedded text.",
+      "tip_before": "Enable",
+      "tip_label": "Tip:",
+      "title_archived": "Existing Documents Will Be Archived",
+      "title_embedded": "PDF Embedded Text Detected",
+      "title_found": "Existing Documents Found",
+      "versioning_after": "and can be restored if needed. Only the latest version is shown in the document list by default.",
+      "versioning_before": "Previous versions are preserved with",
+      "versioning_label": "Document versioning:"
+    },
+    "empty": {
+      "no_match_description": "Try adjusting or clearing your filters to see more results",
+      "no_match_title": "No files match your filters"
+    },
+    "errors": {
+      "already_processing": "One or more files are already being processed",
+      "cancel_failed": "Failed to cancel preprocessing",
+      "check_duplicates_failed": "Failed to check for existing documents",
+      "csv_needs_config": "CSV/XLSX files need import configuration",
+      "download_failed": "Failed to download file",
+      "download_named_failed": "Failed to download {name}",
+      "load_failed": "Failed to load files",
+      "no_ocr_engine": "No OCR engine enabled",
+      "retry_failed": "Failed to retry failed files",
+      "select_all_failed": "Failed to select all files",
+      "start_failed": "Failed to start preprocessing",
+      "upload_failed": "Upload failed"
+    },
+    "filter": {
+      "apply": "Apply",
+      "chip_date": "Date: {value}",
+      "chip_search": "Search: \"{value}\"",
+      "chip_status": "Status: {value}",
+      "chip_type": "Type: {value}",
+      "date_all": "All Time",
+      "date_custom": "Custom Range...",
+      "date_from": "From:",
+      "date_month": "Last 30 Days",
+      "date_to": "To:",
+      "date_today": "Today",
+      "date_week": "Last 7 Days",
+      "date_yesterday": "Yesterday",
+      "item_label": "files",
+      "present": "present",
+      "search_placeholder": "Search files...",
+      "status_all": "All Status",
+      "status_completed": "Completed",
+      "status_failed": "Failed",
+      "status_not_processed": "Not Processed",
+      "status_processing": "Processing",
+      "type_all": "All Types"
+    },
+    "hint": {
+      "configure_preprocessing": "Configure Preprocessing",
+      "next_step_label": "Next step:",
+      "select_files_after": "to extract text from your documents.",
+      "select_files_before": "Select files from the table below, then click"
+    },
+    "history": {
+      "and_more": "…and {count} more",
+      "aria_label": "Preprocessing history",
+      "documents_count": "{count} document | {count} documents",
+      "engine_local": "Local OCR",
+      "engine_local_force": "Local OCR + Force",
+      "eta_left": "≈ {duration} left",
+      "files_processed": "{processed} of {total} files processed",
+      "go_to_document": "Go to Document",
+      "go_to_documents": "Go to Documents ({count})",
+      "go_to_group": "Go to Group ({count})",
+      "no_file_tasks": "No file tasks recorded",
+      "no_runs": "No preprocessing runs yet",
+      "process_this_file": "Process this file",
+      "processing": "Processing...",
+      "retry_failed": "Retry failed files",
+      "row": "Row {index}",
+      "run_label": "Run #{id}",
+      "run_new": "+ Run new preprocessing",
+      "skipped_rows": "{count} skipped row | {count} skipped rows",
+      "started": "Started {time}",
+      "status_cancelled": "Cancelled",
+      "status_done": "Done",
+      "status_failed": "Failed",
+      "status_pending": "Pending",
+      "title": "Preprocessing History",
+      "took": "took {duration}",
+      "unknown_file": "Unknown file",
+      "view_error": "View error",
+      "warnings": "{count} warning | {count} warnings"
+    },
+    "import": {
+      "all_unique": "All {count} IDs in this column are unique.",
+      "appears": "appears {count}×",
+      "checking_unique": "Checking that IDs are unique…",
+      "delim_comma": "Comma (,)",
+      "delim_semicolon": "Semicolon (;)",
+      "delim_tab": "Tab",
+      "delimiter": "Delimiter",
+      "discard_cancel": "Keep editing",
+      "discard_confirm": "Discard",
+      "discard_message": "Your changes to import configuration will be lost.",
+      "discard_title": "Discard unsaved changes?",
+      "empty_value": "(empty)",
+      "encoding": "Encoding",
+      "has_header": "File contains header row",
+      "header_row": "Header Row",
+      "id_column": "Case/Document ID Column",
+      "id_help_after": "). Defaults to row number.",
+      "id_help_before": "Optional: names each document (e.g.",
+      "id_missing_after": "was not found with the current settings. Adjust the header/sheet options or pick another column.",
+      "id_missing_before": "Column",
+      "more_duplicates": "…and {count} more duplicate value(s).",
+      "no_preview": "No preview data available.",
+      "not_unique": "This column is not unique — {rows} rows share a duplicate ID. Each document needs a unique ID, so saving is disabled.",
+      "not_unique_toast": "This ID column is not unique — pick a different column or fix the file.",
+      "pick_different_after": "to name documents automatically.",
+      "pick_different_before": "Pick a different ID column, or use",
+      "preview_title": "Preview (first 25 rows)",
+      "previewing_rows": "Previewing first {count} rows",
+      "recommended": "(Recommended)",
+      "row_number": "(Row number)",
+      "sample_eg": "e.g. {value}",
+      "save": "Save",
+      "save_changes": "Save Changes",
+      "save_failed": "Failed to save import configuration",
+      "saved": "Import configuration saved",
+      "saving": "Saving...",
+      "select_all": "Select all",
+      "sheet": "Sheet",
+      "strategy": "Import Strategy",
+      "strategy_full": "Treat whole file as one document",
+      "strategy_row": "One document per row",
+      "text_columns": "Text Columns",
+      "text_columns_help": "Pick the column(s) whose text the LLM should extract. Their contents are concatenated into each document. Typically the report, notes, or findings column.",
+      "text_columns_required": "Select at least one text column to extract.",
+      "title_edit": "Edit Import Settings: {name}",
+      "title_new": "Configure Import: {name}"
+    },
+    "page": {
+      "subtitle": "Upload files and run OCR preprocessing",
+      "title": "Files"
+    },
+    "preview": {
+      "aria": "File preview",
+      "aria_named": "File preview: {name}",
+      "column": "Column {n}",
+      "copied": "Copied!",
+      "copy": "Copy",
+      "created": "Created: {date}",
+      "download_file": "Download File",
+      "downloaded": "File downloaded",
+      "empty": "empty",
+      "first_file": "First file",
+      "hash": "Hash: {hash}...",
+      "header_id": "{name} (ID)",
+      "header_text": "{name} (Text)",
+      "id_column": "ID column:",
+      "last_file": "Last file",
+      "load_failed": "Failed to load preview",
+      "more": "…more",
+      "nav_hint": "Use ← / → to move between files",
+      "next_file": "Next file (→)",
+      "not_available": "Preview not available for this file type.",
+      "pdf_title": "PDF preview",
+      "prev_file": "Previous file (←)",
+      "showing_rows": "Showing first {shown} of {total} rows",
+      "text_columns": "Text columns:",
+      "to_browse": "to browse files",
+      "try_again": "Try Again"
+    },
+    "progress": {
+      "aria_label": "Preprocessing progress",
+      "eta_remaining": "≈ {duration} remaining",
+      "failed": "{count} failed",
+      "files_of": "{processed} of {total} files",
+      "preprocessing": "Preprocessing",
+      "starting": "Starting…"
+    },
+    "status": {
+      "failed": "Failed",
+      "not_preprocessed": "Not preprocessed",
+      "processed": "Processed",
+      "processing": "Processing"
+    },
+    "table": {
+      "col_file": "File",
+      "col_size": "Size",
+      "col_status": "Status",
+      "col_type": "Type",
+      "col_uploaded": "Uploaded",
+      "empty_title": "No files found",
+      "full_table": "Full Table",
+      "needs_import_config": "Needs Import Config",
+      "row_by_row": "Row-by-Row"
+    },
+    "toast": {
+      "all_configured": "All selected files configured — ready to preprocess",
+      "preprocessing_cancelled": "Preprocessing cancelled",
+      "preprocessing_started": "Preprocessing started for {count} file(s)",
+      "retrying_failed": "Retrying failed files...",
+      "selected_all": "Selected all {count} files",
+      "upload_cancelled": "Upload cancelled — {uploaded} file(s) uploaded, {not_uploaded} not uploaded",
+      "upload_cancelled_failed_suffix": "({count} failed)",
+      "upload_failed": "Failed to upload {count} file(s): {name} — {message}",
+      "upload_in_progress": "Upload already in progress",
+      "upload_more": " (+{count} more)",
+      "uploaded": "Uploaded {count} file | Uploaded {count} files"
+    },
+    "type": {
+      "file": "File",
+      "text": "Text"
+    },
+    "upload": {
+      "cancel": "Cancel upload",
+      "cancelling": "Cancelling…",
+      "close": "Close",
+      "complete": "Upload complete",
+      "current_progress_aria": "Current file upload progress",
+      "failed": "{count} failed",
+      "failed_uploads": "Failed uploads",
+      "overall_progress_aria": "Overall upload progress",
+      "succeeded": "{count} succeeded",
+      "title": "Upload Files",
+      "uploading_file": "Uploading file {current} of {total}"
+    }
+  },
+  "groundtruth": {
+    "manager": {
+      "title": "Manage Ground Truth Files",
+      "subtitle": "Ground truth files contain the correct extracted values you compare trial results against. Configure field mappings to link each ground-truth column to a schema field.",
+      "empty_title": "No ground truth files uploaded yet",
+      "empty_description": "Upload a file with the correct values (CSV, XLSX, or JSON) to start evaluating trial accuracy.",
+      "default_name": "Ground Truth #{number}",
+      "mappings_count": "{count} mapping | {count} mappings",
+      "created": "Created: {date}",
+      "updated": "Updated: {date}",
+      "configure_mappings": "Configure mappings",
+      "rename": "Rename",
+      "rename_aria": "Rename {name}",
+      "delete": "Delete",
+      "delete_aria": "Delete {name}",
+      "fallback_file": "ground truth file",
+      "configured_field_mappings": "Configured Field Mappings",
+      "more_count": "+{count} more...",
+      "close": "Close",
+      "rename_title": "Rename Ground Truth",
+      "name_label": "Name",
+      "name_placeholder": "Ground truth file name",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save": "Save",
+      "delete_confirm_title": "Delete ground truth?",
+      "delete_confirm_message": "Are you sure you want to delete “{name}”? This action cannot be undone.",
+      "this_file": "this ground truth file",
+      "toast_updated": "Ground truth updated",
+      "toast_update_failed": "Failed to update ground truth",
+      "toast_deleted": "Ground truth deleted",
+      "toast_delete_failed": "Failed to delete ground truth",
+      "toast_mappings_configured": "Field mappings configured"
+    },
+    "upload": {
+      "title": "Upload Ground Truth",
+      "name_label": "Name (optional)",
+      "name_placeholder": "Ground truth file name",
+      "format_label": "Format",
+      "format_csv": "CSV (flattened fields with dots)",
+      "format_json": "JSON (single file with document map or multiple files)",
+      "format_zip": "ZIP (multiple JSON files)",
+      "format_xlsx": "Excel (.xlsx, dot-paths build nesting)",
+      "important": "Important:",
+      "json_id_note": "Each document must have an 'id' field that matches your document identifiers.",
+      "tabular_id_note": "You'll choose the ID column (matching your document identifiers) on the next step.",
+      "files_label": "File(s)",
+      "upload_files": "Upload file(s)",
+      "or_drag_and_drop": "or drag and drop",
+      "hint_csv": "CSV file with flattened fields (dots for nesting)",
+      "hint_json": "JSON file(s) - single file or multiple files",
+      "hint_zip": "ZIP file containing JSON files",
+      "hint_xlsx": "Excel file (.xlsx/.xls) with flattened fields (dots for nesting)",
+      "selected_files": "Selected files:",
+      "remove_file": "Remove file",
+      "cancel": "Cancel",
+      "uploading": "Uploading...",
+      "upload": "Upload",
+      "toast_switched_json": "Format switched to JSON to match the dropped files.",
+      "toast_drop_single": "Drop a single CSV, XLSX or ZIP file — or multiple JSON files.",
+      "toast_unsupported_type": "Unsupported file type: \"{name}\". Accepted: CSV, XLSX, JSON, ZIP.",
+      "toast_switched_format": "Format switched to {format} to match the dropped file.",
+      "toast_select_file": "Please select at least one file to upload",
+      "default_json_name": "JSON Ground Truth",
+      "toast_no_file": "No file selected",
+      "toast_upload_failed": "Failed to upload ground truth: {error}"
+    },
+    "preview": {
+      "title": "Configure Ground Truth Mapping",
+      "project": "Project {id}",
+      "help_before": "Pick a schema field (left) and its matching ground-truth column (right), then",
+      "help_create_mapping": "Create mapping",
+      "help_after": "Set the ID field to link each document to its correct row.",
+      "schema_label": "Schema",
+      "select_schema": "Select schema…",
+      "schema_fields_label": "schema fields",
+      "schema_fields_heading": "Schema Fields",
+      "required_count": "{count} required",
+      "select_schema_hint": "Select a schema above to load its fields.",
+      "pick_schema_field": "pick schema field",
+      "pick_gt_field": "pick GT field",
+      "create_mapping": "Create mapping",
+      "map": "Map",
+      "auto_map": "Auto-map matching names",
+      "clear_all_mappings": "Clear all mappings",
+      "gt_fields_heading": "Ground Truth Fields",
+      "fields_count": "{count} fields",
+      "loading": "Loading...",
+      "footer_select_schema": "Please select a schema to start mapping fields.",
+      "warning_required_unmapped": "Warning: not all required fields are mapped!",
+      "select_id_before_save": "Please select the ID column before saving.",
+      "cancel": "Cancel",
+      "save_mappings": "Save Mappings",
+      "saved": "Saved!",
+      "reason_select_schema": "Please select a schema.",
+      "reason_no_mappings": "At least one field mapping is required.",
+      "reason_no_id_column": "You must select an ID column for CSV/XLSX files.",
+      "reason_no_id_field": "You must select an ID field for JSON data.",
+      "reason_generic": "Cannot save right now.",
+      "mapping_count": "{count} mapping | {count} mappings",
+      "toast_load_preview_failed": "Failed to load ground truth preview: {error}",
+      "toast_load_schema_failed": "Failed to load schema fields: {error}",
+      "toast_all_mapped": "All schema fields are already mapped.",
+      "toast_mapped_some": "Mapped {count} of {total} unmapped fields",
+      "toast_mapped_none": "Mapped 0 of {total} unmapped fields — no matching column names found",
+      "toast_save_failed": "Failed to save mappings: {error}",
+      "toast_saved": "Mappings saved"
+    },
+    "sample": {
+      "title": "Ground Truth Sample"
+    },
+    "field_tree": {
+      "already_mapped": "Already mapped — click to reselect",
+      "required_not_mapped": "Required and not mapped",
+      "mapped": "Mapped",
+      "selected": "Selected"
+    },
+    "mapping_list": {
+      "empty_line1": "No mappings yet.",
+      "empty_line2": "Select a schema field and a GT field and click",
+      "map": "Map",
+      "schema_field": "Schema field",
+      "gt_field": "GT field",
+      "options_for": "Comparison options for {field}",
+      "remove_mapping": "Remove mapping",
+      "threshold": "Threshold",
+      "higher_stricter": "higher = stricter match",
+      "partial_match_hint": "Off by default. Substring matching can invert meaning in medical text (e.g. 'cancer' vs 'non-cancer'), so it is opt-in.",
+      "allow_partial": "allow partial / substring match",
+      "tolerance": "Tolerance",
+      "relative": "relative (±%)",
+      "hint_type_mismatch": "Type mismatch: schema field is {schemaType}, GT column is {gtType}",
+      "hint_unusual_method": "\"{method}\" comparison is unusual for a {fieldType} field"
+    },
+    "id_field": {
+      "document_id": "Document ID",
+      "select_id_column": "Select ID column...",
+      "select_id_column_hint": "Please select an ID column to enable evaluation.",
+      "use_filename": "Use document filename",
+      "use_field": "Use field:",
+      "select_field": "Select field...",
+      "match_hint": "Controls how documents are matched to trial results for evaluation."
+    }
+  },
+  "landing": {
+    "nav": {
+      "sign_in": "Sign in",
+      "get_started": "Get started",
+      "go_to_app": "Go to app"
+    },
+    "hero": {
+      "badge": "Document-to-JSON Extraction Platform",
+      "description": "Turn unstructured medical and lab documents into validated structured JSON. Define your schema, run LLM extraction trials, and measure accuracy against ground-truth data — with any OpenAI-compatible model, local or hosted."
+    },
+    "cta": {
+      "title": "Start extracting structured data",
+      "subtitle": "Upload your documents, define a schema, and run your first extraction trial.",
+      "go_to_projects": "Go to Projects",
+      "get_started": "Get Started",
+      "login": "Login",
+      "view_on_github": "View on KatherLab GitHub"
+    },
+    "features": {
+      "heading": "What you can do here",
+      "privacy": {
+        "title": "Privacy-First Design",
+        "description": "Run fully local or with self-hosted LLM and OCR providers. No forced external calls — your data stays in your environment."
+      },
+      "schema": {
+        "title": "Visual Schema Editor",
+        "description": "Build nested JSON schemas with a tree-based editor — objects, arrays, and all JSON types. No hand-writing JSON."
+      },
+      "ocr": {
+        "title": "Four OCR Engines",
+        "description": "Extract text from PDFs, images, or spreadsheets with Docling/Tesseract, Mistral OCR, vision LLMs, or local Docling fallback."
+      },
+      "evaluation": {
+        "title": "Accuracy Evaluation",
+        "description": "Compare extracted values to a ground-truth file field by field, with per-field and per-document metrics and confusion matrices."
+      },
+      "trials": {
+        "title": "Reproducible Trials",
+        "description": "Run extraction across document sets with configurable prompts, schemas, models, temperature, and token limits. Compare runs side by side."
+      },
+      "api": {
+        "title": "OpenAI-Compatible APIs",
+        "description": "Point trials at any OpenAI-compatible endpoint — OpenAI, Mistral, vLLM, Ollama, or llama.cpp. Mix and match per trial."
+      }
+    },
+    "pipeline": {
+      "heading": "How It Works",
+      "steps": {
+        "upload": {
+          "title": "Upload Files",
+          "subtitle": "Multiple formats supported"
+        },
+        "preprocess": {
+          "title": "Preprocess",
+          "subtitle": "Extract & OCR text"
+        },
+        "documents": {
+          "title": "Documents",
+          "subtitle": "Organize & group"
+        },
+        "schemas": {
+          "title": "Schemas",
+          "subtitle": "Define structure"
+        },
+        "trials": {
+          "title": "Run Trials",
+          "subtitle": "LLM extraction"
+        },
+        "evaluation": {
+          "title": "Evaluation",
+          "subtitle": "Accuracy metrics"
+        }
+      }
+    },
+    "details": {
+      "step1": {
+        "title": "Upload Medical Documents",
+        "supported_formats": "Supported Formats",
+        "format_pdf": "PDF documents with text or scanned images",
+        "format_doc": "Word documents (DOCX, DOC)",
+        "format_img": "Images (PNG, JPEG) with OCR support",
+        "format_csv": "Structured data (CSV, XLSX)",
+        "features": "Features",
+        "upload_features": {
+          "batch": "Batch upload multiple files",
+          "detection": "Automatic format detection",
+          "duplicate": "SHA-256 duplicate detection"
+        }
+      },
+      "step2": {
+        "title": "Text Extraction & OCR",
+        "ocr_engines": "OCR Engines",
+        "document_parsers": "Document Parsers",
+        "methods": {
+          "quick": {
+            "name": "Quick (Local OCR)",
+            "description": "Docling + Tesseract via docling-serve. Uses embedded PDF text when available; no API key needed."
+          },
+          "mistral": {
+            "name": "Mistral OCR API",
+            "description": "Mistral cloud or self-hosted DeepSeek-OCR-2. Higher accuracy on complex layouts and tables."
+          },
+          "vision": {
+            "name": "Vision LLM OCR",
+            "description": "Any OpenAI-compatible vision model (e.g. GPT-4o, Gemma 4 via vLLM) for layout-aware extraction."
+          }
+        },
+        "parsers": {
+          "docling": {
+            "name": "Docling",
+            "description": "IBM's document understanding library — embedded text extraction with optional local fallback."
+          },
+          "csv": {
+            "name": "CSV / XLSX",
+            "description": "Full-document or row-by-row parsing with configurable text and case-ID columns."
+          }
+        }
+      },
+      "step3": {
+        "title": "Document Management",
+        "organization": "Organization",
+        "selection_for_trials": "Selection for Trials",
+        "choose_documents": "Choose documents for a trial in two ways:",
+        "document_features": {
+          "sets": "Group documents into reusable sets",
+          "filter": "Filter and search by metadata",
+          "preview": "Preview extracted text",
+          "track": "Track OCR engine and origin per document"
+        },
+        "selection_options": {
+          "sets": {
+            "name": "Document Sets",
+            "description": "Run a trial against an entire group at once"
+          },
+          "individual": {
+            "name": "Individual Selection",
+            "description": "Hand-pick specific documents for a trial"
+          }
+        }
+      },
+      "step4": {
+        "title": "Visual Schema Editor",
+        "tree_based_editor": "Tree-Based Editor",
+        "build_nested": "Build nested structures visually",
+        "schema_features": "Schema Features",
+        "schema_feature_items": {
+          "nested": "Nested objects and arrays",
+          "types": "All JSON data types",
+          "import_export": "Import / export JSON schemas",
+          "templates": "Schema templates and validation"
+        }
+      },
+      "step5": {
+        "title": "LLM-Powered Extraction",
+        "compatible_providers": "Compatible Providers",
+        "trial_configuration": "Trial Configuration",
+        "flow": {
+          "document": "Document",
+          "prompt": "Prompt",
+          "schema": "Schema",
+          "llm_api": "LLM API",
+          "json_output": "JSON Output"
+        },
+        "providers": {
+          "openai": {
+            "name": "OpenAI API",
+            "description": "GPT-4o and other OpenAI models"
+          },
+          "local": {
+            "name": "Local Models",
+            "description": "Ollama, llama.cpp, vLLM — fully offline"
+          },
+          "custom": {
+            "name": "Custom Endpoints",
+            "description": "Any OpenAI-compatible API gateway"
+          }
+        },
+        "trial_config": {
+          "limits": "Set temperature and token limits",
+          "sets": "Run across full document sets",
+          "compare": "Compare prompts, schemas, and models",
+          "tokens": "Track token usage per trial"
+        }
+      },
+      "step6": {
+        "title": "Accuracy Evaluation",
+        "evaluation_process": "Evaluation Process",
+        "metrics_dashboard": "Metrics Dashboard",
+        "overall_accuracy": "Overall Accuracy",
+        "documents": "Documents",
+        "field_errors": "Field Errors",
+        "process": {
+          "upload": {
+            "title": "Upload Ground Truth",
+            "description": "Provide a CSV/XLSX of validated values"
+          },
+          "map": {
+            "title": "Map Fields",
+            "description": "Link ground-truth columns to schema fields and comparison methods"
+          },
+          "compute": {
+            "title": "Compute Metrics",
+            "description": "Overall, per-field, and per-document accuracy"
+          }
+        }
+      }
+    },
+    "demo": {
+      "heading": "See It In Action",
+      "medical_document": "Medical Document",
+      "extracted_data": "Extracted Structured Data",
+      "llm_output": "LLM Output",
+      "copy_aria": "Copy example JSON",
+      "copied": "Copied!",
+      "copy": "Copy",
+      "processing_details": "Processing Details",
+      "model": "Model",
+      "processing_time": "Processing Time",
+      "tokens_used": "Tokens Used",
+      "accuracy_metrics": "Accuracy Metrics",
+      "overall_accuracy": "Overall Accuracy",
+      "based_on_documents": "Based on 8 documents evaluated",
+      "disclaimer": "Illustrative example — the data and metrics shown are fabricated for demonstration.",
+      "flow_document": "Document",
+      "flow_llm_processing": "LLM Processing",
+      "flow_validated_output": "Validated Output"
+    }
+  },
+  "projects": {
+    "overview": {
+      "subtitle": "Create and manage your extraction projects."
+    },
+    "detail": {
+      "loading": "Loading project...",
+      "go_to": "Go to {label}",
+      "project_fallback": "Project",
+      "load_failed": "Failed to load project details",
+      "update_success": "Project updated",
+      "update_failed": "Failed to update project",
+      "delete_success": "Project deleted",
+      "delete_failed": "Failed to delete project"
+    },
+    "steps": {
+      "files": "Files & Preprocessing",
+      "documents": "Documents",
+      "schemas": "Schemas & Prompts",
+      "trials": "Run Trials",
+      "evaluation": "Evaluation"
+    },
+    "hints": {
+      "no_documents": {
+        "title": "No documents yet",
+        "body": "Preprocess your uploaded files to generate documents. Documents are the extracted text the LLM reads during a trial."
+      },
+      "no_trial_documents": {
+        "title": "No documents to run a trial on",
+        "body": "A trial extracts structured data from your documents. Preprocess files first to generate documents."
+      },
+      "no_schema": {
+        "title": "No schema yet"
+      },
+      "no_prompt": {
+        "title": "No prompt yet"
+      },
+      "schema_prompt": {
+        "body": "A trial needs a schema (the fields to extract) and a prompt (extraction instructions). Create both before running a trial."
+      },
+      "no_trials": {
+        "title": "No trials to evaluate",
+        "body": "Evaluation compares trial results against ground-truth data. Run a trial first to produce results to evaluate."
+      }
+    },
+    "create": {
+      "open": "+ Create Project",
+      "title": "Create New Project",
+      "name_label": "Project Name",
+      "name_placeholder": "e.g. Medical Document IE",
+      "description_label": "Description",
+      "optional": "(optional)",
+      "description_placeholder": "Briefly describe your project",
+      "creating": "Creating...",
+      "submit": "Create Project",
+      "error": "Failed to create project"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "delete_project": "Delete Project",
+      "save_changes": "Save Changes"
+    },
+    "delete": {
+      "irreversible": "This action cannot be undone",
+      "warning_prefix": "Deleting",
+      "warning_including": "permanently removes the project and everything in it, including:",
+      "warning_suffix": "permanently removes the project and everything in it.",
+      "confirm_prefix": "Type",
+      "confirm_suffix": "to confirm",
+      "this_project": "this project",
+      "impact_document": "{count} document | {count} documents",
+      "impact_schema": "{count} schema | {count} schemas",
+      "impact_prompt": "{count} prompt | {count} prompts",
+      "impact_trial": "{count} trial | {count} trials",
+      "impact_evaluation": "{count} evaluation | {count} evaluations"
+    },
+    "grid": {
+      "heading": "Your Projects",
+      "show_all": "Show all users' projects",
+      "retry": "Try again",
+      "empty_title": "No projects yet",
+      "empty_body": "Create your first project to start uploading documents, running OCR preprocessing, and extracting structured data with LLMs.",
+      "search_placeholder": "Search projects...",
+      "item_label": "projects",
+      "no_results_title": "No projects found",
+      "no_results_search": "Try a different search term",
+      "no_results_create": "Create a project to get started",
+      "document_count": "{count} document | {count} documents",
+      "view": "View",
+      "columns": {
+        "project": "Project",
+        "documents": "Documents",
+        "user": "User",
+        "created": "Created"
+      },
+      "load_failed": "Failed to load projects.",
+      "workflow": {
+        "upload": "Upload files",
+        "preprocess": "Preprocess",
+        "documents": "Documents",
+        "schemas": "Schemas",
+        "trials": "Run trials",
+        "evaluate": "Evaluate"
+      }
+    },
+    "settings": {
+      "title": "Project Settings",
+      "general": "General",
+      "name_placeholder": "Project Name",
+      "description_placeholder": "Description (optional)",
+      "danger_zone": "Danger Zone",
+      "danger_text": "Once you delete a project, there is no going back. Be certain.",
+      "name_required": "Project name is required"
+    }
+  },
+  "schema": {
+    "management": {
+      "title": "Schemas & Prompts",
+      "subtitle": "Define the structure and instructions for information extraction",
+      "tab_schemas": "JSON Schemas",
+      "tab_prompts": "Extraction Prompts"
+    },
+    "delete": {
+      "title": "Delete Schema",
+      "message": "Are you sure you want to delete the schema \"{name}\"? This action cannot be undone."
+    },
+    "actions": {
+      "delete": "Delete"
+    },
+    "toasts": {
+      "load_failed": "Failed to load schemas. Please try again.",
+      "deleted": "Schema \"{name}\" deleted successfully"
+    },
+    "errors": {
+      "delete_failed": "Failed to delete schema"
+    },
+    "list": {
+      "title": "JSON Schemas",
+      "subtitle": "Define the structure for information extraction",
+      "create": "Create Schema",
+      "empty_title": "No schemas created yet",
+      "empty_description": "Create a schema to define the structure for information extraction",
+      "item_label": "schemas",
+      "search_placeholder": "Search schemas...",
+      "no_match": "No schemas match your search",
+      "view": "View Schema",
+      "edit": "Edit Schema",
+      "delete": "Delete Schema",
+      "col_name": "Name",
+      "col_created": "Created",
+      "search_chip": "Search: \"{query}\""
+    },
+    "view": {
+      "snapshot": "Snapshot",
+      "snapshot_title": "Frozen copy of the schema as it was when the trial ran",
+      "copy": "Copy",
+      "close": "Close",
+      "copied": "Schema copied"
+    },
+    "templates": {
+      "title": "Schema Templates",
+      "subtitle": "Select a template for common medical document structures",
+      "cancel": "Cancel"
+    },
+    "form": {
+      "edit_title": "Edit Schema",
+      "create_title": "Create New Schema",
+      "mode_simple": "Simple",
+      "mode_advanced": "Advanced",
+      "name_label": "Schema Name",
+      "name_placeholder": "e.g., Patient Information",
+      "templates": "Templates",
+      "valid": "Valid",
+      "invalid": "Invalid",
+      "mode_hint_simple_label": "Simple:",
+      "mode_hint_simple_text": "add extraction fields as a flat list. Switch to Advanced for nested groups, lists, and raw JSON.",
+      "mode_hint_advanced_label": "Advanced:",
+      "mode_hint_advanced_text": "build nested structures in the visual editor or edit the raw JSON schema directly.",
+      "developer_options": "Developer options",
+      "developer_options_title": "Use JSON Schema type names (String, Object, Array…) and expose advanced field options like formats and constraints.",
+      "split_view": "Split view",
+      "split_view_disabled_title": "Split view shows the visual editor and raw JSON side by side — switch to the Visual Editor tab to use it.",
+      "split_view_title": "Show the visual editor and raw JSON side by side.",
+      "format": "Format",
+      "format_json_title": "Format JSON",
+      "cancel": "Cancel",
+      "fix_field_names": "Fix the highlighted field names first (empty or duplicate names).",
+      "update": "Update",
+      "create": "Create",
+      "discard_title": "Discard unsaved changes?",
+      "discard_message": "Your schema edits will be lost.",
+      "discard_confirm": "Discard",
+      "discard_cancel": "Keep editing",
+      "tab_visual": "Visual Editor",
+      "tab_raw": "Raw JSON",
+      "invalid_json": "Invalid JSON: {message}",
+      "invalid_json_format": "Invalid JSON format. Please check your schema definition.",
+      "validation_failed": "Schema validation failed",
+      "must_contain_field": "Schema must contain at least one field.",
+      "create_failed": "Failed to create schema",
+      "update_failed": "Failed to update schema",
+      "created": "Schema \"{name}\" created successfully",
+      "updated": "Schema \"{name}\" updated successfully",
+      "template_applied": "Template \"{name}\" applied"
+    }
+  },
+  "prompt": {
+    "delete": {
+      "title": "Delete Prompt",
+      "message": "Are you sure you want to delete the prompt \"{name}\"? This action cannot be undone."
+    },
+    "actions": {
+      "delete": "Delete"
+    },
+    "toasts": {
+      "load_failed": "Failed to load prompts. Please try again.",
+      "deleted": "Prompt \"{name}\" deleted successfully"
+    },
+    "errors": {
+      "delete_failed": "Failed to delete prompt"
+    },
+    "common": {
+      "contains_placeholder": "Contains placeholder"
+    },
+    "fields": {
+      "system_prompt": "System Prompt",
+      "user_prompt": "User Prompt"
+    },
+    "list": {
+      "title": "Extraction Prompts",
+      "subtitle": "Configure how the LLM extracts information from documents",
+      "create": "Create Prompt",
+      "empty_title": "No prompts created yet",
+      "empty_description": "Create a prompt to guide the LLM in extracting information",
+      "item_label": "prompts",
+      "search_placeholder": "Search prompts...",
+      "no_match": "No prompts match your search",
+      "auto_injected_tooltip": "No {ph} placeholder — the document text is appended automatically when the trial runs.",
+      "auto_injected": "Auto-injected",
+      "view": "View Prompt",
+      "edit": "Edit Prompt",
+      "delete": "Delete Prompt",
+      "col_name": "Name",
+      "col_placeholder": "Placeholder",
+      "col_created": "Created",
+      "search_chip": "Search: \"{query}\""
+    },
+    "view": {
+      "snapshot": "Snapshot",
+      "snapshot_title": "Frozen copy of the prompt as it was when the trial ran",
+      "copy": "Copy",
+      "close": "Close",
+      "copied": "Prompt copied"
+    },
+    "form": {
+      "edit_title": "Edit Prompt",
+      "create_title": "Create New Prompt",
+      "mode_simple": "Simple",
+      "mode_advanced": "Advanced",
+      "name_label": "Prompt Name",
+      "name_placeholder": "e.g., Medical Document Extraction",
+      "name_required": "This field is required",
+      "description_label": "Description",
+      "description_placeholder": "Describe what this prompt is designed to extract...",
+      "instruction_label": "Extraction Instruction",
+      "instruction_placeholder": "Based on the document content, extract these fields:",
+      "instruction_help": "This will be used as the user prompt. The document text and the selected schema are appended automatically when the trial runs.",
+      "system_from_advanced": "This prompt has a system prompt from Advanced mode. It is kept while you edit, but will not be saved while Simple mode is selected.",
+      "hide": "Hide",
+      "preview": "Preview",
+      "preview_with_sample": "Preview with Sample Document",
+      "simple_preview_help": "In Simple mode no system message is sent — your instruction becomes the user message, with the document and the trial's schema appended:",
+      "user_message_preview": "User Message Preview",
+      "system_message_preview": "System Message Preview",
+      "callout_title": "How prompts work",
+      "callout_system_label": "System prompt",
+      "callout_system_text": "— the AI's role and rules (applies to every document).",
+      "callout_user_label": "User prompt",
+      "callout_user_text": "— per-document instructions, where",
+      "callout_replaced": "is replaced with the document text.",
+      "callout_schema_label": "The selected schema is automatically included",
+      "callout_schema_text": "when the trial runs, so the model knows which fields to extract. You don't need to paste the schema JSON into your prompt — doing so would duplicate it.",
+      "insert_placeholder_title": "Insert {ph} at cursor",
+      "insert_placeholder": "+ Insert {ph}",
+      "system_placeholder": "You are an AI assistant specialized in extracting structured information from documents...",
+      "user_placeholder": "Extract the following information from this document:\\n\\n{ph}",
+      "use_template": "Use Template",
+      "cancel": "Cancel",
+      "update": "Update",
+      "create": "Create",
+      "discard_title": "Discard unsaved changes?",
+      "discard_message": "Your prompt edits will be lost.",
+      "discard_confirm": "Discard",
+      "discard_cancel": "Keep editing",
+      "apply_template_title": "Apply template?",
+      "apply_template_message": "Applying the template replaces the current name, description, and prompts.",
+      "apply_template_confirm": "Apply template",
+      "apply_template_cancel": "Cancel",
+      "error_enter_instruction": "Please enter an extraction instruction",
+      "error_at_least_one": "At least one prompt (system or user) must be provided",
+      "error_placeholder_required": "The placeholder {ph} must be present in either system or user prompt",
+      "name_required_toast": "Prompt name is required",
+      "check_requirements": "Please check the prompt requirements",
+      "created": "Prompt created",
+      "create_failed": "Failed to create prompt",
+      "updated": "Prompt updated",
+      "update_failed": "Failed to update prompt",
+      "template_applied": "Medical extraction template applied"
+    }
+  },
+  "schemaEditor": {
+    "structure": "Schema Structure",
+    "no_properties": "No properties defined",
+    "add_first_property": "Add First Property",
+    "property_exists": "Property \"{name}\" already exists!",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "array_items": "Array Items",
+    "types": {
+      "text": "Text",
+      "number": "Number",
+      "integer": "Integer",
+      "yes_no": "Yes/No",
+      "group": "Group",
+      "list": "List",
+      "date": "Date",
+      "datetime": "Date & Time",
+      "email": "Email",
+      "any": "Any",
+      "advanced": "Advanced"
+    },
+    "type_desc": {
+      "string": "Single line or multi-line text",
+      "number": "Numeric values, decimals allowed",
+      "boolean": "True or false values",
+      "object": "Group of related fields",
+      "array": "List of items"
+    },
+    "tree": {
+      "root": "Root"
+    },
+    "simple": {
+      "title": "Extract Fields",
+      "subtitle": "Drag to reorder • Click field to edit",
+      "add_field": "Add Field",
+      "empty_title": "No fields yet",
+      "empty_description": "Add fields to define what information to extract from your documents",
+      "add_first_field": "Add Your First Field",
+      "readonly_notice_before": "Fields with nested groups, lists, or advanced settings are read-only here — edit them in",
+      "advanced_mode": "Advanced mode",
+      "readonly_row_title": "Read-only — edit \"{name}\" in Advanced mode",
+      "edit_in_advanced": "Edit in Advanced mode",
+      "drag_to_reorder": "Drag to reorder",
+      "name_placeholder": "field_name (e.g., patient_name)",
+      "required_on": "Required — click to make optional",
+      "required_off": "Optional — click to make required",
+      "toggle_required": "Toggle required",
+      "description_placeholder": "What is this field? (optional)",
+      "remove_field": "Remove field",
+      "options": "Options",
+      "remove_option": "Remove option",
+      "add_option_placeholder": "add option — press Enter",
+      "quick_tips": "Quick Tips",
+      "tip_names": "Use clear names like",
+      "or": "or",
+      "tip_schema": "The schema is automatically included in the prompt sent to the LLM",
+      "tip_nested": "Need nested objects or arrays? Switch to",
+      "advanced_mode_caps": "Advanced Mode",
+      "error_name_required": "Name this field or remove it",
+      "error_duplicate": "Duplicate field name \"{name}\""
+    },
+    "block": {
+      "root_schema": "Root Schema",
+      "edit_settings": "Edit Settings",
+      "add_property": "Add Property",
+      "hide_details": "Hide Details",
+      "show_details": "Show Details",
+      "min_length": "Min Length",
+      "max_length": "Max Length",
+      "pattern": "Pattern",
+      "format": "Format",
+      "minimum": "Minimum",
+      "maximum": "Maximum",
+      "allowed_values": "Allowed Values",
+      "required_fields": "Required Fields",
+      "required": "*required",
+      "default_value": "Default Value",
+      "edit_property": "Edit Property",
+      "navigate_into": "Navigate Into",
+      "delete_property": "Delete Property",
+      "options_prefix": "Options:",
+      "edit_array_items": "Edit Array Items",
+      "navigate_into_items": "Navigate Into Items"
+    },
+    "field_list": {
+      "required": "required",
+      "options_count": "{count} options",
+      "no_fields": "No fields defined.",
+      "show_raw_json": "Show raw JSON (advanced)"
+    },
+    "property": {
+      "basic_info": "Basic Information",
+      "key_label_advanced": "Property Key",
+      "key_label": "Field Name",
+      "key_placeholder": "property_name",
+      "key_hint": "Use lowercase with underscores (e.g., patient_name)",
+      "title_label_advanced": "Title",
+      "title_label": "Display Name",
+      "title_placeholder": "{key} display name",
+      "type_label_advanced": "Type",
+      "type_label": "Field Type",
+      "type_tooltip_string": "Text field for names, descriptions, etc.",
+      "type_tooltip_number": "Numeric values with optional decimals",
+      "type_tooltip_boolean": "True/false checkbox or toggle",
+      "type_tooltip_object": "Container for grouped fields",
+      "type_tooltip_array": "List of repeating items",
+      "description_label": "Description",
+      "description_placeholder": "Describe what this field captures...",
+      "text_settings": "Text Settings",
+      "min_length": "Minimum Length",
+      "max_length": "Maximum Length",
+      "no_minimum": "No minimum",
+      "no_maximum": "No maximum",
+      "format_label": "Format",
+      "format_none": "No specific format",
+      "format_email": "Email",
+      "format_url": "URL",
+      "format_date": "Date (YYYY-MM-DD)",
+      "format_datetime": "Date & Time",
+      "format_time": "Time",
+      "format_ipv4": "IPv4 Address",
+      "format_ipv6": "IPv6 Address",
+      "format_uuid": "UUID",
+      "pattern_label": "Pattern (Regular Expression)",
+      "common_patterns": "Common patterns:",
+      "pattern_numbers": "Numbers only",
+      "pattern_letters": "Letters only",
+      "pattern_example": "2 uppercase letters + 4 digits",
+      "allowed_values": "Allowed Values (Options)",
+      "option_placeholder": "Option value",
+      "remove_enum_value": "Remove enum value",
+      "add_option": "+ Add Option",
+      "number_settings": "Number Settings",
+      "min_value": "Minimum Value",
+      "max_value": "Maximum Value",
+      "multiple_of": "Multiple Of",
+      "multiple_of_placeholder": "e.g., 0.01 for cents",
+      "integer_only": "Integer only",
+      "boolean_settings": "Yes/No Settings",
+      "boolean_help": "This field will capture true/false values. The user interface will show this as a checkbox or toggle switch.",
+      "list_settings": "List Settings",
+      "min_items": "Minimum Items",
+      "max_items": "Maximum Items",
+      "unique_items": "Items must be unique",
+      "group_settings": "Group Settings",
+      "required_fields": "Required Fields",
+      "add_properties_first": "Add properties to this group first",
+      "allow_additional": "Allow additional properties",
+      "additional_settings": "Additional Settings",
+      "default_value": "Default Value",
+      "no_default": "No default",
+      "true": "True",
+      "false": "False",
+      "no_default_value": "No default value",
+      "default_raw_json": "Default values for {type} must be set in raw JSON mode",
+      "advanced_features": "Advanced Features",
+      "read_only": "Read-only field",
+      "examples": "Examples",
+      "examples_placeholder": "Enter examples, one per line",
+      "key_required": "A key is required",
+      "key_invalid": "Only letters, numbers and underscores — must not start with a number (e.g., patient_name)"
+    },
+    "add_modal": {
+      "title": "Add Field",
+      "title_advanced": "Add Property",
+      "name_label": "Field Name",
+      "name_label_advanced": "Property Name",
+      "name_placeholder": "e.g., patient_name",
+      "name_required": "Name is required",
+      "display_name_placeholder": "e.g., Patient Name",
+      "description_placeholder": "Brief description of this field",
+      "cancel": "Cancel"
+    },
+    "edit_modal": {
+      "title_root": "Edit Root Schema",
+      "title_property": "Edit Property",
+      "title_field": "Edit Field",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "discard_title": "Discard unsaved changes?",
+      "discard_message": "Your edits to this property will be lost.",
+      "discard_confirm": "Discard",
+      "discard_cancel": "Keep editing"
+    },
+    "delete_modal": {
+      "title_property": "Delete Property",
+      "title_field": "Delete Field",
+      "message": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+      "confirm": "Delete"
+    },
+    "toolbar": {
+      "help": "Help"
+    },
+    "help": {
+      "title": "Schema Editor Help",
+      "field_types": "Field Types",
+      "tips": "Tips",
+      "tip_click": "Click on any field block to edit its properties",
+      "tip_breadcrumb": "Use the navigation breadcrumb to move between nested structures",
+      "tip_key_before": "Press",
+      "tip_key_after": "to add a new field (when not typing in an input)",
+      "tip_developer": "Enable \"Developer options\" to access more JSON Schema options",
+      "close": "Close"
+    }
+  },
+  "trials": {
+    "title": "Trials",
+    "subtitle": "Run an AI model over your documents to extract structured data, then compare results across trials.",
+    "count": "{count} trial | {count} trials",
+    "actions": {
+      "start_new": "Start New Trial",
+      "delete": "Delete"
+    },
+    "batch": {
+      "item_label": "trial"
+    },
+    "empty": {
+      "none_title": "No trials yet",
+      "none_description": "Run your first extraction trial to see results here.",
+      "none_action": "Start a Trial",
+      "no_match_title": "No trials match your filters",
+      "no_match_description": "Try adjusting or clearing your filters to see more trials.",
+      "clear_all": "Clear All Filters"
+    },
+    "confirm": {
+      "default_confirm": "Confirm"
+    },
+    "disabled_reason": {
+      "loading": "Loading project resources…",
+      "no_schema": "You need at least one schema to start a trial.",
+      "no_document": "You need to upload at least one document to start a trial.",
+      "no_prompt": "You need to create at least one prompt to start a trial."
+    },
+    "errors": {
+      "load_trials": "Failed to load trials",
+      "load": "Failed to load"
+    },
+    "toast": {
+      "created": "Trial created",
+      "create_failed": "Failed to create trial",
+      "renamed": "Trial renamed",
+      "rename_failed": "Failed to rename trial",
+      "cancelled_kept": "Trial cancelled — already-processed results were kept",
+      "cancelled_discarded": "Trial cancelled — in-progress results were discarded",
+      "cancel_failed": "Failed to cancel trial",
+      "deleted": "Trial deleted",
+      "delete_failed": "Failed to delete trial",
+      "retry_failed_docs": "Retrying failed documents",
+      "restarted": "Trial restarted",
+      "restart_failed": "Failed to restart trial"
+    },
+    "delete_dialog": {
+      "title": "Delete Trial",
+      "message": "Deleting this trial also removes its extraction results and any evaluations based on it. This action cannot be undone.",
+      "confirm": "Delete"
+    },
+    "retry_dialog": {
+      "title": "Retry Trial",
+      "message": "Start a new trial run with the same configuration? This will consume LLM credits and process all documents again.",
+      "confirm": "Retry Trial"
+    },
+    "table": {
+      "item_label": "trials",
+      "empty_title": "No trials found",
+      "processed_results": "Processed results",
+      "results_short": "{count} res",
+      "documents_with_errors": "Documents with errors",
+      "errors_short": "{count} err",
+      "progress_aria": "Trial progress",
+      "ready": "Ready",
+      "failed": "Failed",
+      "results_action": "Results",
+      "col_name": "Trial",
+      "col_schema": "Schema",
+      "col_prompt": "Prompt",
+      "col_model": "Model",
+      "col_results": "Results",
+      "col_progress": "Progress",
+      "col_started": "Started"
+    },
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "filters": {
+      "search_placeholder": "Search trials...",
+      "item_label": "trials",
+      "all_status": "All Status",
+      "all_schemas": "All Schemas",
+      "all_prompts": "All Prompts",
+      "all_groups": "All Groups",
+      "all_models": "All Models",
+      "all": "All",
+      "has_errors": "Has errors",
+      "no_errors": "No errors",
+      "all_time": "All Time",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "last_7_days": "Last 7 Days",
+      "last_30_days": "Last 30 Days",
+      "custom_range": "Custom Range...",
+      "from": "From:",
+      "to": "To:",
+      "apply": "Apply",
+      "present": "present",
+      "chip_search": "Search: \"{value}\"",
+      "chip_status": "Status: {value}",
+      "chip_schema": "Schema: {value}",
+      "chip_prompt": "Prompt: {value}",
+      "chip_group": "Group: {value}",
+      "chip_model": "Model: {value}",
+      "chip_errors": "Errors: {value}",
+      "chip_date": "Date: {value}"
+    },
+    "create": {
+      "title": "Start New Trial",
+      "mode_simple": "Simple",
+      "mode_advanced": "Advanced",
+      "what_is_title": "What is a trial?",
+      "what_is_body": "A trial runs an AI model over your documents to extract structured data. You need four things: a <strong>Schema</strong> (the fields to extract), a <strong>Prompt</strong> (extraction instructions), a <strong>Model</strong> (the AI), and the <strong>Documents</strong> to process. Your schema is automatically included with the prompt — you don't need to describe the fields manually.",
+      "help_text": "A trial runs an AI model over your documents to extract structured data. You need a Schema, a Prompt, a Model, and the Documents to process. The schema is automatically included with the prompt.",
+      "name_notes_hide": "Hide name / notes",
+      "name_notes_add": "Add name / notes",
+      "advanced_settings_hide": "Hide Advanced Settings",
+      "advanced_settings_show": "Show Advanced Settings",
+      "custom_api_hide": "Hide Custom API Settings",
+      "custom_api_use": "Use Custom API Settings",
+      "no_model_title": "No default model configured",
+      "no_model_body": "This server has no system-wide LLM configured. You can still run a trial by pointing at any OpenAI-compatible API (OpenAI, Ollama, vLLM, llama.cpp…).",
+      "custom_api_simple_hide": "Hide custom API settings",
+      "custom_api_simple_edit": "Edit custom API settings",
+      "custom_api_simple_use": "Use a different API",
+      "checking_title": "Checking model compatibility…",
+      "checking_body": "Verifying that {model} works with your schema before starting the trial.",
+      "the_model": "the model",
+      "cancel": "Cancel",
+      "verifying": "Verifying…",
+      "start_trial": "Start Trial",
+      "discard_title": "Discard unsaved changes?",
+      "discard_message": "Your trial configuration will be lost.",
+      "discard_confirm": "Discard",
+      "discard_cancel": "Keep editing",
+      "status": {
+        "verifying": "Verifying model works with your schema…",
+        "choose_model": "Choose a model to continue.",
+        "select_documents": "Select documents to continue.",
+        "verified_ready": "Model verified with this schema — ready to start.",
+        "verification_failed": "Verification failed: {message}",
+        "will_check": "Model will be checked when you start the trial."
+      },
+      "toast": {
+        "start_failed": "Could not start the trial. Please try again."
+      }
+    },
+    "metadata": {
+      "name_label": "Trial Name",
+      "optional": "(optional)",
+      "name_placeholder": "E.g. Contract Extraction Run Q3",
+      "description_label": "Description",
+      "description_placeholder": "Short summary for this trial (e.g. doc type, goal, changes etc)"
+    },
+    "select": {
+      "schema_label": "Schema",
+      "schema_placeholder": "Select a schema",
+      "preview_fields": "Preview fields",
+      "prompt_label": "Prompt",
+      "prompt_placeholder": "Select a prompt",
+      "preview_prompt": "Preview Prompt",
+      "sys_prefix": "Sys:",
+      "user_prefix": "User:",
+      "model_label": "LLM Model",
+      "model_loading": "Loading models...",
+      "model_none": "No models available",
+      "model_placeholder": "Select a model",
+      "model_help": "Models are loaded from your configured LLM provider. Not all models support structured JSON output — the compatibility test below verifies your chosen model works with the selected schema before you run the trial.",
+      "model_help_tooltip": "The AI model used for extraction. Models are fetched from your LLM provider (system default or your custom API settings). The list shows raw model IDs from the provider; use the compatibility test to confirm a model can produce structured output matching your schema."
+    },
+    "docsel": {
+      "select_documents": "Select Documents",
+      "n_selected": "{count} selected",
+      "tab_individual": "Individual",
+      "tab_groups": "Groups",
+      "tab_smart": "Smart",
+      "toast": {
+        "load_groups_failed": "Failed to load document groups",
+        "group_empty": "\"{name}\" has no documents",
+        "load_group_docs_failed": "Failed to load documents for this group",
+        "loaded_from_trial": "Loaded {count} documents from previous trial",
+        "selected_all": "Selected all {count} matching documents",
+        "select_all_failed": "Could not select all documents",
+        "selected_recent": "Selected {count} documents from the last {days} days",
+        "selected_range": "Selected {count} documents in date range"
+      }
+    },
+    "groups": {
+      "empty": "No document groups available",
+      "n_documents": "{count} documents",
+      "config": "Config: {name}",
+      "created": "Created: {date}"
+    },
+    "individual": {
+      "search_placeholder": "Search documents (text or filename)…",
+      "select_all_title": "Select all matching documents",
+      "selecting": "Selecting…",
+      "select_all": "Select All",
+      "clear_title": "Clear selection",
+      "clear": "Clear",
+      "no_match": "No documents match your criteria",
+      "doc_fallback": "Document #{id}",
+      "original": "(Original: {name})",
+      "config_created": "Config: {config} • Created: {date}",
+      "na": "N/A",
+      "total": "total",
+      "page": "page",
+      "prev": "Prev",
+      "next": "Next"
+    },
+    "smart": {
+      "load_from_trial": "Load from Previous Trial",
+      "select_trial": "Select a previous trial...",
+      "trial_option": "{name} - {date} ({count} docs)",
+      "filter_by_date": "Filter by Date Range",
+      "last_7_days": "Last 7 days",
+      "last_30_days": "Last 30 days",
+      "apply_title": "Apply explicit date range",
+      "apply_range": "Apply Date Range",
+      "n_selected": "{count} document selected | {count} documents selected",
+      "show": "Show",
+      "hide": "Hide",
+      "clear": "Clear"
+    },
+    "advanced": {
+      "max_tokens_label": "Max Completion Tokens",
+      "optional": "(optional)",
+      "max_tokens_placeholder": "e.g., 4096",
+      "max_tokens_help": "Limit the maximum tokens for model responses. Leave empty to use model defaults.",
+      "temperature_label": "Temperature",
+      "temperature_placeholder": "e.g., 0.7",
+      "temperature_help": "Controls randomness. Lower values make outputs more focused; higher values make them more random. Typical: 0.0–1.0",
+      "reasoning_label": "Reasoning Effort",
+      "reasoning_default": "Use model default",
+      "reasoning_low": "Low",
+      "reasoning_medium": "Medium",
+      "reasoning_high": "High",
+      "reasoning_help": "Hints the model how much compute to spend on chain-of-thought/reasoning. Not all models/APIs support this."
+    },
+    "custom_api": {
+      "api_key_label": "API Key",
+      "api_key_placeholder": "e.g., sk-1234567890abcdef...",
+      "base_url_label": "Base URL",
+      "base_url_placeholder": "e.g., https://api.openai.com/v1"
+    },
+    "model_test": {
+      "title": "Model & Schema Compatibility",
+      "test_now": "Test now",
+      "warning_help": "The model is checked automatically when you start the trial — or test it now to confirm compatibility beforehand."
+    },
+    "results": {
+      "aria": "Trial results",
+      "n_results": "{count} results",
+      "model_label": "Model:",
+      "prompt_label": "Prompt:",
+      "unnamed": "[unnamed]",
+      "set_label": "Set:",
+      "tokens_label": "Tokens:",
+      "schema_button": "Schema",
+      "prompt_button": "Prompt",
+      "n_errors": "{count} errors",
+      "prev_title": "Previous document (←)",
+      "first_result": "First result",
+      "next_title": "Next document (→)",
+      "last_result": "Last result",
+      "loading": "Loading trial results…",
+      "not_found": "Trial not found",
+      "return": "Return to trials",
+      "no_results_title": "No results available for this trial.",
+      "wait": "Please wait for the trial to complete.",
+      "search_placeholder": "Search documents…",
+      "all_statuses": "All statuses",
+      "no_match": "No results match your filters.",
+      "reset_filters": "Reset filters",
+      "hide_list": "Hide document list",
+      "show_list": "Show document list",
+      "doc_fallback": "Document #{id}",
+      "select_doc": "Select a document to view.",
+      "kbd_use": "Use",
+      "kbd_move": "to move between documents.",
+      "close": "Close",
+      "status_option": {
+        "success": "Success",
+        "failed": "Failed",
+        "incomplete": "Incomplete",
+        "invalid_json": "Invalid JSON",
+        "schema_invalid": "Schema invalid",
+        "refused": "Refused",
+        "provider_error": "Provider error"
+      },
+      "status_label": {
+        "success": "OK",
+        "failed": "Error",
+        "incomplete": "Incomplete",
+        "invalid_json": "Invalid JSON",
+        "schema_invalid": "Schema invalid",
+        "refused": "Refused",
+        "provider_error": "Provider error"
+      },
+      "toast": {
+        "no_loaded_result": "No loaded result for this document — it may have failed before producing one, or is on another page."
+      },
+      "errors": {
+        "load_trial": "Failed to load trial data"
+      }
+    },
+    "viewer": {
+      "tokens_label": "Tokens:",
+      "created_label": "Created:",
+      "file_label": "File:",
+      "no_structured_result": "This document has no structured result.",
+      "parser_error": "Parser error: {error}",
+      "tuning_advice": "Tuning advice",
+      "source_document": "Source Document",
+      "show_extracted": "Show extracted text",
+      "show_original": "Show original file",
+      "loading_preview": "Loading preview…",
+      "no_source": "No original file or extracted text for this document.",
+      "result": "Result",
+      "copied": "Copied!",
+      "copy_json": "Copy JSON",
+      "no_output": "No structured output for this document.",
+      "reasoning": "Reasoning",
+      "no_reasoning": "No reasoning content was captured for this document.",
+      "metadata": "Metadata",
+      "token_usage": "Token Usage",
+      "finish_reason": "Finish Reason",
+      "json_error": "JSON Error",
+      "no_metadata": "No metadata for this document.",
+      "panel_source": "Source",
+      "panel_result": "Result",
+      "panel_reasoning": "Reasoning",
+      "panel_metadata": "Metadata",
+      "no_text_content": "No text content available",
+      "load_content_error": "Error loading document content",
+      "toast": {
+        "copy_failed": "Failed to copy",
+        "load_document_failed": "Failed to load document"
+      }
+    },
+    "detail": {
+      "schema_label": "Schema:",
+      "view_schema_title": "View schema",
+      "prompt_label": "Prompt:",
+      "view_prompt_title": "View prompt",
+      "llm_label": "LLM:",
+      "started_label": "Started:",
+      "last_result_label": "Last result:",
+      "docs_label": "Docs:",
+      "docs_progress": "{done}/{total} docs",
+      "elapsed": "{duration} elapsed",
+      "eta": "• ≈ {duration} left",
+      "progress_aria": "Trial progress",
+      "results_ready": "Results ready",
+      "failed_details": "Failed — see details in Results",
+      "cancel": "Cancel",
+      "results": "Results",
+      "download_partial_title": "This trial did not finish — only the successfully extracted documents are included.",
+      "download": "Download",
+      "download_partial": "Download partial",
+      "retry": "Retry",
+      "rename": "Rename",
+      "delete": "Delete"
+    },
+    "doc_errors": {
+      "count": "{count} document error | {count} document errors",
+      "view_details": "View error details",
+      "show_in_viewer_title": "Show this document in the viewer",
+      "trial_name": "Trial",
+      "doc_fallback": "Doc {id}"
+    },
+    "rename": {
+      "title": "Rename Trial",
+      "name_label": "Name",
+      "description_label": "Description",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "cancel_modal": {
+      "title": "Cancel Trial",
+      "message": "Cancel this running trial? Documents that are still being processed will be stopped.",
+      "keep_label": "Keep already-processed results",
+      "keep_yes": "Results extracted so far stay available (partial download and review).",
+      "keep_no": "Results extracted so far will be discarded and cannot be recovered.",
+      "keep_running": "Keep Running",
+      "confirm": "Cancel Trial"
+    },
+    "retry_modal": {
+      "title": "Retry Trial",
+      "message": "Start a new trial run with the same configuration? This will consume LLM credits.",
+      "failed_only": "Retry failed documents only",
+      "failed_only_desc": "Creates a new trial that processes just the documents that failed.",
+      "all": "Re-run all documents",
+      "all_desc": "Processes every document again, including the ones that already succeeded.",
+      "cancel": "Cancel",
+      "confirm": "Retry Trial"
+    },
+    "download": {
+      "title": "Download Trial Results",
+      "partial_note": "This trial did not finish successfully. The download contains only the {count} document(s) that were extracted — documents that failed are not included.",
+      "format_json_zip": "<strong>JSON (per-document):</strong> Downloads a <b>ZIP archive</b> with one JSON file per document.<span class=\"block\">Each file includes all extracted results, full document metadata, preprocessing configuration, and trial configuration.</span>",
+      "format_csv_zip": "<strong>CSV (with files):</strong> Downloads a <b>ZIP archive</b> with the CSV and attached files.<span class=\"block\">The CSV includes all extracted results, full document metadata, preprocessing configuration, and trial configuration.</span>",
+      "format_csv_flat": "<strong>CSV (flat):</strong> Downloads a single CSV file, one row per document.<br />Includes all extracted results, document metadata, preprocessing configuration, and trial configuration.",
+      "format_label": "Format",
+      "format_json_option": "JSON (per-document, ZIP)",
+      "format_csv_option": "CSV (table, with optional files)",
+      "options_label": "Options",
+      "include_content": "Include document content",
+      "include_content_title": "If checked: you will also receive the original document text and files inside the ZIP.",
+      "include_content_hint": "(adds document text and source files)",
+      "note_csv_content": "Will include original files and full document text inside a ZIP.<br /><b>Note:</b> Download may be large if your trial contains many files.",
+      "note_csv_only": "Only a single CSV will be downloaded (no files/text included).",
+      "note_json_content": "Each per-document JSON will contain the extracted document text, and the original source files are bundled in a <code>files/</code> folder inside the ZIP.<br /><b>Note:</b> Download may be large if your trial contains many files.",
+      "note_json_only": "The JSON files contain only the extracted results and metadata — no document text or source files.",
+      "cancel": "Cancel",
+      "downloading": "Downloading...",
+      "download": "Download",
+      "toast": {
+        "downloaded": "Downloaded",
+        "failed": "Download failed"
+      }
+    },
+    "selector": {
+      "title": "Evaluate Trial",
+      "retry": "Retry",
+      "eval_error_heading": "Evaluation Error",
+      "mappings_required_title": "Schema-specific field mappings required",
+      "mappings_required_body": "Each trial requires field mappings for its specific schema. Trials without mappings will be grayed out.",
+      "configure_mappings": "Configure mappings",
+      "loading_trials": "Loading trials and checking mappings...",
+      "empty_title": "No completed trials available for evaluation",
+      "empty_desc": "Run some trials first to evaluate them against ground truth",
+      "select_heading": "Select a trial to evaluate",
+      "select_desc": "Choose from completed trials to compare against your ground truth data.",
+      "total_trials": "Total trials:",
+      "ready_for_eval": "Ready for evaluation:",
+      "missing_mappings": "Missing mappings:",
+      "checking_mappings": "Checking field mappings...",
+      "mappings_ready": "✓ Mappings Ready",
+      "checking": "Checking...",
+      "no_mappings": "⚠ No Mappings",
+      "model_label": "Model:",
+      "schema_label": "Schema:",
+      "documents_label": "Documents:",
+      "results_label": "Results:",
+      "created_label": "Created:",
+      "last_result_label": "Last result:",
+      "errors_label": "Errors: {count}",
+      "no_errors": "No Errors",
+      "configure_to_enable": "Configure field mappings for \"{schema}\" schema to enable evaluation",
+      "already_evaluated": "Already evaluated",
+      "n_results": "{count} results",
+      "item_label": "trials",
+      "cancel": "Cancel",
+      "evaluating": "Evaluating...",
+      "evaluate_named": "Evaluate {name}",
+      "select_first": "Select Trial First",
+      "already_eval_title": "Trial already evaluated",
+      "create_another": "Create another evaluation",
+      "schema_fallback": "Schema {id}",
+      "op_retry": "Retry",
+      "op_loading_data": "Loading trial data",
+      "op_evaluation": "Trial evaluation",
+      "op_refreshing_mappings": "Refreshing mapping status",
+      "validation": {
+        "select_trial": "Please select a trial to evaluate",
+        "requires_mappings": "{name} requires field mappings for schema \"{schema}\"",
+        "gt_required": "Ground truth file is required",
+        "no_results": "Selected trial has no results to evaluate"
+      },
+      "reeval_on": " on {date}",
+      "reeval_message": "This trial was already evaluated{when} against this ground truth. Create another evaluation?",
+      "cannot_evaluate": "Cannot evaluate trial: {errors}",
+      "mappings_removed": "Field mappings for schema \"{schema}\" are not configured or have been removed",
+      "mappings_missing": "Field mappings missing: {detail}",
+      "no_results_run_first": "Trial has no results to evaluate. Please run the trial first.",
+      "data_consistency": "Data consistency issue detected. Some documents or ground truth entries are missing.",
+      "eval_failed": "Evaluation failed: {detail}",
+      "toast": {
+        "operation_completed": "Operation completed",
+        "configure_first": "Configure field mappings for \"{schema}\" schema first",
+        "eval_completed": "{name} evaluation completed",
+        "mappings_required": "Field mappings are required but not found. Please configure them first.",
+        "mappings_configured": "Field mappings configured"
+      }
+    }
+  }
+}

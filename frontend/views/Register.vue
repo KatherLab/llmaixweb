@@ -5,7 +5,7 @@
         <AppBrand :as-link="false" size="md" />
       </h1>
       <p class="text-base text-content-muted mt-2">
-        Extract information from documents using LLMs.
+        {{ $t('auth.tagline') }}
       </p>
     </div>
     <!-- Registration Closed Message -->
@@ -13,7 +13,7 @@
       v-if="!allowRegister && !isLoadingSettings"
       class="p-8 bg-surface border border-default rounded-modal text-center text-content-muted"
     >
-      Registration is currently closed. Please use an invitation link.
+      {{ $t('auth.register.closed') }}
     </div>
 
     <!-- Registration Form -->
@@ -25,35 +25,40 @@
     >
       <FormField
         v-model="fullName"
-        label="Full Name"
+        :label="$t('auth.form.full_name')"
         type="text"
         required
-        placeholder="Your full name"
+        :placeholder="$t('auth.register.full_name_placeholder')"
       />
       <FormField
         v-model="email"
-        label="Email address"
+        :label="$t('auth.form.email')"
         type="email"
         required
         maxlength="254"
         :disabled="isEmailFromInvitation"
-        placeholder="Your email"
+        :placeholder="$t('auth.register.email_placeholder')"
       >
         <template v-if="isEmailFromInvitation" #hint>
-          This email is linked to your invitation
+          {{ $t('auth.register.email_from_invitation') }}
         </template>
       </FormField>
-      <PasswordInput v-model="password" label="Password" required placeholder="Create a password" />
+      <PasswordInput
+        v-model="password"
+        :label="$t('auth.form.password')"
+        required
+        :placeholder="$t('auth.register.password_placeholder')"
+      />
       <FormField
         v-model="confirmPassword"
-        label="Confirm Password"
+        :label="$t('auth.form.confirm_password')"
         type="password"
         required
-        placeholder="Confirm your password"
+        :placeholder="$t('auth.register.confirm_password_placeholder')"
         :invalid="!!confirmPassword && confirmPassword !== password"
       >
         <template v-if="!!confirmPassword && confirmPassword !== password" #error>
-          Passwords do not match
+          {{ $t('auth.errors.passwords_mismatch') }}
         </template>
       </FormField>
       <BaseButton
@@ -63,7 +68,7 @@
         :disabled="isLoading || !isFormValid"
         class="w-full py-2.5"
       >
-        {{ isLoading ? 'Creating account...' : 'Create Account' }}
+        {{ isLoading ? $t('auth.register.creating') : $t('auth.register.create_account') }}
       </BaseButton>
       <transition name="fade">
         <ErrorBanner v-if="error" :message="error" class="text-center" />
@@ -72,7 +77,8 @@
         to="/login"
         class="block mt-3 text-center text-primary hover:underline text-sm transition"
       >
-        Already have an account? <span class="font-semibold">Sign in here</span>
+        {{ $t('auth.register.have_account') }}
+        <span class="font-semibold">{{ $t('auth.register.sign_in_here') }}</span>
       </router-link>
     </form>
   </div>
@@ -81,6 +87,7 @@
 <script setup lang="ts">
 import AppBrand from '@/components/common/AppBrand.vue'
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { authApi } from '@/services/authApi'
 import { usersApi } from '@/services/usersApi'
@@ -93,6 +100,7 @@ import PasswordInput from '@/components/common/PasswordInput.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
+const { t } = useI18n({ useScope: 'global' })
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
@@ -143,10 +151,10 @@ onMounted(async () => {
         email.value = response.data.email ?? ''
         isEmailFromInvitation.value = true
       } else {
-        error.value = 'Invitation is invalid or has already been used'
+        error.value = t('auth.errors.invitation_invalid_or_used')
       }
     } catch {
-      error.value = 'Failed to validate invitation. It may be expired or invalid.'
+      error.value = t('auth.errors.invitation_validate_failed')
     }
   }
 })
@@ -187,10 +195,10 @@ async function handleSubmit(): Promise<void> {
 
     await authStore.setSession(loginResponse.data.access_token, loginResponse.data.refresh_token)
 
-    toast.success('Registration successful! Logging you in...')
+    toast.success(t('auth.register.success_toast'))
     router.push('/projects')
   } catch (err) {
-    error.value = extractErrorMessage(err, 'Registration failed. Please try again.')
+    error.value = extractErrorMessage(err, t('auth.errors.registration_failed'))
     toast.error(error.value)
   } finally {
     isLoading.value = false

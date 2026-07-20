@@ -5,7 +5,7 @@
         <!-- File SVG -->
         <FileText class="w-4 h-4 inline-block" />
       </span>
-      Document ID
+      {{ $t('groundtruth.id_field.document_id') }}
       <span v-if="isTabular" class="text-red-500 text-lg leading-none ml-1">*</span>
     </div>
     <!-- CSV/XLSX: column dropdown -->
@@ -22,12 +22,12 @@
         required
         @change="updateId"
       >
-        <option value="" disabled>Select ID column...</option>
+        <option value="" disabled>{{ $t('groundtruth.id_field.select_id_column') }}</option>
         <option v-for="c in availableColumns" :key="c" :value="c">{{ c }}</option>
       </select>
       <div v-if="!innerIdColumn" class="text-xs text-red-500 mt-1 flex items-center gap-1">
         <CircleAlert class="w-4 h-4" />
-        Please select an ID column to enable evaluation.
+        {{ $t('groundtruth.id_field.select_id_column_hint') }}
       </div>
     </template>
     <!-- JSON/ZIP: radio chip choice -->
@@ -44,7 +44,7 @@
           <span
             class="inline-flex items-center px-2 py-0.5 rounded-full bg-primary-soft text-primary text-xs font-semibold border border-default"
           >
-            Use document filename
+            {{ $t('groundtruth.id_field.use_filename') }}
           </span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
@@ -58,7 +58,7 @@
           <span
             class="inline-flex items-center px-2 py-0.5 rounded-full bg-primary-soft text-primary text-xs font-semibold border border-default"
           >
-            Use field:
+            {{ $t('groundtruth.id_field.use_field') }}
           </span>
           <select
             v-if="innerIdColumn === '__field__'"
@@ -66,7 +66,7 @@
             :class="[selectClass, 'min-w-[120px]']"
             @change="updateJsonId"
           >
-            <option value="" disabled>Select field...</option>
+            <option value="" disabled>{{ $t('groundtruth.id_field.select_field') }}</option>
             <option v-for="f in idCandidates" :key="f" :value="f">{{ f }}</option>
           </select>
         </label>
@@ -83,7 +83,7 @@
       </div>
     </template>
     <div class="text-xs text-content-muted mt-1">
-      Controls how documents are matched to trial results for evaluation.
+      {{ $t('groundtruth.id_field.match_hint') }}
     </div>
   </div>
 </template>

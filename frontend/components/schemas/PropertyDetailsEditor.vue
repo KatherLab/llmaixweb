@@ -4,19 +4,23 @@
     <div class="space-y-4">
       <h4 class="text-sm font-medium text-content flex items-center">
         <Info class="h-4 w-4 mr-2 text-content-muted" />
-        Basic Information
+        {{ $t('schemaEditor.property.basic_info') }}
       </h4>
 
       <!-- Add this if not editing root -->
       <div v-if="propertyKey !== '__root__' && propertyKey !== 'items'">
         <label :class="labelClass" :for="`${uid}-key`">
-          {{ advancedMode ? 'Property Key' : 'Field Name' }}
+          {{
+            advancedMode
+              ? $t('schemaEditor.property.key_label_advanced')
+              : $t('schemaEditor.property.key_label')
+          }}
         </label>
         <input
           :id="`${uid}-key`"
           :value="propertyKey"
           :class="[inputClass, 'font-mono', keyError ? 'border-red-400 dark:border-red-600' : '']"
-          placeholder="property_name"
+          :placeholder="$t('schemaEditor.property.key_placeholder')"
           :aria-invalid="!!keyError"
           @input="onKeyInput(($event.target as HTMLInputElement).value)"
         />
@@ -24,27 +28,35 @@
           {{ keyError }}
         </p>
         <p v-else class="mt-1 text-xs text-content-muted">
-          Use lowercase with underscores (e.g., patient_name)
+          {{ $t('schemaEditor.property.key_hint') }}
         </p>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label :class="labelClass" :for="`${uid}-title`">
-            {{ advancedMode ? 'Title' : 'Display Name' }}
+            {{
+              advancedMode
+                ? $t('schemaEditor.property.title_label_advanced')
+                : $t('schemaEditor.property.title_label')
+            }}
           </label>
           <input
             :id="`${uid}-title`"
             v-model="localProperty.title"
             :class="inputClass"
-            :placeholder="`${propertyKey} display name`"
+            :placeholder="$t('schemaEditor.property.title_placeholder', { key: propertyKey })"
           />
         </div>
 
         <!-- Update the type select dropdown (around line 35) -->
         <div>
           <label :class="labelClass" :for="`${uid}-type`">
-            {{ advancedMode ? 'Type' : 'Field Type' }}
+            {{
+              advancedMode
+                ? $t('schemaEditor.property.type_label_advanced')
+                : $t('schemaEditor.property.type_label')
+            }}
           </label>
           <div class="relative group">
             <select
@@ -53,11 +65,21 @@
               :class="[selectClass, 'pl-10']"
               @change="onTypeChange"
             >
-              <option value="string">{{ advancedMode ? 'String' : 'Text' }}</option>
-              <option value="number">{{ advancedMode ? 'Number' : 'Number' }}</option>
-              <option value="boolean">{{ advancedMode ? 'Boolean' : 'Yes/No' }}</option>
-              <option value="object">{{ advancedMode ? 'Object' : 'Group' }}</option>
-              <option value="array">{{ advancedMode ? 'Array' : 'List' }}</option>
+              <option value="string">
+                {{ advancedMode ? 'String' : $t('schemaEditor.types.text') }}
+              </option>
+              <option value="number">
+                {{ advancedMode ? 'Number' : $t('schemaEditor.types.number') }}
+              </option>
+              <option value="boolean">
+                {{ advancedMode ? 'Boolean' : $t('schemaEditor.types.yes_no') }}
+              </option>
+              <option value="object">
+                {{ advancedMode ? 'Object' : $t('schemaEditor.types.group') }}
+              </option>
+              <option value="array">
+                {{ advancedMode ? 'Array' : $t('schemaEditor.types.list') }}
+              </option>
             </select>
             <div :class="['absolute left-3 top-2.5 rounded p-1', typeColorClass]">
               <component :is="typeIcon" class="h-4 w-4 text-white" />
@@ -68,14 +90,20 @@
                 class="bg-inverse-surface text-inverse-content text-xs rounded-card p-2 shadow-lg"
               >
                 <p v-if="localProperty.type === 'string'">
-                  Text field for names, descriptions, etc.
+                  {{ $t('schemaEditor.property.type_tooltip_string') }}
                 </p>
                 <p v-else-if="localProperty.type === 'number'">
-                  Numeric values with optional decimals
+                  {{ $t('schemaEditor.property.type_tooltip_number') }}
                 </p>
-                <p v-else-if="localProperty.type === 'boolean'">True/false checkbox or toggle</p>
-                <p v-else-if="localProperty.type === 'object'">Container for grouped fields</p>
-                <p v-else-if="localProperty.type === 'array'">List of repeating items</p>
+                <p v-else-if="localProperty.type === 'boolean'">
+                  {{ $t('schemaEditor.property.type_tooltip_boolean') }}
+                </p>
+                <p v-else-if="localProperty.type === 'object'">
+                  {{ $t('schemaEditor.property.type_tooltip_object') }}
+                </p>
+                <p v-else-if="localProperty.type === 'array'">
+                  {{ $t('schemaEditor.property.type_tooltip_array') }}
+                </p>
               </div>
             </div>
           </div>
@@ -83,13 +111,15 @@
       </div>
 
       <div>
-        <label :class="labelClass" :for="`${uid}-description`"> Description </label>
+        <label :class="labelClass" :for="`${uid}-description`">
+          {{ $t('schemaEditor.property.description_label') }}
+        </label>
         <textarea
           :id="`${uid}-description`"
           v-model="localProperty.description"
           rows="2"
           :class="textareaClass"
-          placeholder="Describe what this field captures..."
+          :placeholder="$t('schemaEditor.property.description_placeholder')"
         />
       </div>
     </div>
@@ -98,55 +128,61 @@
     <div v-if="localProperty.type === 'string'" class="space-y-4">
       <h4 class="text-sm font-medium text-content flex items-center">
         <SquarePen class="h-4 w-4 mr-2 text-green-500" />
-        Text Settings
+        {{ $t('schemaEditor.property.text_settings') }}
       </h4>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label :class="labelClass" :for="`${uid}-min-length`"> Minimum Length </label>
+          <label :class="labelClass" :for="`${uid}-min-length`">
+            {{ $t('schemaEditor.property.min_length') }}
+          </label>
           <input
             :id="`${uid}-min-length`"
             v-model.number="localProperty.minLength"
             type="number"
             min="0"
             :class="inputClass"
-            placeholder="No minimum"
+            :placeholder="$t('schemaEditor.property.no_minimum')"
           />
         </div>
 
         <div>
-          <label :class="labelClass" :for="`${uid}-max-length`"> Maximum Length </label>
+          <label :class="labelClass" :for="`${uid}-max-length`">
+            {{ $t('schemaEditor.property.max_length') }}
+          </label>
           <input
             :id="`${uid}-max-length`"
             v-model.number="localProperty.maxLength"
             type="number"
             min="0"
             :class="inputClass"
-            placeholder="No maximum"
+            :placeholder="$t('schemaEditor.property.no_maximum')"
           />
         </div>
       </div>
 
       <!-- Format Selection -->
       <div>
-        <label :class="labelClass" :for="`${uid}-format`"> Format </label>
+        <label :class="labelClass" :for="`${uid}-format`">
+          {{ $t('schemaEditor.property.format_label') }}
+        </label>
         <select :id="`${uid}-format`" v-model="localProperty.format" :class="selectClass">
-          <option value="">No specific format</option>
-          <option value="email">Email</option>
-          <option value="uri">URL</option>
-          <option value="date">Date (YYYY-MM-DD)</option>
-          <option value="date-time">Date & Time</option>
-          <option value="time">Time</option>
-          <option value="ipv4">IPv4 Address</option>
-          <option value="ipv6">IPv6 Address</option>
-          <option value="uuid">UUID</option>
+          <option value="">{{ $t('schemaEditor.property.format_none') }}</option>
+          <option value="email">{{ $t('schemaEditor.property.format_email') }}</option>
+          <option value="uri">{{ $t('schemaEditor.property.format_url') }}</option>
+          <option value="date">{{ $t('schemaEditor.property.format_date') }}</option>
+          <option value="date-time">{{ $t('schemaEditor.property.format_datetime') }}</option>
+          <option value="time">{{ $t('schemaEditor.property.format_time') }}</option>
+          <option value="ipv4">{{ $t('schemaEditor.property.format_ipv4') }}</option>
+          <option value="ipv6">{{ $t('schemaEditor.property.format_ipv6') }}</option>
+          <option value="uuid">{{ $t('schemaEditor.property.format_uuid') }}</option>
         </select>
       </div>
 
       <!-- Pattern -->
       <div>
         <label :class="labelClass" :for="`${uid}-pattern`">
-          Pattern (Regular Expression)
+          {{ $t('schemaEditor.property.pattern_label') }}
           <button
             class="ml-1 text-content-subtle hover:text-content-muted"
             @click="showPatternHelp = !showPatternHelp"
@@ -161,13 +197,19 @@
           placeholder="e.g., ^[A-Z]{2}[0-9]{4}$"
         />
         <Callout v-if="showPatternHelp" variant="info" class="mt-2 text-xs">
-          <p class="font-medium mb-1">Common patterns:</p>
+          <p class="font-medium mb-1">{{ $t('schemaEditor.property.common_patterns') }}</p>
           <ul class="space-y-1">
-            <li><code class="bg-surface-muted px-1 rounded">^[0-9]+$</code> - Numbers only</li>
-            <li><code class="bg-surface-muted px-1 rounded">^[A-Za-z]+$</code> - Letters only</li>
+            <li>
+              <code class="bg-surface-muted px-1 rounded">^[0-9]+$</code> -
+              {{ $t('schemaEditor.property.pattern_numbers') }}
+            </li>
+            <li>
+              <code class="bg-surface-muted px-1 rounded">^[A-Za-z]+$</code> -
+              {{ $t('schemaEditor.property.pattern_letters') }}
+            </li>
             <li>
               <code class="bg-surface-muted px-1 rounded">^[A-Z]{2}[0-9]{4}$</code>
-              - 2 uppercase letters + 4 digits
+              - {{ $t('schemaEditor.property.pattern_example') }}
             </li>
           </ul>
         </Callout>
@@ -175,7 +217,7 @@
 
       <!-- Enum Values -->
       <div>
-        <label :class="labelClass"> Allowed Values (Options) </label>
+        <label :class="labelClass"> {{ $t('schemaEditor.property.allowed_values') }} </label>
         <div class="space-y-2">
           <div
             v-for="(_value, index) in enumValues"
@@ -185,13 +227,13 @@
             <input
               v-model="enumValues[index]"
               :class="[inputClass, 'flex-1']"
-              placeholder="Option value"
+              :placeholder="$t('schemaEditor.property.option_placeholder')"
             />
             <BaseButton
               variant="link"
               tone="red"
               class="p-1"
-              aria-label="Remove enum value"
+              :aria-label="$t('schemaEditor.property.remove_enum_value')"
               @click="removeEnumValue(index)"
             >
               <Trash2 class="h-4 w-4" aria-hidden="true" />
@@ -201,7 +243,7 @@
             class="w-full py-2 border-2 border-dashed border-strong rounded-card text-sm text-content-muted hover:border-strong hover:text-content"
             @click="addEnumValue"
           >
-            + Add Option
+            {{ $t('schemaEditor.property.add_option') }}
           </button>
         </div>
       </div>
@@ -211,43 +253,49 @@
     <div v-else-if="localProperty.type === 'number'" class="space-y-4">
       <h4 class="text-sm font-medium text-content flex items-center">
         <Hash class="h-4 w-4 mr-2 text-primary" />
-        Number Settings
+        {{ $t('schemaEditor.property.number_settings') }}
       </h4>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label :class="labelClass" :for="`${uid}-minimum`"> Minimum Value </label>
+          <label :class="labelClass" :for="`${uid}-minimum`">
+            {{ $t('schemaEditor.property.min_value') }}
+          </label>
           <input
             :id="`${uid}-minimum`"
             v-model.number="localProperty.minimum"
             type="number"
             :class="inputClass"
-            placeholder="No minimum"
+            :placeholder="$t('schemaEditor.property.no_minimum')"
           />
         </div>
 
         <div>
-          <label :class="labelClass" :for="`${uid}-maximum`"> Maximum Value </label>
+          <label :class="labelClass" :for="`${uid}-maximum`">
+            {{ $t('schemaEditor.property.max_value') }}
+          </label>
           <input
             :id="`${uid}-maximum`"
             v-model.number="localProperty.maximum"
             type="number"
             :class="inputClass"
-            placeholder="No maximum"
+            :placeholder="$t('schemaEditor.property.no_maximum')"
           />
         </div>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label :class="labelClass" :for="`${uid}-multiple-of`"> Multiple Of </label>
+          <label :class="labelClass" :for="`${uid}-multiple-of`">
+            {{ $t('schemaEditor.property.multiple_of') }}
+          </label>
           <input
             :id="`${uid}-multiple-of`"
             v-model.number="localProperty.multipleOf"
             type="number"
             step="any"
             :class="inputClass"
-            placeholder="e.g., 0.01 for cents"
+            :placeholder="$t('schemaEditor.property.multiple_of_placeholder')"
           />
         </div>
 
@@ -258,7 +306,9 @@
               type="checkbox"
               class="rounded border-strong text-primary focus:ring-ring"
             />
-            <span class="text-sm font-medium text-content-muted">Integer only</span>
+            <span class="text-sm font-medium text-content-muted">{{
+              $t('schemaEditor.property.integer_only')
+            }}</span>
           </label>
         </div>
       </div>
@@ -268,12 +318,11 @@
     <div v-else-if="localProperty.type === 'boolean'" class="space-y-4">
       <h4 class="text-sm font-medium text-content flex items-center">
         <CircleCheckBig class="h-4 w-4 mr-2 text-purple-500" />
-        Yes/No Settings
+        {{ $t('schemaEditor.property.boolean_settings') }}
       </h4>
 
       <p class="text-sm text-content-muted">
-        This field will capture true/false values. The user interface will show this as a checkbox
-        or toggle switch.
+        {{ $t('schemaEditor.property.boolean_help') }}
       </p>
     </div>
 
@@ -281,31 +330,35 @@
     <div v-else-if="localProperty.type === 'array'" class="space-y-4">
       <h4 class="text-sm font-medium text-content flex items-center">
         <List class="h-4 w-4 mr-2 text-pink-500" />
-        List Settings
+        {{ $t('schemaEditor.property.list_settings') }}
       </h4>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label :class="labelClass" :for="`${uid}-min-items`"> Minimum Items </label>
+          <label :class="labelClass" :for="`${uid}-min-items`">
+            {{ $t('schemaEditor.property.min_items') }}
+          </label>
           <input
             :id="`${uid}-min-items`"
             v-model.number="localProperty.minItems"
             type="number"
             min="0"
             :class="inputClass"
-            placeholder="No minimum"
+            :placeholder="$t('schemaEditor.property.no_minimum')"
           />
         </div>
 
         <div>
-          <label :class="labelClass" :for="`${uid}-max-items`"> Maximum Items </label>
+          <label :class="labelClass" :for="`${uid}-max-items`">
+            {{ $t('schemaEditor.property.max_items') }}
+          </label>
           <input
             :id="`${uid}-max-items`"
             v-model.number="localProperty.maxItems"
             type="number"
             min="0"
             :class="inputClass"
-            placeholder="No maximum"
+            :placeholder="$t('schemaEditor.property.no_maximum')"
           />
         </div>
       </div>
@@ -317,7 +370,9 @@
             type="checkbox"
             class="rounded border-strong text-primary focus:ring-ring"
           />
-          <span class="text-sm font-medium text-content-muted">Items must be unique</span>
+          <span class="text-sm font-medium text-content-muted">{{
+            $t('schemaEditor.property.unique_items')
+          }}</span>
         </label>
       </div>
     </div>
@@ -326,12 +381,12 @@
     <div v-else-if="localProperty.type === 'object'" class="space-y-4">
       <h4 class="text-sm font-medium text-content flex items-center">
         <Layers class="h-4 w-4 mr-2 text-orange-500" />
-        Group Settings
+        {{ $t('schemaEditor.property.group_settings') }}
       </h4>
 
       <!-- Required Properties -->
       <div>
-        <label :class="labelClass"> Required Fields </label>
+        <label :class="labelClass"> {{ $t('schemaEditor.property.required_fields') }} </label>
         <div class="space-y-2">
           <label
             v-for="(propSchema, propKey) in localProperty.properties"
@@ -352,7 +407,7 @@
           v-if="!localProperty.properties || Object.keys(localProperty.properties).length === 0"
           class="text-sm text-content-muted"
         >
-          Add properties to this group first
+          {{ $t('schemaEditor.property.add_properties_first') }}
         </p>
       </div>
 
@@ -363,18 +418,22 @@
             type="checkbox"
             class="rounded border-strong text-primary focus:ring-ring"
           />
-          <span class="text-sm font-medium text-content-muted">Allow additional properties</span>
+          <span class="text-sm font-medium text-content-muted">{{
+            $t('schemaEditor.property.allow_additional')
+          }}</span>
         </label>
       </div>
     </div>
 
     <!-- Common Settings -->
     <div class="space-y-4 pt-4 border-t">
-      <h4 class="text-sm font-medium text-content">Additional Settings</h4>
+      <h4 class="text-sm font-medium text-content">
+        {{ $t('schemaEditor.property.additional_settings') }}
+      </h4>
 
       <div>
         <label :class="labelClass" :for="hasDefaultInput ? `${uid}-default` : undefined">
-          Default Value
+          {{ $t('schemaEditor.property.default_value') }}
         </label>
         <div v-if="localProperty.type === 'boolean'" class="flex items-center space-x-4">
           <label class="flex items-center space-x-2">
@@ -385,7 +444,9 @@
               class="border-strong text-primary focus:ring-ring"
               @change="localProperty.default = undefined"
             />
-            <span class="text-sm text-content-muted">No default</span>
+            <span class="text-sm text-content-muted">{{
+              $t('schemaEditor.property.no_default')
+            }}</span>
           </label>
           <label class="flex items-center space-x-2">
             <input
@@ -394,7 +455,7 @@
               :value="true"
               class="border-strong text-primary focus:ring-ring"
             />
-            <span class="text-sm text-content-muted">True</span>
+            <span class="text-sm text-content-muted">{{ $t('schemaEditor.property.true') }}</span>
           </label>
           <label class="flex items-center space-x-2">
             <input
@@ -403,7 +464,7 @@
               :value="false"
               class="border-strong text-primary focus:ring-ring"
             />
-            <span class="text-sm text-content-muted">False</span>
+            <span class="text-sm text-content-muted">{{ $t('schemaEditor.property.false') }}</span>
           </label>
         </div>
         <input
@@ -412,7 +473,7 @@
           v-model="localProperty.default"
           type="text"
           :class="inputClass"
-          placeholder="No default value"
+          :placeholder="$t('schemaEditor.property.no_default_value')"
         />
         <input
           v-else-if="localProperty.type === 'number'"
@@ -420,16 +481,18 @@
           v-model.number="localProperty.default"
           type="number"
           :class="inputClass"
-          placeholder="No default value"
+          :placeholder="$t('schemaEditor.property.no_default_value')"
         />
         <p v-else class="text-sm text-content-muted">
-          Default values for {{ localProperty.type }} must be set in raw JSON mode
+          {{ $t('schemaEditor.property.default_raw_json', { type: localProperty.type }) }}
         </p>
       </div>
 
       <!-- Advanced Features -->
       <div v-if="advancedMode" class="space-y-4 pt-4 border-t">
-        <h4 class="text-sm font-medium text-content">Advanced Features</h4>
+        <h4 class="text-sm font-medium text-content">
+          {{ $t('schemaEditor.property.advanced_features') }}
+        </h4>
 
         <!-- Read Only -->
         <label class="flex items-center space-x-2">
@@ -438,18 +501,22 @@
             type="checkbox"
             class="rounded border-strong text-primary focus:ring-ring"
           />
-          <span class="text-sm font-medium text-content-muted">Read-only field</span>
+          <span class="text-sm font-medium text-content-muted">{{
+            $t('schemaEditor.property.read_only')
+          }}</span>
         </label>
 
         <!-- Examples -->
         <div>
-          <label :class="labelClass" :for="`${uid}-examples`"> Examples </label>
+          <label :class="labelClass" :for="`${uid}-examples`">
+            {{ $t('schemaEditor.property.examples') }}
+          </label>
           <textarea
             :id="`${uid}-examples`"
             v-model="examplesText"
             rows="2"
             :class="[textareaClass, 'font-mono']"
-            placeholder="Enter examples, one per line"
+            :placeholder="$t('schemaEditor.property.examples_placeholder')"
           />
         </div>
       </div>
@@ -459,6 +526,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, useId, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   CircleCheckBig,
   CircleHelp,
@@ -490,6 +558,8 @@ const emit = defineEmits<{
   'update-key': [key: string]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 // Unique per-instance prefix for label/input ids (the editor can be mounted
 // twice at once: inline in VisualSchemaEditor and inside EditPropertyModal).
 const uid = useId()
@@ -516,9 +586,9 @@ const onKeyInput = (value: string) => {
 }
 const keyError = computed<string | null>(() => {
   const key = keyDraft.value.trim()
-  if (!key) return 'A key is required'
+  if (!key) return t('schemaEditor.property.key_required')
   if (!KEY_PATTERN.test(key)) {
-    return 'Only letters, numbers and underscores — must not start with a number (e.g., patient_name)'
+    return t('schemaEditor.property.key_invalid')
   }
   return null
 })

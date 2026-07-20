@@ -13,7 +13,7 @@
           {{ actionTitle }}
         </h3>
         <p class="mt-1 text-sm text-content-muted">
-          {{ documents.length }} {{ entityLabel }}{{ documents.length !== 1 ? 's' : '' }} selected
+          {{ $t('documents.batch.selected', { count: documents.length, entity: entityNoun }) }}
         </p>
       </div>
     </template>
@@ -28,44 +28,49 @@
           :class="checkboxClass"
         />
         <label for="batch-force-reprocess" class="ml-2 text-sm text-content-muted">
-          Force reprocess (ignore existing results)
+          {{ $t('documents.batch.force_reprocess') }}
         </label>
       </div>
       <Callout variant="info">
         <p class="text-sm">
-          Reprocessing runs on the whole source file, not individual rows — selecting documents from
-          a row-by-row CSV/XLSX import reprocesses every row of that file.
+          {{ $t('documents.batch.reprocess_note') }}
         </p>
       </Callout>
     </div>
 
     <!-- Export Action -->
     <div v-else-if="action === 'export'" class="space-y-4">
-      <p class="text-sm text-content-muted">Choose export format and options:</p>
+      <p class="text-sm text-content-muted">{{ $t('documents.batch.export_choose') }}</p>
       <div>
-        <label for="batch-export-format" :class="labelClass"> Export Format </label>
+        <label for="batch-export-format" :class="labelClass">
+          {{ $t('documents.batch.export_format_label') }}
+        </label>
         <select id="batch-export-format" v-model="exportFormat" :class="selectClass">
           <option value="json">JSON</option>
           <option value="csv">CSV</option>
-          <option value="txt">Plain Text</option>
-          <option value="pdf">PDF (with text layer)</option>
+          <option value="txt">{{ $t('documents.batch.export_format_txt') }}</option>
+          <option value="pdf">{{ $t('documents.batch.export_format_pdf') }}</option>
         </select>
       </div>
       <div class="space-y-2">
         <label class="flex items-center">
           <input v-model="includeMetadata" type="checkbox" :class="checkboxClass" />
-          <span class="ml-2 text-sm text-content-muted">Include metadata</span>
+          <span class="ml-2 text-sm text-content-muted">{{
+            $t('documents.batch.include_metadata')
+          }}</span>
         </label>
         <label class="flex items-center">
           <input v-model="includePreprocessingInfo" type="checkbox" :class="checkboxClass" />
-          <span class="ml-2 text-sm text-content-muted">Include preprocessing information</span>
+          <span class="ml-2 text-sm text-content-muted">{{
+            $t('documents.batch.include_preprocessing')
+          }}</span>
         </label>
       </div>
     </div>
 
     <!-- Delete Action -->
     <div v-else-if="action === 'delete'" class="space-y-4">
-      <Callout variant="danger" title="Warning: This action cannot be undone">
+      <Callout variant="danger" :title="$t('documents.batch.warning_title')">
         <p class="mt-1">{{ deleteWarningText }}</p>
       </Callout>
 
@@ -79,24 +84,28 @@
           />
           <span class="ml-2 text-sm text-content-muted">{{ cascadeLabel }}</span>
         </label>
-        <p v-if="loadingDeps" class="mt-2 text-xs text-content-subtle">Checking usage…</p>
+        <p v-if="loadingDeps" class="mt-2 text-xs text-content-subtle">
+          {{ $t('documents.batch.checking_usage') }}
+        </p>
         <p v-else-if="depsPreviewUnavailable" class="mt-2 text-xs text-content-muted">
-          Usage preview is unavailable for selections over
-          {{ DEPS_PREVIEW_LIMIT.toLocaleString() }} {{ entityLabel }}s — the option above still
-          applies to the whole selection.
+          {{
+            $t('documents.batch.deps_preview_unavailable', {
+              limit: DEPS_PREVIEW_LIMIT.toLocaleString(),
+              entity: entityPlural,
+            })
+          }}
         </p>
         <p v-else-if="cascadeDelete && dependencyImpact" class="mt-2 text-xs text-red-600">
-          This will also delete {{ dependencyImpact }}.
+          {{ $t('documents.batch.will_also_delete', { impact: dependencyImpact }) }}
         </p>
         <p
           v-else-if="cascadeDelete && dependencies && !dependencyImpact"
           class="mt-2 text-xs text-content-subtle"
         >
-          These {{ entityLabel }}s aren't used anywhere else.
+          {{ $t('documents.batch.not_used_elsewhere', { entity: entityPlural }) }}
         </p>
         <p v-else-if="!cascadeDelete && dependencyImpact" class="mt-2 text-xs text-content-subtle">
-          In use by {{ dependencyImpact }}. Enable the option above to remove them too, otherwise
-          deletion will be blocked.
+          {{ $t('documents.batch.in_use_by', { impact: dependencyImpact }) }}
         </p>
       </div>
 
@@ -108,7 +117,7 @@
           :class="[checkboxClass, 'text-red-600 focus:ring-red-500']"
         />
         <label for="batch-confirm-delete" class="ml-2 text-sm text-content-muted">
-          I understand that this action is permanent
+          {{ $t('documents.batch.confirm_permanent') }}
         </label>
       </div>
     </div>
@@ -119,11 +128,16 @@
         class="mr-auto self-center text-sm text-content-muted"
         role="status"
       >
-        {{ progressVerb }} {{ progress.done.toLocaleString() }} of
-        {{ progress.total.toLocaleString() }}…
+        {{
+          $t('documents.batch.progress', {
+            verb: progressVerb,
+            done: progress.done.toLocaleString(),
+            total: progress.total.toLocaleString(),
+          })
+        }}
       </p>
       <BaseButton variant="secondary" :disabled="isProcessing" @click="requestClose">
-        Cancel
+        {{ $t('documents.actions.cancel') }}
       </BaseButton>
       <BaseButton
         :variant="action === 'delete' ? 'danger' : 'primary'"
@@ -131,7 +145,7 @@
         :loading="isProcessing"
         @click="performAction"
       >
-        {{ isProcessing ? 'Processing...' : actionButtonText }}
+        {{ isProcessing ? $t('documents.batch.processing') : actionButtonText }}
       </BaseButton>
     </template>
   </BaseModal>
@@ -139,6 +153,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
@@ -171,7 +186,21 @@ const emit = defineEmits<{
   complete: []
   deleted: [ids: number[]]
 }>()
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
+
+// Count-aware entity noun keyed by mode; used across titles, counts, and toasts.
+const entityKey = computed(() =>
+  props.mode === 'trials'
+    ? 'documents.batch.entity_trial'
+    : props.mode === 'files'
+      ? 'documents.batch.entity_file'
+      : 'documents.batch.entity_document',
+)
+// Noun agreeing with the current selection size, plus fixed singular/plural.
+const entityNoun = computed(() => t(entityKey.value, props.documents.length))
+const entityPlural = computed(() => t(entityKey.value, 2))
+const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
 
 // Form state
 const forceReprocess = ref<boolean>(false)
@@ -184,7 +213,11 @@ const isProcessing = ref<boolean>(false)
 const progress = ref<{ done: number; total: number } | null>(null)
 // Verb for the footer progress counter — deletes delete, reprocess first
 // resolves each document to its source file.
-const progressVerb = computed(() => (props.action === 'reprocess' ? 'Resolving' : 'Deleting'))
+const progressVerb = computed(() =>
+  props.action === 'reprocess'
+    ? t('documents.batch.verb_resolving')
+    : t('documents.batch.verb_deleting'),
+)
 
 // Cascade-delete state (documents & files modes)
 const cascadeDelete = ref<boolean>(false)
@@ -234,7 +267,10 @@ watch(
       dependencies.value = data
     } catch (error) {
       // Non-fatal: the checkbox still works, just without a preview.
-      console.error(extractErrorMessage(error, 'Failed to check usage'), error)
+      console.error(
+        extractErrorMessage(error, t('documents.batch.toast_check_usage_failed')),
+        error,
+      )
     } finally {
       loadingDeps.value = false
     }
@@ -247,68 +283,60 @@ const dependencyImpact = computed<string>(() => {
   const d = dependencies.value
   if (!d) return ''
   const parts: string[] = []
-  const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+  const impact = (n: number, key: string) => t(`documents.batch.${key}`, { count: n }, n)
   // Files delete their produced documents too; show that first.
-  if ('documents' in d && d.documents) parts.push(plural(d.documents, 'document'))
-  if (d.trials.count) parts.push(plural(d.trials.count, 'trial'))
+  if ('documents' in d && d.documents) parts.push(impact(d.documents, 'impact_document'))
+  if (d.trials.count) parts.push(impact(d.trials.count, 'impact_trial'))
   // Groups lose the deleted documents (and are removed only if left empty).
-  if (d.document_sets.count) parts.push(plural(d.document_sets.count, 'group membership'))
-  if (d.trial_results) parts.push(plural(d.trial_results, 'extraction result'))
-  if (d.evaluation_metrics) parts.push(plural(d.evaluation_metrics, 'evaluation metric'))
+  if (d.document_sets.count) parts.push(impact(d.document_sets.count, 'impact_group_membership'))
+  if (d.trial_results) parts.push(impact(d.trial_results, 'impact_extraction_result'))
+  if (d.evaluation_metrics) parts.push(impact(d.evaluation_metrics, 'impact_evaluation_metric'))
   return parts.join(', ')
 })
 
 // Computed
-const entityLabel = computed(() => {
-  if (props.mode === 'trials') return 'trial'
-  if (props.mode === 'files') return 'file'
-  return 'document'
-})
-
 const cascadeLabel = computed(() =>
   props.mode === 'files'
-    ? 'Also delete produced documents and their trials and extraction results, and remove them from groups'
-    : 'Also delete related trials and extraction results, and remove the documents from groups',
+    ? t('documents.batch.cascade_files')
+    : t('documents.batch.cascade_default'),
 )
 
 const deleteWarningText = computed(() => {
   switch (props.mode) {
     case 'trials':
-      return 'The selected trials and their results will be permanently deleted.'
+      return t('documents.batch.warn_trials')
     case 'files':
-      return 'The selected files and their preprocessing results will be permanently deleted.'
+      return t('documents.batch.warn_files')
     default:
-      return 'The selected documents and their preprocessing results will be permanently deleted.'
+      return t('documents.batch.warn_documents')
   }
 })
 
 const actionTitle = computed(() => {
-  const entity = entityLabel.value
-  const capEntity = entity.charAt(0).toUpperCase() + entity.slice(1)
+  const entity = capitalize(entityPlural.value)
   switch (props.action) {
     case 'reprocess':
-      return `Reprocess ${capEntity}s`
+      return t('documents.batch.title_reprocess', { entity })
     case 'export':
-      return `Export ${capEntity}s`
+      return t('documents.batch.title_export', { entity })
     case 'delete':
-      return `Delete ${capEntity}s`
+      return t('documents.batch.title_delete', { entity })
     default:
-      return 'Batch Action'
+      return t('documents.batch.title_default')
   }
 })
 
 const actionButtonText = computed(() => {
-  const entity = entityLabel.value
-  const capEntity = entity.charAt(0).toUpperCase() + entity.slice(1)
+  const entity = capitalize(entityPlural.value)
   switch (props.action) {
     case 'reprocess':
-      return 'Start Reprocessing'
+      return t('documents.batch.button_start_reprocessing')
     case 'export':
-      return 'Export'
+      return t('documents.batch.button_export')
     case 'delete':
-      return `Delete ${capEntity}s`
+      return t('documents.batch.button_delete', { entity })
     default:
-      return 'Confirm'
+      return t('documents.batch.button_confirm')
   }
 })
 
@@ -348,7 +376,7 @@ const performAction = async (): Promise<void> => {
   } catch (error) {
     // Don't show generic error for delete - specific errors already shown
     if (props.action !== 'delete') {
-      toast.error(`Failed to ${props.action} ${entityLabel.value}s`)
+      toast.error(t('documents.batch.toast_action_failed', { entity: entityPlural.value }))
       console.error(error)
     }
   } finally {
@@ -406,7 +434,7 @@ const reprocessDocuments = async (): Promise<void> => {
   const totalFiles = new Set<number>()
   byConfig.forEach((g) => g.fileIds.forEach((id) => totalFiles.add(id)))
   if (totalFiles.size === 0) {
-    toast.error('Could not resolve the selected documents to any files.')
+    toast.error(t('documents.batch.toast_no_files'))
     return
   }
   const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ')
@@ -422,12 +450,12 @@ const reprocessDocuments = async (): Promise<void> => {
     await preprocessingApi.create(props.projectId, taskData)
   }
   toast.success(
-    `Reprocessing task started for ${totalFiles.size} file${totalFiles.size !== 1 ? 's' : ''}`,
+    t('documents.batch.toast_reprocess_started', { count: totalFiles.size }, totalFiles.size),
   )
 }
 
 const exportDocuments = async (): Promise<void> => {
-  toast.info('Export functionality would be implemented here')
+  toast.info(t('documents.batch.toast_export_stub'))
 }
 
 interface FailedDoc {
@@ -448,7 +476,7 @@ const deleteDocuments = async (): Promise<number[]> => {
   const failedDocs: FailedDoc[] = []
   const successDocs: number[] = []
   const useCascade = supportsCascade.value && cascadeDelete.value
-  const label = entityLabel.value
+  const entityOne = t(entityKey.value, 1)
   progress.value = { done: 0, total: props.documents.length }
 
   if (props.mode === 'files') {
@@ -462,12 +490,18 @@ const deleteDocuments = async (): Promise<number[]> => {
         for (const err of data.errors) {
           failedDocs.push({
             docId: err.file_id,
-            error: batchErrorText(err.error, `Failed to delete ${label}`),
+            error: batchErrorText(
+              err.error,
+              t('documents.batch.delete_failed_fallback', { entity: entityOne }),
+            ),
           })
         }
       } catch (error) {
         // Whole-chunk failure (network, 4xx before any delete ran).
-        const message = extractErrorMessage(error, `Failed to delete ${label}s`)
+        const message = extractErrorMessage(
+          error,
+          t('documents.batch.delete_failed_fallback', { entity: entityPlural.value }),
+        )
         failedDocs.push(...chunk.map((docId) => ({ docId, error: message })))
       }
       progress.value = {
@@ -487,7 +521,10 @@ const deleteDocuments = async (): Promise<number[]> => {
       } catch (error) {
         failedDocs.push({
           docId,
-          error: extractErrorMessage(error, `Failed to delete ${label}`),
+          error: extractErrorMessage(
+            error,
+            t('documents.batch.delete_failed_fallback', { entity: entityOne }),
+          ),
         })
       }
       progress.value = {
@@ -499,27 +536,43 @@ const deleteDocuments = async (): Promise<number[]> => {
 
   const successCount = successDocs.length
   if (successCount > 0) {
-    toast.success(`${successCount} ${label}${successCount !== 1 ? 's' : ''} deleted successfully`)
+    toast.success(
+      t(
+        'documents.batch.deleted_success',
+        { count: successCount, entity: t(entityKey.value, successCount) },
+        successCount,
+      ),
+    )
     // Emit successfully deleted IDs so parent can update selection
     emit('deleted', successDocs)
   }
 
   if (failedDocs.length > 0) {
-    console.error(`Failed to delete ${label}s:`, failedDocs)
+    console.error('Failed to delete items:', failedDocs)
     // One summary toast instead of one per failed item. Surface the first
     // error verbatim, note how many more, and add the document-set hint if any
     // failure was caused by a set membership.
     const first = failedDocs[0]
-    const more = failedDocs.length > 1 ? ` (+${failedDocs.length - 1} more)` : ''
+    const more =
+      failedDocs.length > 1
+        ? ' ' + t('documents.batch.more_count', { count: failedDocs.length - 1 })
+        : ''
     const hint = failedDocs.some((f) => f.error.includes('document sets'))
-      ? ' Go to the Document Groups tab to manage.'
+      ? ' ' + t('documents.batch.hint_manage')
       : ''
     // The backend error text says "document sets"; the UI-facing term is
     // "document groups" — normalize so one toast doesn't mix both.
     const firstError = first.error.replace(/document set(s?)/gi, 'document group$1')
     toast.error(
-      `Failed to delete ${failedDocs.length} ${label}${failedDocs.length !== 1 ? 's' : ''}: ` +
-        `#${first.docId} — ${firstError}${more}.${hint}`,
+      t('documents.batch.delete_failed_summary', {
+        count: failedDocs.length,
+        entity: t(entityKey.value, failedDocs.length),
+        id: first.docId,
+        error: firstError,
+      }) +
+        more +
+        '.' +
+        hint,
     )
     // Don't throw - close modal anyway but parent will know what was deleted
   }

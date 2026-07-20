@@ -11,8 +11,8 @@
     :sort-by="sortBy"
     :sort-order="sortOrder"
     :pagination="pagination"
-    item-label="documents"
-    empty-title="No documents found"
+    :item-label="$t('documents.filters.item_label')"
+    :empty-title="$t('documents.table.empty_title')"
     @toggle-selection="$emit('toggle-selection', $event as number)"
     @toggle-all="$emit('toggle-select-all')"
     @select-all="$emit('select-all-documents')"
@@ -26,7 +26,11 @@
         <FileIcon :file-type="doc.original_file?.file_type" :size="40" />
         <div class="ml-3">
           <p class="text-sm font-medium text-content truncate max-w-xs">
-            {{ doc.document_name || doc.original_file?.file_name || `Document #${doc.id}` }}
+            {{
+              doc.document_name ||
+              doc.original_file?.file_name ||
+              $t('documents.common.document_number', { id: doc.id })
+            }}
           </p>
           <p
             v-if="
@@ -47,7 +51,7 @@
 
     <template #cell-configuration="{ row: doc }">
       <div class="text-sm text-content">
-        {{ doc.preprocessing_config?.name || 'Custom Config' }}
+        {{ doc.preprocessing_config?.name || $t('documents.table.custom_config') }}
       </div>
       <div v-if="getOcrDisplay(doc as DocumentListItem)" class="text-xs text-content-muted">
         {{ getOcrDisplay(doc as DocumentListItem) }}
@@ -70,8 +74,8 @@
       <BaseButton
         variant="icon"
         tone="blue"
-        title="View"
-        aria-label="View"
+        :title="$t('documents.actions.view')"
+        :aria-label="$t('documents.actions.view')"
         @click.stop="$emit('view', doc as DocumentListItem)"
       >
         <Eye class="w-5 h-5" aria-hidden="true" />
@@ -79,8 +83,8 @@
       <BaseButton
         variant="icon"
         tone="gray"
-        title="Download"
-        aria-label="Download"
+        :title="$t('documents.actions.download')"
+        :aria-label="$t('documents.actions.download')"
         @click.stop="$emit('download', doc as DocumentListItem)"
       >
         <CloudDownload class="w-5 h-5" aria-hidden="true" />
@@ -90,6 +94,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CloudDownload, Eye } from '@lucide/vue'
 import FileIcon from '@/components/common/FileIcon.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -126,6 +132,8 @@ withDefaults(defineProps<Props>(), {
   sortOrder: 'desc',
 })
 
+const { t } = useI18n({ useScope: 'global' })
+
 defineEmits<{
   'toggle-select-all': []
   'toggle-selection': [id: number]
@@ -140,12 +148,12 @@ defineEmits<{
 
 // Only `created_at` is sortable: the documents list endpoint supports ordering
 // solely by creation time (sort=created_asc|created_desc).
-const columns = [
-  { key: 'document', label: 'Document' },
-  { key: 'configuration', label: 'Configuration' },
-  { key: 'model', label: 'Model' },
-  { key: 'created_at', label: 'Created', sortable: true },
-]
+const columns = computed(() => [
+  { key: 'document', label: t('documents.table.col_document') },
+  { key: 'configuration', label: t('documents.table.col_configuration') },
+  { key: 'model', label: t('documents.table.col_model') },
+  { key: 'created_at', label: t('documents.table.col_created'), sortable: true },
+])
 
 const getModelName = (doc: DocumentListItem): string => {
   const metaData = doc.meta_data || ({} as DocumentMetaData)
@@ -226,7 +234,7 @@ const getOcrDisplay = (doc: DocumentListItem): string | null => {
           return label
         }
       }
-      return 'OCR Applied'
+      return t('documents.table.ocr_applied')
     }
   }
 

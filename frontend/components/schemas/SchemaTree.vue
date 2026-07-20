@@ -13,7 +13,7 @@
           @click="$emit('navigate', [])"
         >
           <Home class="h-4 w-4" />
-          <span>Root</span>
+          <span>{{ $t('schemaEditor.tree.root') }}</span>
           <span class="text-xs text-content-muted">{{ schema.type }}</span>
         </button>
 

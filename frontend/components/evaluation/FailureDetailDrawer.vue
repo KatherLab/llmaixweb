@@ -1,7 +1,7 @@
 <template>
   <SlideOver
     :open="open"
-    aria-label="Failure details"
+    :aria-label="$t('evaluation.drawer.aria_label')"
     max-width="max-w-[95rem]"
     @close="$emit('close')"
   >
@@ -9,21 +9,38 @@
       <div class="flex items-center justify-between gap-4 flex-1 min-w-0 pr-8">
         <div class="min-w-0">
           <h3 class="text-lg font-semibold text-content truncate">
-            {{ documentName || `Document #${documentId}` }}
+            {{ documentName || $t('evaluation.drawer.document_number', { number: documentId }) }}
           </h3>
           <p class="text-xs text-content-subtle mt-0.5">
             <span :class="statusClass">{{ statusLabel }}</span>
             <span v-if="docEval">
-              · {{ docEval.correct_fields }}/{{ docEval.total_fields }} fields correct</span
+              ·
+              {{
+                $t('evaluation.drawer.fields_correct', {
+                  correct: docEval.correct_fields,
+                  total: docEval.total_fields,
+                })
+              }}</span
             >
-            <span v-if="docEval"> · {{ formatMetricPercent(docEval.accuracy) }} accuracy</span>
+            <span v-if="docEval">
+              ·
+              {{
+                $t('evaluation.drawer.accuracy_suffix', {
+                  value: formatMetricPercent(docEval.accuracy),
+                })
+              }}</span
+            >
           </p>
         </div>
         <div class="flex items-center gap-1 shrink-0">
           <BaseButton
             variant="ghost"
             size="sm"
-            :title="leftRailOpen ? 'Hide document list' : 'Show document list'"
+            :title="
+              leftRailOpen
+                ? $t('evaluation.drawer.hide_doc_list')
+                : $t('evaluation.drawer.show_doc_list')
+            "
             @click="leftRailOpen = !leftRailOpen"
           >
             <PanelLeft class="h-4 w-4" />
@@ -32,7 +49,11 @@
             variant="secondary"
             size="sm"
             :disabled="!hasPrev"
-            :title="hasPrev ? 'Previous document (←)' : 'First document'"
+            :title="
+              hasPrev
+                ? $t('evaluation.drawer.prev_document')
+                : $t('evaluation.drawer.first_document')
+            "
             @click="$emit('prev')"
           >
             <ChevronLeft class="h-4 w-4" />
@@ -44,7 +65,11 @@
             variant="secondary"
             size="sm"
             :disabled="!hasNext"
-            :title="hasNext ? 'Next document (→)' : 'Last document'"
+            :title="
+              hasNext
+                ? $t('evaluation.drawer.next_document')
+                : $t('evaluation.drawer.last_document')
+            "
             @click="$emit('next')"
           >
             <ChevronRight class="h-4 w-4" />
@@ -68,7 +93,10 @@
       >
         <div v-show="leftRailOpen" class="flex flex-col h-full min-w-0">
           <div class="p-3 border-b border-default shrink-0">
-            <SearchInput v-model="railSearch" placeholder="Search documents…" />
+            <SearchInput
+              v-model="railSearch"
+              :placeholder="$t('evaluation.drawer.search_documents')"
+            />
           </div>
           <div class="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
             <button
@@ -88,7 +116,8 @@
                   :class="['h-1.5 w-1.5 rounded-full shrink-0', accuracyDotClass(d.accuracy)]"
                 />
                 <span class="text-sm text-content truncate flex-1">{{
-                  d.document_name || `Document #${d.document_id}`
+                  d.document_name ||
+                  $t('evaluation.drawer.document_number', { number: d.document_id })
                 }}</span>
               </div>
               <div class="flex items-center gap-2 mt-0.5 pl-3.5">
@@ -104,13 +133,13 @@
               v-if="!railDocs.length"
               class="flex flex-col items-center justify-center py-8 px-3 text-center"
             >
-              <p class="text-xs text-content-subtle">No documents match your search.</p>
+              <p class="text-xs text-content-subtle">{{ $t('evaluation.drawer.no_docs_match') }}</p>
               <button
                 type="button"
                 class="mt-2 text-xs font-medium text-primary hover:underline"
                 @click="railSearch = ''"
               >
-                Clear search
+                {{ $t('evaluation.drawer.clear_search') }}
               </button>
             </div>
           </div>
@@ -132,14 +161,18 @@
                 class="flex items-center justify-between gap-2 px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
               >
                 <h4 class="flex items-center gap-2 text-sm font-semibold text-content-muted">
-                  <FileText class="h-4 w-4" /> Source Document
+                  <FileText class="h-4 w-4" /> {{ $t('evaluation.drawer.source_document') }}
                 </h4>
                 <button
                   v-if="hasPreviewableFile"
                   class="text-xs text-primary hover:underline"
                   @click="toggleOriginalView"
                 >
-                  {{ viewMode === 'text' ? 'Show original file' : 'Show extracted text' }}
+                  {{
+                    viewMode === 'text'
+                      ? $t('evaluation.drawer.show_original')
+                      : $t('evaluation.drawer.show_extracted')
+                  }}
                 </button>
               </div>
               <div class="flex-1 min-h-0 bg-surface-muted">
@@ -161,8 +194,7 @@
                     documentText
                   }}</pre>
                   <p v-else class="text-xs text-content-subtle italic">
-                    No preview available for this file type. Showing extracted text instead — but
-                    none was extracted during preprocessing.
+                    {{ $t('evaluation.drawer.no_preview') }}
                   </p>
                 </div>
               </div>
@@ -175,15 +207,21 @@
               <h4
                 class="flex items-center gap-2 text-sm font-semibold text-content-muted px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
               >
-                <GitCompare class="h-4 w-4" /> Expected vs Predicted
+                <GitCompare class="h-4 w-4" /> {{ $t('evaluation.drawer.expected_vs_predicted') }}
               </h4>
               <div class="flex-1 min-h-0 overflow-auto bg-surface">
                 <table class="w-full text-xs">
                   <thead class="sticky top-0 bg-surface-muted">
                     <tr>
-                      <th class="p-2 text-left font-medium text-content-muted">Field</th>
-                      <th class="p-2 text-left font-medium text-content-muted">Expected</th>
-                      <th class="p-2 text-left font-medium text-content-muted">Got</th>
+                      <th class="p-2 text-left font-medium text-content-muted">
+                        {{ $t('evaluation.drawer.col_field') }}
+                      </th>
+                      <th class="p-2 text-left font-medium text-content-muted">
+                        {{ $t('evaluation.drawer.col_expected') }}
+                      </th>
+                      <th class="p-2 text-left font-medium text-content-muted">
+                        {{ $t('evaluation.drawer.col_got') }}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -245,7 +283,7 @@
                     </tr>
                     <tr v-if="!Object.keys(fieldDetails).length">
                       <td colspan="3" class="p-4 text-center text-content-subtle italic">
-                        No field-level comparison available.
+                        {{ $t('evaluation.drawer.no_comparison') }}
                       </td>
                     </tr>
                   </tbody>
@@ -260,7 +298,7 @@
               <h4
                 class="flex items-center gap-2 text-sm font-semibold text-content-muted px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
               >
-                <Braces class="h-4 w-4" /> Output
+                <Braces class="h-4 w-4" /> {{ $t('evaluation.drawer.output') }}
               </h4>
               <div class="flex-1 min-h-0 overflow-auto bg-surface p-4">
                 <div
@@ -271,7 +309,7 @@
                 </div>
                 <JsonViewer v-else-if="trialResult?.result" :data="trialResult.result" />
                 <p v-else class="text-xs text-content-subtle italic">
-                  No structured result was produced for this document.
+                  {{ $t('evaluation.drawer.no_result') }}
                 </p>
               </div>
             </div>
@@ -283,7 +321,7 @@
               <h4
                 class="flex items-center gap-2 text-sm font-semibold text-content-muted px-3 py-2 border-b border-default bg-surface-muted/60 shrink-0"
               >
-                <MessageSquare class="h-4 w-4" /> Reasoning
+                <MessageSquare class="h-4 w-4" /> {{ $t('evaluation.drawer.reasoning') }}
               </h4>
               <div class="flex-1 min-h-0 overflow-auto bg-surface p-4">
                 <div
@@ -292,7 +330,7 @@
                   v-html="renderMarkdown(reasoningContent)"
                 ></div>
                 <div v-else class="text-sm text-content-muted italic">
-                  No reasoning content was captured for this document.
+                  {{ $t('evaluation.drawer.no_reasoning') }}
                 </div>
               </div>
             </div>
@@ -304,10 +342,14 @@
     <template #footer>
       <div class="flex items-center justify-between w-full">
         <p class="text-xs text-content-subtle">
-          Tip: use <kbd class="px-1 py-0.5 bg-surface-sunken rounded">←</kbd> /
-          <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd> to move between documents.
+          {{ $t('evaluation.drawer.tip_prefix') }}
+          <kbd class="px-1 py-0.5 bg-surface-sunken rounded">←</kbd> /
+          <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd>
+          {{ $t('evaluation.drawer.tip_suffix') }}
         </p>
-        <BaseButton variant="secondary" @click="$emit('close')">Close</BaseButton>
+        <BaseButton variant="secondary" @click="$emit('close')">{{
+          $t('evaluation.drawer.close')
+        }}</BaseButton>
       </div>
     </template>
   </SlideOver>
@@ -315,6 +357,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, type PropType } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   Braces,
   Check,
@@ -395,6 +438,8 @@ defineEmits<{
   'select-doc': [documentId: number]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 // Active panels in the PanelLayout (order = left-to-right). Default to the
 // GT-vs-prediction comparison — that's the eval use case. Source is prepended
 // when original content arrives.
@@ -460,10 +505,12 @@ const viewMode = computed(() => {
 })
 
 const statusLabel = computed(() => {
-  if (props.docEval?.has_error || props.docEval?.error) return 'Evaluation error'
-  if (props.docEval && props.docEval.accuracy >= ACCURACY_THRESHOLDS.HIGH) return 'High accuracy'
-  if (props.docEval && props.docEval.accuracy < ACCURACY_THRESHOLDS.LOW) return 'Low accuracy'
-  return 'Partial'
+  if (props.docEval?.has_error || props.docEval?.error) return t('evaluation.drawer.status_error')
+  if (props.docEval && props.docEval.accuracy >= ACCURACY_THRESHOLDS.HIGH)
+    return t('evaluation.drawer.status_high')
+  if (props.docEval && props.docEval.accuracy < ACCURACY_THRESHOLDS.LOW)
+    return t('evaluation.drawer.status_low')
+  return t('evaluation.drawer.status_partial')
 })
 
 const statusClass = computed(() => {

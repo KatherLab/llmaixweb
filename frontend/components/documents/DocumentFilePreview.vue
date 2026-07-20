@@ -5,7 +5,7 @@
       :src="originalPdfUrl"
       class="w-full h-full"
       frameborder="0"
-      title="Original PDF"
+      :title="$t('documents.file_preview.original_pdf')"
     ></iframe>
   </div>
   <!-- Image View (for original image files) -->
@@ -13,7 +13,7 @@
     <div class="flex items-center justify-center h-full">
       <img
         :src="originalImageUrl"
-        alt="Original document"
+        :alt="$t('documents.file_preview.original_document')"
         class="max-w-full max-h-full object-contain shadow-lg rounded-card"
       />
     </div>

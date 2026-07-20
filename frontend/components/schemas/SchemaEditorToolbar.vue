@@ -8,7 +8,7 @@
           class="text-content-muted hover:text-content font-medium"
           @click="$emit('navigate-to-root')"
         >
-          Root
+          {{ $t('schemaEditor.tree.root') }}
         </button>
         <template v-for="(segment, index) in navigationPath" :key="index">
           <ChevronRight class="h-4 w-4 text-content-subtle" />
@@ -28,7 +28,7 @@
       <button
         type="button"
         class="p-2 text-content-muted hover:text-content hover:bg-surface-muted rounded-card"
-        title="Help"
+        :title="$t('schemaEditor.toolbar.help')"
         @click="$emit('show-help')"
       >
         <CircleHelp class="h-5 w-5" />

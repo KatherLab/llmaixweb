@@ -15,6 +15,7 @@
 
 <script setup lang="ts">
 import { computed, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { FileText, Globe, Zap } from '@lucide/vue'
 import { getPillClass } from '@/utils/statusStyles'
 import type { DocumentListItem } from '@/types'
@@ -24,6 +25,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t } = useI18n({ useScope: 'global' })
 
 interface ExtractionMethodInfo {
   label: string
@@ -50,9 +52,9 @@ const extractionMethodInfo = computed<ExtractionMethodInfo | null>(() => {
     (engineUsed === 'docling_serve' && !ocrApplied)
   ) {
     return {
-      label: 'Text Extraction',
+      label: t('documents.extraction.text_extraction'),
       color: 'blue',
-      description: 'Extracted from embedded PDF text (no OCR)',
+      description: t('documents.extraction.desc_text_no_ocr'),
       icon: FileText,
     }
   }
@@ -62,18 +64,18 @@ const extractionMethodInfo = computed<ExtractionMethodInfo | null>(() => {
     extractionMethod === 'docling_serve_tesseract_image_ocr'
   ) {
     return {
-      label: 'Local OCR',
+      label: t('documents.extraction.local_ocr'),
       color: 'green',
-      description: 'Processed with local Tesseract OCR',
+      description: t('documents.extraction.desc_local_ocr'),
       icon: Zap,
     }
   }
 
   if (extractionMethod === 'docling_serve_tesseract_force_ocr') {
     return {
-      label: 'Force OCR',
+      label: t('documents.extraction.force_ocr'),
       color: 'yellow',
-      description: 'Full-page OCR forced (even if embedded text exists)',
+      description: t('documents.extraction.desc_force_ocr'),
       icon: Zap,
     }
   }
@@ -82,7 +84,7 @@ const extractionMethodInfo = computed<ExtractionMethodInfo | null>(() => {
     return {
       label: 'Mistral OCR',
       color: 'purple',
-      description: 'Processed with Mistral AI OCR API',
+      description: t('documents.extraction.desc_mistral'),
       icon: Globe,
     }
   }
@@ -91,7 +93,7 @@ const extractionMethodInfo = computed<ExtractionMethodInfo | null>(() => {
     return {
       label: 'Vision LLM',
       color: 'blue',
-      description: 'Processed with Vision LLM API',
+      description: t('documents.extraction.desc_vision'),
       icon: Globe,
     }
   }
@@ -99,9 +101,9 @@ const extractionMethodInfo = computed<ExtractionMethodInfo | null>(() => {
   // Fallback for legacy methods
   if (extractionMethod?.includes('no_ocr')) {
     return {
-      label: 'Text Extraction',
+      label: t('documents.extraction.text_extraction'),
       color: 'blue',
-      description: 'Extracted from embedded PDF text',
+      description: t('documents.extraction.desc_text_embedded'),
       icon: FileText,
     }
   }
@@ -110,7 +112,7 @@ const extractionMethodInfo = computed<ExtractionMethodInfo | null>(() => {
     return {
       label: 'OCR',
       color: 'green',
-      description: 'Processed with OCR',
+      description: t('documents.extraction.desc_ocr_generic'),
       icon: Zap,
     }
   }

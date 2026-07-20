@@ -10,9 +10,12 @@
  * v-model: binds the password string.
  */
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Eye, EyeOff } from '@lucide/vue'
 import { inputClass, labelClass } from '@/utils/formStyles'
 import { useId } from 'vue'
+
+const { t } = useI18n({ useScope: 'global' })
 
 interface Props {
   modelValue?: string
@@ -33,7 +36,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
-  label: 'Password',
+  label: undefined,
   placeholder: '',
   autocomplete: 'new-password',
   required: false,
@@ -50,6 +53,14 @@ const emit = defineEmits<{ (e: 'update:modelValue', value: string): void }>()
 
 const inputId = useId()
 const show = ref(false)
+
+// Default the label to the translated "Password" when the caller doesn't
+// supply one. Resolved here (not in defineProps) because defineProps defaults
+// are hoisted outside setup() and can't reference the local `t`. Passing an
+// explicit empty string still hides the label.
+const resolvedLabel = computed(() =>
+  props.label === undefined ? t('common.password.label') : props.label,
+)
 
 const inputClasses = computed(() => [
   inputClass,
@@ -76,12 +87,18 @@ const strength = computed(() => {
   score += Math.max(0, classes - 1) // 0..3 from diversity
   // Clamp to 0..4
   score = Math.min(4, score)
-  const labels = ['Very weak', 'Weak', 'Okay', 'Good', 'Strong']
+  const labels = [
+    t('common.password.strength.very_weak'),
+    t('common.password.strength.weak'),
+    t('common.password.strength.okay'),
+    t('common.password.strength.good'),
+    t('common.password.strength.strong'),
+  ]
   const colors = ['bg-red-500', 'bg-red-400', 'bg-amber-400', 'bg-green-500', 'bg-green-600']
   // (status colors are intentional semantic shades, kept as-is)
   return {
     score,
-    label: pw.length < 8 ? 'Minimum 8 characters' : labels[score],
+    label: pw.length < 8 ? t('common.password.min_length', { count: 8 }) : labels[score],
     color: colors[score],
   }
 })
@@ -94,7 +111,7 @@ const segments = computed(() => {
 
 <template>
   <div>
-    <label v-if="label" :for="inputId" :class="labelClass">{{ label }}</label>
+    <label v-if="resolvedLabel" :for="inputId" :class="labelClass">{{ resolvedLabel }}</label>
     <div class="relative">
       <input
         :id="inputId"
@@ -112,7 +129,7 @@ const segments = computed(() => {
       <button
         type="button"
         class="absolute inset-y-0 right-0 flex items-center pr-3 text-content-subtle hover:text-content"
-        :aria-label="show ? 'Hide password' : 'Show password'"
+        :aria-label="show ? $t('common.password.hide') : $t('common.password.show')"
         :aria-pressed="show"
         tabindex="-1"
         @click="show = !show"

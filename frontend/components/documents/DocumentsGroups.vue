@@ -6,15 +6,18 @@
       <div class="flex items-center space-x-4">
         <BaseButton variant="primary" @click="showCreateModal = true">
           <Plus class="w-5 h-5" />
-          Create Group
+          {{ $t('documents.actions.create_group') }}
         </BaseButton>
 
-        <SearchInput v-model="searchQuery" placeholder="Search groups..." />
+        <SearchInput
+          v-model="searchQuery"
+          :placeholder="$t('documents.groups.search_placeholder')"
+        />
       </div>
 
       <div class="flex items-center space-x-2">
         <span class="text-sm text-content-muted">
-          {{ totalCount }} group{{ totalCount !== 1 ? 's' : '' }}
+          {{ $t('documents.groups.count', { count: totalCount }, totalCount) }}
         </span>
       </div>
     </div>
@@ -29,12 +32,14 @@
       class="bg-surface-muted rounded-card p-12 text-center"
     >
       <Layers class="mx-auto h-12 w-12 text-content-subtle" />
-      <h3 class="mt-2 text-sm font-medium text-content">No document groups</h3>
+      <h3 class="mt-2 text-sm font-medium text-content">
+        {{ $t('documents.groups.empty_title') }}
+      </h3>
       <p class="mt-1 text-sm text-content-muted max-w-md mx-auto">
         {{
           searchQuery
-            ? 'Try adjusting your search'
-            : 'A group is a named set of documents you can run a trial against. Create one to run an extraction on a specific selection of documents.'
+            ? $t('documents.groups.empty_search')
+            : $t('documents.groups.empty_description')
         }}
       </p>
     </div>
@@ -46,8 +51,8 @@
       row-key="id"
       :pagination="tablePagination"
       :show-page-size-selector="false"
-      item-label="groups"
-      empty-title="No document groups"
+      :item-label="$t('documents.groups.item_label')"
+      :empty-title="$t('documents.groups.empty_title')"
       @page-change="handlePageChange"
     >
       <template #cell-name="{ row: group }">
@@ -57,9 +62,9 @@
             <span
               v-if="group.is_auto_generated"
               class="inline-flex items-center px-2 py-0.5 rounded-card text-xs font-medium bg-primary-soft text-primary"
-              title="Auto-generated during preprocessing"
+              :title="$t('documents.groups.auto_generated_tooltip')"
             >
-              Auto
+              {{ $t('documents.groups.auto') }}
             </span>
           </div>
           <div v-if="group.description" class="text-xs text-content-muted truncate max-w-md">
@@ -76,7 +81,7 @@
         <span v-if="group.preprocessing_config" class="text-sm text-content">
           {{ group.preprocessing_config.name }}
         </span>
-        <span v-else class="text-sm text-content-muted">Mixed</span>
+        <span v-else class="text-sm text-content-muted">{{ $t('documents.groups.mixed') }}</span>
       </template>
 
       <template #cell-tags="{ row: group }">
@@ -106,7 +111,11 @@
               : 'bg-surface-sunken text-content-muted',
           ]"
         >
-          {{ group.is_auto_generated ? 'Auto-generated' : 'Manual' }}
+          {{
+            group.is_auto_generated
+              ? $t('documents.groups.type_auto')
+              : $t('documents.groups.type_manual')
+          }}
         </span>
       </template>
 
@@ -120,8 +129,8 @@
         <BaseButton
           variant="icon"
           tone="blue"
-          title="View"
-          aria-label="View"
+          :title="$t('documents.actions.view')"
+          :aria-label="$t('documents.actions.view')"
           @click.stop="viewGroup(group as DocumentSetSummary)"
         >
           <Eye class="w-5 h-5" aria-hidden="true" />
@@ -130,21 +139,27 @@
           v-if="!group.is_auto_generated"
           variant="icon"
           tone="gray"
-          title="Edit"
-          aria-label="Edit"
+          :title="$t('documents.actions.edit')"
+          :aria-label="$t('documents.actions.edit')"
           @click.stop="editGroup(group as DocumentSetSummary)"
         >
           <SquarePen class="w-5 h-5" aria-hidden="true" />
         </BaseButton>
         <Tooltip
           :text="
-            group.trials_count > 0 ? 'Cannot delete — this group is used by a trial' : 'Delete'
+            group.trials_count > 0
+              ? $t('documents.groups.cannot_delete_tooltip')
+              : $t('documents.actions.delete')
           "
         >
           <BaseButton
             variant="icon"
             tone="red"
-            :aria-label="group.trials_count > 0 ? 'Cannot delete - used by trial' : 'Delete'"
+            :aria-label="
+              group.trials_count > 0
+                ? $t('documents.groups.cannot_delete_aria')
+                : $t('documents.actions.delete')
+            "
             :disabled="group.trials_count > 0"
             @click.stop="deleteGroup(group as DocumentSetSummary)"
           >
@@ -176,9 +191,9 @@
     <!-- Delete Group Confirmation Modal -->
     <ConfirmationDialog
       :open="showDeleteModal"
-      title="Delete Document Group"
+      :title="$t('documents.groups.delete_title')"
       :message="deleteMessage"
-      confirm-text="Delete"
+      :confirm-text="$t('documents.actions.delete')"
       :loading="isDeleting"
       @confirm="confirmDeleteGroupAction"
       @cancel="showDeleteModal = false"
@@ -190,7 +205,7 @@
           :class="[checkboxClass, 'text-red-600 focus:ring-red-500']"
         />
         <label class="ml-2 text-sm text-content-muted">
-          Also delete all documents in this group (if not referenced elsewhere)
+          {{ $t('documents.groups.also_delete_documents') }}
         </label>
       </div>
     </ConfirmationDialog>
@@ -199,6 +214,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Eye, Layers, Plus, SquarePen, Trash2 } from '@lucide/vue'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { useToast } from '@/composables/useToast'
@@ -228,6 +244,7 @@ const emit = defineEmits<{
   refresh: []
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 
 // State
@@ -267,23 +284,29 @@ const handlePageChange = (page: number): void => {
   currentPage.value = page
 }
 
-const columns = [
-  { key: 'name', label: 'Group Name' },
-  { key: 'document_count', label: 'Documents' },
-  { key: 'configuration', label: 'Configuration' },
-  { key: 'tags', label: 'Tags' },
-  { key: 'type', label: 'Type' },
-  { key: 'created_at', label: 'Created' },
-]
+const columns = computed(() => [
+  { key: 'name', label: t('documents.groups.col_name') },
+  { key: 'document_count', label: t('documents.groups.col_documents') },
+  { key: 'configuration', label: t('documents.groups.col_configuration') },
+  { key: 'tags', label: t('documents.groups.col_tags') },
+  { key: 'type', label: t('documents.groups.col_type') },
+  { key: 'created_at', label: t('documents.groups.col_created') },
+])
 
 const canDeleteGroup = computed<boolean>(() => !isDeleting.value)
 
 // Message for the delete confirmation dialog (includes document count warning)
 const deleteMessage = computed<string>(() => {
   if (!groupToDelete.value) return ''
-  let msg = `Are you sure you want to delete "${groupToDelete.value.name}"?`
+  let msg = t('documents.groups.delete_confirm', { name: groupToDelete.value.name })
   if (groupToDelete.value.document_count > 0) {
-    msg += ` This group contains ${groupToDelete.value.document_count} document(s).`
+    msg +=
+      ' ' +
+      t(
+        'documents.groups.delete_contains',
+        { count: groupToDelete.value.document_count },
+        groupToDelete.value.document_count,
+      )
   }
   return msg
 })
@@ -312,7 +335,7 @@ const fetchDocumentSets = async (): Promise<void> => {
       await fetchDocumentSets()
     }
   } catch (error) {
-    toast.error('Failed to load document groups')
+    toast.error(t('documents.toasts.load_groups_failed'))
     console.error(error)
   } finally {
     isLoading.value = false
@@ -332,7 +355,7 @@ const viewGroup = (group: DocumentSetSummary): void => {
 
 const deleteGroup = (group: DocumentSetSummary): void => {
   if (group.trials_count > 0) {
-    toast.warning('Cannot delete group - it is used by a trial')
+    toast.warning(t('documents.toasts.cannot_delete_group'))
     return
   }
 
@@ -359,13 +382,19 @@ const confirmDeleteGroupAction = async (): Promise<void> => {
 
     if (deleteDocumentsToo.value) {
       if (deletedDocs.length > 0) {
-        toast.success(`Group and ${deletedDocs.length} document(s) deleted`)
+        toast.success(
+          t(
+            'documents.toasts.group_and_docs_deleted',
+            { count: deletedDocs.length },
+            deletedDocs.length,
+          ),
+        )
       } else {
         // No documents were deleted - they must all be referenced elsewhere
-        toast.warning('Group deleted, but documents could not be deleted (referenced elsewhere).')
+        toast.warning(t('documents.toasts.group_deleted_docs_referenced'))
       }
     } else {
-      toast.success('Document group deleted')
+      toast.success(t('documents.toasts.group_deleted'))
     }
 
     showDeleteModal.value = false
@@ -375,7 +404,7 @@ const confirmDeleteGroupAction = async (): Promise<void> => {
     currentPage.value = 1
     fetchDocumentSets()
   } catch (error) {
-    toast.error(extractErrorMessage(error, 'Failed to delete document group'))
+    toast.error(extractErrorMessage(error, t('documents.toasts.delete_group_failed')))
     console.error(error)
   } finally {
     isDeleting.value = false
@@ -391,17 +420,17 @@ const handleSaveGroup = async (groupData: DocumentSetCreate): Promise<void> => {
   try {
     if (editingGroup.value) {
       await documentSetsApi.update(props.projectId, editingGroup.value.id, groupData)
-      toast.success('Document group updated')
+      toast.success(t('documents.toasts.group_updated'))
     } else {
       await documentSetsApi.create(props.projectId, groupData)
-      toast.success('Document group created')
+      toast.success(t('documents.toasts.group_created'))
     }
     closeModal()
     emit('refresh')
     currentPage.value = 1
     fetchDocumentSets()
   } catch (error) {
-    toast.error('Failed to save document group')
+    toast.error(t('documents.toasts.save_group_failed'))
     console.error(error)
   }
 }

@@ -2,9 +2,9 @@
   <BaseModal :open="open" size="xl" body-class="p-6" @close="emit('close')">
     <template #header>
       <div>
-        <h3 class="text-lg font-semibold text-content">Schema Templates</h3>
+        <h3 class="text-lg font-semibold text-content">{{ $t('schema.templates.title') }}</h3>
         <p class="text-sm text-content-muted mt-1">
-          Select a template for common medical document structures
+          {{ $t('schema.templates.subtitle') }}
         </p>
       </div>
     </template>
@@ -22,7 +22,9 @@
     </div>
 
     <template #footer>
-      <BaseButton variant="secondary" @click="emit('close')">Cancel</BaseButton>
+      <BaseButton variant="secondary" @click="emit('close')">{{
+        $t('schema.templates.cancel')
+      }}</BaseButton>
     </template>
   </BaseModal>
 </template>

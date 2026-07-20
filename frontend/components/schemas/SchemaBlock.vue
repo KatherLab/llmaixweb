@@ -20,7 +20,11 @@
             <!-- Schema Info -->
             <div>
               <h3 class="text-white font-medium">
-                {{ schema.title || formatTitle((path ?? []).at(-1)) || 'Root Schema' }}
+                {{
+                  schema.title ||
+                  formatTitle((path ?? []).at(-1)) ||
+                  $t('schemaEditor.block.root_schema')
+                }}
               </h3>
               <p class="text-white/80 text-sm">
                 {{ typeLabel }}
@@ -37,8 +41,8 @@
             <button
               type="button"
               class="p-2 bg-white/20 hover:bg-white/30 rounded-card transition-colors"
-              title="Edit Settings"
-              aria-label="Edit settings"
+              :title="$t('schemaEditor.block.edit_settings')"
+              :aria-label="$t('schemaEditor.block.edit_settings')"
               @click="$emit('edit-property', { key: getCurrentKey(), schema: schema })"
             >
               <SquarePen class="h-4 w-4 text-white" />
@@ -49,8 +53,8 @@
               v-if="schema.type === 'object'"
               type="button"
               class="p-2 bg-white/20 hover:bg-white/30 rounded-card transition-colors"
-              title="Add Property"
-              aria-label="Add property"
+              :title="$t('schemaEditor.block.add_property')"
+              :aria-label="$t('schemaEditor.block.add_property')"
               @click="$emit('add-property')"
             >
               <Plus class="h-4 w-4 text-white" />
@@ -60,8 +64,16 @@
             <button
               type="button"
               class="p-2 bg-white/20 hover:bg-white/30 rounded-card transition-colors"
-              :title="showDetails ? 'Hide Details' : 'Show Details'"
-              :aria-label="showDetails ? 'Hide details' : 'Show details'"
+              :title="
+                showDetails
+                  ? $t('schemaEditor.block.hide_details')
+                  : $t('schemaEditor.block.show_details')
+              "
+              :aria-label="
+                showDetails
+                  ? $t('schemaEditor.block.hide_details')
+                  : $t('schemaEditor.block.show_details')
+              "
               @click="showDetails = !showDetails"
             >
               <ChevronRight
@@ -86,32 +98,44 @@
             <!-- Type-specific constraints -->
             <div v-if="schema.type === 'string'" class="grid grid-cols-2 gap-3">
               <div v-if="schema.minLength !== undefined">
-                <label class="block text-xs font-medium text-content-muted"> Min Length </label>
+                <label class="block text-xs font-medium text-content-muted">
+                  {{ $t('schemaEditor.block.min_length') }}
+                </label>
                 <p class="text-sm text-content">{{ schema.minLength }}</p>
               </div>
               <div v-if="schema.maxLength !== undefined">
-                <label class="block text-xs font-medium text-content-muted"> Max Length </label>
+                <label class="block text-xs font-medium text-content-muted">
+                  {{ $t('schemaEditor.block.max_length') }}
+                </label>
                 <p class="text-sm text-content">{{ schema.maxLength }}</p>
               </div>
               <div v-if="schema.pattern" class="col-span-2">
-                <label class="block text-xs font-medium text-content-muted"> Pattern </label>
+                <label class="block text-xs font-medium text-content-muted">
+                  {{ $t('schemaEditor.block.pattern') }}
+                </label>
                 <code class="text-xs bg-surface-sunken px-2 py-1 rounded">
                   {{ schema.pattern }}
                 </code>
               </div>
               <div v-if="schema.format" class="col-span-2">
-                <label class="block text-xs font-medium text-content-muted"> Format </label>
+                <label class="block text-xs font-medium text-content-muted">
+                  {{ $t('schemaEditor.block.format') }}
+                </label>
                 <span class="text-sm text-content">{{ schema.format }}</span>
               </div>
             </div>
 
             <div v-if="schema.type === 'number'" class="grid grid-cols-2 gap-3">
               <div v-if="schema.minimum !== undefined">
-                <label class="block text-xs font-medium text-content-muted"> Minimum </label>
+                <label class="block text-xs font-medium text-content-muted">
+                  {{ $t('schemaEditor.block.minimum') }}
+                </label>
                 <p class="text-sm text-content">{{ schema.minimum }}</p>
               </div>
               <div v-if="schema.maximum !== undefined">
-                <label class="block text-xs font-medium text-content-muted"> Maximum </label>
+                <label class="block text-xs font-medium text-content-muted">
+                  {{ $t('schemaEditor.block.maximum') }}
+                </label>
                 <p class="text-sm text-content">{{ schema.maximum }}</p>
               </div>
             </div>
@@ -123,7 +147,7 @@
             >
               <label class="block text-xs font-medium text-primary mb-2 flex items-center">
                 <List class="h-4 w-4 mr-1" />
-                Allowed Values
+                {{ $t('schemaEditor.block.allowed_values') }}
               </label>
               <div class="grid grid-cols-2 gap-2">
                 <div
@@ -140,7 +164,7 @@
             <!-- Required fields (for objects) -->
             <div v-if="schema.type === 'object' && schema.required && schema.required.length > 0">
               <label class="block text-xs font-medium text-content-muted mb-1">
-                Required Fields
+                {{ $t('schemaEditor.block.required_fields') }}
               </label>
               <div class="flex flex-wrap gap-1">
                 <span
@@ -155,7 +179,9 @@
 
             <!-- Default value -->
             <div v-if="schema.default !== undefined">
-              <label class="block text-xs font-medium text-content-muted"> Default Value </label>
+              <label class="block text-xs font-medium text-content-muted">
+                {{ $t('schemaEditor.block.default_value') }}
+              </label>
               <p class="text-sm text-content">
                 {{ JSON.stringify(schema.default) }}
               </p>
@@ -188,15 +214,15 @@
                     v-if="schema.required && schema.required.includes(propKey)"
                     class="text-xs text-red-600 dark:text-red-400"
                   >
-                    *required
+                    {{ $t('schemaEditor.block.required') }}
                   </span>
                 </div>
                 <div class="flex items-center space-x-1">
                   <button
                     type="button"
                     class="p-1 text-content-muted hover:text-content hover:bg-surface-muted rounded"
-                    title="Edit Property"
-                    aria-label="Edit property"
+                    :title="$t('schemaEditor.block.edit_property')"
+                    :aria-label="$t('schemaEditor.block.edit_property')"
                     @click="$emit('edit-property', { key: propKey, schema: propSchema })"
                   >
                     <SquarePen class="h-4 w-4" />
@@ -205,8 +231,8 @@
                     v-if="propSchema.type === 'object' || propSchema.type === 'array'"
                     type="button"
                     class="p-1 text-primary hover:text-primary hover:bg-primary-soft rounded"
-                    title="Navigate Into"
-                    aria-label="Navigate into"
+                    :title="$t('schemaEditor.block.navigate_into')"
+                    :aria-label="$t('schemaEditor.block.navigate_into')"
                     @click="$emit('navigate', propKey)"
                   >
                     <ArrowRight class="h-4 w-4" />
@@ -214,8 +240,8 @@
                   <button
                     type="button"
                     class="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                    title="Delete Property"
-                    aria-label="Delete property"
+                    :title="$t('schemaEditor.block.delete_property')"
+                    :aria-label="$t('schemaEditor.block.delete_property')"
                     @click="$emit('delete-property', propKey)"
                   >
                     <Trash2 class="h-4 w-4" />
@@ -241,7 +267,8 @@
               <!-- Enum preview -->
               <div v-if="propSchema.enum && propSchema.enum.length > 0" class="mt-1">
                 <span class="text-xs text-content-muted">
-                  Options: {{ propSchema.enum.slice(0, 3).join(', ') }}
+                  {{ $t('schemaEditor.block.options_prefix') }}
+                  {{ propSchema.enum.slice(0, 3).join(', ') }}
                   <span v-if="propSchema.enum.length > 3">...</span>
                 </span>
               </div>
@@ -264,13 +291,15 @@
 
           <div class="bg-surface rounded-card shadow-sm border border-default p-3">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-content-muted">Array Items</span>
+              <span class="text-sm font-medium text-content-muted">{{
+                $t('schemaEditor.array_items')
+              }}</span>
               <div class="flex items-center space-x-1">
                 <button
                   type="button"
                   class="p-1 text-content-muted hover:text-content hover:bg-surface-muted rounded"
-                  title="Edit Array Items"
-                  aria-label="Edit array items"
+                  :title="$t('schemaEditor.block.edit_array_items')"
+                  :aria-label="$t('schemaEditor.block.edit_array_items')"
                   @click="$emit('edit-property', { key: 'items', schema: schema.items })"
                 >
                   <SquarePen class="h-4 w-4" />
@@ -279,8 +308,8 @@
                   v-if="schema.items.type === 'object'"
                   type="button"
                   class="p-1 text-primary hover:text-primary hover:bg-primary-soft rounded"
-                  title="Navigate Into Items"
-                  aria-label="Navigate into items"
+                  :title="$t('schemaEditor.block.navigate_into_items')"
+                  :aria-label="$t('schemaEditor.block.navigate_into_items')"
                   @click="$emit('navigate', 'items')"
                 >
                   <ArrowRight class="h-4 w-4" />
@@ -305,6 +334,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ArrowRight, ChevronRight, List, Plus, SquarePen, Trash2 } from '@lucide/vue'
 import {
   getTypeIcon,
@@ -334,6 +364,8 @@ defineEmits<{
   'edit-root': []
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 const showDetails = ref(false)
 
 // Type Icons + colors: shared via @/utils/schemaTypeIcons
@@ -357,11 +389,11 @@ const getTypeLabel = (type: string | undefined): string => {
   }
 
   const labels: Record<string, string> = {
-    string: 'Text',
-    number: 'Number',
-    boolean: 'Yes/No',
-    object: 'Group',
-    array: 'List',
+    string: t('schemaEditor.types.text'),
+    number: t('schemaEditor.types.number'),
+    boolean: t('schemaEditor.types.yes_no'),
+    object: t('schemaEditor.types.group'),
+    array: t('schemaEditor.types.list'),
   }
   return labels[type] || type
 }

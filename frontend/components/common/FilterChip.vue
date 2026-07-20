@@ -10,7 +10,7 @@
     <button
       type="button"
       class="hover:text-red-600 dark:hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
-      :aria-label="'Remove ' + label"
+      :aria-label="$t('common.filter_chip.remove', { label })"
       @click="$emit('remove')"
     >
       <X class="w-3 h-3" aria-hidden="true" />

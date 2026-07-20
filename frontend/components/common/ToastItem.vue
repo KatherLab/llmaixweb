@@ -36,7 +36,7 @@
     <button
       type="button"
       class="shrink-0 p-1.5 rounded-card text-content-subtle hover:text-content hover:bg-surface-muted transition-colors"
-      aria-label="Dismiss notification"
+      :aria-label="$t('common.dismiss')"
       @click="emit('dismiss')"
     >
       <X class="h-4 w-4" />

@@ -6,8 +6,8 @@
     row-clickable
     :pagination="tablePagination"
     :page-size-options="[10, 25, 50]"
-    item-label="users"
-    empty-title="No users found"
+    :item-label="$t('admin.users.grid.item_label')"
+    :empty-title="$t('admin.users.grid.empty_title')"
     @row-click="$emit('edit-requested', $event as UserResponse)"
     @page-change="handlePageChange"
     @page-size-change="handlePageSizeChange"
@@ -21,7 +21,7 @@
         </div>
         <div class="ml-3">
           <div class="text-sm font-medium text-content">
-            {{ user.full_name || 'N/A' }}
+            {{ user.full_name || $t('admin.users.grid.na') }}
           </div>
           <div class="text-sm text-content-muted">{{ user.email }}</div>
         </div>
@@ -37,7 +37,7 @@
             : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400',
         ]"
       >
-        {{ user.is_active ? 'Active' : 'Inactive' }}
+        {{ user.is_active ? $t('admin.users.status.active') : $t('admin.users.status.inactive') }}
       </span>
     </template>
 
@@ -51,7 +51,7 @@
         size="sm"
         @click.stop="$emit('edit-requested', user as UserResponse)"
       >
-        Edit
+        {{ $t('admin.users.actions.edit') }}
       </BaseButton>
     </template>
   </DataTable>
@@ -59,10 +59,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { UserResponse } from '@/types'
 import DataTable from '@/components/common/DataTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { usePagination } from '@/composables/usePagination'
+
+const { t } = useI18n({ useScope: 'global' })
 
 interface Props {
   rowData?: UserResponse[]
@@ -134,9 +137,9 @@ const initials = (user: UserResponse): string => {
     .toUpperCase()
 }
 
-const columns = [
-  { key: 'full_name', label: 'User', sortable: true },
-  { key: 'is_active', label: 'Status', sortable: true },
-  { key: 'role', label: 'Role', sortable: true },
-]
+const columns = computed(() => [
+  { key: 'full_name', label: t('admin.users.grid.columns.user'), sortable: true },
+  { key: 'is_active', label: t('admin.users.grid.columns.status'), sortable: true },
+  { key: 'role', label: t('admin.users.grid.columns.role'), sortable: true },
+])
 </script>

@@ -13,7 +13,7 @@
       <!-- Tree Navigation (Collapsible) -->
       <div v-if="showTreeNav" class="w-64 bg-surface border-r border-default overflow-y-auto">
         <div class="p-4">
-          <h3 class="text-sm font-medium text-content mb-3">Schema Structure</h3>
+          <h3 class="text-sm font-medium text-content mb-3">{{ $t('schemaEditor.structure') }}</h3>
           <SchemaTree :schema="schema" :current-path="currentPath" @navigate="navigateToPath" />
         </div>
       </div>
@@ -41,8 +41,8 @@
               (!currentSchema.properties || Object.keys(currentSchema.properties).length === 0)
             "
             class="mt-6"
-            title="No properties defined"
-            action-text="Add First Property"
+            :title="$t('schemaEditor.no_properties')"
+            :action-text="$t('schemaEditor.add_first_property')"
             @action="showAddPropertyModal = true"
           />
         </div>
@@ -87,6 +87,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   StringIcon,
   NumberIcon,
@@ -121,6 +122,7 @@ const emit = defineEmits<{
 }>()
 
 // UI State
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 const showTreeNav = ref(true)
 const showAddPropertyModal = ref(false)
@@ -163,38 +165,38 @@ interface AvailableType {
 const availableTypes = computed<AvailableType[]>(() => [
   {
     value: 'string',
-    label: props.advancedMode ? 'String' : 'Text',
+    label: props.advancedMode ? 'String' : t('schemaEditor.types.text'),
     color: getTypeColor('string'),
     icon: StringIcon,
-    description: 'Single line or multi-line text',
+    description: t('schemaEditor.type_desc.string'),
   },
   {
     value: 'number',
-    label: props.advancedMode ? 'Number' : 'Number',
+    label: props.advancedMode ? 'Number' : t('schemaEditor.types.number'),
     color: getTypeColor('number'),
     icon: NumberIcon,
-    description: 'Numeric values, decimals allowed',
+    description: t('schemaEditor.type_desc.number'),
   },
   {
     value: 'boolean',
-    label: props.advancedMode ? 'Boolean' : 'Yes/No',
+    label: props.advancedMode ? 'Boolean' : t('schemaEditor.types.yes_no'),
     color: getTypeColor('boolean'),
     icon: BooleanIcon,
-    description: 'True or false values',
+    description: t('schemaEditor.type_desc.boolean'),
   },
   {
     value: 'object',
-    label: props.advancedMode ? 'Object' : 'Group',
+    label: props.advancedMode ? 'Object' : t('schemaEditor.types.group'),
     color: getTypeColor('object'),
     icon: ObjectIcon,
-    description: 'Group of related fields',
+    description: t('schemaEditor.type_desc.object'),
   },
   {
     value: 'array',
-    label: props.advancedMode ? 'Array' : 'List',
+    label: props.advancedMode ? 'Array' : t('schemaEditor.types.list'),
     color: getTypeColor('array'),
     icon: ArrayIcon,
-    description: 'List of items',
+    description: t('schemaEditor.type_desc.array'),
   },
 ])
 
@@ -293,7 +295,7 @@ const onAddProperty = (formData: {
 }) => {
   const key = formData.name.trim()
   if (currentSchema.value.properties?.[key]) {
-    toast.warning(`Property "${key}" already exists!`)
+    toast.warning(t('schemaEditor.property_exists', { name: key }))
     return
   }
 
@@ -392,7 +394,7 @@ const savePropertyEdits = ({
 
   // Guard-clause for duplicates when renaming
   if (oldKey !== newKey && parent.properties && parent.properties[newKey]) {
-    toast.warning(`Property "${newKey}" already exists!`)
+    toast.warning(t('schemaEditor.property_exists', { name: newKey }))
     return false
   }
 

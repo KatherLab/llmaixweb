@@ -10,15 +10,13 @@
   >
     <template #header>
       <h3 class="text-lg font-semibold text-content">
-        Edit
         {{
           localEditingProperty?.key === '__root__'
-            ? 'Root Schema'
+            ? $t('schemaEditor.edit_modal.title_root')
             : advancedMode
-              ? 'Property'
-              : 'Field'
-        }}:
-        {{ localEditingProperty?.key === '__root__' ? '' : localEditingProperty?.key }}
+              ? $t('schemaEditor.edit_modal.title_property')
+              : $t('schemaEditor.edit_modal.title_field')
+        }}{{ localEditingProperty?.key === '__root__' ? '' : `: ${localEditingProperty?.key}` }}
       </h3>
     </template>
 
@@ -32,17 +30,19 @@
     />
 
     <template #footer>
-      <BaseButton variant="secondary" @click="handleBackdropClose">Cancel</BaseButton>
-      <BaseButton @click="save">Save Changes</BaseButton>
+      <BaseButton variant="secondary" @click="handleBackdropClose">{{
+        $t('schemaEditor.edit_modal.cancel')
+      }}</BaseButton>
+      <BaseButton @click="save">{{ $t('schemaEditor.edit_modal.save') }}</BaseButton>
     </template>
 
     <!-- Discard unsaved changes confirmation -->
     <ConfirmationDialog
       :open="showConfirm"
-      title="Discard unsaved changes?"
-      message="Your edits to this property will be lost."
-      confirm-text="Discard"
-      cancel-text="Keep editing"
+      :title="$t('schemaEditor.edit_modal.discard_title')"
+      :message="$t('schemaEditor.edit_modal.discard_message')"
+      :confirm-text="$t('schemaEditor.edit_modal.discard_confirm')"
+      :cancel-text="$t('schemaEditor.edit_modal.discard_cancel')"
       confirm-variant="danger"
       @confirm="confirmDiscard"
       @cancel="showConfirm = false"

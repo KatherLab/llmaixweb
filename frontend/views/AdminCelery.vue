@@ -1,15 +1,17 @@
 <template>
   <div>
     <PageHeader
-      title="Celery Workers & Queues"
-      subtitle="Monitor Celery workers, queues, and tasks."
+      :title="$t('admin.celery.title')"
+      :subtitle="$t('admin.celery.subtitle')"
       class="mb-6"
     >
       <template #icon>
         <CircleDot class="w-5 h-5" aria-hidden="true" />
       </template>
       <template #actions>
-        <BaseButton variant="primary" :loading="loading" @click="fetchAll">Refresh</BaseButton>
+        <BaseButton variant="primary" :loading="loading" @click="fetchAll">{{
+          $t('admin.celery.refresh')
+        }}</BaseButton>
       </template>
     </PageHeader>
     <div v-if="loading" class="py-8 flex justify-center">
@@ -18,7 +20,7 @@
     <div v-else>
       <!-- Worker status cards -->
       <div>
-        <h3 class="font-semibold text-lg mb-3 text-content">Workers</h3>
+        <h3 class="font-semibold text-lg mb-3 text-content">{{ $t('admin.celery.workers') }}</h3>
         <div v-if="workerList.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
             v-for="w in workerList"
@@ -29,29 +31,31 @@
               <span class="font-semibold text-content truncate" :title="w.name">{{ w.name }}</span>
               <StatusBadge
                 :status="w.status === 'ok' ? 'COMPLETED' : 'FAILED'"
-                :label="w.status === 'ok' ? 'Online' : 'Offline'"
+                :label="w.status === 'ok' ? $t('admin.celery.online') : $t('admin.celery.offline')"
               />
             </div>
             <dl class="text-sm space-y-1 text-content-muted">
               <div v-if="w.pool" class="flex justify-between">
-                <dt class="text-content-subtle">Pool</dt>
+                <dt class="text-content-subtle">{{ $t('admin.celery.pool') }}</dt>
                 <dd>{{ w.pool }}</dd>
               </div>
               <div v-if="w.concurrency !== undefined" class="flex justify-between">
-                <dt class="text-content-subtle">Concurrency</dt>
+                <dt class="text-content-subtle">{{ $t('admin.celery.concurrency') }}</dt>
                 <dd>{{ w.concurrency }}</dd>
               </div>
               <div v-if="w.processes !== undefined" class="flex justify-between">
-                <dt class="text-content-subtle">Processes</dt>
+                <dt class="text-content-subtle">{{ $t('admin.celery.processes') }}</dt>
                 <dd>{{ w.processes }}</dd>
               </div>
             </dl>
           </div>
         </div>
-        <p v-else class="text-sm text-content-subtle italic">No workers reported.</p>
+        <p v-else class="text-sm text-content-subtle italic">
+          {{ $t('admin.celery.no_workers') }}
+        </p>
         <details class="mt-3">
           <summary class="text-xs text-content-subtle cursor-pointer hover:text-content-muted">
-            Show raw worker JSON
+            {{ $t('admin.celery.show_raw_worker_json') }}
           </summary>
           <pre
             class="bg-surface-sunken p-4 rounded-card border border-default overflow-x-auto text-sm mt-2"
@@ -61,7 +65,9 @@
 
       <!-- Queue table -->
       <div class="mt-8">
-        <h3 class="font-semibold text-lg mb-3 text-content">Queues & Tasks</h3>
+        <h3 class="font-semibold text-lg mb-3 text-content">
+          {{ $t('admin.celery.queues_tasks') }}
+        </h3>
         <div
           v-if="queueRows.length"
           class="bg-surface border border-default rounded-card overflow-hidden"
@@ -69,10 +75,12 @@
           <table class="w-full text-sm">
             <thead class="bg-surface-sunken text-content-muted">
               <tr>
-                <th class="text-left px-4 py-2 font-semibold">Queue</th>
-                <th class="text-left px-4 py-2 font-semibold">Active</th>
-                <th class="text-left px-4 py-2 font-semibold">Scheduled</th>
-                <th class="text-left px-4 py-2 font-semibold">Reserved</th>
+                <th class="text-left px-4 py-2 font-semibold">{{ $t('admin.celery.queue') }}</th>
+                <th class="text-left px-4 py-2 font-semibold">{{ $t('admin.celery.active') }}</th>
+                <th class="text-left px-4 py-2 font-semibold">
+                  {{ $t('admin.celery.scheduled') }}
+                </th>
+                <th class="text-left px-4 py-2 font-semibold">{{ $t('admin.celery.reserved') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-default-border">
@@ -85,10 +93,12 @@
             </tbody>
           </table>
         </div>
-        <p v-else class="text-sm text-content-subtle italic">No queue data available.</p>
+        <p v-else class="text-sm text-content-subtle italic">
+          {{ $t('admin.celery.no_queue_data') }}
+        </p>
         <details class="mt-3">
           <summary class="text-xs text-content-subtle cursor-pointer hover:text-content-muted">
-            Show raw queue JSON
+            {{ $t('admin.celery.show_raw_queue_json') }}
           </summary>
           <pre
             class="bg-surface-sunken p-4 rounded-card border border-default overflow-x-auto text-sm mt-2"
@@ -98,20 +108,22 @@
 
       <!-- Task inspection -->
       <div class="mt-8">
-        <label :class="labelClass" for="celery-inspect-task-id">Inspect Task by ID:</label>
+        <label :class="labelClass" for="celery-inspect-task-id">{{
+          $t('admin.celery.inspect_task_by_id')
+        }}</label>
         <form class="flex gap-2 mb-4" @submit.prevent="inspectTask">
           <input
             id="celery-inspect-task-id"
             v-model="taskId"
             :class="inputClass"
-            placeholder="Paste task ID here"
+            :placeholder="$t('admin.celery.paste_task_id')"
           />
-          <BaseButton type="submit" variant="primary">Inspect</BaseButton>
+          <BaseButton type="submit" variant="primary">{{ $t('admin.celery.inspect') }}</BaseButton>
         </form>
         <div v-if="taskStatus">
           <details open>
             <summary class="text-xs text-content-subtle cursor-pointer hover:text-content-muted">
-              Task details (raw JSON)
+              {{ $t('admin.celery.task_details_raw_json') }}
             </summary>
             <pre
               class="bg-surface-sunken p-4 rounded-card border border-default overflow-x-auto text-sm mt-2"
@@ -123,12 +135,12 @@
             class="mt-2"
             @click="revokeTask(taskStatus.id)"
           >
-            Revoke/Terminate
+            {{ $t('admin.celery.revoke_terminate') }}
           </BaseButton>
         </div>
       </div>
       <div v-if="revokedId" class="mt-4 text-green-700 dark:text-green-400 font-semibold">
-        Task {{ revokedId }} revoked!
+        {{ $t('admin.celery.task_revoked', { id: revokedId }) }}
       </div>
       <div v-if="error" class="mt-5 text-red-600 dark:text-red-400 font-semibold">{{ error }}</div>
     </div>
@@ -136,6 +148,7 @@
 </template>
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CircleDot } from '@lucide/vue'
 import { adminApi } from '@/services/adminApi'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -145,6 +158,8 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import { extractErrorMessage } from '@/utils/errors'
 import { inputClass, labelClass } from '@/utils/formStyles'
 import type { CeleryWorkersResponse, CeleryQueuesResponse } from '@/types'
+
+const { t } = useI18n({ useScope: 'global' })
 
 interface CeleryTaskStatus {
   id: string
@@ -248,7 +263,7 @@ async function fetchAll(): Promise<void> {
   try {
     await Promise.all([fetchWorkers(), fetchQueues()])
   } catch (e) {
-    error.value = extractErrorMessage(e, 'Failed to fetch celery status')
+    error.value = extractErrorMessage(e, t('admin.celery.errors.fetch_status'))
   } finally {
     loading.value = false
   }
@@ -261,7 +276,7 @@ async function inspectTask(): Promise<void> {
     const res = await adminApi.celeryTask(taskId.value)
     taskStatus.value = res.data as CeleryTaskStatus
   } catch (e) {
-    error.value = extractErrorMessage(e, 'Failed to inspect task')
+    error.value = extractErrorMessage(e, t('admin.celery.errors.inspect_task'))
   }
 }
 async function revokeTask(id: string): Promise<void> {
@@ -276,7 +291,7 @@ async function revokeTask(id: string): Promise<void> {
     // Optionally refresh queue info
     await fetchAll()
   } catch (e) {
-    error.value = extractErrorMessage(e, 'Failed to revoke task')
+    error.value = extractErrorMessage(e, t('admin.celery.errors.revoke_task'))
   }
 }
 onMounted(fetchAll)

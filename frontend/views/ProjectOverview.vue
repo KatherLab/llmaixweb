@@ -1,8 +1,8 @@
 <template>
   <div class="bg-surface flex flex-col">
     <PageHeader
-      title="Projects"
-      subtitle="Create and manage your extraction projects."
+      :title="$t('common.projects')"
+      :subtitle="$t('projects.overview.subtitle')"
       class="mb-6"
     >
       <template #icon>

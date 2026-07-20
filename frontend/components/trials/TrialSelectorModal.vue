@@ -2,7 +2,7 @@
   <BaseModal
     :open="open"
     size="lg"
-    title="Evaluate Trial"
+    :title="$t('trials.selector.title')"
     body-class="p-0 flex flex-col min-h-0"
     @close="handleClose"
   >
@@ -11,24 +11,29 @@
       v-if="error"
       :message="error"
       dismissable
-      :retry-text="lastFailedOperation ? 'Retry' : ''"
+      :retry-text="lastFailedOperation ? $t('trials.selector.retry') : ''"
       :retry-loading="isRetrying"
       class="mx-6 mt-4"
       @dismiss="clearError"
       @retry="retryLastOperation"
     >
-      <h4 class="text-sm font-medium text-red-800 dark:text-red-300">Evaluation Error</h4>
+      <h4 class="text-sm font-medium text-red-800 dark:text-red-300">
+        {{ $t('trials.selector.eval_error_heading') }}
+      </h4>
       <p class="mt-1 text-sm text-red-700 dark:text-red-200">{{ error }}</p>
     </ErrorBanner>
 
     <div class="flex-1 overflow-y-auto p-6">
       <!-- Prerequisites Warning -->
-      <Callout variant="warning" class="mb-4" title="Schema-specific field mappings required">
+      <Callout
+        variant="warning"
+        class="mb-4"
+        :title="$t('trials.selector.mappings_required_title')"
+      >
         <p class="mt-1">
-          Each trial requires field mappings for its specific schema. Trials without mappings will
-          be grayed out.
+          {{ $t('trials.selector.mappings_required_body') }}
           <button class="underline hover:no-underline" @click="showMappingModal = true">
-            Configure mappings
+            {{ $t('trials.selector.configure_mappings') }}
           </button>
         </p>
       </Callout>
@@ -36,35 +41,36 @@
       <!-- Loading State -->
       <div v-if="loadingStates.trials" class="text-center py-8">
         <LoadingSpinner size="medium" />
-        <p class="mt-2 text-content-muted">Loading trials and checking mappings...</p>
+        <p class="mt-2 text-content-muted">{{ $t('trials.selector.loading_trials') }}</p>
       </div>
 
       <!-- No Trials State -->
       <EmptyState
         v-else-if="trials.items.length === 0"
-        title="No completed trials available for evaluation"
-        description="Run some trials first to evaluate them against ground truth"
+        :title="$t('trials.selector.empty_title')"
+        :description="$t('trials.selector.empty_desc')"
       />
 
       <!-- Trials List -->
       <div v-else>
         <div class="mb-4">
-          <h4 class="font-medium text-content mb-2">Select a trial to evaluate</h4>
+          <h4 class="font-medium text-content mb-2">{{ $t('trials.selector.select_heading') }}</h4>
           <p class="text-sm text-content-muted">
-            Choose from completed trials to compare against your ground truth data.
+            {{ $t('trials.selector.select_desc') }}
           </p>
           <div class="mt-3 flex gap-4 text-sm">
             <span class="text-content-muted">
-              Total trials: <span class="font-medium">{{ trials.total }}</span>
+              {{ $t('trials.selector.total_trials') }}
+              <span class="font-medium">{{ trials.total }}</span>
             </span>
             <span class="text-green-600 dark:text-green-400">
-              Ready for evaluation:
+              {{ $t('trials.selector.ready_for_eval') }}
               <span class="font-medium">{{
                 availableTrials.filter((t) => t.hasMappings).length
               }}</span>
             </span>
             <span class="text-red-600 dark:text-red-400">
-              Missing mappings:
+              {{ $t('trials.selector.missing_mappings') }}
               <span class="font-medium">{{
                 availableTrials.filter((t) => !t.hasMappings).length
               }}</span>
@@ -75,7 +81,9 @@
         <!-- Mapping Status Loading -->
         <div v-if="loadingStates.mappings" class="text-center py-4">
           <LoadingSpinner size="small" />
-          <p class="mt-2 text-sm text-content-muted">Checking field mappings...</p>
+          <p class="mt-2 text-sm text-content-muted">
+            {{ $t('trials.selector.checking_mappings') }}
+          </p>
         </div>
 
         <div class="space-y-3">
@@ -103,36 +111,45 @@
                   <StatusBadge
                     v-if="trial.hasMappings"
                     color="blue"
-                    label="✓ Mappings Ready"
+                    :label="$t('trials.selector.mappings_ready')"
                     class="px-2 py-1 font-medium"
                   />
                   <StatusBadge
                     v-else-if="trial.mappingStatus === 'loading'"
                     color="gray"
-                    label="Checking..."
+                    :label="$t('trials.selector.checking')"
                     class="px-2 py-1 font-medium"
                   />
                   <StatusBadge
                     v-else
                     color="red"
-                    label="⚠ No Mappings"
+                    :label="$t('trials.selector.no_mappings')"
                     class="px-2 py-1 font-medium"
                   />
                 </div>
                 <div class="text-sm text-content-muted grid grid-cols-2 gap-y-1 gap-x-4">
-                  <div><span class="font-medium">Model:</span> {{ trial.llm_model }}</div>
                   <div>
-                    <span class="font-medium">Schema:</span>
+                    <span class="font-medium">{{ $t('trials.selector.model_label') }}</span>
+                    {{ trial.llm_model }}
+                  </div>
+                  <div>
+                    <span class="font-medium">{{ $t('trials.selector.schema_label') }}</span>
                     {{ getSchemaName(trial.schema_id) }}
                   </div>
-                  <div><span class="font-medium">Documents:</span> {{ trial.documents_count }}</div>
-                  <div><span class="font-medium">Results:</span> {{ trial.results_count }}</div>
                   <div>
-                    <span class="font-medium">Created:</span>
+                    <span class="font-medium">{{ $t('trials.selector.documents_label') }}</span>
+                    {{ trial.documents_count }}
+                  </div>
+                  <div>
+                    <span class="font-medium">{{ $t('trials.selector.results_label') }}</span>
+                    {{ trial.results_count }}
+                  </div>
+                  <div>
+                    <span class="font-medium">{{ $t('trials.selector.created_label') }}</span>
                     {{ formatDate(trial.created_at) }}
                   </div>
                   <div>
-                    <span class="font-medium">Last result:</span>
+                    <span class="font-medium">{{ $t('trials.selector.last_result_label') }}</span>
                     {{ trial.last_result_at ? formatDate(trial.last_result_at) : '—' }}
                   </div>
                   <div
@@ -140,17 +157,25 @@
                     class="col-span-2"
                   >
                     <StatusBadge v-if="trial.has_failures" color="red" class="font-medium">
-                      Errors: {{ trial.error_count || 0 }}
+                      {{ $t('trials.selector.errors_label', { count: trial.error_count || 0 }) }}
                     </StatusBadge>
-                    <StatusBadge v-else color="green" label="No Errors" class="font-medium" />
+                    <StatusBadge
+                      v-else
+                      color="green"
+                      :label="$t('trials.selector.no_errors')"
+                      class="font-medium"
+                    />
                   </div>
                 </div>
                 <div
                   v-if="!trial.hasMappings && trial.mappingStatus !== 'loading'"
                   class="mt-2 text-xs text-red-600 dark:text-red-400"
                 >
-                  Configure field mappings for "{{ getSchemaName(trial.schema_id) }}" schema to
-                  enable evaluation
+                  {{
+                    $t('trials.selector.configure_to_enable', {
+                      schema: getSchemaName(trial.schema_id),
+                    })
+                  }}
                 </div>
               </div>
               <div class="flex flex-col items-end gap-2">
@@ -158,9 +183,11 @@
                   v-if="isAlreadyEvaluated(trial)"
                   class="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-card"
                 >
-                  Already evaluated
+                  {{ $t('trials.selector.already_evaluated') }}
                 </div>
-                <div class="text-xs text-content-muted">{{ trial.results_count }} results</div>
+                <div class="text-xs text-content-muted">
+                  {{ $t('trials.selector.n_results', { count: trial.results_count }) }}
+                </div>
               </div>
             </div>
           </div>
@@ -173,7 +200,7 @@
             :visible-pages="visiblePages"
             :total-items="trials.total"
             :page-size="trials.limit"
-            item-label="trials"
+            :item-label="$t('trials.selector.item_label')"
             class="-mx-4 sm:-mx-0 rounded-none border-t border-default sm:rounded-card mt-2"
             @update:model-value="goToPage"
           />
@@ -182,7 +209,9 @@
     </div>
 
     <template #footer>
-      <BaseButton variant="secondary" type="button" @click="handleClose">Cancel</BaseButton>
+      <BaseButton variant="secondary" type="button" @click="handleClose">{{
+        $t('trials.selector.cancel')
+      }}</BaseButton>
       <BaseButton
         variant="primary"
         class="shadow-sm"
@@ -192,10 +221,10 @@
       >
         {{
           isEvaluating
-            ? 'Evaluating...'
+            ? $t('trials.selector.evaluating')
             : selectedTrial
-              ? `Evaluate ${trialDisplayName(selectedTrial)}`
-              : 'Select Trial First'
+              ? $t('trials.selector.evaluate_named', { name: trialDisplayName(selectedTrial) })
+              : $t('trials.selector.select_first')
         }}
       </BaseButton>
     </template>
@@ -213,9 +242,9 @@
   <!-- Re-evaluation confirmation (re-evaluating creates another evaluation) -->
   <ConfirmationDialog
     :open="showReEvaluateConfirm"
-    title="Trial already evaluated"
+    :title="$t('trials.selector.already_eval_title')"
     :message="reEvaluateMessage"
-    confirm-text="Create another evaluation"
+    :confirm-text="$t('trials.selector.create_another')"
     confirm-variant="primary"
     @confirm="confirmReEvaluate"
     @cancel="showReEvaluateConfirm = false"
@@ -224,6 +253,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, type PropType } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { trialsApi } from '@/services/trialsApi'
 import { schemasApi } from '@/services/schemasApi'
 import { evaluationsApi } from '@/services/evaluationsApi'
@@ -283,6 +313,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { t } = useI18n({ useScope: 'global' })
 
 // Loading states
 const loadingStates = ref<LoadingStates>({
@@ -380,7 +411,7 @@ const lastEvaluationDate = (trialId: number): string | null => {
 
 const getSchemaName = (schemaId: number): string => {
   const schema = schemas.value.find((s) => s.id === schemaId)
-  return schema?.schema_name || `Schema ${schemaId}`
+  return schema?.schema_name || t('trials.selector.schema_fallback', { id: schemaId })
 }
 
 // Error handling functions
@@ -408,10 +439,10 @@ const retryLastOperation = async (): Promise<void> => {
 
   try {
     await lastFailedOperation.value()
-    toast.success('Operation completed')
+    toast.success(t('trials.selector.toast.operation_completed'))
     lastFailedOperation.value = null
   } catch (err) {
-    handleApiError(err, 'Retry')
+    handleApiError(err, t('trials.selector.op_retry'))
   } finally {
     isRetrying.value = false
   }
@@ -440,7 +471,7 @@ const fetchTrials = async (): Promise<void> => {
 
     lastFailedOperation.value = null
   } catch (err) {
-    handleApiError(err, 'Loading trial data')
+    handleApiError(err, t('trials.selector.op_loading_data'))
   } finally {
     loadingStates.value.trials = false
   }
@@ -469,7 +500,7 @@ const fetchData = async (): Promise<void> => {
 
     lastFailedOperation.value = null
   } catch (err) {
-    handleApiError(err, 'Loading trial data')
+    handleApiError(err, t('trials.selector.op_loading_data'))
   }
 }
 
@@ -515,7 +546,9 @@ const selectTrial = (trial: AvailableTrial): void => {
 }
 
 const showMappingRequiredTooltip = (trial: AvailableTrial): void => {
-  toast.warning(`Configure field mappings for "${getSchemaName(trial.schema_id)}" schema first`)
+  toast.warning(
+    t('trials.selector.toast.configure_first', { schema: getSchemaName(trial.schema_id) }),
+  )
 }
 
 // Validation (uses summary fields)
@@ -523,21 +556,24 @@ const validateEvaluationPrerequisites = (): string[] => {
   const errors: string[] = []
 
   if (!selectedTrial.value) {
-    errors.push('Please select a trial to evaluate')
+    errors.push(t('trials.selector.validation.select_trial'))
   }
 
   if (selectedTrial.value && !selectedTrial.value.hasMappings) {
     errors.push(
-      `${trialLabel(selectedTrial.value, selectedTrial.value.id)} requires field mappings for schema "${getSchemaName(selectedTrial.value.schema_id)}"`,
+      t('trials.selector.validation.requires_mappings', {
+        name: trialLabel(selectedTrial.value, selectedTrial.value.id),
+        schema: getSchemaName(selectedTrial.value.schema_id),
+      }),
     )
   }
 
   if (!props.groundTruth) {
-    errors.push('Ground truth file is required')
+    errors.push(t('trials.selector.validation.gt_required'))
   }
 
   if (selectedTrial.value && (selectedTrial.value.results_count || 0) === 0) {
-    errors.push('Selected trial has no results to evaluate')
+    errors.push(t('trials.selector.validation.no_results'))
   }
 
   return errors
@@ -551,8 +587,8 @@ const reEvaluateMessage = computed(() => {
   const trial = selectedTrial.value
   if (!trial) return ''
   const date = lastEvaluationDate(trial.id)
-  const when = date ? ` on ${formatDate(date)}` : ''
-  return `This trial was already evaluated${when} against this ground truth. Create another evaluation?`
+  const when = date ? t('trials.selector.reeval_on', { date: formatDate(date) }) : ''
+  return t('trials.selector.reeval_message', { when })
 })
 
 const confirmReEvaluate = async (): Promise<void> => {
@@ -564,7 +600,7 @@ const confirmReEvaluate = async (): Promise<void> => {
 const evaluateTrialWithValidation = async (): Promise<void> => {
   const validationErrors = validateEvaluationPrerequisites()
   if (validationErrors.length > 0) {
-    error.value = `Cannot evaluate trial: ${validationErrors.join(', ')}`
+    error.value = t('trials.selector.cannot_evaluate', { errors: validationErrors.join(', ') })
     toast.error(error.value)
     return
   }
@@ -587,7 +623,9 @@ const runEvaluation = async (): Promise<void> => {
     const mappingStatus = await checkMappingStatus(selectedTrial.value!)
     if (!mappingStatus) {
       throw new Error(
-        `Field mappings for schema "${getSchemaName(selectedTrial.value!.schema_id)}" are not configured or have been removed`,
+        t('trials.selector.mappings_removed', {
+          schema: getSchemaName(selectedTrial.value!.schema_id),
+        }),
       )
     }
 
@@ -600,30 +638,31 @@ const runEvaluation = async (): Promise<void> => {
     // The evaluate endpoint returns an EvaluationSummary; the emit is typed as
     // Evaluation to match the parent (EvaluationView) which casts at the boundary.
     emit('evaluate', response.data as unknown as Evaluation)
-    toast.success(`${trialDisplayName(selectedTrial.value)} evaluation completed`)
+    toast.success(
+      t('trials.selector.toast.eval_completed', { name: trialDisplayName(selectedTrial.value) }),
+    )
     lastFailedOperation.value = null
   } catch (err) {
     if ((err as { response?: { status?: number } })?.response?.status === 400) {
       const detail = extractErrorMessage(err)
       if (detail.includes('No field mapping found')) {
-        error.value = `Field mappings missing: ${detail}`
-        toast.error('Field mappings are required but not found. Please configure them first.')
+        error.value = t('trials.selector.mappings_missing', { detail })
+        toast.error(t('trials.selector.toast.mappings_required'))
       } else if (detail.includes('No results found')) {
-        error.value = 'Trial has no results to evaluate. Please run the trial first.'
+        error.value = t('trials.selector.no_results_run_first')
         toast.error(error.value)
       } else if (
         detail.includes('Document not found') ||
         detail.includes('No ground truth found')
       ) {
-        error.value =
-          'Data consistency issue detected. Some documents or ground truth entries are missing.'
+        error.value = t('trials.selector.data_consistency')
         toast.error(error.value)
       } else {
-        error.value = `Evaluation failed: ${detail}`
+        error.value = t('trials.selector.eval_failed', { detail })
         toast.error(error.value)
       }
     } else {
-      handleApiError(err, 'Trial evaluation')
+      handleApiError(err, t('trials.selector.op_evaluation'))
     }
   } finally {
     loadingStates.value.evaluation = false
@@ -635,9 +674,9 @@ const onMappingConfigured = async (): Promise<void> => {
   showMappingModal.value = false
   try {
     await loadMappingStatusesFor(trials.value.items)
-    toast.success('Field mappings configured')
+    toast.success(t('trials.selector.toast.mappings_configured'))
   } catch (err) {
-    handleApiError(err, 'Refreshing mapping status')
+    handleApiError(err, t('trials.selector.op_refreshing_mappings'))
   }
 }
 

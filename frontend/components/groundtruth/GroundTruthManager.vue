@@ -2,10 +2,9 @@
   <BaseModal :open="open" size="xl" @close="emitClose">
     <template #header>
       <div>
-        <h3 class="text-lg font-semibold text-content">Manage Ground Truth Files</h3>
+        <h3 class="text-lg font-semibold text-content">{{ $t('groundtruth.manager.title') }}</h3>
         <p class="mt-1 text-sm text-content-muted">
-          Ground truth files contain the correct extracted values you compare trial results against.
-          Configure field mappings to link each ground-truth column to a schema field.
+          {{ $t('groundtruth.manager.subtitle') }}
         </p>
       </div>
     </template>
@@ -13,8 +12,8 @@
     <!-- BODY: Files List -->
     <EmptyState
       v-if="groundTruthFiles.length === 0"
-      title="No ground truth files uploaded yet"
-      description="Upload a file with the correct values (CSV, XLSX, or JSON) to start evaluating trial accuracy."
+      :title="$t('groundtruth.manager.empty_title')"
+      :description="$t('groundtruth.manager.empty_description')"
     />
 
     <div v-else class="space-y-4">
@@ -27,7 +26,7 @@
           <div class="flex-1">
             <div class="flex items-center gap-3 mb-2">
               <h4 class="font-medium text-content">
-                {{ gt.name || `Ground Truth #${index + 1}` }}
+                {{ gt.name || $t('groundtruth.manager.default_name', { number: index + 1 }) }}
               </h4>
               <StatusBadge color="blue" class="px-2 py-1 font-medium">{{
                 gt.format?.toUpperCase()
@@ -36,13 +35,21 @@
                 v-if="gt.field_mappings?.length"
                 color="green"
                 class="px-2 py-1 font-medium"
-                >{{ gt.field_mappings.length }} mappings</StatusBadge
+                >{{
+                  $t(
+                    'groundtruth.manager.mappings_count',
+                    { count: gt.field_mappings.length },
+                    gt.field_mappings.length,
+                  )
+                }}</StatusBadge
               >
             </div>
             <div class="text-xs text-content-muted flex flex-wrap gap-4">
-              <span>Created: {{ formatDate(gt.created_at) }}</span>
+              <span>{{
+                $t('groundtruth.manager.created', { date: formatDate(gt.created_at) })
+              }}</span>
               <span v-if="gt.updated_at !== gt.created_at">
-                Updated: {{ formatDate(gt.updated_at) }}
+                {{ $t('groundtruth.manager.updated', { date: formatDate(gt.updated_at) }) }}
               </span>
             </div>
           </div>
@@ -50,17 +57,21 @@
             <!-- Configure mappings -->
             <button
               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary hover:text-primary hover:bg-primary-soft rounded-card transition-colors"
-              title="Configure field mappings"
+              :title="$t('groundtruth.manager.configure_mappings')"
               @click="previewGroundTruth(gt)"
             >
               <Settings class="w-4 h-4" />
-              Configure mappings
+              {{ $t('groundtruth.manager.configure_mappings') }}
             </button>
             <!-- Rename (pencil) -->
             <button
               class="p-2 text-content-muted hover:text-content hover:bg-surface-muted rounded-card transition-colors"
-              title="Rename"
-              :aria-label="`Rename ${gt.name || 'ground truth file'}`"
+              :title="$t('groundtruth.manager.rename')"
+              :aria-label="
+                $t('groundtruth.manager.rename_aria', {
+                  name: gt.name || $t('groundtruth.manager.fallback_file'),
+                })
+              "
               @click="editGroundTruth(gt)"
             >
               <Pencil class="w-5 h-5" aria-hidden="true" />
@@ -68,8 +79,12 @@
             <!-- Delete (trash) -->
             <button
               class="p-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-card transition-colors"
-              title="Delete"
-              :aria-label="`Delete ${gt.name || 'ground truth file'}`"
+              :title="$t('groundtruth.manager.delete')"
+              :aria-label="
+                $t('groundtruth.manager.delete_aria', {
+                  name: gt.name || $t('groundtruth.manager.fallback_file'),
+                })
+              "
               @click="deleteGroundTruth(gt)"
             >
               <Trash2 class="w-5 h-5" aria-hidden="true" />
@@ -78,7 +93,9 @@
         </div>
         <!-- Field mappings preview -->
         <div v-if="gt.field_mappings?.length" class="mt-3 pt-3 border-t border-default">
-          <h5 class="text-xs font-medium text-content-muted mb-1">Configured Field Mappings</h5>
+          <h5 class="text-xs font-medium text-content-muted mb-1">
+            {{ $t('groundtruth.manager.configured_field_mappings') }}
+          </h5>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
             <div
               v-for="mapping in gt.field_mappings.slice(0, 6)"
@@ -92,7 +109,7 @@
               v-if="gt.field_mappings.length > 6"
               class="bg-surface-sunken px-2 py-1 rounded-card text-center text-content-muted"
             >
-              +{{ gt.field_mappings.length - 6 }} more...
+              {{ $t('groundtruth.manager.more_count', { count: gt.field_mappings.length - 6 }) }}
             </div>
           </div>
         </div>
@@ -100,26 +117,33 @@
     </div>
 
     <template #footer>
-      <BaseButton @click="emitClose">Close</BaseButton>
+      <BaseButton @click="emitClose">{{ $t('groundtruth.manager.close') }}</BaseButton>
     </template>
   </BaseModal>
 
   <!-- Edit Modal -->
-  <BaseModal :open="!!editingGroundTruth" title="Rename Ground Truth" size="sm" @close="cancelEdit">
-    <label for="edit-name" :class="labelClass">Name</label>
+  <BaseModal
+    :open="!!editingGroundTruth"
+    :title="$t('groundtruth.manager.rename_title')"
+    size="sm"
+    @close="cancelEdit"
+  >
+    <label for="edit-name" :class="labelClass">{{ $t('groundtruth.manager.name_label') }}</label>
     <input
       id="edit-name"
       v-model="editName"
       type="text"
       :class="inputClass"
       maxlength="100"
-      placeholder="Ground truth file name"
+      :placeholder="$t('groundtruth.manager.name_placeholder')"
     />
     <template #footer>
-      <BaseButton variant="secondary" @click="cancelEdit">Cancel</BaseButton>
+      <BaseButton variant="secondary" @click="cancelEdit">{{
+        $t('groundtruth.manager.cancel')
+      }}</BaseButton>
       <BaseButton :disabled="isSaving" :loading="isSaving" @click="saveEdit">
-        <span v-if="isSaving">Saving...</span>
-        <span v-else>Save</span>
+        <span v-if="isSaving">{{ $t('groundtruth.manager.saving') }}</span>
+        <span v-else>{{ $t('groundtruth.manager.save') }}</span>
       </BaseButton>
     </template>
   </BaseModal>
@@ -136,10 +160,14 @@
   <!-- Delete ground truth confirmation -->
   <ConfirmationDialog
     :open="showDeleteConfirm"
-    title="Delete ground truth?"
-    :message="`Are you sure you want to delete “${pendingDelete?.name || 'this ground truth file'}”? This action cannot be undone.`"
-    confirm-text="Delete"
-    cancel-text="Cancel"
+    :title="$t('groundtruth.manager.delete_confirm_title')"
+    :message="
+      $t('groundtruth.manager.delete_confirm_message', {
+        name: pendingDelete?.name || $t('groundtruth.manager.this_file'),
+      })
+    "
+    :confirm-text="$t('groundtruth.manager.delete')"
+    :cancel-text="$t('groundtruth.manager.cancel')"
     confirm-variant="danger"
     @confirm="confirmDelete"
     @cancel="showDeleteConfirm = false"
@@ -148,6 +176,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Pencil, Settings, Trash2 } from '@lucide/vue'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
@@ -171,6 +200,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{ close: []; updated: [] }>()
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 const editingGroundTruth = ref<GroundTruth | null>(null)
 const previewingGroundTruth = ref<GroundTruth | null>(null)
@@ -200,11 +230,11 @@ async function saveEdit() {
     formData.append('name', editName.value)
 
     await groundtruthApi.update(props.projectId, editingGroundTruth.value.id, formData)
-    toast.success('Ground truth updated')
+    toast.success(t('groundtruth.manager.toast_updated'))
     emit('updated')
     cancelEdit()
   } catch (err) {
-    toast.error(extractErrorMessage(err, 'Failed to update ground truth'))
+    toast.error(extractErrorMessage(err, t('groundtruth.manager.toast_update_failed')))
     console.error(err)
   } finally {
     isSaving.value = false
@@ -234,10 +264,10 @@ async function confirmDelete() {
   if (!gt) return
   try {
     await groundtruthApi.delete(props.projectId, gt.id)
-    toast.success('Ground truth deleted')
+    toast.success(t('groundtruth.manager.toast_deleted'))
     emit('updated')
   } catch (err) {
-    toast.error(extractErrorMessage(err, 'Failed to delete ground truth'))
+    toast.error(extractErrorMessage(err, t('groundtruth.manager.toast_delete_failed')))
     console.error(err)
   }
 }
@@ -246,6 +276,6 @@ async function confirmDelete() {
 function onMappingConfigured() {
   showPreview.value = false
   emit('updated')
-  toast.success('Field mappings configured')
+  toast.success(t('groundtruth.manager.toast_mappings_configured'))
 }
 </script>

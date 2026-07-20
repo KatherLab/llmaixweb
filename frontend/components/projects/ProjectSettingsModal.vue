@@ -1,9 +1,17 @@
 <!-- src/components/ProjectSettingsModal.vue -->
 <template>
-  <BaseModal :open="open" title="Project Settings" size="md" body-class="p-8" @close="emitClose">
+  <BaseModal
+    :open="open"
+    :title="$t('projects.settings.title')"
+    size="md"
+    body-class="p-8"
+    @close="emitClose"
+  >
     <!-- General Settings Section -->
     <div class="mb-6">
-      <h3 class="text-sm font-semibold text-content-muted uppercase tracking-wide mb-3">General</h3>
+      <h3 class="text-sm font-semibold text-content-muted uppercase tracking-wide mb-3">
+        {{ $t('projects.settings.general') }}
+      </h3>
       <div class="mb-3">
         <input
           v-model="name"
@@ -12,7 +20,7 @@
             'text-lg font-semibold',
             nameError ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800' : '',
           ]"
-          placeholder="Project Name"
+          :placeholder="$t('projects.settings.name_placeholder')"
           maxlength="100"
           required
           autofocus
@@ -27,28 +35,30 @@
         :class="textareaClass"
         rows="3"
         maxlength="500"
-        placeholder="Description (optional)"
+        :placeholder="$t('projects.settings.description_placeholder')"
       ></textarea>
     </div>
 
     <!-- Danger Zone Section -->
     <div class="border-t border-default pt-6 mt-6">
       <h3 class="text-sm font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide mb-3">
-        Danger Zone
+        {{ $t('projects.settings.danger_zone') }}
       </h3>
       <Callout variant="danger">
-        <p class="text-sm mb-3">Once you delete a project, there is no going back. Be certain.</p>
+        <p class="text-sm mb-3">{{ $t('projects.settings.danger_text') }}</p>
         <BaseButton variant="danger" class="w-full" @click="onDeleteClick">
           <Trash2 class="w-4 h-4" />
-          Delete Project
+          {{ $t('projects.actions.delete_project') }}
         </BaseButton>
       </Callout>
     </div>
 
     <template #footer>
-      <BaseButton variant="secondary" @click="emitClose"> Cancel </BaseButton>
+      <BaseButton variant="secondary" @click="emitClose">
+        {{ $t('projects.actions.cancel') }}
+      </BaseButton>
       <BaseButton :loading="isSaving" :disabled="isSaving" @click="onSave">
-        Save Changes
+        {{ $t('projects.actions.save_changes') }}
       </BaseButton>
     </template>
   </BaseModal>
@@ -56,6 +66,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Trash2 } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -82,6 +93,8 @@ const emit = defineEmits<{
   delete: []
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 const name = ref(props.initialName || '')
 const description = ref(props.initialDescription || '')
 const nameError = ref('')
@@ -105,7 +118,7 @@ watch(name, (v) => {
 function onSave(): void {
   const trimmedName = name.value.trim()
   if (!trimmedName) {
-    nameError.value = 'Project name is required'
+    nameError.value = t('projects.settings.name_required')
     return
   }
   nameError.value = ''

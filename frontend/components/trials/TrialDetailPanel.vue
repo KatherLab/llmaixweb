@@ -8,54 +8,62 @@
     <!-- Metadata -->
     <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-content-muted">
       <span class="inline-flex items-center gap-1">
-        <strong class="text-content-muted">Schema:</strong>
+        <strong class="text-content-muted">{{ $t('trials.detail.schema_label') }}</strong>
         <button
           type="button"
           class="text-primary hover:underline cursor-pointer"
-          title="View schema"
+          :title="$t('trials.detail.view_schema_title')"
           @click.stop="emit('view-schema', trial)"
         >
           {{ schemaName }}
         </button>
       </span>
       <span v-if="promptName" class="inline-flex items-center gap-1">
-        <strong class="text-content-muted">Prompt:</strong>
+        <strong class="text-content-muted">{{ $t('trials.detail.prompt_label') }}</strong>
         <button
           type="button"
           class="text-primary hover:underline cursor-pointer"
-          title="View prompt"
+          :title="$t('trials.detail.view_prompt_title')"
           @click.stop="emit('view-prompt', trial)"
         >
           {{ promptName }}
         </button>
       </span>
-      <span><strong class="text-content-muted">LLM:</strong> {{ trial.llm_model }}</span>
       <span
-        ><strong class="text-content-muted">Started:</strong>
+        ><strong class="text-content-muted">{{ $t('trials.detail.llm_label') }}</strong>
+        {{ trial.llm_model }}</span
+      >
+      <span
+        ><strong class="text-content-muted">{{ $t('trials.detail.started_label') }}</strong>
         {{ formatDateFull(trial.created_at) }}</span
       >
       <span v-if="trial.last_result_at"
-        ><strong class="text-content-muted">Last result:</strong>
+        ><strong class="text-content-muted">{{ $t('trials.detail.last_result_label') }}</strong>
         {{ formatDateFull(trial.last_result_at) }}</span
       >
       <span v-if="trial.documents_count != null"
-        ><strong class="text-content-muted">Docs:</strong> {{ trial.documents_count }}</span
+        ><strong class="text-content-muted">{{ $t('trials.detail.docs_label') }}</strong>
+        {{ trial.documents_count }}</span
       >
     </div>
 
     <!-- Progress (active) -->
     <div v-if="isActive" class="flex flex-col gap-1">
       <div class="flex items-center gap-2 text-xs" aria-live="polite">
-        <span class="font-medium text-primary">{{ docsDone }}/{{ totalDocs }} docs</span>
-        <span class="text-content-muted">{{ formatDuration(elapsedSeconds) }} elapsed</span>
-        <span v-if="etaSeconds && etaSeconds > 0" class="text-content-muted"
-          >• ≈ {{ formatDuration(etaSeconds) }} left</span
-        >
+        <span class="font-medium text-primary">{{
+          $t('trials.detail.docs_progress', { done: docsDone, total: totalDocs })
+        }}</span>
+        <span class="text-content-muted">{{
+          $t('trials.detail.elapsed', { duration: formatDuration(elapsedSeconds) })
+        }}</span>
+        <span v-if="etaSeconds && etaSeconds > 0" class="text-content-muted">{{
+          $t('trials.detail.eta', { duration: formatDuration(etaSeconds) })
+        }}</span>
       </div>
       <div
         class="w-full h-1 bg-surface-sunken rounded-full overflow-hidden"
         role="progressbar"
-        aria-label="Trial progress"
+        :aria-label="$t('trials.detail.progress_aria')"
         :aria-valuenow="progressPercent"
         aria-valuemin="0"
         aria-valuemax="100"
@@ -73,14 +81,14 @@
       class="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium text-xs"
     >
       <CircleCheckBig class="w-4 h-4" />
-      Results ready
+      {{ $t('trials.detail.results_ready') }}
     </div>
     <div
       v-else-if="trial.status === 'failed'"
       class="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs font-medium"
     >
       <AlertCircle class="w-4 h-4" />
-      Failed — see details in Results
+      {{ $t('trials.detail.failed_details') }}
     </div>
 
     <!-- Actions -->
@@ -92,34 +100,36 @@
           size="sm"
           @click.stop="emit('cancel', trial)"
         >
-          Cancel
+          {{ $t('trials.detail.cancel') }}
         </BaseButton>
         <BaseButton variant="primary" size="sm" @click.stop="emit('view-results', trial)">
-          Results
+          {{ $t('trials.detail.results') }}
         </BaseButton>
         <BaseButton
           v-if="canDownload"
           variant="success"
           size="sm"
           :title="
-            trial.status === 'completed'
-              ? undefined
-              : 'This trial did not finish — only the successfully extracted documents are included.'
+            trial.status === 'completed' ? undefined : $t('trials.detail.download_partial_title')
           "
           @click.stop="emit('download', trial)"
         >
-          {{ trial.status === 'completed' ? 'Download' : 'Download partial' }}
+          {{
+            trial.status === 'completed'
+              ? $t('trials.detail.download')
+              : $t('trials.detail.download_partial')
+          }}
         </BaseButton>
       </div>
       <div class="flex gap-2 flex-wrap">
         <BaseButton variant="secondary" size="sm" @click.stop="emit('retry', trial)">
-          Retry
+          {{ $t('trials.detail.retry') }}
         </BaseButton>
         <BaseButton variant="secondary" size="sm" @click.stop="emit('rename', trial)">
-          Rename
+          {{ $t('trials.detail.rename') }}
         </BaseButton>
         <BaseButton variant="danger" size="sm" @click.stop="emit('delete', trial)">
-          Delete
+          {{ $t('trials.detail.delete') }}
         </BaseButton>
       </div>
     </div>

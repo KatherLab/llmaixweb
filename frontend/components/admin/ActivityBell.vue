@@ -4,7 +4,7 @@
     <button
       ref="bellButton"
       type="button"
-      aria-label="View activity"
+      :aria-label="$t('admin.activity.view_activity')"
       :aria-expanded="showDropdown"
       aria-haspopup="true"
       class="relative p-2 rounded-full hover:bg-surface-sunken transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
@@ -37,19 +37,19 @@
       >
         <!-- Header -->
         <div class="px-4 py-3 border-b border-default flex items-center justify-between">
-          <h3 class="font-semibold text-content">Activity</h3>
+          <h3 class="font-semibold text-content">{{ $t('admin.activity.title') }}</h3>
           <div class="flex items-center gap-2">
             <span v-if="hasActiveTasks" class="text-xs text-primary font-medium">
-              {{ activeCount }} running
+              {{ $t('admin.activity.running', { count: activeCount }) }}
             </span>
             <button
               v-if="displayTasks.length > 0"
               type="button"
               class="text-xs text-content-subtle hover:text-content-muted"
-              title="Dismiss all"
+              :title="$t('admin.activity.dismiss_all')"
               @click="dismissAll"
             >
-              Dismiss all
+              {{ $t('admin.activity.dismiss_all') }}
             </button>
           </div>
         </div>
@@ -64,7 +64,7 @@
           <!-- Empty state -->
           <div v-else-if="displayTasks.length === 0" class="text-center py-12">
             <CircleCheckBig class="mx-auto h-12 w-12 text-content-subtle" />
-            <p class="mt-3 text-sm text-content-subtle">No recent activity</p>
+            <p class="mt-3 text-sm text-content-subtle">{{ $t('admin.activity.no_recent') }}</p>
           </div>
 
           <!-- Task list grouped by type -->
@@ -75,7 +75,9 @@
                 <div class="flex items-center gap-2">
                   <Clipboard class="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   <h4 class="text-xs font-semibold text-content-muted uppercase tracking-wide">
-                    Preprocessing ({{ preprocessingTasks.length }})
+                    {{
+                      $t('admin.activity.preprocessing_count', { count: preprocessingTasks.length })
+                    }}
                   </h4>
                 </div>
               </div>
@@ -85,7 +87,11 @@
                   :key="`preprocess-${task.id}`"
                   role="button"
                   tabindex="0"
-                  :aria-label="`View preprocessing task ${task.configuration?.name || `#${task.id}`}`"
+                  :aria-label="
+                    $t('admin.activity.view_preprocessing_task', {
+                      name: task.configuration?.name || `#${task.id}`,
+                    })
+                  "
                   class="px-4 py-3 hover:bg-surface-muted transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                   @click="navigateToPreprocessing(task)"
                   @keydown.enter.self.prevent="navigateToPreprocessing(task)"
@@ -116,15 +122,18 @@
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2">
                         <p class="text-sm font-medium text-content truncate">
-                          {{ task.configuration?.name || `Task #${task.id}` }}
+                          {{
+                            task.configuration?.name ||
+                            $t('admin.activity.task_number', { id: task.id })
+                          }}
                         </p>
                         <!-- Cancel button (visible on hover, active tasks only) -->
                         <button
                           v-if="isTaskActive(task)"
                           type="button"
                           class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 transition-opacity p-0.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
-                          title="Cancel task"
-                          aria-label="Cancel task"
+                          :title="$t('admin.activity.cancel_task')"
+                          :aria-label="$t('admin.activity.cancel_task')"
                           @click.stop="cancelPreprocessing(task)"
                         >
                           <CircleStop class="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
@@ -133,8 +142,8 @@
                         <button
                           type="button"
                           class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 transition-opacity p-0.5 hover:bg-surface-sunken rounded"
-                          title="Dismiss"
-                          aria-label="Dismiss task"
+                          :title="$t('admin.activity.dismiss')"
+                          :aria-label="$t('admin.activity.dismiss_task')"
                           @click.stop="dismissTask('preprocess', task.id)"
                         >
                           <X class="w-3.5 h-3.5 text-content-subtle" />
@@ -150,13 +159,13 @@
                           class="flex items-center justify-between text-xs text-content-subtle mb-1"
                           aria-live="polite"
                         >
-                          <span>Processing...</span>
+                          <span>{{ $t('admin.activity.processing') }}</span>
                           <span>{{ getProgressPercent(task) }}%</span>
                         </div>
                         <div
                           class="w-full bg-surface-sunken rounded-full h-1.5 overflow-hidden"
                           role="progressbar"
-                          aria-label="Preprocessing progress"
+                          :aria-label="$t('admin.activity.preprocessing_progress')"
                           :aria-valuenow="getProgressPercent(task)"
                           aria-valuemin="0"
                           aria-valuemax="100"
@@ -184,7 +193,7 @@
                 <div class="flex items-center gap-2">
                   <FlaskConical class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <h4 class="text-xs font-semibold text-content-muted uppercase tracking-wide">
-                    Trials ({{ trialTasks.length }})
+                    {{ $t('admin.activity.trials_count', { count: trialTasks.length }) }}
                   </h4>
                 </div>
               </div>
@@ -194,7 +203,7 @@
                   :key="`trial-${task.id}`"
                   role="button"
                   tabindex="0"
-                  :aria-label="`View trial ${trialLabel(task, task.id)}`"
+                  :aria-label="$t('admin.activity.view_trial', { name: trialLabel(task, task.id) })"
                   class="px-4 py-3 hover:bg-surface-muted transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                   @click="navigateToTrial(task)"
                   @keydown.enter.self.prevent="navigateToTrial(task)"
@@ -231,8 +240,8 @@
                         <button
                           type="button"
                           class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 transition-opacity p-0.5 hover:bg-surface-sunken rounded"
-                          title="Dismiss"
-                          aria-label="Dismiss trial"
+                          :title="$t('admin.activity.dismiss')"
+                          :aria-label="$t('admin.activity.dismiss_trial')"
                           @click.stop="dismissTask('trial', task.id)"
                         >
                           <X class="w-3.5 h-3.5 text-content-subtle" />
@@ -247,7 +256,12 @@
                         <div
                           class="flex items-center justify-between text-xs text-content-subtle mb-1"
                         >
-                          <span>{{ task.docs_done || 0 }}/{{ task.documents_count }} docs</span>
+                          <span>{{
+                            $t('admin.activity.docs_progress', {
+                              done: task.docs_done || 0,
+                              total: task.documents_count,
+                            })
+                          }}</span>
                           <span>{{ Math.round((task.progress || 0) * 100) }}%</span>
                         </div>
                         <div class="w-full bg-surface-sunken rounded-full h-1.5 overflow-hidden">
@@ -280,7 +294,7 @@
             class="w-full text-center text-sm text-primary font-medium hover:underline"
             @click="viewAllActivity"
           >
-            View all activity
+            {{ $t('admin.activity.view_all') }}
           </button>
         </div>
       </div>
@@ -291,6 +305,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Bell, CircleCheckBig, CircleStop, Clipboard, FlaskConical, X } from '@lucide/vue'
 import type {
   PreprocessingTask,
@@ -311,6 +326,7 @@ import { trialLabel } from '@/utils/trialLabel'
 import { mergeWsEntity } from '@/composables/useWsEntityUpdates'
 
 const router = useRouter()
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 const authStore = useAuthStore()
 const isAdmin = computed(() => authStore.isAdmin)
@@ -419,15 +435,15 @@ const getPreprocessingSummary = (task: PreprocessingTask): string => {
   const failed = task.meta?.failed_files || task.failed_files || 0
 
   if (isTaskActive(task)) {
-    return `${completed}/${total} files processed`
+    return t('admin.activity.files_processing', { completed, total })
   } else if (task.status === 'completed') {
-    return `✓ ${total} files processed`
+    return t('admin.activity.files_done', { total })
   } else if (task.status === 'failed') {
-    return `✗ ${failed} of ${total} files failed`
+    return t('admin.activity.files_failed', { failed, total })
   } else if (task.status === 'cancelled') {
-    return `Cancelled`
+    return t('admin.activity.cancelled')
   }
-  return `${total} files`
+  return t('admin.activity.files_count', { total })
 }
 
 const getTrialSummary = (task: TrialSummary): string => {
@@ -436,18 +452,18 @@ const getTrialSummary = (task: TrialSummary): string => {
   const errors = task.error_count || 0
 
   if (isTrialActive(task)) {
-    return `${completed}/${total} docs extracted`
+    return t('admin.activity.docs_extracting', { completed, total })
   } else if (task.status === 'completed') {
     if (errors > 0) {
-      return `✓ ${total} docs extracted (${errors} errors)`
+      return t('admin.activity.docs_done_errors', { total, errors })
     }
-    return `✓ ${total} docs extracted`
+    return t('admin.activity.docs_done', { total })
   } else if (task.status === 'failed') {
-    return `✗ Extraction failed`
+    return t('admin.activity.extraction_failed')
   } else if (task.status === 'cancelled') {
-    return `Cancelled`
+    return t('admin.activity.cancelled')
   }
-  return `${total} docs`
+  return t('admin.activity.docs_count', { total })
 }
 
 const getProgressPercent = (task: PreprocessingTask): number => {
@@ -466,7 +482,7 @@ const formatTaskTime = (task: PreprocessingTask | TrialSummary): string => {
   // Delegates the "just now"/"m ago"/"h ago" tiers to the shared formatter;
   // ActivityBell capitalizes "Just now" in the UI.
   const result = formatRelativeTime(task.created_at)
-  return result === 'just now' ? 'Just now' : result
+  return result === 'just now' ? t('admin.activity.just_now') : result
 }
 
 const dismissTask = (type: 'preprocess' | 'trial', id: number): void => {
@@ -521,7 +537,7 @@ const fetchAllTasks = async (isPolling = false): Promise<void> => {
     hasLoadedOnce.value = true
   } catch (err) {
     console.error('Failed to fetch activity tasks:', err)
-    toast.error('Failed to load activity')
+    toast.error(t('admin.activity.errors.load_failed'))
   } finally {
     isLoading.value = false
   }
@@ -600,7 +616,7 @@ const stopWebSocket = (): void => {
 const navigateToPreprocessing = (task: PreprocessingTask): void => {
   if (!task.project_id) {
     console.error('Preprocessing task missing project_id:', task)
-    toast.error('Cannot navigate: missing project info')
+    toast.error(t('admin.activity.errors.navigate_missing_project'))
     return
   }
   router.push({
@@ -612,12 +628,12 @@ const navigateToPreprocessing = (task: PreprocessingTask): void => {
 
 const cancelPreprocessing = async (task: PreprocessingTask): Promise<void> => {
   if (!task.project_id) {
-    toast.error('Cannot cancel: missing project info')
+    toast.error(t('admin.activity.errors.cancel_missing_project'))
     return
   }
   try {
     await preprocessingApi.cancel(task.project_id, task.id)
-    toast.success('Preprocessing cancelled')
+    toast.success(t('admin.activity.preprocessing_cancelled'))
     // Update local state
     const idx = preprocessingTasks.value.findIndex((t) => t.id === task.id)
     const target = idx >= 0 ? preprocessingTasks.value[idx] : undefined
@@ -627,14 +643,14 @@ const cancelPreprocessing = async (task: PreprocessingTask): Promise<void> => {
     }
   } catch (err) {
     console.error('Failed to cancel preprocessing:', err)
-    toast.error('Failed to cancel preprocessing')
+    toast.error(t('admin.activity.errors.cancel_failed'))
   }
 }
 
 const navigateToTrial = (task: TrialSummary): void => {
   if (!task.project_id) {
     console.error('Trial missing project_id:', task)
-    toast.error('Cannot navigate: missing project info')
+    toast.error(t('admin.activity.errors.navigate_missing_project'))
     return
   }
   router.push({

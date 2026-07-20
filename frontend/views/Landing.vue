@@ -16,10 +16,12 @@
             to="/login"
             class="text-sm font-medium text-content-muted hover:text-content transition-colors"
           >
-            Sign in
+            {{ $t('landing.nav.sign_in') }}
           </router-link>
-          <BaseButton v-if="!isAuthenticated" to="/register" size="sm">Get started</BaseButton>
-          <BaseButton v-else to="/projects" size="sm">Go to app</BaseButton>
+          <BaseButton v-if="!isAuthenticated" to="/register" size="sm">{{
+            $t('landing.nav.get_started')
+          }}</BaseButton>
+          <BaseButton v-else to="/projects" size="sm">{{ $t('landing.nav.go_to_app') }}</BaseButton>
         </div>
       </div>
     </header>

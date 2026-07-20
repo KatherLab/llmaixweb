@@ -1,8 +1,8 @@
 <template>
   <div class="p-6 space-y-6">
     <PageHeader
-      title="Schemas &amp; Prompts"
-      subtitle="Define the structure and instructions for information extraction"
+      :title="$t('schema.management.title')"
+      :subtitle="$t('schema.management.subtitle')"
       :sticky="false"
       class="mb-6"
     />
@@ -73,9 +73,9 @@
     <!-- Delete Schema Confirmation -->
     <ConfirmationDialog
       :open="showDeleteModal"
-      title="Delete Schema"
-      :message="`Are you sure you want to delete the schema &quot;${schemaToDelete?.schema_name}&quot;? This action cannot be undone.`"
-      confirm-text="Delete"
+      :title="$t('schema.delete.title')"
+      :message="$t('schema.delete.message', { name: schemaToDelete?.schema_name })"
+      :confirm-text="$t('schema.actions.delete')"
       :loading="isDeleting"
       @confirm="deleteSchema"
       @cancel="showDeleteModal = false"
@@ -84,9 +84,9 @@
     <!-- Delete Prompt Confirmation -->
     <ConfirmationDialog
       :open="showDeletePromptModal"
-      title="Delete Prompt"
-      :message="`Are you sure you want to delete the prompt &quot;${promptToDelete?.name}&quot;? This action cannot be undone.`"
-      confirm-text="Delete"
+      :title="$t('prompt.delete.title')"
+      :message="$t('prompt.delete.message', { name: promptToDelete?.name })"
+      :confirm-text="$t('prompt.actions.delete')"
       :loading="isDeleting"
       @confirm="deletePrompt"
       @cancel="showDeletePromptModal = false"
@@ -96,6 +96,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Database, MessageSquare } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
 import { promptsApi } from '@/services/promptsApi'
@@ -119,6 +120,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 
 // Tab state
@@ -127,8 +129,16 @@ const activeSection = ref<'schemas' | 'prompts'>('schemas')
 // Tab config for BaseTabGroup (icons + count badges rendered via the #tab scoped
 // slot to keep the Database/MessageSquare icons and StatusBadge styling).
 const tabs = computed(() => [
-  { label: 'JSON Schemas', value: 'schemas', badge: schemas.value.length || null },
-  { label: 'Extraction Prompts', value: 'prompts', badge: prompts.value.length || null },
+  {
+    label: t('schema.management.tab_schemas'),
+    value: 'schemas',
+    badge: schemas.value.length || null,
+  },
+  {
+    label: t('schema.management.tab_prompts'),
+    value: 'prompts',
+    badge: prompts.value.length || null,
+  },
 ])
 
 // Schema list state
@@ -168,7 +178,7 @@ const fetchSchemas = async () => {
     schemas.value = response.data
   } catch (err) {
     error.value = 'Failed to load schemas'
-    toast.error('Failed to load schemas. Please try again.')
+    toast.error(t('schema.toasts.load_failed'))
     console.error(err)
   } finally {
     isLoading.value = false
@@ -182,7 +192,7 @@ const fetchPrompts = async () => {
     prompts.value = response.data
   } catch (err) {
     console.error('Failed to load prompts:', err)
-    toast.error('Failed to load prompts. Please try again.')
+    toast.error(t('prompt.toasts.load_failed'))
   } finally {
     isLoadingPrompts.value = false
   }
@@ -229,9 +239,9 @@ const deleteSchema = async () => {
     await schemasApi.delete(props.projectId, toDelete.id)
     schemas.value = schemas.value.filter((s) => s.id !== toDelete.id)
     showDeleteModal.value = false
-    toast.success(`Schema "${toDelete.schema_name}" deleted successfully`)
+    toast.success(t('schema.toasts.deleted', { name: toDelete.schema_name }))
   } catch (err) {
-    const errorMessage = extractErrorMessage(err, 'Failed to delete schema')
+    const errorMessage = extractErrorMessage(err, t('schema.errors.delete_failed'))
     toast.error(errorMessage)
     console.error(err)
   } finally {
@@ -281,10 +291,10 @@ const deletePrompt = async () => {
     await promptsApi.delete(props.projectId, toDelete.id)
     prompts.value = prompts.value.filter((p) => p.id !== toDelete.id)
     showDeletePromptModal.value = false
-    toast.success(`Prompt "${toDelete.name}" deleted successfully`)
+    toast.success(t('prompt.toasts.deleted', { name: toDelete.name }))
   } catch (err) {
     console.error('Failed to delete prompt:', err)
-    const errorMessage = extractErrorMessage(err, 'Failed to delete prompt')
+    const errorMessage = extractErrorMessage(err, t('prompt.errors.delete_failed'))
     toast.error(errorMessage)
   } finally {
     isDeleting.value = false

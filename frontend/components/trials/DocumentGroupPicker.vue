@@ -5,7 +5,7 @@
     </div>
     <EmptyState
       v-else-if="!documentGroups || documentGroups.length === 0"
-      title="No document groups available"
+      :title="$t('trials.groups.empty')"
     />
     <div v-else class="space-y-2">
       <div
@@ -24,11 +24,15 @@
               {{ group.description }}
             </p>
             <div class="flex items-center gap-4 mt-2 text-xs text-content-muted">
-              <span>{{ group.document_count ?? 0 }} documents</span>
+              <span>{{
+                $t('trials.groups.n_documents', { count: group.document_count ?? 0 })
+              }}</span>
               <span v-if="group.preprocessing_config">
-                Config: {{ group.preprocessing_config.name }}
+                {{ $t('trials.groups.config', { name: group.preprocessing_config.name }) }}
               </span>
-              <span v-if="group.created_at"> Created: {{ formatDate(group.created_at) }} </span>
+              <span v-if="group.created_at">
+                {{ $t('trials.groups.created', { date: formatDate(group.created_at) }) }}
+              </span>
             </div>
             <div v-if="group.tags && group.tags.length > 0" class="mt-2 flex flex-wrap gap-1">
               <span

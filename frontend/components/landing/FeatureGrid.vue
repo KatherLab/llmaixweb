@@ -1,6 +1,8 @@
 <template>
   <div class="mb-24">
-    <h2 class="text-center text-3xl font-bold mb-12 text-content">What you can do here</h2>
+    <h2 class="text-center text-3xl font-bold mb-12 text-content">
+      {{ $t('landing.features.heading') }}
+    </h2>
 
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       <FeatureCard
@@ -15,8 +17,11 @@
 
 <script setup lang="ts">
 import type { Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Lock, Code, ClipboardList, BarChart3, LayoutDashboard, Terminal } from '@lucide/vue'
 import FeatureCard from '@/components/landing/FeatureCard.vue'
+
+const { t } = useI18n({ useScope: 'global' })
 
 interface Feature {
   title: string
@@ -32,9 +37,8 @@ interface Feature {
 
 const features: Feature[] = [
   {
-    title: 'Privacy-First Design',
-    description:
-      'Run fully local or with self-hosted LLM and OCR providers. No forced external calls — your data stays in your environment.',
+    title: t('landing.features.privacy.title'),
+    description: t('landing.features.privacy.description'),
     icon: Lock,
     borderHover: 'hover:border-primary',
     shadowHover: 'hover:shadow-lg hover:shadow-primary/10',
@@ -44,9 +48,8 @@ const features: Feature[] = [
     iconHoverBg: 'group-hover:bg-primary-soft',
   },
   {
-    title: 'Visual Schema Editor',
-    description:
-      'Build nested JSON schemas with a tree-based editor — objects, arrays, and all JSON types. No hand-writing JSON.',
+    title: t('landing.features.schema.title'),
+    description: t('landing.features.schema.description'),
     icon: Code,
     borderHover: 'hover:border-primary',
     shadowHover: 'hover:shadow-lg hover:shadow-primary/10',
@@ -56,9 +59,8 @@ const features: Feature[] = [
     iconHoverBg: 'group-hover:bg-primary-soft',
   },
   {
-    title: 'Four OCR Engines',
-    description:
-      'Extract text from PDFs, images, or spreadsheets with Docling/Tesseract, Mistral OCR, vision LLMs, or local Docling fallback.',
+    title: t('landing.features.ocr.title'),
+    description: t('landing.features.ocr.description'),
     icon: ClipboardList,
     borderHover: 'hover:border-purple-400 dark:hover:border-purple-500/50',
     shadowHover: 'hover:shadow-lg hover:shadow-purple-500/10',
@@ -68,9 +70,8 @@ const features: Feature[] = [
     iconHoverBg: 'group-hover:bg-purple-200 dark:group-hover:bg-purple-500/20',
   },
   {
-    title: 'Accuracy Evaluation',
-    description:
-      'Compare extracted values to a ground-truth file field by field, with per-field and per-document metrics and confusion matrices.',
+    title: t('landing.features.evaluation.title'),
+    description: t('landing.features.evaluation.description'),
     icon: BarChart3,
     borderHover: 'hover:border-emerald-400 dark:hover:border-emerald-500/50',
     shadowHover: 'hover:shadow-lg hover:shadow-emerald-500/10',
@@ -80,9 +81,8 @@ const features: Feature[] = [
     iconHoverBg: 'group-hover:bg-emerald-200 dark:group-hover:bg-emerald-500/20',
   },
   {
-    title: 'Reproducible Trials',
-    description:
-      'Run extraction across document sets with configurable prompts, schemas, models, temperature, and token limits. Compare runs side by side.',
+    title: t('landing.features.trials.title'),
+    description: t('landing.features.trials.description'),
     icon: LayoutDashboard,
     borderHover: 'hover:border-pink-400 dark:hover:border-pink-500/50',
     shadowHover: 'hover:shadow-lg hover:shadow-pink-500/10',
@@ -92,9 +92,8 @@ const features: Feature[] = [
     iconHoverBg: 'group-hover:bg-pink-200 dark:group-hover:bg-pink-500/20',
   },
   {
-    title: 'OpenAI-Compatible APIs',
-    description:
-      'Point trials at any OpenAI-compatible endpoint — OpenAI, Mistral, vLLM, Ollama, or llama.cpp. Mix and match per trial.',
+    title: t('landing.features.api.title'),
+    description: t('landing.features.api.description'),
     icon: Terminal,
     borderHover: 'hover:border-teal-400 dark:hover:border-teal-500/50',
     shadowHover: 'hover:shadow-lg hover:shadow-teal-500/10',

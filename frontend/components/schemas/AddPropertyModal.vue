@@ -8,21 +8,29 @@
     @close="$emit('close')"
   >
     <h3 class="text-lg font-semibold text-content mb-4">
-      Add {{ advancedMode ? 'Property' : 'Field' }}
+      {{
+        advancedMode
+          ? $t('schemaEditor.add_modal.title_advanced')
+          : $t('schemaEditor.add_modal.title')
+      }}
     </h3>
 
     <form @submit.prevent="submit">
       <div class="space-y-4">
         <div>
           <label :class="labelClass" for="add-property-name">
-            {{ advancedMode ? 'Property Name' : 'Field Name' }}
+            {{
+              advancedMode
+                ? $t('schemaEditor.add_modal.name_label_advanced')
+                : $t('schemaEditor.add_modal.name_label')
+            }}
           </label>
           <input
             id="add-property-name"
             ref="propertyNameInput"
             v-model="form.name"
             :class="[inputClass, nameError ? 'border-red-400 dark:border-red-600' : '']"
-            placeholder="e.g., patient_name"
+            :placeholder="$t('schemaEditor.add_modal.name_placeholder')"
             required
             :aria-invalid="!!nameError"
           />
@@ -30,13 +38,17 @@
             {{ nameError }}
           </p>
           <p v-else class="mt-1 text-xs text-content-muted">
-            Use lowercase with underscores (e.g., patient_name)
+            {{ $t('schemaEditor.property.key_hint') }}
           </p>
         </div>
 
         <div>
           <label :class="labelClass">
-            {{ advancedMode ? 'Type' : 'Field Type' }}
+            {{
+              advancedMode
+                ? $t('schemaEditor.property.type_label_advanced')
+                : $t('schemaEditor.property.type_label')
+            }}
           </label>
           <div class="mt-2 grid grid-cols-2 gap-2">
             <button
@@ -60,38 +72,47 @@
         </div>
 
         <div>
-          <label :class="labelClass" for="add-property-title"> Display Name </label>
+          <label :class="labelClass" for="add-property-title">
+            {{ $t('schemaEditor.property.title_label') }}
+          </label>
           <input
             id="add-property-title"
             v-model="form.title"
             :class="inputClass"
-            placeholder="e.g., Patient Name"
+            :placeholder="$t('schemaEditor.add_modal.display_name_placeholder')"
           />
         </div>
 
         <div>
-          <label :class="labelClass" for="add-property-description"> Description </label>
+          <label :class="labelClass" for="add-property-description">
+            {{ $t('schemaEditor.property.description_label') }}
+          </label>
           <textarea
             id="add-property-description"
             v-model="form.description"
             rows="2"
             :class="textareaClass"
-            placeholder="Brief description of this field"
+            :placeholder="$t('schemaEditor.add_modal.description_placeholder')"
           />
         </div>
       </div>
     </form>
     <template #footer>
-      <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
-      <BaseButton variant="primary" :disabled="!!nameError" @click="submit"
-        >Add {{ advancedMode ? 'Property' : 'Field' }}</BaseButton
-      >
+      <BaseButton variant="secondary" @click="$emit('close')">{{
+        $t('schemaEditor.add_modal.cancel')
+      }}</BaseButton>
+      <BaseButton variant="primary" :disabled="!!nameError" @click="submit">{{
+        advancedMode
+          ? $t('schemaEditor.add_modal.title_advanced')
+          : $t('schemaEditor.add_modal.title')
+      }}</BaseButton>
     </template>
   </BaseModal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -119,6 +140,8 @@ const emit = defineEmits<{
   add: [formData: { name: string; type: string; title: string; description: string }]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 // Form state (reset every time the modal opens)
 const form = ref({
   name: '',
@@ -138,9 +161,9 @@ const submitAttempted = ref(false)
 
 const nameError = computed<string | null>(() => {
   const name = form.value.name.trim()
-  if (!name) return submitAttempted.value ? 'Name is required' : null
+  if (!name) return submitAttempted.value ? t('schemaEditor.add_modal.name_required') : null
   if (!KEY_PATTERN.test(name)) {
-    return 'Only letters, numbers and underscores — must not start with a number (e.g., patient_name)'
+    return t('schemaEditor.property.key_invalid')
   }
   return null
 })

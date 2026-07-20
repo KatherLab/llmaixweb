@@ -1,7 +1,7 @@
 <template>
   <SlideOver
     :open="open"
-    aria-label="Document viewer"
+    :aria-label="$t('documents.viewer.aria_label')"
     body-class="!p-0 overflow-hidden"
     @close="$emit('close')"
   >
@@ -13,7 +13,7 @@
               {{
                 document.document_name ||
                 document.original_file?.file_name ||
-                `Document #${document.id}`
+                $t('documents.common.document_number', { id: document.id })
               }}
             </h3>
             <p
@@ -35,14 +35,18 @@
             v-if="hasVersionHistory"
             variant="secondary"
             size="sm"
-            :title="showVersionHistory ? 'Hide version history' : 'Show version history'"
+            :title="
+              showVersionHistory
+                ? $t('documents.viewer.hide_history')
+                : $t('documents.viewer.show_history')
+            "
             @click="showVersionHistory = !showVersionHistory"
           >
             <Clock class="h-4 w-4" />
             <StatusBadge v-if="(versionCount ?? 0) > 0" color="blue">{{
               versionCount
             }}</StatusBadge>
-            History
+            {{ $t('documents.viewer.history') }}
           </BaseButton>
           <BaseSegmentedControl
             v-if="hasDisplayableOriginalFile"
@@ -54,14 +58,14 @@
           <span
             v-else
             class="inline-flex items-center px-3 py-1.5 border border-default text-sm font-medium rounded-card text-content-muted bg-surface-muted"
-            title="Only text view is available"
+            :title="$t('documents.viewer.only_text_available')"
           >
             <FileText class="h-4 w-4 mr-1.5" />
-            Text Only
+            {{ $t('documents.viewer.text_only') }}
           </span>
           <BaseButton variant="secondary" size="sm" @click="bodyRef?.downloadDocument()">
             <CloudDownload class="h-4 w-4" />
-            Download
+            {{ $t('documents.actions.download') }}
           </BaseButton>
           <!-- Document nav -->
           <template v-if="showNav">
@@ -69,7 +73,11 @@
               variant="secondary"
               size="sm"
               :disabled="!hasPrev"
-              :title="hasPrev ? 'Previous document (←)' : 'First document'"
+              :title="
+                hasPrev
+                  ? $t('documents.viewer.previous_document')
+                  : $t('documents.viewer.first_document')
+              "
               @click="$emit('prev')"
             >
               <ChevronLeft class="h-4 w-4" />
@@ -83,7 +91,11 @@
               variant="secondary"
               size="sm"
               :disabled="!hasNext"
-              :title="hasNext ? 'Next document (→)' : 'Last document'"
+              :title="
+                hasNext
+                  ? $t('documents.viewer.next_document')
+                  : $t('documents.viewer.last_document')
+              "
               @click="$emit('next')"
             >
               <ChevronRight class="h-4 w-4" />
@@ -109,6 +121,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, Clock, CloudDownload, FileText } from '@lucide/vue'
 import SlideOver from '@/components/common/SlideOver.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -145,6 +158,8 @@ const emit = defineEmits<{
   next: []
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 const bodyRef = ref<InstanceType<typeof DocumentViewerBody> | null>(null)
 
 // Version-history sidebar visibility — owned by the header toggle, passed down.
@@ -179,11 +194,11 @@ const versionCount = ref<number>(1)
 type SegmentedView = 'text' | 'file' | 'both'
 const segmentedValue = ref<SegmentedView>('both')
 
-const viewOptions = [
-  { label: 'Text', value: 'text' },
-  { label: 'File', value: 'file' },
-  { label: 'Both', value: 'both' },
-]
+const viewOptions = computed(() => [
+  { label: t('documents.viewer.view_text'), value: 'text' },
+  { label: t('documents.viewer.view_file'), value: 'file' },
+  { label: t('documents.viewer.view_both'), value: 'both' },
+])
 
 function onSegmentedChange(value: string | number | boolean): void {
   segmentedValue.value = String(value) as SegmentedView

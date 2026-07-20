@@ -1,16 +1,18 @@
 <template>
   <div class="mb-4">
     <label :class="labelClass" for="trial-prompt-select"
-      >Prompt <span class="text-red-500">*</span></label
+      >{{ $t('trials.select.prompt_label') }} <span class="text-red-500">*</span></label
     >
     <select id="trial-prompt-select" v-model="model" :class="selectClass" @change="emit('change')">
-      <option disabled value="">Select a prompt</option>
+      <option disabled value="">{{ $t('trials.select.prompt_placeholder') }}</option>
       <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id.toString()">
         {{ prompt.name }}
       </option>
     </select>
     <details class="mt-1 text-xs">
-      <summary class="text-primary cursor-pointer hover:underline">Preview Prompt</summary>
+      <summary class="text-primary cursor-pointer hover:underline">
+        {{ $t('trials.select.preview_prompt') }}
+      </summary>
       <div
         v-if="selectedPrompt"
         class="mt-2 bg-surface-muted border border-default rounded-card p-2"
@@ -19,10 +21,10 @@
           {{ selectedPrompt.description }}
         </p>
         <div v-if="selectedPrompt.system_prompt" class="font-mono text-xs mb-1 text-content-muted">
-          Sys: {{ selectedPrompt.system_prompt }}
+          {{ $t('trials.select.sys_prefix') }} {{ selectedPrompt.system_prompt }}
         </div>
         <div v-if="selectedPrompt.user_prompt" class="font-mono text-xs text-content-muted">
-          User: {{ selectedPrompt.user_prompt }}
+          {{ $t('trials.select.user_prefix') }} {{ selectedPrompt.user_prompt }}
         </div>
       </div>
     </details>

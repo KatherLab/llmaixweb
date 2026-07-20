@@ -1,13 +1,13 @@
 <template>
   <SlideOver
     :open="open"
-    aria-label="Preprocessing history"
+    :aria-label="$t('files.history.aria_label')"
     max-width="max-w-md"
     @close="emit('close')"
   >
     <template #header>
       <div class="min-w-0 flex-1 pr-8">
-        <h3 class="text-lg font-semibold text-content">Preprocessing History</h3>
+        <h3 class="text-lg font-semibold text-content">{{ $t('files.history.title') }}</h3>
         <p v-if="historyFile" class="text-sm text-content-muted truncate mt-0.5">
           {{ historyFile.file_name }}
         </p>
@@ -47,7 +47,8 @@
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <p class="text-sm font-medium text-content truncate">
-                      Run #{{ task.id }} • {{ getEngineName(task) }}
+                      {{ $t('files.history.run_label', { id: task.id }) }} •
+                      {{ getEngineName(task) }}
                     </p>
                     <!-- Expand/collapse chevron -->
                     <ChevronRight
@@ -58,9 +59,9 @@
                     />
                   </div>
                   <p class="text-xs text-content-muted mt-0.5 truncate">
-                    Started {{ formatRelativeTime(task.created_at) }}
+                    {{ $t('files.history.started', { time: formatRelativeTime(task.created_at) }) }}
                     <span v-if="taskDurationLabel(task)">
-                      · took {{ taskDurationLabel(task) }}</span
+                      · {{ $t('files.history.took', { duration: taskDurationLabel(task) }) }}</span
                     >
                   </p>
                 </div>
@@ -87,9 +88,13 @@
                 class="space-y-1"
               >
                 <div class="flex items-center justify-between text-xs text-content-muted">
-                  <span>Processing...</span>
+                  <span>{{ $t('files.history.processing') }}</span>
                   <span v-if="(task.meta?.eta_seconds ?? 0) > 0" class="text-content-muted">
-                    ≈ {{ formatDuration(task.meta?.eta_seconds) }} left
+                    {{
+                      $t('files.history.eta_left', {
+                        duration: formatDuration(task.meta?.eta_seconds),
+                      })
+                    }}
                   </span>
                 </div>
                 <div class="w-full bg-surface-sunken rounded-full h-2 overflow-hidden">
@@ -101,9 +106,14 @@
                   />
                 </div>
                 <p class="text-xs text-content-muted">
-                  {{ task.processed_files }} of {{ task.total_files }} files processed
+                  {{
+                    $t('files.history.files_processed', {
+                      processed: task.processed_files,
+                      total: task.total_files,
+                    })
+                  }}
                   <span v-if="task.failed_files > 0" class="text-red-600 dark:text-red-400">
-                    • {{ task.failed_files }} failed
+                    • {{ $t('files.progress.failed', { count: task.failed_files }) }}
                   </span>
                 </p>
               </div>
@@ -137,7 +147,7 @@
                         />
                         <Clock v-else class="w-4 h-4 text-content-subtle flex-shrink-0 mt-0.5" />
                         <span class="font-medium text-content truncate">
-                          {{ fileTask.file_name || 'Unknown file' }}
+                          {{ fileTask.file_name || $t('files.history.unknown_file') }}
                         </span>
                       </div>
                       <!-- Processing time -->
@@ -156,7 +166,7 @@
                           class="text-xs text-red-700 dark:text-red-400 cursor-pointer hover:text-red-900 dark:hover:text-red-300 flex items-center gap-1"
                         >
                           <ChevronRight class="w-3 h-3 transition-transform group-open:rotate-90" />
-                          View error
+                          {{ $t('files.history.view_error') }}
                         </summary>
                         <p
                           class="mt-1 text-xs text-red-600 dark:text-red-300 dark:bg-red-900/30 bg-red-100 rounded p-2"
@@ -196,7 +206,7 @@
                               :key="idx"
                               class="flex justify-between"
                             >
-                              <span>Row {{ row.row_index }}</span>
+                              <span>{{ $t('files.history.row', { index: row.row_index }) }}</span>
                               <span class="truncate max-w-[150px]">{{ row.reason }}</span>
                             </div>
                             <p
@@ -205,9 +215,13 @@
                               "
                               class="text-amber-500 dark:text-amber-400"
                             >
-                              ...and
-                              {{ (getWarnings(fileTask)?.skipped_rows?.details?.length ?? 0) - 10 }}
-                              more
+                              {{
+                                $t('files.history.and_more', {
+                                  count:
+                                    (getWarnings(fileTask)?.skipped_rows?.details?.length ?? 0) -
+                                    10,
+                                })
+                              }}
                             </p>
                           </div>
                           <div v-else>
@@ -232,8 +246,12 @@
                         class="text-xs text-green-700 dark:text-green-400 inline-flex items-center gap-1"
                       >
                         <Check class="w-3 h-3" />
-                        {{ fileTask.document_ids.length }} document{{
-                          fileTask.document_ids.length !== 1 ? 's' : ''
+                        {{
+                          $t(
+                            'files.history.documents_count',
+                            { count: fileTask.document_ids.length },
+                            fileTask.document_ids.length,
+                          )
                         }}
                       </span>
                       <!-- Row-by-row CSV/XLSX runs produce an auto-generated
@@ -246,7 +264,9 @@
                         @click.stop="emit('navigate-group', fileTask.document_set_id)"
                       >
                         <ExternalLink class="w-3 h-3" />
-                        Go to Group ({{ fileTask.document_ids.length }})
+                        {{
+                          $t('files.history.go_to_group', { count: fileTask.document_ids.length })
+                        }}
                       </BaseButton>
                       <BaseButton
                         v-else-if="fileTask.document_ids.length === 1"
@@ -256,7 +276,7 @@
                         @click.stop="emit('navigate', fileTask.document_ids[0]!)"
                       >
                         <ExternalLink class="w-3 h-3" />
-                        Go to Document
+                        {{ $t('files.history.go_to_document') }}
                       </BaseButton>
                       <BaseButton
                         v-else
@@ -266,13 +286,17 @@
                         @click.stop="emit('navigate', fileTask.document_ids[0]!)"
                       >
                         <ExternalLink class="w-3 h-3" />
-                        Go to Documents ({{ fileTask.document_ids.length }})
+                        {{
+                          $t('files.history.go_to_documents', {
+                            count: fileTask.document_ids.length,
+                          })
+                        }}
                       </BaseButton>
                     </div>
                   </div>
                 </template>
                 <div v-else class="text-center text-content-subtle py-4 text-sm">
-                  No file tasks recorded
+                  {{ $t('files.history.no_file_tasks') }}
                 </div>
               </div>
 
@@ -294,7 +318,7 @@
                   class="text-xs font-medium"
                   @click.stop="emit('retry', task.id)"
                 >
-                  Retry failed files
+                  {{ $t('files.history.retry_failed') }}
                 </BaseButton>
                 <BaseButton
                   v-if="
@@ -308,7 +332,7 @@
                   @click.stop="emit('cancel', task)"
                 >
                   <X class="w-3 h-3" />
-                  Cancel
+                  {{ $t('files.actions.cancel') }}
                 </BaseButton>
                 <BaseButton
                   variant="ghost"
@@ -316,7 +340,7 @@
                   class="text-xs"
                   @click.stop="toggleTaskAccordion(task.id)"
                 >
-                  Close
+                  {{ $t('files.actions.close') }}
                 </BaseButton>
               </div>
             </div>
@@ -324,14 +348,14 @@
         </div>
 
         <!-- No Runs Yet -->
-        <EmptyState v-else title="No preprocessing runs yet">
+        <EmptyState v-else :title="$t('files.history.no_runs')">
           <template #icon>
             <FilePlus class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
           </template>
           <template v-if="historyFile" #action>
             <BaseButton class="shadow-sm" @click="emit('process', historyFile)">
               <Rocket class="w-4 h-4" />
-              Process this file
+              {{ $t('files.history.process_this_file') }}
             </BaseButton>
           </template>
         </EmptyState>
@@ -348,10 +372,10 @@
           class="font-medium"
           @click="emit('process-panel', historyFile)"
         >
-          + Run new preprocessing
+          {{ $t('files.history.run_new') }}
         </BaseButton>
         <BaseButton variant="secondary" size="sm" class="ml-auto" @click="emit('close')">
-          Close
+          {{ $t('files.actions.close') }}
         </BaseButton>
       </div>
     </div>
@@ -360,6 +384,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   AlertTriangle,
   Ban,
@@ -402,6 +427,8 @@ const emit = defineEmits<{
   'process-panel': [file: FileWithTasks]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 // Multi-expand accordion state
 const expandedTasks = ref(new Set<number>())
 
@@ -431,8 +458,8 @@ const getEngineName = (task: PreprocessingTask): string => {
 
   if (engine === 'mistral_ocr') return 'Mistral OCR'
   if (engine === 'llm_vision') return 'Vision LLM'
-  if (settings.force_ocr) return 'Local OCR + Force'
-  return 'Local OCR'
+  if (settings.force_ocr) return t('files.history.engine_local_force')
+  return t('files.history.engine_local')
 }
 
 // Helper to check task status (handles enum or string)
@@ -450,10 +477,10 @@ const isTaskActive = (task: PreprocessingTask): boolean =>
 const taskStatusLabel = (task: PreprocessingTask): string => {
   if (isTaskStatus(task, 'processing') || isTaskStatus(task, 'in_progress'))
     return `${Math.round(task.meta?.progress || 0)}%`
-  if (isTaskStatus(task, 'completed')) return 'Done'
-  if (isTaskStatus(task, 'failed')) return 'Failed'
-  if (isTaskStatus(task, 'cancelled')) return 'Cancelled'
-  return 'Pending'
+  if (isTaskStatus(task, 'completed')) return t('files.history.status_done')
+  if (isTaskStatus(task, 'failed')) return t('files.history.status_failed')
+  if (isTaskStatus(task, 'cancelled')) return t('files.history.status_cancelled')
+  return t('files.history.status_pending')
 }
 
 // Typed accessors for the warnings payload (typed loosely as Record<string,
@@ -482,9 +509,9 @@ function getWarnings(fileTask: FilePreprocessingTask): FileTaskWarnings | null {
 const warningSummaryLabel = (warnings: FileTaskWarnings | null): string => {
   if (!warnings) return ''
   const skipped = warnings.skipped_rows?.count ?? warnings.skipped_rows?.details?.length ?? 0
-  if (skipped > 0) return `${skipped} skipped row${skipped === 1 ? '' : 's'}`
+  if (skipped > 0) return t('files.history.skipped_rows', { count: skipped }, skipped)
   const messageCount = warnings.messages?.length ?? 0
-  return `${messageCount} warning${messageCount === 1 ? '' : 's'}`
+  return t('files.history.warnings', { count: messageCount }, messageCount)
 }
 
 // Format relative time. Delegates the just-now/m/h tiers to the shared

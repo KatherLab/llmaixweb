@@ -2,22 +2,24 @@
   <div class="relative rounded-modal border border-default bg-surface p-8 backdrop-blur-sm">
     <!-- Step 1 Details -->
     <div v-if="step === 1" class="space-y-4">
-      <h3 class="text-2xl font-bold text-content mb-4">Upload Medical Documents</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">{{ $t('landing.details.step1.title') }}</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
-          <h4 class="text-lg font-semibold text-primary mb-3">Supported Formats</h4>
+          <h4 class="text-lg font-semibold text-primary mb-3">
+            {{ $t('landing.details.step1.supported_formats') }}
+          </h4>
           <div class="space-y-2">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-card bg-primary-soft flex items-center justify-center">
                 <span class="text-xs font-bold text-primary">PDF</span>
               </div>
-              <span class="text-content-muted">PDF documents with text or scanned images</span>
+              <span class="text-content-muted">{{ $t('landing.details.step1.format_pdf') }}</span>
             </div>
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-card bg-primary-soft flex items-center justify-center">
                 <span class="text-xs font-bold text-primary">DOC</span>
               </div>
-              <span class="text-content-muted">Word documents (DOCX, DOC)</span>
+              <span class="text-content-muted">{{ $t('landing.details.step1.format_doc') }}</span>
             </div>
             <div class="flex items-center gap-3">
               <div
@@ -25,7 +27,7 @@
               >
                 <span class="text-xs font-bold text-purple-600 dark:text-purple-400">IMG</span>
               </div>
-              <span class="text-content-muted">Images (PNG, JPEG) with OCR support</span>
+              <span class="text-content-muted">{{ $t('landing.details.step1.format_img') }}</span>
             </div>
             <div class="flex items-center gap-3">
               <div
@@ -33,12 +35,14 @@
               >
                 <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">CSV</span>
               </div>
-              <span class="text-content-muted">Structured data (CSV, XLSX)</span>
+              <span class="text-content-muted">{{ $t('landing.details.step1.format_csv') }}</span>
             </div>
           </div>
         </div>
         <div>
-          <h4 class="text-lg font-semibold text-primary mb-3">Features</h4>
+          <h4 class="text-lg font-semibold text-primary mb-3">
+            {{ $t('landing.details.step1.features') }}
+          </h4>
           <ul class="space-y-2 text-content-muted">
             <li v-for="feature in uploadFeatures" :key="feature" class="flex items-start gap-2">
               <CheckIcon />
@@ -51,10 +55,12 @@
 
     <!-- Step 2 Details -->
     <div v-if="step === 2" class="space-y-4">
-      <h3 class="text-2xl font-bold text-content mb-4">Text Extraction & OCR</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">{{ $t('landing.details.step2.title') }}</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
-          <h4 class="text-lg font-semibold text-primary mb-3">OCR Engines</h4>
+          <h4 class="text-lg font-semibold text-primary mb-3">
+            {{ $t('landing.details.step2.ocr_engines') }}
+          </h4>
           <div class="space-y-3">
             <div
               v-for="method in ocrMethods"
@@ -67,7 +73,9 @@
           </div>
         </div>
         <div>
-          <h4 class="text-lg font-semibold text-primary mb-3">Document Parsers</h4>
+          <h4 class="text-lg font-semibold text-primary mb-3">
+            {{ $t('landing.details.step2.document_parsers') }}
+          </h4>
           <div class="space-y-3">
             <div
               v-for="parser in documentParsers"
@@ -84,11 +92,11 @@
 
     <!-- Step 3 Details -->
     <div v-if="step === 3" class="space-y-4">
-      <h3 class="text-2xl font-bold text-content mb-4">Document Management</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">{{ $t('landing.details.step3.title') }}</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
           <h4 class="text-lg font-semibold text-purple-600 mb-3 dark:text-purple-400">
-            Organization
+            {{ $t('landing.details.step3.organization') }}
           </h4>
           <ul class="space-y-2 text-content-muted">
             <li v-for="feature in documentFeatures" :key="feature" class="flex items-start gap-2">
@@ -99,9 +107,9 @@
         </div>
         <div>
           <h4 class="text-lg font-semibold text-purple-600 mb-3 dark:text-purple-400">
-            Selection for Trials
+            {{ $t('landing.details.step3.selection_for_trials') }}
           </h4>
-          <p class="text-content-muted mb-3">Choose documents for a trial in two ways:</p>
+          <p class="text-content-muted mb-3">{{ $t('landing.details.step3.choose_documents') }}</p>
           <div class="space-y-3">
             <div
               v-for="option in selectionOptions"
@@ -118,11 +126,11 @@
 
     <!-- Step 4 Details -->
     <div v-if="step === 4" class="space-y-4">
-      <h3 class="text-2xl font-bold text-content mb-4">Visual Schema Editor</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">{{ $t('landing.details.step4.title') }}</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
           <h4 class="text-lg font-semibold text-pink-600 mb-3 dark:text-pink-400">
-            Tree-Based Editor
+            {{ $t('landing.details.step4.tree_based_editor') }}
           </h4>
           <div class="p-4 rounded-card bg-surface-muted border border-default">
             <div class="font-mono text-sm space-y-2">
@@ -145,11 +153,13 @@
               </div>
             </div>
           </div>
-          <p class="text-sm text-content-muted mt-3">Build nested structures visually</p>
+          <p class="text-sm text-content-muted mt-3">
+            {{ $t('landing.details.step4.build_nested') }}
+          </p>
         </div>
         <div>
           <h4 class="text-lg font-semibold text-pink-600 mb-3 dark:text-pink-400">
-            Schema Features
+            {{ $t('landing.details.step4.schema_features') }}
           </h4>
           <ul class="space-y-2 text-content-muted">
             <li v-for="feature in schemaFeatures" :key="feature" class="flex items-start gap-2">
@@ -163,7 +173,7 @@
 
     <!-- Step 5 Details -->
     <div v-if="step === 5" class="space-y-4">
-      <h3 class="text-2xl font-bold text-content mb-4">LLM-Powered Extraction</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">{{ $t('landing.details.step5.title') }}</h3>
       <div class="space-y-6">
         <!-- Visual Flow -->
         <div class="p-6 rounded-card bg-surface-muted border border-default">
@@ -195,7 +205,7 @@
         <div class="grid md:grid-cols-2 gap-6">
           <div>
             <h4 class="text-lg font-semibold text-emerald-600 mb-3 dark:text-emerald-400">
-              Compatible Providers
+              {{ $t('landing.details.step5.compatible_providers') }}
             </h4>
             <div class="space-y-2">
               <div
@@ -212,7 +222,7 @@
           </div>
           <div>
             <h4 class="text-lg font-semibold text-emerald-600 mb-3 dark:text-emerald-400">
-              Trial Configuration
+              {{ $t('landing.details.step5.trial_configuration') }}
             </h4>
             <ul class="space-y-2 text-content-muted">
               <li v-for="feature in trialConfig" :key="feature" class="flex items-start gap-2">
@@ -227,11 +237,11 @@
 
     <!-- Step 6 Details -->
     <div v-if="step === 6" class="space-y-4">
-      <h3 class="text-2xl font-bold text-content mb-4">Accuracy Evaluation</h3>
+      <h3 class="text-2xl font-bold text-content mb-4">{{ $t('landing.details.step6.title') }}</h3>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
           <h4 class="text-lg font-semibold text-teal-600 mb-3 dark:text-teal-400">
-            Evaluation Process
+            {{ $t('landing.details.step6.evaluation_process') }}
           </h4>
           <div class="space-y-3">
             <div v-for="item in evaluationProcess" :key="item.step" class="flex items-start gap-3">
@@ -251,12 +261,14 @@
         </div>
         <div>
           <h4 class="text-lg font-semibold text-teal-600 mb-3 dark:text-teal-400">
-            Metrics Dashboard
+            {{ $t('landing.details.step6.metrics_dashboard') }}
           </h4>
           <div class="p-4 rounded-card bg-surface-muted border border-default">
             <div class="space-y-3">
               <div class="flex justify-between items-center">
-                <span class="text-content-muted">Overall Accuracy</span>
+                <span class="text-content-muted">{{
+                  $t('landing.details.step6.overall_accuracy')
+                }}</span>
                 <span class="text-2xl font-bold text-teal-600 dark:text-teal-400">92.2%</span>
               </div>
               <div class="w-full bg-surface-sunken rounded-full h-2">
@@ -267,11 +279,15 @@
               </div>
               <div class="grid grid-cols-2 gap-2 mt-4">
                 <div class="text-center p-2 rounded-card bg-surface-sunken">
-                  <p class="text-xs text-content-muted">Documents</p>
+                  <p class="text-xs text-content-muted">
+                    {{ $t('landing.details.step6.documents') }}
+                  </p>
                   <p class="text-lg font-bold text-content">8</p>
                 </div>
                 <div class="text-center p-2 rounded-card bg-surface-sunken">
-                  <p class="text-xs text-content-muted">Field Errors</p>
+                  <p class="text-xs text-content-muted">
+                    {{ $t('landing.details.step6.field_errors') }}
+                  </p>
                   <p class="text-lg font-bold text-content">5</p>
                 </div>
               </div>
@@ -293,8 +309,11 @@
 
 <script setup lang="ts">
 import type { Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { FileText, MessageSquare, Database, Zap, ChevronRight, X } from '@lucide/vue'
 import CheckIcon from '@/components/landing/CheckIcon.vue'
+
+const { t } = useI18n({ useScope: 'global' })
 
 interface Props {
   step?: number | null
@@ -308,53 +327,55 @@ defineEmits<{ close: [] }>()
 
 // Step 1 data
 const uploadFeatures: string[] = [
-  'Batch upload multiple files',
-  'Automatic format detection',
-  'SHA-256 duplicate detection',
+  t('landing.details.step1.upload_features.batch'),
+  t('landing.details.step1.upload_features.detection'),
+  t('landing.details.step1.upload_features.duplicate'),
 ]
 
 // Step 2 data — matches the README's four-engine breakdown
 const ocrMethods: { name: string; description: string }[] = [
   {
-    name: 'Quick (Local OCR)',
-    description:
-      'Docling + Tesseract via docling-serve. Uses embedded PDF text when available; no API key needed.',
+    name: t('landing.details.step2.methods.quick.name'),
+    description: t('landing.details.step2.methods.quick.description'),
   },
   {
-    name: 'Mistral OCR API',
-    description:
-      'Mistral cloud or self-hosted DeepSeek-OCR-2. Higher accuracy on complex layouts and tables.',
+    name: t('landing.details.step2.methods.mistral.name'),
+    description: t('landing.details.step2.methods.mistral.description'),
   },
   {
-    name: 'Vision LLM OCR',
-    description:
-      'Any OpenAI-compatible vision model (e.g. GPT-4o, Gemma 4 via vLLM) for layout-aware extraction.',
+    name: t('landing.details.step2.methods.vision.name'),
+    description: t('landing.details.step2.methods.vision.description'),
   },
 ]
 
 const documentParsers: { name: string; description: string }[] = [
   {
-    name: 'Docling',
-    description:
-      "IBM's document understanding library — embedded text extraction with optional local fallback.",
+    name: t('landing.details.step2.parsers.docling.name'),
+    description: t('landing.details.step2.parsers.docling.description'),
   },
   {
-    name: 'CSV / XLSX',
-    description: 'Full-document or row-by-row parsing with configurable text and case-ID columns.',
+    name: t('landing.details.step2.parsers.csv.name'),
+    description: t('landing.details.step2.parsers.csv.description'),
   },
 ]
 
 // Step 3 data
 const documentFeatures: string[] = [
-  'Group documents into reusable sets',
-  'Filter and search by metadata',
-  'Preview extracted text',
-  'Track OCR engine and origin per document',
+  t('landing.details.step3.document_features.sets'),
+  t('landing.details.step3.document_features.filter'),
+  t('landing.details.step3.document_features.preview'),
+  t('landing.details.step3.document_features.track'),
 ]
 
 const selectionOptions: { name: string; description: string }[] = [
-  { name: 'Document Sets', description: 'Run a trial against an entire group at once' },
-  { name: 'Individual Selection', description: 'Hand-pick specific documents for a trial' },
+  {
+    name: t('landing.details.step3.selection_options.sets.name'),
+    description: t('landing.details.step3.selection_options.sets.description'),
+  },
+  {
+    name: t('landing.details.step3.selection_options.individual.name'),
+    description: t('landing.details.step3.selection_options.individual.description'),
+  },
 ]
 
 // Step 4 data
@@ -365,10 +386,10 @@ const schemaTreeFields: { name: string; type: string; typeClass: string }[] = [
 ]
 
 const schemaFeatures: string[] = [
-  'Nested objects and arrays',
-  'All JSON data types',
-  'Import / export JSON schemas',
-  'Schema templates and validation',
+  t('landing.details.step4.schema_feature_items.nested'),
+  t('landing.details.step4.schema_feature_items.types'),
+  t('landing.details.step4.schema_feature_items.import_export'),
+  t('landing.details.step4.schema_feature_items.templates'),
 ]
 
 // Step 5 data
@@ -379,31 +400,31 @@ const extractionFlow: {
   iconClass: string
 }[] = [
   {
-    label: 'Document',
+    label: t('landing.details.step5.flow.document'),
     bg: 'bg-primary-soft',
     icon: FileText,
     iconClass: 'text-primary',
   },
   {
-    label: 'Prompt',
+    label: t('landing.details.step5.flow.prompt'),
     bg: 'bg-primary-soft',
     icon: MessageSquare,
     iconClass: 'text-primary',
   },
   {
-    label: 'Schema',
+    label: t('landing.details.step5.flow.schema'),
     bg: 'bg-purple-100 dark:bg-purple-500/20',
     icon: Database,
     iconClass: 'text-purple-600 dark:text-purple-400',
   },
   {
-    label: 'LLM API',
+    label: t('landing.details.step5.flow.llm_api'),
     bg: 'bg-emerald-100 dark:bg-emerald-500/20',
     icon: Zap,
     iconClass: 'text-emerald-600 dark:text-emerald-400',
   },
   {
-    label: 'JSON Output',
+    label: t('landing.details.step5.flow.json_output'),
     bg: 'bg-teal-100 dark:bg-teal-500/20',
     icon: null,
     iconClass: 'text-teal-600 dark:text-teal-400',
@@ -418,30 +439,43 @@ const flowArrows: { line: string; arrowClass: string }[] = [
 ]
 
 const llmProviders: { name: string; description: string }[] = [
-  { name: 'OpenAI API', description: 'GPT-4o and other OpenAI models' },
-  { name: 'Local Models', description: 'Ollama, llama.cpp, vLLM — fully offline' },
-  { name: 'Custom Endpoints', description: 'Any OpenAI-compatible API gateway' },
+  {
+    name: t('landing.details.step5.providers.openai.name'),
+    description: t('landing.details.step5.providers.openai.description'),
+  },
+  {
+    name: t('landing.details.step5.providers.local.name'),
+    description: t('landing.details.step5.providers.local.description'),
+  },
+  {
+    name: t('landing.details.step5.providers.custom.name'),
+    description: t('landing.details.step5.providers.custom.description'),
+  },
 ]
 
 const trialConfig: string[] = [
-  'Set temperature and token limits',
-  'Run across full document sets',
-  'Compare prompts, schemas, and models',
-  'Track token usage per trial',
+  t('landing.details.step5.trial_config.limits'),
+  t('landing.details.step5.trial_config.sets'),
+  t('landing.details.step5.trial_config.compare'),
+  t('landing.details.step5.trial_config.tokens'),
 ]
 
 // Step 6 data
 const evaluationProcess: { step: number; title: string; description: string }[] = [
-  { step: 1, title: 'Upload Ground Truth', description: 'Provide a CSV/XLSX of validated values' },
+  {
+    step: 1,
+    title: t('landing.details.step6.process.upload.title'),
+    description: t('landing.details.step6.process.upload.description'),
+  },
   {
     step: 2,
-    title: 'Map Fields',
-    description: 'Link ground-truth columns to schema fields and comparison methods',
+    title: t('landing.details.step6.process.map.title'),
+    description: t('landing.details.step6.process.map.description'),
   },
   {
     step: 3,
-    title: 'Compute Metrics',
-    description: 'Overall, per-field, and per-document accuracy',
+    title: t('landing.details.step6.process.compute.title'),
+    description: t('landing.details.step6.process.compute.description'),
   },
 ]
 </script>

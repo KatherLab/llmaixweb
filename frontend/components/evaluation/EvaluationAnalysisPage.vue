@@ -4,10 +4,14 @@
     <div class="flex items-center justify-between gap-4 mb-4">
       <div class="min-w-0">
         <BaseButton variant="link" size="sm" tone="gray" class="-ml-1 mb-2" @click="$emit('back')">
-          <ChevronLeft class="h-4 w-4" /> Back to evaluations
+          <ChevronLeft class="h-4 w-4" /> {{ $t('evaluation.analysis.back') }}
         </BaseButton>
         <h1 class="text-2xl font-bold text-content truncate">
-          {{ trialName || loadedTrialName || `Trial #${evaluationDetail?.trial_id}` }}
+          {{
+            trialName ||
+            loadedTrialName ||
+            $t('evaluation.analysis.trial_number', { number: evaluationDetail?.trial_id })
+          }}
         </h1>
         <p class="text-sm text-content-subtle mt-0.5">
           <span v-if="evaluationDetail?.model || loadedTrialModel">{{
@@ -19,7 +23,7 @@
       </div>
       <BaseButton variant="secondary" @click="$emit('export')">
         <Download class="h-4 w-4" />
-        Export
+        {{ $t('evaluation.analysis.export') }}
       </BaseButton>
     </div>
 
@@ -35,15 +39,13 @@
         <!-- Overall metrics -->
         <div class="bg-surface shadow-sm rounded-card p-4">
           <div class="flex items-baseline justify-between mb-3">
-            <h2 class="text-sm font-semibold text-content-muted">Overall Metrics</h2>
+            <h2 class="text-sm font-semibold text-content-muted">
+              {{ $t('evaluation.analysis.overall_metrics') }}
+            </h2>
             <span
               v-if="matchedDocInfo"
               class="text-[11px] text-content-subtle"
-              :title="
-                errorDocCount > 0
-                  ? 'Accuracy is computed over matched documents only. Unmatched documents are listed in the table below.'
-                  : ''
-              "
+              :title="errorDocCount > 0 ? $t('evaluation.analysis.matched_only_tooltip') : ''"
             >
               {{ matchedDocInfo }}
             </span>
@@ -65,30 +67,40 @@
             </div>
           </div>
           <div v-if="errorDocCount > 0" class="mt-3 text-xs text-yellow-600 dark:text-yellow-400">
-            {{ errorDocCount }} of {{ totalDocCount }} document(s) could not be scored (no
-            ground-truth match) and are excluded from the accuracy above.
+            {{
+              $t('evaluation.analysis.unscored_docs', {
+                errorCount: errorDocCount,
+                totalCount: totalDocCount,
+              })
+            }}
           </div>
         </div>
 
         <!-- Field list -->
         <div class="bg-surface shadow-sm rounded-card p-4">
           <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-content-muted">Fields</h2>
+            <h2 class="text-sm font-semibold text-content-muted">
+              {{ $t('evaluation.analysis.fields') }}
+            </h2>
             <div class="flex items-center gap-3">
               <button
                 class="text-xs text-content-subtle hover:text-content-muted inline-flex items-center gap-1"
-                :title="fieldSort === 'accuracy' ? 'Sorted worst-first' : 'Sorted alphabetically'"
+                :title="
+                  fieldSort === 'accuracy'
+                    ? $t('evaluation.analysis.sorted_worst_first')
+                    : $t('evaluation.analysis.sorted_alphabetically')
+                "
                 @click="toggleFieldSort"
               >
                 <ArrowDownWideNarrow class="h-3.5 w-3.5" />
-                {{ fieldSort === 'accuracy' ? 'Worst first' : 'A→Z' }}
+                {{ fieldSort === 'accuracy' ? $t('evaluation.analysis.worst_first') : 'A→Z' }}
               </button>
               <button
                 v-if="selectedFieldFilter"
                 class="text-xs text-primary hover:underline"
                 @click="selectedFieldFilter = ''"
               >
-                Clear filter
+                {{ $t('evaluation.analysis.clear_filter') }}
               </button>
             </div>
           </div>
@@ -112,7 +124,7 @@
                 <span
                   v-if="field.isCategory"
                   class="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                  title="Categorical field — select it to view its confusion matrix"
+                  :title="$t('evaluation.analysis.categorical_tooltip')"
                 >
                   <Tags class="h-2.5 w-2.5" />
                   CAT
@@ -130,7 +142,7 @@
               </div>
             </li>
             <li v-if="!fieldList.length" class="text-xs text-content-subtle italic px-2 py-1">
-              No fields.
+              {{ $t('evaluation.analysis.no_fields') }}
             </li>
           </ul>
         </div>
@@ -142,16 +154,16 @@
         <div class="bg-surface shadow-sm rounded-card p-3 mb-4 flex flex-wrap items-center gap-3">
           <SearchInput
             v-model="search"
-            placeholder="Search documents..."
+            :placeholder="$t('evaluation.analysis.search_documents')"
             class="flex-1 min-w-[200px]"
           />
           <select v-model="statusFilter" :class="selectClass">
-            <option value="all">All statuses</option>
-            <option value="failed">Failed</option>
-            <option value="incorrect">Has wrong values</option>
-            <option value="missing">Has missing fields</option>
-            <option value="perfect">High (≥90%)</option>
-            <option value="low">Low (&lt;50%)</option>
+            <option value="all">{{ $t('evaluation.analysis.status.all') }}</option>
+            <option value="failed">{{ $t('evaluation.analysis.status.failed') }}</option>
+            <option value="incorrect">{{ $t('evaluation.analysis.status.incorrect') }}</option>
+            <option value="missing">{{ $t('evaluation.analysis.status.missing') }}</option>
+            <option value="perfect">{{ $t('evaluation.analysis.status.high') }}</option>
+            <option value="low">{{ $t('evaluation.analysis.status.low') }}</option>
           </select>
           <div v-if="selectedFieldFilter" class="flex items-center gap-1">
             <!-- Without a confusion-cell selection the field filter shows
@@ -160,8 +172,12 @@
             <FilterChip
               :label="
                 confusionFilter
-                  ? `Field: ${prettifyField(selectedFieldFilter)}`
-                  : `Errors in: ${prettifyField(selectedFieldFilter)}`
+                  ? $t('evaluation.analysis.chip_field', {
+                      field: prettifyField(selectedFieldFilter),
+                    })
+                  : $t('evaluation.analysis.chip_errors_in', {
+                      field: prettifyField(selectedFieldFilter),
+                    })
               "
               color="blue"
               @remove="selectedFieldFilter = ''"
@@ -180,11 +196,19 @@
         <div v-if="selectedFieldMetrics" class="bg-surface shadow-sm rounded-card p-4 mb-4">
           <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h3 class="text-sm font-semibold text-content-muted">
-              Field metrics — {{ prettifyField(selectedFieldFilter) }}
+              {{
+                $t('evaluation.analysis.field_metrics', {
+                  field: prettifyField(selectedFieldFilter),
+                })
+              }}
             </h3>
             <span class="text-xs text-content-subtle">
-              {{ selectedFieldMetrics.correct_count }}/{{ selectedFieldMetrics.total_count }}
-              correct
+              {{
+                $t('evaluation.analysis.correct_count', {
+                  correct: selectedFieldMetrics.correct_count,
+                  total: selectedFieldMetrics.total_count,
+                })
+              }}
             </span>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -208,7 +232,9 @@
             v-if="Object.keys(selectedFieldMetrics.error_distribution).length"
             class="mt-3 flex flex-wrap items-center gap-1.5"
           >
-            <span class="text-xs text-content-subtle mr-1">Errors:</span>
+            <span class="text-xs text-content-subtle mr-1">{{
+              $t('evaluation.analysis.errors_label')
+            }}</span>
             <span
               v-for="(count, type) in selectedFieldMetrics.error_distribution"
               :key="type"
@@ -223,7 +249,11 @@
         <!-- Confusion matrix for the selected categorical field -->
         <div v-if="confusionMatrixForField" class="bg-surface shadow-sm rounded-card p-4 mb-4">
           <h3 class="text-sm font-semibold text-content-muted mb-2">
-            Confusion matrix — {{ prettifyField(selectedFieldFilter) }}
+            {{
+              $t('evaluation.analysis.confusion_matrix', {
+                field: prettifyField(selectedFieldFilter),
+              })
+            }}
           </h3>
           <ConfusionMatrix
             :matrix="confusionMatrixForField"
@@ -241,12 +271,15 @@
             row-clickable
             :highlighted-keys="selectedDocId ? [String(selectedDocId)] : []"
             :row-id-prefix="'eval-doc'"
-            empty-title="No documents match your filters"
+            :empty-title="$t('evaluation.analysis.no_documents_match')"
             @row-click="openDoc"
           >
             <template #cell-document_name="{ row }">
               <span class="text-sm font-medium text-content">
-                {{ row.document_name || `Document #${row.document_id}` }}
+                {{
+                  row.document_name ||
+                  $t('evaluation.analysis.document_number', { number: row.document_id })
+                }}
               </span>
             </template>
             <template #cell-accuracy="{ row }">
@@ -307,6 +340,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ArrowDownWideNarrow, ChevronLeft, Download, Info, Tags } from '@lucide/vue'
 import { evaluationsApi } from '@/services/evaluationsApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
@@ -363,6 +397,8 @@ const props = withDefaults(defineProps<Props>(), {
   trialName: '',
   groundTruthName: '',
 })
+
+const { t } = useI18n({ useScope: 'global' })
 
 defineEmits<{ back: []; export: [] }>()
 
@@ -442,39 +478,42 @@ const overallMetrics = computed(() => {
   return [
     {
       key: 'accuracy',
-      label: 'Accuracy',
+      label: t('evaluation.metrics.accuracy'),
       value: formatMetricPercent(m.accuracy),
       sub:
         m.total_fields != null && m.correct_fields != null
-          ? `${m.correct_fields}/${m.total_fields} fields`
+          ? t('evaluation.analysis.fields_ratio', {
+              correct: m.correct_fields,
+              total: m.total_fields,
+            })
           : '',
-      tooltipTitle: 'Accuracy',
+      tooltipTitle: t('evaluation.metrics.accuracy'),
       tooltip: getMetricTooltip('accuracy'),
     },
     {
       key: 'precision',
-      label: 'Precision',
+      label: t('evaluation.metrics.precision'),
       value: formatMetricPercent(m.precision),
       // No "docs matched" sub here — that info belongs to the header/footnote,
       // and under the Precision tile it reads as part of the precision metric.
       sub: '',
-      tooltipTitle: 'Precision',
+      tooltipTitle: t('evaluation.metrics.precision'),
       tooltip: getMetricTooltip('precision'),
     },
     {
       key: 'recall',
-      label: 'Recall',
+      label: t('evaluation.metrics.recall'),
       value: formatMetricPercent(m.recall),
       sub: '',
-      tooltipTitle: 'Recall',
+      tooltipTitle: t('evaluation.metrics.recall'),
       tooltip: getMetricTooltip('recall'),
     },
     {
       key: 'f1_score',
-      label: 'F1',
+      label: t('evaluation.metrics.f1'),
       value: formatMetricPercent(m.f1_score),
       sub: '',
-      tooltipTitle: 'F1 Score',
+      tooltipTitle: t('evaluation.metrics.f1_title'),
       tooltip: getMetricTooltip('f1_score'),
     },
   ]
@@ -493,9 +532,12 @@ const matchedDocCount = computed(
 const matchedDocInfo = computed(() => {
   if (!totalDocCount.value) return ''
   if (errorDocCount.value > 0) {
-    return `${matchedDocCount.value}/${totalDocCount.value} docs matched`
+    return t('evaluation.analysis.docs_matched', {
+      matched: matchedDocCount.value,
+      total: totalDocCount.value,
+    })
   }
-  return `${totalDocCount.value} doc${totalDocCount.value === 1 ? '' : 's'}`
+  return t('evaluation.analysis.doc_total', { count: totalDocCount.value }, totalDocCount.value)
 })
 const createdDate = computed(() =>
   evaluationDetail.value?.created_at ? formatDate(evaluationDetail.value.created_at) : '',
@@ -582,30 +624,30 @@ const selectedFieldMetricCards = computed(() => {
   return [
     {
       key: 'accuracy',
-      label: 'Accuracy',
+      label: t('evaluation.metrics.accuracy'),
       value: m.accuracy,
-      tooltipTitle: 'Accuracy',
+      tooltipTitle: t('evaluation.metrics.accuracy'),
       tooltip: getMetricTooltip('accuracy'),
     },
     {
       key: 'precision',
-      label: 'Precision',
+      label: t('evaluation.metrics.precision'),
       value: m.precision,
-      tooltipTitle: 'Precision',
+      tooltipTitle: t('evaluation.metrics.precision'),
       tooltip: getMetricTooltip('precision'),
     },
     {
       key: 'recall',
-      label: 'Recall',
+      label: t('evaluation.metrics.recall'),
       value: m.recall,
-      tooltipTitle: 'Recall',
+      tooltipTitle: t('evaluation.metrics.recall'),
       tooltip: getMetricTooltip('recall'),
     },
     {
       key: 'f1_score',
-      label: 'F1',
+      label: t('evaluation.metrics.f1'),
       value: m.f1_score,
-      tooltipTitle: 'F1 Score',
+      tooltipTitle: t('evaluation.metrics.f1_title'),
       tooltip: getMetricTooltip('f1_score'),
     },
   ]
@@ -887,12 +929,12 @@ const documentStatusLabel = (row: unknown): string =>
 const documentStatusColor = (row: unknown): 'red' | 'green' | 'yellow' =>
   _documentStatusColor(row as DocumentEvaluationDetail | null | undefined)
 
-const columns: DataTableColumn[] = [
-  { key: 'document_name', label: 'Document', sortable: true },
-  { key: 'accuracy', label: 'Accuracy', sortable: true, align: 'right' },
-  { key: 'incorrect_fields', label: 'Wrong of Total', align: 'right' },
-  { key: 'status', label: 'Status' },
-]
+const columns = computed<DataTableColumn[]>(() => [
+  { key: 'document_name', label: t('evaluation.analysis.col_document'), sortable: true },
+  { key: 'accuracy', label: t('evaluation.metrics.accuracy'), sortable: true, align: 'right' },
+  { key: 'incorrect_fields', label: t('evaluation.analysis.col_wrong_of_total'), align: 'right' },
+  { key: 'status', label: t('evaluation.analysis.col_status') },
+])
 
 // ---- Keyboard nav (←/→ or J/K) ----
 const onKeydown = (e: KeyboardEvent): void => {

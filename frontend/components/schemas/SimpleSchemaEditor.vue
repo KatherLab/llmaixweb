@@ -3,12 +3,12 @@
     <!-- Header -->
     <div class="border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
       <div>
-        <h3 class="text-base font-semibold text-content">Extract Fields</h3>
-        <p class="text-sm text-content-muted mt-0.5">Drag to reorder • Click field to edit</p>
+        <h3 class="text-base font-semibold text-content">{{ $t('schemaEditor.simple.title') }}</h3>
+        <p class="text-sm text-content-muted mt-0.5">{{ $t('schemaEditor.simple.subtitle') }}</p>
       </div>
       <BaseButton class="shadow-sm hover:shadow" @click="addField">
         <Plus class="h-4 w-4" />
-        Add Field
+        {{ $t('schemaEditor.simple.add_field') }}
       </BaseButton>
     </div>
 
@@ -16,13 +16,13 @@
     <div class="flex-1 overflow-y-auto p-6">
       <EmptyState
         v-if="fields.length === 0"
-        title="No fields yet"
-        description="Add fields to define what information to extract from your documents"
+        :title="$t('schemaEditor.simple.empty_title')"
+        :description="$t('schemaEditor.simple.empty_description')"
       >
         <template #action>
           <BaseButton class="shadow-sm" @click="addField">
             <Plus class="h-4 w-4" aria-hidden="true" />
-            Add Your First Field
+            {{ $t('schemaEditor.simple.add_first_field') }}
           </BaseButton>
         </template>
       </EmptyState>
@@ -30,8 +30,9 @@
       <div v-else class="space-y-2">
         <!-- Read-only fields notice -->
         <Callout v-if="hasReadonlyFields" variant="warning" class="text-xs">
-          Fields with nested groups, lists, or advanced settings are read-only here — edit them in
-          <strong>Advanced mode</strong>.
+          {{ $t('schemaEditor.simple.readonly_notice_before') }}
+          <strong>{{ $t('schemaEditor.simple.advanced_mode') }}</strong
+          >.
         </Callout>
 
         <div v-for="(field, index) in fields" :key="field.id">
@@ -39,7 +40,7 @@
           <div
             v-if="field.kind === 'readonly'"
             class="group flex items-center gap-3 p-3 rounded-modal border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-900/20"
-            :title="`Read-only — edit “${field.name}” in Advanced mode`"
+            :title="$t('schemaEditor.simple.readonly_row_title', { name: field.name })"
           >
             <!-- Lock icon (in place of the drag handle) -->
             <div class="flex-shrink-0 p-2 text-amber-500 rounded-card">
@@ -66,7 +67,7 @@
             <!-- Hint to edit in Advanced mode -->
             <div class="flex-1 min-w-0 hidden lg:block">
               <p class="text-xs text-amber-700 dark:text-amber-400 truncate">
-                Edit in Advanced mode
+                {{ $t('schemaEditor.simple.edit_in_advanced') }}
               </p>
             </div>
 
@@ -97,7 +98,7 @@
             <!-- Drag Handle (arms dragging for this row) -->
             <div
               class="flex-shrink-0 cursor-grab active:cursor-grabbing p-2 text-content-subtle hover:text-content-muted hover:bg-surface-sunken rounded-card transition-all"
-              title="Drag to reorder"
+              :title="$t('schemaEditor.simple.drag_to_reorder')"
               @mousedown="dragArmedIndex = index"
             >
               <GripVertical class="h-5 w-5" />
@@ -125,7 +126,7 @@
                     ? 'border-red-400 dark:border-red-600 focus:border-red-500'
                     : 'border-strong focus:border-primary',
                 ]"
-                placeholder="field_name (e.g., patient_name)"
+                :placeholder="$t('schemaEditor.simple.name_placeholder')"
                 @input="emitChange"
               />
               <p v-if="fieldError(field)" class="mt-0.5 text-xs text-red-600 dark:text-red-400">
@@ -141,13 +142,13 @@
                   :class="[selectClass, 'appearance-none pl-3 pr-8 cursor-pointer']"
                   @change="emitChange"
                 >
-                  <option value="String">Text</option>
-                  <option value="Number">Number</option>
-                  <option value="Integer">Integer</option>
-                  <option value="Boolean">Yes/No</option>
-                  <option value="Date">Date</option>
-                  <option value="DateTime">Date & Time</option>
-                  <option value="Email">Email</option>
+                  <option value="String">{{ $t('schemaEditor.types.text') }}</option>
+                  <option value="Number">{{ $t('schemaEditor.types.number') }}</option>
+                  <option value="Integer">{{ $t('schemaEditor.types.integer') }}</option>
+                  <option value="Boolean">{{ $t('schemaEditor.types.yes_no') }}</option>
+                  <option value="Date">{{ $t('schemaEditor.types.date') }}</option>
+                  <option value="DateTime">{{ $t('schemaEditor.types.datetime') }}</option>
+                  <option value="Email">{{ $t('schemaEditor.types.email') }}</option>
                 </select>
                 <ChevronDown
                   class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-content-subtle"
@@ -167,11 +168,11 @@
               ]"
               :title="
                 field.required
-                  ? 'Required — click to make optional'
-                  : 'Optional — click to make required'
+                  ? $t('schemaEditor.simple.required_on')
+                  : $t('schemaEditor.simple.required_off')
               "
               :aria-pressed="field.required"
-              aria-label="Toggle required"
+              :aria-label="$t('schemaEditor.simple.toggle_required')"
               @click="toggleRequired(field)"
             >
               <Star v-if="!field.required" class="h-4 w-4" />
@@ -183,7 +184,7 @@
               <input
                 v-model="field.description"
                 class="w-full bg-transparent border-0 border-b border-strong focus:border-primary focus:ring-0 text-xs text-content-muted placeholder-content-subtle transition-colors py-1.5"
-                placeholder="What is this field? (optional)"
+                :placeholder="$t('schemaEditor.simple.description_placeholder')"
                 @input="emitChange"
               />
             </div>
@@ -193,8 +194,8 @@
               variant="icon"
               tone="red"
               class="flex-shrink-0 p-2 opacity-0 group-hover:opacity-100"
-              title="Remove field"
-              aria-label="Remove field"
+              :title="$t('schemaEditor.simple.remove_field')"
+              :aria-label="$t('schemaEditor.simple.remove_field')"
               @click="removeField(field.id)"
             >
               <Trash2 class="h-4 w-4" aria-hidden="true" />
@@ -205,7 +206,9 @@
               v-if="field.type === 'String'"
               class="basis-full w-full flex flex-wrap items-center gap-1.5 pt-1.5 mt-0.5 border-t border-default"
             >
-              <span class="text-xs font-medium text-content-muted mr-0.5">Options</span>
+              <span class="text-xs font-medium text-content-muted mr-0.5">{{
+                $t('schemaEditor.simple.options')
+              }}</span>
               <span
                 v-for="(opt, i) in field.options"
                 :key="i"
@@ -215,7 +218,7 @@
                 <button
                   type="button"
                   class="text-primary hover:text-primary transition-colors"
-                  aria-label="Remove option"
+                  :aria-label="$t('schemaEditor.simple.remove_option')"
                   @click="removeOption(field, i)"
                 >
                   <X class="h-3 w-3" aria-hidden="true" />
@@ -224,7 +227,7 @@
               <input
                 :value="pendingOptions[field.id] || ''"
                 class="flex-1 min-w-[120px] bg-transparent border-0 border-b border-dashed border-strong focus:border-primary focus:ring-0 text-xs text-content-muted placeholder-content-subtle transition-colors py-0.5"
-                placeholder="add option — press Enter"
+                :placeholder="$t('schemaEditor.simple.add_option_placeholder')"
                 @input="setPendingOption(field.id, ($event.target as HTMLInputElement).value)"
                 @keydown="onOptionKeydown(field, $event)"
                 @blur="commitOption(field)"
@@ -247,26 +250,27 @@
           <Info class="h-3 w-3 text-primary" />
         </div>
         <div class="text-sm text-primary">
-          <p class="font-medium mb-1.5">Quick Tips</p>
+          <p class="font-medium mb-1.5">{{ $t('schemaEditor.simple.quick_tips') }}</p>
           <ul class="space-y-1 text-primary">
             <li class="flex items-center gap-2">
               <span class="w-1 h-1 rounded-full bg-primary"></span>
-              Use clear names like
+              {{ $t('schemaEditor.simple.tip_names') }}
               <code class="px-1.5 py-0.5 bg-surface-muted/60 rounded text-xs font-mono"
                 >patient_name</code
               >
-              or
+              {{ $t('schemaEditor.simple.or') }}
               <code class="px-1.5 py-0.5 bg-surface-muted/60 rounded text-xs font-mono"
                 >date_of_birth</code
               >
             </li>
             <li class="flex items-center gap-2">
               <span class="w-1 h-1 rounded-full bg-primary"></span>
-              The schema is automatically included in the prompt sent to the LLM
+              {{ $t('schemaEditor.simple.tip_schema') }}
             </li>
             <li class="flex items-center gap-2">
               <span class="w-1 h-1 rounded-full bg-primary"></span>
-              Need nested objects or arrays? Switch to <strong>Advanced Mode</strong>
+              {{ $t('schemaEditor.simple.tip_nested') }}
+              <strong>{{ $t('schemaEditor.simple.advanced_mode_caps') }}</strong>
             </li>
           </ul>
         </div>
@@ -277,6 +281,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronDown, GripVertical, Info, Lock, Plus, Star, Trash2, X } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
@@ -289,6 +294,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const { t } = useI18n({ useScope: 'global' })
 
 const emit = defineEmits<{
   'update:schema': [schema: SchemaDefinition]
@@ -384,14 +391,14 @@ const isSimpleEditable = (propSchema: SchemaProperty): boolean => {
 
 // Human-readable label for a read-only property's type
 const readonlyTypeLabel = (field: ReadonlyField): string => {
-  const t = field.rawSchema?.type
-  if (t === 'object') return 'Group'
-  if (t === 'array') return 'List'
-  if (t === 'string') return 'Text'
-  if (t === 'number') return 'Number'
-  if (t === 'integer') return 'Integer'
-  if (t === 'boolean') return 'Yes/No'
-  return t ? t.charAt(0).toUpperCase() + t.slice(1) : 'Advanced'
+  const type = field.rawSchema?.type
+  if (type === 'object') return t('schemaEditor.types.group')
+  if (type === 'array') return t('schemaEditor.types.list')
+  if (type === 'string') return t('schemaEditor.types.text')
+  if (type === 'number') return t('schemaEditor.types.number')
+  if (type === 'integer') return t('schemaEditor.types.integer')
+  if (type === 'boolean') return t('schemaEditor.types.yes_no')
+  return type ? type.charAt(0).toUpperCase() + type.slice(1) : t('schemaEditor.types.advanced')
 }
 
 const hasReadonlyFields = computed(() => fields.value.some((f) => f.kind === 'readonly'))
@@ -413,8 +420,8 @@ const nameCounts = computed<Record<string, number>>(() => {
 const fieldError = (field: Field): string | null => {
   if (field.kind !== 'simple') return null
   const name = (field.name || '').trim()
-  if (!name) return 'Name this field or remove it'
-  if ((nameCounts.value[name] || 0) > 1) return `Duplicate field name "${name}"`
+  if (!name) return t('schemaEditor.simple.error_name_required')
+  if ((nameCounts.value[name] || 0) > 1) return t('schemaEditor.simple.error_duplicate', { name })
   return null
 }
 

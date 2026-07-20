@@ -3,7 +3,7 @@
        click can't cancel it — only the explicit X / Cancel button does. -->
   <BaseModal
     :open="open"
-    title="Upload Files"
+    :title="$t('files.upload.title')"
     size="md"
     :close-on-backdrop="!progress || progress.done"
     :close-on-esc="!progress || progress.done"
@@ -19,16 +19,21 @@
         <div class="flex items-center justify-between gap-2">
           <p class="text-sm font-medium text-content">
             <template v-if="!progress.done">
-              Uploading file {{ progress.currentIndex }} of {{ progress.total }}
+              {{
+                $t('files.upload.uploading_file', {
+                  current: progress.currentIndex,
+                  total: progress.total,
+                })
+              }}
             </template>
-            <template v-else> Upload complete </template>
+            <template v-else> {{ $t('files.upload.complete') }} </template>
           </p>
           <span class="text-xs text-content tabular-nums">{{ overallPercent }}%</span>
         </div>
         <div
           class="mt-2 h-2 w-full bg-surface-sunken rounded-full overflow-hidden"
           role="progressbar"
-          aria-label="Overall upload progress"
+          :aria-label="$t('files.upload.overall_progress_aria')"
           :aria-valuenow="overallPercent"
           aria-valuemin="0"
           aria-valuemax="100"
@@ -40,11 +45,12 @@
           ></div>
         </div>
         <p class="mt-2 text-xs text-content-muted" aria-live="polite">
-          {{ progress.succeeded }} succeeded<span v-if="progress.failures.length > 0">
+          {{ $t('files.upload.succeeded', { count: progress.succeeded })
+          }}<span v-if="progress.failures.length > 0">
             ·
-            <span class="text-red-600 dark:text-red-400"
-              >{{ progress.failures.length }} failed</span
-            ></span
+            <span class="text-red-600 dark:text-red-400">{{
+              $t('files.upload.failed', { count: progress.failures.length })
+            }}</span></span
           >
         </p>
       </div>
@@ -62,7 +68,7 @@
         <div
           class="mt-1.5 h-1 w-full bg-surface-sunken rounded-full overflow-hidden"
           role="progressbar"
-          aria-label="Current file upload progress"
+          :aria-label="$t('files.upload.current_progress_aria')"
           :aria-valuenow="progress.currentPercent"
           aria-valuemin="0"
           aria-valuemax="100"
@@ -79,7 +85,9 @@
         v-if="progress.done && progress.failures.length > 0"
         class="rounded-card border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 p-3 max-h-48 overflow-y-auto"
       >
-        <p class="text-xs font-medium text-red-700 dark:text-red-300 mb-1.5">Failed uploads</p>
+        <p class="text-xs font-medium text-red-700 dark:text-red-300 mb-1.5">
+          {{ $t('files.upload.failed_uploads') }}
+        </p>
         <ul class="space-y-1">
           <!-- Key by index + name: two failed files can share the same name. -->
           <li
@@ -101,9 +109,9 @@
         :disabled="cancelling"
         @click="emit('cancel')"
       >
-        {{ cancelling ? 'Cancelling…' : 'Cancel upload' }}
+        {{ cancelling ? $t('files.upload.cancelling') : $t('files.upload.cancel') }}
       </BaseButton>
-      <BaseButton v-else @click="emit('close')">Close</BaseButton>
+      <BaseButton v-else @click="emit('close')">{{ $t('files.upload.close') }}</BaseButton>
     </template>
   </BaseModal>
 </template>

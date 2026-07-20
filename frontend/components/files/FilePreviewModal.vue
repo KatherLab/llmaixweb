@@ -1,7 +1,11 @@
 <template>
   <SlideOver
     :open="open"
-    :aria-label="file?.file_name ? `File preview: ${file.file_name}` : 'File preview'"
+    :aria-label="
+      file?.file_name
+        ? $t('files.preview.aria_named', { name: file.file_name })
+        : $t('files.preview.aria')
+    "
     body-class="!p-0 overflow-hidden"
     @close="$emit('close')"
   >
@@ -12,7 +16,8 @@
           <div class="min-w-0">
             <h3 class="text-xl font-bold text-content truncate">{{ file?.file_name }}</h3>
             <p class="text-xs text-content-muted">
-              {{ formatFileSize(file?.file_size, 'Unknown') }} &middot; {{ file?.file_type }}
+              {{ formatFileSize(file?.file_size, $t('files.common.unknown')) }} &middot;
+              {{ file?.file_type }}
             </p>
           </div>
         </div>
@@ -21,13 +26,13 @@
           <div
             v-if="hasMultipleFiles"
             class="flex items-center gap-1 mr-1"
-            :title="'Use ← / → to move between files'"
+            :title="$t('files.preview.nav_hint')"
           >
             <BaseButton
               variant="secondary"
               size="sm"
               :disabled="!hasPrev"
-              :title="hasPrev ? 'Previous file (←)' : 'First file'"
+              :title="hasPrev ? $t('files.preview.prev_file') : $t('files.preview.first_file')"
               @click="goPrev"
             >
               <ChevronLeft class="h-4 w-4" />
@@ -41,7 +46,7 @@
               variant="secondary"
               size="sm"
               :disabled="!hasNext"
-              :title="hasNext ? 'Next file (→)' : 'Last file'"
+              :title="hasNext ? $t('files.preview.next_file') : $t('files.preview.last_file')"
               @click="goNext"
             >
               <ChevronRight class="h-4 w-4" />
@@ -49,7 +54,7 @@
           </div>
           <button
             class="p-2 text-content-muted hover:text-content hover:bg-surface-sunken rounded-modal transition shrink-0"
-            title="Download"
+            :title="$t('files.actions.download')"
             @click="downloadFile"
           >
             <CloudDownload class="h-5 w-5" />
@@ -70,7 +75,7 @@
         <AlertTriangle class="mx-auto h-12 w-12 text-content-subtle" />
         <p class="mt-3 text-base text-content-muted">{{ error }}</p>
         <BaseButton variant="ghost" size="sm" class="mt-5" @click="loadPreview">
-          Try Again
+          {{ $t('files.preview.try_again') }}
         </BaseButton>
       </div>
     </div>
@@ -80,7 +85,7 @@
       v-else-if="previewUrl && file?.file_type === 'application/pdf'"
       :src="previewUrl"
       class="w-full h-full rounded-b-modal border-none"
-      title="PDF preview"
+      :title="$t('files.preview.pdf_title')"
     ></iframe>
 
     <!-- Image Preview -->
@@ -123,9 +128,9 @@
                 class="px-4 py-2 border-b border-default max-w-[260px] align-top text-content-muted"
                 :class="cellClasses(normalizedHeaders[cidx] ?? null)"
               >
-                <span v-if="cell === '' || cell == null" class="text-content-subtle italic"
-                  >empty</span
-                >
+                <span v-if="cell === '' || cell == null" class="text-content-subtle italic">{{
+                  $t('files.preview.empty')
+                }}</span>
                 <template
                   v-else-if="
                     isTextColumn(normalizedHeaders[cidx] ?? null) && String(cell).length > 80
@@ -136,7 +141,9 @@
                     :title="String(cell)"
                     @click="showFullCell(String(cell), headerLabels[cidx] ?? null)"
                     >{{ String(cell).slice(0, 80)
-                    }}<span class="font-semibold text-primary ml-1">…more</span></span
+                    }}<span class="font-semibold text-primary ml-1">{{
+                      $t('files.preview.more')
+                    }}</span></span
                   >
                 </template>
                 <template v-else>
@@ -150,7 +157,12 @@
           v-if="truncated"
           class="px-4 py-2 bg-surface-muted text-xs text-content-muted rounded-b-modal text-center"
         >
-          Showing first {{ tabularData.rows.length }} of {{ totalRows }} rows
+          {{
+            $t('files.preview.showing_rows', {
+              shown: tabularData.rows.length,
+              total: totalRows,
+            })
+          }}
         </div>
       </div>
       <div class="flex flex-wrap gap-2 mt-4">
@@ -158,13 +170,14 @@
           v-if="idColumn"
           class="inline-flex items-center px-3 py-1 rounded bg-primary-soft text-primary text-xs font-medium"
         >
-          <span class="mr-1 font-bold">ID column:</span> {{ idColumn }}
+          <span class="mr-1 font-bold">{{ $t('files.preview.id_column') }}</span> {{ idColumn }}
         </span>
         <span
           v-if="textColumns && textColumns.length"
           class="inline-flex items-center px-3 py-1 rounded bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium"
         >
-          <span class="mr-1 font-bold">Text columns:</span> {{ textColumns.join(', ') }}
+          <span class="mr-1 font-bold">{{ $t('files.preview.text_columns') }}</span>
+          {{ textColumns.join(', ') }}
         </span>
       </div>
     </div>
@@ -183,10 +196,10 @@
     <div v-else class="flex items-center justify-center h-full">
       <div class="text-center">
         <FileIcon :file-type="file?.file_type" :size="64" />
-        <p class="mt-4 text-sm text-content-muted">Preview not available for this file type.</p>
+        <p class="mt-4 text-sm text-content-muted">{{ $t('files.preview.not_available') }}</p>
         <BaseButton class="mt-4" @click="downloadFile">
           <CloudDownload class="mr-2 h-4 w-4" />
-          Download File
+          {{ $t('files.preview.download_file') }}
         </BaseButton>
       </div>
     </div>
@@ -204,22 +217,25 @@
         >{{ modalContent }}</pre>
       <div class="mt-4 flex items-center gap-2">
         <BaseButton variant="link" tone="blue" class="text-xs underline" @click="copyToClipboard">
-          Copy
+          {{ $t('files.preview.copy') }}
         </BaseButton>
-        <span v-if="copied" class="text-green-700 dark:text-green-400 text-xs">Copied!</span>
+        <span v-if="copied" class="text-green-700 dark:text-green-400 text-xs">{{
+          $t('files.preview.copied')
+        }}</span>
       </div>
     </BaseModal>
 
     <template #footer>
       <div class="flex items-center justify-between text-xs w-full">
         <div class="flex items-center gap-6 text-content-muted">
-          <span>Created: {{ formatDateFull(file?.created_at) }}</span>
+          <span>{{ $t('files.preview.created', { date: formatDateFull(file?.created_at) }) }}</span>
           <span v-if="file?.file_hash" class="font-mono text-xs">
-            Hash: {{ file.file_hash.substring(0, 8) }}...
+            {{ $t('files.preview.hash', { hash: file.file_hash.substring(0, 8) }) }}
           </span>
           <span v-if="hasMultipleFiles" class="text-content-subtle">
             <kbd class="px-1 py-0.5 bg-surface-sunken rounded">←</kbd> /
-            <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd> to browse files
+            <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd>
+            {{ $t('files.preview.to_browse') }}
           </span>
         </div>
         <div v-if="file?.description" class="text-content-muted truncate">
@@ -232,6 +248,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertTriangle, ChevronLeft, ChevronRight, CloudDownload } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
@@ -260,6 +277,7 @@ const emit = defineEmits<{
   /** Emitted when the user navigates to a different file in the list. */
   navigate: [file: File]
 }>()
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 
 interface TabularData {
@@ -326,7 +344,7 @@ const copied = ref(false)
 const headerLabels = computed(() =>
   (tabularData.value?.headers || []).map((h, idx) => {
     if (h == null || (typeof h === 'string' && h.trim() === '')) {
-      return `Column ${idx + 1}`
+      return t('files.preview.column', { n: idx + 1 })
     }
     return String(h)
   }),
@@ -356,11 +374,11 @@ const normalizedHeaders = computed(() => {
   const rows = tabularData.value?.rows || []
   const maxLen = Math.max(headers.length, ...rows.map((r) => r.length))
   while (headers.length < maxLen) {
-    headers.push(`Column ${headers.length + 1}`)
+    headers.push(t('files.preview.column', { n: headers.length + 1 }))
   }
   return headers.map((h, idx) => {
     if (h == null || (typeof h === 'string' && h.trim() === '')) {
-      return `Column ${idx + 1}`
+      return t('files.preview.column', { n: idx + 1 })
     }
     return String(h)
   })
@@ -430,11 +448,11 @@ const loadPreview = async (): Promise<void> => {
       if (seq !== loadSeq) return
       previewUrl.value = URL.createObjectURL(response.data)
     } else {
-      error.value = 'Preview not available for this file type.'
+      error.value = t('files.preview.not_available')
     }
   } catch (err) {
     if (seq !== loadSeq) return
-    error.value = extractErrorMessage(err, 'Failed to load preview')
+    error.value = extractErrorMessage(err, t('files.preview.load_failed'))
     console.error('Preview error:', err)
   } finally {
     if (seq === loadSeq) isLoading.value = false
@@ -454,9 +472,9 @@ const downloadFile = async (): Promise<void> => {
     link.click()
     link.remove()
     window.URL.revokeObjectURL(url)
-    toast.success('File downloaded')
+    toast.success(t('files.preview.downloaded'))
   } catch (err) {
-    toast.error('Failed to download file')
+    toast.error(t('files.errors.download_failed'))
     console.error(err)
   }
 }
@@ -506,8 +524,9 @@ function cellClasses(headerLabel: string | null): string {
 }
 function headerLabel(headerLabel: string | null): string {
   if (!headerLabel) return ''
-  if (headerLabel === idColumn.value) return `${headerLabel} (ID)`
-  if (textColumns.value && textColumns.value.includes(headerLabel)) return `${headerLabel} (Text)`
+  if (headerLabel === idColumn.value) return t('files.preview.header_id', { name: headerLabel })
+  if (textColumns.value && textColumns.value.includes(headerLabel))
+    return t('files.preview.header_text', { name: headerLabel })
   return headerLabel
 }
 function isTextColumn(headerLabel: string | null): boolean {

@@ -1,8 +1,16 @@
 <template>
-  <BaseModal :open="open" title="Rename Trial" size="sm" body-class="p-6" @close="$emit('close')">
-    <label :class="labelClass" for="rename-trial-name">Name</label>
+  <BaseModal
+    :open="open"
+    :title="$t('trials.rename.title')"
+    size="sm"
+    body-class="p-6"
+    @close="$emit('close')"
+  >
+    <label :class="labelClass" for="rename-trial-name">{{ $t('trials.rename.name_label') }}</label>
     <input id="rename-trial-name" v-model="name" maxlength="100" :class="[inputClass, 'mb-3']" />
-    <label :class="labelClass" for="rename-trial-description">Description</label>
+    <label :class="labelClass" for="rename-trial-description">{{
+      $t('trials.rename.description_label')
+    }}</label>
     <textarea
       id="rename-trial-description"
       v-model="description"
@@ -11,8 +19,12 @@
       rows="2"
     />
     <template #footer>
-      <BaseButton variant="secondary" @click="$emit('close')">Cancel</BaseButton>
-      <BaseButton variant="primary" :disabled="!name.trim()" @click="submit">Save</BaseButton>
+      <BaseButton variant="secondary" @click="$emit('close')">{{
+        $t('trials.rename.cancel')
+      }}</BaseButton>
+      <BaseButton variant="primary" :disabled="!name.trim()" @click="submit">{{
+        $t('trials.rename.save')
+      }}</BaseButton>
     </template>
   </BaseModal>
 </template>

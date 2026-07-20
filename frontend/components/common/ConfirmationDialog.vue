@@ -3,18 +3,18 @@
     :open="open"
     size="sm"
     role="alertdialog"
-    :title="title"
+    :title="title || $t('common.confirm_dialog.title')"
     body-class="p-6"
     @close="emit('cancel')"
   >
-    <p class="text-content-muted mb-6">{{ message }}</p>
+    <p class="text-content-muted mb-6">{{ message || $t('common.confirm_dialog.message') }}</p>
     <slot />
     <template #footer>
       <BaseButton variant="secondary" :disabled="loading" @click="emit('cancel')">
-        {{ cancelText }}
+        {{ cancelText || $t('common.confirm_dialog.cancel') }}
       </BaseButton>
       <BaseButton :variant="confirmVariant" :loading="loading" @click="emit('confirm')">
-        {{ confirmText }}
+        {{ confirmText || $t('common.confirm_dialog.confirm') }}
       </BaseButton>
     </template>
   </BaseModal>
@@ -35,10 +35,6 @@ interface Props {
 }
 
 withDefaults(defineProps<Props>(), {
-  title: 'Confirm Action',
-  message: 'Are you sure you want to perform this action?',
-  confirmText: 'Confirm',
-  cancelText: 'Cancel',
   confirmVariant: 'danger',
   loading: false,
 })

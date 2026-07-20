@@ -1,9 +1,9 @@
 <template>
   <FilterBar
     :search="filters.search"
-    search-placeholder="Search trials..."
+    :search-placeholder="$t('trials.filters.search_placeholder')"
     :total-count="totalTrials"
-    item-label="trials"
+    :item-label="$t('trials.filters.item_label')"
     :active-filters="activeFilters"
     @update:search="(v) => (filters.search = v)"
     @search-input="emit('input')"
@@ -13,17 +13,17 @@
     <template #filters>
       <!-- Status -->
       <select v-model="filters.status" :class="inlineSelectClass" @change="emit('apply')">
-        <option value="">All Status</option>
-        <option value="pending">Pending</option>
-        <option value="processing">Processing</option>
-        <option value="completed">Completed</option>
-        <option value="failed">Failed</option>
-        <option value="cancelled">Cancelled</option>
+        <option value="">{{ $t('trials.filters.all_status') }}</option>
+        <option value="pending">{{ $t('trials.status.pending') }}</option>
+        <option value="processing">{{ $t('trials.status.processing') }}</option>
+        <option value="completed">{{ $t('trials.status.completed') }}</option>
+        <option value="failed">{{ $t('trials.status.failed') }}</option>
+        <option value="cancelled">{{ $t('trials.status.cancelled') }}</option>
       </select>
 
       <!-- Schema -->
       <select v-model="filters.schema_id" :class="inlineSelectClass" @change="emit('apply')">
-        <option value="">All Schemas</option>
+        <option value="">{{ $t('trials.filters.all_schemas') }}</option>
         <option v-for="schema in schemas" :key="schema.id" :value="schema.id">
           {{ schema.schema_name }}
         </option>
@@ -31,7 +31,7 @@
 
       <!-- Prompt -->
       <select v-model="filters.prompt_id" :class="inlineSelectClass" @change="emit('apply')">
-        <option value="">All Prompts</option>
+        <option value="">{{ $t('trials.filters.all_prompts') }}</option>
         <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id">
           {{ prompt.name }}
         </option>
@@ -39,7 +39,7 @@
 
       <!-- Document Group -->
       <select v-model="filters.document_set_id" :class="inlineSelectClass" @change="emit('apply')">
-        <option value="">All Groups</option>
+        <option value="">{{ $t('trials.filters.all_groups') }}</option>
         <option v-for="group in documentGroups" :key="group.id" :value="group.id">
           {{ group.name }}
         </option>
@@ -47,7 +47,7 @@
 
       <!-- LLM Model -->
       <select v-model="filters.llm_model" :class="inlineSelectClass" @change="emit('apply')">
-        <option value="">All Models</option>
+        <option value="">{{ $t('trials.filters.all_models') }}</option>
         <option v-for="model in availableTrialModels" :key="model" :value="model">
           {{ model }}
         </option>
@@ -55,9 +55,9 @@
 
       <!-- Errors -->
       <select v-model="filters.has_failures" :class="inlineSelectClass" @change="emit('apply')">
-        <option value="">All</option>
-        <option value="true">Has errors</option>
-        <option value="false">No errors</option>
+        <option value="">{{ $t('trials.filters.all') }}</option>
+        <option value="true">{{ $t('trials.filters.has_errors') }}</option>
+        <option value="false">{{ $t('trials.filters.no_errors') }}</option>
       </select>
 
       <!-- Date Range -->
@@ -66,18 +66,20 @@
         :class="inlineSelectClass"
         @change="handleDateRangeChange"
       >
-        <option value="">All Time</option>
-        <option value="today">Today</option>
-        <option value="yesterday">Yesterday</option>
-        <option value="week">Last 7 Days</option>
-        <option value="month">Last 30 Days</option>
-        <option value="custom">Custom Range...</option>
+        <option value="">{{ $t('trials.filters.all_time') }}</option>
+        <option value="today">{{ $t('trials.filters.today') }}</option>
+        <option value="yesterday">{{ $t('trials.filters.yesterday') }}</option>
+        <option value="week">{{ $t('trials.filters.last_7_days') }}</option>
+        <option value="month">{{ $t('trials.filters.last_30_days') }}</option>
+        <option value="custom">{{ $t('trials.filters.custom_range') }}</option>
       </select>
     </template>
 
     <template v-if="filters.dateRange === 'custom'" #custom-range>
       <div class="flex items-center gap-2">
-        <label :class="labelClass" for="trial-filter-date-from">From:</label>
+        <label :class="labelClass" for="trial-filter-date-from">{{
+          $t('trials.filters.from')
+        }}</label>
         <input
           id="trial-filter-date-from"
           v-model="customDateFrom"
@@ -87,7 +89,7 @@
         />
       </div>
       <div class="flex items-center gap-2">
-        <label :class="labelClass" for="trial-filter-date-to">To:</label>
+        <label :class="labelClass" for="trial-filter-date-to">{{ $t('trials.filters.to') }}</label>
         <input
           id="trial-filter-date-to"
           v-model="customDateTo"
@@ -101,7 +103,7 @@
         type="button"
         @click="emit('apply')"
       >
-        Apply
+        {{ $t('trials.filters.apply') }}
       </button>
     </template>
   </FilterBar>
@@ -109,6 +111,7 @@
 
 <script setup lang="ts">
 import { computed, type PropType } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getDateRangeLabel } from '@/utils/dateRange'
 import FilterBar from '@/components/common/FilterBar.vue'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
@@ -153,22 +156,24 @@ const emit = defineEmits<{
   'clear-filter': [key: string]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
+
 // Two-way bound filter state (parent owns the source of truth via defineModel).
 const filters = defineModel<TrialFilters>('filters', { required: true })
 const customDateFrom = defineModel<string>('customDateFrom', { default: '' })
 const customDateTo = defineModel<string>('customDateTo', { default: '' })
 
 // Label maps for chips
-const statusLabels: Record<string, string> = {
-  pending: 'Pending',
-  processing: 'Processing',
-  completed: 'Completed',
-  failed: 'Failed',
-  cancelled: 'Cancelled',
-}
+const statusLabels = (): Record<string, string> => ({
+  pending: t('trials.status.pending'),
+  processing: t('trials.status.processing'),
+  completed: t('trials.status.completed'),
+  failed: t('trials.status.failed'),
+  cancelled: t('trials.status.cancelled'),
+})
 
 const dateRangeLabel = (range: string): string => getDateRangeLabel(range)
-const statusLabel = (status: string): string => statusLabels[status] || status
+const statusLabel = (status: string): string => statusLabels()[status] || status
 const schemaName = (id: string | number): string =>
   props.schemas.find((s) => s.id === id)?.schema_name || `#${id}`
 const promptName = (id: string | number): string =>
@@ -180,49 +185,64 @@ const groupName = (id: string | number): string =>
 const activeFilters = computed<FilterChip[]>(() => {
   const chips: FilterChip[] = []
   if (filters.value.search)
-    chips.push({ key: 'search', label: `Search: "${filters.value.search}"`, color: 'blue' })
+    chips.push({
+      key: 'search',
+      label: t('trials.filters.chip_search', { value: filters.value.search }),
+      color: 'blue',
+    })
   if (filters.value.status)
     chips.push({
       key: 'status',
-      label: `Status: ${statusLabel(filters.value.status)}`,
+      label: t('trials.filters.chip_status', { value: statusLabel(filters.value.status) }),
       color: 'green',
     })
   if (filters.value.schema_id)
     chips.push({
       key: 'schema_id',
-      label: `Schema: ${schemaName(filters.value.schema_id)}`,
+      label: t('trials.filters.chip_schema', { value: schemaName(filters.value.schema_id) }),
       color: 'blue',
     })
   if (filters.value.prompt_id)
     chips.push({
       key: 'prompt_id',
-      label: `Prompt: ${promptName(filters.value.prompt_id)}`,
+      label: t('trials.filters.chip_prompt', { value: promptName(filters.value.prompt_id) }),
       color: 'teal',
     })
   if (filters.value.document_set_id)
     chips.push({
       key: 'document_set_id',
-      label: `Group: ${groupName(filters.value.document_set_id)}`,
+      label: t('trials.filters.chip_group', { value: groupName(filters.value.document_set_id) }),
       color: 'cyan',
     })
   if (filters.value.llm_model)
-    chips.push({ key: 'llm_model', label: `Model: ${filters.value.llm_model}`, color: 'purple' })
+    chips.push({
+      key: 'llm_model',
+      label: t('trials.filters.chip_model', { value: filters.value.llm_model }),
+      color: 'purple',
+    })
   if (filters.value.has_failures !== '' && filters.value.has_failures !== null)
     chips.push({
       key: 'has_failures',
-      label: `Errors: ${filters.value.has_failures === 'true' ? 'Has errors' : 'No errors'}`,
+      label: t('trials.filters.chip_errors', {
+        value:
+          filters.value.has_failures === 'true'
+            ? t('trials.filters.has_errors')
+            : t('trials.filters.no_errors'),
+      }),
       color: 'red',
     })
   if (filters.value.dateRange && filters.value.dateRange !== 'custom')
     chips.push({
       key: 'dateRange',
-      label: `Date: ${dateRangeLabel(filters.value.dateRange)}`,
+      label: t('trials.filters.chip_date', { value: dateRangeLabel(filters.value.dateRange) }),
       color: 'orange',
     })
   if (filters.value.dateRange === 'custom' && customDateFrom.value)
     chips.push({
       key: 'customDateRange',
-      label: `Date: ${customDateFrom.value} → ${customDateTo.value || 'present'}`,
+      label: t('trials.filters.chip_date', {
+        value: `${customDateFrom.value} → ${customDateTo.value || t('trials.filters.present')}`,
+      }),
       color: 'orange',
     })
   return chips

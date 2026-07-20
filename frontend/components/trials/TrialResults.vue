@@ -2,7 +2,7 @@
   <SlideOver
     v-if="isModal"
     :open="isModal"
-    aria-label="Trial results"
+    :aria-label="$t('trials.results.aria')"
     body-class="!p-0 overflow-hidden"
     @close="$emit('close')"
   >
@@ -18,7 +18,7 @@
               v-if="trial"
               class="text-[11px] text-content-subtle bg-surface px-2 py-0.5 rounded-full border border-default"
             >
-              {{ totalCount }} results
+              {{ $t('trials.results.n_results', { count: totalCount }) }}
             </span>
           </div>
           <div
@@ -26,19 +26,27 @@
             class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-content-subtle mt-1"
           >
             <span v-if="trial.llm_model">
-              <span class="font-medium text-content-muted">Model:</span>
+              <span class="font-medium text-content-muted">{{
+                $t('trials.results.model_label')
+              }}</span>
               {{ trial.llm_model }}
             </span>
             <span v-if="trial.prompt">
-              <span class="font-medium text-content-muted">Prompt:</span>
-              {{ trial.prompt.name || '[unnamed]' }}
+              <span class="font-medium text-content-muted">{{
+                $t('trials.results.prompt_label')
+              }}</span>
+              {{ trial.prompt.name || $t('trials.results.unnamed') }}
             </span>
             <span v-if="trial.document_set">
-              <span class="font-medium text-content-muted">Set:</span>
+              <span class="font-medium text-content-muted">{{
+                $t('trials.results.set_label')
+              }}</span>
               {{ trial.document_set.name || '#' + trial.document_set.id }}
             </span>
             <span v-if="totalUsage.total_tokens">
-              <span class="font-medium text-content-muted">Tokens:</span>
+              <span class="font-medium text-content-muted">{{
+                $t('trials.results.tokens_label')
+              }}</span>
               {{ totalUsage.total_tokens }}
             </span>
             <button
@@ -46,14 +54,14 @@
               class="font-medium text-primary hover:underline"
               @click="openSchemaModal"
             >
-              Schema
+              {{ $t('trials.results.schema_button') }}
             </button>
             <button
               type="button"
               class="font-medium text-primary hover:underline"
               @click="openPromptModal"
             >
-              Prompt
+              {{ $t('trials.results.prompt_button') }}
             </button>
             <button
               v-if="hasFailures"
@@ -61,7 +69,7 @@
               class="font-medium text-red-600 dark:text-red-400 hover:underline"
               @click="showErrors = !showErrors"
             >
-              {{ hasFailures ? `${errorCount} errors` : '' }}
+              {{ hasFailures ? $t('trials.results.n_errors', { count: errorCount }) : '' }}
             </button>
           </div>
         </div>
@@ -71,7 +79,7 @@
             variant="secondary"
             size="sm"
             :disabled="!hasPrev"
-            :title="hasPrev ? 'Previous document (←)' : 'First result'"
+            :title="hasPrev ? $t('trials.results.prev_title') : $t('trials.results.first_result')"
             @click="goPrev"
           >
             <ChevronLeft class="h-4 w-4" />
@@ -83,7 +91,7 @@
             variant="secondary"
             size="sm"
             :disabled="!hasNext"
-            :title="hasNext ? 'Next document (→)' : 'Last result'"
+            :title="hasNext ? $t('trials.results.next_title') : $t('trials.results.last_result')"
             @click="goNext"
           >
             <ChevronRight class="h-4 w-4" />
@@ -95,7 +103,7 @@
     <!-- Loading -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center h-full py-16">
       <LoadingSpinner size="medium" inline label="" />
-      <span class="mt-2 text-content-muted">Loading trial results…</span>
+      <span class="mt-2 text-content-muted">{{ $t('trials.results.loading') }}</span>
     </div>
     <!-- Error -->
     <div v-else-if="error" class="p-6">
@@ -105,9 +113,9 @@
     <!-- Trial not found -->
     <div v-else-if="!trial" class="flex flex-col items-center justify-center h-full py-16">
       <Frown class="h-14 w-14 text-content-subtle" />
-      <span class="text-content-muted mt-3">Trial not found</span>
+      <span class="text-content-muted mt-3">{{ $t('trials.results.not_found') }}</span>
       <BaseButton variant="secondary" class="mt-6" @click="$emit('close')">
-        Return to trials
+        {{ $t('trials.results.return') }}
       </BaseButton>
     </div>
 
@@ -118,12 +126,12 @@
       v-else-if="results.length === 0 && !resultsLoading && !hasActiveFilters"
       class="flex flex-col items-center justify-center h-full py-16"
     >
-      <EmptyState title="No results available for this trial.">
+      <EmptyState :title="$t('trials.results.no_results_title')">
         <p
           v-if="trial.status === 'processing' || trial.status === 'pending'"
           class="mt-1 text-sm text-content-subtle"
         >
-          Please wait for the trial to complete.
+          {{ $t('trials.results.wait') }}
         </p>
       </EmptyState>
     </div>
@@ -142,7 +150,7 @@
           <div class="p-3 border-b border-default space-y-2 shrink-0">
             <SearchInput
               v-model="search"
-              placeholder="Search documents…"
+              :placeholder="$t('trials.results.search_placeholder')"
               @input="debouncedFetchResults"
             />
             <select
@@ -150,7 +158,7 @@
               :class="[selectClass, 'px-2 py-1.5 text-xs w-full']"
               @change="handleFilterChange"
             >
-              <option value="">All statuses</option>
+              <option value="">{{ $t('trials.results.all_statuses') }}</option>
               <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
                 {{ opt.label }}
               </option>
@@ -176,7 +184,9 @@
                   :class="['h-1.5 w-1.5 rounded-full shrink-0', statusDotClass(r.status as string)]"
                 />
                 <span class="text-sm text-content truncate flex-1">{{
-                  r.document_name || r.original_file_name || `Document #${r.document_id}`
+                  r.document_name ||
+                  r.original_file_name ||
+                  $t('trials.results.doc_fallback', { id: r.document_id })
                 }}</span>
               </div>
               <div class="flex items-center gap-2 mt-0.5 pl-3.5">
@@ -201,13 +211,13 @@
               v-else-if="results.length === 0"
               class="flex flex-col items-center justify-center py-8 px-3 text-center"
             >
-              <p class="text-xs text-content-subtle">No results match your filters.</p>
+              <p class="text-xs text-content-subtle">{{ $t('trials.results.no_match') }}</p>
               <button
                 type="button"
                 class="mt-2 text-xs font-medium text-primary hover:underline"
                 @click="resetFilters"
               >
-                Reset filters
+                {{ $t('trials.results.reset_filters') }}
               </button>
             </div>
           </div>
@@ -246,7 +256,7 @@
           <BaseButton
             variant="ghost"
             size="sm"
-            :title="leftRailOpen ? 'Hide document list' : 'Show document list'"
+            :title="leftRailOpen ? $t('trials.results.hide_list') : $t('trials.results.show_list')"
             @click="leftRailOpen = !leftRailOpen"
           >
             <PanelLeft class="h-4 w-4" />
@@ -266,7 +276,7 @@
             <FileText class="h-10 w-10 mb-2 opacity-40" />
             <p class="text-sm">
               {{
-                hasActiveFilters ? 'No results match your filters.' : 'Select a document to view.'
+                hasActiveFilters ? $t('trials.results.no_match') : $t('trials.results.select_doc')
               }}
             </p>
           </div>
@@ -289,12 +299,14 @@
     <template #footer>
       <div class="flex items-center justify-between gap-4 w-full">
         <p class="text-xs text-content-subtle">
-          Use <kbd class="px-1 py-0.5 bg-surface-sunken rounded">←</kbd> /
-          <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd> to move between documents.
+          {{ $t('trials.results.kbd_use') }}
+          <kbd class="px-1 py-0.5 bg-surface-sunken rounded">←</kbd> /
+          <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd>
+          {{ $t('trials.results.kbd_move') }}
         </p>
         <BaseButton variant="secondary" size="sm" @click="$emit('close')">
           <X class="h-4 w-4" />
-          Close
+          {{ $t('trials.results.close') }}
         </BaseButton>
       </div>
     </template>
@@ -317,6 +329,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, type PropType } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { debounce } from 'perfect-debounce'
 import { ChevronLeft, ChevronRight, FileText, Frown, PanelLeft, X } from '@lucide/vue'
@@ -355,6 +368,7 @@ defineEmits<{ close: [] }>()
 
 const route = useRoute()
 const toast = useToast()
+const { t } = useI18n({ useScope: 'global' })
 const trialId = computed(() => props.trialId || parseInt(route.params.trialId as string))
 
 // Trial-level state
@@ -423,32 +437,30 @@ function selectFailureDocument(documentId: number): void {
     showErrors.value = false
     return
   }
-  toast.info(
-    'No loaded result for this document — it may have failed before producing one, or is on another page.',
-  )
+  toast.info(t('trials.results.toast.no_loaded_result'))
 }
 
-const statusOptions = [
-  { value: 'success', label: 'Success' },
-  { value: 'failed', label: 'Failed' },
-  { value: 'incomplete', label: 'Incomplete' },
-  { value: 'invalid_json', label: 'Invalid JSON' },
-  { value: 'schema_invalid', label: 'Schema invalid' },
-  { value: 'refused', label: 'Refused' },
-  { value: 'provider_error', label: 'Provider error' },
-]
+const statusOptions = computed(() => [
+  { value: 'success', label: t('trials.results.status_option.success') },
+  { value: 'failed', label: t('trials.results.status_option.failed') },
+  { value: 'incomplete', label: t('trials.results.status_option.incomplete') },
+  { value: 'invalid_json', label: t('trials.results.status_option.invalid_json') },
+  { value: 'schema_invalid', label: t('trials.results.status_option.schema_invalid') },
+  { value: 'refused', label: t('trials.results.status_option.refused') },
+  { value: 'provider_error', label: t('trials.results.status_option.provider_error') },
+])
 
-const STATUS_LABELS: Record<string, string> = {
-  success: 'OK',
-  failed: 'Error',
-  incomplete: 'Incomplete',
-  invalid_json: 'Invalid JSON',
-  schema_invalid: 'Schema invalid',
-  refused: 'Refused',
-  provider_error: 'Provider error',
-}
+const statusLabels = (): Record<string, string> => ({
+  success: t('trials.results.status_label.success'),
+  failed: t('trials.results.status_label.failed'),
+  incomplete: t('trials.results.status_label.incomplete'),
+  invalid_json: t('trials.results.status_label.invalid_json'),
+  schema_invalid: t('trials.results.status_label.schema_invalid'),
+  refused: t('trials.results.status_label.refused'),
+  provider_error: t('trials.results.status_label.provider_error'),
+})
 
-const statusLabel = (status: string): string => STATUS_LABELS[status] || (status ? status : '—')
+const statusLabel = (status: string): string => statusLabels()[status] || (status ? status : '—')
 
 const statusDotClass = (status: string): string => {
   if (status === 'success') return 'bg-green-500'
@@ -485,7 +497,7 @@ const fetchTrial = async (): Promise<void> => {
     trial.value = res.data
   } catch (err) {
     console.error('Error loading trial:', err)
-    error.value = extractErrorMessage(err, 'Failed to load trial data')
+    error.value = extractErrorMessage(err, t('trials.results.errors.load_trial'))
   } finally {
     isLoading.value = false
   }

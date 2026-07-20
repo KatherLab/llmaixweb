@@ -5,8 +5,8 @@
     row-key="id"
     :pagination="tablePagination"
     :page-size-options="[10, 25, 50]"
-    item-label="invitations"
-    empty-title="No invitations found"
+    :item-label="$t('admin.invitations.grid.item_label')"
+    :empty-title="$t('admin.invitations.grid.empty_title')"
     @page-change="handlePageChange"
     @page-size-change="handlePageSizeChange"
   >
@@ -19,13 +19,13 @@
         v-if="invitation.is_used"
         class="bg-surface-sunken text-content-muted px-2 py-0.5 rounded-full text-xs"
       >
-        Yes
+        {{ $t('admin.invitations.used_yes') }}
       </span>
       <span
         v-else
         class="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full text-xs"
       >
-        No
+        {{ $t('admin.invitations.used_no') }}
       </span>
     </template>
 
@@ -36,7 +36,7 @@
         tone="red"
         @click.stop="$emit('delete-requested', invitation as InvitationResponse)"
       >
-        Delete
+        {{ $t('admin.invitations.actions.delete') }}
       </BaseButton>
     </template>
   </DataTable>
@@ -44,10 +44,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { InvitationResponse } from '@/types'
 import DataTable from '@/components/common/DataTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { usePagination } from '@/composables/usePagination'
+
+const { t } = useI18n({ useScope: 'global' })
 
 interface Props {
   rowData?: InvitationResponse[]
@@ -103,8 +106,8 @@ function handlePageSizeChange(size: number): void {
   currentPage.value = 1
 }
 
-const columns = [
-  { key: 'email', label: 'Email', sortable: true },
-  { key: 'is_used', label: 'Used', sortable: true },
-]
+const columns = computed(() => [
+  { key: 'email', label: t('admin.invitations.grid.columns.email'), sortable: true },
+  { key: 'is_used', label: t('admin.invitations.grid.columns.used'), sortable: true },
+])
 </script>

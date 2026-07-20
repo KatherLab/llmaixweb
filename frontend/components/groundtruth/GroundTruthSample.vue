@@ -2,7 +2,7 @@
   <div
     class="mt-2 p-2 bg-surface-muted rounded-card border border-default text-xs max-h-64 overflow-auto w-full"
   >
-    <div class="font-bold mb-1 text-content-muted">Ground Truth Sample</div>
+    <div class="font-bold mb-1 text-content-muted">{{ $t('groundtruth.sample.title') }}</div>
     <div v-if="format === 'json' || format === 'zip'">
       <pre class="break-all whitespace-pre-wrap text-content-muted">{{ prettyJson(doc) }}</pre>
     </div>

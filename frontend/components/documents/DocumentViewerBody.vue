@@ -14,8 +14,8 @@
     <div class="flex-1 overflow-hidden">
       <SplitPane
         v-if="hasDisplayableOriginalFile"
-        left-label="Original"
-        right-label="Text"
+        :left-label="$t('documents.viewer.original')"
+        :right-label="$t('documents.viewer.text')"
         :mode="splitMode"
         :collapsible="false"
       >
@@ -34,7 +34,7 @@
             v-else
             class="flex items-center justify-center h-full text-sm text-content-subtle italic"
           >
-            No original file available
+            {{ $t('documents.viewer.no_original_file') }}
           </div>
         </template>
         <template #right>
@@ -67,10 +67,10 @@
     <!-- Restore archived version confirmation -->
     <ConfirmationDialog
       :open="showRestoreConfirm"
-      title="Restore archived version?"
-      message="This makes the selected version the latest again. Nothing is reprocessed."
-      confirm-text="Restore"
-      cancel-text="Cancel"
+      :title="$t('documents.viewer.restore_title')"
+      :message="$t('documents.viewer.restore_message')"
+      :confirm-text="$t('documents.viewer.restore_confirm')"
+      :cancel-text="$t('documents.actions.cancel')"
       confirm-variant="primary"
       @confirm="confirmRestore"
       @cancel="showRestoreConfirm = false"
@@ -80,6 +80,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { documentsApi } from '@/services/documentsApi'
 import { filesApi } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
@@ -122,6 +123,7 @@ const emit = defineEmits<{
   'update:versionCount': [count: number]
 }>()
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 const { downloadBlob } = useFileDownload()
 
@@ -208,7 +210,7 @@ const downloadDocument = async (): Promise<void> => {
   try {
     const fileId = props.document.preprocessed_file?.id || props.document.original_file?.id
     if (!fileId) {
-      toast.error('No file available for download')
+      toast.error(t('documents.toasts.no_file_for_download'))
       return
     }
     const response = await filesApi.getContent(props.projectId, fileId)
@@ -217,7 +219,7 @@ const downloadDocument = async (): Promise<void> => {
       props.document.original_file?.file_name || `document_${props.document.id}.pdf`,
     )
   } catch (error) {
-    toast.error('Failed to download document')
+    toast.error(t('documents.toasts.download_failed'))
     console.error(error)
   }
 }
@@ -304,7 +306,7 @@ const confirmRestore = async (): Promise<void> => {
     // True restore: copy this version's content into a new latest version. No
     // reprocessing — the restored text is exactly the archived version's text.
     const { data } = await documentsApi.restoreVersion(props.projectId, version.id)
-    toast.success('Version restored')
+    toast.success(t('documents.viewer.version_restored'))
     // Refresh the version list, then show the freshly restored latest version.
     await fetchVersions()
     const newLatest = versions.value.find((v) => v.is_latest) || versions.value[0] || null
@@ -313,7 +315,7 @@ const confirmRestore = async (): Promise<void> => {
     emit('restored', data.id)
   } catch (error) {
     console.error('Failed to restore version:', error)
-    toast.error(extractErrorMessage(error, 'Failed to restore version'))
+    toast.error(extractErrorMessage(error, t('documents.viewer.restore_failed')))
   }
 }
 
@@ -356,7 +358,7 @@ async function load(): Promise<void> {
     await fetchVersions()
   } catch (error) {
     if (seq !== loadSeq) return
-    toast.error('Failed to load document preview.')
+    toast.error(t('documents.viewer.load_preview_failed'))
     console.error(error)
   }
 }

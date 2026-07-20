@@ -2,8 +2,8 @@
   <div class="p-6 space-y-8">
     <!-- Header -->
     <PageHeader
-      title="Trials"
-      subtitle="Run an AI model over your documents to extract structured data, then compare results across trials."
+      :title="$t('trials.title')"
+      :subtitle="$t('trials.subtitle')"
       :sticky="false"
       class="mb-6"
     >
@@ -14,7 +14,7 @@
             :disabled="trialDisabled"
             type="button"
             @click="openCreateTrialModal"
-            >Start New Trial</BaseButton
+            >{{ $t('trials.actions.start_new') }}</BaseButton
           >
         </Tooltip>
         <BaseButton
@@ -23,7 +23,7 @@
           :disabled="trialDisabled"
           type="button"
           @click="openCreateTrialModal"
-          >Start New Trial</BaseButton
+          >{{ $t('trials.actions.start_new') }}</BaseButton
         >
       </template>
     </PageHeader>
@@ -51,9 +51,9 @@
     <!-- Empty: no trials have ever been created -->
     <EmptyState
       v-else-if="trials.length === 0 && !hasActiveFilters"
-      title="No trials yet"
-      description="Run your first extraction trial to see results here."
-      action-text="Start a Trial"
+      :title="$t('trials.empty.none_title')"
+      :description="$t('trials.empty.none_description')"
+      :action-text="$t('trials.empty.none_action')"
       :disabled="trialDisabled"
       :disabled-reason="trialDisabledReason"
       @action="openCreateTrialModal"
@@ -66,14 +66,16 @@
     <!-- Empty: filters matched nothing -->
     <EmptyState
       v-else-if="trials.length === 0 && hasActiveFilters"
-      title="No trials match your filters"
-      description="Try adjusting or clearing your filters to see more trials."
+      :title="$t('trials.empty.no_match_title')"
+      :description="$t('trials.empty.no_match_description')"
     >
       <template #icon>
         <SearchX class="h-12 w-12 text-content-subtle" />
       </template>
       <template #action>
-        <BaseButton variant="secondary" @click="clearFilters">Clear All Filters</BaseButton>
+        <BaseButton variant="secondary" @click="clearFilters">{{
+          $t('trials.empty.clear_all')
+        }}</BaseButton>
       </template>
     </EmptyState>
 
@@ -82,7 +84,7 @@
       <!-- Batch Actions -->
       <div class="flex justify-between items-center">
         <span class="text-sm text-content-muted">
-          {{ totalTrials }} trial{{ totalTrials !== 1 ? 's' : '' }}
+          {{ $t('trials.count', { count: totalTrials }, totalTrials) }}
         </span>
       </div>
 
@@ -110,12 +112,12 @@
       <!-- Floating Batch Toolbar -->
       <BatchActionBar
         :count="selectedTrials.length"
-        count-label="trial"
+        :count-label="$t('trials.batch.item_label')"
         @clear="selectedTrials = []"
       >
         <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
           <Trash2 class="w-4 h-4" />
-          Delete
+          {{ $t('trials.actions.delete') }}
         </BaseButton>
       </BatchActionBar>
     </div>
@@ -204,6 +206,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, type PropType } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { debounce } from 'perfect-debounce'
 import { useToast } from '@/composables/useToast'
 import { ClipboardList, SearchX, Trash2 } from '@lucide/vue'
@@ -282,6 +285,7 @@ const props = defineProps({
 })
 
 const toast = useToast()
+const { t } = useI18n({ useScope: 'global' })
 
 const documents = ref<DocumentListItem[]>([])
 
@@ -300,12 +304,16 @@ const isConfirmDialogOpen = ref(false)
 const confirmAction = ref<ConfirmAction>({
   title: '',
   message: '',
-  confirmText: 'Confirm',
+  confirmText: t('trials.confirm.default_confirm'),
   variant: 'danger',
   handler: () => {},
 })
 const openConfirm = (config: ConfirmConfig): void => {
-  confirmAction.value = { confirmText: 'Confirm', variant: 'danger', ...config }
+  confirmAction.value = {
+    confirmText: t('trials.confirm.default_confirm'),
+    variant: 'danger',
+    ...config,
+  }
   isConfirmDialogOpen.value = true
 }
 const showRenameModal = ref(false)
@@ -355,11 +363,10 @@ const trialDisabled = computed(
 )
 
 const trialDisabledReason = computed(() => {
-  if (isLoading.value) return 'Loading project resources…'
-  if (schemas.value.length === 0) return 'You need at least one schema to start a trial.'
-  if (documents.value.length === 0)
-    return 'You need to upload at least one document to start a trial.'
-  if (prompts.value.length === 0) return 'You need to create at least one prompt to start a trial.'
+  if (isLoading.value) return t('trials.disabled_reason.loading')
+  if (schemas.value.length === 0) return t('trials.disabled_reason.no_schema')
+  if (documents.value.length === 0) return t('trials.disabled_reason.no_document')
+  if (prompts.value.length === 0) return t('trials.disabled_reason.no_prompt')
   return ''
 })
 
@@ -477,7 +484,7 @@ async function fetchTrials({ silent = false }: { silent?: boolean } = {}): Promi
     totalTrials.value = data.total || 0
     trials.value = data.items || []
   } catch (err) {
-    error.value = extractErrorMessage(err, 'Failed to load trials')
+    error.value = extractErrorMessage(err, t('trials.errors.load_trials'))
   } finally {
     if (!silent) isLoading.value = false
   }
@@ -552,10 +559,10 @@ async function handleCreateTrial(
     trials.value.unshift(response.data as unknown as TrialSummary)
     totalTrials.value += 1
     isModalOpen.value = false
-    toast.success('Trial created')
+    toast.success(t('trials.toast.created'))
     done?.(true)
   } catch (err) {
-    toast.error(extractErrorMessage(err, 'Failed to create trial'))
+    toast.error(extractErrorMessage(err, t('trials.toast.create_failed')))
     done?.(false)
   }
 }
@@ -573,10 +580,10 @@ async function submitRename({ id, name, description }: RenamePayload): Promise<v
       target.name = name
       target.description = description
     }
-    toast.success('Trial renamed')
+    toast.success(t('trials.toast.renamed'))
     showRenameModal.value = false
   } catch {
-    toast.error('Failed to rename trial')
+    toast.error(t('trials.toast.rename_failed'))
   }
 }
 
@@ -627,12 +634,10 @@ async function cancelTrial(trial: TrialSummary, keepProcessed: boolean): Promise
       ;(target as TrialSummary & { is_cancelled?: boolean }).is_cancelled = true
     }
     toast.success(
-      keepProcessed
-        ? 'Trial cancelled — already-processed results were kept'
-        : 'Trial cancelled — in-progress results were discarded',
+      keepProcessed ? t('trials.toast.cancelled_kept') : t('trials.toast.cancelled_discarded'),
     )
   } catch (err) {
-    toast.error(extractErrorMessage(err, 'Failed to cancel trial'))
+    toast.error(extractErrorMessage(err, t('trials.toast.cancel_failed')))
   }
 }
 
@@ -656,10 +661,9 @@ function handleCancelConfirmed(keepProcessed: boolean): void {
 
 function confirmDeleteTrial(trial: TrialSummary): void {
   openConfirm({
-    title: 'Delete Trial',
-    message:
-      'Deleting this trial also removes its extraction results and any evaluations based on it. This action cannot be undone.',
-    confirmText: 'Delete',
+    title: t('trials.delete_dialog.title'),
+    message: t('trials.delete_dialog.message'),
+    confirmText: t('trials.delete_dialog.confirm'),
     variant: 'danger',
     handler: () => deleteTrial(trial),
   })
@@ -672,9 +676,9 @@ async function deleteTrial(trial: TrialSummary | null): Promise<void> {
     selectedTrials.value = selectedTrials.value.filter((id) => id !== trial.id)
     totalTrials.value = Math.max(0, totalTrials.value - 1)
     clampPageAfterRemoval()
-    toast.success('Trial deleted')
+    toast.success(t('trials.toast.deleted'))
   } catch {
-    toast.error('Failed to delete trial')
+    toast.error(t('trials.toast.delete_failed'))
   } finally {
     isConfirmDialogOpen.value = false
   }
@@ -688,9 +692,9 @@ async function retryTrial(trial: TrialSummary, onlyFailed = false): Promise<void
     const response = await trialsApi.retry(props.projectId, trial.id, onlyFailed)
     trials.value.unshift(response.data as unknown as TrialSummary)
     totalTrials.value += 1
-    toast.success(onlyFailed ? 'Retrying failed documents' : 'Trial restarted')
+    toast.success(onlyFailed ? t('trials.toast.retry_failed_docs') : t('trials.toast.restarted'))
   } catch (err) {
-    toast.error(extractErrorMessage(err, 'Failed to restart trial'))
+    toast.error(extractErrorMessage(err, t('trials.toast.restart_failed')))
   }
 }
 
@@ -714,10 +718,9 @@ function confirmRetryTrial(trial: TrialSummary): void {
     return
   }
   openConfirm({
-    title: 'Retry Trial',
-    message:
-      'Start a new trial run with the same configuration? This will consume LLM credits and process all documents again.',
-    confirmText: 'Retry Trial',
+    title: t('trials.retry_dialog.title'),
+    message: t('trials.retry_dialog.message'),
+    confirmText: t('trials.retry_dialog.confirm'),
     variant: 'primary',
     handler: () => {
       isConfirmDialogOpen.value = false
@@ -784,7 +787,7 @@ onMounted(async () => {
       : groupsResponse.data?.items || []
     await resetAndFetch()
   } catch (err) {
-    error.value = extractErrorMessage(err, 'Failed to load')
+    error.value = extractErrorMessage(err, t('trials.errors.load'))
   } finally {
     isLoading.value = false
     startWebSocket()

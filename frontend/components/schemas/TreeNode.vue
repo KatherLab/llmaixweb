@@ -28,7 +28,7 @@
             type="button"
             class="h-3 w-3 text-content-subtle transition-transform cursor-pointer p-0 hover:text-content-muted"
             :class="{ 'rotate-90': isExpanded }"
-            :aria-label="isExpanded ? 'Collapse' : 'Expand'"
+            :aria-label="isExpanded ? $t('schemaEditor.collapse') : $t('schemaEditor.expand')"
             :aria-expanded="isExpanded"
             @click.stop="toggleExpanded"
             @keydown.enter.stop
@@ -45,7 +45,7 @@
 
           <!-- Node name -->
           <span class="truncate">
-            {{ isArrayItem ? 'Array Items' : nodeKey }}
+            {{ isArrayItem ? $t('schemaEditor.array_items') : nodeKey }}
           </span>
         </div>
 

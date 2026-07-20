@@ -5,9 +5,9 @@
         <CircleUser class="w-12 h-12 text-content-subtle" aria-hidden="true" />
       </div>
       <h1 class="text-4xl font-extrabold text-content tracking-tight mb-1">
-        Welcome to <AppBrand :as-link="false" size="md" />
+        {{ $t('auth.first_admin.welcome_to') }} <AppBrand :as-link="false" size="md" />
       </h1>
-      <p class="text-base text-content-muted">First-time setup: Create your admin account</p>
+      <p class="text-base text-content-muted">{{ $t('auth.first_admin.subtitle') }}</p>
     </div>
     <form
       class="bg-surface border border-default rounded-modal p-8 shadow-lg flex flex-col gap-5"
@@ -16,39 +16,39 @@
     >
       <FormField
         v-model="fullName"
-        label="Full Name"
+        :label="$t('auth.form.full_name')"
         type="text"
         required
-        placeholder="Full name"
+        :placeholder="$t('auth.first_admin.full_name_placeholder')"
         data-testid="first-admin-name"
       />
       <FormField
         v-model="email"
-        label="Email address"
+        :label="$t('auth.form.email')"
         type="email"
         required
         maxlength="254"
-        placeholder="admin@yourcompany.com"
+        :placeholder="$t('auth.form.email_admin_placeholder')"
         data-testid="first-admin-email"
       />
       <PasswordInput
         v-model="password"
-        label="Password"
+        :label="$t('auth.form.password')"
         required
-        placeholder="Password"
+        :placeholder="$t('auth.form.password_placeholder')"
         data-testid="first-admin-password"
       />
       <FormField
         v-model="confirmPassword"
-        label="Confirm Password"
+        :label="$t('auth.form.confirm_password')"
         type="password"
         required
-        placeholder="Confirm password"
+        :placeholder="$t('auth.first_admin.confirm_password_placeholder')"
         :invalid="!!confirmPassword && confirmPassword !== password"
         data-testid="first-admin-confirm"
       >
         <template v-if="!!confirmPassword && confirmPassword !== password" #error>
-          Passwords do not match
+          {{ $t('auth.errors.passwords_mismatch') }}
         </template>
       </FormField>
       <BaseButton
@@ -59,19 +59,22 @@
         data-testid="first-admin-submit"
         class="w-full py-2.5"
       >
-        {{ isLoading ? 'Creating admin...' : 'Create Admin Account' }}
+        {{ isLoading ? $t('auth.first_admin.creating') : $t('auth.first_admin.create_account') }}
       </BaseButton>
       <transition name="fade">
         <ErrorBanner v-if="error" :message="error" class="text-center" />
       </transition>
     </form>
-    <div class="text-center text-content-subtle text-xs mt-8">Powered by LLMAIx (v2)</div>
+    <div class="text-center text-content-subtle text-xs mt-8">
+      {{ $t('auth.first_admin.powered_by') }}
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import AppBrand from '@/components/common/AppBrand.vue'
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { CircleUser } from '@lucide/vue'
 import { authApi } from '@/services/authApi'
@@ -85,6 +88,7 @@ import PasswordInput from '@/components/common/PasswordInput.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { extractErrorMessage } from '@/utils/errors'
 
+const { t } = useI18n({ useScope: 'global' })
 const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()
@@ -131,10 +135,10 @@ async function handleSubmit(): Promise<void> {
     await firstAdminStore.checkFirstAdmin()
 
     // --- Only then, route away
-    toast.success('Admin account created! Welcome 👋')
+    toast.success(t('auth.first_admin.success_toast'))
     router.push('/')
   } catch (err) {
-    error.value = extractErrorMessage(err, 'Failed to create admin. Try again.')
+    error.value = extractErrorMessage(err, t('auth.errors.create_admin_failed'))
     toast.error(error.value)
   } finally {
     isLoading.value = false

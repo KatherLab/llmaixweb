@@ -29,6 +29,18 @@ that point forward.
 - Playwright end-to-end smoke test driving the core workflow (login → project →
   upload → preprocess → trial → evaluation) against a broker-free backend and a
   fake LLM, run in CI.
+- Localization (i18n) foundation (frontend): `vue-i18n` with lazy-loaded
+  message catalogs for English, German, French, and Spanish, a navbar language
+  switcher, and system-language auto-detection (persisted on explicit switch).
+  Date/number formatting now follows the active locale. Catalog key-parity is
+  enforced in CI via `npm run i18n:check`.
+- Localized the full application UI (frontend): hardcoded strings across the
+  auth, admin, projects, files, documents, schemas/prompts, trials, evaluation,
+  ground-truth, landing, and shared-component views are now translated via
+  `$t()` (~2,250 keys per locale in en/de/fr/es). A second CI guard,
+  `npm run i18n:usage`, statically verifies every referenced message key exists
+  in the source catalog. Backend error-message localization follows in a later
+  phase.
 
 ### Changed
 

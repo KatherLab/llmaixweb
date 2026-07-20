@@ -1,24 +1,22 @@
 <template>
   <div class="space-y-6">
-    <PageHeader
-      title="Single Sign-On (OIDC)"
-      subtitle="Configure OpenID Connect identity providers. Users can sign in with these providers in addition to local passwords."
-      class="mb-6"
-    >
+    <PageHeader :title="$t('admin.sso.title')" :subtitle="$t('admin.sso.subtitle')" class="mb-6">
       <template #icon>
         <KeyRound class="w-5 h-5" aria-hidden="true" />
       </template>
       <template #actions>
         <BaseButton variant="primary" @click="openCreate">
-          <Plus class="w-4 h-4" /> Add provider
+          <Plus class="w-4 h-4" /> {{ $t('admin.sso.add_provider') }}
         </BaseButton>
       </template>
     </PageHeader>
 
     <Callout v-if="!ssoEnabled" variant="warning" class="text-sm">
-      SSO is globally disabled. Enable it in
-      <router-link to="/admin/settings" class="font-semibold underline">Admin Settings</router-link>
-      (SSO Enabled) to activate configured providers.
+      {{ $t('admin.sso.globally_disabled_before') }}
+      <router-link to="/admin/settings" class="font-semibold underline">{{
+        $t('admin.sso.admin_settings_link')
+      }}</router-link>
+      {{ $t('admin.sso.globally_disabled_after') }}
     </Callout>
 
     <div v-if="loading" class="flex justify-center py-12">
@@ -29,8 +27,8 @@
     </div>
     <EmptyState
       v-else-if="providers.length === 0"
-      title="No identity providers configured"
-      description="Add an OIDC provider so users can sign in with SSO."
+      :title="$t('admin.sso.empty_title')"
+      :description="$t('admin.sso.empty_description')"
     >
       <template #icon>
         <KeyRound class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
@@ -54,10 +52,10 @@
                   : 'bg-surface-sunken text-content-muted'
               "
             >
-              {{ p.enabled ? 'Enabled' : 'Disabled' }}
+              {{ p.enabled ? $t('admin.sso.enabled') : $t('admin.sso.disabled') }}
             </span>
             <span v-if="!p.has_secret" class="text-xs text-amber-600 dark:text-amber-400">
-              no secret set
+              {{ $t('admin.sso.no_secret_set') }}
             </span>
           </div>
           <p class="text-xs text-content-subtle mt-1">
@@ -65,9 +63,11 @@
           </p>
         </div>
         <div class="flex gap-2">
-          <BaseButton variant="secondary" size="sm" @click="openEdit(p)">Edit</BaseButton>
+          <BaseButton variant="secondary" size="sm" @click="openEdit(p)">{{
+            $t('admin.sso.edit')
+          }}</BaseButton>
           <BaseButton variant="secondary" size="sm" tone="red" @click="confirmDelete(p)">
-            Delete
+            {{ $t('admin.sso.delete') }}
           </BaseButton>
         </div>
       </li>
@@ -76,23 +76,27 @@
     <!-- Create / Edit modal -->
     <BaseModal
       :open="showModal"
-      :title="editing ? 'Edit provider' : 'Add provider'"
+      :title="editing ? $t('admin.sso.edit_provider') : $t('admin.sso.add_provider')"
       size="md"
       @close="closeModal"
     >
       <form class="space-y-4" @submit.prevent="saveProvider">
         <div>
-          <label :class="labelClass" for="sso-provider-name">Display name</label>
+          <label :class="labelClass" for="sso-provider-name">{{
+            $t('admin.sso.form.display_name')
+          }}</label>
           <input
             id="sso-provider-name"
             v-model="form.name"
             type="text"
             :class="inputClass"
-            placeholder="e.g. Google"
+            :placeholder="$t('admin.sso.form.display_name_placeholder')"
           />
         </div>
         <div>
-          <label :class="labelClass" for="sso-provider-issuer-url">Issuer URL</label>
+          <label :class="labelClass" for="sso-provider-issuer-url">{{
+            $t('admin.sso.form.issuer_url')
+          }}</label>
           <input
             id="sso-provider-issuer-url"
             v-model="form.issuer_url"
@@ -101,12 +105,14 @@
             placeholder="https://accounts.google.com"
           />
           <p class="mt-1 text-xs text-content-subtle">
-            The IdP base URL; discovery is fetched from
+            {{ $t('admin.sso.form.issuer_help') }}
             <code>{issuer}/.well-known/openid-configuration</code>.
           </p>
         </div>
         <div>
-          <label :class="labelClass" for="sso-provider-client-id">Client ID</label>
+          <label :class="labelClass" for="sso-provider-client-id">{{
+            $t('admin.sso.form.client_id')
+          }}</label>
           <input
             id="sso-provider-client-id"
             v-model="form.client_id"
@@ -115,29 +121,39 @@
           />
         </div>
         <div>
-          <label :class="labelClass" for="sso-provider-client-secret">Client secret</label>
+          <label :class="labelClass" for="sso-provider-client-secret">{{
+            $t('admin.sso.form.client_secret')
+          }}</label>
           <input
             id="sso-provider-client-secret"
             v-model="form.client_secret"
             type="password"
             :class="inputClass"
-            :placeholder="editing ? 'Leave blank to keep current' : 'Provider client secret'"
+            :placeholder="
+              editing
+                ? $t('admin.sso.form.client_secret_keep')
+                : $t('admin.sso.form.client_secret_placeholder')
+            "
             autocomplete="new-password"
           />
         </div>
         <div>
-          <label :class="labelClass" for="sso-provider-scopes">Scopes</label>
+          <label :class="labelClass" for="sso-provider-scopes">{{
+            $t('admin.sso.form.scopes')
+          }}</label>
           <input id="sso-provider-scopes" v-model="form.scopes" type="text" :class="inputClass" />
         </div>
         <label class="flex items-center gap-2 text-sm text-content-muted">
           <input v-model="form.enabled" type="checkbox" class="rounded" />
-          Enabled
+          {{ $t('admin.sso.form.enabled') }}
         </label>
         <ErrorBanner v-if="formError" :message="formError" />
         <div class="flex justify-end gap-2 pt-2">
-          <BaseButton variant="secondary" type="button" @click="closeModal">Cancel</BaseButton>
+          <BaseButton variant="secondary" type="button" @click="closeModal">{{
+            $t('admin.sso.cancel')
+          }}</BaseButton>
           <BaseButton variant="primary" type="submit" :loading="saving">{{
-            editing ? 'Save' : 'Create'
+            editing ? $t('admin.sso.save') : $t('admin.sso.create')
           }}</BaseButton>
         </div>
       </form>
@@ -145,9 +161,9 @@
 
     <ConfirmationDialog
       :open="!!toDelete"
-      title="Delete provider"
+      :title="$t('admin.sso.delete_provider_title')"
       :message="deleteMessage"
-      confirm-text="Delete"
+      :confirm-text="$t('admin.sso.delete')"
       confirm-variant="danger"
       :loading="deleting"
       @confirm="deleteProvider"
@@ -158,6 +174,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { KeyRound, Plus } from '@lucide/vue'
 import { ssoApi } from '@/services/ssoApi'
 import { authApi } from '@/services/authApi'
@@ -174,6 +191,7 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import type { IdentityProviderResponse } from '@/types'
 
+const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
 
 const ssoEnabled = ref<boolean>(false)
@@ -205,9 +223,7 @@ const toDelete = ref<IdentityProviderResponse | null>(null)
 const deleting = ref<boolean>(false)
 
 const deleteMessage = computed<string>(() =>
-  toDelete.value
-    ? `Delete the "${toDelete.value.name}" provider? Linked users keep their accounts but can no longer sign in via this provider.`
-    : '',
+  toDelete.value ? t('admin.sso.delete_provider_message', { name: toDelete.value.name }) : '',
 )
 
 onMounted(async () => {
@@ -227,7 +243,7 @@ async function load(): Promise<void> {
     const res = await ssoApi.listProviders()
     providers.value = res.data
   } catch (e) {
-    error.value = extractErrorMessage(e, 'Failed to load providers.')
+    error.value = extractErrorMessage(e, t('admin.sso.errors.load'))
   } finally {
     loading.value = false
   }
@@ -286,17 +302,17 @@ async function saveProvider(): Promise<void> {
     if (form.client_secret) payload.client_secret = form.client_secret
     if (editing.value) {
       await ssoApi.updateProvider(editing.value.id, payload)
-      toast.success('Provider updated')
+      toast.success(t('admin.sso.toast.updated'))
     } else {
       if (!form.client_secret)
-        throw { response: { data: { detail: 'Client secret is required.' } } }
+        throw { response: { data: { detail: t('admin.sso.errors.client_secret_required') } } }
       await ssoApi.createProvider({ ...payload, client_secret: form.client_secret })
-      toast.success('Provider created')
+      toast.success(t('admin.sso.toast.created'))
     }
     showModal.value = false
     await load()
   } catch (e) {
-    formError.value = extractErrorMessage(e, 'Failed to save provider.')
+    formError.value = extractErrorMessage(e, t('admin.sso.errors.save'))
   } finally {
     saving.value = false
   }
@@ -311,11 +327,11 @@ async function deleteProvider(): Promise<void> {
   deleting.value = true
   try {
     await ssoApi.deleteProvider(toDelete.value.id)
-    toast.success('Provider deleted')
+    toast.success(t('admin.sso.toast.deleted'))
     toDelete.value = null
     await load()
   } catch (e) {
-    toast.error(extractErrorMessage(e, 'Failed to delete provider.'))
+    toast.error(extractErrorMessage(e, t('admin.sso.errors.delete')))
   } finally {
     deleting.value = false
   }

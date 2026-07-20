@@ -1,8 +1,8 @@
 <template>
   <div class="bg-surface flex flex-col">
     <PageHeader
-      title="User Management"
-      subtitle="Manage user accounts, roles, and invitations."
+      :title="$t('admin.user_management.title')"
+      :subtitle="$t('admin.user_management.subtitle')"
       class="mb-6"
     >
       <template #icon>
@@ -10,7 +10,7 @@
       </template>
       <template #actions>
         <BaseButton variant="primary" size="sm" @click="showInviteModal = true">
-          + Invite User
+          + {{ $t('admin.user_management.invite_user') }}
         </BaseButton>
       </template>
     </PageHeader>
@@ -22,13 +22,16 @@
           <div class="h-full flex flex-col min-h-0">
             <div class="flex items-center justify-between mb-3 pb-3 border-b border-default">
               <h2 class="text-base font-semibold text-content">
-                Users
+                {{ $t('admin.user_management.users') }}
                 <span
                   class="ml-2 text-xs bg-primary-soft text-primary px-2 py-0.5 rounded-full border border-default"
-                  >{{ users.length }} total</span
+                  >{{ $t('admin.user_management.total', { count: users.length }) }}</span
                 >
               </h2>
-              <SearchInput v-model="userSearch" placeholder="Search users…" />
+              <SearchInput
+                v-model="userSearch"
+                :placeholder="$t('admin.user_management.search_users')"
+              />
             </div>
             <div class="flex-1 min-h-0">
               <div v-if="loading" class="flex justify-center py-12">
@@ -37,9 +40,9 @@
               <div v-else-if="loadUsersError" class="py-8">
                 <ErrorBanner :message="loadUsersError" />
                 <div class="mt-3 text-center">
-                  <BaseButton variant="secondary" size="sm" @click="loadUsers"
-                    >Try again</BaseButton
-                  >
+                  <BaseButton variant="secondary" size="sm" @click="loadUsers">{{
+                    $t('admin.user_management.try_again')
+                  }}</BaseButton>
                 </div>
               </div>
               <UserGrid
@@ -57,21 +60,24 @@
           <div class="h-full flex flex-col min-h-0">
             <div class="flex items-center justify-between mb-3 pb-3 border-b border-default">
               <h2 class="text-base font-semibold text-content">
-                Invitations
+                {{ $t('admin.user_management.invitations') }}
                 <label class="ml-4 text-xs font-medium text-content-subtle">
                   <input
                     v-model="showUsedInvitations"
                     type="checkbox"
                     class="mr-2 rounded border-strong text-primary"
-                  />Show used
+                  />{{ $t('admin.user_management.show_used') }}
                 </label>
               </h2>
               <div class="flex items-center gap-4">
                 <span
                   class="text-xs bg-primary-soft text-primary px-2 py-0.5 rounded-full border border-default"
-                  >{{ activeInvitations }} active</span
+                  >{{ $t('admin.user_management.active', { count: activeInvitations }) }}</span
                 >
-                <SearchInput v-model="invitationSearch" placeholder="Search invitations…" />
+                <SearchInput
+                  v-model="invitationSearch"
+                  :placeholder="$t('admin.user_management.search_invitations')"
+                />
               </div>
             </div>
             <div class="flex-1 min-h-0">
@@ -82,7 +88,7 @@
                 <ErrorBanner :message="loadInvitationsError" />
                 <div class="mt-3 text-center">
                   <BaseButton variant="secondary" size="sm" @click="loadInvitations">
-                    Try again
+                    {{ $t('admin.user_management.try_again') }}
                   </BaseButton>
                 </div>
               </div>
@@ -118,9 +124,9 @@
     <!-- Delete User Confirmation -->
     <ConfirmationDialog
       :open="deleteUserModal"
-      title="Delete User"
+      :title="$t('admin.user_management.delete_user_title')"
       :message="deleteUserMessage"
-      confirm-text="Permanently Delete"
+      :confirm-text="$t('admin.user_management.permanently_delete')"
       confirm-variant="danger"
       :loading="isProcessingDelete"
       @confirm="deleteUser"
@@ -130,9 +136,9 @@
     <!-- Delete Invitation Confirmation -->
     <ConfirmationDialog
       :open="deleteInvitationModal"
-      title="Delete Invitation"
+      :title="$t('admin.user_management.delete_invitation_title')"
       :message="deleteInvitationMessage"
-      confirm-text="Delete"
+      :confirm-text="$t('admin.user_management.delete')"
       confirm-variant="danger"
       :loading="isProcessingDelete"
       @confirm="deleteInvitation"
@@ -143,6 +149,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
 import { Users } from '@lucide/vue'
 import UserGrid from '@/components/admin/UserGrid.vue'
@@ -161,6 +168,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import type { UserResponse, InvitationResponse } from '@/types'
 
 const toast = useToast()
+const { t } = useI18n({ useScope: 'global' })
 
 const currentUserId = ref<number | null>(null)
 
@@ -206,12 +214,17 @@ const filteredInvitations = computed<InvitationResponse[]>(() => {
 
 const deleteUserMessage = computed<string>(() => {
   if (!userToDelete.value) return ''
-  return `This will permanently delete the user account and all associated data, including all projects owned by this user (files, documents, schemas, prompts, trials, evaluations) and uploaded files removed from storage.\n\nAre you sure you want to delete this user?\n${userToDelete.value.full_name} (${userToDelete.value.email})`
+  return t('admin.user_management.delete_user_message', {
+    name: userToDelete.value.full_name,
+    email: userToDelete.value.email,
+  })
 })
 
 const deleteInvitationMessage = computed<string>(() => {
   if (!invitationToDelete.value) return ''
-  return `Are you sure you want to delete this invitation? This action cannot be undone.\n${invitationToDelete.value.email}`
+  return t('admin.user_management.delete_invitation_message', {
+    email: invitationToDelete.value.email,
+  })
 })
 
 onMounted(async () => {
@@ -231,7 +244,7 @@ async function loadUsers(): Promise<void> {
     const response = await usersApi.list()
     users.value = response.data
   } catch (error) {
-    loadUsersError.value = extractErrorMessage(error, 'Failed to load users.')
+    loadUsersError.value = extractErrorMessage(error, t('admin.user_management.errors.load_users'))
   } finally {
     loading.value = false
   }
@@ -244,7 +257,10 @@ async function loadInvitations(): Promise<void> {
     const response = await usersApi.listInvitations()
     invitations.value = response.data
   } catch (error) {
-    loadInvitationsError.value = extractErrorMessage(error, 'Failed to load invitations.')
+    loadInvitationsError.value = extractErrorMessage(
+      error,
+      t('admin.user_management.errors.load_invitations'),
+    )
   } finally {
     loadingInvitations.value = false
   }
@@ -278,12 +294,12 @@ async function deleteUser(): Promise<void> {
   try {
     await usersApi.delete(target.id)
     users.value = users.value.filter((u) => u.id !== target.id)
-    toast.success(`User "${userName}" deleted successfully.`)
+    toast.success(t('admin.user_management.toast.user_deleted', { name: userName }))
     deleteUserModal.value = false
     userToDelete.value = null
     editUser.value = null // close edit modal too
   } catch (error) {
-    toast.error(extractErrorMessage(error, 'Failed to delete user.'))
+    toast.error(extractErrorMessage(error, t('admin.user_management.errors.delete_user')))
   } finally {
     isProcessingDelete.value = false
   }
@@ -307,11 +323,11 @@ async function deleteInvitation(): Promise<void> {
   try {
     await usersApi.deleteInvitation(target.id)
     invitations.value = invitations.value.filter((inv) => inv.id !== target.id)
-    toast.success(`Invitation for "${target.email}" deleted.`)
+    toast.success(t('admin.user_management.toast.invitation_deleted', { email: target.email }))
     deleteInvitationModal.value = false
     invitationToDelete.value = null
   } catch (error) {
-    toast.error(extractErrorMessage(error, 'Failed to delete invitation.'))
+    toast.error(extractErrorMessage(error, t('admin.user_management.errors.delete_invitation')))
   } finally {
     isProcessingDelete.value = false
   }

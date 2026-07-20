@@ -1,9 +1,13 @@
 <template>
   <ConfirmationDialog
     :open="open"
-    :title="`Delete ${advancedMode ? 'Property' : 'Field'}`"
-    :message="`Are you sure you want to delete &quot;${propertyKey}&quot;? This action cannot be undone.`"
-    confirm-text="Delete"
+    :title="
+      advancedMode
+        ? $t('schemaEditor.delete_modal.title_property')
+        : $t('schemaEditor.delete_modal.title_field')
+    "
+    :message="$t('schemaEditor.delete_modal.message', { name: propertyKey })"
+    :confirm-text="$t('schemaEditor.delete_modal.confirm')"
     confirm-variant="danger"
     @confirm="$emit('confirm')"
     @cancel="$emit('cancel')"

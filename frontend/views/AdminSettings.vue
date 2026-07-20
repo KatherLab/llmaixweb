@@ -1,8 +1,8 @@
 <template>
   <div>
     <PageHeader
-      title="App Settings"
-      subtitle="Configure system-wide settings for the application."
+      :title="$t('admin.settings.title')"
+      :subtitle="$t('admin.settings.subtitle')"
       class="mb-6"
     >
       <template #icon>
@@ -29,8 +29,12 @@
         <!-- Value Display -->
         <div class="text-xs text-content-subtle break-all">
           <template v-if="val.secret">
-            <span v-if="val.is_set" class="text-green-700 dark:text-green-400">Set</span>
-            <span v-else class="text-red-500 dark:text-red-400">Not Set</span>
+            <span v-if="val.is_set" class="text-green-700 dark:text-green-400">{{
+              $t('admin.settings.set')
+            }}</span>
+            <span v-else class="text-red-500 dark:text-red-400">{{
+              $t('admin.settings.not_set')
+            }}</span>
           </template>
           <template v-else>
             <span v-if="val.override !== undefined && val.override !== null">
@@ -48,10 +52,10 @@
             <div class="text-content-subtle flex flex-col gap-1">
               <span class="flex items-center gap-1">
                 <Lock class="w-4 h-4 text-content-subtle" />
-                Set in <code>.env</code>
+                {{ $t('admin.settings.set_in') }} <code>.env</code>
               </span>
               <span class="text-xs"
-                >Example: <code>{{ key }}={{ val.original }}</code></span
+                >{{ $t('admin.settings.example') }} <code>{{ key }}={{ val.original }}</code></span
               >
             </div>
           </template>
@@ -65,7 +69,7 @@
                   class="px-2 py-1 rounded bg-primary-soft text-primary text-xs font-medium hover:bg-primary-soft"
                   @click="showSecretInput[key] = !showSecretInput[key]"
                 >
-                  {{ val.is_set ? 'Update' : 'Set' }}
+                  {{ val.is_set ? $t('admin.settings.update') : $t('admin.settings.set_action') }}
                 </button>
                 <button
                   v-if="val.is_set"
@@ -73,7 +77,7 @@
                   class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
                   @click="clearSecret(key)"
                 >
-                  Clear
+                  {{ $t('admin.settings.clear') }}
                 </button>
               </div>
               <div v-if="showSecretInput[key]" class="mt-2 flex gap-2">
@@ -82,10 +86,10 @@
                   type="password"
                   autocomplete="off"
                   :class="[inputClass, 'flex-1']"
-                  placeholder="Enter new value"
+                  :placeholder="$t('admin.settings.enter_new_value')"
                 />
                 <BaseButton type="button" variant="primary" size="sm" @click="saveSecret(key)">
-                  Save
+                  {{ $t('admin.settings.save') }}
                 </BaseButton>
                 <BaseButton
                   type="button"
@@ -93,7 +97,7 @@
                   size="sm"
                   @click="cancelSecretInput(key)"
                 >
-                  Cancel
+                  {{ $t('admin.settings.cancel') }}
                 </BaseButton>
               </div>
             </div>
@@ -109,7 +113,7 @@
                 class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
                 @click="deleteOverride(key)"
               >
-                Revert
+                {{ $t('admin.settings.revert') }}
               </button>
             </div>
           </template>
@@ -123,7 +127,7 @@
                 class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
                 @click="deleteOverride(key)"
               >
-                Revert
+                {{ $t('admin.settings.revert') }}
               </button>
             </div>
           </template>
@@ -137,7 +141,7 @@
                 class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
                 @click="deleteOverride(key)"
               >
-                Revert
+                {{ $t('admin.settings.revert') }}
               </button>
             </div>
           </template>
@@ -145,12 +149,14 @@
       </div>
       <div class="mt-8 flex gap-4">
         <BaseButton type="submit" variant="primary" :loading="saving" :disabled="saving">
-          {{ saving ? 'Saving...' : 'Save' }}
+          {{ saving ? $t('admin.settings.saving') : $t('admin.settings.save') }}
         </BaseButton>
-        <BaseButton variant="secondary" @click="resetDraft"> Reset </BaseButton>
+        <BaseButton variant="secondary" @click="resetDraft">
+          {{ $t('admin.settings.reset') }}
+        </BaseButton>
       </div>
       <div v-if="success" class="mt-5 text-green-600 dark:text-green-400 font-semibold">
-        Settings saved!
+        {{ $t('admin.settings.saved') }}
       </div>
       <div v-if="error" class="mt-5 text-red-600 dark:text-red-400 font-semibold">{{ error }}</div>
     </form>
@@ -162,6 +168,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CircleDot, Lock } from '@lucide/vue'
 import { adminApi } from '@/services/adminApi'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -171,6 +178,8 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import { extractErrorMessage } from '@/utils/errors'
 import { inputClass } from '@/utils/formStyles'
 import type { AdminSettings, AdminSettingEntry } from '@/types'
+
+const { t } = useI18n({ useScope: 'global' })
 
 const settings = reactive<AdminSettings>({})
 // Draft values are a mix of booleans, numbers, and strings.
@@ -246,7 +255,7 @@ async function saveSecret(key: string): Promise<void> {
       success.value = false
     }, 1200)
   } catch (e) {
-    error.value = extractErrorMessage(e, 'Failed to save secret')
+    error.value = extractErrorMessage(e, t('admin.settings.errors.save_secret'))
   } finally {
     saving.value = false
   }
@@ -269,7 +278,7 @@ async function clearSecret(key: string): Promise<void> {
       success.value = false
     }, 1200)
   } catch (e) {
-    error.value = extractErrorMessage(e, 'Failed to clear secret')
+    error.value = extractErrorMessage(e, t('admin.settings.errors.clear_secret'))
   } finally {
     saving.value = false
   }
@@ -317,7 +326,7 @@ async function fetchSettings(): Promise<void> {
       activeTab.value = categoryTabs.value[0].value
     }
   } catch {
-    error.value = 'Failed to load settings'
+    error.value = t('admin.settings.errors.load')
   } finally {
     loading.value = false
   }
@@ -344,7 +353,7 @@ async function save(): Promise<void> {
       success.value = false
     }, 1200)
   } catch (e) {
-    error.value = extractErrorMessage(e, 'Failed to save settings')
+    error.value = extractErrorMessage(e, t('admin.settings.errors.save'))
   } finally {
     saving.value = false
   }
@@ -361,7 +370,7 @@ async function deleteOverride(key: string): Promise<void> {
       draft[key] = entry.original ?? ''
     }
   } catch (e) {
-    error.value = extractErrorMessage(e, 'Failed to remove override')
+    error.value = extractErrorMessage(e, t('admin.settings.errors.remove_override'))
   }
 }
 
