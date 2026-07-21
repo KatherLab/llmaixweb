@@ -8,6 +8,11 @@
       // Apply dark mode before first paint to avoid a light-mode flash.
       // Mirrors AppLayout.vue's logic: localStorage['darkMode'] stores '1'/'0';
       // when unset, fall back to the OS preference.
+      //
+      // NOTE: this inline script is allowlisted in nginx.conf's CSP by its
+      // sha256 hash. If you change anything below (even whitespace), the hash
+      // changes and the script will be blocked in the nginx-served build —
+      // recompute it and update the script-src hash in frontend/nginx.conf.
       ;(function () {
         try {
           var saved = localStorage.getItem('darkMode')
