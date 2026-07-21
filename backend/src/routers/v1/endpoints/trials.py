@@ -1117,6 +1117,8 @@ def download_trial_results(
     trial_id: int,
     format: str = Query("json", enum=["json", "csv"]),
     include_content: bool = Query(True),
+    include_reasoning: bool = Query(False),
+    include_usage: bool = Query(False),
     current_user: "models.User" = Depends(get_current_user),
 ) -> Response:
     """Download trial results, with a separate metadata.json for trial/prompt/schema metadata."""
@@ -1157,18 +1159,19 @@ def download_trial_results(
         select(models.Schema).where(models.Schema.id == trial.schema_id)
     ).scalar_one_or_none()
 
-    # additional_content (raw LLM output, reasoning traces — the bulk of a
-    # result row) is never read by this export; defer it so a large trial
-    # doesn't hydrate it all into memory.
-    results = list(
-        db.execute(
-            select(models.TrialResult)
-            .where(models.TrialResult.trial_id == trial_id)
-            .options(defer(models.TrialResult.additional_content))
-        )
-        .scalars()
-        .all()
+    # additional_content (raw LLM output, reasoning traces, token usage — the
+    # bulk of a result row) is only read when the caller explicitly opts in to
+    # reasoning/usage; otherwise defer it so a large trial doesn't hydrate it
+    # all into memory.
+    include_extras = include_reasoning or include_usage
+    result_query = select(models.TrialResult).where(
+        models.TrialResult.trial_id == trial_id
     )
+    if not include_extras:
+        result_query = result_query.options(
+            defer(models.TrialResult.additional_content)
+        )
+    results = list(db.execute(result_query).scalars().all())
     if not results:
         raise api_error("trials.no_results", 404, "No results found for this trial")
 
@@ -1183,8 +1186,25 @@ def download_trial_results(
             "format": format,
             "results": len(results),
             "include_content": include_content,
+            "include_reasoning": include_reasoning,
+            "include_usage": include_usage,
         },
     )
+
+    def _extras(result):
+        """Reasoning/usage/finish_reason pulled from additional_content, honoring
+        the include_reasoning / include_usage opt-ins. Empty dict when neither is
+        requested (additional_content stays deferred in that case)."""
+        if not include_extras:
+            return {}
+        ac = result.additional_content or {}
+        out = {}
+        if include_reasoning:
+            out["reasoning"] = ac.get("reasoning_content")
+        if include_usage:
+            out["usage"] = ac.get("usage") or {}
+            out["finish_reason"] = ac.get("finish_reason")
+        return out
 
     document_cache = {}
     file_cache = {}
@@ -1192,6 +1212,7 @@ def download_trial_results(
     all_meta_keys = set()
     all_result_keys = set()
     all_prep_keys = set()
+    all_usage_keys = set()
 
     # Batch-load all documents (with their original file + preprocessing config)
     # in a single query instead of 3 queries per result (N+1). The text column
@@ -1249,6 +1270,10 @@ def download_trial_results(
 
     for result in results:
         all_result_keys.update(_extract_keys(result.result or {}))
+        if include_usage:
+            usage = (result.additional_content or {}).get("usage") or {}
+            if isinstance(usage, dict):
+                all_usage_keys.update(_extract_keys(usage))
 
     trial_dict = filter_sensitive_keys(
         {
@@ -1347,6 +1372,7 @@ def download_trial_results(
                     "document_metadata": document.meta_data or {},
                     "preprocessing": prep_conf or {},
                 }
+                result_data.update(_extras(result))
                 if include_content:
                     result_data["content"] = document.text
                     file_id = document.preprocessed_file_id or document.original_file_id
@@ -1393,9 +1419,17 @@ def download_trial_results(
         prompt_keys = sorted(_extract_keys(prompt_dict))
         schema_keys = sorted(_extract_keys(schema_dict))
 
+        usage_keys = sorted(all_usage_keys)
+
         base_columns = ["document_id", "document_name", "file_name", "created_at"]
         if include_content:
             base_columns.append("document_content")
+        extra_columns = []
+        if include_reasoning:
+            extra_columns.append("reasoning")
+        if include_usage:
+            extra_columns.append("finish_reason")
+            extra_columns += [f"usage.{k}" for k in usage_keys]
         header = (
             base_columns
             + [f"meta.{k}" for k in meta_keys]
@@ -1404,6 +1438,7 @@ def download_trial_results(
             + [f"prompt.{k}" for k in prompt_keys]
             + [f"schema.{k}" for k in schema_keys]
             + [f"result.{k}" for k in result_keys]
+            + extra_columns
         )
 
         def _iter_csv_rows():
@@ -1484,6 +1519,15 @@ def download_trial_results(
                 res_flat = flatten_dict(result.result)
                 for k in result_keys:
                     row[f"result.{k}"] = res_flat.get(k, "")
+                if include_extras:
+                    extras = _extras(result)
+                    if include_reasoning:
+                        row["reasoning"] = extras.get("reasoning") or ""
+                    if include_usage:
+                        row["finish_reason"] = extras.get("finish_reason") or ""
+                        usage_flat = flatten_dict(extras.get("usage") or {})
+                        for k in usage_keys:
+                            row[f"usage.{k}"] = usage_flat.get(k, "")
                 writer.writerow(row)
                 yield _drain()
 

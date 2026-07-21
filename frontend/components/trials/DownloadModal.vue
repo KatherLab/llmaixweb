@@ -21,6 +21,8 @@ const emit = defineEmits<{ close: [] }>()
 
 const format = ref<'json' | 'csv'>('json')
 const includeContent = ref(true)
+const includeReasoning = ref(false)
+const includeUsage = ref(false)
 
 const isDownloading = ref(false)
 const toast = useToast()
@@ -55,6 +57,8 @@ watch(
     if (open) {
       format.value = 'json'
       includeContent.value = true
+      includeReasoning.value = false
+      includeUsage.value = false
     }
   },
 )
@@ -68,6 +72,8 @@ async function download(): Promise<void> {
         trialsApi.download(props.projectId!, props.trial!.id!, {
           format: format.value,
           include_content: includeContent.value,
+          include_reasoning: includeReasoning.value,
+          include_usage: includeUsage.value,
         }),
       `${downloadBasename.value}_results.${fileExt.value}`,
     )
@@ -117,6 +123,24 @@ async function download(): Promise<void> {
           >{{ $t('trials.download.include_content') }}
           <span class="text-content-subtle" :title="$t('trials.download.include_content_title')">
             {{ $t('trials.download.include_content_hint') }}
+          </span>
+        </span>
+      </label>
+      <label class="mt-2 flex items-center text-sm text-content-muted">
+        <input v-model="includeReasoning" type="checkbox" :class="checkboxClass" />
+        <span class="ml-2"
+          >{{ $t('trials.download.include_reasoning') }}
+          <span class="text-content-subtle" :title="$t('trials.download.include_reasoning_title')">
+            {{ $t('trials.download.include_reasoning_hint') }}
+          </span>
+        </span>
+      </label>
+      <label class="mt-2 flex items-center text-sm text-content-muted">
+        <input v-model="includeUsage" type="checkbox" :class="checkboxClass" />
+        <span class="ml-2"
+          >{{ $t('trials.download.include_usage') }}
+          <span class="text-content-subtle" :title="$t('trials.download.include_usage_title')">
+            {{ $t('trials.download.include_usage_hint') }}
           </span>
         </span>
       </label>
