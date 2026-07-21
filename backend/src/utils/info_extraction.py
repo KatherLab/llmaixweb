@@ -674,8 +674,12 @@ def _build_messages(
             schema_json = json.dumps(schema_definition, indent=2)
             user_content += f"\n\nExtract the data according to this JSON schema:\n```json\n{schema_json}\n```"
         msgs.append({"role": "user", "content": user_content})
-    elif not msgs:
-        # Fallback: if no user prompt, create a minimal one with document markers
+    elif not has_system_placeholder:
+        # No user prompt AND the document was not injected into the system prompt
+        # via a placeholder. Without this branch a system-prompt-only prompt would
+        # send NO document text to the model (it would extract from nothing), so
+        # always surface the document as a minimal user message here. This also
+        # covers the no-prompt-at-all fallback.
         user_content = f"--- DOCUMENT CONTENT ---\n{clean_doc}\n--- END DOCUMENT ---"
         # Auto-append JSON schema for structured output
         if schema_definition:
@@ -1122,7 +1126,12 @@ def safe_json_loads(text: str) -> Any:
         )
 
     candidate = _extract_json_snippet(text)
-    candidate = candidate.replace(""", '"').replace(""", '"').replace("'", "'")
+    candidate = (
+        candidate.replace("\u201c", '"')
+        .replace("\u201d", '"')
+        .replace("\u2018", "'")
+        .replace("\u2019", "'")
+    )
     candidate = _escape_ctrls_in_json_strings(candidate)
 
     try:

@@ -87,7 +87,7 @@ jobs:
         # can't silently regress; ratchet up as coverage grows.
         run: >
           ENV_PATH=backend/tests/.env uv run pytest
-          --cov=backend/src --cov-report=term-missing --cov-fail-under=68
+          --cov=backend/src --cov-report=term-missing --cov-fail-under=70
 
   migrations:
     name: Alembic migrations (PostgreSQL)

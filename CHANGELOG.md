@@ -29,6 +29,12 @@ that point forward.
   suggestions now fire for underscore/suffix column-name variants.
 - Schema type validation no longer accepts a boolean where an integer/number is
   expected.
+- LLM extraction: JSON responses delimited with typographic ("curly") quotes are
+  now repaired correctly instead of being rejected as invalid JSON — the
+  smart-quote normalization step had been silently disabled.
+- LLM extraction: a prompt consisting of only a system prompt (with no
+  `{document_content}` placeholder and no user prompt) now still sends the
+  document to the model, instead of running the extraction against no content.
 
 ## [0.7.1] — 2026-07-21
 
