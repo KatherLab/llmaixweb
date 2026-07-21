@@ -96,6 +96,7 @@ nav:
       - Single sign-on (SSO): admin/sso.md
       - Task monitoring: admin/celery.md
   - Operations:
+      - Requirements & sizing: operations/requirements.md
       - Deployment: operations/deployment.md
       - Configuration: operations/configuration.md
       - Upgrading: operations/upgrading.md

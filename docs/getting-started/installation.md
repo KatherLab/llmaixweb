@@ -13,6 +13,9 @@ self-hosted GPU services only when you need them.
   drivers.
 - For local development from source: **Node.js 20+** (22+ recommended; the build image uses Node 26) and **Python 3.13**.
 
+For host sizing (CPU/RAM/disk/GPU by workload), see
+[Requirements & sizing](../operations/requirements.md).
+
 ## Quick start
 
 ```bash
@@ -44,7 +47,7 @@ API.
 | --- | --- | --- |
 | `compose.yml` | Base stack (CPU) — **always required** | No |
 | `compose.dev.yml` | Local code hot-reload for development | No |
-| `compose.deepseek.yml` | Self-hosted Mistral-compatible OCR (DeepSeek-OCR-2 + [KatDocExtract](https://github.com/KatherLab/KatDocExtract)) | Yes (24+ GB VRAM) |
+| `compose.deepseek.yml` | Self-hosted Mistral-compatible OCR (DeepSeek-OCR-2 + [KatDocExtract](https://github.com/KatherLab/KatDocExtract)) | Yes (8 GB min, 12+ GB for concurrency) |
 | `compose.vllm.yml` | Self-hosted OpenAI-compatible endpoint (e.g. Gemma via vLLM) | Yes (model-dependent) |
 
 ```bash

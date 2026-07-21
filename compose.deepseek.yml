@@ -5,7 +5,7 @@
 # a Mistral OCR-compatible API backed by DeepSeek-OCR-2 on a GPU.
 #
 # Prerequisites:
-#   - NVIDIA GPU with sufficient VRAM (24+ GB recommended for DeepSeek-OCR-2)
+#   - NVIDIA GPU with sufficient VRAM (8 GB min, 12+ GB for more concurrency)
 #   - NVIDIA Container Toolkit (nvidia-docker2 / nvidia-container-toolkit)
 #
 # Required .env overrides (uncomment in your .env):

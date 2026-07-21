@@ -51,7 +51,11 @@ services:
     volumes:
       - docling-models:/models
       - docling-scratch:/scratch
-    mem_limit: 8g
+    # Protective container memory limit — a ceiling to contain unusually large
+    # jobs, not a measured requirement. Actual usage is workload-dependent
+    # (commonly a few GB). Benchmark with `docker stats docling-serve` and set
+    # DOCLING_MEMORY_LIMIT to your worst observed peak + ~25% headroom.
+    mem_limit: ${DOCLING_MEMORY_LIMIT:-8g}
     healthcheck:
       test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/openapi.json', timeout=5)\"" ]
       interval: 10s
