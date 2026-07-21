@@ -305,6 +305,8 @@ The `docs/` tree is organized by nav section: Getting started (installation, qui
 
 Build locally: `uv run --only-group docs mkdocs build` (or `mkdocs serve`). **When you change user-facing behavior, config, or the workflow, update the relevant page under `docs/`** — that is where end users and operators read it, not the README.
 
+Screenshots live in `docs/assets/screenshots/` and are generated, not hand-captured: `npm run screenshots` drives the whole workflow with the sample data and rewrites every image (see the Playwright harness under "Running Tests"). Pages embed them as Material `<figure markdown>` blocks (`md_in_html` + `attr_list` are enabled) with a directory-relative prefix (`../assets/screenshots/` from a section page, `assets/screenshots/` from the docs root). `USAGE.md` (included into the quickstart) uses plain-markdown images with the `docs/assets/screenshots/` prefix so they resolve both on GitHub and through the include. **Re-run `npm run screenshots` after any UI change that affects a documented screen**, and avoid citing exact numbers from a screenshot in prose (they drift when the images regenerate).
+
 ### Licensing & Governance Files (repo root)
 - `LICENSE` — **AGPL-3.0-or-later**. Note: `pymupdf` is AGPL, which currently blocks any future MIT relicense.
 - `THIRD_PARTY_NOTICES.md` — bundled OSS components and their licenses.
