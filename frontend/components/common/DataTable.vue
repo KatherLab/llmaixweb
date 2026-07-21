@@ -35,7 +35,11 @@
     </div>
 
     <!-- Table -->
-    <div :class="['overflow-auto min-h-0', items.length > 0 ? 'flex-1' : '']">
+    <div
+      ref="scrollContainer"
+      :class="['overflow-auto min-h-0', items.length > 0 ? 'flex-1' : '']"
+      @scroll="updateScrollState"
+    >
       <table :class="t.table">
         <thead :class="t.thead">
           <tr>
@@ -86,10 +90,27 @@
                 {{ column.label }}
               </div>
             </th>
-            <th v-if="hasRowActions" scope="col" :class="[t.th, 'text-right']">
+            <th
+              v-if="hasRowActions"
+              scope="col"
+              :class="[
+                t.th,
+                'text-right sticky z-20 bg-surface-muted',
+                expandable ? 'right-10' : 'right-0',
+                canScrollRight ? stickyShadow : '',
+              ]"
+            >
               {{ $t('common.data_table.actions') }}
             </th>
-            <th v-if="expandable" scope="col" :class="[t.th, 'w-10']"></th>
+            <th
+              v-if="expandable"
+              scope="col"
+              :class="[
+                t.th,
+                'w-10 sticky right-0 z-20 bg-surface-muted',
+                !hasRowActions && canScrollRight ? stickyShadow : '',
+              ]"
+            ></th>
           </tr>
         </thead>
         <tbody :class="t.tbody">
@@ -98,6 +119,7 @@
               :id="rowIdPrefix ? `${rowIdPrefix}${getRowKeyValue(row)}` : undefined"
               :class="[
                 t.tr,
+                'group',
                 isRowSelected(row) ? 'bg-primary-soft' : '',
                 isRowHighlighted(row)
                   ? 'ring-2 ring-emerald-500 ring-inset bg-emerald-50 dark:bg-emerald-900/20'
@@ -134,12 +156,29 @@
                   {{ row[column.key] }}
                 </slot>
               </td>
-              <td v-if="hasRowActions" :class="t.td" class="whitespace-nowrap text-right">
+              <td
+                v-if="hasRowActions"
+                :class="[
+                  t.td,
+                  'whitespace-nowrap text-right sticky z-10 group-hover:bg-surface-muted',
+                  expandable ? 'right-10' : 'right-0',
+                  stickyBg(row),
+                  canScrollRight ? stickyShadow : '',
+                ]"
+              >
                 <div class="flex items-center justify-end gap-1">
                   <slot name="row-actions" :row="row" />
                 </div>
               </td>
-              <td v-if="expandable" :class="t.td" class="whitespace-nowrap text-right">
+              <td
+                v-if="expandable"
+                :class="[
+                  t.td,
+                  'whitespace-nowrap text-right sticky right-0 z-10 group-hover:bg-surface-muted',
+                  stickyBg(row),
+                  !hasRowActions && canScrollRight ? stickyShadow : '',
+                ]"
+              >
                 <button
                   type="button"
                   class="p-1 rounded text-content-subtle hover:text-content hover:bg-surface-muted transition-colors"
@@ -160,8 +199,14 @@
               </td>
             </tr>
             <tr v-if="expandable && isRowExpanded(row)">
-              <td :colspan="totalColspan" class="p-0">
-                <div class="bg-surface-muted border-t border-default">
+              <td :colspan="totalColspan" class="p-0 bg-surface-muted">
+                <!-- Pin the panel to the visible viewport width so its own layout
+                     (e.g. right-aligned action buttons) stays on-screen even when
+                     the table overflows horizontally. -->
+                <div
+                  class="bg-surface-muted border-t border-default sticky left-0"
+                  :style="viewportWidth ? { width: viewportWidth + 'px' } : undefined"
+                >
                   <slot name="expanded" :row="row" />
                 </div>
               </td>
@@ -200,7 +245,7 @@
 </template>
 
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { computed, useSlots } from 'vue'
+import { computed, useSlots, ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { ChevronDown } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -306,6 +351,52 @@ defineEmits<{
 
 const slots = useSlots()
 const t = useTableClasses({ density: props.density })
+
+// Sticky right-hand columns (actions + expand toggle) stay pinned to the visible
+// edge when the table overflows horizontally — otherwise long labels (e.g. German
+// translations) push the accordion/download affordance off-screen with no hint to
+// scroll. The shadow only appears while there is hidden content to the right.
+const scrollContainer = ref<HTMLElement | null>(null)
+const canScrollRight = ref(false)
+// Visible width of the scroll viewport — used to constrain the expanded-row panel
+// so it doesn't stretch to the overflowing table width.
+const viewportWidth = ref(0)
+
+const stickyShadow =
+  'shadow-[-6px_0_10px_-6px_rgba(0,0,0,0.10)] dark:shadow-[-6px_0_10px_-6px_rgba(0,0,0,0.45)]'
+
+function updateScrollState(): void {
+  const el = scrollContainer.value
+  canScrollRight.value = el ? el.scrollLeft + el.clientWidth < el.scrollWidth - 1 : false
+  viewportWidth.value = el ? el.clientWidth : 0
+}
+
+// Solid background so the pinned cells paint over columns scrolling underneath.
+// Mirrors the row-state backgrounds applied to the <tr> (group-hover handled
+// via the class list on the cell itself).
+function stickyBg(row: T): string {
+  if (isRowHighlighted(row)) return 'bg-emerald-50 dark:bg-emerald-900/20'
+  if (isRowSelected(row)) return 'bg-primary-soft'
+  return 'bg-surface'
+}
+
+let resizeObserver: ResizeObserver | null = null
+onMounted(() => {
+  updateScrollState()
+  const el = scrollContainer.value
+  if (el && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => updateScrollState())
+    resizeObserver.observe(el)
+  }
+})
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+})
+watch(
+  () => props.items,
+  () => nextTick(updateScrollState),
+)
 
 const hasRowActions = computed(() => !!slots['row-actions'])
 

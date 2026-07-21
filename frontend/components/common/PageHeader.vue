@@ -37,7 +37,7 @@ withDefaults(defineProps<Props>(), {
         </div>
         <div class="min-w-0">
           <h1 class="text-xl font-bold text-content truncate">{{ title }}</h1>
-          <p v-if="subtitle" class="text-sm text-content-muted truncate">{{ subtitle }}</p>
+          <p v-if="subtitle" class="text-sm text-content-muted">{{ subtitle }}</p>
         </div>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
