@@ -6,7 +6,7 @@
     selectable
     :selected-keys="selectedDocuments"
     :all-selected="areAllSelected"
-    :total-selected="selectedDocuments.length"
+    :total-selected="selectedDocuments?.length ?? 0"
     :select-all-busy="selectAllBusy"
     :sort-by="sortBy"
     :sort-order="sortOrder"
