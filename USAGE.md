@@ -100,6 +100,8 @@ From the following medical report, extract the following information and return 
 
 ## Step 1 — Files & Preprocessing
 
+![The Files & Preprocessing tab with the sample CSV, a PDF, and a PNG uploaded. CSV/XLSX files show a "Needs Import Config" badge.](docs/assets/screenshots/files-list.png)
+
 1. Create a **Project** (top-level container) from the Projects page.
 2. Open the project and stay on the **Files & Preprocessing** tab.
 3. Upload `reports_with_groundtruth.csv`.
@@ -107,6 +109,9 @@ From the following medical report, extract the following information and return 
    - **Import Strategy:** select **One document per row** (row-by-row).
    - **Text Columns:** select `report` (required — this column's content becomes each document's text).
    - **Case/Document ID Column:** select `id` (optional but recommended — used for document naming, so each document is identifiable by `9874562.pdf`, etc.).
+
+   ![The Configure Import dialog: one document per row, the report column selected as the text column, and id as the Case/Document ID column.](docs/assets/screenshots/files-import-config.png)
+
 5. Run preprocessing. Since the report text is already plain text in the CSV, **no OCR is needed** — every row becomes one `Document` with the `report` text and its `id` as the document name.
 
 When preprocessing finishes, you'll have **8 documents** (one per report).
@@ -117,6 +122,8 @@ When preprocessing finishes, you'll have **8 documents** (one per report).
 ---
 
 ## Step 2 — Documents (optional review)
+
+![The Documents tab listing the 8 documents produced by row-by-row import, one per report.](docs/assets/screenshots/documents-list.png)
 
 On the **Documents** tab you can review the 8 extracted documents and confirm the text looks correct. The tab has two sub-views: **All Documents** and **Document Groups**. A *document group* is a saved selection of documents you can run a trial against — select documents in the list and click **Create Group**, or create one from the **Document Groups** tab. This is optional: trials can also select documents individually.
 
@@ -129,6 +136,10 @@ On the **Schemas & Prompts** tab, switch between the **JSON Schemas** and **Extr
 1. In **JSON Schemas**, create a new schema. Switch the editor to **Advanced** mode, which gives you two tabs: **Visual Editor** (build the tree — 6 boolean fields + `location` and `side` enums) and **Raw JSON** (paste the schema JSON from above into a textarea).
 2. In **Extraction Prompts**, create a new prompt. In **simple mode**, just paste the extraction instruction from above into the user-prompt field — the document text and schema are injected automatically, so no system prompt or placeholder is needed.
 
+![The schema editor in Advanced mode, Raw JSON tab, holding the 8-field lung-embolism schema.](docs/assets/screenshots/schema-editor.png)
+
+![The prompt editor in simple mode: just the extraction instruction — the document text and schema are appended automatically at trial time.](docs/assets/screenshots/prompt-editor.png)
+
 ---
 
 ## Step 4 — Run Trials
@@ -140,9 +151,13 @@ On the **Run Trials** tab, click to start a new trial. The trial dialog has a **
 3. **LLM Model** — models are fetched from your configured LLM provider (the system default set in the admin panel). In Advanced mode you can override with custom API settings (base URL + API key) to point at any OpenAI-compatible endpoint.
 4. **Documents** — choose a selection mode: **Individual** (pick the 8 documents), **Groups** (pick a document group), or **Smart**.
 
+![The Start New Trial dialog: prompt, schema, and model selectors on the left; document selection (Individual / Groups / Smart) on the right.](docs/assets/screenshots/trial-create-modal.png)
+
 Then run the trial. The app sends each document's `report` text to the LLM and stores one **Trial Result** per document, containing the JSON the model produced.
 
 After the trial completes, open it to inspect the per-document JSON output side-by-side with the source text.
+
+![The trial results viewer: the document list on the left, the source report and the extracted JSON side-by-side on the right.](docs/assets/screenshots/trial-results.png)
 
 ---
 
@@ -167,12 +182,16 @@ Now compare the trial's output against the ground-truth labels.
 
      For this example: use **boolean** for the six symptom fields, and **category** (or **exact**) for `location` and `side`.
 
+   ![The Configure Ground Truth Mapping dialog: schema fields on the left, ground-truth columns on the right, a comparison method per field, and the Document ID column at the top.](docs/assets/screenshots/groundtruth-mapping.png)
+
 3. Save the mappings (they're stored on the ground-truth file, so you only do this once).
 4. Click **Evaluate Trial**, pick the trial you ran in Step 4, and run the evaluation. You get:
    - **Overall metrics** — accuracy, plus precision, recall, and F1 (a wrong value counts as both a false positive and a false negative; a missing value is a false negative; an extra value is a false positive).
    - **Per-field metrics** — accuracy, precision, recall, F1, and an error breakdown per field.
    - **Confusion matrices** for categorical fields (`location`, `side`).
    - **Per-document metrics** — accuracy per report, with lists of missing and incorrect fields, so you can see exactly where the model failed.
+
+   ![The evaluation analysis view: overall accuracy/precision/recall/F1, per-field accuracy sorted worst-first, and per-document OK/Partial status.](docs/assets/screenshots/evaluation-analysis.png)
 
 > [!NOTE]
 > Boolean comparison accepts `true`/`false`, `yes`/`no`, or `1`/`0` on both sides (case-insensitive). For `category`, the model's output must match the ground-truth class — which is why the schema enums (`main`/`segmental`/`unknown` and `left`/`right`/`bilateral`) line up with the CSV columns.

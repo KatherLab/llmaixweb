@@ -387,7 +387,22 @@ Specs live next to the code they cover as `*.test.ts` (e.g. `utils/*.test.ts`,
 `composables/*.test.ts`). Config is in `vitest.config.ts` at the repo root
 (separate from `frontend/vite.config.js` so the test toolchain stays out of the
 production bundle). Current coverage is the pure `utils/` helpers and
-logic-heavy composables; component/e2e coverage is not set up yet.
+logic-heavy composables; component-level coverage is not set up yet.
+
+End-to-end + documentation screenshots (Playwright):
+```bash
+npm run test:e2e      # smoke: boots fake-LLM + SQLite backend + Vite, drives the full workflow
+npm run screenshots   # regenerates docs/assets/screenshots/*.png from the real sample data
+```
+Both configs boot three servers (a fake OpenAI-compatible LLM, the FastAPI
+backend broker-free on SQLite via `backend/.env.e2e`, and the Vite dev server)
+and reset backend state first via `e2e/support/reset.mjs`. The smoke test
+(`e2e/tests/workflow.spec.ts`, `playwright.config.ts`) asserts the workflow
+works; the **screenshot harness** (`e2e/screenshots/workflow.screens.spec.ts`,
+`playwright.screenshots.config.ts`) walks the same path and captures every
+docs image, backed by a realistic per-document fake LLM
+(`e2e/screenshots/support/fake-llm-realistic.mjs`). Re-run `npm run screenshots`
+after any UI change that affects the documentation images.
 
 ### Docker
 - Four compose files compose together via `-f` flag pattern:

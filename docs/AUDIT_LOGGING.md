@@ -4,6 +4,13 @@ LLMAIx Web records an **append-only audit trail** and a **central error log** to
 support the accountability requirements of a clinical deployment. This document
 explains what is recorded, how to read it, and how to operate it.
 
+Admins read both from **Admin → Audit Log**:
+
+<figure markdown>
+  ![Admin Audit Log with the activity table, filters, and Export CSV](assets/screenshots/admin-audit.png){ width="820" }
+  <figcaption>The Audit Log UI: the append-only activity table with Activity/Errors tabs, Action/Outcome/Resource-type/Correlation-ID filters, and Export CSV.</figcaption>
+</figure>
+
 ## What gets recorded
 
 ### Audit trail (`audit_logs`)

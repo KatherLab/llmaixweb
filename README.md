@@ -35,6 +35,45 @@ A web application that turns unstructured medical/lab documents into structured 
 
 ---
 
+## Screenshots
+
+The full end-to-end workflow — from raw files to a scored extraction — using the eight fictitious lung-embolism reports that ship with the repo. Walk through it step by step in the **[quickstart](https://katherlab.github.io/llmaixweb/getting-started/quickstart/)**.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/assets/screenshots/files-list.png" alt="Files & Preprocessing tab with uploaded files">
+      <p><b>1. Upload &amp; preprocess</b><br>Bring in PDFs, images, and spreadsheets; extract text with your chosen OCR engine.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/assets/screenshots/document-viewer.png" alt="Document viewer with extracted text and metadata">
+      <p><b>2. Review documents</b><br>Inspect the extracted text and its provenance before running a trial.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/assets/screenshots/trial-create-modal.png" alt="Start New Trial dialog">
+      <p><b>3. Run a trial</b><br>Pick a schema, prompt, model, and documents — against any OpenAI-compatible endpoint.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/assets/screenshots/trial-results.png" alt="Trial results: source report next to extracted JSON">
+      <p><b>4. Inspect extractions</b><br>See each source report next to the structured JSON the model produced.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/assets/screenshots/groundtruth-mapping.png" alt="Ground truth field mapping dialog">
+      <p><b>5. Map ground truth</b><br>Pair schema fields with known-correct columns and choose a comparison method per field.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/assets/screenshots/evaluation-analysis.png" alt="Evaluation analysis with per-field accuracy">
+      <p><b>6. Evaluate</b><br>Overall and per-field accuracy, per-document breakdowns, and confusion matrices.</p>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Quick start
 
 ```bash

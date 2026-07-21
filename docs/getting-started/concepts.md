@@ -33,6 +33,11 @@ an LLM. A single file can yield one document (e.g. a PDF) or many (e.g. one per
 CSV row). Documents can be grouped into **document sets** for running trials.
 See [Documents](../user-guide/documents.md).
 
+<figure markdown>
+  ![The document viewer showing extracted text on the left and a metadata sidebar on the right](../assets/screenshots/document-viewer.png){ width="820" }
+  <figcaption>A document is the extracted text (left) plus its provenance metadata (right) — the exact input a trial sends to the LLM.</figcaption>
+</figure>
+
 ## Schema & prompt
 
 A **schema** is a JSON schema defining the structured output you want (nested
@@ -54,6 +59,11 @@ compares a trial's results against ground truth — using per-field comparison
 methods (exact, fuzzy, numeric, …) — and computes accuracy metrics. See
 [Ground truth](../user-guide/ground-truth.md) and
 [Evaluation](../user-guide/evaluation.md).
+
+<figure markdown>
+  ![The evaluation dashboard listing a scored trial with its overall accuracy and per-field breakdown](../assets/screenshots/evaluation-overview.png){ width="820" }
+  <figcaption>An evaluation scores a trial against ground truth and reports overall and per-field accuracy.</figcaption>
+</figure>
 
 ## Asynchronous processing
 

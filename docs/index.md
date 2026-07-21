@@ -5,6 +5,11 @@ language models.** Upload PDFs, images, or spreadsheets, extract data with
 configurable schemas and prompts, then evaluate the results against ground
 truth.
 
+<figure markdown>
+  ![A completed extraction trial in LLMAIx Web: the source medical report on the left and the structured JSON the model produced on the right](assets/screenshots/trial-results.png){ width="900" }
+  <figcaption>A completed extraction trial — each source report next to the structured JSON the model produced.</figcaption>
+</figure>
+
 !!! warning "Research use only"
     LLMAIx Web is a research prototype. It may not run stably and extracted
     results can be inaccurate. **Always verify outputs before using them in
@@ -63,3 +68,8 @@ Files → Preprocessing → Documents → Schemas + Prompts → Trials → Evalu
 
 Each step has its own tab in the project view and its own page in the
 [user guide](user-guide/index.md).
+
+<figure markdown>
+  ![The Files & Preprocessing tab of a project, showing uploaded source files and the workflow tabs across the top](assets/screenshots/files-list.png){ width="900" }
+  <figcaption>Every project opens on the Files &amp; Preprocessing tab; the workflow tabs run across the top from Files to Evaluation.</figcaption>
+</figure>
