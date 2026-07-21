@@ -15,9 +15,12 @@ const localesDir = join(root, 'frontend', 'locales')
 const tempDir = join(root, '.i18n-phase2')
 const LOCALES = ['en', 'de', 'fr', 'es']
 
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
 /** Deep-merge `add` into `base`, keeping existing `base` leaves on conflict. */
 function mergeFill(base, add) {
   for (const [key, value] of Object.entries(add)) {
+    if (FORBIDDEN_KEYS.has(key)) continue
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       if (!base[key] || typeof base[key] !== 'object') base[key] = {}
       mergeFill(base[key], value)
