@@ -14,6 +14,22 @@ that point forward.
 
 ## [Unreleased]
 
+### Security
+
+- SSRF hardening: validation of user-supplied LLM/OCR `base_url`s now also
+  blocks cloud instance-metadata addresses written in alternate numeric IP
+  notations (decimal/hex/octal), not just dotted-quad.
+
+### Fixed
+
+- Admin Celery monitoring endpoints now return a clear 503 ("monitoring
+  unavailable") instead of a 500 when Celery is disabled (`DISABLE_CELERY`).
+- Evaluation matching is more robust: blank/missing ground-truth IDs no longer
+  collide under a literal `"None"`/`"nan"` key, and automatic field-mapping
+  suggestions now fire for underscore/suffix column-name variants.
+- Schema type validation no longer accepts a boolean where an integer/number is
+  expected.
+
 ## [0.7.1] — 2026-07-21
 
 ### Added

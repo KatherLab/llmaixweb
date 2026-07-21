@@ -152,11 +152,15 @@ class ConnectionManager:
         deleted), only admins receive the message.
         """
         disconnected = []
+        # A socket that is both an admin connection and the owner's connection
+        # must receive the message once, not twice.
+        sent: set = set()
 
         # Admin connections always receive project updates.
         for websocket in list(self._admin_connections):
             try:
                 await websocket.send_json(message)
+                sent.add(websocket)
             except Exception as e:
                 logger.warning(f"Failed to send to admin: {e}")
                 disconnected.append((websocket, None))
@@ -164,8 +168,11 @@ class ConnectionManager:
         # The owner's connections (if any) receive their own project's updates.
         if owner_id is not None and owner_id in self._active_connections:
             for websocket in list(self._active_connections[owner_id]):
+                if websocket in sent:
+                    continue
                 try:
                     await websocket.send_json(message)
+                    sent.add(websocket)
                 except Exception as e:
                     logger.warning(f"Failed to send to user {owner_id}: {e}")
                     disconnected.append((websocket, owner_id))

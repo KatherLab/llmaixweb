@@ -180,11 +180,26 @@ def delete_setting(
 # --------------------------
 
 
+def _require_celery_app():
+    """Return the Celery app, or a 503 when Celery is disabled.
+
+    Celery is optional (``DISABLE_CELERY``); when off, ``celery_app`` is None.
+    Monitoring endpoints must degrade to a clear 503 rather than raising an
+    AssertionError (500) or hitting Celery's DisabledBackend.
+    """
+    if celery_app is None:
+        raise api_error(
+            "admin.celery_disabled",
+            503,
+            "Celery is disabled; task monitoring is unavailable.",
+        )
+    return celery_app
+
+
 @router.get("/celery/workers")
 def get_celery_workers(current_user=Depends(get_admin_user)):
     """Show Celery worker stats and health."""
-    assert celery_app is not None  # guarded by INITIALIZE_CELERY at startup
-    i = celery_app.control.inspect()
+    i = _require_celery_app().control.inspect()
     return {
         "active": i.active(),
         "registered": i.registered(),
@@ -196,8 +211,7 @@ def get_celery_workers(current_user=Depends(get_admin_user)):
 @router.get("/celery/queues")
 def get_celery_queues(current_user=Depends(get_admin_user)):
     """Show queue/task status."""
-    assert celery_app is not None  # guarded by INITIALIZE_CELERY at startup
-    i = celery_app.control.inspect()
+    i = _require_celery_app().control.inspect()
     return {
         "reserved": i.reserved(),
         "scheduled": i.scheduled(),
@@ -208,7 +222,7 @@ def get_celery_queues(current_user=Depends(get_admin_user)):
 @router.get("/celery/tasks/{task_id}")
 def get_task_status(task_id: str, current_user=Depends(get_admin_user)):
     """Get task status/result."""
-    result = AsyncResult(task_id, app=celery_app)
+    result = AsyncResult(task_id, app=_require_celery_app())
     out = {
         "id": result.id,
         "status": result.status,
@@ -223,8 +237,7 @@ def revoke_task(
     task_id: str, terminate: bool = False, current_user=Depends(get_admin_user)
 ):
     """Revoke (cancel) a running celery task."""
-    assert celery_app is not None  # guarded by INITIALIZE_CELERY at startup
-    celery_app.control.revoke(task_id, terminate=terminate)
+    _require_celery_app().control.revoke(task_id, terminate=terminate)
     return {"revoked": task_id, "terminate": terminate}
 
 

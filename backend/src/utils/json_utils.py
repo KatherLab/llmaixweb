@@ -22,7 +22,19 @@ def case_id_str(value: Any) -> str:
 
     Shared by preprocessing (document naming) and ground-truth parsing so
     both sides produce identical keys and evaluation matching works.
+
+    Missing values (None / NaN / NaT) normalize to "" rather than leaking a
+    literal "None"/"nan" key — otherwise two blank IDs would collide on that
+    literal and spuriously match during evaluation. Downstream ID validation
+    treats "" as a missing/invalid ID.
     """
+    if value is None:
+        return ""
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
     if isinstance(value, float) and value.is_integer():
         return str(int(value))
     return strip_nul(str(value)).strip()

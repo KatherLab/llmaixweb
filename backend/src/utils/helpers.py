@@ -731,6 +731,14 @@ def check_value_type(value: Any, expected_type: str, field_path: str) -> str | N
     if expected_python_type is None:
         return None  # Unknown type, skip validation
 
+    # bool is a subclass of int in Python, so isinstance(True, int) is True.
+    # A boolean is not a valid integer/number — reject it explicitly.
+    if expected_type in ("integer", "number") and isinstance(value, bool):
+        return (
+            f"Field '{field_path}' expects a {expected_type} but got boolean "
+            f"'{value}'. Please use a numeric value."
+        )
+
     if not isinstance(value, expected_python_type):
         # Special handling for numbers
         if expected_type == "number" and isinstance(value, (int, float)):

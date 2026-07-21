@@ -92,11 +92,15 @@ class FieldMapper:
         if name1 == name2:
             return 1.0
 
-        # Check common mappings
+        # Check common mappings. The variant lists hold raw forms (e.g.
+        # "document_id"), so normalize them the same way as the names before
+        # comparing — otherwise the boost never fires for underscore/suffix
+        # variants (which normalize to "document", "email address", ...).
         for key, variants in self.common_mappings.items():
-            if name1 == key and name2 in variants:
+            norm_variants = {self._normalize_field_name(v) for v in variants}
+            if name1 == key and name2 in norm_variants:
                 return 0.9
-            if name2 == key and name1 in variants:
+            if name2 == key and name1 in norm_variants:
                 return 0.9
 
         # Fuzzy matching

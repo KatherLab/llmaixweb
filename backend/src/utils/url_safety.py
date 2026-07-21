@@ -66,6 +66,52 @@ def _is_metadata_ip(ip: ipaddress._BaseAddress) -> bool:
     return any(ip in net for net in _METADATA_NETWORKS)
 
 
+def _coerce_numeric_ipv4(host: str) -> ipaddress.IPv4Address | None:
+    """Parse legacy/alternate IPv4 notations that ``ipaddress.ip_address``
+    rejects but the C resolver (``inet_aton``/``getaddrinfo``) accepts.
+
+    ``169.254.169.254`` can also be written as the decimal ``2852039166``, the
+    hex ``0xA9FEA9FE``, dotted-octal ``0251.0376.0251.0376``, or with fewer than
+    four parts. Without this, such a host slips past the metadata check and only
+    fails to reach the IMDS by resolver luck — a real SSRF bypass. Returns the
+    canonical address, or ``None`` if ``host`` isn't a numeric IPv4 form.
+    """
+    parts = host.split(".")
+    if not 1 <= len(parts) <= 4:
+        return None
+
+    values: list[int] = []
+    for part in parts:
+        if not part:
+            return None
+        low = part.lower()
+        try:
+            if low.startswith("0x"):
+                num = int(low, 16)
+            elif low.startswith("0") and len(low) > 1:
+                num = int(low, 8)  # leading-zero => octal (inet_aton semantics)
+            else:
+                num = int(low, 10)
+        except ValueError:
+            return None
+        if num < 0:
+            return None
+        values.append(num)
+
+    # inet_aton semantics: the final part fills all remaining low-order bytes.
+    n = len(values)
+    max_last = 256 ** (4 - (n - 1)) - 1 if n > 1 else 0xFFFFFFFF
+    if any(v > 0xFF for v in values[:-1]) or values[-1] > max_last:
+        return None
+    packed = values[-1]
+    for i, v in enumerate(values[:-1]):
+        packed |= v << (8 * (4 - 1 - i))
+    try:
+        return ipaddress.IPv4Address(packed)
+    except (ValueError, ipaddress.AddressValueError):
+        return None
+
+
 def _host_resolves_to_metadata(host: str) -> bool:
     """Resolve ``host`` and return True if any A/AAAA record is a metadata IP.
 
@@ -124,8 +170,16 @@ def validate_user_endpoint(base_url: str | None) -> str | None:
     try:
         ip = ipaddress.ip_address(host)
     except ValueError:
-        # Not a literal IP — resolve and check A/AAAA records.
-        if _host_resolves_to_metadata(host):
+        # Not a standard literal IP. First try alternate numeric notations
+        # (decimal/hex/octal/short-form) that the C resolver would accept but
+        # ipaddress rejects — otherwise a metadata IP written as
+        # http://2852039166/ would bypass the check. Only if it isn't a numeric
+        # form do we resolve it as a hostname.
+        coerced = _coerce_numeric_ipv4(host)
+        if coerced is not None:
+            if _is_metadata_ip(coerced):
+                raise UnsafeEndpointError("Endpoint resolves to a blocked address.")
+        elif _host_resolves_to_metadata(host):
             raise UnsafeEndpointError("Endpoint resolves to a blocked address.")
     else:
         if _is_metadata_ip(ip):

@@ -83,11 +83,11 @@ jobs:
         run: mkdir -p test_local_storage
 
       - name: Run tests
-        # Coverage floor set just below the current baseline (~40%) so it can't
-        # silently regress; ratchet up as coverage grows.
+        # Coverage floor set a few points below the current baseline (~72%) so it
+        # can't silently regress; ratchet up as coverage grows.
         run: >
           ENV_PATH=backend/tests/.env uv run pytest
-          --cov=backend/src --cov-report=term-missing --cov-fail-under=38
+          --cov=backend/src --cov-report=term-missing --cov-fail-under=68
 
   migrations:
     name: Alembic migrations (PostgreSQL)
