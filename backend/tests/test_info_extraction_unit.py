@@ -472,6 +472,39 @@ def test_advice_for_finish_reason_length_recommends_more_tokens():
     assert "lower_reasoning_effort" in actions
 
 
+def test_advice_for_finish_reason_string_max_tokens_no_string_multiplication():
+    """A numeric-*string* max_completion_tokens (advanced_options is unvalidated)
+    with no usage completion_tokens must double to 2*N, not concatenate the
+    string ("500" -> 1000, never 500500)."""
+    advice = ie._advice_for_finish_reason(
+        finish_reason="length",
+        usage=None,
+        advanced_options={"max_completion_tokens": "500"},
+        has_reasoning=False,
+    )
+    reco = next(
+        r
+        for r in advice["recommendations"]
+        if r["action"] == "increase_max_completion_tokens"
+    )
+    assert reco["suggested_value"] == 1000
+
+
+def test_advice_for_finish_reason_garbage_max_tokens_falls_back():
+    advice = ie._advice_for_finish_reason(
+        finish_reason="length",
+        usage=None,
+        advanced_options={"max_completion_tokens": "not-a-number"},
+        has_reasoning=False,
+    )
+    reco = next(
+        r
+        for r in advice["recommendations"]
+        if r["action"] == "increase_max_completion_tokens"
+    )
+    assert reco["suggested_value"] == 2048
+
+
 def test_advice_for_finish_reason_content_filter():
     advice = ie._advice_for_finish_reason(
         finish_reason="content_filter",
@@ -714,6 +747,37 @@ def test_store_result_refusal_raises(extraction_fixture):
         .one()
     )
     assert row.status == TrialResultStatus.REFUSED
+
+
+def test_store_result_truncated_but_valid_json_stored_as_incomplete(extraction_fixture):
+    """A `finish_reason="length"` response whose content still parses to
+    schema-valid JSON must be STORED (status=incomplete, with a warning +
+    truncation/tuning metadata) and must NOT raise — the model was cut off but
+    produced usable output."""
+    from backend.src import models
+    from backend.src.utils.enums import TrialResultStatus
+
+    fx = extraction_fixture
+    db, trial, doc, schema = fx["db"], fx["trial"], fx["doc"], fx["schema"]
+    ie._store_result(
+        db,
+        trial.id,
+        doc.id,
+        _resp(content='{"x": "ok"}', finish_reason="length"),
+        {"max_completion_tokens": 100},
+        schema.schema_definition,
+    )
+    row = (
+        db.query(models.TrialResult)
+        .filter_by(trial_id=trial.id, document_id=doc.id)
+        .one()
+    )
+    assert row.status == TrialResultStatus.INCOMPLETE
+    assert row.result == {"x": "ok"}
+    additional = row.additional_content or {}
+    assert "warning" in additional
+    assert "truncation_analysis" in additional
+    assert "tuning_advice" in additional
 
 
 def test_store_result_skips_existing_success(extraction_fixture):

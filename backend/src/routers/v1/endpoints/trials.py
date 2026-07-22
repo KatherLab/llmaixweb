@@ -650,6 +650,18 @@ def get_trials(
 
     # --- apply filters ---
     if status:
+        # Validate against the enum (like list_trial_results) so a typo'd or
+        # wrong-case value returns 400 rather than silently matching nothing and
+        # handing back an empty page that masks the client's mistake.
+        try:
+            status = models.TrialStatus(status)
+        except ValueError:
+            raise api_error(
+                "trials.invalid_status_filter",
+                400,
+                f"Invalid status filter: {status}",
+                status=status,
+            )
         base = base.where(T.status == status)
 
     if schema_id is not None:

@@ -48,6 +48,12 @@ from backend.src.utils.helpers import (
     validate_prompt,
 )
 
+# Aliased so pytest does not collect this ``test_``-prefixed network helper as
+# a test case (it takes required args and would error at collection).
+from backend.src.utils.helpers import (  # noqa: E402
+    test_remote_image_support as remote_image_support,
+)
+
 
 class _Trial:
     """Minimal stand-in for the Trial ORM object (only attrs the helpers read)."""
@@ -693,3 +699,72 @@ class TestValidatePrompt:
         # Empty strings are falsy, so this is still "no prompt".
         with pytest.raises(HTTPException):
             validate_prompt(PromptUpdate(system_prompt="", user_prompt=""))
+
+
+class _FakeResponse:
+    def __init__(self, payload, *, ok=True):
+        self._payload = payload
+        self.ok = ok
+
+    def json(self):
+        return self._payload
+
+
+class TestRemoteImageSupport:
+    """Regression tests for the vision-capability probe.
+
+    The probe previously sent a malformed ``image_url`` (a bare string instead
+    of the OpenAI-compatible ``{"url": ...}`` object), which made strict servers
+    reject the request and the probe report *every* vision model as unsupported.
+    """
+
+    def _patch_post(self, monkeypatch, response, capture):
+        def fake_post(url, json=None, headers=None, timeout=None, allow_redirects=None):
+            capture["json"] = json
+            capture["allow_redirects"] = allow_redirects
+            if isinstance(response, Exception):
+                raise response
+            return response
+
+        monkeypatch.setattr("backend.src.utils.helpers.requests.post", fake_post)
+
+    def test_sends_openai_compatible_image_url_object(self, monkeypatch):
+        capture = {}
+        self._patch_post(
+            monkeypatch,
+            _FakeResponse({"choices": [{"message": {"content": "white"}}]}),
+            capture,
+        )
+        assert remote_image_support("http://x/v1", "m", "k") is True
+
+        content = capture["json"]["messages"][0]["content"]
+        image_part = next(p for p in content if p["type"] == "image_url")
+        # Must be an object with a "url" key, not a bare string.
+        assert isinstance(image_part["image_url"], dict)
+        assert image_part["image_url"]["url"].startswith("data:image/png;base64,")
+        # SSRF guard: never follow redirects to a user-controlled endpoint.
+        assert capture["allow_redirects"] is False
+
+    def test_null_content_does_not_crash(self, monkeypatch):
+        # Several servers return content: null — must not raise, just report False.
+        capture = {}
+        self._patch_post(
+            monkeypatch,
+            _FakeResponse({"choices": [{"message": {"content": None}}]}),
+            capture,
+        )
+        assert remote_image_support("http://x/v1", "m", "k") is False
+
+    def test_non_ok_response_reports_false(self, monkeypatch):
+        capture = {}
+        self._patch_post(
+            monkeypatch,
+            _FakeResponse({"error": "bad"}, ok=False),
+            capture,
+        )
+        assert remote_image_support("http://x/v1", "m", "k") is False
+
+    def test_network_error_reports_false(self, monkeypatch):
+        capture = {}
+        self._patch_post(monkeypatch, RuntimeError("boom"), capture)
+        assert remote_image_support("http://x/v1", "m", "k") is False

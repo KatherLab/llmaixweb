@@ -58,6 +58,32 @@ def _validate_issuer(issuer_url: str) -> str:
     return validated.rstrip("/")
 
 
+def _safe_discovery_endpoint(url: str) -> str:
+    """SSRF-check an endpoint URL pulled from a discovery document.
+
+    The issuer URL is validated, but the ``token_endpoint`` / ``userinfo_endpoint``
+    / ``jwks_uri`` *inside* the fetched discovery document are attacker- or
+    misconfiguration-influenceable and could name an internal address (e.g.
+    cloud metadata). Re-validate each before making a server-side request.
+    """
+    try:
+        validated = validate_user_endpoint(url)
+    except UnsafeEndpointError as e:
+        logger.warning("OIDC discovery named an unsafe endpoint (%s): %s", url, e)
+        raise api_error(
+            "sso.unsafe_discovery_endpoint",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC discovery document names an unsafe endpoint.",
+        )
+    if not validated:
+        raise api_error(
+            "sso.unsafe_discovery_endpoint",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC discovery document names an invalid endpoint.",
+        )
+    return validated
+
+
 def discover(issuer_url: str) -> dict:
     """Fetch + cache the OIDC discovery document for ``issuer_url``."""
     issuer = _validate_issuer(issuer_url)
@@ -177,8 +203,9 @@ def exchange_code(
         "client_secret": client_secret,
         "code_verifier": code_verifier,
     }
+    token_endpoint = _safe_discovery_endpoint(doc["token_endpoint"])
     try:
-        resp = httpx.post(doc["token_endpoint"], data=data, timeout=_TOKEN_TIMEOUT)
+        resp = httpx.post(token_endpoint, data=data, timeout=_TOKEN_TIMEOUT)
     except httpx.HTTPError as e:
         logger.warning("OIDC token endpoint unreachable (%s): %s", issuer_url, e)
         raise api_error(
@@ -210,6 +237,7 @@ def fetch_userinfo(issuer_url: str, access_token: str) -> dict:
     if not userinfo_endpoint:
         # No userinfo endpoint — caller must decode the id_token instead.
         return {}
+    userinfo_endpoint = _safe_discovery_endpoint(userinfo_endpoint)
 
     try:
         resp = httpx.get(
@@ -272,6 +300,7 @@ def verify_id_token(
             status.HTTP_400_BAD_REQUEST,
             "OIDC discovery document has no jwks_uri; cannot verify id_token.",
         )
+    jwks_uri = _safe_discovery_endpoint(jwks_uri)
     try:
         jwk_client = jwt.PyJWKClient(jwks_uri)
         signing_key = jwk_client.get_signing_key_from_jwt(id_token)

@@ -615,3 +615,30 @@ def test_ocr_preprocessing_for_extraction(
     assert result["status"] == "completed"
     assert len(result["results"]) == 1
     assert "patient" in result["results"][0]["result"]
+
+
+def test_get_trials_invalid_status_filter_returns_400(
+    client, api_url, user_headers, make_project
+):
+    """An unknown/typo'd status filter must 400 (like list_trial_results),
+    not silently return an empty page that masks the client's mistake."""
+    project_id = make_project(user_headers)["id"]
+
+    resp = client.get(
+        f"{api_url}/project/{project_id}/trial?status=running", headers=user_headers
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["code"] == "trials.invalid_status_filter"
+
+    # Uppercase of a valid value is still invalid (enum values are lowercase).
+    resp = client.get(
+        f"{api_url}/project/{project_id}/trial?status=PENDING", headers=user_headers
+    )
+    assert resp.status_code == 400, resp.text
+
+    # A valid status filter is accepted.
+    resp = client.get(
+        f"{api_url}/project/{project_id}/trial?status=pending", headers=user_headers
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["total"] == 0

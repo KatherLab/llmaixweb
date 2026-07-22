@@ -3,6 +3,7 @@
 
 import json
 import logging
+from pathlib import Path
 from typing import cast
 
 from fastapi import (
@@ -125,6 +126,7 @@ async def upload_groundtruth(
         import zipfile
 
         zip_buffer = io.BytesIO()
+        used_arcnames: set[str] = set()
         with zipfile.ZipFile(zip_buffer, "w") as zf:
             for idx, json_file in enumerate(files):
                 content = await read_upload_with_limit_async(json_file)
@@ -138,7 +140,22 @@ async def upload_groundtruth(
                         f"File {json_file.filename} is not valid JSON",
                         filename=json_file.filename,
                     )
-                zf.writestr(json_file.filename or "", content)
+                # Build a UNIQUE arcname ending in ``.json``. The parser only
+                # reads ``*.json`` members and, for id-less documents, keys them
+                # by filename stem — so a missing name (all become "") or a
+                # duplicate name would silently drop/overwrite a document. Keep
+                # the original name when unique (filename-based GT matching still
+                # works) and only disambiguate real collisions.
+                base_name = Path(json_file.filename).name if json_file.filename else ""
+                if not base_name.endswith(".json"):
+                    base_name = f"{base_name or 'document'}.json"
+                arcname = base_name
+                dup = 1
+                while arcname in used_arcnames:
+                    arcname = f"{Path(base_name).stem}_{dup}.json"
+                    dup += 1
+                used_arcnames.add(arcname)
+                zf.writestr(arcname, content)
 
         zip_buffer.seek(0)
         file_content = zip_buffer.read()
@@ -670,10 +687,15 @@ def configure_field_mapping(
         )
     )
 
-    # Create new mappings
+    # Create new mappings. The PATH ``schema_id`` is authoritative (it was
+    # validated for project ownership and drove the delete above); force it so
+    # a mismatched body ``schema_id`` can't write rows under a different — or
+    # another project's — schema, which would leave this schema with no
+    # mappings while silently poisoning another.
     for mapping_data in mappings:
         mapping = models.FieldMapping(
-            ground_truth_id=groundtruth_id, **mapping_data.model_dump()
+            ground_truth_id=groundtruth_id,
+            **{**mapping_data.model_dump(), "schema_id": schema_id},
         )
         db.add(mapping)
 
@@ -1301,6 +1323,25 @@ def configure_field_mapping_legacy(
     ).scalar_one_or_none()
     if not groundtruth:
         raise api_error("groundtruth.not_found", 404, "Ground truth not found")
+
+    # The legacy endpoint takes ``schema_id`` from each mapping body (there is
+    # no path schema). Validate every referenced schema belongs to THIS project
+    # so a caller can't write mapping rows pointing at another project's schema.
+    body_schema_ids = {m.schema_id for m in mappings if m.schema_id is not None}
+    if body_schema_ids:
+        owned_ids = set(
+            db.execute(
+                select(models.Schema.id).where(
+                    models.Schema.project_id == project_id,
+                    models.Schema.id.in_(body_schema_ids),
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if body_schema_ids - owned_ids:
+            raise api_error("groundtruth.schema_not_found", 404, "Schema not found")
+
     # Delete existing mappings
     db.execute(
         delete(models.FieldMapping).where(

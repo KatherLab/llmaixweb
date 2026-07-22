@@ -1042,12 +1042,19 @@ class ValueComparator:
         options: Dict,
     ) -> Dict:
         """Compare two values and return comparison result."""
-        # Handle None values
-        if gt_value is None and pred_value is None:
+        # Handle missing values. Use ``_is_missing`` (not ``is None``) so an
+        # empty-string / whitespace-collapsed / NaN prediction is classified as
+        # "missing" (a false negative only) rather than falling through to the
+        # scalar comparators, where it would convert to None mid-way and be
+        # scored as a *substitution* (both a false positive AND false negative),
+        # wrongly depressing precision on every field the model left blank.
+        gt_missing = _is_missing(gt_value)
+        pred_missing = _is_missing(pred_value)
+        if gt_missing and pred_missing:
             return {"is_correct": True, "error_type": None}
-        if pred_value is None:
+        if pred_missing:
             return {"is_correct": False, "error_type": "missing"}
-        if gt_value is None:
+        if gt_missing:
             return {"is_correct": False, "error_type": "extra"}
         # Array-valued fields: compare element-wise as sets (order-independent).
         # Previously `_get_nested_value` collapsed arrays to their first element,
@@ -1098,30 +1105,48 @@ class ValueComparator:
         ):
             return {"is_correct": True, "error_type": None, "confidence_score": 1.0}
 
-        # Set semantics: match each GT element to a distinct predicted element.
-        unmatched_pred = list(pred_list)
+        # Set semantics via *maximum* bipartite matching (Kuhn's algorithm).
+        # A greedy first-match loop can wrongly report "missing"/"extra" when a
+        # predicted element matches several GT elements (possible under fuzzy /
+        # numeric tolerance): it may consume an element another GT element
+        # needed, even though a complete matching exists. Maximum matching finds
+        # a complete pairing whenever one is possible.
+        n_gt, n_pred = len(gt_list), len(pred_list)
+        adj: list[list[int]] = []
         for g in gt_list:
-            for i, p in enumerate(unmatched_pred):
-                if p is None:
-                    continue
-                if self.compare(g, p, field_type, method, options)["is_correct"]:
-                    unmatched_pred[i] = None
-                    break
-            else:
-                # No predicted element matched this GT element → missing item.
-                return {
-                    "is_correct": False,
-                    "error_type": "missing",
-                    "confidence_score": 0.0,
-                }
-        # Any leftover predicted elements are extras.
-        extras = [p for p in unmatched_pred if p is not None]
-        if extras:
+            matches = [
+                pi
+                for pi, p in enumerate(pred_list)
+                if self.compare(g, p, field_type, method, options)["is_correct"]
+            ]
+            adj.append(matches)
+
+        match_pred = [-1] * n_pred  # predicted index -> matched GT index
+
+        def _augment(gi: int, visited: list[bool]) -> bool:
+            for pi in adj[gi]:
+                if not visited[pi]:
+                    visited[pi] = True
+                    if match_pred[pi] == -1 or _augment(match_pred[pi], visited):
+                        match_pred[pi] = gi
+                        return True
+            return False
+
+        matched = 0
+        for gi in range(n_gt):
+            if _augment(gi, [False] * n_pred):
+                matched += 1
+
+        if matched < n_gt:
+            # At least one GT element has no distinct predicted match → missing.
             return {
                 "is_correct": False,
-                "error_type": "extra",
+                "error_type": "missing",
                 "confidence_score": 0.0,
             }
+        if matched < n_pred:
+            # Every GT element matched but predicted elements are left over.
+            return {"is_correct": False, "error_type": "extra", "confidence_score": 0.0}
         return {"is_correct": True, "error_type": None, "confidence_score": 1.0}
 
     def _convert_value(self, value: Any, field_type: str) -> Any:
@@ -1244,9 +1269,13 @@ class ValueComparator:
         # Check mappings
         if gt_str in mappings:
             valid_values = mappings[gt_str]
-            if isinstance(valid_values, str):
+            # A mapping option may be a single scalar (str/int/…) or a list.
+            # Coerce everything through ``str`` so a non-string option value
+            # (e.g. ``{"positive": 1}``) doesn't raise AttributeError and zero
+            # out the whole document via the per-doc error handler.
+            if not isinstance(valid_values, (list, tuple, set)):
                 valid_values = [valid_values]
-            if pred_str in [v.lower() for v in valid_values]:
+            if pred_str in [str(v).lower().strip() for v in valid_values]:
                 return {"is_correct": True, "error_type": None, "confidence_score": 0.9}
         return {
             "is_correct": False,

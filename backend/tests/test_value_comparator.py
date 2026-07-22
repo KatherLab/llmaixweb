@@ -106,3 +106,164 @@ def test_boolean_mismatch_when_values_differ():
     result = _bool_compare("true", "false")
     assert result["is_correct"] is False
     assert result["error_type"] == "boolean_mismatch"
+
+
+# ─── Missing / empty-value classification ───────────────────────────────────
+# An empty-string / NaN prediction must be "missing" (FN only), NOT a
+# substitution (FP+FN). Regression on precision for every blank field.
+
+
+def test_empty_string_prediction_is_missing_not_substitution():
+    for method, field_type, gt in [
+        ("exact", "string", "hello"),
+        ("numeric", "number", 5),
+        ("date", "date", "2020-01-01"),
+        ("fuzzy", "string", "hello"),
+    ]:
+        result = _compare(gt, "", field_type=field_type, method=method)
+        assert result["is_correct"] is False, (method, field_type)
+        assert result["error_type"] == "missing", (method, field_type)
+
+
+def test_nan_prediction_is_missing():
+    result = _compare(5, float("nan"), field_type="number", method="numeric")
+    assert result["error_type"] == "missing"
+
+
+def test_empty_gt_with_present_prediction_is_extra():
+    result = _compare("", "surprise", field_type="string", method="exact")
+    assert result["is_correct"] is False
+    assert result["error_type"] == "extra"
+
+
+def test_both_empty_is_correct():
+    assert _compare("", "", field_type="string", method="exact")["is_correct"] is True
+
+
+# ─── Category comparison: non-string mapping options must not crash ─────────
+
+
+def test_category_mapping_with_non_string_option_matches():
+    """A mapping option that is a non-string scalar (e.g. ``{"positive": 1}``)
+    must be coerced through ``str`` rather than raising AttributeError (which
+    previously zeroed the entire document)."""
+    result = _compare(
+        "positive",
+        "1",
+        field_type="string",
+        method="category",
+        options={"mappings": {"positive": 1}},
+    )
+    assert result["is_correct"] is True
+
+
+def test_category_mapping_with_list_of_mixed_types():
+    result = _compare(
+        "pos",
+        "yes",
+        field_type="string",
+        method="category",
+        options={"mappings": {"pos": [1, "YES", "y"]}},
+    )
+    assert result["is_correct"] is True
+
+
+def test_category_direct_match_and_mismatch():
+    assert _compare("A", "a", method="category")["is_correct"] is True
+    r = _compare("A", "B", method="category")
+    assert r["is_correct"] is False
+    assert r["error_type"] == "category_mismatch"
+
+
+# ─── List (array-valued) field comparison, order-independent set semantics ──
+
+
+def _list_compare(gt, pred, field_type="string", method="exact", options=None):
+    return _comparator().compare(gt, pred, field_type, method, options or {})
+
+
+def test_list_order_independent_match():
+    r = _list_compare(["a", "b", "c"], ["c", "a", "b"])
+    assert r["is_correct"] is True
+
+
+def test_list_missing_element():
+    r = _list_compare(["a", "b", "c"], ["a", "b"])
+    assert r["is_correct"] is False
+    assert r["error_type"] == "missing"
+
+
+def test_list_extra_element():
+    r = _list_compare(["a", "b"], ["a", "b", "c"])
+    assert r["is_correct"] is False
+    assert r["error_type"] == "extra"
+
+
+def test_list_fuzzy_maximum_matching_not_greedy():
+    """A perfect pairing exists (ab->ab, abc->abc); a greedy first-match loop
+    would let gt 'ab' consume 'abc' and then falsely report 'abc' as missing.
+    Maximum matching must find the complete pairing."""
+    r = _list_compare(
+        ["ab", "abc"],
+        ["abc", "ab"],
+        field_type="string",
+        method="fuzzy",
+        options={"threshold": 60},  # low enough that ab~abc also matches
+    )
+    assert r["is_correct"] is True
+
+
+def test_list_numeric_tolerance_per_element():
+    r = _list_compare(
+        [1.0, 2.0],
+        [1.0005, 2.0],
+        field_type="number",
+        method="numeric",
+        options={"tolerance": 0.01},
+    )
+    assert r["is_correct"] is True
+
+
+# ─── Numeric relative tolerance + gt=0 fallback ─────────────────────────────
+
+
+def test_numeric_relative_tolerance():
+    r = _compare(
+        100,
+        105,
+        field_type="number",
+        method="numeric",
+        options={"relative": True, "tolerance": 0.1},
+    )
+    assert r["is_correct"] is True  # 5% within 10%
+
+
+def test_numeric_relative_gt_zero_falls_back_to_absolute():
+    # gt=0 with relative would divide by zero; falls back to absolute diff.
+    r = _compare(
+        0,
+        0.0005,
+        field_type="number",
+        method="numeric",
+        options={"relative": True, "tolerance": 0.001},
+    )
+    assert r["is_correct"] is True
+
+
+def test_numeric_type_error_on_non_numeric():
+    r = _compare("abc", "def", field_type="number", method="numeric")
+    assert r["error_type"] == "type_error"
+
+
+# ─── Date parsing ───────────────────────────────────────────────────────────
+
+
+def test_date_multiple_formats_match():
+    # Same day expressed two ways.
+    r = _compare("2020-01-15", "15/01/2020", field_type="date", method="date")
+    assert r["is_correct"] is True
+
+
+def test_date_parse_error():
+    r = _compare("not-a-date", "2020-01-01", field_type="date", method="date")
+    assert r["error_type"] == "date_parse_error"

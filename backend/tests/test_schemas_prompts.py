@@ -234,6 +234,134 @@ def test_delete_schema_with_field_mappings(client, api_url, user_headers, make_p
         db.close()
 
 
+def test_update_schema(client, api_url, user_headers, make_project, make_schema):
+    """PUT /schema/{id} updates name + definition and round-trips."""
+    headers = user_headers
+    project_id = make_project(headers, name="Schema Update Project")["id"]
+    schema_id = make_schema(headers, project_id)["id"]
+
+    new_def = {
+        "type": "object",
+        "properties": {"diagnosis": {"type": "string"}},
+    }
+    response = client.put(
+        f"{api_url}/project/{project_id}/schema/{schema_id}",
+        headers=headers,
+        json={"schema_name": "Renamed Schema", "schema_definition": new_def},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["schema_name"] == "Renamed Schema"
+    assert body["schema_definition"] == new_def
+
+    # Persisted
+    response = client.get(
+        f"{api_url}/project/{project_id}/schema/{schema_id}", headers=headers
+    )
+    assert response.json()["schema_name"] == "Renamed Schema"
+
+
+def test_update_schema_not_found(client, api_url, user_headers, make_project):
+    headers = user_headers
+    project_id = make_project(headers, name="Schema Update 404")["id"]
+    response = client.put(
+        f"{api_url}/project/{project_id}/schema/999999",
+        headers=headers,
+        json={
+            "schema_name": "x",
+            "schema_definition": {"type": "object", "properties": {}},
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "schemas.not_found"
+
+
+def test_schema_field_types_endpoint(
+    client, api_url, user_headers, make_project, make_schema
+):
+    """GET /schema/{id}/field_types flattens nested objects, arrays, enums, and
+    date-formatted fields into dot-notation leaf paths."""
+    headers = user_headers
+    project_id = make_project(headers, name="Field Types Project")["id"]
+    definition = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "age": {"type": "integer"},
+            "status": {"type": "string", "enum": ["a", "b"]},
+            "collected_on": {"type": "string", "format": "date"},
+            "patient": {
+                "type": "object",
+                "properties": {"mrn": {"type": "string"}},
+            },
+            "tags": {"type": "array", "items": {"type": "string"}},
+            "labs": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"value": {"type": "number"}},
+                },
+            },
+        },
+    }
+    schema_id = make_schema(headers, project_id, definition=definition)["id"]
+
+    response = client.get(
+        f"{api_url}/project/{project_id}/schema/{schema_id}/field_types",
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    types = response.json()
+    assert types["name"] == "string"
+    assert types["status"] == "category"  # enum -> category
+    assert types["collected_on"] == "date"  # format override
+    assert types["patient.mrn"] == "string"  # nested object flattened
+    assert types["tags[]"] == "string"  # array of primitive
+    assert types["labs[].value"] == "number"  # array of objects flattened
+
+
+def test_schema_access_control(
+    client, api_url, user_headers, login, make_project, make_schema
+):
+    """A different (non-admin) user cannot read/update/delete another user's schema."""
+    owner_headers = user_headers
+    project_id = make_project(owner_headers, name="Owned Schema Project")["id"]
+    schema_id = make_schema(owner_headers, project_id)["id"]
+
+    other_headers = login("another@example.com", "Anotherpassword1")
+
+    # Read list
+    resp = client.get(f"{api_url}/project/{project_id}/schema", headers=other_headers)
+    assert resp.status_code == 403
+    # Read one
+    resp = client.get(
+        f"{api_url}/project/{project_id}/schema/{schema_id}", headers=other_headers
+    )
+    assert resp.status_code == 403
+    # Update
+    resp = client.put(
+        f"{api_url}/project/{project_id}/schema/{schema_id}",
+        headers=other_headers,
+        json={
+            "schema_name": "hijack",
+            "schema_definition": {"type": "object", "properties": {}},
+        },
+    )
+    assert resp.status_code == 403
+    # Delete
+    resp = client.delete(
+        f"{api_url}/project/{project_id}/schema/{schema_id}", headers=other_headers
+    )
+    assert resp.status_code == 403
+
+
+def test_schema_project_not_found(client, api_url, user_headers):
+    headers = user_headers
+    resp = client.get(f"{api_url}/project/999999/schema", headers=headers)
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["code"] == "schemas.project_not_found"
+
+
 # Test Delete Schema Referenced by Trial
 def test_delete_schema_referenced_by_trial(
     client, api_url, admin_headers, make_project, monkeypatch

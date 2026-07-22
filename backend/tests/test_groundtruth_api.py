@@ -489,6 +489,127 @@ def test_mapping_invalid_schema_field(
     assert "not_a_real_field" in str(resp.json()["detail"])
 
 
+def test_configure_mapping_forces_path_schema_id(
+    client, api_url, user_headers, make_project, make_schema, files_base_path
+):
+    """The PATH schema_id is authoritative: a mismatched body schema_id must NOT
+    redirect the written rows to a different schema (regression — rows used to be
+    stored under the body value, leaving the path schema with none)."""
+    project_id = make_project(user_headers)["id"]
+    gt_id = _upload_csv(
+        client, api_url, user_headers, project_id, files_base_path
+    ).json()["id"]
+    schema_a = make_schema(
+        user_headers, project_id, name="A", definition=_MAP_SCHEMA_DEF
+    )["id"]
+    schema_b = make_schema(
+        user_headers, project_id, name="B", definition=_MAP_SCHEMA_DEF
+    )["id"]
+
+    # POST to schema A's path, but with body schema_id pointing at B.
+    mappings = [
+        {
+            "schema_field": "cough",
+            "ground_truth_field": "cough",
+            "schema_id": schema_b,  # mismatched on purpose
+            "field_type": "boolean",
+        }
+    ]
+    resp = client.post(
+        _gt_url(api_url, project_id, f"/{gt_id}/schema/{schema_a}/mapping"),
+        headers=user_headers,
+        json=mappings,
+    )
+    assert resp.status_code == 200, resp.text
+
+    # The mapping must live under schema A (the path), not B (the body).
+    under_a = client.get(
+        _gt_url(api_url, project_id, f"/{gt_id}/schema/{schema_a}/mapping"),
+        headers=user_headers,
+    ).json()
+    under_b = client.get(
+        _gt_url(api_url, project_id, f"/{gt_id}/schema/{schema_b}/mapping"),
+        headers=user_headers,
+    ).json()
+    assert len(under_a) == 1
+    assert under_a[0]["schema_id"] == schema_a
+    assert len(under_b) == 0
+
+
+def test_legacy_mapping_rejects_foreign_project_schema(
+    client, api_url, user_headers, login, make_project, make_schema, files_base_path
+):
+    """The legacy (body-schema_id) endpoint must reject a schema_id that belongs
+    to another project, so it can't write mapping rows referencing it."""
+    project_id = make_project(user_headers)["id"]
+    gt_id = _upload_csv(
+        client, api_url, user_headers, project_id, files_base_path
+    ).json()["id"]
+
+    # A schema in a DIFFERENT project (owned by another user).
+    other = login("another@example.com", "Anotherpassword1")
+    other_project = make_project(other, name="Other")["id"]
+    foreign_schema = make_schema(other, other_project, definition=_MAP_SCHEMA_DEF)["id"]
+
+    mappings = [
+        {
+            "schema_field": "cough",
+            "ground_truth_field": "cough",
+            "schema_id": foreign_schema,
+            "field_type": "boolean",
+        }
+    ]
+    resp = client.post(
+        _gt_url(api_url, project_id, f"/{gt_id}/mapping"),
+        headers=user_headers,
+        json=mappings,
+    )
+    assert resp.status_code == 404, resp.text
+    assert resp.json()["detail"]["code"] == "groundtruth.schema_not_found"
+
+
+def test_multiple_json_duplicate_filenames_both_survive(
+    client, api_url, user_headers, make_project
+):
+    """Two id-less JSON files sharing a filename must both be preserved: the ZIP
+    arcname is de-duplicated so neither is silently dropped (parser keys id-less
+    docs by filename stem)."""
+    project_id = make_project(user_headers)["id"]
+    files = [
+        (
+            "files",
+            (
+                "dup.json",
+                json.dumps({"cough": True, "location": "a"}).encode(),
+                "application/json",
+            ),
+        ),
+        (
+            "files",
+            (
+                "dup.json",
+                json.dumps({"cough": False, "location": "b"}).encode(),
+                "application/json",
+            ),
+        ),
+    ]
+    resp = client.post(
+        _gt_url(api_url, project_id),
+        headers=user_headers,
+        files=files,
+        data={"format": "json", "multiple_json": "true", "name": "dupbundle"},
+    )
+    assert resp.status_code == 200, resp.text
+    gt_id = resp.json()["id"]
+
+    preview = client.get(
+        _gt_url(api_url, project_id, f"/{gt_id}/preview"), headers=user_headers
+    )
+    assert preview.status_code == 200, preview.text
+    # Both documents parsed (not collapsed to one by an arcname collision).
+    assert len(preview.json()["preview_data"]) == 2
+
+
 # --------------------------------------------------------------------------- #
 # Authorization
 # --------------------------------------------------------------------------- #

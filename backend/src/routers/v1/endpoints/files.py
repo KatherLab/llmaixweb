@@ -509,7 +509,7 @@ def upload_file(
     normalized_mime = detect_structured_mime(
         file_name=incoming_name,
         content=head,
-        provided_mime=file.content_type or getattr(file_info, "file_type", None),
+        provided_mime=file.content_type or file_create.file_type,
     )
 
     # Check duplicates by hash
@@ -1811,6 +1811,22 @@ def move_files(
             )
 
     db.commit()
+
+    # Moving files relocates source PHI across project boundaries; record it in
+    # the append-only audit trail like the other file access/egress events.
+    if moved_count:
+        record_audit(
+            AuditAction.UPDATE,
+            actor=current_user,
+            resource_type="file",
+            project_id=project_id,
+            detail={
+                "action": "move",
+                "target_project_id": target_project_id,
+                "moved": moved_count,
+                "requested": len(file_ids),
+            },
+        )
 
     return {"moved": moved_count, "errors": errors, "total_requested": len(file_ids)}
 

@@ -1295,7 +1295,15 @@ def _advice_for_finish_reason(
     def bump_target():
         if isinstance(comp_toks, int) and comp_toks > 0:
             return min(comp_toks * 2, comp_toks + 4096)
-        return 2048 if not current_max_tok else int(current_max_tok * 2)
+        if not current_max_tok:
+            return 2048
+        # ``current_max_tok`` may arrive as a numeric *string* (advanced_options
+        # is an unvalidated dict), so coerce to int BEFORE doubling — otherwise
+        # ``int("500" * 2)`` yields 500500 instead of 1000.
+        try:
+            return int(current_max_tok) * 2
+        except (ValueError, TypeError):
+            return 2048
 
     if finish_reason == "length":
         advice["recommendations"].append(

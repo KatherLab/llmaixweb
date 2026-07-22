@@ -917,7 +917,10 @@ def test_remote_image_support(api_url: str, model: str, api_key: str) -> bool:
                 "role": "user",
                 "content": [
                     {"type": "text", "text": "Describe this image in one word."},
-                    {"type": "image_url", "image_url": f"data:image/png;base64,{b64}"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{b64}"},
+                    },
                 ],
             }
         ],
@@ -932,7 +935,7 @@ def test_remote_image_support(api_url: str, model: str, api_key: str) -> bool:
         data = response.json()
         if not response.ok or "choices" not in data:
             return False
-        reply = data["choices"][0].get("message", {}).get("content", "").lower()
+        reply = (data["choices"][0].get("message", {}).get("content") or "").lower()
         # You may want to adjust the check below based on expected behavior
         if (
             "white" in reply
