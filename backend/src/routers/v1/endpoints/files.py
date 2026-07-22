@@ -323,13 +323,18 @@ def get_file_stats(
     if file_creator is not None:
         base_query = base_query.where(models.File.file_creator == file_creator)
 
-    # Get total count and size
+    # Get total count and size. Aggregate over the subquery's own columns
+    # (``base_subq.c.*``) — referencing ``models.File.*`` here would drag the
+    # full ``files`` table back into the FROM clause and cross-join it with the
+    # subquery (a cartesian product), inflating every total by the row count of
+    # the whole table.
+    base_subq = base_query.subquery()
     stats = db.execute(
         select(
-            func.count(models.File.id).label("total_files"),
-            func.sum(models.File.file_size).label("total_size"),
-            func.count(distinct(models.File.file_hash)).label("unique_files"),
-        ).select_from(base_query.subquery())
+            func.count(base_subq.c.id).label("total_files"),
+            func.sum(base_subq.c.file_size).label("total_size"),
+            func.count(distinct(base_subq.c.file_hash)).label("unique_files"),
+        )
     ).first()
 
     # Get files by type

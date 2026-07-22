@@ -421,6 +421,221 @@ def test_evaluations_api_endpoints(
     assert r.status_code == 404
 
 
+def test_evaluation_cross_project_idor_and_errors(
+    client, api_url, files_base_path, admin_headers, monkeypatch
+):
+    """Cross-project IDOR + errors-enrichment/filtering.
+
+    Builds one real evaluation with a *fixed wrong* fake LLM (guarantees
+    per-field errors), then:
+
+    1. Confirms every by-id endpoint scopes the evaluation to the trial's
+       project: requesting the eval under a *different* project the caller
+       owns returns 404 ``evaluation_not_found_for_project`` (never the row),
+       and a cross-project DELETE does not remove it.
+    2. Exercises the errors endpoint enrichment (document_name + context) and
+       the field_name / error_type / limit filter branches, which the near
+       perfect pipeline in ``test_evaluations_api_endpoints`` can't reach.
+    """
+    # Fixed answer that will disagree with most ground-truth rows → real errors.
+    monkeypatch.setattr(
+        "backend.src.utils.info_extraction.OpenAI",
+        make_fake_openai(
+            {
+                "shortness of breath": False,
+                "chest pain": False,
+                "leg pain or swelling": False,
+                "heart palpitations": False,
+                "cough": False,
+                "dizziness": False,
+                "location": "unknown",
+                "side": "left",
+            }
+        ),
+    )
+    headers = admin_headers
+
+    ctx = _build_evaluated_pipeline(client, api_url, headers, files_base_path)
+    project_id = ctx["project_id"]
+    eval_id = ctx["evaluation"]["id"]
+    doc_id = ctx["doc_ids"][0]
+
+    # A second project owned by the SAME caller — the evaluation is not reachable
+    # through it because its trial lives in `project_id`.
+    other_pid = client.post(
+        f"{api_url}/project", headers=headers, json={"name": "EvalIDOROther"}
+    ).json()["id"]
+
+    expected = "evaluations.evaluation_not_found_for_project"
+
+    r = client.get(
+        f"{api_url}/project/{other_pid}/evaluation/{eval_id}", headers=headers
+    )
+    assert r.status_code == 404, r.text
+    assert r.json()["detail"]["code"] == expected
+
+    r = client.get(
+        f"{api_url}/project/{other_pid}/evaluation/{eval_id}/errors", headers=headers
+    )
+    assert r.status_code == 404, r.text
+    assert r.json()["detail"]["code"] == expected
+
+    r = client.get(
+        f"{api_url}/project/{other_pid}/evaluation/{eval_id}/document/{doc_id}",
+        headers=headers,
+    )
+    assert r.status_code == 404, r.text
+    assert r.json()["detail"]["code"] == expected
+
+    r = client.delete(
+        f"{api_url}/project/{other_pid}/evaluation/{eval_id}", headers=headers
+    )
+    assert r.status_code == 404, r.text
+    assert r.json()["detail"]["code"] == expected
+
+    # The failed cross-project DELETE must not have removed the row: it's still
+    # readable under its own project.
+    r = client.get(
+        f"{api_url}/project/{project_id}/evaluation/{eval_id}", headers=headers
+    )
+    assert r.status_code == 200, r.text
+
+    # --- ERRORS enrichment + filtering (correct project) -----------------
+    r = client.get(
+        f"{api_url}/project/{project_id}/evaluation/{eval_id}/errors", headers=headers
+    )
+    assert r.status_code == 200, r.text
+    errors = r.json()
+    assert isinstance(errors, list)
+    assert errors, "fixed-wrong fake should have produced field errors"
+    for e in errors:
+        # Enrichment: document name resolved from the original file, plus a
+        # text context snippet (both come from the batch doc-info join).
+        assert e["document_name"] == _GT_NAME
+        assert "context" in e and isinstance(e["context"], str) and e["context"]
+        assert e["error_type"]
+
+    # field_name filter → only that field's errors come back.
+    target_field = errors[0]["field_name"]
+    r = client.get(
+        f"{api_url}/project/{project_id}/evaluation/{eval_id}/errors",
+        headers=headers,
+        params={"field_name": target_field},
+    )
+    assert r.status_code == 200, r.text
+    filtered = r.json()
+    assert filtered
+    assert all(e["field_name"] == target_field for e in filtered)
+
+    # error_type filter → only that error type comes back.
+    target_type = errors[0]["error_type"]
+    r = client.get(
+        f"{api_url}/project/{project_id}/evaluation/{eval_id}/errors",
+        headers=headers,
+        params={"error_type": target_type},
+    )
+    assert r.status_code == 200, r.text
+    typed = r.json()
+    assert typed
+    assert all(e["error_type"] == target_type for e in typed)
+
+    # limit caps the number of returned rows.
+    r = client.get(
+        f"{api_url}/project/{project_id}/evaluation/{eval_id}/errors",
+        headers=headers,
+        params={"limit": 1},
+    )
+    assert r.status_code == 200, r.text
+    assert len(r.json()) <= 1
+
+
+def test_evaluation_batch_caps_and_compare_download_caps(
+    client, api_url, admin_headers, make_project
+):
+    """The three request-size caps are enforced before any heavy work.
+
+    Each cap is checked before the project lookup, so these need no real
+    evaluation — only that the endpoint rejects an oversized request with the
+    documented 400 code.
+    """
+    project = make_project(admin_headers, name="EvalCaps")
+    pid = project["id"]
+
+    # compare: > 10 evaluation ids → 400 too_many_compare.
+    r = client.get(
+        f"{api_url}/project/{pid}/evaluation/compare",
+        headers=admin_headers,
+        params={"evaluation_ids": list(range(1, 12))},
+    )
+    assert r.status_code == 400, r.text
+    assert r.json()["detail"]["code"] == "evaluations.too_many_compare"
+
+    # download: > 50 evaluation ids → 400 too_many_download.
+    r = client.get(
+        f"{api_url}/project/{pid}/evaluations/download",
+        headers=admin_headers,
+        params={"evaluation_ids": [str(i) for i in range(1, 52)], "format": "csv"},
+    )
+    assert r.status_code == 400, r.text
+    assert r.json()["detail"]["code"] == "evaluations.too_many_download"
+
+    # batch: > 200 trial ids → 400 too_many_trials.
+    r = client.post(
+        f"{api_url}/project/{pid}/evaluation/batch",
+        headers=admin_headers,
+        json={"trial_ids": list(range(1, 202)), "groundtruth_id": 1},
+    )
+    assert r.status_code == 400, r.text
+    assert r.json()["detail"]["code"] == "evaluations.too_many_trials"
+
+
+def test_download_evaluation_ids_comma_and_repeated_forms(
+    client, api_url, admin_headers, make_project
+):
+    """The download endpoint parses both the repeated-param and the legacy
+    comma-joined single-param forms, splitting on commas so each id counts
+    individually (this is what makes multi-eval exports work).
+    """
+    project = make_project(admin_headers, name="EvalDownloadParse")
+    pid = project["id"]
+
+    # Comma-joined single param of unknown-but-valid ids → parses past the 400
+    # gate to a 404 (no such evaluations in this project).
+    r = client.get(
+        f"{api_url}/project/{pid}/evaluations/download",
+        headers=admin_headers,
+        params={"evaluation_ids": "999998,999999", "format": "csv"},
+    )
+    assert r.status_code == 404, r.text
+    assert r.json()["detail"]["code"] == "evaluations.no_evaluations_found"
+
+    # A single comma-joined param with 51 ids is split to 51 and trips the
+    # per-request cap — proving commas are counted individually, not as one id.
+    r = client.get(
+        f"{api_url}/project/{pid}/evaluations/download",
+        headers=admin_headers,
+        params={
+            "evaluation_ids": ",".join(str(i) for i in range(1, 52)),
+            "format": "csv",
+        },
+    )
+    assert r.status_code == 400, r.text
+    assert r.json()["detail"]["code"] == "evaluations.too_many_download"
+
+
+def test_compare_too_many_ids_before_project_check(client, api_url, admin_headers):
+    """The compare cap fires before the project lookup (defense-in-depth):
+    an oversized request is rejected 400 even for a project id that doesn't
+    exist, rather than leaking a 404."""
+    r = client.get(
+        f"{api_url}/project/999999/evaluation/compare",
+        headers=admin_headers,
+        params={"evaluation_ids": list(range(1, 12))},
+    )
+    assert r.status_code == 400, r.text
+    assert r.json()["detail"]["code"] == "evaluations.too_many_compare"
+
+
 def test_evaluation_read_endpoints_unknown_project(client, api_url, admin_headers):
     """Endpoints on a nonexistent project should 404 (project lookup first)."""
     r = client.get(

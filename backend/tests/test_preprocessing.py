@@ -842,3 +842,896 @@ def test_preprocess_preview_detects_same_config_image_duplicate(
         f"Expected the reprocessed JPG to be a same-config duplicate, got: {data}"
     )
     assert same_config[0]["file_id"] == file_id
+
+
+# ---------------------------------------------------------------------------
+# Endpoint-gating / duplicate-detection / cancel / retry coverage.
+#
+# These exercise the validation and lifecycle branches of
+# routers/v1/endpoints/preprocess.py that don't require a live OCR/Celery
+# worker: they seed ORM rows directly (Document, TrialResult, EvaluationMetric,
+# PreprocessingTask, FilePreprocessingTask) and assert the endpoint's
+# gating/rollback logic. Celery is disabled in the test env, so any path that
+# reaches dispatch is only reached via admin bypass_celery (which the pipeline
+# handles locally for text files) or is short-circuited before dispatch.
+# ---------------------------------------------------------------------------
+
+
+def _seed_file(db, project_id, *, file_type, name, strategy=None):
+    """Insert a File row (no storage bytes) and return it."""
+    import uuid
+
+    from ..src import models
+    from ..src.utils.enums import FileCreator
+
+    f = models.File(
+        project_id=project_id,
+        file_uuid=str(uuid.uuid4()),
+        file_name=name,
+        file_type=file_type,
+        file_creator=FileCreator.user,
+        preprocessing_strategy=strategy,
+        file_metadata={},
+        # 32-char hex is well within the 64-char column and unique enough here.
+        file_hash=uuid.uuid4().hex,
+    )
+    db.add(f)
+    db.flush()
+    return f
+
+
+def _seed_config(db, project_id, additional_settings):
+    from ..src import models
+
+    cfg = models.PreprocessingConfiguration(
+        project_id=project_id,
+        name="Seed Config",
+        additional_settings=additional_settings,
+    )
+    db.add(cfg)
+    db.flush()
+    return cfg
+
+
+def _seed_document(
+    db, project_id, *, file_id, config_id, name, meta=None, file_task_id=None
+):
+    from ..src import models
+
+    doc = models.Document(
+        project_id=project_id,
+        original_file_id=file_id,
+        preprocessing_config_id=config_id,
+        file_preprocessing_task_id=file_task_id,
+        text="seeded text",
+        document_name=name,
+        is_latest=True,
+        meta_data=meta or {},
+    )
+    db.add(doc)
+    db.flush()
+    return doc
+
+
+def _seed_trial(db, project_id, schema_id, prompt_id, number, document_ids):
+    from ..src import models
+
+    trial = models.Trial(
+        project_id=project_id,
+        project_trial_number=number,
+        schema_id=schema_id,
+        prompt_id=prompt_id,
+        llm_model="gpt-test",
+        base_url="",
+        api_key_encrypted="",
+        document_ids=document_ids,
+    )
+    db.add(trial)
+    db.flush()
+    return trial
+
+
+# ── preview: 404 / 400 gating ──────────────────────────────────────────────
+
+
+def test_preview_missing_file_ids_returns_404(
+    client, api_url, user_headers, make_project
+):
+    project_id = make_project(user_headers, name="Preview 404")["id"]
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess/preview",
+        headers=user_headers,
+        json={
+            "file_ids": [999999],
+            "inline_config": {"name": "x", "additional_settings": {}},
+        },
+    )
+    assert resp.status_code == 404, resp.text
+    assert resp.json()["detail"]["code"] == "preprocess.files_not_found"
+
+
+def test_preview_without_inline_config_returns_400(
+    client, api_url, user_headers, make_project
+):
+    """A request carrying configuration_id but no inline_config passes schema
+    validation, then trips the endpoint's inline_config guard (400)."""
+    project_id = make_project(user_headers, name="Preview 400")["id"]
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess/preview",
+        headers=user_headers,
+        json={"file_ids": [1], "configuration_id": 12345},
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["code"] == "preprocess.inline_config_required"
+
+
+# ── preview: same-config normalization matrix ──────────────────────────────
+
+
+def test_preview_pdf_tesseract_normalization_same_config(
+    client, api_url, user_headers, make_project
+):
+    """A PDF doc stored with ocr_engine='tesseract' must be detected as a
+    same-config duplicate when the inline config sends the frontend name
+    'docling_tesseract' (the normalization the code comment warns about)."""
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(user_headers, name="PDF Norm")["id"]
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {"ocr_engine": "docling_tesseract"})
+        f = _seed_file(
+            db, project_id, file_type=models.FileType.APPLICATION_PDF, name="a.pdf"
+        )
+        _seed_document(
+            db,
+            project_id,
+            file_id=f.id,
+            config_id=cfg.id,
+            name="a.pdf",
+            meta={
+                "ocr_engine": "tesseract",
+                "force_ocr": False,
+                "extraction_method": "docling_serve_tesseract",
+            },
+        )
+        db.commit()
+        file_id = f.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess/preview",
+        headers=user_headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": {
+                "name": "reprocess",
+                "additional_settings": {
+                    "ocr_engine": "docling_tesseract",
+                    "force_ocr": False,
+                },
+            },
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert [d["file_id"] for d in data["same_config_duplicates"]] == [file_id]
+
+
+def test_preview_pdf_force_ocr_mismatch_not_same_config(
+    client, api_url, user_headers, make_project
+):
+    """For PDFs force_ocr IS relevant: a stored force_ocr=False doc must NOT be
+    a same-config duplicate when the new config sends force_ocr=True — it is
+    still a plain duplicate though."""
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(user_headers, name="PDF ForceOCR")["id"]
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {"ocr_engine": "docling_tesseract"})
+        f = _seed_file(
+            db, project_id, file_type=models.FileType.APPLICATION_PDF, name="b.pdf"
+        )
+        _seed_document(
+            db,
+            project_id,
+            file_id=f.id,
+            config_id=cfg.id,
+            name="b.pdf",
+            meta={
+                "ocr_engine": "tesseract",
+                "force_ocr": False,
+                "extraction_method": "docling_serve_tesseract",
+            },
+        )
+        db.commit()
+        file_id = f.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess/preview",
+        headers=user_headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": {
+                "name": "reprocess",
+                "additional_settings": {
+                    "ocr_engine": "docling_tesseract",
+                    "force_ocr": True,
+                },
+            },
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["same_config_duplicates"] == []
+    # It is still flagged as a (non-same-config) duplicate.
+    assert [d["file_id"] for d in data["files_with_duplicates"]] == [file_id]
+
+
+def test_preview_pdf_embedded_text_special_case(
+    client, api_url, user_headers, make_project
+):
+    """A PDF with embedded text extracted via a 'no_ocr' method is a same-config
+    duplicate for ANY OCR engine selection when force_ocr is False, and is also
+    reported under pdfs_with_embedded_text."""
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(user_headers, name="PDF Embedded")["id"]
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {"ocr_engine": "mistral_ocr"})
+        f = _seed_file(
+            db, project_id, file_type=models.FileType.APPLICATION_PDF, name="c.pdf"
+        )
+        _seed_document(
+            db,
+            project_id,
+            file_id=f.id,
+            config_id=cfg.id,
+            name="c.pdf",
+            meta={
+                "ocr_engine": "pypdf",
+                "force_ocr": False,
+                "embedded_text_detected": True,
+                "extraction_method": "docling_serve_no_ocr",
+            },
+        )
+        db.commit()
+        file_id = f.id
+    finally:
+        db.close()
+
+    # Select a *different* engine (llm_vision) with force_ocr=False → still same
+    # config via the embedded-text special case.
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess/preview",
+        headers=user_headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": {
+                "name": "reprocess",
+                "additional_settings": {
+                    "ocr_engine": "llm_vision",
+                    "force_ocr": False,
+                },
+            },
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert [d["file_id"] for d in data["same_config_duplicates"]] == [file_id]
+    assert [d["file_id"] for d in data["pdfs_with_embedded_text"]] == [file_id]
+
+
+# ── preprocess submission gating ───────────────────────────────────────────
+
+
+def test_preprocess_unconfigured_csv_returns_400(
+    client, api_url, admin_headers, make_project, upload_file
+):
+    """A CSV uploaded without a preprocessing strategy must be rejected with
+    csv_xlsx_needs_config before any task rows are created."""
+    project_id = make_project(admin_headers, name="Unconfigured CSV")["id"]
+    file_id = upload_file(
+        admin_headers,
+        project_id,
+        content=b"a,b\n1,2\n",
+        name="raw.csv",
+        content_type="text/csv",
+    )["id"]
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=admin_headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": {"name": "c"},
+            "bypass_celery": True,
+        },
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["code"] == "csv_xlsx_needs_config"
+
+
+def test_preprocess_image_all_ocr_disabled_returns_400(
+    client, api_url, user_headers, make_project, monkeypatch
+):
+    """An image submission is refused with no_ocr_engine_enabled when every OCR
+    engine is disabled."""
+    from ..src import models
+    from ..src.core import config
+    from ..src.db.session import SessionLocal
+
+    live = config._get_settings()
+    for flag in (
+        "DOCLING_SERVE_ENABLED",
+        "MISTRAL_OCR_ENABLED",
+        "VISION_OCR_ENABLED",
+        "DOCLING_LOCAL_FALLBACK",
+    ):
+        monkeypatch.setattr(live, flag, False)
+
+    project_id = make_project(user_headers, name="No OCR")["id"]
+    db = SessionLocal()
+    try:
+        f = _seed_file(
+            db, project_id, file_type=models.FileType.IMAGE_PNG, name="scan.png"
+        )
+        db.commit()
+        file_id = f.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=user_headers,
+        json={"file_ids": [file_id], "inline_config": {"name": "c"}},
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["code"] == "no_ocr_engine_enabled"
+
+
+def test_preprocess_files_already_being_processed_returns_409(
+    client, api_url, user_headers, make_project
+):
+    """Submitting a file that already has an IN_PROGRESS file task for the same
+    config is rejected with files_already_being_processed."""
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(user_headers, name="In Progress")["id"]
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {})
+        f = _seed_file(
+            db, project_id, file_type=models.FileType.TEXT_PLAIN, name="p.txt"
+        )
+        task = models.PreprocessingTask(
+            project_id=project_id,
+            configuration_id=cfg.id,
+            total_files=1,
+            status=models.PreprocessingStatus.IN_PROGRESS,
+        )
+        db.add(task)
+        db.flush()
+        ftask = models.FilePreprocessingTask(
+            preprocessing_task_id=task.id,
+            file_id=f.id,
+            file_name=f.file_name,
+            status=models.PreprocessingStatus.IN_PROGRESS,
+        )
+        db.add(ftask)
+        db.commit()
+        file_id = f.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=user_headers,
+        # Empty additional_settings → matches the seeded config ({}), so the
+        # in-progress check runs against that config's id.
+        json={"file_ids": [file_id], "inline_config": {"name": "c"}},
+    )
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["detail"]["code"] == "files_already_being_processed"
+
+
+def test_preprocess_nonadmin_bypass_celery_returns_403(
+    client, api_url, user_headers, make_project, upload_file
+):
+    """A non-admin cannot set bypass_celery."""
+    project_id = make_project(user_headers, name="Bypass 403")["id"]
+    file_id = upload_file(
+        user_headers, project_id, content=b"hi", name="t.txt", content_type="text/plain"
+    )["id"]
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=user_headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": {"name": "c"},
+            "bypass_celery": True,
+        },
+    )
+    assert resp.status_code == 403, resp.text
+    assert resp.json()["detail"]["code"] == "preprocess.bypass_celery_admin_only"
+
+
+def test_preprocess_all_files_skipped_autocompletes(
+    client, api_url, admin_headers, make_project
+):
+    """skip_existing with every file already processed for the config yields a
+    task that is immediately COMPLETED with skipped_files populated (no worker
+    runs). Uses admin bypass_celery to get past the DISABLE_CELERY guard."""
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(admin_headers, name="All Skipped")["id"]
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {})
+        f = _seed_file(
+            db, project_id, file_type=models.FileType.TEXT_PLAIN, name="done.txt"
+        )
+        _seed_document(db, project_id, file_id=f.id, config_id=cfg.id, name="done.txt")
+        db.commit()
+        file_id = f.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=admin_headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": {"name": "c"},
+            "skip_existing": True,
+            "bypass_celery": True,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    task = resp.json()
+    assert task["status"] == "completed"
+    assert task["skipped_files"] == 1
+    assert task["total_files"] == 0
+
+
+# ── force_reprocess ─────────────────────────────────────────────────────────
+
+
+def test_force_reprocess_referenced_document_returns_409(
+    client, api_url, admin_headers, make_project, make_schema, make_prompt
+):
+    """force_reprocess must refuse (409) to delete a document referenced by a
+    trial result, reporting the referenced document ids."""
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(admin_headers, name="Force Ref")["id"]
+    schema_id = make_schema(admin_headers, project_id)["id"]
+    prompt_id = make_prompt(admin_headers, project_id)["id"]
+
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {})
+        f = _seed_file(
+            db, project_id, file_type=models.FileType.TEXT_PLAIN, name="ref.txt"
+        )
+        doc = _seed_document(
+            db, project_id, file_id=f.id, config_id=cfg.id, name="ref.txt"
+        )
+        trial = _seed_trial(db, project_id, schema_id, prompt_id, 1, [doc.id])
+        db.add(models.TrialResult(trial_id=trial.id, document_id=doc.id, result={}))
+        db.commit()
+        file_id, doc_id = f.id, doc.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=admin_headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": {"name": "c"},
+            "force_reprocess": True,
+            "bypass_celery": True,
+        },
+    )
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["detail"]["referenced_document_ids"] == [doc_id]
+
+
+def test_force_reprocess_unreferenced_deletes_old_docs(
+    client, api_url, admin_headers, make_project, upload_file
+):
+    """force_reprocess on an unreferenced document deletes the old row and
+    reprocesses (a new document replaces it)."""
+    project_id = make_project(admin_headers, name="Force Unref")["id"]
+    file_id = upload_file(
+        admin_headers,
+        project_id,
+        content=b"reprocess me",
+        name="u.txt",
+        content_type="text/plain",
+    )["id"]
+
+    body = {
+        "file_ids": [file_id],
+        "inline_config": {"name": "c"},
+        "bypass_celery": True,
+    }
+    # First run creates the config + a single document.
+    first = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=admin_headers,
+        json=body,
+    )
+    assert first.status_code == 200, first.text
+    docs = client.get(
+        f"{api_url}/project/{project_id}/document", headers=admin_headers
+    ).json()
+    assert docs["total"] == 1
+
+    # Second run with force_reprocess reuses the same config (same settings),
+    # deletes the old doc, and reprocesses the file. If the old doc were NOT
+    # deleted (or a second config were created) we'd end up with 2 documents;
+    # correct behavior replaces it in place, so the count stays at 1 and the
+    # task actually processed the file (total_files == 1, not a 0-file skip).
+    # (Note: SQLite may recycle the deleted row's id, so we assert on document
+    # count rather than id identity.)
+    body["force_reprocess"] = True
+    second = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=admin_headers,
+        json=body,
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["status"] == "completed"
+    assert second.json()["total_files"] == 1
+
+    remaining = client.get(
+        f"{api_url}/project/{project_id}/document", headers=admin_headers
+    ).json()
+    assert remaining["total"] == 1
+
+
+# ── cancel ──────────────────────────────────────────────────────────────────
+
+
+def test_cancel_keep_processed_deletes_nothing(
+    client, api_url, user_headers, make_project
+):
+    """keep_processed=true forces rollback off, so a completed file task's
+    document survives the cancel."""
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(user_headers, name="Cancel Keep")["id"]
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {})
+        f = _seed_file(
+            db, project_id, file_type=models.FileType.TEXT_PLAIN, name="k.txt"
+        )
+        task = models.PreprocessingTask(
+            project_id=project_id,
+            configuration_id=cfg.id,
+            total_files=1,
+            rollback_on_cancel=True,
+            status=models.PreprocessingStatus.IN_PROGRESS,
+        )
+        db.add(task)
+        db.flush()
+        ftask = models.FilePreprocessingTask(
+            preprocessing_task_id=task.id,
+            file_id=f.id,
+            file_name=f.file_name,
+            status=models.PreprocessingStatus.COMPLETED,
+        )
+        db.add(ftask)
+        db.flush()
+        doc = _seed_document(
+            db,
+            project_id,
+            file_id=f.id,
+            config_id=cfg.id,
+            name="k.txt",
+            file_task_id=ftask.id,
+        )
+        db.commit()
+        task_id, doc_id = task.id, doc.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess/{task_id}/cancel",
+        headers=user_headers,
+        params={"keep_processed": True},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "cancelled"
+
+    still = client.get(
+        f"{api_url}/project/{project_id}/document/{doc_id}", headers=user_headers
+    )
+    assert still.status_code == 200
+
+
+def test_cancel_rollback_keeps_referenced_document(
+    client, api_url, admin_headers, make_project, make_schema, make_prompt
+):
+    """On rollback cancel, a document referenced by an evaluation metric is
+    KEPT while an unreferenced sibling is deleted; deleted_count reflects only
+    the unreferenced one."""
+    import uuid
+
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(admin_headers, name="Cancel Rollback")["id"]
+    schema_id = make_schema(admin_headers, project_id)["id"]
+    prompt_id = make_prompt(admin_headers, project_id)["id"]
+
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {})
+        f = _seed_file(
+            db, project_id, file_type=models.FileType.TEXT_PLAIN, name="r.txt"
+        )
+        task = models.PreprocessingTask(
+            project_id=project_id,
+            configuration_id=cfg.id,
+            total_files=1,
+            rollback_on_cancel=True,
+            status=models.PreprocessingStatus.IN_PROGRESS,
+        )
+        db.add(task)
+        db.flush()
+        ftask = models.FilePreprocessingTask(
+            preprocessing_task_id=task.id,
+            file_id=f.id,
+            file_name=f.file_name,
+            status=models.PreprocessingStatus.COMPLETED,
+        )
+        db.add(ftask)
+        db.flush()
+        ref_doc = _seed_document(
+            db,
+            project_id,
+            file_id=f.id,
+            config_id=cfg.id,
+            name="ref.txt",
+            file_task_id=ftask.id,
+        )
+        free_doc = _seed_document(
+            db,
+            project_id,
+            file_id=f.id,
+            config_id=cfg.id,
+            name="free.txt",
+            file_task_id=ftask.id,
+        )
+        trial = _seed_trial(db, project_id, schema_id, prompt_id, 1, [ref_doc.id])
+        gt = models.GroundTruth(
+            project_id=project_id,
+            name="gt",
+            format="csv",
+            file_uuid=str(uuid.uuid4()),
+        )
+        db.add(gt)
+        db.flush()
+        ev = models.Evaluation(
+            trial_id=trial.id,
+            groundtruth_id=gt.id,
+            metrics={},
+            field_metrics={},
+            document_metrics=[],
+        )
+        db.add(ev)
+        db.flush()
+        db.add(
+            models.EvaluationMetric(
+                evaluation_id=ev.id,
+                document_id=ref_doc.id,
+                field_name="f",
+                is_correct=True,
+            )
+        )
+        db.commit()
+        task_id, ref_id, free_id = task.id, ref_doc.id, free_doc.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess/{task_id}/cancel",
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "cancelled"
+    assert "1 processed documents rolled back" in body["message"]
+    assert "kept" in body["message"]
+
+    # Referenced doc survives, unreferenced one is deleted.
+    assert (
+        client.get(
+            f"{api_url}/project/{project_id}/document/{ref_id}", headers=admin_headers
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"{api_url}/project/{project_id}/document/{free_id}", headers=admin_headers
+        ).status_code
+        == 404
+    )
+
+
+def test_cancel_terminal_task_returns_400(client, api_url, user_headers, make_project):
+    """Cancelling an already-COMPLETED task is rejected with
+    cannot_cancel_status."""
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(user_headers, name="Cancel Terminal")["id"]
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {})
+        task = models.PreprocessingTask(
+            project_id=project_id,
+            configuration_id=cfg.id,
+            total_files=0,
+            status=models.PreprocessingStatus.COMPLETED,
+        )
+        db.add(task)
+        db.commit()
+        task_id = task.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess/{task_id}/cancel",
+        headers=user_headers,
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["code"] == "preprocess.cannot_cancel_status"
+
+
+# ── list tasks: status filter + pagination ─────────────────────────────────
+
+
+def test_get_tasks_invalid_status_returns_400(
+    client, api_url, user_headers, make_project
+):
+    project_id = make_project(user_headers, name="Bad Status")["id"]
+    resp = client.get(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=user_headers,
+        params={"status": "bogus"},
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["code"] == "preprocess.invalid_status"
+
+
+def test_get_tasks_limit_and_offset(client, api_url, user_headers, make_project):
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(user_headers, name="Pagination")["id"]
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {})
+        for _ in range(3):
+            db.add(
+                models.PreprocessingTask(
+                    project_id=project_id,
+                    configuration_id=cfg.id,
+                    total_files=0,
+                    status=models.PreprocessingStatus.COMPLETED,
+                )
+            )
+        db.commit()
+    finally:
+        db.close()
+
+    all_tasks = client.get(
+        f"{api_url}/project/{project_id}/preprocess", headers=user_headers
+    ).json()
+    assert len(all_tasks) == 3
+
+    page1 = client.get(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=user_headers,
+        params={"limit": 2, "offset": 0},
+    ).json()
+    assert len(page1) == 2
+
+    page2 = client.get(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=user_headers,
+        params={"limit": 2, "offset": 2},
+    ).json()
+    assert len(page2) == 1
+
+
+# ── retry-failed ────────────────────────────────────────────────────────────
+
+
+def test_retry_failed_no_failed_files_returns_400(
+    client, api_url, user_headers, make_project
+):
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(user_headers, name="Retry None")["id"]
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {})
+        f = _seed_file(
+            db, project_id, file_type=models.FileType.TEXT_PLAIN, name="ok.txt"
+        )
+        task = models.PreprocessingTask(
+            project_id=project_id,
+            configuration_id=cfg.id,
+            total_files=1,
+            status=models.PreprocessingStatus.COMPLETED,
+        )
+        db.add(task)
+        db.flush()
+        db.add(
+            models.FilePreprocessingTask(
+                preprocessing_task_id=task.id,
+                file_id=f.id,
+                file_name=f.file_name,
+                status=models.PreprocessingStatus.COMPLETED,
+            )
+        )
+        db.commit()
+        task_id = task.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess/{task_id}/retry-failed",
+        headers=user_headers,
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"]["code"] == "preprocess.no_failed_files"
+
+
+def test_retry_failed_while_task_running_returns_409(
+    client, api_url, user_headers, make_project
+):
+    from ..src import models
+    from ..src.db.session import SessionLocal
+
+    project_id = make_project(user_headers, name="Retry Running")["id"]
+    db = SessionLocal()
+    try:
+        cfg = _seed_config(db, project_id, {})
+        task = models.PreprocessingTask(
+            project_id=project_id,
+            configuration_id=cfg.id,
+            total_files=1,
+            status=models.PreprocessingStatus.IN_PROGRESS,
+        )
+        db.add(task)
+        db.commit()
+        task_id = task.id
+    finally:
+        db.close()
+
+    resp = client.post(
+        f"{api_url}/project/{project_id}/preprocess/{task_id}/retry-failed",
+        headers=user_headers,
+    )
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["detail"]["code"] == "preprocess.task_still_running"
