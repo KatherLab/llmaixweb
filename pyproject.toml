@@ -35,7 +35,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "fastapi[standard]==0.139.2",
+    "fastapi[standard]==0.140.13",
     "uvicorn==0.51.0",
     "pyjwt==2.13.0",
     "sqlalchemy==2.0.51",
