@@ -219,7 +219,7 @@
     <!-- Empty State -->
     <EmptyState
       v-if="items.length === 0 && !loading"
-      :title="emptyTitle ?? $t('common.data_table.empty_title')"
+      :title="emptyTitle || $t('common.data_table.empty_title')"
       :description="emptyDescription"
     >
       <template v-if="$slots['empty-icon']" #icon>
@@ -333,6 +333,7 @@ const props = withDefaults(defineProps<Props>(), {
   expandable: false,
   expandedKeys: () => [],
   density: 'default',
+  emptyTitle: '',
   emptyDescription: '',
   loading: false,
 })

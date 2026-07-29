@@ -45,8 +45,9 @@ def init_db():
             return
         Base.metadata.create_all(bind=engine)
 
-        from alembic import command
         from alembic.config import Config as AlembicConfig
+
+        from alembic import command
 
         repo_root = Path(__file__).resolve().parents[2]
         alembic_cfg = AlembicConfig(str(repo_root / "alembic.ini"))

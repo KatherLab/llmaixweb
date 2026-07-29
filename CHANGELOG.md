@@ -14,6 +14,8 @@ that point forward.
 
 ## [Unreleased]
 
+## [0.7.2] — 2026-07-29
+
 ### Security
 
 - SSRF hardening: validation of user-supplied LLM/OCR `base_url`s now also
@@ -96,7 +98,8 @@ that point forward.
 See the [GitHub Releases page](https://github.com/KatherLab/llmaixweb/releases)
 and the git commit history for details.
 
-[Unreleased]: https://github.com/KatherLab/llmaixweb/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/KatherLab/llmaixweb/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/KatherLab/llmaixweb/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/KatherLab/llmaixweb/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/KatherLab/llmaixweb/compare/v0.6.8...v0.7.0
 [0.6.8]: https://github.com/KatherLab/llmaixweb/compare/v0.6.7...v0.6.8

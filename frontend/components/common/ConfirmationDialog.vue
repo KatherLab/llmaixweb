@@ -35,6 +35,10 @@ interface Props {
 }
 
 withDefaults(defineProps<Props>(), {
+  title: '',
+  message: '',
+  confirmText: '',
+  cancelText: '',
   confirmVariant: 'danger',
   loading: false,
 })
