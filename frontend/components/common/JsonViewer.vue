@@ -53,7 +53,9 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   data: null,
-  maxDepth: 3,
+  // Children only render once expanded, so a generous limit costs nothing and keeps
+  // deeply nested extraction schemas (list → object → list → object) explorable.
+  maxDepth: 10,
 })
 
 const expanded = reactive<Record<string, boolean>>({})
@@ -64,7 +66,9 @@ const isExpandable = (value: unknown): boolean => {
 
 const toggleExpanded = (key: string | number): void => {
   const k = String(key)
-  if (props.data && typeof props.data === 'object' && !Array.isArray(props.data)) {
+  // Arrays are indexed by their numeric-string keys here too, so they must not be excluded —
+  // otherwise objects inside a list render a chevron that does nothing.
+  if (props.data && typeof props.data === 'object') {
     if (isExpandable((props.data as Record<string, unknown>)[k])) {
       expanded[k] = !expanded[k]
     }
