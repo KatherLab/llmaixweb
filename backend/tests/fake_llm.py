@@ -113,3 +113,45 @@ def make_fake_openai(
             return False
 
     return _FakeOpenAI
+
+
+def make_sequenced_openai(specs):
+    """Return a fake ``OpenAI`` class that replays ``specs`` across calls.
+
+    Each spec is a ``(content, finish_reason)`` pair; the last one repeats once
+    the list is exhausted. Exercises the retry-on-length path, where the first
+    call comes back truncated and the second one succeeds. The returned class
+    exposes ``.calls`` — the kwargs of every ``create`` call — so a test can
+    assert the retry actually raised the token cap.
+    """
+    queue = [(_as_str(content), finish_reason) for content, finish_reason in specs]
+    recorded: list[dict] = []
+
+    class _FakeCompletions:
+        def create(self, **kwargs):
+            recorded.append(kwargs)
+            content, finish_reason = queue[min(len(recorded) - 1, len(queue) - 1)]
+            return _FakeCompletion(content, finish_reason=finish_reason)
+
+    class _FakeChat:
+        def __init__(self):
+            self.completions = _FakeCompletions()
+
+    class _FakeModels:
+        def list(self):
+            return _FakeModelList(("gpt-4o-mini",))
+
+    class _FakeOpenAI:
+        calls = recorded
+
+        def __init__(self, *args, **kwargs):
+            self.chat = _FakeChat()
+            self.models = _FakeModels()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    return _FakeOpenAI

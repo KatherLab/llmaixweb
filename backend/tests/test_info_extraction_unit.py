@@ -864,3 +864,257 @@ def test_update_trial_progress_missing_trial_is_noop():
         ie.update_trial_progress(db, 10_000_000)
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Finish-reason assessment: retry decision + response selection
+#
+# A 'length' finish used to be retried only when the content came back empty.
+# Everything else it produces — a body cut off mid-JSON, or a grammar
+# whitespace runaway (valid JSON prefix, then filler until the cap) — was a hard
+# failure with no second attempt, even though a bigger budget is exactly what
+# those need.
+# ---------------------------------------------------------------------------
+
+_RETRY_SCHEMA = {
+    "type": "object",
+    "properties": {"x": {"type": "string"}},
+    "required": ["x"],
+}
+
+# The runaway shape observed against a real vLLM endpoint.
+_RUNAWAY = '{\n  "x": "a"' + "\n \t" * 40
+
+
+@pytest.mark.parametrize(
+    "content,finish_reason,expected",
+    [
+        ("", "length", True),  # reasoning ate the whole budget
+        (None, "length", True),
+        ('{"x": "a"', "length", True),  # cut off mid-JSON
+        (_RUNAWAY, "length", True),  # whitespace runaway
+        ('{"y": "a"}', "length", True),  # parses, but misses a required key
+        ('{"x": "a"}', "length", False),  # complete despite hitting the cap
+        ('{"x": "a"', "stop", False),  # broken, but more tokens won't help
+        ("", "stop", False),
+        ('{"x": "a"}', "content_filter", False),
+    ],
+)
+def test_needs_length_retry(content, finish_reason, expected):
+    resp = _resp(content=content or "", finish_reason=finish_reason)
+    if content is None:
+        resp.choices[0].message.content = None
+    assert ie._needs_length_retry(resp, _RETRY_SCHEMA) is expected
+
+
+def test_needs_length_retry_without_schema_accepts_any_valid_json():
+    resp = _resp(content='{"anything": 1}', finish_reason="length")
+    assert ie._needs_length_retry(resp, None) is False
+
+
+def test_pick_better_response_prefers_a_usable_retry():
+    first = _resp(content='{"x": "a"', finish_reason="length")
+    second = _resp(content='{"x": "recovered"}')
+    assert ie._pick_better_response(first, second, _RETRY_SCHEMA) is second
+
+
+def test_pick_better_response_keeps_partial_output_over_an_empty_retry():
+    # The partial body is the user's only diagnostic; an empty retry must not
+    # erase it.
+    first = _resp(content='{"x": "partial…', finish_reason="length")
+    second = _resp(content="", finish_reason="length")
+    assert ie._pick_better_response(first, second, _RETRY_SCHEMA) is first
+
+
+# ---------------------------------------------------------------------------
+# Finish-reason assessment: status classification
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "kwargs,expected",
+    [
+        # Truncated mid-JSON is incomplete, not malformed.
+        (
+            dict(
+                finish_reason="length",
+                parse_error="Expecting ',' delimiter",
+                schema_error=None,
+                has_refusal=False,
+                has_content=False,
+            ),
+            "incomplete",
+        ),
+        # Same parse failure without a cap hit really is malformed JSON.
+        (
+            dict(
+                finish_reason="stop",
+                parse_error="Expecting value",
+                schema_error=None,
+                has_refusal=False,
+                has_content=False,
+            ),
+            "invalid_json",
+        ),
+        # Empty body: at the cap it's truncation, otherwise a failed call.
+        (
+            dict(
+                finish_reason="length",
+                parse_error="empty_content",
+                schema_error=None,
+                has_refusal=False,
+                has_content=False,
+            ),
+            "incomplete",
+        ),
+        (
+            dict(
+                finish_reason="stop",
+                parse_error="empty_content",
+                schema_error=None,
+                has_refusal=False,
+                has_content=False,
+            ),
+            "failed",
+        ),
+        # A provider filter is a refusal — no retry or budget fixes it.
+        (
+            dict(
+                finish_reason="content_filter",
+                parse_error="empty_content",
+                schema_error=None,
+                has_refusal=False,
+                has_content=False,
+            ),
+            "refused",
+        ),
+        (
+            dict(
+                finish_reason="content_filter",
+                parse_error="Expecting value",
+                schema_error=None,
+                has_refusal=False,
+                has_content=False,
+            ),
+            "refused",
+        ),
+        # …but a filtered response that still parsed keeps its result.
+        (
+            dict(
+                finish_reason="content_filter",
+                parse_error=None,
+                schema_error=None,
+                has_refusal=False,
+                has_content=True,
+            ),
+            "incomplete",
+        ),
+        # Schema mismatch outranks the finish reason.
+        (
+            dict(
+                finish_reason="length",
+                parse_error=None,
+                schema_error="'x' is a required property",
+                has_refusal=False,
+                has_content=True,
+            ),
+            "schema_invalid",
+        ),
+    ],
+)
+def test_determine_result_status_uses_finish_reason(kwargs, expected):
+    assert ie._determine_result_status(**kwargs) == expected
+
+
+def test_store_result_marks_truncated_json_incomplete(extraction_fixture):
+    from backend.src import models
+    from backend.src.utils.enums import TrialResultStatus
+
+    fx = extraction_fixture
+    db, trial, doc, schema = fx["db"], fx["trial"], fx["doc"], fx["schema"]
+    with pytest.raises(ie.IncompleteLLMResponseError):
+        ie._store_result(
+            db,
+            trial.id,
+            doc.id,
+            _resp(content='{"x": "abc', finish_reason="length"),
+            {},
+            schema.schema_definition,
+            retried_for_length=True,
+        )
+    row = (
+        db.query(models.TrialResult)
+        .filter_by(trial_id=trial.id, document_id=doc.id)
+        .one()
+    )
+    assert row.status == TrialResultStatus.INCOMPLETE
+    additional = row.additional_content or {}
+    assert additional["error_type"] == "truncated"
+    assert additional["length_retry_attempted"] is True
+
+
+def test_extract_info_single_doc_retries_a_truncated_response(
+    extraction_fixture, monkeypatch
+):
+    """End-to-end: cut-off first attempt -> bumped retry -> stored success."""
+    from backend.src import models
+    from backend.src.utils.enums import TrialResultStatus
+
+    from .fake_llm import make_sequenced_openai
+
+    fx = extraction_fixture
+    db, trial, doc, schema = fx["db"], fx["trial"], fx["doc"], fx["schema"]
+
+    fake = make_sequenced_openai(
+        [('{"x": "cut off', "length"), ({"x": "recovered"}, "stop")]
+    )
+    monkeypatch.setattr("backend.src.utils.info_extraction.OpenAI", fake)
+
+    ie.extract_info_single_doc(
+        db_session=db,
+        trial_id=trial.id,
+        document_id=doc.id,
+        llm_model="m",
+        api_key="k",
+        base_url="http://x",
+        schema_id=schema.id,
+        prompt_id=trial.prompt_id,
+        project_id=trial.project_id,
+        advanced_options={"max_completion_tokens": 100},
+    )
+
+    assert len(fake.calls) == 2, "truncated response should trigger exactly one retry"
+    assert fake.calls[1]["max_tokens"] > fake.calls[0]["max_tokens"]
+
+    row = (
+        db.query(models.TrialResult)
+        .filter_by(trial_id=trial.id, document_id=doc.id)
+        .one()
+    )
+    assert row.status == TrialResultStatus.SUCCESS
+    assert row.result == {"x": "recovered"}
+
+
+def test_extract_info_single_doc_does_not_retry_a_complete_response(
+    extraction_fixture, monkeypatch
+):
+    fx = extraction_fixture
+    db, trial, doc, schema = fx["db"], fx["trial"], fx["doc"], fx["schema"]
+
+    from .fake_llm import make_sequenced_openai
+
+    fake = make_sequenced_openai([({"x": "ok"}, "stop")])
+    monkeypatch.setattr("backend.src.utils.info_extraction.OpenAI", fake)
+
+    ie.extract_info_single_doc(
+        db_session=db,
+        trial_id=trial.id,
+        document_id=doc.id,
+        llm_model="m",
+        api_key="k",
+        base_url="http://x",
+        schema_id=schema.id,
+        prompt_id=trial.prompt_id,
+        project_id=trial.project_id,
+    )
+    assert len(fake.calls) == 1

@@ -2961,6 +2961,8 @@
       "referenced_by_trial": "No se puede eliminar un prompt referenciado por un ensayo"
     },
     "schemas": {
+      "required_without_property": "El esquema indica campos obligatorios que no están definidos en «properties», por lo que el modelo nunca podrá devolverlos: {details}",
+      "schema_definition_invalid": "La definición del esquema no es un JSON Schema válido: {details}",
       "project_not_found": "Proyecto no encontrado",
       "not_authorized_project": "No está autorizado para {permission} este proyecto",
       "not_authorized_create": "No está autorizado para crear esquemas para este proyecto",
@@ -3003,6 +3005,8 @@
       "id_token_nonce_mismatch": "Discrepancia del nonce en el id_token de OIDC."
     },
     "trials": {
+      "required_without_property": "Este esquema indica campos obligatorios que no están definidos en «properties», por lo que todos los documentos fallarían la validación: {details}",
+      "schema_definition_invalid": "El esquema de este ensayo no es un JSON Schema válido: {details}",
       "project_not_found": "Proyecto no encontrado",
       "not_authorized_project_action": "No tiene autorización para realizar la acción {permission} en este proyecto",
       "not_authorized_create": "No tiene autorización para crear ejecuciones en este proyecto",

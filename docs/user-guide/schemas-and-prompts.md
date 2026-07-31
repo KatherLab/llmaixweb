@@ -130,6 +130,26 @@ Property keys must be valid identifiers (letters, numbers, underscores; not
 starting with a number). Renaming a property keeps its place in the parent's
 `required` list.
 
+### Validation on save
+
+Saving a schema checks two things, and refuses the save if either fails:
+
+1. The definition is valid JSON Schema.
+2. Every name in a `required` list is actually defined in the same object's
+   `properties`.
+
+The second check matters more than it looks. Structured output (the constrained
+decoding your LLM endpoint applies) builds its grammar from `properties` and
+**silently ignores** a `required` entry that names no property — so the model
+returns output the endpoint considers correct, and LLMAIx then rejects it with
+`'<field>' is a required property` for *every* document in the trial. The usual
+cause is a property renamed or removed by hand in the **Raw JSON** editor while
+its old name stayed in `required`; the error message names the offending field
+and suggests the closest matching property.
+
+The same check runs when a trial is created, so a schema saved before this
+validation existed fails fast instead of consuming a full run's worth of tokens.
+
 ### Viewing, editing, deleting
 
 **View Schema** shows the fields (with a **raw-JSON toggle** and a **Copy**

@@ -2961,6 +2961,8 @@
       "referenced_by_trial": "Impossible de supprimer un prompt référencé par un essai"
     },
     "schemas": {
+      "required_without_property": "Le schéma déclare des champs obligatoires qui ne sont pas définis dans « properties » ; le modèle ne pourra jamais les renvoyer : {details}",
+      "schema_definition_invalid": "La définition du schéma n'est pas un JSON Schema valide : {details}",
       "project_not_found": "Projet introuvable",
       "not_authorized_project": "Vous n'êtes pas autorisé à {permission} ce projet",
       "not_authorized_create": "Vous n'êtes pas autorisé à créer des schémas pour ce projet",
@@ -3003,6 +3005,8 @@
       "id_token_nonce_mismatch": "Incohérence du nonce dans l'id_token OIDC."
     },
     "trials": {
+      "required_without_property": "Ce schéma déclare des champs obligatoires qui ne sont pas définis dans « properties » ; chaque document échouerait à la validation : {details}",
+      "schema_definition_invalid": "Le schéma de cet essai n'est pas un JSON Schema valide : {details}",
       "project_not_found": "Projet introuvable",
       "not_authorized_project_action": "Vous n'êtes pas autorisé à effectuer l'action {permission} sur ce projet",
       "not_authorized_create": "Vous n'êtes pas autorisé à créer des essais pour ce projet",

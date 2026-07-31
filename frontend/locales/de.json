@@ -2961,6 +2961,8 @@
       "referenced_by_trial": "Der Prompt kann nicht gelöscht werden, da er von einem Trial referenziert wird"
     },
     "schemas": {
+      "required_without_property": "Das Schema führt Pflichtfelder auf, die nicht in „properties“ definiert sind. Das Modell kann sie nie zurückgeben: {details}",
+      "schema_definition_invalid": "Die Schemadefinition ist kein gültiges JSON Schema: {details}",
       "project_not_found": "Projekt nicht gefunden",
       "not_authorized_project": "Sie sind nicht berechtigt, dieses Projekt zu {permission}",
       "not_authorized_create": "Sie sind nicht berechtigt, Schemata für dieses Projekt zu erstellen",
@@ -3003,6 +3005,8 @@
       "id_token_nonce_mismatch": "Abweichung des Nonce-Werts im OIDC-id_token."
     },
     "trials": {
+      "required_without_property": "Dieses Schema führt Pflichtfelder auf, die nicht in „properties“ definiert sind. Dadurch würde jedes Dokument die Validierung nicht bestehen: {details}",
+      "schema_definition_invalid": "Das Schema dieses Trials ist kein gültiges JSON Schema: {details}",
       "project_not_found": "Projekt nicht gefunden",
       "not_authorized_project_action": "Sie sind nicht berechtigt, für dieses Projekt die Aktion {permission} auszuführen",
       "not_authorized_create": "Sie sind nicht berechtigt, Durchläufe für dieses Projekt zu erstellen",

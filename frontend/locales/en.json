@@ -2961,6 +2961,8 @@
       "referenced_by_trial": "Cannot delete prompt referenced by a trial"
     },
     "schemas": {
+      "required_without_property": "Schema lists required field(s) that are not defined in properties, so the model can never return them: {details}",
+      "schema_definition_invalid": "Schema definition is not valid JSON Schema: {details}",
       "project_not_found": "Project not found",
       "not_authorized_project": "Not authorized to {permission} this project",
       "not_authorized_create": "Not authorized to create schemas for this project",
@@ -3003,6 +3005,8 @@
       "id_token_nonce_mismatch": "OIDC id_token nonce mismatch."
     },
     "trials": {
+      "required_without_property": "This schema lists required field(s) that are not defined in properties, so every document would fail validation: {details}",
+      "schema_definition_invalid": "This trial's schema is not valid JSON Schema: {details}",
       "project_not_found": "Project not found",
       "not_authorized_project_action": "Not authorized to {permission} this project",
       "not_authorized_create": "Not authorized to create trials for this project",

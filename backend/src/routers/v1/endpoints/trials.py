@@ -29,6 +29,7 @@ from ....utils.csv_safety import SafeDictCsvWriter
 from ....utils.deletion import cascade_delete_trials
 from ....utils.enums import AuditAction, TrialResultStatus
 from ....utils.helpers import flatten_dict, trial_filename_slug
+from ....utils.schema_validation import raise_for_schema_problems
 from ....utils.streaming_zip import iter_zip
 from ....utils.url_safety import (
     UnsafeEndpointError,
@@ -150,6 +151,12 @@ def create_trial(
     ).scalar_one_or_none()
     if not schema:
         raise api_error("trials.schema_not_found", 404, "Schema not found")
+    # Pre-flight the schema: a structurally broken one (e.g. a `required` entry
+    # with no matching property) is accepted by the provider's grammar but fails
+    # local validation on every single document. Fail the trial before it burns
+    # a full run's worth of tokens. Older schemas predate the save-time check,
+    # so this also catches rows already in the DB.
+    raise_for_schema_problems(schema.schema_definition, code_prefix="trials")
 
     prompt: models.Prompt | None = db.execute(
         select(models.Prompt).where(

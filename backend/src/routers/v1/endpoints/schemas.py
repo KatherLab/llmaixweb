@@ -16,6 +16,7 @@ from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
 from ....utils.helpers import extract_field_types_from_schema
+from ....utils.schema_validation import raise_for_schema_problems
 
 router = APIRouter()
 
@@ -79,6 +80,7 @@ def create_schema(
             status.HTTP_400_BAD_REQUEST,
             "Invalid JSON schema",
         )
+    raise_for_schema_problems(schema.schema_definition, code_prefix="schemas")
     schema_db = models.Schema(**schema.model_dump(), project_id=project_id)
     db.add(schema_db)
     db.commit()
@@ -210,6 +212,7 @@ def update_schema(
             status.HTTP_400_BAD_REQUEST,
             "Invalid JSON schema",
         )
+    raise_for_schema_problems(schema.schema_definition, code_prefix="schemas")
 
     for key, value in schema.model_dump(exclude_unset=True).items():
         setattr(existing_schema, key, value)

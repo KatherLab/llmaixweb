@@ -53,6 +53,28 @@ docker compose logs worker_preprocess
 On macOS, multiprocessing issues can occur — set `CELERY_PREPROCESS_POOL=solo`
 in `.env`.
 
+## Every document in a trial fails with "is a required property"
+
+The model returned JSON that your endpoint's structured output considered valid,
+but that LLMAIx rejected. Almost always the schema lists a field in `required`
+that is not defined in `properties` (typically after a hand-edit or rename):
+constrained decoding builds its grammar from `properties` and ignores the orphan
+entry, so the field can never appear in the output.
+
+Open the schema and fix the `required` list — saving now rejects this, and the
+error message names the field. Note that a trial freezes a **snapshot** of the
+schema at creation time, so a running or completed trial keeps the broken copy;
+create a new trial after fixing the schema.
+
+## Trial results come back truncated ("incomplete")
+
+The model hit its completion-token cap. LLMAIx retries such a call once with a
+larger budget automatically; if the retry is still cut off, the result is stored
+as `incomplete` with the partial output and tuning advice attached. Raise
+**max_completion_tokens** in the trial's advanced settings, lower
+**reasoning_effort** if the model emits long reasoning traces, or trim the schema
+(fewer fields, shorter descriptions) so less output is needed.
+
 ## Still stuck?
 
 Open an issue at

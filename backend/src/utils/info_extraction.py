@@ -778,6 +778,78 @@ def _completion_kwargs(
 
 
 # =============================================================================
+# Finish-reason assessment (retry decisions at the call sites)
+# =============================================================================
+
+
+def _first_choice(response: Any) -> Any | None:
+    choices = getattr(response, "choices", None) or []
+    return choices[0] if choices else None
+
+
+def _choice_content(response: Any) -> str | None:
+    choice = _first_choice(response)
+    content = getattr(getattr(choice, "message", None), "content", None)
+    return content if isinstance(content, str) else None
+
+
+def _response_is_usable(response: Any, schema_def: dict | None) -> bool:
+    """True if the response carries JSON we could actually store as a result."""
+    content = _choice_content(response)
+    if not content or not content.strip():
+        return False
+    try:
+        parsed = safe_json_loads(content)
+    except Exception:
+        return False
+    if schema_def:
+        is_valid, _ = validate_against_schema(parsed, schema_def)
+        return is_valid
+    return True
+
+
+def _needs_length_retry(response: Any, schema_def: dict | None) -> bool:
+    """Whether a token-capped call is worth retrying with a bigger budget.
+
+    Only ``finish_reason == "length"`` qualifies: the cap demonstrably ran out.
+    Empty content is the classic case (reasoning ate the budget), but a body cut
+    off mid-JSON — or a grammar whitespace runaway, which emits a valid JSON
+    prefix followed by filler until the cap — is just as unusable and used to be
+    a hard failure with no second attempt.
+    """
+    choice = _first_choice(response)
+    if choice is None or getattr(choice, "finish_reason", None) != "length":
+        return False
+    return not _response_is_usable(response, schema_def)
+
+
+def _pick_better_response(first: Any, second: Any, schema_def: dict | None) -> Any:
+    """Keep the retry only if it actually improved on the first attempt.
+
+    A retry that comes back empty would otherwise discard the partial output of
+    the first call, which is the only diagnostic material the user gets.
+    """
+    if _response_is_usable(second, schema_def):
+        return second
+    return (
+        second
+        if len(_choice_content(second) or "") >= len(_choice_content(first) or "")
+        else first
+    )
+
+
+def _retry_advanced_options(response: Any, advanced_options: dict | None) -> dict:
+    """Advanced options for a length retry, based on what the first call used."""
+    choice = _first_choice(response)
+    has_reasoning = bool(
+        getattr(getattr(choice, "message", None), "reasoning_content", None)
+    )
+    return _bump_for_length(
+        advanced_options, getattr(response, "usage", None), has_reasoning
+    )
+
+
+# =============================================================================
 # Async/sync extraction
 # =============================================================================
 
@@ -855,28 +927,18 @@ async def extract_info_single_doc_async(
     )
     response = await client.chat.completions.create(**kwargs)
 
-    finish_reason = getattr(response.choices[0], "finish_reason", None)
-    raw_content = response.choices[0].message.content
-    has_reasoning = bool(
-        getattr(response.choices[0].message, "reasoning_content", None)
-    )
-
-    # Retry with bumped tokens if truncated due to length
-    if (finish_reason == "length") and (
-        raw_content is None
-        or (isinstance(raw_content, str) and raw_content.strip() == "")
-    ):
-        bumped_adv = _bump_for_length(
-            advanced_options, getattr(response, "usage", None), has_reasoning
-        )
+    # Retry once with a bumped token cap when the cap is what ruined the result.
+    retried_for_length = _needs_length_retry(response, schema_def)
+    if retried_for_length:
         bumped_kwargs = _completion_kwargs(
             llm_model,
             schema_def,
             _build_messages(prompt_obj, document_text, schema_def),
-            bumped_adv,
+            _retry_advanced_options(response, advanced_options),
             base_url,
         )
-        response = await client.chat.completions.create(**bumped_kwargs)
+        retry_response = await client.chat.completions.create(**bumped_kwargs)
+        response = _pick_better_response(response, retry_response, schema_def)
 
     # Phase 3: store the result with a fresh short-lived session.
     with db_session() as session:
@@ -887,6 +949,7 @@ async def extract_info_single_doc_async(
             response,
             advanced_options,
             schema_def,
+            retried_for_length=retried_for_length,
         )
 
 
@@ -949,28 +1012,19 @@ def extract_info_single_doc(
         )
         response = client.chat.completions.create(**kwargs)
 
-        finish_reason = getattr(response.choices[0], "finish_reason", None)
-        raw_content = response.choices[0].message.content
-        has_reasoning = bool(
-            getattr(response.choices[0].message, "reasoning_content", None)
-        )
-
-        # Retry with bumped tokens if truncated due to length
-        if (finish_reason == "length") and (
-            raw_content is None
-            or (isinstance(raw_content, str) and raw_content.strip() == "")
-        ):
-            bumped_adv = _bump_for_length(
-                advanced_options, getattr(response, "usage", None), has_reasoning
-            )
+        # Retry once with a bumped token cap when the cap is what ruined the
+        # result (see _needs_length_retry).
+        retried_for_length = _needs_length_retry(response, schema_def)
+        if retried_for_length:
             bumped_kwargs = _completion_kwargs(
                 llm_model,
                 schema_def,
                 _build_messages(prompt_obj, document.text, schema_def),
-                bumped_adv,
+                _retry_advanced_options(response, advanced_options),
                 base_url,
             )
-            response = client.chat.completions.create(**bumped_kwargs)
+            retry_response = client.chat.completions.create(**bumped_kwargs)
+            response = _pick_better_response(response, retry_response, schema_def)
 
     _store_result(
         db_session,
@@ -979,6 +1033,7 @@ def extract_info_single_doc(
         response,
         advanced_options,
         schema_def,
+        retried_for_length=retried_for_length,
     )
 
 
@@ -1558,20 +1613,44 @@ def _determine_result_status(
     has_refusal: bool,
     has_content: bool,
 ) -> ResultStatus:
-    """Determine the result status based on various error conditions."""
+    """Determine the result status from the error conditions and finish reason.
+
+    The finish reason decides between causes that look identical from the parse
+    error alone: a body cut off at the token cap is *incomplete*, not malformed
+    JSON, and a provider-filtered response is a refusal, not a truncation.
+    """
     if has_refusal:
         return "refused"
+
+    reason = (finish_reason or "").lower()
+
+    # The provider's safety system cut the response. No token budget or retry
+    # fixes that, so an unusable filtered response is a refusal rather than a
+    # truncation. One that still parsed keeps its result and is merely flagged
+    # incomplete further down.
+    blocked = reason == "content_filter"
+
+    if parse_error == "empty_content":
+        # Nothing came back at all: at the cap it's a truncation, otherwise the
+        # provider returned an empty completion.
+        if blocked:
+            return "refused"
+        return "incomplete" if reason == "length" else "failed"
+
     if parse_error:
-        return "invalid_json"
+        # Unparsable *because* it was cut off mid-JSON — report the cause, not
+        # the symptom.
+        if blocked:
+            return "refused"
+        return "incomplete" if reason == "length" else "invalid_json"
+
     if schema_error:
         return "schema_invalid"
     if not has_content:
-        return "failed"
-    if finish_reason and finish_reason != "stop":
+        return "refused" if blocked else "failed"
+    if reason and reason != "stop":
         return "incomplete"
-    if schema_error is None and parse_error is None and has_content:
-        return "success"
-    return "failed"
+    return "success"
 
 
 def _store_result(
@@ -1581,6 +1660,8 @@ def _store_result(
     response,
     advanced_options: dict | None = None,
     schema_definition: dict | None = None,
+    *,
+    retried_for_length: bool = False,
 ) -> None:
     """
     Store extraction result with detailed status tracking.
@@ -1627,6 +1708,12 @@ def _store_result(
 
     if finish_reason is not None:
         additional["finish_reason"] = finish_reason
+
+    if retried_for_length:
+        # The first attempt hit the token cap; this is the (possibly still
+        # truncated) second one. Surfaced so repeated truncation is diagnosable
+        # instead of looking like a one-off.
+        additional["length_retry_attempted"] = True
 
     if usage is not None:
         try:
@@ -1777,7 +1864,11 @@ def _store_result(
             has_refusal=False,
             has_content=False,
         )
-        additional["error_type"] = "invalid_json"
+        # Name the cause, not the symptom: at the token cap the JSON is
+        # truncated rather than malformed.
+        additional["error_type"] = (
+            "truncated" if additional["status"] == "incomplete" else "invalid_json"
+        )
         additional["error_message"] = f"JSON parse failed: {parse_error}"
 
         if existing:

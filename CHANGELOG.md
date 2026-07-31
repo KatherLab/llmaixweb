@@ -14,6 +14,25 @@ that point forward.
 
 ## [Unreleased]
 
+### Added
+
+- Schemas are now validated when saved: the definition must be valid JSON Schema,
+  and every `required` entry must be defined in the same object's `properties`.
+  A stale `required` entry (e.g. left behind by a rename) is invisible to an LLM
+  endpoint's structured output but made *every* document in a trial fail with
+  `'<field>' is a required property`. The same check runs at trial creation, so
+  schemas saved before this release fail fast instead of consuming a full run.
+
+### Fixed
+
+- LLM extraction retries a token-capped response whenever it is unusable, not
+  only when it came back empty — a body cut off mid-JSON (or a structured-output
+  whitespace runaway) now gets a second attempt with a larger budget instead of
+  failing outright. The retry is discarded if it returns less than the first try.
+- Trial results are classified by finish reason: a response cut off at the token
+  cap is reported as `incomplete` rather than `invalid_json`, and one stopped by
+  a provider content filter as `refused` rather than a truncation.
+
 ## [0.7.2] — 2026-07-29
 
 ### Security
