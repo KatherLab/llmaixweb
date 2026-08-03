@@ -403,7 +403,6 @@ import {
   accuracyBarColor,
   getEvaluationAccuracy,
   getEvaluationDocumentCount,
-  getEvaluationDocuments,
 } from '@/utils/evaluationHelpers'
 import { extractErrorMessage } from '@/utils/errors'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -779,13 +778,14 @@ const getUnmatchedDocCount = (evaluation: EvaluationRow): number => {
   return 0
 }
 
-const hasEvaluationErrors = (evaluation: EvaluationRow): boolean => {
-  return getEvaluationDocuments(evaluation).some((doc) => !!doc.error || doc.has_error)
-}
+// Status badge: derived from the overall metrics' error_document_count (the
+// same source as getUnmatchedDocCount), which is present both in the list
+// payload and in the optimistic in-memory row. Counting document_summaries
+// here made the badge silently disappear after a reload — the list endpoint
+// deliberately omits the per-document payload.
+const getErrorCount = (evaluation: EvaluationRow): number => getUnmatchedDocCount(evaluation)
 
-const getErrorCount = (evaluation: EvaluationRow): number => {
-  return getEvaluationDocuments(evaluation).filter((doc) => !!doc.error || doc.has_error).length
-}
+const hasEvaluationErrors = (evaluation: EvaluationRow): boolean => getErrorCount(evaluation) > 0
 
 // Validation functions
 const validateEvaluationPrerequisites = (): string[] => {

@@ -133,7 +133,7 @@
             v-if="['PENDING', 'STARTED', 'RETRY'].includes(taskStatus.status)"
             variant="danger"
             class="mt-2"
-            @click="revokeTask(taskStatus.id)"
+            @click="pendingRevokeId = taskStatus.id"
           >
             {{ $t('admin.celery.revoke_terminate') }}
           </BaseButton>
@@ -144,6 +144,17 @@
       </div>
       <div v-if="error" class="mt-5 text-red-600 dark:text-red-400 font-semibold">{{ error }}</div>
     </div>
+
+    <!-- Confirm revoking/terminating a running task -->
+    <ConfirmationDialog
+      :open="pendingRevokeId !== null"
+      :title="$t('admin.celery.revoke_dialog.title')"
+      :message="$t('admin.celery.revoke_dialog.message', { id: pendingRevokeId ?? '' })"
+      :confirm-text="$t('admin.celery.revoke_terminate')"
+      confirm-variant="danger"
+      @confirm="confirmRevoke"
+      @cancel="pendingRevokeId = null"
+    />
   </div>
 </template>
 <script setup lang="ts">
@@ -152,6 +163,7 @@ import { useI18n } from 'vue-i18n'
 import { CircleDot } from '@lucide/vue'
 import { adminApi } from '@/services/adminApi'
 import BaseButton from '@/components/common/BaseButton.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -189,6 +201,7 @@ const queues = ref<CeleryQueuesResponse | Record<string, unknown>>({})
 const taskId = ref<string>('')
 const taskStatus = ref<CeleryTaskStatus | null>(null)
 const revokedId = ref<string>('')
+const pendingRevokeId = ref<string | null>(null)
 
 function pretty(obj: unknown): string {
   return JSON.stringify(obj, null, 2)
@@ -278,6 +291,11 @@ async function inspectTask(): Promise<void> {
   } catch (e) {
     error.value = extractErrorMessage(e, t('admin.celery.errors.inspect_task'))
   }
+}
+async function confirmRevoke(): Promise<void> {
+  const id = pendingRevokeId.value
+  pendingRevokeId.value = null
+  if (id) await revokeTask(id)
 }
 async function revokeTask(id: string): Promise<void> {
   error.value = ''

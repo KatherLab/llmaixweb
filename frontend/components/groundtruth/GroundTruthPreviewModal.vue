@@ -256,23 +256,18 @@
         </span>
       </div>
       <div class="flex items-center gap-5">
+        <!-- Why-can't-I-save reason, shown inline while the Save button is
+             disabled (a tooltip never fires over a natively-disabled button). -->
+        <span v-if="!canSave" class="text-xs text-content-muted text-right max-w-[280px]">
+          {{ saveDisabledReason }}
+        </span>
         <BaseButton variant="secondary" class="px-5 py-2 font-semibold text-sm" @click="close">
           {{ $t('groundtruth.preview.cancel') }}
         </BaseButton>
 
-        <!-- Save button — uses BaseButton; disabled state shows a tooltip with the reason. -->
-        <Tooltip v-if="saveDisabled" :text="saveDisabledReason">
-          <BaseButton :disabled="true" class="px-7 py-2 font-bold text-base">
-            <span v-if="!justSaved">{{ $t('groundtruth.preview.save_mappings') }}</span>
-            <span v-else class="flex items-center gap-2">
-              <Check class="w-5 h-5 text-green-300" />
-              {{ $t('groundtruth.preview.saved') }}
-            </span>
-          </BaseButton>
-        </Tooltip>
         <BaseButton
-          v-else
           class="px-7 py-2 font-bold text-base"
+          :disabled="saveDisabled"
           :loading="justSaved"
           @click="saveMappings"
         >
@@ -285,6 +280,18 @@
       </div>
     </template>
   </BaseModal>
+
+  <!-- Discard unsaved mapping changes confirmation -->
+  <ConfirmationDialog
+    :open="showDiscardConfirm"
+    :title="$t('groundtruth.preview.discard_title')"
+    :message="$t('groundtruth.preview.discard_message')"
+    :confirm-text="$t('groundtruth.preview.discard_confirm')"
+    :cancel-text="$t('groundtruth.preview.discard_cancel')"
+    confirm-variant="danger"
+    @confirm="confirmDiscard"
+    @cancel="showDiscardConfirm = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -293,7 +300,7 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
 import { ArrowRight, Check, CircleAlert, FileText, Plus, Sparkles } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import Tooltip from '@/components/common/Tooltip.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import FieldTree from '@/components/groundtruth/FieldTree.vue'
 import MappingList from '@/components/groundtruth/MappingList.vue'
 import GroundTruthSample from '@/components/groundtruth/GroundTruthSample.vue'
@@ -349,6 +356,24 @@ const mappings = ref<MappingItem[]>([])
 const loading = ref(false)
 const justSaved = ref(false)
 const saveDisabled = computed(() => !canSave.value || justSaved.value)
+
+// --- Unsaved-changes tracking (snapshot compare, same pattern as
+// SchemaFormModal). The baseline is captured after open-initialization so the
+// loading/preselect writes don't count as user edits; while dirty, Cancel /
+// backdrop / Esc are intercepted with a discard confirmation instead of
+// silently throwing away hand-made mappings.
+const initialSnapshot = ref('')
+const currentSnapshot = (): string =>
+  JSON.stringify({
+    schemaId: selectedSchemaId.value,
+    idColumn: idColumn.value,
+    jsonIdField: jsonIdField.value,
+    mappings: mappings.value,
+  })
+const hasUnsavedChanges = computed(
+  () => initialSnapshot.value !== '' && currentSnapshot() !== initialSnapshot.value,
+)
+const showDiscardConfirm = ref(false)
 
 function normStr(v: unknown): string {
   return (v ?? '').toString().trim()
@@ -409,6 +434,7 @@ watch(
         // were lost: prefer the schema the saved mappings belong to, otherwise
         // auto-select when there's only one schema to choose from.
         await preselectSchema()
+        initialSnapshot.value = currentSnapshot()
       } catch (err) {
         toast.error(
           t('groundtruth.preview.toast_load_preview_failed', { error: extractErrorMessage(err) }),
@@ -427,6 +453,8 @@ watch(
       selectedGroundTruthField.value = ''
       mappings.value = []
       justSaved.value = false
+      initialSnapshot.value = ''
+      showDiscardConfirm.value = false
     }
   },
   { immediate: true },
@@ -738,6 +766,7 @@ async function saveMappings() {
     return
   }
   toast.success(t('groundtruth.preview.toast_saved'))
+  initialSnapshot.value = currentSnapshot() // saved — no longer dirty
   justSaved.value = true
   setTimeout(() => {
     justSaved.value = false
@@ -818,6 +847,14 @@ function updateJsonIdField(val: string) {
 // Note: the ID column intentionally is NOT persisted on change — saveMappings
 // persists it on Save, so Cancel discards a changed ID like everything else.
 function close() {
+  if (hasUnsavedChanges.value) {
+    showDiscardConfirm.value = true
+    return
+  }
+  emit('close')
+}
+function confirmDiscard() {
+  showDiscardConfirm.value = false
   emit('close')
 }
 </script>

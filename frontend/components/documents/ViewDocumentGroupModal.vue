@@ -178,6 +178,7 @@
             :open="true"
             @update-document="onUpdateDocument"
             @restored="onDocumentRestored"
+            @reprocess="$emit('reprocess', $event)"
           />
           <div
             v-else-if="docLoading"
@@ -266,6 +267,9 @@ const props = defineProps<Props>()
 defineEmits<{
   close: []
   edit: [group: ViewGroup]
+  // Forwarded from the embedded DocumentViewerBody — the host owns the actual
+  // reprocess logic (see DocumentsManagement.reprocessDocument).
+  reprocess: [payload: Partial<DocumentListItem>]
 }>()
 
 const { t } = useI18n({ useScope: 'global' })

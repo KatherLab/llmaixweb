@@ -157,7 +157,11 @@
     </div>
 
     <div v-else-if="activeTab === 'groups'">
-      <DocumentGroups :project-id="projectId" @refresh="handleGroupsRefresh" />
+      <DocumentGroups
+        :project-id="projectId"
+        @refresh="handleGroupsRefresh"
+        @reprocess="reprocessDocument"
+      />
     </div>
 
     <!-- Document Viewer Modal (moved outside tabs to be always available) -->
@@ -185,6 +189,7 @@
       :project-id="projectId"
       @close="closeGroupViewer"
       @edit="closeGroupViewer"
+      @reprocess="reprocessDocument"
     />
   </div>
 </template>

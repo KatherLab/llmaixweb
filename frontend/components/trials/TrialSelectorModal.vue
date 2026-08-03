@@ -9,7 +9,7 @@
     <!-- Error Display -->
     <ErrorBanner
       v-if="error"
-      :message="error"
+      :message="errorText"
       dismissable
       :retry-text="lastFailedOperation ? $t('trials.selector.retry') : ''"
       :retry-loading="isRetrying"
@@ -20,7 +20,21 @@
       <h4 class="text-sm font-medium text-red-800 dark:text-red-300">
         {{ $t('trials.selector.eval_error_heading') }}
       </h4>
-      <p class="mt-1 text-sm text-red-700 dark:text-red-200">{{ error }}</p>
+      <p class="mt-1 text-sm text-red-700 dark:text-red-200">{{ errorText }}</p>
+      <ul
+        v-if="errorDetails.length"
+        class="mt-1 list-disc list-inside text-sm text-red-700 dark:text-red-200"
+      >
+        <li v-for="(item, i) in errorDetails" :key="i">{{ item }}</li>
+      </ul>
+      <template v-if="errorSuggestions.length">
+        <p class="mt-2 text-sm font-medium text-red-800 dark:text-red-300">
+          {{ $t('trials.selector.suggestions_heading') }}
+        </p>
+        <ul class="list-disc list-inside text-sm text-red-700 dark:text-red-200">
+          <li v-for="(item, i) in errorSuggestions" :key="i">{{ item }}</li>
+        </ul>
+      </template>
     </ErrorBanner>
 
     <div class="flex-1 overflow-y-auto p-6">
@@ -271,7 +285,8 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import { describeHttpError, extractErrorMessage } from '@/utils/errors'
+import { describeHttpError, extractErrorDetail, extractErrorMessage } from '@/utils/errors'
+import type { StructuredErrorDetail } from '@/utils/errors'
 import type { GroundTruth, Schema, TrialSummary, Evaluation } from '@/types'
 
 interface LoadingStates {
@@ -329,10 +344,21 @@ const existingEvaluations = ref<Evaluation[]>([])
 const trialMappingStatus = ref<Record<number, boolean>>({})
 const showMappingModal = ref(false)
 
-// Error handling
-const error = ref<string | null>(null)
+// Error handling. `error` is either a plain message or the backend's
+// structured { message, errors, suggestions } evaluation-validation detail.
+const error = ref<string | StructuredErrorDetail | null>(null)
 const lastFailedOperation = ref<(() => Promise<void>) | null>(null)
 const isRetrying = ref(false)
+
+const errorText = computed(() =>
+  typeof error.value === 'string' ? error.value : (error.value?.message ?? ''),
+)
+const errorDetails = computed(() =>
+  error.value && typeof error.value === 'object' ? (error.value.errors ?? []) : [],
+)
+const errorSuggestions = computed(() =>
+  error.value && typeof error.value === 'object' ? (error.value.suggestions ?? []) : [],
+)
 
 // Computed properties
 const isEvaluating = computed(() => loadingStates.value.evaluation)
@@ -599,8 +625,9 @@ const confirmReEvaluate = async (): Promise<void> => {
 const evaluateTrialWithValidation = async (): Promise<void> => {
   const validationErrors = validateEvaluationPrerequisites()
   if (validationErrors.length > 0) {
-    error.value = t('trials.selector.cannot_evaluate', { errors: validationErrors.join(', ') })
-    toast.error(error.value)
+    const message = t('trials.selector.cannot_evaluate', { errors: validationErrors.join(', ') })
+    error.value = message
+    toast.error(message)
     return
   }
 
@@ -645,24 +672,17 @@ const runEvaluation = async (): Promise<void> => {
     )
     lastFailedOperation.value = null
   } catch (err) {
-    if ((err as { response?: { status?: number } })?.response?.status === 400) {
-      const detail = extractErrorMessage(err)
-      if (detail.includes('No field mapping found')) {
-        error.value = t('trials.selector.mappings_missing', { detail })
-        toast.error(t('trials.selector.toast.mappings_required'))
-      } else if (detail.includes('No results found')) {
-        error.value = t('trials.selector.no_results_run_first')
-        toast.error(error.value)
-      } else if (
-        detail.includes('Document not found') ||
-        detail.includes('No ground truth found')
-      ) {
-        error.value = t('trials.selector.data_consistency')
-        toast.error(error.value)
-      } else {
-        error.value = t('trials.selector.eval_failed', { detail })
-        toast.error(error.value)
-      }
+    // Evaluation validation failures return a structured
+    // { message, errors, suggestions } detail — surface all of it in the
+    // banner instead of flattening it to a single string.
+    const structured = extractErrorDetail(err)
+    if (structured) {
+      error.value = structured
+      toast.error(structured.message)
+    } else if ((err as { response?: { status?: number } })?.response?.status === 400) {
+      const message = t('trials.selector.eval_failed', { detail: extractErrorMessage(err) })
+      error.value = message
+      toast.error(message)
     } else {
       handleApiError(err, t('trials.selector.op_evaluation'))
     }

@@ -61,16 +61,29 @@
         {{ $t('projects.actions.save_changes') }}
       </BaseButton>
     </template>
+
+    <!-- Discard unsaved changes confirmation -->
+    <ConfirmationDialog
+      :open="showDiscardConfirm"
+      :title="$t('projects.settings.discard_title')"
+      :message="$t('projects.settings.discard_message')"
+      :confirm-text="$t('projects.settings.discard_confirm')"
+      :cancel-text="$t('projects.settings.discard_cancel')"
+      confirm-variant="danger"
+      @confirm="confirmDiscard"
+      @cancel="showDiscardConfirm = false"
+    />
   </BaseModal>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Trash2 } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import { inputClass, textareaClass } from '@/utils/formStyles'
 import type { ProjectUpdate } from '@/types'
 
@@ -125,11 +138,32 @@ function onSave(): void {
   emit('save', { name: trimmedName, description: description.value.trim() })
 }
 
-// Emit close event
+// Unsaved-changes guard: only *user* edits (vs the values at open) count.
+const isDirty = computed(
+  () =>
+    name.value !== (props.initialName || '') ||
+    description.value !== (props.initialDescription || ''),
+)
+const showDiscardConfirm = ref(false)
+
+// Emit close event (Esc/backdrop/Cancel) — confirm first when dirty
 function emitClose(): void {
-  if (!props.isSaving) {
-    emit('close')
+  if (props.isSaving) return
+  if (isDirty.value) {
+    showDiscardConfirm.value = true
+    return
   }
+  emit('close')
+}
+
+function confirmDiscard(): void {
+  showDiscardConfirm.value = false
+  // Reset to the saved values so a reopen doesn't show (or re-flag) the
+  // discarded edits.
+  name.value = props.initialName || ''
+  description.value = props.initialDescription || ''
+  nameError.value = ''
+  emit('close')
 }
 
 // Emit delete event

@@ -243,7 +243,11 @@
       "errors": {
         "update_failed": "Benutzer konnte nicht aktualisiert werden.",
         "set_password_failed": "Passwort konnte nicht festgelegt werden"
-      }
+      },
+      "discard_title": "Nicht gespeicherte Änderungen verwerfen?",
+      "discard_message": "Ihre Änderungen an diesem Benutzer gehen verloren.",
+      "discard_confirm": "Verwerfen",
+      "discard_cancel": "Weiter bearbeiten"
     },
     "user_management": {
       "title": "Benutzerverwaltung",
@@ -297,6 +301,18 @@
         "load": "Einstellungen konnten nicht geladen werden",
         "save": "Einstellungen konnten nicht gespeichert werden",
         "remove_override": "Überschreibung konnte nicht entfernt werden"
+      },
+      "revert_dialog": {
+        "title": "Überschreibung entfernen?",
+        "message": "Die Überschreibung für {key} entfernen? Die Einstellung wird systemweit auf ihren Standardwert (.env) zurückgesetzt."
+      },
+      "clear_dialog": {
+        "title": "Geheimnis löschen?",
+        "message": "Den gespeicherten Wert für {key} löschen? Alles, was von diesem Geheimnis abhängt, funktioniert nicht mehr, bis ein neuer Wert gesetzt wird."
+      },
+      "toasts": {
+        "override_removed": "Überschreibung für {key} entfernt",
+        "secret_cleared": "{key} gelöscht"
       }
     },
     "sso": {
@@ -372,6 +388,10 @@
         "fetch_status": "Celery-Status konnte nicht abgerufen werden",
         "inspect_task": "Aufgabe konnte nicht geprüft werden",
         "revoke_task": "Aufgabe konnte nicht widerrufen werden"
+      },
+      "revoke_dialog": {
+        "title": "Aufgabe widerrufen?",
+        "message": "Aufgabe {id} beenden? Die laufende Verarbeitung wird sofort gestoppt und kann nicht fortgesetzt werden."
       }
     },
     "audit": {
@@ -574,7 +594,12 @@
       "subtitle": "Externe Identitätsanbieter, die mit Ihrem Konto verknüpft sind.",
       "empty": "Keine externen Konten verbunden.",
       "last_login": "· letzte Anmeldung {date}",
-      "disconnect": "Trennen"
+      "disconnect": "Trennen",
+      "disconnect_dialog": {
+        "title": "{name} trennen?",
+        "message": "Sie können sich dann nicht mehr mit {name} anmelden.",
+        "message_last": "Dies ist Ihr einziger verbundener Anmeldeanbieter. Wenn für Ihr Konto kein Passwort gesetzt ist, sperren Sie sich durch das Trennen selbst aus. Stellen Sie zuerst sicher, dass Sie sich mit E-Mail und Passwort anmelden können."
+      }
     },
     "signout": {
       "title": "Abmelden",
@@ -1416,7 +1441,8 @@
       "upload_failed": "{count} Datei(en) konnten nicht hochgeladen werden: {name} — {message}",
       "upload_in_progress": "Ein Upload läuft bereits",
       "upload_more": " (+{count} weitere)",
-      "uploaded": "{count} Datei hochgeladen | {count} Dateien hochgeladen"
+      "uploaded": "{count} Datei hochgeladen | {count} Dateien hochgeladen",
+      "unresolved_removed": "{count} ausgewählte Datei(en), die nicht mehr gefunden wurden, wurden aus der Auswahl entfernt"
     },
     "type": {
       "file": "Datei",
@@ -1542,7 +1568,11 @@
       "toast_mapped_some": "{count} von {total} nicht zugeordneten Feldern zugeordnet",
       "toast_mapped_none": "0 von {total} nicht zugeordneten Feldern zugeordnet – keine übereinstimmenden Spaltennamen gefunden",
       "toast_save_failed": "Zuordnungen konnten nicht gespeichert werden: {error}",
-      "toast_saved": "Zuordnungen gespeichert"
+      "toast_saved": "Zuordnungen gespeichert",
+      "discard_title": "Zuordnungsänderungen verwerfen?",
+      "discard_message": "Ihre nicht gespeicherten Feldzuordnungen und die ID-Auswahl gehen verloren.",
+      "discard_confirm": "Verwerfen",
+      "discard_cancel": "Weiter bearbeiten"
     },
     "sample": {
       "title": "Ground-Truth-Beispiel"
@@ -1919,7 +1949,11 @@
       "description_placeholder": "Beschreibung (optional)",
       "danger_zone": "Gefahrenbereich",
       "danger_text": "Sobald Sie ein Projekt löschen, gibt es kein Zurück. Seien Sie sicher.",
-      "name_required": "Projektname ist erforderlich"
+      "name_required": "Projektname ist erforderlich",
+      "discard_title": "Nicht gespeicherte Änderungen verwerfen?",
+      "discard_message": "Ihre Änderungen an Projektname und -beschreibung gehen verloren.",
+      "discard_confirm": "Verwerfen",
+      "discard_cancel": "Weiter bearbeiten"
     }
   },
   "schema": {
@@ -2010,7 +2044,8 @@
       "update_failed": "Schema konnte nicht aktualisiert werden",
       "created": "Schema \"{name}\" erfolgreich erstellt",
       "updated": "Schema \"{name}\" erfolgreich aktualisiert",
-      "template_applied": "Vorlage \"{name}\" angewendet"
+      "template_applied": "Vorlage \"{name}\" angewendet",
+      "name_required": "Schemaname ist erforderlich"
     }
   },
   "prompt": {
@@ -2289,7 +2324,11 @@
       "name_required": "Name ist erforderlich",
       "display_name_placeholder": "z. B. Patientenname",
       "description_placeholder": "Kurze Beschreibung dieses Feldes",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "discard_title": "Nicht gespeicherte Änderungen verwerfen?",
+      "discard_message": "Das Feld, das Sie hinzufügen wollten, geht verloren.",
+      "discard_confirm": "Verwerfen",
+      "discard_cancel": "Weiter bearbeiten"
     },
     "edit_modal": {
       "title_root": "Wurzelschema bearbeiten",
@@ -2474,7 +2513,12 @@
       "toast": {
         "start_failed": "Der Durchlauf konnte nicht gestartet werden. Bitte versuchen Sie es erneut."
       },
-      "intro_dismiss": "Verstanden — nicht mehr anzeigen"
+      "intro_dismiss": "Verstanden — nicht mehr anzeigen",
+      "large_run": {
+        "title": "Großen Durchlauf starten?",
+        "message": "Dieser Durchlauf führt die LLM-Extraktion für {count} Dokumente aus. Jedes Dokument ist ein separater LLM-Aufruf und kann API-Guthaben verbrauchen."
+      },
+      "start_trial_count": "Durchlauf starten ({count} Dokument) | Durchlauf starten ({count} Dokumente)"
     },
     "metadata": {
       "name_label": "Name des Durchlaufs",
@@ -2823,7 +2867,8 @@
         "eval_completed": "Auswertung von {name} abgeschlossen",
         "mappings_required": "Feldzuordnungen sind erforderlich, wurden aber nicht gefunden. Bitte konfigurieren Sie sie zuerst.",
         "mappings_configured": "Feldzuordnungen konfiguriert"
-      }
+      },
+      "suggestions_heading": "Vorschläge"
     },
     "provenance": {
       "mode_label": "Herkunft der Werte hervorheben",

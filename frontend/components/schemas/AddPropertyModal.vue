@@ -1,12 +1,5 @@
 <template>
-  <BaseModal
-    :open="open"
-    size="sm"
-    :closeable="false"
-    :close-on-esc="false"
-    body-class="p-6"
-    @close="$emit('close')"
-  >
+  <BaseModal :open="open" size="sm" body-class="p-6" @close="tryClose">
     <h3 class="text-lg font-semibold text-content mb-4">
       {{
         advancedMode
@@ -98,7 +91,7 @@
       </div>
     </form>
     <template #footer>
-      <BaseButton variant="secondary" @click="$emit('close')">{{
+      <BaseButton variant="secondary" @click="tryClose">{{
         $t('schemaEditor.add_modal.cancel')
       }}</BaseButton>
       <BaseButton variant="primary" :disabled="!!nameError" @click="submit">{{
@@ -107,6 +100,18 @@
           : $t('schemaEditor.add_modal.title')
       }}</BaseButton>
     </template>
+
+    <!-- Discard unsaved changes confirmation -->
+    <ConfirmationDialog
+      :open="showDiscardConfirm"
+      :title="$t('schemaEditor.add_modal.discard_title')"
+      :message="$t('schemaEditor.add_modal.discard_message')"
+      :confirm-text="$t('schemaEditor.add_modal.discard_confirm')"
+      :cancel-text="$t('schemaEditor.add_modal.discard_cancel')"
+      confirm-variant="danger"
+      @confirm="confirmDiscard"
+      @cancel="showDiscardConfirm = false"
+    />
   </BaseModal>
 </template>
 
@@ -116,6 +121,7 @@ import { useI18n } from 'vue-i18n'
 import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 
 interface AvailableType {
   value: string
@@ -187,5 +193,29 @@ const submit = () => {
   const name = form.value.name.trim()
   if (!name || nameError.value) return
   emit('add', { ...form.value, name })
+}
+
+// Unsaved-changes guard: the form starts empty on open, so any typed value
+// (or a non-default type) counts as work worth confirming before discard.
+const isDirty = computed(
+  () =>
+    !!form.value.name.trim() ||
+    !!form.value.title.trim() ||
+    !!form.value.description.trim() ||
+    form.value.type !== 'string',
+)
+const showDiscardConfirm = ref(false)
+
+const tryClose = () => {
+  if (isDirty.value) {
+    showDiscardConfirm.value = true
+    return
+  }
+  emit('close')
+}
+
+const confirmDiscard = () => {
+  showDiscardConfirm.value = false
+  emit('close')
 }
 </script>

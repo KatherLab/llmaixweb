@@ -243,7 +243,11 @@
       "errors": {
         "update_failed": "Échec de la mise à jour de l'utilisateur.",
         "set_password_failed": "Échec de la définition du mot de passe"
-      }
+      },
+      "discard_title": "Abandonner les modifications non enregistrées ?",
+      "discard_message": "Vos modifications de cet utilisateur seront perdues.",
+      "discard_confirm": "Abandonner",
+      "discard_cancel": "Continuer la modification"
     },
     "user_management": {
       "title": "Gestion des utilisateurs",
@@ -297,6 +301,18 @@
         "load": "Échec du chargement des paramètres",
         "save": "Échec de l'enregistrement des paramètres",
         "remove_override": "Échec de la suppression de la substitution"
+      },
+      "revert_dialog": {
+        "title": "Supprimer la substitution ?",
+        "message": "Supprimer la substitution pour {key} ? Le paramètre reviendra à sa valeur par défaut (.env) pour tout le système."
+      },
+      "clear_dialog": {
+        "title": "Effacer le secret ?",
+        "message": "Effacer la valeur enregistrée pour {key} ? Tout ce qui dépend de ce secret cessera de fonctionner jusqu'à ce qu'une nouvelle valeur soit définie."
+      },
+      "toasts": {
+        "override_removed": "Substitution pour {key} supprimée",
+        "secret_cleared": "{key} effacé"
       }
     },
     "sso": {
@@ -372,6 +388,10 @@
         "fetch_status": "Échec de la récupération du statut Celery",
         "inspect_task": "Échec de l'inspection de la tâche",
         "revoke_task": "Échec de la révocation de la tâche"
+      },
+      "revoke_dialog": {
+        "title": "Révoquer la tâche ?",
+        "message": "Terminer la tâche {id} ? Le travail en cours sera arrêté immédiatement et ne pourra pas reprendre."
       }
     },
     "audit": {
@@ -574,7 +594,12 @@
       "subtitle": "Fournisseurs d'identité externes liés à votre compte.",
       "empty": "Aucun compte externe connecté.",
       "last_login": "· dernière connexion {date}",
-      "disconnect": "Déconnecter"
+      "disconnect": "Déconnecter",
+      "disconnect_dialog": {
+        "title": "Déconnecter {name} ?",
+        "message": "Vous ne pourrez plus vous connecter avec {name}.",
+        "message_last": "Il s'agit de votre seul fournisseur de connexion associé. Si votre compte n'a pas de mot de passe défini, le déconnecter vous bloquerait l'accès. Assurez-vous d'abord de pouvoir vous connecter avec votre e-mail et votre mot de passe."
+      }
     },
     "signout": {
       "title": "Se déconnecter",
@@ -1416,7 +1441,8 @@
       "upload_failed": "Échec du téléversement de {count} fichier(s) : {name} — {message}",
       "upload_in_progress": "Un téléversement est déjà en cours",
       "upload_more": " (+{count} de plus)",
-      "uploaded": "{count} fichier téléversé | {count} fichiers téléversés"
+      "uploaded": "{count} fichier téléversé | {count} fichiers téléversés",
+      "unresolved_removed": "{count} fichier(s) sélectionné(s) introuvable(s) ont été retirés de la sélection"
     },
     "type": {
       "file": "Fichier",
@@ -1542,7 +1568,11 @@
       "toast_mapped_some": "{count} sur {total} champs non mappés ont été mappés",
       "toast_mapped_none": "0 sur {total} champs non mappés mappés — aucun nom de colonne correspondant trouvé",
       "toast_save_failed": "Échec de l'enregistrement des mappages : {error}",
-      "toast_saved": "Mappages enregistrés"
+      "toast_saved": "Mappages enregistrés",
+      "discard_title": "Abandonner les modifications de correspondance ?",
+      "discard_message": "Vos correspondances de champs non enregistrées et votre sélection d'ID seront perdues.",
+      "discard_confirm": "Abandonner",
+      "discard_cancel": "Continuer la modification"
     },
     "sample": {
       "title": "Échantillon Ground Truth"
@@ -1919,7 +1949,11 @@
       "description_placeholder": "Description (facultatif)",
       "danger_zone": "Zone de danger",
       "danger_text": "Une fois un projet supprimé, il n'y a pas de retour en arrière. Soyez certain.",
-      "name_required": "Le nom du projet est requis"
+      "name_required": "Le nom du projet est requis",
+      "discard_title": "Abandonner les modifications non enregistrées ?",
+      "discard_message": "Vos modifications du nom et de la description du projet seront perdues.",
+      "discard_confirm": "Abandonner",
+      "discard_cancel": "Continuer la modification"
     }
   },
   "schema": {
@@ -2010,7 +2044,8 @@
       "update_failed": "Échec de la mise à jour du schéma",
       "created": "Schéma \"{name}\" créé avec succès",
       "updated": "Schéma \"{name}\" mis à jour avec succès",
-      "template_applied": "Modèle \"{name}\" appliqué"
+      "template_applied": "Modèle \"{name}\" appliqué",
+      "name_required": "Le nom du schéma est obligatoire"
     }
   },
   "prompt": {
@@ -2289,7 +2324,11 @@
       "name_required": "Le nom est obligatoire",
       "display_name_placeholder": "ex. : Nom du patient",
       "description_placeholder": "Brève description de ce champ",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "discard_title": "Abandonner les modifications non enregistrées ?",
+      "discard_message": "Le champ que vous avez commencé à ajouter sera perdu.",
+      "discard_confirm": "Abandonner",
+      "discard_cancel": "Continuer la modification"
     },
     "edit_modal": {
       "title_root": "Modifier le schéma racine",
@@ -2474,7 +2513,12 @@
       "toast": {
         "start_failed": "Impossible de lancer l'essai. Veuillez réessayer."
       },
-      "intro_dismiss": "Compris — ne plus afficher"
+      "intro_dismiss": "Compris — ne plus afficher",
+      "large_run": {
+        "title": "Lancer un essai volumineux ?",
+        "message": "Cet essai exécutera l'extraction LLM sur {count} documents. Chaque document est un appel LLM distinct et peut consommer des crédits d'API."
+      },
+      "start_trial_count": "Lancer l'essai ({count} document) | Lancer l'essai ({count} documents)"
     },
     "metadata": {
       "name_label": "Nom de l'essai",
@@ -2823,7 +2867,8 @@
         "eval_completed": "Évaluation de {name} terminée",
         "mappings_required": "Les correspondances de champs sont requises mais introuvables. Veuillez d'abord les configurer.",
         "mappings_configured": "Correspondances de champs configurées"
-      }
+      },
+      "suggestions_heading": "Suggestions"
     },
     "provenance": {
       "mode_label": "Surligner la source des valeurs",

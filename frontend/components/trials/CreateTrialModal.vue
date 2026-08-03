@@ -292,9 +292,21 @@
         :loading="submitting"
         @click="handleStartTrial"
       >
-        {{ submitting ? $t('trials.create.verifying') : $t('trials.create.start_trial') }}
+        {{ submitting ? $t('trials.create.verifying') : startTrialLabel }}
       </BaseButton>
     </template>
+
+    <!-- Large-run cost confirmation: every selected document is a separate,
+         potentially billable LLM call (mirrors the retry dialog's warning). -->
+    <ConfirmationDialog
+      :open="showLargeRunConfirm"
+      :title="$t('trials.create.large_run.title')"
+      :message="$t('trials.create.large_run.message', { count: selectedDocCount.toLocaleString() })"
+      :confirm-text="$t('trials.create.start_trial')"
+      confirm-variant="primary"
+      @confirm="confirmLargeRun"
+      @cancel="showLargeRunConfirm = false"
+    />
 
     <!-- Discard unsaved changes confirmation -->
     <ConfirmationDialog
@@ -631,7 +643,35 @@ const buildFormData = (): TrialCreatePayload => {
   return formData
 }
 
+/* Scale cue + cost guard: the Start button shows how many documents are
+ * attached, and runs above the threshold get an explicit confirmation —
+ * each document is a separate (potentially billable) LLM call. */
+const LARGE_TRIAL_THRESHOLD = 100
+const showLargeRunConfirm = ref(false)
+
+const selectedDocCount = computed(() => trialData.value.document_ids?.length ?? 0)
+
+const startTrialLabel = computed(() => {
+  const count = selectedDocCount.value
+  if (!count) return t('trials.create.start_trial')
+  return t('trials.create.start_trial_count', { count: count.toLocaleString() }, count)
+})
+
 const handleStartTrial = async (): Promise<void> => {
+  if (!canSubmit.value || submitting.value) return
+  if (selectedDocCount.value > LARGE_TRIAL_THRESHOLD) {
+    showLargeRunConfirm.value = true
+    return
+  }
+  await startTrial()
+}
+
+const confirmLargeRun = async (): Promise<void> => {
+  showLargeRunConfirm.value = false
+  await startTrial()
+}
+
+const startTrial = async (): Promise<void> => {
   if (!canSubmit.value || submitting.value) return
 
   submitting.value = true

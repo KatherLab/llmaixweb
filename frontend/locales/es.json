@@ -243,7 +243,11 @@
       "errors": {
         "update_failed": "No se pudo actualizar el usuario.",
         "set_password_failed": "No se pudo establecer la contraseña"
-      }
+      },
+      "discard_title": "¿Descartar los cambios no guardados?",
+      "discard_message": "Se perderán sus cambios en este usuario.",
+      "discard_confirm": "Descartar",
+      "discard_cancel": "Seguir editando"
     },
     "user_management": {
       "title": "Gestión de usuarios",
@@ -297,6 +301,18 @@
         "load": "No se pudo cargar la configuración",
         "save": "No se pudo guardar la configuración",
         "remove_override": "No se pudo eliminar la anulación"
+      },
+      "revert_dialog": {
+        "title": "¿Eliminar la anulación?",
+        "message": "¿Eliminar la anulación de {key}? El ajuste volverá a su valor predeterminado (.env) para todo el sistema."
+      },
+      "clear_dialog": {
+        "title": "¿Borrar el secreto?",
+        "message": "¿Borrar el valor almacenado de {key}? Todo lo que dependa de este secreto dejará de funcionar hasta que se establezca un nuevo valor."
+      },
+      "toasts": {
+        "override_removed": "Anulación de {key} eliminada",
+        "secret_cleared": "{key} borrado"
       }
     },
     "sso": {
@@ -372,6 +388,10 @@
         "fetch_status": "No se pudo obtener el estado de Celery",
         "inspect_task": "No se pudo inspeccionar la tarea",
         "revoke_task": "No se pudo revocar la tarea"
+      },
+      "revoke_dialog": {
+        "title": "¿Revocar la tarea?",
+        "message": "¿Terminar la tarea {id}? El trabajo en curso se detendrá de inmediato y no podrá reanudarse."
       }
     },
     "audit": {
@@ -574,7 +594,12 @@
       "subtitle": "Proveedores de identidad externos vinculados a su cuenta.",
       "empty": "No hay cuentas externas conectadas.",
       "last_login": "· último inicio de sesión {date}",
-      "disconnect": "Desconectar"
+      "disconnect": "Desconectar",
+      "disconnect_dialog": {
+        "title": "¿Desconectar {name}?",
+        "message": "Ya no podrá iniciar sesión con {name}.",
+        "message_last": "Este es su único proveedor de inicio de sesión conectado. Si su cuenta no tiene contraseña establecida, desconectarlo le dejaría sin acceso. Asegúrese primero de poder iniciar sesión con su correo y contraseña."
+      }
     },
     "signout": {
       "title": "Cerrar sesión",
@@ -1416,7 +1441,8 @@
       "upload_failed": "No se pudieron subir {count} archivo(s): {name} — {message}",
       "upload_in_progress": "Ya hay una subida en curso",
       "upload_more": " (+{count} más)",
-      "uploaded": "{count} archivo subido | {count} archivos subidos"
+      "uploaded": "{count} archivo subido | {count} archivos subidos",
+      "unresolved_removed": "Se quitaron {count} archivo(s) seleccionado(s) que ya no se encontraron"
     },
     "type": {
       "file": "Archivo",
@@ -1542,7 +1568,11 @@
       "toast_mapped_some": "Se asignaron {count} de {total} campos sin asignar",
       "toast_mapped_none": "Se asignaron 0 de {total} campos sin asignar: no se encontraron nombres de columna coincidentes",
       "toast_save_failed": "No se pudieron guardar las asignaciones: {error}",
-      "toast_saved": "Asignaciones guardadas"
+      "toast_saved": "Asignaciones guardadas",
+      "discard_title": "¿Descartar los cambios de asignación?",
+      "discard_message": "Se perderán sus asignaciones de campos no guardadas y su selección de ID.",
+      "discard_confirm": "Descartar",
+      "discard_cancel": "Seguir editando"
     },
     "sample": {
       "title": "Muestra de Ground Truth"
@@ -1919,7 +1949,11 @@
       "description_placeholder": "Descripción (opcional)",
       "danger_zone": "Zona de peligro",
       "danger_text": "Una vez que elimine un proyecto, no hay vuelta atrás. Asegúrese.",
-      "name_required": "El nombre del proyecto es obligatorio"
+      "name_required": "El nombre del proyecto es obligatorio",
+      "discard_title": "¿Descartar los cambios no guardados?",
+      "discard_message": "Se perderán sus cambios en el nombre y la descripción del proyecto.",
+      "discard_confirm": "Descartar",
+      "discard_cancel": "Seguir editando"
     }
   },
   "schema": {
@@ -2010,7 +2044,8 @@
       "update_failed": "No se pudo actualizar el esquema",
       "created": "Esquema \"{name}\" creado correctamente",
       "updated": "Esquema \"{name}\" actualizado correctamente",
-      "template_applied": "Plantilla \"{name}\" aplicada"
+      "template_applied": "Plantilla \"{name}\" aplicada",
+      "name_required": "El nombre del esquema es obligatorio"
     }
   },
   "prompt": {
@@ -2289,7 +2324,11 @@
       "name_required": "El nombre es obligatorio",
       "display_name_placeholder": "p. ej., Nombre del paciente",
       "description_placeholder": "Breve descripción de este campo",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "discard_title": "¿Descartar los cambios no guardados?",
+      "discard_message": "Se perderá el campo que empezó a añadir.",
+      "discard_confirm": "Descartar",
+      "discard_cancel": "Seguir editando"
     },
     "edit_modal": {
       "title_root": "Editar esquema raíz",
@@ -2474,7 +2513,12 @@
       "toast": {
         "start_failed": "No se pudo iniciar el ensayo. Inténtelo de nuevo."
       },
-      "intro_dismiss": "Entendido: no mostrar de nuevo"
+      "intro_dismiss": "Entendido: no mostrar de nuevo",
+      "large_run": {
+        "title": "¿Iniciar un ensayo grande?",
+        "message": "Este ensayo ejecutará la extracción LLM en {count} documentos. Cada documento es una llamada LLM independiente y puede consumir créditos de API."
+      },
+      "start_trial_count": "Iniciar ensayo ({count} documento) | Iniciar ensayo ({count} documentos)"
     },
     "metadata": {
       "name_label": "Nombre del ensayo",
@@ -2823,7 +2867,8 @@
         "eval_completed": "Evaluación de {name} completada",
         "mappings_required": "Se requieren asignaciones de campos pero no se encontraron. Configúrelas primero.",
         "mappings_configured": "Asignaciones de campos configuradas"
-      }
+      },
+      "suggestions_heading": "Sugerencias"
     },
     "provenance": {
       "mode_label": "Resaltar el origen de los valores",

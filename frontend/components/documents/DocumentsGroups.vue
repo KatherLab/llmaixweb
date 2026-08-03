@@ -186,6 +186,7 @@
       :project-id="projectId"
       @close="showViewGroup = false"
       @edit="editGroup"
+      @reprocess="emit('reprocess', $event)"
     />
 
     <!-- Delete Group Confirmation Modal -->
@@ -230,7 +231,7 @@ import Tooltip from '@/components/common/Tooltip.vue'
 import { usePagination } from '@/composables/usePagination'
 import { extractErrorMessage } from '@/utils/errors'
 import { checkboxClass } from '@/utils/formStyles'
-import type { DocumentSetCreate, DocumentSetSummary } from '@/types'
+import type { DocumentListItem, DocumentSetCreate, DocumentSetSummary } from '@/types'
 
 interface Props {
   projectId: string | number
@@ -242,6 +243,9 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   refresh: []
+  // Forwarded from the group viewer's embedded document viewer — handled by
+  // DocumentsManagement, which owns the reprocess logic.
+  reprocess: [doc: Partial<DocumentListItem>]
 }>()
 
 const { t } = useI18n({ useScope: 'global' })

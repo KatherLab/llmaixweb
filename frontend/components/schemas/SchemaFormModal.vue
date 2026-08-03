@@ -205,8 +205,16 @@
       <BaseButton
         variant="primary"
         :loading="isSubmitting"
-        :disabled="!isSchemaValid || (simpleMode && !simpleEditorValid)"
-        :title="simpleMode && !simpleEditorValid ? $t('schema.form.fix_field_names') : undefined"
+        :disabled="
+          !schemaForm.schema_name.trim() || !isSchemaValid || (simpleMode && !simpleEditorValid)
+        "
+        :title="
+          !schemaForm.schema_name.trim()
+            ? $t('schema.form.name_required')
+            : simpleMode && !simpleEditorValid
+              ? $t('schema.form.fix_field_names')
+              : undefined
+        "
         data-testid="schema-submit"
         @click="isEdit ? updateSchema() : createSchema()"
       >
@@ -366,6 +374,12 @@ const confirmDiscard = () => {
 }
 
 const createSchema = async () => {
+  const schemaName = schemaForm.value.schema_name.trim()
+  if (!schemaName) {
+    schemaError.value = t('schema.form.name_required')
+    toast.error(schemaError.value)
+    return
+  }
   if (simpleMode.value && !simpleEditorValid.value) {
     schemaError.value = t('schema.form.fix_field_names')
     toast.error(schemaError.value)
@@ -390,7 +404,7 @@ const createSchema = async () => {
       return
     }
     response = await schemasApi.create(props.projectId, {
-      schema_name: schemaForm.value.schema_name,
+      schema_name: schemaName,
       schema_definition: schemaDefinition,
     })
     initialSnapshot.value = currentSnapshot() // saved — no longer dirty
@@ -407,6 +421,12 @@ const createSchema = async () => {
 }
 
 const updateSchema = async () => {
+  const schemaName = schemaForm.value.schema_name.trim()
+  if (!schemaName) {
+    schemaError.value = t('schema.form.name_required')
+    toast.error(schemaError.value)
+    return
+  }
   if (simpleMode.value && !simpleEditorValid.value) {
     schemaError.value = t('schema.form.fix_field_names')
     toast.error(schemaError.value)
@@ -431,7 +451,7 @@ const updateSchema = async () => {
       return
     }
     response = await schemasApi.update(props.projectId, props.schema!.id, {
-      schema_name: schemaForm.value.schema_name,
+      schema_name: schemaName,
       schema_definition: schemaDefinition,
     })
     initialSnapshot.value = currentSnapshot() // saved — no longer dirty
@@ -511,7 +531,10 @@ const onRawSchemaChange = () => {
 }
 
 const applyTemplate = (template: SchemaTemplate) => {
-  visualSchema.value = template.schema
+  // Deep clone per editor: `visualSchema` and `simpleSchema` are independent
+  // working copies, and sharing the template object would let edits mutate it.
+  visualSchema.value = JSON.parse(JSON.stringify(template.schema))
+  simpleSchema.value = JSON.parse(JSON.stringify(template.schema))
   schemaForm.value.schema_definition = JSON.stringify(template.schema, null, 2)
   schemaForm.value.schema_name = template.name
   showTemplates.value = false

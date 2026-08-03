@@ -121,6 +121,36 @@ export function extractErrorMessage(
   return fallback
 }
 
+/** Structured backend error detail: a message plus optional actionable lists. */
+export interface StructuredErrorDetail {
+  message: string
+  errors?: string[]
+  suggestions?: string[]
+}
+
+/**
+ * Extract a structured `{ message, errors, suggestions }` error detail when the
+ * backend sent one (e.g. evaluation validation failures return per-check errors
+ * and actionable suggestions). Returns null for every other error shape —
+ * callers should then fall back to `extractErrorMessage`, whose plain-string
+ * contract is unchanged.
+ */
+export function extractErrorDetail(err: unknown): StructuredErrorDetail | null {
+  if (!isAxiosLike(err)) return null
+  const detail = err.response?.data?.detail
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return null
+  const message = (detail as { message?: unknown }).message
+  if (typeof message !== 'string' || !message.trim()) return null
+  const toStrings = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x.trim()) : []
+  const errors = toStrings((detail as { errors?: unknown }).errors)
+  const suggestions = toStrings((detail as { suggestions?: unknown }).suggestions)
+  // Plain { code, message } details are not "structured" in this sense — those
+  // stay on the extractErrorMessage path (which localizes known codes).
+  if (!errors.length && !suggestions.length) return null
+  return { message, errors, suggestions }
+}
+
 /**
  * Describe an API error in the context of a user-facing operation.
  *

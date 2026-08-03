@@ -301,45 +301,19 @@ function handleQueryParams(): void {
     handleStepChange(queryTab, { replace: true })
   }
 
-  // Note: the `?group=` param (preprocessing history "Go to Group") is consumed
-  // by DocumentsManagement itself on mount. Driving it from here with a timed
-  // dispatch is racy against the async tab component + out-in transition, so the
-  // child reads the param directly once mounted.
-
-  // Pass expand parameters to child components via custom events
-  // Need to wait for tab change to render the component first
-  if (expandTask) {
-    const taskId = String(expandTask)
-    // Ensure we're on the files tab
-    if (currentStep.value !== 'files') {
-      handleStepChange('files', { replace: true })
-    }
-    // Wait for component to render and then dispatch event
-    setTimeout(() => {
-      document.dispatchEvent(
-        new CustomEvent('expand-preprocessing-task', { detail: { id: taskId } }),
-      )
-      // Clean up query params after handling
-      const { expandTask: _omit, ...rest } = route.query
-      void _omit
-      router.replace({ query: { ...rest, expandTask: undefined } })
-    }, 300)
+  // Note: the deep-link params themselves (`?group=`, `?expandTask=`,
+  // `?expandTrial=`) are consumed by the child tab components on mount (plus a
+  // route watcher for the already-mounted case). Driving them from here with a
+  // timed CustomEvent dispatch was racy against the async tab component + out-in
+  // transition — on a slow chunk load the event fired into the void and the
+  // stripped param made refresh unrecoverable. Here we only make sure the
+  // matching tab is shown.
+  if (expandTask && currentStep.value !== 'files') {
+    handleStepChange('files', { replace: true })
   }
 
-  if (expandTrial) {
-    const trialId = String(expandTrial)
-    // Ensure we're on the trials tab
-    if (currentStep.value !== 'trials') {
-      handleStepChange('trials', { replace: true })
-    }
-    // Wait for component to render and then dispatch event
-    setTimeout(() => {
-      document.dispatchEvent(new CustomEvent('expand-trial', { detail: { id: trialId } }))
-      // Clean up query params after handling
-      const { expandTrial: _omit, ...rest } = route.query
-      void _omit
-      router.replace({ query: { ...rest, expandTrial: undefined } })
-    }, 300)
+  if (expandTrial && currentStep.value !== 'trials') {
+    handleStepChange('trials', { replace: true })
   }
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :open="open" size="md" @close="emit('close')">
+  <BaseModal :open="open" size="md" @close="tryClose">
     <template #header>
       <div>
         <h3 class="text-lg font-semibold text-content">{{ $t('admin.edit_modal.title') }}</h3>
@@ -160,7 +160,7 @@
       <BaseButton
         variant="secondary"
         class="dark:bg-surface dark:text-content-muted dark:border-strong dark:hover:bg-surface-sunken"
-        @click="emit('close')"
+        @click="tryClose"
       >
         {{ $t('admin.edit_modal.cancel') }}
       </BaseButton>
@@ -173,17 +173,30 @@
         {{ isSavingEdit ? $t('admin.edit_modal.saving') : $t('admin.edit_modal.save_changes') }}
       </BaseButton>
     </template>
+
+    <!-- Discard unsaved changes confirmation -->
+    <ConfirmationDialog
+      :open="showDiscardConfirm"
+      :title="$t('admin.edit_modal.discard_title')"
+      :message="$t('admin.edit_modal.discard_message')"
+      :confirm-text="$t('admin.edit_modal.discard_confirm')"
+      :cancel-text="$t('admin.edit_modal.discard_cancel')"
+      confirm-variant="danger"
+      @confirm="confirmDiscard"
+      @cancel="showDiscardConfirm = false"
+    />
   </BaseModal>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { UserResponse, UserUpdateAdmin, UserRole } from '@/types'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
@@ -248,6 +261,37 @@ watch(
     }
   },
 )
+
+// Unsaved-changes guard: user edits vs the loaded user, plus a typed-but-not-
+// applied password. After a save the parent hands back the updated user, so
+// the form matches again and the modal closes freely.
+const isDirty = computed(() => {
+  if (!props.user) return false
+  return (
+    editForm.value.full_name !== props.user.full_name ||
+    editForm.value.email !== props.user.email ||
+    editForm.value.role !== props.user.role ||
+    editForm.value.is_active !== props.user.is_active ||
+    !!editPassword.value
+  )
+})
+const showDiscardConfirm = ref(false)
+
+function tryClose(): void {
+  if (isDirty.value) {
+    showDiscardConfirm.value = true
+    return
+  }
+  emit('close')
+}
+
+function confirmDiscard(): void {
+  showDiscardConfirm.value = false
+  // Reset so reopening the same user (the id-keyed watch below won't refire)
+  // doesn't resurrect the discarded edits.
+  initForm()
+  emit('close')
+}
 
 function toggleEditUserActive(): void {
   if (props.user && props.user.id !== props.currentUserId) {

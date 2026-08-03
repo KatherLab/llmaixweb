@@ -397,7 +397,7 @@
 <script setup lang="ts">
 import { ref, computed, toRef, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { AlertTriangle, Search, Settings, Trash2, Upload, X } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
@@ -445,6 +445,7 @@ const emit = defineEmits<{
 }>()
 const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
+const route = useRoute()
 const router = useRouter()
 const { downloadBlob } = useFileDownload()
 
@@ -483,6 +484,13 @@ const pendingProcessingSettings = ref<PreprocessingTaskCreate | null>(null)
 // "Select all" across all pages state
 const selectAllMode = ref(false) // true = all files in project, false = only current page
 const isSelectingAll = ref(false) // fetching all file ids across pages
+
+// Cross-page file cache: id → file object. `files` only holds the CURRENT page,
+// but "Select all" collects ids across every page — without this cache those
+// selections render as "Unknown" in the preprocessing panel and unconfigured
+// CSV/XLSX files on other pages slip past the Start gate. Fed by normal page
+// loads and the select-all loop; entries are pruned when files are deleted.
+const fileCache = ref(new Map<number, FileWithTasks>())
 
 interface PaginationState {
   page: number
@@ -704,6 +712,9 @@ const fetchFiles = async (options: { forceRefreshTasks?: boolean } = {}): Promis
 
     files.value = filesWithTasks
 
+    // Keep the cross-page cache fresh for the files on this page.
+    for (const f of filesWithTasks) fileCache.value.set(f.id, f)
+
     // Mark that we've loaded files at least once (for filter UX)
     hasLoadedFiles.value = true
 
@@ -823,6 +834,18 @@ const selectAllFiles = async (): Promise<void> => {
       const fileIds = respData.items.map((f) => f.id)
       allFileIds.push(...fileIds)
 
+      // Cache the fetched file objects so files on other pages resolve in the
+      // preprocessing panel (name, type, CSV/XLSX config state) instead of
+      // rendering as "Unknown". Preserve any task info from a prior page load.
+      for (const f of respData.items) {
+        const existing = fileCache.value.get(f.id)
+        fileCache.value.set(f.id, {
+          ...f,
+          preprocessing_tasks: existing?.preprocessing_tasks ?? [],
+          _status: existing?._status ?? 'not_preprocessed',
+        })
+      }
+
       if (page >= respData.total_pages) break
       page++
     }
@@ -890,6 +913,8 @@ const confirmDeleteSelected = (): void => {
 // operate on a file that no longer exists.
 const onFilesDeleted = (ids: number[]): void => {
   selectedFiles.value = selectedFiles.value.filter((id) => !ids.includes(id))
+  // Deleted files must not linger in the cross-page cache.
+  for (const id of ids) fileCache.value.delete(id)
 }
 // Modal closed (after any delete attempts) — refresh the file list.
 const closeDeleteFileModal = async (): Promise<void> => {
@@ -921,8 +946,26 @@ const onImportConfigClose = (): void => {
   configChainActive.value = false
 }
 const onImportConfigSaved = async (): Promise<void> => {
+  const savedFile = configuringFile.value
   showImportConfigModal.value = false
   await fetchFiles()
+  // A configured file on ANOTHER page isn't refreshed by fetchFiles — refetch
+  // it individually so its cache entry picks up the new preprocessing_strategy
+  // (otherwise unconfiguredCsvXlsxFiles keeps flagging it and the configure
+  // chain would re-open the same file forever).
+  if (savedFile && !files.value.some((f) => f.id === savedFile.id)) {
+    try {
+      const { data } = await filesApi.get(props.projectId, savedFile.id)
+      const existing = fileCache.value.get(savedFile.id)
+      fileCache.value.set(savedFile.id, {
+        ...data,
+        preprocessing_tasks: existing?.preprocessing_tasks ?? [],
+        _status: existing?._status ?? 'not_preprocessed',
+      })
+    } catch (err) {
+      console.error('Failed to refresh configured file:', err)
+    }
+  }
   emit('files-changed')
   if (configChainActive.value) {
     // `unconfiguredCsvXlsxFiles` recomputes off the refreshed file list.
@@ -938,9 +981,10 @@ const onImportConfigSaved = async (): Promise<void> => {
   }
 }
 
-// Get file by ID (for panel display)
+// Get file by ID (for panel display). Falls back to the cross-page cache for
+// selected files that aren't on the current page (cross-page "Select all").
 const getFileById = (id: number): FileWithTasks | undefined => {
-  return files.value.find((f) => f.id === id)
+  return files.value.find((f) => f.id === id) ?? fileCache.value.get(id)
 }
 
 // Handle view preprocessing history
@@ -1030,21 +1074,35 @@ const quickProcessFile = (file: FileModel): void => {
   openProcessingPanel()
 }
 
-// Open processing panel
+// Open processing panel. Selected ids that can't be resolved to a file object
+// (edge case: cache miss, e.g. the file vanished server-side) are dropped with
+// a visible warning instead of rendering "Unknown" rows and letting Start fail
+// server-side.
 const openProcessingPanel = (): void => {
+  const unresolved = selectedFiles.value.filter((id) => !getFileById(id))
+  if (unresolved.length > 0) {
+    selectedFiles.value = selectedFiles.value.filter((id) => !!getFileById(id))
+    toast.warning(t('files.toast.unresolved_removed', { count: unresolved.length }))
+    if (selectedFiles.value.length === 0) return
+  }
   showProcessingPanel.value = true
 }
 
-// Check if any selected CSV/XLSX files lack preprocessing strategy
+// Check if any selected CSV/XLSX files lack preprocessing strategy. Resolves
+// each selected id via getFileById (current page + cross-page cache) so
+// unconfigured files on OTHER pages are caught too, not just the visible ones.
 const unconfiguredCsvXlsxFiles = computed(() => {
-  return files.value.filter((f) => {
-    if (!selectedFiles.value.includes(f.id)) return false
+  const result: FileWithTasks[] = []
+  for (const id of selectedFiles.value) {
+    const f = getFileById(id)
+    if (!f) continue
     const isCsvXlsx =
       f.file_type === 'text/csv' ||
       f.file_type === 'application/vnd.ms-excel' ||
       f.file_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    return isCsvXlsx && !f.preprocessing_strategy
-  })
+    if (isCsvXlsx && !f.preprocessing_strategy) result.push(f)
+  }
+  return result
 })
 
 // Can start processing
@@ -1544,23 +1602,25 @@ const { start: startWebSocket, stop: stopWebSocket } = usePreprocessingUpdates({
   invalidateTaskCache,
 })
 
-// Handle expand-preprocessing-task event from ActivityBell
-const handleExpandTask = (event: Event): void => {
-  const customEvent = event as CustomEvent<{ id?: string | number }>
-  const taskId = customEvent.detail?.id
-  if (!taskId) return
-
-  // Try to find and expand the task, retrying a few times if files aren't loaded yet
+// Deep-link "?expandTask=" (ActivityBell "view task"): open the preprocessing
+// history panel on the task's file and highlight the task. Consumed here on
+// mount (plus a watcher for the already-mounted case) instead of a timed DOM
+// event from ProjectDetail — mirrors the ?group= pattern in DocumentsManagement.
+// The param is stripped when the history panel CLOSES, not on open, so this
+// async tab component can mount more than once during navigation and every
+// instance still sees the param (see closeGroupViewer's rationale over there).
+const expandTaskById = (taskId: number): void => {
+  // Retry a few times: on a cold deep-link the files/tasks may not be loaded yet.
   const tryExpandTask = (attempts = 0): void => {
     const fileWithTask = files.value.find((f) =>
-      f.preprocessing_tasks?.some((t) => t.id === Number(taskId)),
+      f.preprocessing_tasks?.some((t) => t.id === taskId),
     )
     if (fileWithTask) {
       // Open the history panel for this file
       historyFile.value = fileWithTask
       showHistoryPanel.value = true
       // Expand the specific task (the panel watches highlightTaskId)
-      highlightTaskId.value = Number(taskId)
+      highlightTaskId.value = taskId
     } else if (attempts < 5) {
       // Retry after a short delay if files aren't loaded yet
       setTimeout(() => tryExpandTask(attempts + 1), 200)
@@ -1569,16 +1629,41 @@ const handleExpandTask = (event: Event): void => {
   tryExpandTask()
 }
 
+const consumeExpandTaskParam = (): void => {
+  const raw = route.query.expandTask
+  if (raw) expandTaskById(Number(raw))
+}
+
+const clearExpandTaskParam = (): void => {
+  if (route.query.expandTask) {
+    router.replace({ query: { ...route.query, expandTask: undefined } })
+  }
+}
+
+// Already-mounted case: the param changes while this is the active tab
+// (mount-time reads happen in onMounted).
+watch(
+  () => route.query.expandTask,
+  (newVal) => {
+    if (newVal) consumeExpandTaskParam()
+  },
+)
+
+// Strip the deep-link param once the history panel closes (covers every close
+// path, since they all flip showHistoryPanel).
+watch(showHistoryPanel, (open) => {
+  if (!open) clearExpandTaskParam()
+})
+
 onMounted(async () => {
   fetchFiles()
   fetchOcrSettings()
   startWebSocket()
-  // Listen for expand event from ActivityBell
-  document.addEventListener('expand-preprocessing-task', handleExpandTask as EventListener)
+  // Deep-link from ActivityBell: expand a preprocessing task's history.
+  consumeExpandTaskParam()
 })
 
 onUnmounted(() => {
   stopWebSocket()
-  document.removeEventListener('expand-preprocessing-task', handleExpandTask as EventListener)
 })
 </script>

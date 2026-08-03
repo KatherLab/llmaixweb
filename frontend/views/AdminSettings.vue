@@ -75,7 +75,7 @@
                   v-if="val.is_set"
                   type="button"
                   class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
-                  @click="clearSecret(key)"
+                  @click="pendingClearKey = key"
                 >
                   {{ $t('admin.settings.clear') }}
                 </button>
@@ -116,7 +116,7 @@
                 v-if="val.overridden"
                 type="button"
                 class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
-                @click="deleteOverride(key)"
+                @click="pendingRevertKey = key"
               >
                 {{ $t('admin.settings.revert') }}
               </button>
@@ -130,7 +130,7 @@
                 v-if="val.overridden"
                 type="button"
                 class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
-                @click="deleteOverride(key)"
+                @click="pendingRevertKey = key"
               >
                 {{ $t('admin.settings.revert') }}
               </button>
@@ -144,7 +144,7 @@
                 v-if="val.overridden"
                 type="button"
                 class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
-                @click="deleteOverride(key)"
+                @click="pendingRevertKey = key"
               >
                 {{ $t('admin.settings.revert') }}
               </button>
@@ -168,6 +168,28 @@
     <div v-else class="py-12 flex justify-center">
       <LoadingSpinner />
     </div>
+
+    <!-- Confirm removing a system-wide override -->
+    <ConfirmationDialog
+      :open="pendingRevertKey !== null"
+      :title="$t('admin.settings.revert_dialog.title')"
+      :message="$t('admin.settings.revert_dialog.message', { key: pendingRevertKey ?? '' })"
+      :confirm-text="$t('admin.settings.revert')"
+      confirm-variant="danger"
+      @confirm="confirmRevert"
+      @cancel="pendingRevertKey = null"
+    />
+
+    <!-- Confirm clearing a stored secret -->
+    <ConfirmationDialog
+      :open="pendingClearKey !== null"
+      :title="$t('admin.settings.clear_dialog.title')"
+      :message="$t('admin.settings.clear_dialog.message', { key: pendingClearKey ?? '' })"
+      :confirm-text="$t('admin.settings.clear')"
+      confirm-variant="danger"
+      @confirm="confirmClear"
+      @cancel="pendingClearKey = null"
+    />
   </div>
 </template>
 
@@ -176,8 +198,10 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CircleDot, Lock } from '@lucide/vue'
 import { adminApi } from '@/services/adminApi'
+import { useToast } from '@/composables/useToast'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { extractErrorMessage } from '@/utils/errors'
@@ -185,6 +209,7 @@ import { inputClass } from '@/utils/formStyles'
 import type { AdminSettings, AdminSettingEntry } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
+const toast = useToast()
 
 const settings = reactive<AdminSettings>({})
 // Draft values are a mix of booleans, numbers, and strings.
@@ -235,6 +260,22 @@ const filteredSettings = computed<AdminSettings>(() =>
 const showSecretInput = reactive<Record<string, boolean>>({})
 const secretDraft = reactive<Record<string, string>>({})
 
+// --- Destructive-action confirmations ---
+const pendingRevertKey = ref<string | null>(null)
+const pendingClearKey = ref<string | null>(null)
+
+async function confirmRevert(): Promise<void> {
+  const key = pendingRevertKey.value
+  pendingRevertKey.value = null
+  if (key) await deleteOverride(key)
+}
+
+async function confirmClear(): Promise<void> {
+  const key = pendingClearKey.value
+  pendingClearKey.value = null
+  if (key) await clearSecret(key)
+}
+
 function cancelSecretInput(key: string): void {
   showSecretInput[key] = false
   secretDraft[key] = ''
@@ -278,6 +319,7 @@ async function clearSecret(key: string): Promise<void> {
       entry.effective = null
     }
     secretDraft[key] = ''
+    toast.success(t('admin.settings.toasts.secret_cleared', { key }))
     success.value = true
     setTimeout(() => {
       success.value = false
@@ -374,6 +416,7 @@ async function deleteOverride(key: string): Promise<void> {
       entry.overridden = false
       draft[key] = entry.original ?? ''
     }
+    toast.success(t('admin.settings.toasts.override_removed', { key }))
   } catch (e) {
     error.value = extractErrorMessage(e, t('admin.settings.errors.remove_override'))
   }

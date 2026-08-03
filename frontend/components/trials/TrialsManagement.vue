@@ -205,8 +205,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, type PropType } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, type PropType } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { debounce } from 'perfect-debounce'
 import { useToast } from '@/composables/useToast'
 import { ClipboardList, SearchX, Trash2 } from '@lucide/vue'
@@ -286,6 +287,8 @@ const props = defineProps({
 
 const toast = useToast()
 const { t } = useI18n({ useScope: 'global' })
+const route = useRoute()
+const router = useRouter()
 
 const documents = ref<DocumentListItem[]>([])
 
@@ -333,19 +336,22 @@ const showDownloadModal = ref(false)
 const trialToDownload = ref<TrialSummary | null>(null)
 const highlightedTrialId = ref<number | null>(null)
 
-// Handle expand-trial event from ActivityBell
-const handleExpandTrial = (event: Event): void => {
-  const customEvent = event as CustomEvent<{ id?: string | number }>
-  const trialId = customEvent.detail?.id
-  if (!trialId) return
-
-  highlightedTrialId.value = Number(trialId)
+// Deep-link "?expandTrial=" (ActivityBell "view trial"): highlight the trial's
+// row and scroll it into view. Consumed here on mount (plus a watcher for the
+// already-mounted case) instead of a timed DOM event from ProjectDetail —
+// mirrors the ?group= pattern in DocumentsManagement. The param is only
+// stripped AFTER the card was actually found (successful handling), so this
+// async tab component can mount more than once during navigation and every
+// instance still sees the param; on failure it stays so a refresh can retry.
+const expandTrialById = (trialId: number): void => {
+  highlightedTrialId.value = trialId
 
   // Try to scroll to the trial card, retrying if it's not found yet
   const tryScrollToTrial = (attempts = 0): void => {
     const card = document.getElementById(`trial-card-${trialId}`)
     if (card) {
       card.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      clearExpandTrialParam()
     } else if (attempts < 5) {
       // Retry after a short delay if card isn't found yet
       setTimeout(() => tryScrollToTrial(attempts + 1), 200)
@@ -353,6 +359,26 @@ const handleExpandTrial = (event: Event): void => {
   }
   setTimeout(() => tryScrollToTrial(), 100)
 }
+
+const consumeExpandTrialParam = (): void => {
+  const raw = route.query.expandTrial
+  if (raw) expandTrialById(Number(raw))
+}
+
+const clearExpandTrialParam = (): void => {
+  if (route.query.expandTrial) {
+    router.replace({ query: { ...route.query, expandTrial: undefined } })
+  }
+}
+
+// Already-mounted case: the param changes while this is the active tab
+// (mount-time reads happen in onMounted).
+watch(
+  () => route.query.expandTrial,
+  (newVal) => {
+    if (newVal) consumeExpandTrialParam()
+  },
+)
 
 const trialDisabled = computed(
   () =>
@@ -792,11 +818,10 @@ onMounted(async () => {
     isLoading.value = false
     startWebSocket()
   }
-  // Listen for expand event from ActivityBell
-  document.addEventListener('expand-trial', handleExpandTrial as EventListener)
+  // Deep-link from ActivityBell: highlight + scroll to a trial.
+  consumeExpandTrialParam()
 })
 onUnmounted(() => {
   stopWebSocket()
-  document.removeEventListener('expand-trial', handleExpandTrial as EventListener)
 })
 </script>

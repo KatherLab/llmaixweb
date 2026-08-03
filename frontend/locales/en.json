@@ -243,7 +243,11 @@
       "errors": {
         "update_failed": "Failed to update user.",
         "set_password_failed": "Failed to set password"
-      }
+      },
+      "discard_title": "Discard unsaved changes?",
+      "discard_message": "Your changes to this user will be lost.",
+      "discard_confirm": "Discard",
+      "discard_cancel": "Keep editing"
     },
     "user_management": {
       "title": "User Management",
@@ -297,6 +301,18 @@
         "load": "Failed to load settings",
         "save": "Failed to save settings",
         "remove_override": "Failed to remove override"
+      },
+      "revert_dialog": {
+        "title": "Remove override?",
+        "message": "Remove the override for {key}? The setting will revert to its default (.env) value for the whole system."
+      },
+      "clear_dialog": {
+        "title": "Clear secret?",
+        "message": "Clear the stored value for {key}? Anything that depends on this secret will stop working until a new value is set."
+      },
+      "toasts": {
+        "override_removed": "Override for {key} removed",
+        "secret_cleared": "{key} cleared"
       }
     },
     "sso": {
@@ -372,6 +388,10 @@
         "fetch_status": "Failed to fetch celery status",
         "inspect_task": "Failed to inspect task",
         "revoke_task": "Failed to revoke task"
+      },
+      "revoke_dialog": {
+        "title": "Revoke task?",
+        "message": "Terminate task {id}? The running work will be stopped immediately and cannot be resumed."
       }
     },
     "audit": {
@@ -574,7 +594,12 @@
       "subtitle": "External identity providers linked to your account.",
       "empty": "No external accounts connected.",
       "last_login": "· last login {date}",
-      "disconnect": "Disconnect"
+      "disconnect": "Disconnect",
+      "disconnect_dialog": {
+        "title": "Disconnect {name}?",
+        "message": "You will no longer be able to sign in with {name}.",
+        "message_last": "This is your only connected sign-in provider. If your account has no password set, disconnecting it would lock you out. Make sure you can sign in with your email and password first."
+      }
     },
     "signout": {
       "title": "Sign out",
@@ -1416,7 +1441,8 @@
       "upload_failed": "Failed to upload {count} file(s): {name} — {message}",
       "upload_in_progress": "Upload already in progress",
       "upload_more": " (+{count} more)",
-      "uploaded": "Uploaded {count} file | Uploaded {count} files"
+      "uploaded": "Uploaded {count} file | Uploaded {count} files",
+      "unresolved_removed": "Removed {count} selected file(s) that could no longer be found"
     },
     "type": {
       "file": "File",
@@ -1542,7 +1568,11 @@
       "toast_mapped_some": "Mapped {count} of {total} unmapped fields",
       "toast_mapped_none": "Mapped 0 of {total} unmapped fields — no matching column names found",
       "toast_save_failed": "Failed to save mappings: {error}",
-      "toast_saved": "Mappings saved"
+      "toast_saved": "Mappings saved",
+      "discard_title": "Discard mapping changes?",
+      "discard_message": "Your unsaved field mappings and ID selection will be lost.",
+      "discard_confirm": "Discard",
+      "discard_cancel": "Keep editing"
     },
     "sample": {
       "title": "Ground Truth Sample"
@@ -1919,7 +1949,11 @@
       "description_placeholder": "Description (optional)",
       "danger_zone": "Danger Zone",
       "danger_text": "Once you delete a project, there is no going back. Be certain.",
-      "name_required": "Project name is required"
+      "name_required": "Project name is required",
+      "discard_title": "Discard unsaved changes?",
+      "discard_message": "Your changes to the project name and description will be lost.",
+      "discard_confirm": "Discard",
+      "discard_cancel": "Keep editing"
     }
   },
   "schema": {
@@ -2010,7 +2044,8 @@
       "update_failed": "Failed to update schema",
       "created": "Schema \"{name}\" created successfully",
       "updated": "Schema \"{name}\" updated successfully",
-      "template_applied": "Template \"{name}\" applied"
+      "template_applied": "Template \"{name}\" applied",
+      "name_required": "Schema name is required"
     }
   },
   "prompt": {
@@ -2289,7 +2324,11 @@
       "name_required": "Name is required",
       "display_name_placeholder": "e.g., Patient Name",
       "description_placeholder": "Brief description of this field",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "discard_title": "Discard unsaved changes?",
+      "discard_message": "The field you started adding will be lost.",
+      "discard_confirm": "Discard",
+      "discard_cancel": "Keep editing"
     },
     "edit_modal": {
       "title_root": "Edit Root Schema",
@@ -2474,7 +2513,12 @@
       "toast": {
         "start_failed": "Could not start the trial. Please try again."
       },
-      "intro_dismiss": "Got it — don't show this again"
+      "intro_dismiss": "Got it — don't show this again",
+      "large_run": {
+        "title": "Start large trial?",
+        "message": "This trial will run LLM extraction on {count} documents. Each document is a separate LLM call and may consume API credits."
+      },
+      "start_trial_count": "Start Trial ({count} document) | Start Trial ({count} documents)"
     },
     "metadata": {
       "name_label": "Trial Name",
@@ -2823,7 +2867,8 @@
         "eval_completed": "{name} evaluation completed",
         "mappings_required": "Field mappings are required but not found. Please configure them first.",
         "mappings_configured": "Field mappings configured"
-      }
+      },
+      "suggestions_heading": "Suggestions"
     },
     "provenance": {
       "mode_label": "Highlight source of values",

@@ -46,7 +46,15 @@ const emit = defineEmits<{ (e: 'action'): void }>()
     <div v-if="actionText || $slots.action" class="mt-6 flex flex-col items-center">
       <slot name="action">
         <Tooltip v-if="disabled && disabledReason" :text="disabledReason">
-          <BaseButton variant="primary" :disabled="disabled" @click="emit('action')">
+          <!-- pointer-events-none lets hover reach the Tooltip wrapper: a
+               natively-disabled button swallows mouse events, so the tooltip
+               would otherwise never show. -->
+          <BaseButton
+            variant="primary"
+            :disabled="disabled"
+            class="pointer-events-none"
+            @click="emit('action')"
+          >
             {{ actionText }}
           </BaseButton>
         </Tooltip>

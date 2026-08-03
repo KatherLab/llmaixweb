@@ -144,7 +144,7 @@
                 size="sm"
                 tone="red"
                 :disabled="disconnectingId === ident.id"
-                @click="disconnectIdentity(ident)"
+                @click="identityToDisconnect = ident"
               >
                 {{ disconnectingId === ident.id ? '...' : $t('account.connected.disconnect') }}
               </BaseButton>
@@ -173,6 +173,31 @@
         </div>
       </GlassCard>
     </div>
+
+    <!-- Confirm disconnecting an SSO identity. If it's the last one, warn about
+         lockout — the backend refuses when no password is set, but the frontend
+         can't see whether one is, so the message errs on the side of caution. -->
+    <ConfirmationDialog
+      :open="identityToDisconnect !== null"
+      :title="
+        $t('account.connected.disconnect_dialog.title', {
+          name: identityToDisconnect?.provider_name ?? '',
+        })
+      "
+      :message="
+        identities.length <= 1
+          ? $t('account.connected.disconnect_dialog.message_last', {
+              name: identityToDisconnect?.provider_name ?? '',
+            })
+          : $t('account.connected.disconnect_dialog.message', {
+              name: identityToDisconnect?.provider_name ?? '',
+            })
+      "
+      :confirm-text="$t('account.connected.disconnect')"
+      confirm-variant="danger"
+      @confirm="confirmDisconnect"
+      @cancel="identityToDisconnect = null"
+    />
   </div>
 </template>
 
@@ -187,6 +212,7 @@ import { usersApi } from '@/services/usersApi'
 import { extractErrorMessage } from '@/utils/errors'
 import { formatDate } from '@/utils/formatters'
 import BaseButton from '@/components/common/BaseButton.vue'
+import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import FormField from '@/components/common/FormField.vue'
 import PasswordInput from '@/components/common/PasswordInput.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -233,6 +259,7 @@ const ssoEnabled = ref<boolean | null>(null)
 const identities = ref<UserIdentityResponse[]>([])
 const loadingIdentities = ref<boolean>(false)
 const disconnectingId = ref<number | null>(null)
+const identityToDisconnect = ref<UserIdentityResponse | null>(null)
 
 // ── Sign out ──
 const signingOut = ref<boolean>(false)
@@ -305,6 +332,12 @@ async function changePassword(): Promise<void> {
   } finally {
     savingPassword.value = false
   }
+}
+
+async function confirmDisconnect(): Promise<void> {
+  const ident = identityToDisconnect.value
+  identityToDisconnect.value = null
+  if (ident) await disconnectIdentity(ident)
 }
 
 async function disconnectIdentity(ident: UserIdentityResponse): Promise<void> {
