@@ -135,6 +135,11 @@
                 : $t('admin.sso.form.client_secret_placeholder')
             "
             autocomplete="new-password"
+            name="oidc_client_secret"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bwignore="true"
+            data-form-type="other"
           />
         </div>
         <div>

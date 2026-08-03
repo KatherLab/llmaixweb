@@ -84,7 +84,12 @@
                 <input
                   v-model="secretDraft[key]"
                   type="password"
-                  autocomplete="off"
+                  autocomplete="new-password"
+                  :name="key.toLowerCase()"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-bwignore="true"
+                  data-form-type="other"
                   :class="[inputClass, 'flex-1']"
                   :placeholder="$t('admin.settings.enter_new_value')"
                 />

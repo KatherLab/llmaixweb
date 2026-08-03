@@ -32,6 +32,14 @@ interface Props {
   invalid?: boolean
   hint?: string
   error?: string
+  /** Field name. Browsers autofill by name heuristics, so a non-credential
+   *  name (e.g. `vision_api_key`) matters for fields that only look like logins. */
+  name?: string
+  /** Set for password-shaped fields that are NOT account credentials (e.g. an
+   *  OCR/LLM API key). Browsers ignore autocomplete="off" on type=password, so
+   *  a manager will fill a saved login into the field and that value gets
+   *  submitted and persisted as the key. Mirrors the same prop on FormField. */
+  ignorePasswordManagers?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -47,6 +55,8 @@ const props = withDefaults(defineProps<Props>(), {
   invalid: false,
   hint: '',
   error: '',
+  name: undefined,
+  ignorePasswordManagers: false,
 })
 
 const emit = defineEmits<{ (e: 'update:modelValue', value: string): void }>()
@@ -124,6 +134,11 @@ const segments = computed(() => {
         :minlength="minlength"
         :maxlength="maxlength"
         :class="inputClasses"
+        :name="name"
+        :data-1p-ignore="ignorePasswordManagers ? '' : undefined"
+        :data-lpignore="ignorePasswordManagers ? 'true' : undefined"
+        :data-bwignore="ignorePasswordManagers ? 'true' : undefined"
+        :data-form-type="ignorePasswordManagers ? 'other' : undefined"
         @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
       <button

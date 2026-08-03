@@ -213,7 +213,9 @@
               v-model="mistralApiKey"
               :label="$t('files.config.api_key')"
               :show-strength="false"
-              autocomplete="off"
+              autocomplete="new-password"
+              name="mistral_api_key"
+              ignore-password-managers
               maxlength="512"
               :placeholder="$t('files.config.leave_empty_default')"
             />
@@ -231,7 +233,9 @@
               v-model="visionApiKey"
               :label="$t('files.config.api_key')"
               :show-strength="false"
-              autocomplete="off"
+              autocomplete="new-password"
+              name="vision_api_key"
+              ignore-password-managers
               maxlength="512"
               :placeholder="$t('files.config.leave_empty_default')"
             />
