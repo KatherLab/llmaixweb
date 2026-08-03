@@ -14,6 +14,8 @@ that point forward.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-08-03
+
 ### Added
 
 - Trial results viewer: click an extracted value to highlight where it came from
@@ -42,6 +44,7 @@ that point forward.
   only when they came back empty.
 - Results cut off at the token cap are reported as `incomplete`, and
   provider-filtered ones as `refused`.
+- JSON result viewer: objects nested inside arrays can be expanded again.
 
 ## [0.7.2] — 2026-07-29
 
@@ -127,7 +130,8 @@ that point forward.
 See the [GitHub Releases page](https://github.com/KatherLab/llmaixweb/releases)
 and the git commit history for details.
 
-[Unreleased]: https://github.com/KatherLab/llmaixweb/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/KatherLab/llmaixweb/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/KatherLab/llmaixweb/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/KatherLab/llmaixweb/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/KatherLab/llmaixweb/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/KatherLab/llmaixweb/compare/v0.6.8...v0.7.0
