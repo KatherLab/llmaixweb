@@ -23,6 +23,17 @@ export const textareaClass = inputClass + ' resize-y'
 // Select — same base (native arrow kept).
 export const selectClass = inputClass
 
+// Required-but-empty field. Marks the input that is actually blocking the form
+// so it doesn't look identical to the ones already answered. Amber (not red):
+// nothing is wrong yet, it just still needs an answer.
+export const pendingFieldClass = 'ring-1 ring-amber-400/70 dark:ring-amber-500/50'
+
+// Same idea for a bordered *container* (a panel rather than an input). Recolors
+// the existing border instead of adding a ring: a ring paints outside the box,
+// so any scrolling or overflow-hidden ancestor clips it — which showed up as an
+// outline visible only on the corners and one side.
+export const pendingPanelClass = 'border-amber-400/70 dark:border-amber-500/50'
+
 // Label — single convention (replaces the ~8 per-component label variants).
 export const labelClass = 'block text-sm font-medium text-content-muted mb-1.5'
 

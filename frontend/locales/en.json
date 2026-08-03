@@ -2114,7 +2114,8 @@
       "create_failed": "Failed to create prompt",
       "updated": "Prompt updated",
       "update_failed": "Failed to update prompt",
-      "template_applied": "Medical extraction template applied"
+      "template_applied": "Medical extraction template applied",
+      "template_language": "Template language"
     }
   },
   "schemaEditor": {
@@ -2472,7 +2473,8 @@
       },
       "toast": {
         "start_failed": "Could not start the trial. Please try again."
-      }
+      },
+      "intro_dismiss": "Got it — don't show this again"
     },
     "metadata": {
       "name_label": "Trial Name",
@@ -2494,8 +2496,7 @@
       "model_loading": "Loading models...",
       "model_none": "No models available",
       "model_placeholder": "Select a model",
-      "model_help": "Models are loaded from your configured LLM provider. Not all models support structured JSON output — the compatibility test below verifies your chosen model works with the selected schema before you run the trial.",
-      "model_help_tooltip": "The AI model used for extraction. Models are fetched from your LLM provider (system default or your custom API settings). The list shows raw model IDs from the provider; use the compatibility test to confirm a model can produce structured output matching your schema."
+      "model_help_tooltip": "The AI model used for extraction, listed by the raw model ID your LLM endpoint reports (system default, or your custom API settings). Whether it can produce structured JSON for your schema is checked automatically when the trial starts."
     },
     "docsel": {
       "select_documents": "Select Documents",
@@ -2564,7 +2565,12 @@
       "reasoning_low": "Low",
       "reasoning_medium": "Medium",
       "reasoning_high": "High",
-      "reasoning_help": "Hints the model how much compute to spend on chain-of-thought/reasoning. Not all models/APIs support this."
+      "reasoning_help": "Hints the model how much compute to spend on chain-of-thought/reasoning. Not all models/APIs support this.",
+      "evidence_label": "Ask for source quotes",
+      "evidence_help": "The model also returns the verbatim text each value was read from, used to highlight sources in the results viewer. Roughly doubles output tokens and cost.",
+      "evidence_cost": "Doubles output tokens",
+      "prompt_language_label": "Prompt Language",
+      "prompt_language_help": "Language of the instructions the app adds to your prompt (safety notice, schema line, source-quote rules). Defaults to the interface language."
     },
     "custom_api": {
       "api_key_label": "API Key",
@@ -2818,6 +2824,41 @@
         "mappings_required": "Field mappings are required but not found. Please configure them first.",
         "mappings_configured": "Field mappings configured"
       }
+    },
+    "provenance": {
+      "mode_label": "Highlight source of values",
+      "mode_off": "Off",
+      "mode_selected": "Selected",
+      "mode_all": "All",
+      "coverage": "{found}/{total} located",
+      "coverage_title": "Value provenance",
+      "coverage_help": "Values are located by searching the extracted text. Matches come from a text search, not from the model — verify before relying on them.",
+      "coverage_evidence_mode": "This trial ran with source quotes: the model was asked to quote the text each value came from.",
+      "coverage_missing": "No citation: {fields}",
+      "prev_match": "Previous occurrence",
+      "next_match": "Next occurrence",
+      "clear_selection": "Clear selection",
+      "pdf_note": "Highlights are shown on the extracted text.",
+      "pdf_note_switch": "Switch",
+      "kind": {
+        "quote": "Model-cited",
+        "exact": "Verbatim",
+        "normalized": "Normalized",
+        "numeric": "Same number",
+        "date": "Same date",
+        "label": "Field mentioned",
+        "fuzzy": "Approximate"
+      },
+      "desc": {
+        "quote": "The model quoted this passage as its source.",
+        "exact": "The value appears in the text exactly as extracted.",
+        "normalized": "Found ignoring case, spacing, line breaks or accents.",
+        "numeric": "A number in the text has the same value, written differently.",
+        "date": "A date in the text means the same day, written differently.",
+        "label": "Only the field name appears here — the value itself was inferred.",
+        "fuzzy": "A similar passage. Check it manually."
+      },
+      "note_label": "Model's note"
     }
   },
   "errors": {

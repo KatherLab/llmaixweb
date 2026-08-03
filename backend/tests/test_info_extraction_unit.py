@@ -1118,3 +1118,185 @@ def test_extract_info_single_doc_does_not_retry_a_complete_response(
         project_id=trial.project_id,
     )
     assert len(fake.calls) == 1
+
+
+# ---------------------------------------------------------------------------
+# Evidence mode wiring (schema augmentation on the way out, split on the way in)
+# ---------------------------------------------------------------------------
+
+
+def test_store_result_splits_evidence_into_additional_content(extraction_fixture):
+    """The stored result keeps the user's schema shape; quotes move aside.
+
+    This is what protects evaluation, ground-truth mapping and exports from
+    ever seeing the `__evidence` companions.
+    """
+    from backend.src import models
+    from backend.src.utils.enums import TrialResultStatus
+
+    fx = extraction_fixture
+    db, trial, doc, schema = fx["db"], fx["trial"], fx["doc"], fx["schema"]
+
+    ie._store_result(
+        db,
+        trial.id,
+        doc.id,
+        _resp(content='{"x": "ok", "x__evidence": "the value is ok"}'),
+        {"evidence_mode": True},
+        schema.schema_definition,
+        evidence=True,
+    )
+
+    row = (
+        db.query(models.TrialResult)
+        .filter_by(trial_id=trial.id, document_id=doc.id)
+        .one()
+    )
+    assert row.status == TrialResultStatus.SUCCESS
+    assert row.result == {"x": "ok"}
+    assert row.additional_content["evidence"] == {"x": "the value is ok"}
+    assert row.additional_content["evidence_mode"] is True
+
+
+def test_evidence_mode_sends_companion_fields_and_stores_a_clean_result(
+    extraction_fixture, monkeypatch
+):
+    from backend.src import models
+
+    from .fake_llm import make_sequenced_openai
+
+    fx = extraction_fixture
+    db, trial, doc, schema = fx["db"], fx["trial"], fx["doc"], fx["schema"]
+
+    fake = make_sequenced_openai(
+        [({"x": "ok", "x__evidence": "quoted from the document"}, "stop")]
+    )
+    monkeypatch.setattr("backend.src.utils.info_extraction.OpenAI", fake)
+
+    ie.extract_info_single_doc(
+        db_session=db,
+        trial_id=trial.id,
+        document_id=doc.id,
+        llm_model="m",
+        api_key="k",
+        base_url="http://x",
+        schema_id=schema.id,
+        prompt_id=trial.prompt_id,
+        project_id=trial.project_id,
+        advanced_options={"evidence_mode": True},
+    )
+
+    sent = fake.calls[0]
+    sent_schema = sent["response_format"]["json_schema"]["schema"]
+    assert "x__evidence" in sent_schema["properties"]
+    assert "x__evidence" in sent_schema["required"]
+    assert "__evidence" in sent["messages"][-1]["content"]
+
+    row = (
+        db.query(models.TrialResult)
+        .filter_by(trial_id=trial.id, document_id=doc.id)
+        .one()
+    )
+    assert row.result == {"x": "ok"}
+    assert row.additional_content["evidence"] == {"x": "quoted from the document"}
+
+
+def test_evidence_mode_off_leaves_the_request_and_result_untouched(
+    extraction_fixture, monkeypatch
+):
+    from backend.src import models
+
+    from .fake_llm import make_sequenced_openai
+
+    fx = extraction_fixture
+    db, trial, doc, schema = fx["db"], fx["trial"], fx["doc"], fx["schema"]
+
+    fake = make_sequenced_openai([({"x": "ok"}, "stop")])
+    monkeypatch.setattr("backend.src.utils.info_extraction.OpenAI", fake)
+
+    ie.extract_info_single_doc(
+        db_session=db,
+        trial_id=trial.id,
+        document_id=doc.id,
+        llm_model="m",
+        api_key="k",
+        base_url="http://x",
+        schema_id=schema.id,
+        prompt_id=trial.prompt_id,
+        project_id=trial.project_id,
+    )
+
+    sent_schema = fake.calls[0]["response_format"]["json_schema"]["schema"]
+    assert sent_schema == schema.schema_definition
+    assert "__evidence" not in fake.calls[0]["messages"][-1]["content"]
+
+    row = (
+        db.query(models.TrialResult)
+        .filter_by(trial_id=trial.id, document_id=doc.id)
+        .one()
+    )
+    assert "evidence" not in (row.additional_content or {})
+
+
+def test_prompt_language_localizes_the_appended_instructions(
+    extraction_fixture, monkeypatch
+):
+    """A German trial must not reach the model with English scaffolding."""
+    from .fake_llm import make_sequenced_openai
+
+    fx = extraction_fixture
+    db, trial, doc, schema = fx["db"], fx["trial"], fx["doc"], fx["schema"]
+
+    fake = make_sequenced_openai([({"x": "ok"}, "stop")])
+    monkeypatch.setattr("backend.src.utils.info_extraction.OpenAI", fake)
+
+    ie.extract_info_single_doc(
+        db_session=db,
+        trial_id=trial.id,
+        document_id=doc.id,
+        llm_model="m",
+        api_key="k",
+        base_url="http://x",
+        schema_id=schema.id,
+        prompt_id=trial.prompt_id,
+        project_id=trial.project_id,
+        advanced_options={"prompt_language": "de", "evidence_mode": True},
+    )
+
+    messages = fake.calls[0]["messages"]
+    system = next(m["content"] for m in messages if m["role"] == "system")
+    user = next(m["content"] for m in messages if m["role"] == "user")
+
+    assert "nicht vertrauenswürdig" in system
+    assert "Sicherheit:" in system
+    assert "JSON-Schema" in user
+    assert "Begleitfeld" in user
+    # The English scaffolding must be gone, not merely accompanied.
+    assert "untrusted data" not in system
+    assert "Extract the data according to this JSON schema" not in user
+
+
+def test_prompt_language_defaults_to_english(extraction_fixture, monkeypatch):
+    from .fake_llm import make_sequenced_openai
+
+    fx = extraction_fixture
+    db, trial, doc, schema = fx["db"], fx["trial"], fx["doc"], fx["schema"]
+
+    fake = make_sequenced_openai([({"x": "ok"}, "stop")])
+    monkeypatch.setattr("backend.src.utils.info_extraction.OpenAI", fake)
+
+    ie.extract_info_single_doc(
+        db_session=db,
+        trial_id=trial.id,
+        document_id=doc.id,
+        llm_model="m",
+        api_key="k",
+        base_url="http://x",
+        schema_id=schema.id,
+        prompt_id=trial.prompt_id,
+        project_id=trial.project_id,
+    )
+
+    messages = fake.calls[0]["messages"]
+    system = next(m["content"] for m in messages if m["role"] == "system")
+    assert "untrusted data" in system

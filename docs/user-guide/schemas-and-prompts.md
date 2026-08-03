@@ -216,6 +216,13 @@ it switches you to Advanced mode; if you've already typed anything, a
 confirmation guards the overwrite. Closing with unsaved edits prompts a
 **Discard unsaved changes?** confirmation.
 
+The template comes in English, German, French and Spanish, and the selector
+beside the button follows the interface language — German documents generally
+extract better with German instructions. It only affects the text the button
+inserts; you can edit or translate the prompt freely afterwards. The language of
+the instructions the app *appends* at run time is set per trial (see
+[Advanced settings](trials.md#advanced-settings)).
+
 !!! warning "Simple mode drops the system prompt"
     Saving in Simple mode sends an empty system prompt. The system-prompt text
     isn't wiped from the form while you edit — it's only omitted from the saved

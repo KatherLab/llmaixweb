@@ -92,18 +92,98 @@
               <h4 class="flex items-center gap-2 text-sm font-semibold text-content-muted">
                 <FileText class="h-4 w-4" /> {{ $t('trials.viewer.source_document') }}
               </h4>
-              <button
-                v-if="hasPreviewableFile"
-                class="text-xs text-primary hover:underline"
-                @click="toggleOriginalView"
+              <div class="flex items-center gap-2">
+                <BaseSegmentedControl
+                  v-if="hasProvenance"
+                  v-model="highlightMode"
+                  size="sm"
+                  :options="highlightModeOptions"
+                  :aria-label="$t('trials.provenance.mode_label')"
+                />
+                <button
+                  v-if="hasPreviewableFile"
+                  class="text-xs text-primary hover:underline"
+                  @click="toggleOriginalView"
+                >
+                  {{
+                    showOriginal
+                      ? $t('trials.viewer.show_extracted')
+                      : $t('trials.viewer.show_original')
+                  }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Selection bar: which value is being traced, how it was found,
+                 and a stepper when the value occurs more than once. -->
+            <div
+              v-if="selectedLeaf && highlightMode !== 'off'"
+              class="flex items-center gap-2 px-3 py-1.5 border-b border-default bg-surface text-xs shrink-0"
+            >
+              <span class="font-medium text-content truncate">{{ selectedLeaf.label }}</span>
+              <span
+                v-if="selectedKind"
+                class="inline-flex items-center gap-1 shrink-0 text-content-muted"
               >
-                {{
-                  showOriginal
-                    ? $t('trials.viewer.show_extracted')
-                    : $t('trials.viewer.show_original')
-                }}
+                <span class="h-1.5 w-1.5 rounded-full" :class="selectedDotClass" />
+                {{ $t(PROVENANCE_STYLES[selectedKind].labelKey) }}
+              </span>
+              <!-- Nothing is shown for a value the search could not place: see
+                   jsonAnnotations. The model's own note, when there is one, is
+                   labelled as a note — it is a claim, not a citation. -->
+              <span v-if="selectedNote" class="min-w-0 truncate text-content-muted">
+                <span class="text-content-subtle">{{ $t('trials.provenance.note_label') }}:</span>
+                {{ selectedNote }}
+              </span>
+              <div
+                v-if="selectedMatches.length > 1"
+                class="flex items-center gap-1 ml-auto shrink-0"
+              >
+                <span class="tabular-nums text-content-muted">
+                  {{ activeMatchIndex + 1 }} / {{ selectedMatches.length }}
+                </span>
+                <BaseButton
+                  variant="icon"
+                  size="sm"
+                  :title="$t('trials.provenance.prev_match')"
+                  @click="stepMatch(-1)"
+                >
+                  <ChevronUp class="h-3.5 w-3.5" />
+                </BaseButton>
+                <BaseButton
+                  variant="icon"
+                  size="sm"
+                  :title="$t('trials.provenance.next_match')"
+                  @click="stepMatch(1)"
+                >
+                  <ChevronDown class="h-3.5 w-3.5" />
+                </BaseButton>
+              </div>
+              <BaseButton
+                variant="icon"
+                size="sm"
+                :class="selectedMatches.length > 1 ? '' : 'ml-auto'"
+                :title="$t('trials.provenance.clear_selection')"
+                @click="clearSelection"
+              >
+                <X class="h-3.5 w-3.5" />
+              </BaseButton>
+            </div>
+
+            <!-- Highlights live in the extracted text; the PDF is an embedded
+                 viewer with no text layer we can annotate. Say so rather than
+                 silently doing nothing. -->
+            <div
+              v-if="showOriginal && documentPdfUrl && highlightMode !== 'off' && hasProvenance"
+              class="flex items-center gap-2 px-3 py-1.5 border-b border-default bg-surface-muted text-xs text-content-muted shrink-0"
+            >
+              <Info class="h-3.5 w-3.5 shrink-0" />
+              <span class="min-w-0">{{ $t('trials.provenance.pdf_note') }}</span>
+              <button class="text-primary hover:underline shrink-0" @click="showOriginal = false">
+                {{ $t('trials.provenance.pdf_note_switch') }}
               </button>
             </div>
+
             <div class="flex-1 min-h-0 bg-surface-muted">
               <div
                 v-if="documentPdfLoading"
@@ -122,10 +202,13 @@
               <div v-else-if="docLoading" class="flex items-center justify-center h-full">
                 <LoadingSpinner size="medium" inline label="" />
               </div>
-              <pre
+              <HighlightedText
                 v-else-if="documentContent"
-                class="text-xs text-content-muted whitespace-pre-wrap break-words font-mono p-4 overflow-auto h-full"
-                >{{ documentContent }}</pre>
+                :text="documentContent"
+                :ranges="highlightRanges"
+                :active-id="activeRangeId"
+                @select="onRangeSelect"
+              />
               <div
                 v-else
                 class="flex items-center justify-center h-full p-6 text-sm text-content-subtle italic"
@@ -145,6 +228,25 @@
               <h4 class="flex items-center gap-2 text-sm font-semibold text-content-muted">
                 <Braces class="h-4 w-4" /> {{ $t('trials.viewer.result') }}
               </h4>
+              <!-- Coverage: how many extracted values could be traced back to
+                   the document. A low number is the signal worth surfacing. -->
+              <Tooltip
+                v-if="hasProvenance"
+                :title="$t('trials.provenance.coverage_title')"
+                :text="coverageTooltip"
+              >
+                <span
+                  class="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full border border-default bg-surface text-content-muted tabular-nums"
+                >
+                  <MapPin class="h-3 w-3" />
+                  {{
+                    $t('trials.provenance.coverage', {
+                      found: coverage.found,
+                      total: coverage.total,
+                    })
+                  }}
+                </span>
+              </Tooltip>
             </div>
             <div class="relative flex-1 min-h-0 overflow-y-auto bg-surface p-5">
               <!-- Copy JSON — floats top-right so it doesn't affect header height -->
@@ -161,6 +263,9 @@
               <JsonViewer
                 v-if="activeResult.result"
                 :data="activeResult.result as Record<string, unknown>"
+                :annotations="jsonAnnotations"
+                :selected-path="selectedPath"
+                @select="onValueSelect"
               />
               <div v-else class="text-sm text-content-muted italic">
                 {{ $t('trials.viewer.no_output') }}
@@ -246,12 +351,26 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Braces, Check, Copy, FileText, Info, MessageSquare } from '@lucide/vue'
-import JsonViewer from '@/components/common/JsonViewer.vue'
+import {
+  Braces,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  FileText,
+  Info,
+  MapPin,
+  MessageSquare,
+  X,
+} from '@lucide/vue'
+import JsonViewer, { type JsonAnnotation } from '@/components/common/JsonViewer.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
+import HighlightedText, { type HighlightRange } from '@/components/common/HighlightedText.vue'
 import PanelLayout, { type PanelOption } from '@/components/common/PanelLayout.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import Tooltip from '@/components/common/Tooltip.vue'
 import DocumentFilePreview from '@/components/documents/DocumentFilePreview.vue'
 import { documentsApi } from '@/services/documentsApi'
 import { filesApi } from '@/services/filesApi'
@@ -259,6 +378,15 @@ import { useToast } from '@/composables/useToast'
 import { renderMarkdown } from '@/utils/markdown'
 import { getPillClass } from '@/utils/statusStyles'
 import { formatDateSmart } from '@/utils/formatters'
+import {
+  bestMatch,
+  flattenResultLeaves,
+  locateValue,
+  type ProvenanceKind,
+  type ProvenanceMatch,
+  type ResultLeaf,
+} from '@/utils/provenance'
+import { PROVENANCE_NOTE_ONLY, PROVENANCE_STYLES } from '@/utils/provenanceStyles'
 import type { TrialResultItem } from '@/types'
 
 interface AdditionalContent {
@@ -266,6 +394,11 @@ interface AdditionalContent {
   usage?: Record<string, unknown>
   finish_reason?: string
   json_error?: string
+  /** Evidence mode: {json path → verbatim quote the model cited}. */
+  evidence?: Record<string, string>
+  /** Evidence mode: {json path → the model's short note where it had no quote}. */
+  evidence_notes?: Record<string, string>
+  evidence_mode?: boolean
   user_guidance?: { user_message?: string }
   tuning_advice?: {
     recommendations: Array<{
@@ -276,6 +409,8 @@ interface AdditionalContent {
   }
   [key: string]: unknown
 }
+
+type HighlightMode = 'off' | 'selected' | 'all'
 
 interface TokenUsage {
   prompt_tokens?: number
@@ -293,6 +428,9 @@ const toast = useToast()
 const { t } = useI18n({ useScope: 'global' })
 
 const documentContent = ref('')
+// Whether documentContent is real extracted text (vs. the "no text" placeholder).
+// Provenance must never be matched against a placeholder string.
+const documentHasText = ref(false)
 const docLoading = ref(false)
 const documentPreviewable = ref(false)
 const documentFileId = ref<number | null>(null)
@@ -358,6 +496,203 @@ const additionalContent = computed<AdditionalContent | null>(() => {
 
 const reasoningContent = computed(() => additionalContent.value?.reasoning_content || '')
 
+// ---------------------------------------------------------------------------
+// Provenance — where each extracted value came from in the source text
+// ---------------------------------------------------------------------------
+
+const highlightMode = ref<HighlightMode>('selected')
+const selectedPath = ref('')
+const activeMatchIndex = ref(0)
+
+const highlightModeOptions = computed(() => [
+  { label: t('trials.provenance.mode_off'), value: 'off' },
+  { label: t('trials.provenance.mode_selected'), value: 'selected' },
+  { label: t('trials.provenance.mode_all'), value: 'all' },
+])
+
+/** Quotes the model itself cited, when the trial ran with evidence mode on. */
+const evidenceQuotes = computed<Record<string, string>>(
+  () => additionalContent.value?.evidence || {},
+)
+
+/**
+ * The model's one-liner for values it could not quote. This is the only thing
+ * that separates "the document says no" from "the document never says" — a
+ * distinction no amount of text matching can recover.
+ */
+const evidenceNotes = computed<Record<string, string>>(
+  () => additionalContent.value?.evidence_notes || {},
+)
+
+const resultLeaves = computed<ResultLeaf[]>(() =>
+  activeResult.value.result ? flattenResultLeaves(activeResult.value.result) : [],
+)
+
+/**
+ * Every leaf's matches, keyed by path. Computed once per (document, result)
+ * pair and cached by Vue — the fuzzy tier is the expensive one and only runs
+ * for values the cheap tiers could not place.
+ */
+const provenance = computed<Map<string, ProvenanceMatch[]>>(() => {
+  const map = new Map<string, ProvenanceMatch[]>()
+  const text = documentHasText.value ? documentContent.value : ''
+  if (!text) return map
+  for (const leaf of resultLeaves.value) {
+    if (leaf.isEmpty) continue
+    map.set(
+      leaf.path,
+      locateValue(text, leaf.value, {
+        quote: evidenceQuotes.value[leaf.path],
+        label: leaf.label,
+      }),
+    )
+  }
+  return map
+})
+
+const traceableLeaves = computed(() => resultLeaves.value.filter((l) => !l.isEmpty))
+
+/** Provenance is only meaningful when there is text to trace values back to. */
+const hasProvenance = computed(() => provenance.value.size > 0)
+
+const coverage = computed(() => {
+  let found = 0
+  for (const leaf of traceableLeaves.value) {
+    if ((provenance.value.get(leaf.path) || []).length) found++
+  }
+  return { found, total: traceableLeaves.value.length }
+})
+
+const coverageTooltip = computed(() => {
+  // Where the model explained itself, show that alongside the field — this list
+  // is exactly where someone asks "why is this one ungrounded?".
+  const missing = traceableLeaves.value
+    .filter((l) => !(provenance.value.get(l.path) || []).length)
+    .map((l) => {
+      const note = evidenceNotes.value[l.path]
+      return note ? `${l.label} (${note})` : l.label
+    })
+  const lines = [t('trials.provenance.coverage_help')]
+  if (additionalContent.value?.evidence_mode) {
+    lines.push(t('trials.provenance.coverage_evidence_mode'))
+  }
+  if (missing.length) {
+    lines.push(
+      t('trials.provenance.coverage_missing', {
+        fields: missing.slice(0, 12).join(', ') + (missing.length > 12 ? ' …' : ''),
+      }),
+    )
+  }
+  return lines.join('\n')
+})
+
+/**
+ * Per-leaf dot + hover text for the JSON tree.
+ *
+ * Only values with something real to say get an annotation: a citation, or the
+ * model's own note. A value the text search could not place gets nothing —
+ * "not found in the text" is a fact about the search, and reads as a verdict on
+ * the extraction, which for a correctly-derived boolean it is not.
+ */
+const jsonAnnotations = computed<Record<string, JsonAnnotation>>(() => {
+  const out: Record<string, JsonAnnotation> = {}
+  if (!hasProvenance.value) return out
+  for (const leaf of traceableLeaves.value) {
+    const matches = provenance.value.get(leaf.path) || []
+    const best = bestMatch(matches)
+    const note = evidenceNotes.value[leaf.path]
+    const noteLine = note ? `${t('trials.provenance.note_label')}: ${note}` : ''
+    if (!best && !noteLine) continue
+    const style = best ? PROVENANCE_STYLES[best.kind] : null
+    out[leaf.path] = {
+      dotClass: style ? style.dot : PROVENANCE_NOTE_ONLY,
+      title: style
+        ? `${t(style.labelKey)} — ${t(style.descKey)}` + (noteLine ? `\n${noteLine}` : '')
+        : noteLine,
+      count: matches.length,
+    }
+  }
+  return out
+})
+
+const selectedLeaf = computed(
+  () => traceableLeaves.value.find((l) => l.path === selectedPath.value) || null,
+)
+const selectedMatches = computed(() =>
+  selectedPath.value ? provenance.value.get(selectedPath.value) || [] : [],
+)
+const selectedKind = computed<ProvenanceKind | null>(
+  () => bestMatch(selectedMatches.value)?.kind ?? null,
+)
+const selectedNote = computed(() =>
+  selectedPath.value ? evidenceNotes.value[selectedPath.value] || '' : '',
+)
+const selectedDotClass = computed(() =>
+  selectedKind.value ? PROVENANCE_STYLES[selectedKind.value].dot : PROVENANCE_NOTE_ONLY,
+)
+
+const rangeId = (path: string, index: number): string => `${path}#${index}`
+
+const highlightRanges = computed<HighlightRange[]>(() => {
+  if (highlightMode.value === 'off' || !hasProvenance.value) return []
+  const toRanges = (leaf: ResultLeaf): HighlightRange[] =>
+    (provenance.value.get(leaf.path) || []).map((m, i) => ({
+      id: rangeId(leaf.path, i),
+      label: leaf.label,
+      start: m.start,
+      end: m.end,
+      kind: m.kind,
+    }))
+
+  if (highlightMode.value === 'selected') {
+    return selectedLeaf.value ? toRanges(selectedLeaf.value) : []
+  }
+  return traceableLeaves.value.flatMap(toRanges)
+})
+
+const activeRangeId = computed(() =>
+  selectedPath.value ? rangeId(selectedPath.value, activeMatchIndex.value) : '',
+)
+
+/** Jump to the strongest match first — that is the one worth looking at. */
+function bestMatchIndex(matches: ProvenanceMatch[]): number {
+  const best = bestMatch(matches)
+  const idx = best ? matches.indexOf(best) : 0
+  return idx < 0 ? 0 : idx
+}
+
+function onValueSelect(path: string): void {
+  selectedPath.value = path
+  activeMatchIndex.value = bestMatchIndex(provenance.value.get(path) || [])
+  if (highlightMode.value === 'off') highlightMode.value = 'selected'
+  // Make sure the answer is actually visible: open the source pane, and leave
+  // the PDF for the extracted text, which is both what the model saw and the
+  // only view that can carry highlights.
+  if (!activePanels.value.includes('source') && hasOriginalContent.value) {
+    activePanels.value = ['source', ...activePanels.value]
+  }
+  if (showOriginal.value) showOriginal.value = false
+}
+
+/** Reverse link: clicking a highlight selects the value it supports. */
+function onRangeSelect(id: string): void {
+  const hash = id.lastIndexOf('#')
+  if (hash === -1) return
+  selectedPath.value = id.slice(0, hash)
+  activeMatchIndex.value = Number(id.slice(hash + 1)) || 0
+}
+
+function stepMatch(delta: number): void {
+  const total = selectedMatches.value.length
+  if (total < 2) return
+  activeMatchIndex.value = (activeMatchIndex.value + delta + total) % total
+}
+
+function clearSelection(): void {
+  selectedPath.value = ''
+  activeMatchIndex.value = 0
+}
+
 const documentLabel = computed(
   () =>
     props.result.document_name ||
@@ -420,6 +755,7 @@ async function loadDocumentTextAndMeta(seq: number): Promise<void> {
     const r = await documentsApi.get(props.projectId, docId)
     if (seq !== loadSeq) return // superseded by a newer result selection
     const d = r.data
+    documentHasText.value = !!d.text
     documentContent.value = d.text || t('trials.viewer.no_text_content')
     const previewable = analyzeOriginalFile(d.original_file?.file_type)
     documentPreviewable.value = previewable
@@ -470,6 +806,8 @@ function resetDocState(): void {
   documentPdfUrl.value = ''
   documentPdfLoading.value = false
   documentContent.value = ''
+  documentHasText.value = false
+  clearSelection()
   documentPreviewable.value = false
   documentFileId.value = null
   showOriginal.value = true

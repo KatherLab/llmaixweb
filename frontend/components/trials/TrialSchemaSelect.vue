@@ -3,7 +3,12 @@
     <label :class="labelClass" for="trial-schema-select"
       >{{ $t('trials.select.schema_label') }} <span class="text-red-500">*</span></label
     >
-    <select id="trial-schema-select" v-model="model" :class="selectClass" @change="emit('change')">
+    <select
+      id="trial-schema-select"
+      v-model="model"
+      :class="[selectClass, pendingClass]"
+      @change="emit('change')"
+    >
       <option disabled value="">{{ $t('trials.select.schema_placeholder') }}</option>
       <option v-for="schema in schemas" :key="schema.id" :value="schema.id.toString()">
         {{ schema.schema_name }}
@@ -31,7 +36,7 @@
 import { computed, type PropType } from 'vue'
 import { summarizeSchema } from '@/utils/schemaFieldList'
 import SchemaFieldList from '@/components/schemas/SchemaFieldList.vue'
-import { selectClass, labelClass } from '@/utils/formStyles'
+import { pendingFieldClass, selectClass, labelClass } from '@/utils/formStyles'
 import type { Schema } from '@/types'
 
 const props = defineProps({
@@ -44,6 +49,10 @@ const props = defineProps({
 const emit = defineEmits<{ change: [] }>()
 
 const model = defineModel<string>({ default: '' })
+
+// Required-but-empty selects get a marker so the one still blocking the
+// form doesn't look identical to the ones already answered.
+const pendingClass = computed(() => (model.value ? '' : pendingFieldClass))
 
 const selectedSchema = computed(() => {
   if (!model.value) return null

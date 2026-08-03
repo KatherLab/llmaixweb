@@ -1,5 +1,14 @@
 <template>
-  <BaseModal :open="open" size="2xl" panel-class="max-h-[95vh]" @close="tryClose">
+  <!-- body-class makes the body a flex column at lg+, so the two-column area
+       below can take exactly the height that's left instead of guessing a vh
+       value that over- or undershoots depending on what else is on screen. -->
+  <BaseModal
+    :open="open"
+    size="2xl"
+    panel-class="max-h-[95vh]"
+    body-class="p-6 lg:flex lg:flex-col"
+    @close="tryClose"
+  >
     <template #header>
       <div class="flex items-center gap-4">
         <div class="flex items-center gap-2">
@@ -19,15 +28,82 @@
       </div>
     </template>
 
-    <!-- Orientation: shown in both modes so first-time users get the primer -->
-    <Callout variant="info" :title="$t('trials.create.what_is_title')" class="mb-6">
+    <!-- Orientation: a primer for the first run, dismissed for good once read.
+         The same text stays available under the ⓘ next to the title, so keeping
+         it on screen forever only costs every later run ~130px of height. -->
+    <Callout
+      v-if="showIntro"
+      variant="info"
+      :title="$t('trials.create.what_is_title')"
+      class="mb-4 lg:shrink-0"
+    >
       <p class="mt-1" v-html="$t('trials.create.what_is_body')"></p>
+      <BaseButton variant="link" tone="blue" class="mt-2 text-xs" @click="dismissIntro">
+        {{ $t('trials.create.intro_dismiss') }}
+      </BaseButton>
     </Callout>
 
-    <div class="grid md:grid-cols-2 gap-8">
+    <!-- Two independently scrolling columns at lg+: the choices on the left stay
+         put while a long document list is browsed on the right. Below lg the
+         columns stack and the modal body scrolls as one, as before. -->
+    <!-- min-h floor: the columns share the leftover height, so on a short window
+         (or on the first run, where the primer takes ~150px) the document list
+         would otherwise be squeezed down to a row and a half. Below the floor
+         the modal body scrolls again, which is the lesser evil. -->
+    <div class="grid md:grid-cols-2 gap-8 lg:flex-1 lg:min-h-[26rem]">
       <!-- LEFT COLUMN -->
-      <div>
-        <!-- Name / Description: collapsible in Simple mode, always visible in Advanced -->
+      <div class="lg:min-h-0 lg:overflow-y-auto lg:pr-2">
+        <!-- Prompt / Schema / Model -->
+        <div class="mb-8 bg-surface border border-default rounded-modal p-6 shadow">
+          <TrialPromptSelect
+            v-model="trialData.prompt_id"
+            :prompts="prompts"
+            @change="resetModelTest"
+          />
+
+          <TrialSchemaSelect
+            v-model="trialData.schema_id"
+            :schemas="schemas"
+            @change="resetModelTest"
+          />
+
+          <TrialModelSelect
+            v-model="trialData.llm_model"
+            :available-models="availableModels"
+            :is-loading-models="isLoadingModels"
+            :is-testing-connection="isTestingConnection"
+            :config-status="configStatus"
+          />
+
+          <!-- Source quotes: kept out of the collapsed Advanced section on
+               purpose — it changes what the results viewer can show, so it has
+               to be discoverable in Simple mode too. The explanation lives in
+               the tooltip; only the cost stays inline, because that is the part
+               nobody should have to hover to discover. -->
+          <div class="flex items-center gap-2 mt-4 pt-4 border-t border-default">
+            <input
+              id="trial-evidence-mode"
+              v-model="evidenceMode"
+              type="checkbox"
+              :class="checkboxClass"
+            />
+            <label
+              for="trial-evidence-mode"
+              class="text-sm font-medium text-content cursor-pointer"
+            >
+              {{ $t('trials.advanced.evidence_label') }}
+            </label>
+            <span class="text-xs text-content-subtle">{{
+              $t('trials.advanced.evidence_cost')
+            }}</span>
+            <Tooltip :text="$t('trials.advanced.evidence_help')">
+              <Info class="h-4 w-4 text-content-subtle hover:text-content-muted" />
+            </Tooltip>
+          </div>
+        </div>
+
+        <!-- Optional metadata sits *after* the required card: it used to be the
+             first thing in the dialog, pushing the four required inputs down. -->
         <div v-if="!simpleMode" class="mb-8">
           <TrialMetadataCard
             v-model:name="trialData.name"
@@ -58,29 +134,6 @@
               v-model:description="trialData.description"
             />
           </div>
-        </div>
-
-        <!-- Prompt / Schema / Model -->
-        <div class="mb-8 bg-surface border border-default rounded-modal p-6 shadow">
-          <TrialPromptSelect
-            v-model="trialData.prompt_id"
-            :prompts="prompts"
-            @change="resetModelTest"
-          />
-
-          <TrialSchemaSelect
-            v-model="trialData.schema_id"
-            :schemas="schemas"
-            @change="resetModelTest"
-          />
-
-          <TrialModelSelect
-            v-model="trialData.llm_model"
-            :available-models="availableModels"
-            :is-loading-models="isLoadingModels"
-            :is-testing-connection="isTestingConnection"
-            :config-status="configStatus"
-          />
         </div>
 
         <!-- Advanced toggles + sections (Advanced mode only) -->
@@ -128,6 +181,7 @@
             v-model:max-completion-tokens="maxCompletionTokens"
             v-model:temperature="temperature"
             v-model:reasoning-effort="reasoningEffort"
+            v-model:prompt-language="promptLanguage"
           />
 
           <!-- Custom API Settings -->
@@ -193,8 +247,10 @@
         />
       </div>
 
-      <!-- RIGHT COLUMN -->
-      <div>
+      <!-- RIGHT COLUMN — a plain flex box, not a scroller: the panel inside
+           already scrolls its own list, and nesting the two produced a second
+           scrollbar and content sliding past the panel's bottom border. -->
+      <div class="flex flex-col lg:min-h-0">
         <DocumentSelectionPanel
           v-model:mode="documentSelectionMode"
           v-model:selected-ids="trialData.document_ids"
@@ -221,7 +277,7 @@
     </Callout>
 
     <!-- Inline status line (hidden while submitting — the overlay above takes over) -->
-    <div v-else class="mt-6 flex items-center gap-2 text-sm">
+    <div v-else class="mt-6 flex items-center gap-2 text-sm lg:shrink-0">
       <component :is="statusIcon" v-if="statusIcon" :class="['h-4 w-4', statusIconClass]" />
       <p :class="statusTextClass">{{ statusMessage }}</p>
     </div>
@@ -274,6 +330,7 @@ import AdvancedSettingsPanel from './AdvancedSettingsPanel.vue'
 import CustomApiSettingsPanel from './CustomApiSettingsPanel.vue'
 import ModelTestCard from './ModelTestCard.vue'
 import DocumentSelectionPanel from './DocumentSelectionPanel.vue'
+import { checkboxClass } from '@/utils/formStyles'
 import { useModelTesting, type TrialFormData } from '@/composables/useModelTesting'
 import type { DocumentListItem, Schema, Prompt } from '@/types'
 
@@ -304,7 +361,7 @@ interface TrialCreatePayload {
 }
 
 const toast = useToast()
-const { t } = useI18n({ useScope: 'global' })
+const { t, locale } = useI18n({ useScope: 'global' })
 
 const props = defineProps({
   open: { type: Boolean, required: true },
@@ -348,9 +405,56 @@ const documentSelectionMode = ref<'individual' | 'groups' | 'smart'>('individual
 const maxCompletionTokens = ref('')
 const temperature = ref('')
 const reasoningEffort = ref('')
+const evidenceMode = ref(false)
+// Language of the instructions the backend appends to the prompt. Defaults to
+// the UI language: a German prompt over a German report shouldn't be diluted
+// with English scaffolding.
+const promptLanguage = ref<string>(locale.value)
 
 const advancedSettingsVisible = ref(false)
 const advancedOptionsVisible = ref(false)
+
+/* -------------------------------------------------------
+ * Getting started: the first-run primer
+ * -----------------------------------------------------*/
+const INTRO_KEY = 'llmaix.trialIntroDismissed'
+const showIntro = ref(false)
+
+function dismissIntro(): void {
+  showIntro.value = false
+  try {
+    localStorage.setItem(INTRO_KEY, '1')
+  } catch {
+    // Private mode / storage disabled — the primer just returns next time.
+  }
+}
+
+/* -------------------------------------------------------
+ * Model memory — the model is the one required input with no natural default,
+ * which is exactly why it gets hunted for. Reuse the last model the project
+ * ran, or the only one on offer; never guess between several unknowns.
+ * -----------------------------------------------------*/
+const lastModelKey = computed(() => `llmaix.lastModel.${props.projectId}`)
+
+function rememberModel(model: string): void {
+  try {
+    if (model) localStorage.setItem(lastModelKey.value, model)
+  } catch {
+    /* storage disabled — preselection is a convenience, not a requirement */
+  }
+}
+
+function preselectModel(models: string[]): void {
+  if (trialData.value.llm_model || !models.length) return
+  let remembered: string | null
+  try {
+    remembered = localStorage.getItem(lastModelKey.value)
+  } catch {
+    remembered = null
+  }
+  if (remembered && models.includes(remembered)) trialData.value.llm_model = remembered
+  else if (models.length === 1) trialData.value.llm_model = models[0]
+}
 
 /* -------------------------------------------------------
  * Model testing (connection + model/schema test)
@@ -380,6 +484,14 @@ const {
   maxCompletionTokens,
   temperature,
   reasoningEffort,
+})
+
+// Fill the model in as soon as the list arrives. Also re-baselines the dirty
+// check: a preselection the user never touched must not trigger the
+// "Discard changes?" prompt when they close the dialog.
+watch(availableModels, (models) => {
+  preselectModel(models || [])
+  initialValues.value.llm_model = trialData.value.llm_model
 })
 
 /* -------------------------------------------------------
@@ -467,6 +579,13 @@ const initializeForm = (): void => {
   maxCompletionTokens.value = ''
   temperature.value = ''
   reasoningEffort.value = ''
+  evidenceMode.value = false
+  promptLanguage.value = locale.value
+  try {
+    showIntro.value = localStorage.getItem(INTRO_KEY) !== '1'
+  } catch {
+    showIntro.value = true
+  }
   resetModelTest()
 
   snapshotInitialValues()
@@ -499,6 +618,12 @@ const buildFormData = (): TrialCreatePayload => {
   if (reasoningEffort.value) {
     advancedOptions.reasoning_effort = reasoningEffort.value
   }
+  if (evidenceMode.value) {
+    advancedOptions.evidence_mode = true
+  }
+  if (promptLanguage.value) {
+    advancedOptions.prompt_language = promptLanguage.value
+  }
   if (Object.keys(advancedOptions).length > 0) {
     formData.advanced_options = advancedOptions
   }
@@ -520,6 +645,8 @@ const handleStartTrial = async (): Promise<void> => {
         return
       }
     }
+    // The model passed verification, so it is worth offering again next time.
+    rememberModel(trialData.value.llm_model)
     // Phase 2 — submit. The parent closes the modal on success; on failure it
     // reports back so the form is re-enabled (otherwise Cancel and Start stay
     // disabled behind `submitting` forever).

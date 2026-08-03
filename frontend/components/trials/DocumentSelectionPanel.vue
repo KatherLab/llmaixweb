@@ -1,12 +1,20 @@
 <template>
-  <div class="bg-surface border border-default rounded-modal p-6 shadow flex flex-col h-full">
+  <!-- Marked while empty, the same way the required selects are: this panel is
+       one of the four things the trial can't start without. `overflow-hidden`
+       keeps the list from spilling past the rounded border while it scrolls. -->
+  <div
+    class="bg-surface border rounded-modal p-6 shadow flex flex-col h-full min-h-0 overflow-hidden"
+    :class="selectedIds.length ? 'border-default' : pendingPanelClass"
+  >
     <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
       <span class="block text-sm font-semibold text-content-muted"
         >{{ $t('trials.docsel.select_documents') }} <span class="text-red-500">*</span></span
       >
-      <span class="text-xs text-content-muted">{{
-        $t('trials.docsel.n_selected', { count: selectedIds.length })
-      }}</span>
+      <span
+        class="text-xs"
+        :class="selectedIds.length ? 'text-content-muted' : 'text-amber-600 dark:text-amber-400'"
+        >{{ $t('trials.docsel.n_selected', { count: selectedIds.length }) }}</span
+      >
     </div>
 
     <div class="mb-4">
@@ -63,6 +71,7 @@ import { useToast } from '@/composables/useToast'
 import { trialsApi } from '@/services/trialsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { useDocumentPagination } from '@/composables/useDocumentPagination'
+import { pendingPanelClass } from '@/utils/formStyles'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import DocumentIndividualPicker from './DocumentIndividualPicker.vue'
 import DocumentGroupPicker from './DocumentGroupPicker.vue'

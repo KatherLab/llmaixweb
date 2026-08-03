@@ -248,6 +248,10 @@ test('documentation screenshots: full workflow', async ({ page }) => {
           api_key: 'sk-fake',
           base_url: FAKE_LLM_BASE,
           bypass_celery: true,
+          // Source quotes on: the fake LLM answers the augmented schema, so the
+          // provenance screenshot shows model-cited quotes and the short notes
+          // on the values it had nothing to quote for.
+          advanced_options: { evidence_mode: true },
         },
       }),
       'create trial',
@@ -268,6 +272,18 @@ test('documentation screenshots: full workflow', async ({ page }) => {
       await expect(resultsDialog).toBeVisible({ timeout: 8000 })
       await page.waitForTimeout(800)
       await shot(page, 'trial-results')
+      // Provenance: click an extracted value so the source panel highlights
+      // the passage it came from.
+      try {
+        await resultsDialog
+          .locator('button.json-value-actionable')
+          .first()
+          .click({ timeout: 4000 })
+        await page.waitForTimeout(600)
+        await shot(page, 'trial-provenance')
+      } catch {
+        /* no traceable values in this run */
+      }
       // Add the Reasoning pane (present only when the model returned reasoning)
       // to capture the chain-of-thought + token-usage view.
       try {
@@ -438,6 +454,11 @@ test('documentation screenshots: full workflow', async ({ page }) => {
       await page.getByRole('button', { name: 'Start New Trial' }).first().click()
       await expect(dialog()).toBeVisible({ timeout: 5000 })
       await page.waitForTimeout(800)
+      // Scroll the model selector into view: the modal is taller than the
+      // viewport, and Model + "Ask for source quotes" are the part of the left
+      // column the docs actually describe.
+      await dialog().locator('#trial-evidence-mode').scrollIntoViewIfNeeded()
+      await page.waitForTimeout(300)
       await shotEl(dialog(), 'trial-create-modal')
     })
 

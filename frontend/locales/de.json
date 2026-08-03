@@ -2114,7 +2114,8 @@
       "create_failed": "Prompt konnte nicht erstellt werden",
       "updated": "Prompt aktualisiert",
       "update_failed": "Prompt konnte nicht aktualisiert werden",
-      "template_applied": "Vorlage für medizinische Extraktion angewendet"
+      "template_applied": "Vorlage für medizinische Extraktion angewendet",
+      "template_language": "Sprache der Vorlage"
     }
   },
   "schemaEditor": {
@@ -2472,7 +2473,8 @@
       },
       "toast": {
         "start_failed": "Der Durchlauf konnte nicht gestartet werden. Bitte versuchen Sie es erneut."
-      }
+      },
+      "intro_dismiss": "Verstanden — nicht mehr anzeigen"
     },
     "metadata": {
       "name_label": "Name des Durchlaufs",
@@ -2494,8 +2496,7 @@
       "model_loading": "Modelle werden geladen...",
       "model_none": "Keine Modelle verfügbar",
       "model_placeholder": "Modell auswählen",
-      "model_help": "Die Modelle werden von Ihrem konfigurierten LLM-Anbieter geladen. Nicht alle Modelle unterstützen strukturierte JSON-Ausgabe — der Kompatibilitätstest unten überprüft, ob Ihr gewähltes Modell mit dem ausgewählten Schema funktioniert, bevor Sie den Durchlauf ausführen.",
-      "model_help_tooltip": "Das für die Extraktion verwendete KI-Modell. Die Modelle werden von Ihrem LLM-Anbieter abgerufen (Systemstandard oder Ihre benutzerdefinierten API-Einstellungen). Die Liste zeigt die rohen Modell-IDs des Anbieters; verwenden Sie den Kompatibilitätstest, um zu bestätigen, dass ein Modell strukturierte Ausgabe passend zu Ihrem Schema erzeugen kann."
+      "model_help_tooltip": "Das für die Extraktion verwendete KI-Modell, aufgeführt mit der rohen Modell-ID Ihres LLM-Endpunkts (Systemstandard oder Ihre benutzerdefinierten API-Einstellungen). Ob es strukturiertes JSON passend zu Ihrem Schema erzeugen kann, wird beim Start des Durchlaufs automatisch geprüft."
     },
     "docsel": {
       "select_documents": "Dokumente auswählen",
@@ -2564,7 +2565,12 @@
       "reasoning_low": "Niedrig",
       "reasoning_medium": "Mittel",
       "reasoning_high": "Hoch",
-      "reasoning_help": "Gibt dem Modell einen Hinweis, wie viel Rechenaufwand es für Gedankenketten/Reasoning aufwenden soll. Nicht alle Modelle/APIs unterstützen dies."
+      "reasoning_help": "Gibt dem Modell einen Hinweis, wie viel Rechenaufwand es für Gedankenketten/Reasoning aufwenden soll. Nicht alle Modelle/APIs unterstützen dies.",
+      "evidence_label": "Quellenzitate anfordern",
+      "evidence_help": "Das Modell gibt zusätzlich die wörtliche Textstelle zu jedem Wert zurück; sie wird im Ergebnis-Viewer hervorgehoben. Verdoppelt etwa die Ausgabe-Tokens und die Kosten.",
+      "evidence_cost": "Verdoppelt die Ausgabe-Tokens",
+      "prompt_language_label": "Prompt-Sprache",
+      "prompt_language_help": "Sprache der Anweisungen, die die App an Ihren Prompt anhängt (Sicherheitshinweis, Schema-Zeile, Regeln für Quellenzitate). Standard ist die Sprache der Oberfläche."
     },
     "custom_api": {
       "api_key_label": "API-Schlüssel",
@@ -2818,6 +2824,41 @@
         "mappings_required": "Feldzuordnungen sind erforderlich, wurden aber nicht gefunden. Bitte konfigurieren Sie sie zuerst.",
         "mappings_configured": "Feldzuordnungen konfiguriert"
       }
+    },
+    "provenance": {
+      "mode_label": "Herkunft der Werte hervorheben",
+      "mode_off": "Aus",
+      "mode_selected": "Ausgewählt",
+      "mode_all": "Alle",
+      "coverage": "{found}/{total} gefunden",
+      "coverage_title": "Herkunft der Werte",
+      "coverage_help": "Werte werden durch eine Suche im extrahierten Text lokalisiert. Die Treffer stammen aus einer Textsuche, nicht vom Modell — bitte vor der Verwendung prüfen.",
+      "coverage_evidence_mode": "Dieser Trial lief mit Quellenzitaten: Das Modell wurde gebeten, die Textstelle zu jedem Wert zu zitieren.",
+      "coverage_missing": "Ohne Zitat: {fields}",
+      "prev_match": "Vorheriges Vorkommen",
+      "next_match": "Nächstes Vorkommen",
+      "clear_selection": "Auswahl aufheben",
+      "pdf_note": "Hervorhebungen werden im extrahierten Text angezeigt.",
+      "pdf_note_switch": "Wechseln",
+      "kind": {
+        "quote": "Vom Modell zitiert",
+        "exact": "Wörtlich",
+        "normalized": "Normalisiert",
+        "numeric": "Gleiche Zahl",
+        "date": "Gleiches Datum",
+        "label": "Feld erwähnt",
+        "fuzzy": "Ungefähr"
+      },
+      "desc": {
+        "quote": "Das Modell hat diese Stelle als Quelle zitiert.",
+        "exact": "Der Wert steht genau so im Text.",
+        "normalized": "Gefunden ohne Berücksichtigung von Groß-/Kleinschreibung, Leerzeichen, Zeilenumbrüchen oder Akzenten.",
+        "numeric": "Eine Zahl im Text hat denselben Wert, nur anders geschrieben.",
+        "date": "Ein Datum im Text meint denselben Tag, nur anders geschrieben.",
+        "label": "Hier steht nur der Feldname — der Wert selbst wurde abgeleitet.",
+        "fuzzy": "Eine ähnliche Textstelle. Bitte manuell prüfen."
+      },
+      "note_label": "Notiz des Modells"
     }
   },
   "errors": {

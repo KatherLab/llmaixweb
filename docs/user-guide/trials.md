@@ -13,7 +13,7 @@ creating, running, and inspecting trials.
 
 **Start New Trial** opens a dialog with a **Simple / Advanced** toggle at the top
 and a **"What is a trial?"** info tooltip next to the title. Four inputs are
-required:
+required, and any of them still missing is outlined in amber:
 
 1. **Prompt** — the extraction instructions. Use **Preview prompt** to read the
    system/user templates inline before committing.
@@ -23,14 +23,30 @@ required:
    supports structured JSON output; see [model compatibility](#model-compatibility).
 4. **Documents** — which documents to run over (right-hand panel).
 
-An optional **name** and **description** can be added. In Simple mode these are
-collapsed behind an *Add name / notes* link; in Advanced mode the metadata card
-is always shown. The prompt and schema selectors default to the first available
-of each when the dialog opens.
+Below the model selector, in both modes, is one optional checkbox:
+
+- **Ask for source quotes** — off by default. When enabled, the model is also
+  asked to return the verbatim passage each value was read from, which the
+  results viewer uses to highlight sources (see
+  [Tracing values back to the document](#tracing-values-back-to-the-document)).
+  The quotes are stripped out of the stored result, so the extracted JSON keeps
+  exactly the shape your schema describes and evaluation is unaffected. It
+  roughly doubles output tokens and cost.
+
+An optional **name** and **description** can be added below the required inputs.
+In Simple mode these are collapsed behind an *Add name / notes* link; in Advanced
+mode the metadata card is always shown.
+
+The prompt and schema selectors default to the first available of each when the
+dialog opens. The model selector is pre-filled with the **last model this project
+ran successfully**, or with the only model on offer if your endpoint exposes just
+one; otherwise it stays empty and is marked amber until you choose. A first-run
+**"What is a trial?"** primer appears above the form and can be dismissed for
+good — its text remains under the ⓘ next to the dialog title.
 
 <figure markdown>
-  ![Start New Trial dialog with Simple/Advanced toggle, prompt/schema/model selectors, and the document selection panel](../assets/screenshots/trial-create-modal.png){ width="820" }
-  <figcaption>The Start New Trial dialog: mode toggle and "What is a trial?" help (top), the Prompt / Schema / LLM Model selectors on the left, and the Individual / Groups / Smart document panel on the right.</figcaption>
+  ![Start New Trial dialog showing the schema and model selectors, the "Ask for source quotes" checkbox, and the document selection panel](../assets/screenshots/trial-create-modal.png){ width="820" }
+  <figcaption>The Start New Trial dialog, scrolled to the LLM Model selector: the optional <strong>Ask for source quotes</strong> checkbox sits directly below it in both modes, with the document selection panel on the right.</figcaption>
 </figure>
 
 ### Selecting documents
@@ -64,6 +80,13 @@ inputs (all blank by default, in which case the model's own defaults apply):
 - **Temperature** — sampling randomness, `0`–`2`. Lower is more deterministic.
 - **Reasoning Effort** — *Use model default / Low / Medium / High*. Only some
   reasoning models honor this; it is ignored by models that don't.
+- **Prompt Language** — defaults to the interface language. Besides your own
+  prompt text, every request carries instructions the app adds: a notice telling
+  the model to treat the document as untrusted data, the line introducing the
+  JSON schema, and (with source quotes on) the citation rules. These follow this
+  setting, so a German prompt over a German report isn't diluted with English
+  scaffolding. Change it if you run the app in one language and extract in
+  another.
 
 Changing any advanced setting resets the model-compatibility check, so it is
 re-verified against the new options on submit.
@@ -167,6 +190,69 @@ you can open up to three panels side by side:
 Failed documents show an error banner with **tuning advice** (suggested prompt
 or setting changes). The **"{N} errors"** header link lists all failures; click
 one to jump to that document.
+
+### Tracing values back to the document
+
+Every extracted value in the **Result** panel carries a small coloured dot.
+Click the value and the **Source Document** panel scrolls to the passage the
+value most likely came from and highlights it. Clicking a highlight works the
+other way round, selecting the value that passage supports. When a value occurs
+more than once, a **1 / 3** stepper walks through the occurrences.
+
+<figure markdown>
+  ![Trial results viewer with an extracted value selected and the matching passage highlighted in the source text](../assets/screenshots/trial-provenance.png){ width="820" }
+  <figcaption>Clicking <code>shortness of breath</code> highlights the passage it was read from and names how it was matched ("Field mentioned"). The dots beside each value show its match grade; the header chip counts how many values were located.</figcaption>
+</figure>
+
+The **Highlight** control in the Source panel header switches between:
+
+- **Off** — no highlighting.
+- **Selected** — only the value you clicked (the default).
+- **All** — every located value at once, colour-coded. Hovering a highlight
+  names the field it belongs to. This is the quickest way to see how much of a
+  document a result actually rests on.
+
+Matches are graded, and the grade is shown on hover, because they are not all
+equally trustworthy:
+
+| Grade | Colour | Meaning |
+| --- | --- | --- |
+| **Model-cited** | green | The model quoted this passage as its source (requires **Ask for source quotes**). |
+| **Verbatim** | green | The value appears in the text exactly as extracted. |
+| **Normalized** | amber | Found ignoring case, spacing, line breaks, hyphenation or accents. |
+| **Same number** / **Same date** | amber | The text writes the same value differently (`1,234.50` ≡ `1234.5`, `03/04/1961` ≡ `1961-04-03`). |
+| **Field mentioned** | orange | Only the field name appears — the value itself was inferred. Typical for yes/no fields. |
+| **Approximate** | orange | A similar passage, found by fuzzy matching. Check it manually. |
+
+A value the search cannot place simply carries **no dot** — the viewer never
+claims a value is "not in the document". Plenty of correct answers have nothing
+to quote: a yes/no question answered from the sense of a paragraph, a value the
+model summarized or derived. Absence of a citation is not evidence against the
+extraction.
+
+With **Ask for source quotes** enabled, such a value carries the model's own
+short note instead — *"not mentioned"*, *"inferred"* — shown beside it when
+selected and on hover. The note is the model's claim, not a citation, and is
+capped at a few words by design.
+
+A **stated negative is quoted, not noted**: a `false` read from *"denies chest
+pain"* or *"no evidence of embolism"* cites that sentence like any other value,
+so you can check it. A note therefore means the document is genuinely silent —
+which is the distinction that matters when reviewing a negative finding.
+
+The header chip counts how many values carry a citation (**9/12 located**);
+hover it for the ones that don't.
+
+!!! warning "Best-effort by design"
+    Except for **Model-cited** matches, highlights come from searching the
+    extracted text — the model does not report where it read a value. A value
+    without a citation is not necessarily wrong, and a located value is not
+    necessarily right. Treat the highlights as a reading aid for review, not as
+    a correctness check.
+
+Highlighting works on the **extracted text**, which is what the model was
+actually given. When the Source panel is showing the original PDF, selecting a
+value switches it to the text view.
 
 ## Filtering and managing trials
 

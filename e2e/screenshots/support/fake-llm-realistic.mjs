@@ -188,6 +188,51 @@ function pickDoc(prompt) {
   return DOCS[DEFAULT_KEY]
 }
 
+/** The document text the backend wrapped in markers, or the whole prompt. */
+function documentText(prompt) {
+  const m = /--- DOCUMENT CONTENT ---([\s\S]*?)--- END DOCUMENT ---/.exec(prompt)
+  return (m ? m[1] : prompt).trim()
+}
+
+/** First sentence of `text` containing `needle`, trimmed for display. */
+function findSentence(text, needle) {
+  if (!needle) return ''
+  const target = String(needle).toLowerCase()
+  for (const sentence of text.split(/(?<=[.;:!?])\s+|\n+/)) {
+    const trimmed = sentence.trim()
+    if (trimmed.length > 3 && trimmed.toLowerCase().includes(target)) {
+      return trimmed.length > 160 ? `${trimmed.slice(0, 157)}…` : trimmed
+    }
+  }
+  return ''
+}
+
+/**
+ * Fill the `__evidence` / `__note` companions for a result, the way the prompt
+ * asks a real model to: quote where the value is visible in the text, and give
+ * a few words instead where it isn't.
+ */
+function buildProvenance(result, prompt, schemaProps) {
+  const text = documentText(prompt)
+  const out = {}
+  for (const [key, value] of Object.entries(result)) {
+    if (!schemaProps[`${key}__evidence`]) continue
+    // A stated negative is evidence like any other, so a `false` looks for the
+    // denial first and only falls back to a note when the report is silent.
+    // Strings look for the value; booleans look for the field's own wording,
+    // which is what a report would actually say ("chest pain").
+    const quote =
+      value === false
+        ? findSentence(text, `no ${key}`) || findSentence(text, `denies ${key}`)
+        : findSentence(text, typeof value === 'string' ? value : key)
+    out[`${key}__evidence`] = quote || ''
+    if (`${key}__note` in schemaProps) {
+      out[`${key}__note`] = quote ? '' : value === false ? 'not mentioned' : 'inferred'
+    }
+  }
+  return out
+}
+
 const server = http.createServer((req, res) => {
   const send = (code, body) => {
     const payload = JSON.stringify(body)
@@ -220,9 +265,24 @@ const server = http.createServer((req, res) => {
         // ignore malformed bodies; fall back below
       }
       const doc = pickDoc(prompt)
+      let payload = doc.result
+      // Evidence mode: the backend sends a schema with `<field>__evidence` /
+      // `<field>__note` companions. Answer them the way a real model would —
+      // quote the sentence carrying the value, or say briefly why there is
+      // nothing to quote — so the provenance UI can be exercised offline.
+      let schemaProps = null
+      try {
+        const body = JSON.parse(raw || '{}')
+        schemaProps = body?.response_format?.json_schema?.schema?.properties || null
+      } catch {
+        // ignore malformed bodies
+      }
+      if (schemaProps && Object.keys(schemaProps).some((k) => k.endsWith('__evidence'))) {
+        payload = { ...doc.result, ...buildProvenance(doc.result, prompt, schemaProps) }
+      }
       const message = {
         role: 'assistant',
-        content: JSON.stringify(doc.result),
+        content: JSON.stringify(payload),
       }
       // reasoning_content is a non-standard field the backend reads via getattr;
       // the OpenAI SDK exposes it because its models allow extra fields.

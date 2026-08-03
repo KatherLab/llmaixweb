@@ -281,10 +281,26 @@
     </form>
     <template #footer>
       <div class="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-3">
-        <BaseButton variant="secondary" @click="useTemplate">
-          <FileText class="h-4 w-4" />
-          {{ $t('prompt.form.use_template') }}
-        </BaseButton>
+        <!-- The template language defaults to the UI language, because a German
+             report extracts better with German instructions. Overridable here
+             for anyone running the app in one language and extracting in
+             another. -->
+        <div class="flex items-center gap-2">
+          <BaseButton variant="secondary" class="whitespace-nowrap" @click="useTemplate">
+            <FileText class="h-4 w-4 shrink-0" />
+            {{ $t('prompt.form.use_template') }}
+          </BaseButton>
+          <select
+            v-model="templateLanguage"
+            :class="[selectClass, 'w-auto py-1.5 text-xs']"
+            :aria-label="$t('prompt.form.template_language')"
+            :title="$t('prompt.form.template_language')"
+          >
+            <option v-for="code in SUPPORTED_LOCALES" :key="code" :value="code">
+              {{ $t(`language.${code}`) }}
+            </option>
+          </select>
+        </div>
         <div class="flex gap-3">
           <BaseButton variant="secondary" @click="cancelPromptModal">{{
             $t('prompt.form.cancel')
@@ -341,8 +357,9 @@ import Callout from '@/components/common/Callout.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
-import { inputClass, textareaClass, labelClass } from '@/utils/formStyles'
-import { promptTemplates, sampleDocument } from '@/utils/promptTemplates'
+import { inputClass, textareaClass, labelClass, selectClass } from '@/utils/formStyles'
+import { sampleDocumentFor, schemaIntroPreview, templatesFor } from '@/utils/promptTemplates'
+import { SUPPORTED_LOCALES, type SupportedLocale } from '@/i18n'
 import { extractErrorMessage } from '@/utils/errors'
 import type { Prompt } from '@/types'
 
@@ -362,7 +379,13 @@ const emit = defineEmits<{
   updated: [prompt: Prompt]
 }>()
 
-const { t } = useI18n({ useScope: 'global' })
+const { t, locale } = useI18n({ useScope: 'global' })
+
+// Template language: follows the UI language, overridable in the footer for
+// anyone running the app in one language and extracting documents in another.
+const templateLanguage = ref<SupportedLocale>(locale.value as SupportedLocale)
+watch(locale, (next) => (templateLanguage.value = next as SupportedLocale))
+const sampleDocument = computed(() => sampleDocumentFor(templateLanguage.value))
 const toast = useToast()
 
 const isEdit = computed(() => !!props.prompt)
@@ -396,8 +419,8 @@ const simplePromptMode = ref(true)
 const simplePreview = computed(() => {
   return (
     `${promptForm.value.user_prompt}\n\n` +
-    `--- DOCUMENT CONTENT ---\n${sampleDocument}\n--- END DOCUMENT ---\n\n` +
-    'Extract the data according to this JSON schema:\n' +
+    `--- DOCUMENT CONTENT ---\n${sampleDocument.value}\n--- END DOCUMENT ---\n\n` +
+    `${schemaIntroPreview[templateLanguage.value] ?? schemaIntroPreview.en}\n` +
     '```json\n{ …the schema selected when the trial runs… }\n```'
   )
 })
@@ -592,7 +615,7 @@ const useTemplate = () => {
 
 const applyTemplate = () => {
   showTemplateConfirm.value = false
-  const template = promptTemplates.medical
+  const template = templatesFor(templateLanguage.value).medical
   if (!template) return
   promptForm.value = {
     name: template.name,

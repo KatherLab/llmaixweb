@@ -2114,7 +2114,8 @@
       "create_failed": "No se pudo crear el prompt",
       "updated": "Prompt actualizado",
       "update_failed": "No se pudo actualizar el prompt",
-      "template_applied": "Plantilla de extracción médica aplicada"
+      "template_applied": "Plantilla de extracción médica aplicada",
+      "template_language": "Idioma de la plantilla"
     }
   },
   "schemaEditor": {
@@ -2472,7 +2473,8 @@
       },
       "toast": {
         "start_failed": "No se pudo iniciar el ensayo. Inténtelo de nuevo."
-      }
+      },
+      "intro_dismiss": "Entendido: no mostrar de nuevo"
     },
     "metadata": {
       "name_label": "Nombre del ensayo",
@@ -2494,8 +2496,7 @@
       "model_loading": "Cargando modelos...",
       "model_none": "No hay modelos disponibles",
       "model_placeholder": "Seleccionar un modelo",
-      "model_help": "Los modelos se cargan desde su proveedor de LLM configurado. No todos los modelos admiten salida JSON estructurada — la prueba de compatibilidad de abajo verifica que el modelo elegido funciona con el esquema seleccionado antes de ejecutar el ensayo.",
-      "model_help_tooltip": "El modelo de IA utilizado para la extracción. Los modelos se obtienen de su proveedor de LLM (predeterminado del sistema o sus ajustes de API personalizada). La lista muestra los identificadores de modelo sin procesar del proveedor; use la prueba de compatibilidad para confirmar que un modelo puede producir una salida estructurada acorde con su esquema."
+      "model_help_tooltip": "El modelo de IA utilizado para la extracción, indicado con el identificador sin procesar que informa su endpoint de LLM (predeterminado del sistema o sus ajustes de API personalizada). Si puede producir JSON estructurado acorde con su esquema se comprueba automáticamente al iniciar el ensayo."
     },
     "docsel": {
       "select_documents": "Seleccionar documentos",
@@ -2564,7 +2565,12 @@
       "reasoning_low": "Bajo",
       "reasoning_medium": "Medio",
       "reasoning_high": "Alto",
-      "reasoning_help": "Indica al modelo cuánto cómputo dedicar a la cadena de pensamiento/razonamiento. No todos los modelos/API lo admiten."
+      "reasoning_help": "Indica al modelo cuánto cómputo dedicar a la cadena de pensamiento/razonamiento. No todos los modelos/API lo admiten.",
+      "evidence_label": "Solicitar citas de origen",
+      "evidence_help": "El modelo también devuelve el texto literal del que leyó cada valor, que se usa para resaltar las fuentes en el visor de resultados. Duplica aproximadamente los tokens de salida y el coste.",
+      "evidence_cost": "Duplica los tokens de salida",
+      "prompt_language_label": "Idioma del prompt",
+      "prompt_language_help": "Idioma de las instrucciones que la aplicación añade a su prompt (aviso de seguridad, línea del esquema, reglas de citas). Por defecto, el idioma de la interfaz."
     },
     "custom_api": {
       "api_key_label": "Clave API",
@@ -2818,6 +2824,41 @@
         "mappings_required": "Se requieren asignaciones de campos pero no se encontraron. Configúrelas primero.",
         "mappings_configured": "Asignaciones de campos configuradas"
       }
+    },
+    "provenance": {
+      "mode_label": "Resaltar el origen de los valores",
+      "mode_off": "Desactivado",
+      "mode_selected": "Seleccionado",
+      "mode_all": "Todo",
+      "coverage": "{found}/{total} localizados",
+      "coverage_title": "Procedencia de los valores",
+      "coverage_help": "Los valores se localizan buscando en el texto extraído. Las coincidencias provienen de una búsqueda de texto, no del modelo: verifíquelas antes de confiar en ellas.",
+      "coverage_evidence_mode": "Este ensayo usó citas de origen: se pidió al modelo que citara el texto del que procede cada valor.",
+      "coverage_missing": "Sin cita: {fields}",
+      "prev_match": "Aparición anterior",
+      "next_match": "Aparición siguiente",
+      "clear_selection": "Borrar selección",
+      "pdf_note": "Los resaltados se muestran sobre el texto extraído.",
+      "pdf_note_switch": "Cambiar",
+      "kind": {
+        "quote": "Citado por el modelo",
+        "exact": "Literal",
+        "normalized": "Normalizado",
+        "numeric": "Mismo número",
+        "date": "Misma fecha",
+        "label": "Campo mencionado",
+        "fuzzy": "Aproximado"
+      },
+      "desc": {
+        "quote": "El modelo citó este pasaje como su fuente.",
+        "exact": "El valor aparece en el texto exactamente como se extrajo.",
+        "normalized": "Encontrado ignorando mayúsculas, espacios, saltos de línea o acentos.",
+        "numeric": "Un número del texto tiene el mismo valor, escrito de otra forma.",
+        "date": "Una fecha del texto indica el mismo día, escrita de otra forma.",
+        "label": "Aquí solo aparece el nombre del campo; el valor se dedujo.",
+        "fuzzy": "Un pasaje similar. Compruébelo manualmente."
+      },
+      "note_label": "Nota del modelo"
     }
   },
   "errors": {

@@ -12,7 +12,7 @@
       id="trial-model-select"
       v-model="model"
       :disabled="isLoadingModels || isTestingConnection || (availableModels ?? []).length === 0"
-      :class="[selectClass, 'disabled:opacity-60 disabled:cursor-not-allowed']"
+      :class="[selectClass, pendingClass, 'disabled:opacity-60 disabled:cursor-not-allowed']"
     >
       <option disabled value="">
         {{
@@ -27,9 +27,6 @@
         {{ mdl }}
       </option>
     </select>
-    <p class="mt-1 text-xs text-content-muted">
-      {{ $t('trials.select.model_help') }}
-    </p>
     <div v-if="configStatus?.type === 'error'" class="text-xs text-red-500 mt-1">
       {{ configStatus.message }}
     </div>
@@ -37,10 +34,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Info } from '@lucide/vue'
 import Tooltip from '@/components/common/Tooltip.vue'
-import { selectClass, labelClass } from '@/utils/formStyles'
+import { pendingFieldClass, selectClass, labelClass } from '@/utils/formStyles'
 
 interface StatusDescriptor {
   type: 'loading' | 'warning' | 'error' | 'success' | 'none'
@@ -67,4 +65,8 @@ const { t } = useI18n({ useScope: 'global' })
 const modelHelpText = t('trials.select.model_help_tooltip')
 
 const model = defineModel<string>({ default: '' })
+
+// Empty required field: mark it so it reads differently from the pre-filled
+// prompt/schema selects beside it.
+const pendingClass = computed(() => (model.value ? '' : pendingFieldClass))
 </script>

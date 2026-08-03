@@ -2114,7 +2114,8 @@
       "create_failed": "Échec de la création du prompt",
       "updated": "Prompt mis à jour",
       "update_failed": "Échec de la mise à jour du prompt",
-      "template_applied": "Modèle d'extraction médicale appliqué"
+      "template_applied": "Modèle d'extraction médicale appliqué",
+      "template_language": "Langue du modèle"
     }
   },
   "schemaEditor": {
@@ -2472,7 +2473,8 @@
       },
       "toast": {
         "start_failed": "Impossible de lancer l'essai. Veuillez réessayer."
-      }
+      },
+      "intro_dismiss": "Compris — ne plus afficher"
     },
     "metadata": {
       "name_label": "Nom de l'essai",
@@ -2494,8 +2496,7 @@
       "model_loading": "Chargement des modèles...",
       "model_none": "Aucun modèle disponible",
       "model_placeholder": "Sélectionner un modèle",
-      "model_help": "Les modèles sont chargés depuis votre fournisseur LLM configuré. Tous les modèles ne prennent pas en charge la sortie JSON structurée — le test de compatibilité ci-dessous vérifie que le modèle choisi fonctionne avec le schéma sélectionné avant de lancer l'essai.",
-      "model_help_tooltip": "Le modèle d'IA utilisé pour l'extraction. Les modèles sont récupérés depuis votre fournisseur LLM (par défaut du système ou vos paramètres API personnalisés). La liste affiche les identifiants bruts des modèles du fournisseur ; utilisez le test de compatibilité pour confirmer qu'un modèle peut produire une sortie structurée correspondant à votre schéma."
+      "model_help_tooltip": "Le modèle d'IA utilisé pour l'extraction, indiqué par l'identifiant brut que renvoie votre point de terminaison LLM (par défaut du système ou vos paramètres API personnalisés). Sa capacité à produire du JSON structuré pour votre schéma est vérifiée automatiquement au démarrage de l'essai."
     },
     "docsel": {
       "select_documents": "Sélectionner des documents",
@@ -2564,7 +2565,12 @@
       "reasoning_low": "Faible",
       "reasoning_medium": "Moyen",
       "reasoning_high": "Élevé",
-      "reasoning_help": "Indique au modèle la quantité de calcul à consacrer à la chaîne de pensée / au raisonnement. Tous les modèles/API ne le prennent pas en charge."
+      "reasoning_help": "Indique au modèle la quantité de calcul à consacrer à la chaîne de pensée / au raisonnement. Tous les modèles/API ne le prennent pas en charge.",
+      "evidence_label": "Demander des citations sources",
+      "evidence_help": "Le modèle renvoie aussi le texte exact d’où provient chaque valeur, utilisé pour surligner les sources dans la visionneuse de résultats. Double environ les jetons de sortie et le coût.",
+      "evidence_cost": "Double les jetons de sortie",
+      "prompt_language_label": "Langue du prompt",
+      "prompt_language_help": "Langue des instructions que l'application ajoute à votre prompt (avertissement de sécurité, ligne du schéma, règles de citation). Par défaut, la langue de l'interface."
     },
     "custom_api": {
       "api_key_label": "Clé API",
@@ -2818,6 +2824,41 @@
         "mappings_required": "Les correspondances de champs sont requises mais introuvables. Veuillez d'abord les configurer.",
         "mappings_configured": "Correspondances de champs configurées"
       }
+    },
+    "provenance": {
+      "mode_label": "Surligner la source des valeurs",
+      "mode_off": "Désactivé",
+      "mode_selected": "Sélection",
+      "mode_all": "Tout",
+      "coverage": "{found}/{total} localisées",
+      "coverage_title": "Provenance des valeurs",
+      "coverage_help": "Les valeurs sont localisées par recherche dans le texte extrait. Les correspondances proviennent d’une recherche textuelle, pas du modèle — vérifiez avant de vous y fier.",
+      "coverage_evidence_mode": "Cet essai a utilisé les citations sources : le modèle devait citer le texte d’où provient chaque valeur.",
+      "coverage_missing": "Sans citation : {fields}",
+      "prev_match": "Occurrence précédente",
+      "next_match": "Occurrence suivante",
+      "clear_selection": "Effacer la sélection",
+      "pdf_note": "Les surlignages sont affichés sur le texte extrait.",
+      "pdf_note_switch": "Basculer",
+      "kind": {
+        "quote": "Cité par le modèle",
+        "exact": "Littéral",
+        "normalized": "Normalisé",
+        "numeric": "Même nombre",
+        "date": "Même date",
+        "label": "Champ mentionné",
+        "fuzzy": "Approximatif"
+      },
+      "desc": {
+        "quote": "Le modèle a cité ce passage comme source.",
+        "exact": "La valeur apparaît dans le texte exactement telle qu’extraite.",
+        "normalized": "Trouvée en ignorant la casse, les espaces, les retours à la ligne ou les accents.",
+        "numeric": "Un nombre du texte a la même valeur, écrit différemment.",
+        "date": "Une date du texte désigne le même jour, écrite différemment.",
+        "label": "Seul le nom du champ apparaît ici — la valeur a été déduite.",
+        "fuzzy": "Un passage similaire. À vérifier manuellement."
+      },
+      "note_label": "Note du modèle"
     }
   },
   "errors": {

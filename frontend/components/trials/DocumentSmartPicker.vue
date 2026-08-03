@@ -1,5 +1,5 @@
 <template>
-  <div class="mt-4 flex-1 flex flex-col gap-4">
+  <div class="mt-4 flex-1 min-h-0 overflow-y-auto flex flex-col gap-4">
     <div>
       <h4 class="text-sm font-medium text-content-muted mb-2">
         {{ $t('trials.smart.load_from_trial') }}

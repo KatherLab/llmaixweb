@@ -9,6 +9,18 @@ export type TrialAdvancedOptions = Record<string, unknown> & {
   max_tokens?: number
   max_completion_tokens?: number
   reasoning_effort?: 'low' | 'medium' | 'high'
+  /**
+   * Ask the model to quote the source text for every extracted value. The
+   * quotes are split out of the result and stored in
+   * `TrialResult.additional_content.evidence` as {json path → quote}.
+   */
+  evidence_mode?: boolean
+  /**
+   * Language for the instructions the backend appends to the prompt (injection
+   * guard, schema line, evidence rules). Defaults to the UI language on create;
+   * unknown or absent values fall back to English server-side.
+   */
+  prompt_language?: string
 }
 
 /** Trial.meta — holds eta_seconds during processing. */

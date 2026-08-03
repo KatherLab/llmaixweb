@@ -21,6 +21,16 @@ interface Props {
   type?: string
   placeholder?: string
   autocomplete?: string
+  /** Field name. Browsers autofill by name heuristics, so a non-credential
+   *  name (e.g. `llm_api_key`) matters for fields that only look like logins. */
+  name?: string
+  /**
+   * Opt this field out of password managers. Browsers ignore `autocomplete="off"`
+   * on password inputs when they hold a credential for the origin, and 1Password /
+   * LastPass / Bitwarden ignore it entirely — each needs its own attribute. Use
+   * for secret fields that are *data*, not credentials for this site.
+   */
+  ignorePasswordManagers?: boolean
   required?: boolean
   disabled?: boolean
   spellcheck?: boolean
@@ -43,6 +53,8 @@ const props = withDefaults(defineProps<Props>(), {
   type: 'text',
   placeholder: '',
   autocomplete: 'off',
+  name: undefined,
+  ignorePasswordManagers: false,
   required: false,
   disabled: false,
   spellcheck: true,
@@ -81,6 +93,11 @@ const inputClasses = computed(() => [
         :value="modelValue"
         :placeholder="placeholder"
         :autocomplete="autocomplete"
+        :name="name"
+        :data-1p-ignore="ignorePasswordManagers ? '' : undefined"
+        :data-lpignore="ignorePasswordManagers ? 'true' : undefined"
+        :data-bwignore="ignorePasswordManagers ? 'true' : undefined"
+        :data-form-type="ignorePasswordManagers ? 'other' : undefined"
         :required="required"
         :disabled="disabled"
         :spellcheck="spellcheck"

@@ -3,7 +3,12 @@
     <label :class="labelClass" for="trial-prompt-select"
       >{{ $t('trials.select.prompt_label') }} <span class="text-red-500">*</span></label
     >
-    <select id="trial-prompt-select" v-model="model" :class="selectClass" @change="emit('change')">
+    <select
+      id="trial-prompt-select"
+      v-model="model"
+      :class="[selectClass, pendingClass]"
+      @change="emit('change')"
+    >
       <option disabled value="">{{ $t('trials.select.prompt_placeholder') }}</option>
       <option v-for="prompt in prompts" :key="prompt.id" :value="prompt.id.toString()">
         {{ prompt.name }}
@@ -33,7 +38,7 @@
 
 <script setup lang="ts">
 import { computed, type PropType } from 'vue'
-import { selectClass, labelClass } from '@/utils/formStyles'
+import { pendingFieldClass, selectClass, labelClass } from '@/utils/formStyles'
 import type { Prompt } from '@/types'
 
 const props = defineProps({
@@ -46,6 +51,10 @@ const props = defineProps({
 const emit = defineEmits<{ change: [] }>()
 
 const model = defineModel<string>({ default: '' })
+
+// Required-but-empty selects get a marker so the one still blocking the
+// form doesn't look identical to the ones already answered.
+const pendingClass = computed(() => (model.value ? '' : pendingFieldClass))
 
 const selectedPrompt = computed(() => {
   if (!model.value) return null

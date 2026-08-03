@@ -8,6 +8,7 @@
       <div v-for="(value, key) in data" :key="key" class="json-item">
         <div
           class="json-key"
+          :class="{ 'json-key-selected': childPath(key) === selectedPath }"
           :tabindex="isExpandable(value) ? 0 : undefined"
           :role="isExpandable(value) ? 'button' : undefined"
           :aria-expanded="isExpandable(value) ? !!expanded[key] : undefined"
@@ -24,15 +25,45 @@
             <span v-else class="w-3 h-3 inline-block"></span>
           </span>
           <span class="key-name text-xs font-medium text-primary">{{ key }}:</span>
-          <span v-if="!isExpandable(value) || !expanded[key]" class="json-value text-xs ml-1">
-            {{ formatValue(value, !expanded[key]) }}
-          </span>
+          <template v-if="!isExpandable(value) || !expanded[key]">
+            <!-- Provenance-enabled leaves become clickable and carry a
+                 confidence dot; without `annotations` this is a plain span and
+                 the viewer behaves exactly as before. -->
+            <component
+              :is="annotationFor(key) ? 'button' : 'span'"
+              :type="annotationFor(key) ? 'button' : undefined"
+              class="json-value text-xs ml-1 text-left"
+              :class="annotationFor(key) ? 'json-value-actionable' : ''"
+              :title="annotationFor(key)?.title"
+              @click.stop="onValueClick(key)"
+            >
+              {{ formatValue(value, !expanded[key]) }}
+              <span
+                v-if="annotationFor(key)"
+                class="provenance-dot"
+                :class="annotationFor(key)!.dotClass"
+                aria-hidden="true"
+              />
+              <span
+                v-if="(annotationFor(key)?.count ?? 0) > 1"
+                class="text-[10px] text-content-subtle ml-0.5"
+                >×{{ annotationFor(key)!.count }}</span
+              >
+            </component>
+          </template>
         </div>
         <div
           v-if="isExpandable(value) && expanded[key]"
           class="json-children ml-3 pl-2 border-l border-default"
         >
-          <JsonViewer :data="value as JsonValue" :max-depth="(maxDepth ?? 0) - 1" />
+          <JsonViewer
+            :data="value as JsonValue"
+            :max-depth="(maxDepth ?? 0) - 1"
+            :path="childPath(key)"
+            :annotations="annotations"
+            :selected-path="selectedPath"
+            @select="emit('select', $event)"
+          />
         </div>
       </div>
     </div>
@@ -45,10 +76,22 @@ import { ChevronRight } from '@lucide/vue'
 
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null
 
+/** Per-leaf provenance summary, keyed by JSON path (see utils/provenance.ts). */
+export interface JsonAnnotation {
+  dotClass: string
+  title: string
+  count: number
+}
+
 interface Props {
   // Accepts any JSON-shaped value (object, array, primitive, or null).
   data?: JsonValue
   maxDepth?: number
+  /** JSON path of `data` itself; children extend it (`a.b[0].c`). */
+  path?: string
+  /** Optional path→annotation map. Presence turns leaves into select targets. */
+  annotations?: Record<string, JsonAnnotation>
+  selectedPath?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -56,12 +99,33 @@ const props = withDefaults(defineProps<Props>(), {
   // Children only render once expanded, so a generous limit costs nothing and keeps
   // deeply nested extraction schemas (list → object → list → object) explorable.
   maxDepth: 10,
+  path: '',
+  annotations: undefined,
+  selectedPath: '',
 })
+
+const emit = defineEmits<{ (e: 'select', path: string): void }>()
 
 const expanded = reactive<Record<string, boolean>>({})
 
 const isExpandable = (value: unknown): boolean => {
   return !!value && typeof value === 'object' && props.maxDepth > 0
+}
+
+/**
+ * Path of a child key. Array indices use bracket syntax so the result matches
+ * the backend's evidence map (`medications[0].dose`) exactly.
+ */
+const childPath = (key: string | number): string => {
+  if (Array.isArray(props.data)) return `${props.path}[${key}]`
+  return props.path ? `${props.path}.${key}` : String(key)
+}
+
+const annotationFor = (key: string | number): JsonAnnotation | undefined =>
+  props.annotations?.[childPath(key)]
+
+const onValueClick = (key: string | number): void => {
+  if (annotationFor(key)) emit('select', childPath(key))
 }
 
 const toggleExpanded = (key: string | number): void => {
@@ -120,6 +184,11 @@ const formatValue = (value: unknown, collapsed = false): string => {
   background-color: var(--color-primary-soft);
 }
 
+.json-key-selected {
+  background-color: var(--color-primary-soft);
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
 .toggle-icon {
   width: 12px;
   display: inline-block;
@@ -135,5 +204,23 @@ const formatValue = (value: unknown, collapsed = false): string => {
 .json-value {
   color: var(--color-primary);
   word-break: break-word;
+}
+
+.json-value-actionable {
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.json-value-actionable:hover {
+  text-decoration: underline;
+}
+
+.provenance-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  margin-left: 4px;
+  vertical-align: middle;
 }
 </style>

@@ -51,13 +51,30 @@
         {{ $t('trials.advanced.reasoning_help') }}
       </p>
     </div>
+    <div>
+      <label :class="labelClass" for="advanced-prompt-language">
+        {{ $t('trials.advanced.prompt_language_label') }}
+      </label>
+      <select id="advanced-prompt-language" v-model="promptLanguage" :class="selectClass">
+        <option v-for="code in SUPPORTED_LOCALES" :key="code" :value="code">
+          {{ $t(`language.${code}`) }}
+        </option>
+      </select>
+      <p class="mt-1 text-xs text-content-muted">
+        {{ $t('trials.advanced.prompt_language_help') }}
+      </p>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
+import { SUPPORTED_LOCALES } from '@/i18n'
 
 const maxCompletionTokens = defineModel<string>('maxCompletionTokens', { default: '' })
 const temperature = defineModel<string>('temperature', { default: '' })
 const reasoningEffort = defineModel<string>('reasoningEffort', { default: '' })
+// Language of the instructions the backend appends to the prompt (injection
+// guard, schema line, evidence rules). Defaults to the UI language upstream.
+const promptLanguage = defineModel<string>('promptLanguage', { default: 'en' })
 </script>
