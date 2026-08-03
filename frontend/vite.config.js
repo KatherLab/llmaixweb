@@ -5,7 +5,7 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
-  const frontendDir = path.resolve(__dirname)
+  const frontendDir = path.resolve(import.meta.dirname)
   const env = loadEnv(mode, frontendDir, '')
 
   // Backend URL - can be overridden via env var VITE_BACKEND_URL

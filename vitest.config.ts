@@ -18,7 +18,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'frontend'),
+      '@': path.resolve(import.meta.dirname, 'frontend'),
       'vue-i18n': 'vue-i18n/dist/vue-i18n.esm-bundler.js',
     },
   },

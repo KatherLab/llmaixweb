@@ -107,7 +107,7 @@ const router = createRouter({
 })
 
 // Auth/admin/first-admin guard
-router.beforeEach(async (to, _from, next) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore()
   const firstAdminStore = useFirstAdminStore()
 
@@ -118,11 +118,11 @@ router.beforeEach(async (to, _from, next) => {
 
   // If first admin is needed, only allow access to /first-admin
   if (firstAdminStore.needsFirstAdmin && to.path !== '/first-admin') {
-    return next('/first-admin')
+    return '/first-admin'
   }
   // Prevent showing setup page after admin exists
   if (!firstAdminStore.needsFirstAdmin && to.path === '/first-admin') {
-    return next('/')
+    return '/'
   }
 
   // Ensure the user profile is loaded before evaluating auth/admin guards.
@@ -137,10 +137,10 @@ router.beforeEach(async (to, _from, next) => {
   // Standard auth guard
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     if (!authStore.isAuthenticated) {
-      return next({ path: '/login', query: { redirect: to.fullPath } })
+      return { path: '/login', query: { redirect: to.fullPath } }
     }
     if (to.matched.some((record) => record.meta.adminOnly) && !authStore.isAdmin) {
-      return next('/')
+      return '/'
     }
   }
   // Prevent logged-in users from seeing login/register pages
@@ -152,9 +152,9 @@ router.beforeEach(async (to, _from, next) => {
       to.path === '/forgot-password' ||
       to.path.startsWith('/reset-password/'))
   ) {
-    return next('/projects')
+    return '/projects'
   }
-  return next()
+  return true
 })
 
 // Per-route document titles from `meta.title` (child meta wins over parent).

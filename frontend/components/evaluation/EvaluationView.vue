@@ -353,7 +353,7 @@
     <TrialSelectorModal
       :open="showTrialSelector"
       :project-id="projectId"
-      :ground-truth="selectedGroundTruth!"
+      :ground-truth="selectedGroundTruth"
       @close="showTrialSelector = false"
       @evaluate="onTrialEvaluate"
     />

@@ -162,8 +162,9 @@
 
     <!-- Document Viewer Modal (moved outside tabs to be always available) -->
     <DocumentViewer
+      v-if="viewingDocument"
       :open="showDocumentViewer"
-      :document="viewingDocument!"
+      :document="viewingDocument"
       :project-id="projectId"
       :index="viewerGlobalIndex"
       :total="totalCount"

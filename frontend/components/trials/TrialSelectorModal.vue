@@ -252,7 +252,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, type PropType } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { trialsApi } from '@/services/trialsApi'
 import { schemasApi } from '@/services/schemasApi'
@@ -292,20 +292,13 @@ interface AvailableTrial extends TrialSummary {
   mappingStatus: 'loading' | 'loaded'
 }
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  projectId: {
-    type: [String, Number] as PropType<string | number>,
-    required: true,
-  },
-  groundTruth: {
-    type: Object as PropType<GroundTruth>,
-    required: true,
-  },
-})
+interface Props {
+  open: boolean
+  projectId: string | number
+  groundTruth: GroundTruth | null
+}
+
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   close: []
@@ -479,9 +472,12 @@ const fetchTrials = async (): Promise<void> => {
 
 // Fetch schemas and existing evaluations for this ground truth
 const fetchSchemasAndEvaluations = async (): Promise<void> => {
+  const groundTruth = props.groundTruth
+  if (!groundTruth) return
+
   const [schemasResponse, evaluationsResponse] = await Promise.all([
     schemasApi.list(props.projectId),
-    evaluationsApi.list(props.projectId, { groundtruth_id: props.groundTruth.id }),
+    evaluationsApi.list(props.projectId, { groundtruth_id: groundTruth.id }),
   ])
   schemas.value = schemasResponse.data
   existingEvaluations.value = evaluationsResponse.data
@@ -506,10 +502,13 @@ const fetchData = async (): Promise<void> => {
 
 // Mapping checks
 const checkMappingStatus = async (trial: TrialSummary): Promise<boolean> => {
+  const groundTruth = props.groundTruth
+  if (!groundTruth) return false
+
   try {
     const response = await groundtruthApi.getMappingStatus(
       props.projectId,
-      props.groundTruth.id,
+      groundTruth.id,
       trial.schema_id,
     )
     return response.data.has_mappings || false
@@ -614,6 +613,9 @@ const evaluateTrialWithValidation = async (): Promise<void> => {
 }
 
 const runEvaluation = async (): Promise<void> => {
+  const groundTruth = props.groundTruth
+  if (!groundTruth) return
+
   lastFailedOperation.value = runEvaluation
   loadingStates.value.evaluation = true
   error.value = null
@@ -632,7 +634,7 @@ const runEvaluation = async (): Promise<void> => {
     const response = await trialsApi.evaluate(
       props.projectId,
       selectedTrial.value!.id,
-      props.groundTruth.id,
+      groundTruth.id,
     )
 
     // The evaluate endpoint returns an EvaluationSummary; the emit is typed as
