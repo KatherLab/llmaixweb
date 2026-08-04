@@ -3,7 +3,7 @@
     :columns="columns"
     :items="files"
     row-key="id"
-    selectable
+    :selectable="canEdit"
     :selected-keys="selectedFiles"
     :all-selected="allSelected"
     :total-selected="selectedFiles.length"
@@ -50,7 +50,7 @@
               }}
             </span>
             <BaseButton
-              v-if="isCSVXLSX(file)"
+              v-if="isCSVXLSX(file) && canEdit"
               variant="ghost"
               size="sm"
               class="text-xs underline"
@@ -121,6 +121,7 @@
         <Download class="w-4 h-4" aria-hidden="true" />
       </BaseButton>
       <BaseButton
+        v-if="canEdit"
         variant="icon"
         tone="red"
         :title="$t('files.actions.delete')"
@@ -145,6 +146,7 @@ import FileIcon from '@/components/common/FileIcon.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import DataTable from '@/components/common/DataTable.vue'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { formatFileSize, formatDateSmart, formatDateFull } from '@/utils/formatters'
 import type { FileWithTasks } from '@/composables/usePreprocessingUpdates'
 
@@ -191,6 +193,9 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const { t } = useI18n({ useScope: 'global' })
+// Read-only collaborators get no row-level mutations. Selection is switched off
+// with them, since its only consumers are the (hidden) batch actions.
+const { canEdit } = useProjectAccess()
 
 const emit = defineEmits<{
   'toggle-selection': [fileId: number]

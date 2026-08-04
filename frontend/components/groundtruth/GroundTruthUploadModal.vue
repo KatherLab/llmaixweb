@@ -123,6 +123,7 @@
           {{ $t('groundtruth.upload.cancel') }}
         </BaseButton>
         <BaseButton
+          v-if="canEdit"
           type="submit"
           :disabled="isUploading || selectedFiles.length === 0"
           :loading="isUploading"
@@ -138,6 +139,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { ImageIcon, X } from '@lucide/vue'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { useToast } from '@/composables/useToast'
@@ -161,6 +163,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 const toast = useToast()
 
 const groundTruthName = ref('')
@@ -259,6 +262,7 @@ const removeFile = (index: number) => {
 }
 
 const uploadGroundTruth = async () => {
+  if (!canEdit.value) return
   if (selectedFiles.value.length === 0) {
     toast.warning(t('groundtruth.upload.toast_select_file'))
     return

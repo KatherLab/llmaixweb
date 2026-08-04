@@ -81,6 +81,7 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { documentsApi } from '@/services/documentsApi'
 import { filesApi } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
@@ -124,6 +125,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 const toast = useToast()
 const { downloadBlob } = useFileDownload()
 
@@ -293,6 +295,9 @@ const selectVersion = (version: DocumentListItem): void => {
 const showRestoreConfirm = ref<boolean>(false)
 const pendingRestoreVersion = ref<DocumentListItem | null>(null)
 const restoreVersion = (version: DocumentListItem): void => {
+  // The trigger lives in the (gated) info sidebar; guard here too so restoring
+  // can't be reached by a viewer through any other path.
+  if (!canEdit.value) return
   pendingRestoreVersion.value = version
   showRestoreConfirm.value = true
 }

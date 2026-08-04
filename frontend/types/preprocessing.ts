@@ -85,6 +85,13 @@ export interface PreprocessingTask {
   /** Runtime progress meta (REST-serialized from the ORM `meta` column; also
    * updated at runtime by the WS merge layer). */
   meta?: PreprocessingTaskMeta | null
+  /**
+   * Whether the requesting user may act on this task (cancel/retry). Only the
+   * cross-project activity feed populates it meaningfully; in-project
+   * endpoints leave it `true`, since reaching the task there already implies
+   * the permission.
+   */
+  can_write?: boolean
   /** Computed: sum of file_tasks[].document_count. */
   documents_count: number
 }

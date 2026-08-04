@@ -65,6 +65,7 @@
             </button>
             <!-- Rename (pencil) -->
             <button
+              v-if="canEdit"
               class="p-2 text-content-muted hover:text-content hover:bg-surface-muted rounded-card transition-colors"
               :title="$t('groundtruth.manager.rename')"
               :aria-label="
@@ -78,6 +79,7 @@
             </button>
             <!-- Delete (trash) -->
             <button
+              v-if="canEdit"
               class="p-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-card transition-colors"
               :title="$t('groundtruth.manager.delete')"
               :aria-label="
@@ -182,6 +184,7 @@ import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
 import { extractErrorMessage } from '@/utils/errors'
 import { inputClass, labelClass } from '@/utils/formStyles'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
@@ -201,6 +204,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{ close: []; updated: [] }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 const toast = useToast()
 const editingGroundTruth = ref<GroundTruth | null>(null)
 const previewingGroundTruth = ref<GroundTruth | null>(null)

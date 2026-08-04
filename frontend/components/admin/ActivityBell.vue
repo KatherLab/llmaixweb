@@ -129,7 +129,7 @@
                         </p>
                         <!-- Cancel button (visible on hover, active tasks only) -->
                         <button
-                          v-if="isTaskActive(task)"
+                          v-if="isTaskActive(task) && task.can_write !== false"
                           type="button"
                           class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 transition-opacity p-0.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
                           :title="$t('admin.activity.cancel_task')"

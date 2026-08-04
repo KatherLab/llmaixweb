@@ -311,29 +311,32 @@
 
               <!-- Actions -->
               <div class="flex items-center justify-end gap-2 pt-2 border-t border-default">
-                <BaseButton
-                  v-if="isTaskStatus(task, 'failed')"
-                  variant="ghost"
-                  size="sm"
-                  class="text-xs font-medium"
-                  @click.stop="emit('retry', task.id)"
-                >
-                  {{ $t('files.history.retry_failed') }}
-                </BaseButton>
-                <BaseButton
-                  v-if="
-                    isTaskStatus(task, 'processing') ||
-                    isTaskStatus(task, 'pending') ||
-                    isTaskStatus(task, 'in_progress')
-                  "
-                  variant="ghost"
-                  size="sm"
-                  class="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"
-                  @click.stop="emit('cancel', task)"
-                >
-                  <X class="w-3 h-3" />
-                  {{ $t('files.actions.cancel') }}
-                </BaseButton>
+                <!-- Run-mutating actions: hidden for read-only collaborators. -->
+                <template v-if="canEdit">
+                  <BaseButton
+                    v-if="isTaskStatus(task, 'failed')"
+                    variant="ghost"
+                    size="sm"
+                    class="text-xs font-medium"
+                    @click.stop="emit('retry', task.id)"
+                  >
+                    {{ $t('files.history.retry_failed') }}
+                  </BaseButton>
+                  <BaseButton
+                    v-if="
+                      isTaskStatus(task, 'processing') ||
+                      isTaskStatus(task, 'pending') ||
+                      isTaskStatus(task, 'in_progress')
+                    "
+                    variant="ghost"
+                    size="sm"
+                    class="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"
+                    @click.stop="emit('cancel', task)"
+                  >
+                    <X class="w-3 h-3" />
+                    {{ $t('files.actions.cancel') }}
+                  </BaseButton>
+                </template>
                 <BaseButton
                   variant="ghost"
                   size="sm"
@@ -352,7 +355,7 @@
           <template #icon>
             <FilePlus class="h-12 w-12 mx-auto text-content-subtle" aria-hidden="true" />
           </template>
-          <template v-if="historyFile" #action>
+          <template v-if="historyFile && canEdit" #action>
             <BaseButton class="shadow-sm" @click="emit('process', historyFile)">
               <Rocket class="w-4 h-4" />
               {{ $t('files.history.process_this_file') }}
@@ -366,7 +369,7 @@
     <div class="px-6 py-4 border-t border-default bg-surface-muted flex-shrink-0">
       <div class="flex items-center justify-between">
         <BaseButton
-          v-if="historyFile"
+          v-if="historyFile && canEdit"
           variant="ghost"
           size="sm"
           class="font-medium"
@@ -403,6 +406,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import SlideOver from '@/components/common/SlideOver.vue'
 import Callout from '@/components/common/Callout.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import type { FilePreprocessingTask, PreprocessingTask } from '@/types'
 import type { FileWithTasks } from '@/composables/usePreprocessingUpdates'
 
@@ -429,6 +433,9 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+// Viewers keep the full read-only history (progress, errors, document links);
+// only the run-mutating actions (retry / cancel / start a new run) are hidden.
+const { canEdit } = useProjectAccess()
 
 // Multi-expand accordion state
 const expandedTasks = ref(new Set<number>())

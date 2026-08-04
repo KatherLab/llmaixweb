@@ -1,6 +1,6 @@
 <template>
   <BaseModal
-    :open="open"
+    :open="isOpen"
     size="xl"
     body-class="p-0 flex flex-col min-h-0"
     @close="cancelPromptModal"
@@ -350,6 +350,7 @@ import { useI18n } from 'vue-i18n'
 import { Check, FileText } from '@lucide/vue'
 import { promptsApi } from '@/services/promptsApi'
 import { useToast } from '@/composables/useToast'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
@@ -387,8 +388,13 @@ const templateLanguage = ref<SupportedLocale>(locale.value as SupportedLocale)
 watch(locale, (next) => (templateLanguage.value = next as SupportedLocale))
 const sampleDocument = computed(() => sampleDocumentFor(templateLanguage.value))
 const toast = useToast()
+const { canEdit } = useProjectAccess()
 
 const isEdit = computed(() => !!props.prompt)
+
+// The modal exists only to create or update a prompt, so it never opens for a
+// read-only collaborator.
+const isOpen = computed(() => props.open && canEdit.value)
 
 const promptError = ref('')
 const showPreviewSystem = ref(false)
@@ -668,39 +674,36 @@ const confirmDiscard = () => {
 }
 
 // Initialize/reset when modal opens/closes
-watch(
-  () => props.open,
-  (isOpen) => {
-    if (isOpen) {
-      if (props.prompt) {
-        // Edit mode
-        promptForm.value = {
-          name: props.prompt.name || '',
-          description: props.prompt.description || '',
-          system_prompt: props.prompt.system_prompt || '',
-          user_prompt: props.prompt.user_prompt || '',
-        }
-        // Open in Advanced mode when the prompt uses advanced features (a
-        // system prompt, or an explicit {document_content} placeholder).
-        // Simple mode clears system_prompt in validatePromptPlaceholder, so
-        // defaulting an advanced prompt to Simple would silently wipe it.
-        const usesAdvanced =
-          !!promptForm.value.system_prompt ||
-          promptForm.value.user_prompt.includes('{document_content}')
-        simplePromptMode.value = !usesAdvanced
-      } else {
-        // Create mode
-        resetPromptForm()
+watch(isOpen, (opened) => {
+  if (opened) {
+    if (props.prompt) {
+      // Edit mode
+      promptForm.value = {
+        name: props.prompt.name || '',
+        description: props.prompt.description || '',
+        system_prompt: props.prompt.system_prompt || '',
+        user_prompt: props.prompt.user_prompt || '',
       }
-      // Baseline for the unsaved-changes guard: everything written above is
-      // initialization, not a user edit.
-      initialSnapshot.value = currentSnapshot()
+      // Open in Advanced mode when the prompt uses advanced features (a
+      // system prompt, or an explicit {document_content} placeholder).
+      // Simple mode clears system_prompt in validatePromptPlaceholder, so
+      // defaulting an advanced prompt to Simple would silently wipe it.
+      const usesAdvanced =
+        !!promptForm.value.system_prompt ||
+        promptForm.value.user_prompt.includes('{document_content}')
+      simplePromptMode.value = !usesAdvanced
     } else {
+      // Create mode
       resetPromptForm()
-      initialSnapshot.value = ''
     }
-  },
-)
+    // Baseline for the unsaved-changes guard: everything written above is
+    // initialization, not a user edit.
+    initialSnapshot.value = currentSnapshot()
+  } else {
+    resetPromptForm()
+    initialSnapshot.value = ''
+  }
+})
 
 watch(
   () => promptForm.value.name,

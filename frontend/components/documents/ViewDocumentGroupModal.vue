@@ -45,7 +45,7 @@
             <Package class="h-4 w-4" />
             {{ $t('documents.group_view.download_all') }}
           </BaseButton>
-          <BaseButton variant="secondary" size="sm" @click="$emit('edit', group)">
+          <BaseButton v-if="canEdit" variant="secondary" size="sm" @click="$emit('edit', group)">
             <Pencil class="h-4 w-4" />
             {{ $t('documents.actions.edit') }}
           </BaseButton>
@@ -253,6 +253,7 @@ import SlideOver from '@/components/common/SlideOver.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import DocumentViewerBody from './DocumentViewerBody.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import type { DocumentListItem, DocumentSetSummary } from '@/types'
 
 /** DocumentSetSummary as returned by the set list, optionally with `trial_id`. */
@@ -277,6 +278,7 @@ defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 const toast = useToast()
 const { downloadBlob, downloadFromApi } = useFileDownload()
 

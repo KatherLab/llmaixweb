@@ -756,6 +756,13 @@ class PreprocessingTask(PreprocessingTaskBase):
     # dict default, but this is exposed as `dict | None` for safety.
     meta: dict | None = None
 
+    # Whether the requesting user may act on this task (cancel/retry). Only the
+    # cross-project activity feed sets it: that feed spans projects, so the
+    # client can't derive write access from the project it is currently in the
+    # way the in-project views do. Defaults True for the in-project endpoints,
+    # where reaching the task at all already implies the needed permission.
+    can_write: bool = True
+
     # Computed fields for document counts
     @computed_field
     @property

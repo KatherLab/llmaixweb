@@ -17,7 +17,7 @@ from ....dependencies import get_db, remove_file
 from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.deletion import cascade_delete_project
-from ....utils.enums import AuditAction
+from ....utils.enums import AuditAction, ProjectPermission
 from .documents import router as documents_router
 from .evaluations import router as evaluations_router
 from .files import router as files_router
@@ -119,7 +119,35 @@ def get_recent_preprocessing_tasks(
     )
 
     tasks = db.execute(query).scalars().all()
-    return [schemas.PreprocessingTask.model_validate(task) for task in tasks]
+
+    # The bell spans projects, so the client can't infer write access from "the
+    # project I'm in" the way the in-project views do. Tell it per task, or a
+    # read-only collaborator sees a Cancel button that can only ever 403.
+    if admin_has_global_project_access(current_user):
+        writable: set[int] = set(project_ids)
+    else:
+        writable = set(
+            db.execute(
+                select(models.Project.id).where(
+                    models.Project.owner_id == current_user.id
+                )
+            ).scalars()
+        )
+        writable.update(
+            db.execute(
+                select(models.ProjectShare.project_id).where(
+                    models.ProjectShare.user_id == current_user.id,
+                    models.ProjectShare.permission == ProjectPermission.WRITE,
+                )
+            ).scalars()
+        )
+
+    result = []
+    for task in tasks:
+        payload = schemas.PreprocessingTask.model_validate(task)
+        payload.can_write = task.project_id in writable
+        result.append(payload)
+    return result
 
 
 @router.get(

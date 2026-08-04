@@ -20,12 +20,16 @@
             : 'border-primary',
         ]"
         required
+        :disabled="!canEdit"
         @change="updateId"
       >
         <option value="" disabled>{{ $t('groundtruth.id_field.select_id_column') }}</option>
         <option v-for="c in availableColumns" :key="c" :value="c">{{ c }}</option>
       </select>
-      <div v-if="!innerIdColumn" class="text-xs text-red-500 mt-1 flex items-center gap-1">
+      <div
+        v-if="canEdit && !innerIdColumn"
+        class="text-xs text-red-500 mt-1 flex items-center gap-1"
+      >
         <CircleAlert class="w-4 h-4" />
         {{ $t('groundtruth.id_field.select_id_column_hint') }}
       </div>
@@ -39,6 +43,7 @@
             type="radio"
             class="accent-purple-500"
             value=""
+            :disabled="!canEdit"
             @change="updateId"
           />
           <span
@@ -53,6 +58,7 @@
             type="radio"
             class="accent-purple-500"
             value="__field__"
+            :disabled="!canEdit"
             @change="updateId"
           />
           <span
@@ -64,6 +70,7 @@
             v-if="innerIdColumn === '__field__'"
             v-model="innerJsonIdField"
             :class="[selectClass, 'min-w-[120px]']"
+            :disabled="!canEdit"
             @change="updateJsonId"
           >
             <option value="" disabled>{{ $t('groundtruth.id_field.select_field') }}</option>
@@ -92,6 +99,7 @@
 import { ref, watch } from 'vue'
 import { CircleAlert, FileText, Key } from '@lucide/vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { selectClass } from '@/utils/formStyles'
 
 interface Props {
@@ -118,6 +126,8 @@ const emit = defineEmits<{
   'update:id-column': [value: string]
   'update:json-id-field': [value: string]
 }>()
+
+const { canEdit } = useProjectAccess()
 
 const innerIdColumn = ref(props.idColumn || '')
 const innerJsonIdField = ref(props.jsonIdField || '')

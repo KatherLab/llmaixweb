@@ -75,9 +75,11 @@
       @clear-filters="clearFilters"
     />
 
-    <!-- Hint: Select files to preprocess -->
+    <!-- Hint: Select files to preprocess (points at an action viewers can't take) -->
     <Callout
-      v-if="files.length > 0 && selectedFiles.length === 0 && !hasActivePreprocessingTasks"
+      v-if="
+        canEdit && files.length > 0 && selectedFiles.length === 0 && !hasActivePreprocessingTasks
+      "
       variant="info"
       class="flex items-center gap-2"
     >
@@ -199,7 +201,7 @@
                 {{ $t('files.actions.view_details') }}
               </BaseButton>
               <BaseButton
-                v-if="activePreprocessingSummary.cancelableTask"
+                v-if="canEdit && activePreprocessingSummary.cancelableTask"
                 variant="ghost"
                 size="sm"
                 class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
@@ -282,8 +284,11 @@
       </template>
     </EmptyState>
 
-    <!-- Floating Batch Toolbar -->
+    <!-- Floating Batch Toolbar — every action in it mutates, so the whole bar is
+         hidden for viewers rather than left as an empty shell (row selection is
+         switched off for them too). -->
     <BatchActionBar
+      v-if="canEdit"
       :count="selectedFiles.length"
       count-key="files.batch.selected_count"
       @clear="selectedFiles = []"
@@ -1107,6 +1112,8 @@ const quickProcessFile = (file: FileModel): void => {
 // a visible warning instead of rendering "Unknown" rows and letting Start fail
 // server-side.
 const openProcessingPanel = (): void => {
+  // Read-only collaborators can't start a run — never open the panel for them.
+  if (!canEdit.value) return
   const unresolved = selectedFiles.value.filter((id) => !getFileById(id))
   if (unresolved.length > 0) {
     selectedFiles.value = selectedFiles.value.filter((id) => !!getFileById(id))
@@ -1327,6 +1334,7 @@ const viewActiveTaskDetails = (): void => {
 // Check for duplicates and start processing (or show confirmation).
 // Receives the built settings payload from PreprocessingConfigPanel.
 const startProcessing = async (payload: PreprocessingTaskCreate): Promise<void> => {
+  if (!canEdit.value) return
   if (!canStartProcessing.value) return
 
   isSubmitting.value = true

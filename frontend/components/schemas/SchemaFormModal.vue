@@ -1,6 +1,6 @@
 <template>
   <BaseModal
-    :open="open"
+    :open="isOpen"
     size="full"
     body-class="p-0 flex flex-col min-h-0"
     panel-class="max-w-[1600px] h-[90vh]"
@@ -253,6 +253,7 @@ import { useI18n } from 'vue-i18n'
 import { ArrowUpDown, BookOpen, CircleAlert, CircleCheckBig, Layers } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
 import { useToast } from '@/composables/useToast'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
@@ -289,8 +290,15 @@ const emit = defineEmits<{
 
 const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
+const { canEdit } = useProjectAccess()
 
 const isEdit = computed(() => !!props.schema)
+
+// The entire modal — name field, both editors, the templates picker — only
+// exists to create or update a schema, so it never opens for a read-only
+// collaborator. Gating here (rather than inside the tree editor) keeps the
+// in-memory editing components untouched and safe to reuse elsewhere.
+const isOpen = computed(() => props.open && canEdit.value)
 
 const rawJsonTextarea = ref<HTMLTextAreaElement | null>(null)
 const cursorPosition = ref(0)
@@ -639,56 +647,53 @@ watch(simpleMode, (isSimple) => {
 })
 
 // Initialize schema when opening modal
-watch(
-  () => props.open,
-  (isOpen) => {
-    if (isOpen) {
-      simpleMode.value = true // Default to simple mode
-      simpleEditorValid.value = true
-      if (props.schema) {
-        // Edit mode
-        const formattedJson = formatJSON(props.schema.schema_definition)
-        schemaForm.value = {
-          schema_name: props.schema.schema_name || '',
-          schema_definition: formattedJson,
-        }
-        try {
-          const parsed = JSON.parse(formattedJson)
-          simpleSchema.value = parsed
-          visualSchema.value = parsed
-        } catch {
-          simpleSchema.value = { type: 'object', properties: {} }
-          visualSchema.value = { type: 'object', properties: {} }
-        }
-      } else {
-        // Create mode — start empty: the Simple editor's empty state invites
-        // adding the first field, and no example fields ship by accident.
+watch(isOpen, (opened) => {
+  if (opened) {
+    simpleMode.value = true // Default to simple mode
+    simpleEditorValid.value = true
+    if (props.schema) {
+      // Edit mode
+      const formattedJson = formatJSON(props.schema.schema_definition)
+      schemaForm.value = {
+        schema_name: props.schema.schema_name || '',
+        schema_definition: formattedJson,
+      }
+      try {
+        const parsed = JSON.parse(formattedJson)
+        simpleSchema.value = parsed
+        visualSchema.value = parsed
+      } catch {
         simpleSchema.value = { type: 'object', properties: {} }
         visualSchema.value = { type: 'object', properties: {} }
-        schemaForm.value = {
-          schema_name: '',
-          schema_definition: JSON.stringify({ type: 'object', properties: {} }, null, 2),
-        }
-        // "Start from a template" entry point: open the picker right away.
-        showTemplates.value = props.startWithTemplates
       }
-      // Baseline for unsaved-changes detection: everything written above is
-      // initialization, not a user edit.
-      initialSnapshot.value = currentSnapshot()
     } else {
-      // Reset on close
-      schemaError.value = ''
-      showTemplates.value = false
-      activeTab.value = 'visual'
+      // Create mode — start empty: the Simple editor's empty state invites
+      // adding the first field, and no example fields ship by accident.
+      simpleSchema.value = { type: 'object', properties: {} }
+      visualSchema.value = { type: 'object', properties: {} }
       schemaForm.value = {
         schema_name: '',
-        schema_definition: '',
+        schema_definition: JSON.stringify({ type: 'object', properties: {} }, null, 2),
       }
-      visualSchema.value = { type: 'object', properties: {} }
-      initialSnapshot.value = ''
+      // "Start from a template" entry point: open the picker right away.
+      showTemplates.value = props.startWithTemplates
     }
-  },
-)
+    // Baseline for unsaved-changes detection: everything written above is
+    // initialization, not a user edit.
+    initialSnapshot.value = currentSnapshot()
+  } else {
+    // Reset on close
+    schemaError.value = ''
+    showTemplates.value = false
+    activeTab.value = 'visual'
+    schemaForm.value = {
+      schema_name: '',
+      schema_definition: '',
+    }
+    visualSchema.value = { type: 'object', properties: {} }
+    initialSnapshot.value = ''
+  }
+})
 
 // Watch visual schema changes (advanced mode only).
 // In simple mode the SimpleSchemaEditor drives `schemaForm` via `updateSimpleSchema`;

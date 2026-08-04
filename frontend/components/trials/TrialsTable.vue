@@ -4,7 +4,7 @@
     :items="trials"
     row-key="id"
     row-id-prefix="trial-card-"
-    selectable
+    :selectable="canEdit"
     :selected-keys="selectedTrials"
     :all-selected="allSelected"
     :total-selected="selectedTrials.length"
@@ -153,6 +153,7 @@ import DataTable from '@/components/common/DataTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import TrialDetailPanel from './TrialDetailPanel.vue'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { formatDateSmart } from '@/utils/formatters'
 import { trialLabel } from '@/utils/trialLabel'
 import type { TrialSummary, Schema, Prompt } from '@/types'
@@ -189,6 +190,9 @@ defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+// Row selection exists only to feed the batch-delete bar, so read-only
+// collaborators get no checkboxes.
+const { canEdit } = useProjectAccess()
 
 const allSelected = computed(
   () => props.trials.length > 0 && props.selectedTrials.length === props.trials.length,

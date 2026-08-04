@@ -46,7 +46,11 @@
       >
         <p class="mt-1">
           {{ $t('trials.selector.mappings_required_body') }}
-          <button class="underline hover:no-underline" @click="showMappingModal = true">
+          <button
+            v-if="canEdit"
+            class="underline hover:no-underline"
+            @click="showMappingModal = true"
+          >
             {{ $t('trials.selector.configure_mappings') }}
           </button>
         </p>
@@ -227,6 +231,7 @@
         $t('trials.selector.cancel')
       }}</BaseButton>
       <BaseButton
+        v-if="canEdit"
         variant="primary"
         class="shadow-sm"
         :loading="isEvaluating"
@@ -275,6 +280,7 @@ import { groundtruthApi } from '@/services/groundtruthApi'
 import { formatDate } from '@/utils/formatters'
 import { trialLabel } from '@/utils/trialLabel'
 import { useToast } from '@/composables/useToast'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import BaseModal from '@/components/common/BaseModal.vue'
 import Callout from '@/components/common/Callout.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
@@ -322,6 +328,8 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const { t } = useI18n({ useScope: 'global' })
+// Running an evaluation mutates the project; viewers only browse the list.
+const { canEdit } = useProjectAccess()
 
 // Loading states
 const loadingStates = ref<LoadingStates>({
@@ -623,6 +631,7 @@ const confirmReEvaluate = async (): Promise<void> => {
 
 // Evaluate
 const evaluateTrialWithValidation = async (): Promise<void> => {
+  if (!canEdit.value) return
   const validationErrors = validateEvaluationPrerequisites()
   if (validationErrors.length > 0) {
     const message = t('trials.selector.cannot_evaluate', { errors: validationErrors.join(', ') })

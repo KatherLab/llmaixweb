@@ -90,6 +90,7 @@
         <Download class="w-4 h-4" aria-hidden="true" />
       </BaseButton>
       <BaseButton
+        v-if="canEdit"
         variant="icon"
         tone="red"
         :title="$t('documents.actions.delete')"
@@ -109,6 +110,7 @@ import { Download, Eye, Trash2 } from '@lucide/vue'
 import FileIcon from '@/components/common/FileIcon.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { formatFileSize, formatDate } from '@/utils/formatters'
 import type { DocumentListItem, DocumentMetaData } from '@/types'
 
@@ -142,6 +144,7 @@ withDefaults(defineProps<Props>(), {
 })
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 
 defineEmits<{
   'toggle-select-all': []

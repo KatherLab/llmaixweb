@@ -111,13 +111,14 @@
         @view-prompt="viewTrialPrompt"
       />
 
-      <!-- Floating Batch Toolbar -->
+      <!-- Floating Batch Toolbar (delete is its only action — no bar for viewers) -->
       <BatchActionBar
+        v-if="canEdit"
         :count="selectedTrials.length"
         count-key="trials.batch.selected_count"
         @clear="selectedTrials = []"
       >
-        <BaseButton v-if="canEdit" variant="danger" size="sm" @click="performBatchAction('delete')">
+        <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
           <Trash2 class="w-4 h-4" />
           {{ $t('trials.actions.delete') }}
         </BaseButton>

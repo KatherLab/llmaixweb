@@ -150,7 +150,7 @@
             :types="schemaFieldTypes"
             :required="requiredFields"
             :selected="selectedSchemaField"
-            :disabled="!selectedSchemaId"
+            :disabled="!selectedSchemaId || !canEdit"
             variant="schema"
             :mapped="mappedSchemaPaths"
             :highlight="highlightRequiredUnmapped"
@@ -190,7 +190,8 @@
             >
           </div>
         </div>
-        <div class="flex flex-col gap-2 mb-3">
+        <!-- Mapping authoring controls — read-only collaborators only view -->
+        <div v-if="canEdit" class="flex flex-col gap-2 mb-3">
           <BaseButton
             :disabled="!canAddMapping"
             class="w-full py-2 font-semibold text-sm"
@@ -229,7 +230,7 @@
           />
         </div>
         <BaseButton
-          v-if="mappings.length"
+          v-if="canEdit && mappings.length"
           variant="ghost"
           size="sm"
           class="mt-2 text-xs text-red-600 dark:text-red-400 font-semibold hover:underline hover:text-red-700 dark:hover:text-red-300"
@@ -261,7 +262,7 @@
             :fields="groundTruthFieldTree"
             :types="groundTruthFieldTypes"
             :selected="selectedGroundTruthField"
-            :disabled="!selectedSchemaId"
+            :disabled="!selectedSchemaId || !canEdit"
             variant="groundtruth"
             :mapped="mappedGtPaths"
             @select="onGroundTruthFieldSelect"
@@ -300,7 +301,7 @@
           {{ $t('groundtruth.preview.warning_required_unmapped') }}
         </span>
         <span
-          v-if="isTabularFormat && !idColumn"
+          v-if="canEdit && isTabularFormat && !idColumn"
           class="block mt-1 text-xs text-red-600 dark:text-red-400 font-semibold flex items-center gap-2"
         >
           <CircleAlert class="w-4 h-4" />
@@ -310,14 +311,18 @@
       <div class="flex items-center gap-5">
         <!-- Why-can't-I-save reason, shown inline while the Save button is
              disabled (a tooltip never fires over a natively-disabled button). -->
-        <span v-if="!canSave" class="text-xs text-content-muted text-right max-w-[280px]">
+        <span
+          v-if="canEdit && !canSave"
+          class="text-xs text-content-muted text-right max-w-[280px]"
+        >
           {{ saveDisabledReason }}
         </span>
         <BaseButton variant="secondary" class="px-5 py-2 font-semibold text-sm" @click="close">
-          {{ $t('groundtruth.preview.cancel') }}
+          {{ canEdit ? $t('groundtruth.preview.cancel') : $t('common.close') }}
         </BaseButton>
 
         <BaseButton
+          v-if="canEdit"
           class="px-7 py-2 font-bold text-base"
           :disabled="saveDisabled"
           :loading="justSaved"
@@ -349,6 +354,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { useToast } from '@/composables/useToast'
 import { ArrowRight, Check, CircleAlert, CircleCheck, FileText, Plus, Sparkles } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -392,6 +398,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<{ close: []; configured: [] }>()
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 const toast = useToast()
 
 // --- State

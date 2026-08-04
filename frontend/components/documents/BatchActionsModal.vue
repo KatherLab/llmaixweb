@@ -110,6 +110,7 @@
         {{ $t('documents.actions.cancel') }}
       </BaseButton>
       <BaseButton
+        v-if="canEdit"
         :variant="action === 'delete' ? 'danger' : 'primary'"
         :disabled="!canPerformAction"
         :loading="isProcessing"
@@ -133,6 +134,7 @@ import { trialsApi } from '@/services/trialsApi'
 import { filesApi } from '@/services/filesApi'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { useToast } from '@/composables/useToast'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { extractErrorMessage } from '@/utils/errors'
 import type { DocumentDependencies, FileDependencies, PreprocessingTaskCreate } from '@/types'
 
@@ -157,6 +159,10 @@ const emit = defineEmits<{
   deleted: [ids: number[]]
 }>()
 const { t } = useI18n({ useScope: 'global' })
+// This modal is a pure mutation flow and is also hosted by the Files and Trials
+// tabs, so it guards its own confirm action rather than trusting every caller
+// to gate the entry point.
+const { canEdit } = useProjectAccess()
 const toast = useToast()
 
 // Count-aware entity noun keyed by mode; used across titles, counts, and toasts.
@@ -304,7 +310,7 @@ const actionButtonText = computed(() => {
 })
 
 const canPerformAction = computed(() => {
-  if (isProcessing.value) return false
+  if (isProcessing.value || !canEdit.value) return false
   switch (props.action) {
     case 'reprocess':
       return true

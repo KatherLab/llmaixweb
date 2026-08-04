@@ -95,7 +95,7 @@
     <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-default">
       <div class="flex gap-2 flex-wrap">
         <BaseButton
-          v-if="isActive && trial.status !== 'cancelled'"
+          v-if="canEdit && isActive && trial.status !== 'cancelled'"
           variant="warning"
           size="sm"
           @click.stop="emit('cancel', trial)"
@@ -122,8 +122,10 @@
           }}
         </BaseButton>
       </div>
-      <!-- Secondary actions collapsed into an overflow menu -->
-      <div ref="menuContainer" class="relative" @keydown.escape="menuOpen = false">
+      <!-- Secondary actions collapsed into an overflow menu. Every entry
+           (retry / rename / delete) mutates, so read-only collaborators get no
+           menu at all rather than an empty one. -->
+      <div v-if="canEdit" ref="menuContainer" class="relative" @keydown.escape="menuOpen = false">
         <BaseButton
           variant="ghost"
           size="sm"
@@ -176,6 +178,7 @@ import { computed, ref, type PropType } from 'vue'
 import { AlertCircle, CircleCheckBig, Download, EllipsisVertical } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useClickOutside } from '@/composables/useClickOutside'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { formatDuration, formatDateFull } from '@/utils/formatters'
 import type { TrialSummary, Schema, Prompt } from '@/types'
 
@@ -195,6 +198,8 @@ const emit = defineEmits<{
   'view-prompt': [trial: TrialSummary]
   cancel: [trial: TrialSummary]
 }>()
+
+const { canEdit } = useProjectAccess()
 
 const schema = computed(() => props.schemas.find((s) => s.id === props.trial.schema_id))
 const prompt = computed(() => props.prompts.find((p) => p.id === props.trial.prompt_id))

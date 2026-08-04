@@ -270,6 +270,7 @@
         $t('files.actions.cancel')
       }}</BaseButton>
       <BaseButton
+        v-if="canEdit"
         :disabled="
           saving ||
           validatingId ||
@@ -299,6 +300,7 @@ import { useI18n } from 'vue-i18n'
 import { filesApi } from '@/services/filesApi'
 import type { IdColumnValidation } from '@/services/filesApi'
 import { useToast } from '@/composables/useToast'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
@@ -323,6 +325,9 @@ const emit = defineEmits<{
 
 const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
+// Read-only collaborators can't write the import config. The modal's entry
+// points are hidden for them; this keeps Save unreachable regardless.
+const { canEdit } = useProjectAccess()
 
 const isEdit = ref(false)
 
@@ -627,7 +632,7 @@ watch([caseIdColumn, preprocessingStrategy, sheet, delimiter, encoding, hasHeade
 })
 
 const saveConfig = async (): Promise<void> => {
-  if (!props.file) return
+  if (!props.file || !canEdit.value) return
   saving.value = true
   try {
     const cleanTextCols =

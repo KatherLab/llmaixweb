@@ -299,6 +299,7 @@
             {{ $t('files.actions.cancel') }}
           </BaseButton>
           <BaseButton
+            v-if="canEdit"
             class="flex-1"
             :disabled="!canSubmit || isSubmitting"
             :loading="isSubmitting"
@@ -322,12 +323,17 @@ import Callout from '@/components/common/Callout.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FormField from '@/components/common/FormField.vue'
 import PasswordInput from '@/components/common/PasswordInput.vue'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { textareaClass, selectClass, labelClass } from '@/utils/formStyles'
 import type { File, PreprocessingTaskCreate } from '@/types'
 
 type OcrEngine = 'docling_tesseract' | 'mistral_ocr' | 'llm_vision' | null
 
 const { t } = useI18n({ useScope: 'global' })
+// This panel exists solely to start a preprocessing run. Read-only collaborators
+// can't open it (the entry points are hidden), so this is a second line of
+// defence: no Start button and no way to emit `start`.
+const { canEdit } = useProjectAccess()
 
 // Decision-oriented engine descriptions for the selection cards. Admins can
 // still override the subtitle via ocrLabels.setEngineLabels (Admin Settings):
@@ -455,6 +461,7 @@ const ocrRequiredButUnavailable = computed(() => hasOcrRequiringFiles.value && n
 // with the OCR rules: a table/text-only selection needs no engine; an
 // OCR-requiring selection needs an enabled engine to be picked.
 const canSubmit = computed(() => {
+  if (!canEdit.value) return false
   if (!props.canStartProcessing) return false
   if (!hasOcrRequiringFiles.value) return true // table/text only → no engine needed
   if (noOcrEnabled.value) return false // needs OCR, none enabled

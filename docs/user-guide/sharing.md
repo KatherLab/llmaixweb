@@ -60,8 +60,18 @@ non-owner may make. Deleting a project removes all of its shares along with it.
 ## What collaborators see
 
 A viewer opening a shared project sees a **View-only access** banner at the top
-of the workspace, and the buttons they can't use — upload, start run, delete,
-project settings' danger zone — are hidden rather than shown disabled.
+of the workspace, and every control they can't use is hidden rather than shown
+disabled: uploading and preprocessing, creating or editing schemas and prompts,
+starting/renaming/cancelling/retrying/deleting extraction runs, uploading ground
+truth, editing field mappings, and creating or deleting evaluations. Row
+checkboxes for batch actions are hidden too, and the *Danger Zone* in project
+settings is owner-only.
+
+Everything that only reads stays available: browsing files and documents,
+previewing and downloading, viewing results and evaluations, exporting metrics,
+and viewing (but not editing) field mappings. The task-activity bell shows
+progress for shared projects, but only offers **Cancel** on projects the user
+can edit.
 
 Live progress for preprocessing and extraction runs is delivered to every member
 of a project, so a viewer watching a run started by someone else sees the same

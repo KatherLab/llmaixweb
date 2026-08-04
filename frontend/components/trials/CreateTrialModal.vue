@@ -286,7 +286,10 @@
       <BaseButton variant="secondary" :disabled="submitting" @click="tryClose">{{
         $t('trials.create.cancel')
       }}</BaseButton>
+      <!-- Defensive: the entry points to this modal are already gated, but a
+           viewer must never see a start button that the backend would reject. -->
       <BaseButton
+        v-if="canEdit"
         variant="primary"
         :disabled="!canSubmit || submitting"
         :loading="submitting"
@@ -327,6 +330,7 @@ import { computed, ref, toRef, watch, type Component, type PropType } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CheckCircle2, ChevronDown, CircleAlert, Info, Loader2 } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
@@ -374,6 +378,7 @@ interface TrialCreatePayload {
 
 const toast = useToast()
 const { t, locale } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 
 const props = defineProps({
   open: { type: Boolean, required: true },
@@ -658,7 +663,7 @@ const startTrialLabel = computed(() => {
 })
 
 const handleStartTrial = async (): Promise<void> => {
-  if (!canSubmit.value || submitting.value) return
+  if (!canEdit.value || !canSubmit.value || submitting.value) return
   if (selectedDocCount.value > LARGE_TRIAL_THRESHOLD) {
     showLargeRunConfirm.value = true
     return
@@ -672,7 +677,7 @@ const confirmLargeRun = async (): Promise<void> => {
 }
 
 const startTrial = async (): Promise<void> => {
-  if (!canSubmit.value || submitting.value) return
+  if (!canEdit.value || !canSubmit.value || submitting.value) return
 
   submitting.value = true
   try {

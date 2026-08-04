@@ -107,8 +107,9 @@
           <JsonViewer :data="selectedVersion?.meta_data || document.meta_data" />
         </div>
       </div>
-      <!-- Actions -->
-      <div class="pt-4 border-t space-y-2">
+      <!-- Actions — mutations only, so the whole block goes away for viewers
+           (otherwise it leaves an empty bordered section). -->
+      <div v-if="canEdit" class="pt-4 border-t space-y-2">
         <!-- Restore button for archived versions -->
         <BaseButton
           v-if="selectedVersion && !selectedVersion.is_latest"
@@ -132,6 +133,7 @@
 import { RefreshCw } from '@lucide/vue'
 import JsonViewer from '@/components/common/JsonViewer.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { getEngineLabelWithKey } from '@/utils/ocrLabels'
 import { formatDateFull, formatFileSize } from '@/utils/formatters'
 import type { DocumentListItem, DocumentMetaData } from '@/types'
@@ -151,6 +153,8 @@ defineEmits<{
   'restore-version': [version: DocumentListItem]
   reprocess: [document: DocumentListItem]
 }>()
+
+const { canEdit } = useProjectAccess()
 
 interface DocWithMetaData {
   meta_data?: DocumentMetaData | null

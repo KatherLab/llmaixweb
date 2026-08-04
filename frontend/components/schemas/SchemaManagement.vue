@@ -41,8 +41,9 @@
       @delete="confirmDeletePrompt"
     />
 
-    <!-- Create/Edit Schema Modal -->
+    <!-- Create/Edit Schema Modal (mutation surface — not mounted for viewers) -->
     <SchemaFormModal
+      v-if="canEdit"
       :open="showCreateModal || showEditModal"
       :project-id="props.projectId"
       :schema="showEditModal ? currentSchema : null"
@@ -52,8 +53,9 @@
       @updated="onSchemaUpdated"
     />
 
-    <!-- Create/Edit Prompt Modal -->
+    <!-- Create/Edit Prompt Modal (mutation surface — not mounted for viewers) -->
     <PromptFormModal
+      v-if="canEdit"
       :open="showCreatePromptModal || showEditPromptModal"
       :project-id="props.projectId"
       :prompt="showEditPromptModal ? currentPrompt : null"
@@ -74,6 +76,7 @@
 
     <!-- Delete Schema Confirmation -->
     <ConfirmationDialog
+      v-if="canEdit"
       :open="showDeleteModal"
       :title="$t('schema.delete.title')"
       :message="$t('schema.delete.message', { name: schemaToDelete?.schema_name })"
@@ -85,6 +88,7 @@
 
     <!-- Delete Prompt Confirmation -->
     <ConfirmationDialog
+      v-if="canEdit"
       :open="showDeletePromptModal"
       :title="$t('prompt.delete.title')"
       :message="$t('prompt.delete.message', { name: promptToDelete?.name })"
@@ -104,6 +108,7 @@ import { Database, MessageSquare } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
 import { promptsApi } from '@/services/promptsApi'
 import { useToast } from '@/composables/useToast'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import SchemaListSection from './SchemaListSection.vue'
 import PromptListSection from './PromptListSection.vue'
 import SchemaFormModal from './SchemaFormModal.vue'
@@ -125,6 +130,7 @@ const props = defineProps<Props>()
 
 const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
+const { canEdit } = useProjectAccess()
 const route = useRoute()
 const router = useRouter()
 

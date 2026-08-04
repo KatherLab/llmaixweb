@@ -452,3 +452,94 @@ class TestVisibility:
         # The collaborator's project list must not carry a dangling entry.
         listed = client.get(f"{api_url}/project", headers=collab_headers).json()
         assert project["id"] not in [p["id"] for p in listed]
+
+
+# --------------------------------------------------------------------------- #
+# Cross-project activity feed
+# --------------------------------------------------------------------------- #
+class TestActivityFeed:
+    """The bell spans projects, so each task must carry its own write flag.
+
+    Without it a read-only collaborator sees a Cancel button on a shared
+    project's task that can only ever 403.
+    """
+
+    def _make_task(self, project_id):
+        """Insert a PreprocessingTask row directly and return its id.
+
+        The API route can't be used here: `DISABLE_CELERY` is set in the test
+        environment, and that path 503s *before* creating a row (see
+        test_preprocessing_dispatch). The activity feed only reads rows, so
+        inserting one directly exercises exactly what we're testing.
+        """
+        from backend.src.db.session import SessionLocal
+        from backend.src.models.project import PreprocessingTask
+        from backend.src.utils.enums import PreprocessingStatus
+
+        db = SessionLocal()
+        try:
+            task = PreprocessingTask(
+                project_id=project_id,
+                status=PreprocessingStatus.IN_PROGRESS,
+                total_files=1,
+            )
+            db.add(task)
+            db.commit()
+            return task.id
+        finally:
+            db.close()
+
+    def _feed(self, client, api_url, headers, project_id):
+        resp = client.get(f"{api_url}/project/activity/preprocess", headers=headers)
+        assert resp.status_code == 200, resp.text
+        return [t for t in resp.json() if t["project_id"] == project_id]
+
+    def test_read_only_collaborator_sees_task_as_not_writable(
+        self,
+        client,
+        api_url,
+        owner_headers,
+        collab_headers,
+        make_project,
+        share,
+    ):
+        project = make_project(owner_headers, name="Activity Read Project")
+        self._make_task(project["id"])
+        share(owner_headers, project["id"], permission="read")
+
+        tasks = self._feed(client, api_url, collab_headers, project["id"])
+        # The shared project's task is visible to the collaborator...
+        assert tasks, "collaborator should see the shared project's task"
+        # ...but flagged as not actionable, so the UI hides Cancel.
+        assert all(t["can_write"] is False for t in tasks)
+
+    def test_write_collaborator_and_owner_see_task_as_writable(
+        self,
+        client,
+        api_url,
+        owner_headers,
+        collab_headers,
+        make_project,
+        share,
+    ):
+        project = make_project(owner_headers, name="Activity Write Project")
+        self._make_task(project["id"])
+        share(owner_headers, project["id"], permission="write")
+
+        for label, headers in (("owner", owner_headers), ("editor", collab_headers)):
+            tasks = self._feed(client, api_url, headers, project["id"])
+            assert tasks, f"{label} should see the task"
+            assert all(t["can_write"] is True for t in tasks), label
+
+    def test_stranger_does_not_see_the_task_at_all(
+        self,
+        client,
+        api_url,
+        owner_headers,
+        collab_headers,
+        make_project,
+    ):
+        project = make_project(owner_headers, name="Activity Private Project")
+        self._make_task(project["id"])
+
+        assert self._feed(client, api_url, collab_headers, project["id"]) == []

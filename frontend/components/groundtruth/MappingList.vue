@@ -46,10 +46,12 @@
               >
             </span>
           </Tooltip>
-          <!-- Comparison method selector -->
+          <!-- Comparison method selector. Kept visible (disabled, not hidden)
+               for read-only collaborators: the method is part of the mapping. -->
           <select
             :value="m.comparison_method || 'exact'"
             :class="[selectClass, 'ml-auto text-[11px] px-1 py-0.5']"
+            :disabled="!canEdit"
             :title="getComparisonMethodDescription(m.comparison_method || 'exact')"
             @change="
               $emit('update-method', {
@@ -75,6 +77,7 @@
           </button>
           <!-- Remove -->
           <button
+            v-if="canEdit"
             class="ml-1 text-red-300 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
             :title="$t('groundtruth.mapping_list.remove_mapping')"
             @click="$emit('remove', i)"
@@ -111,6 +114,7 @@
                 max="100"
                 step="1"
                 :class="[inputClass, 'w-16 px-1 py-0.5']"
+                :disabled="!canEdit"
                 :value="getOption(m, 'threshold', 85)"
                 @input="
                   setOption(i, 'threshold', Number(($event.target as HTMLInputElement).value))
@@ -126,6 +130,7 @@
             >
               <input
                 type="checkbox"
+                :disabled="!canEdit"
                 :checked="!!getOption(m, 'allow_partial_match', false)"
                 @change="
                   setOption(i, 'allow_partial_match', ($event.target as HTMLInputElement).checked)
@@ -142,6 +147,7 @@
                 min="0"
                 step="0.001"
                 :class="[inputClass, 'w-16 px-1 py-0.5']"
+                :disabled="!canEdit"
                 :value="getOption(m, 'tolerance', 0.001)"
                 @input="
                   setOption(i, 'tolerance', Number(($event.target as HTMLInputElement).value))
@@ -151,6 +157,7 @@
             <label class="flex items-center gap-1">
               <input
                 type="checkbox"
+                :disabled="!canEdit"
                 :checked="!!getOption(m, 'relative', false)"
                 @change="setOption(i, 'relative', ($event.target as HTMLInputElement).checked)"
               />
@@ -167,6 +174,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { AlertTriangle, ArrowRight, SlidersHorizontal, X } from '@lucide/vue'
 import Tooltip from '@/components/common/Tooltip.vue'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { COMPARISON_METHODS, getComparisonMethodDescription } from '@/utils/metricsDefinitions'
 import { selectClass, inputClass } from '@/utils/formStyles'
 import type { ComparisonMethod } from '@/types'
@@ -199,6 +207,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 
 const optionsOpen = ref<Record<number, boolean>>({}) // { [index]: true }
 

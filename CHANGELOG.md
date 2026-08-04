@@ -14,6 +14,15 @@ that point forward.
 
 ## [Unreleased]
 
+### Fixed
+
+- Read-only collaborators no longer see edit controls that only produce an error
+  toast. Upload/preprocessing, document restore and reprocess, group and schema
+  and prompt editing, extraction-run rename/cancel/retry/delete, ground-truth
+  upload and field mapping, and evaluation create/delete are now hidden for
+  view-only access, along with batch-selection checkboxes. The task-activity
+  bell only offers *Cancel* on projects the user can edit.
+
 ## [0.9.0] — 2026-08-04
 
 ### Added

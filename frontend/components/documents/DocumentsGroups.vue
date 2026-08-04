@@ -4,7 +4,7 @@
     <!-- Actions Bar -->
     <div class="flex justify-between items-center">
       <div class="flex items-center space-x-4">
-        <BaseButton variant="primary" @click="showCreateModal = true">
+        <BaseButton v-if="canEdit" variant="primary" @click="showCreateModal = true">
           <Plus class="w-5 h-5" />
           {{ $t('documents.actions.create_group') }}
         </BaseButton>
@@ -134,7 +134,7 @@
           <Eye class="w-4 h-4" aria-hidden="true" />
         </BaseButton>
         <BaseButton
-          v-if="!group.is_auto_generated"
+          v-if="canEdit && !group.is_auto_generated"
           variant="icon"
           tone="gray"
           :title="$t('documents.actions.edit')"
@@ -144,6 +144,7 @@
           <Pencil class="w-4 h-4" aria-hidden="true" />
         </BaseButton>
         <Tooltip
+          v-if="canEdit"
           :text="
             group.trials_count > 0
               ? $t('documents.groups.cannot_delete_tooltip')
@@ -227,6 +228,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import Tooltip from '@/components/common/Tooltip.vue'
 import { usePagination } from '@/composables/usePagination'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { extractErrorMessage } from '@/utils/errors'
 import { checkboxClass } from '@/utils/formStyles'
 import type { DocumentListItem, DocumentSetCreate, DocumentSetSummary } from '@/types'
@@ -247,6 +249,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 const toast = useToast()
 
 // State

@@ -152,14 +152,18 @@
               </div>
               <div class="flex gap-2">
                 <BaseButton
+                  v-if="canEdit"
                   size="sm"
                   :disabled="!canStartEvaluation"
                   @click="showTrialSelectorWithValidation"
                 >
                   {{ $t('evaluation.view.evaluate_trial') }}
                 </BaseButton>
+                <!-- Read-only collaborators keep this as the way to inspect the
+                     existing mappings (the modal itself is read-only for them),
+                     but it is a dead end when nothing is mapped yet. -->
                 <BaseButton
-                  v-if="selectedGroundTruth"
+                  v-if="selectedGroundTruth && (canEdit || hasMappings)"
                   variant="secondary"
                   size="sm"
                   @click="previewGroundTruth"
@@ -206,9 +210,10 @@
               </dl>
             </Callout>
 
-            <!-- Prerequisites Warning -->
+            <!-- Prerequisites Warning — setup guidance for the evaluate action,
+                 which read-only collaborators don't have. -->
             <Callout
-              v-if="!canStartEvaluation"
+              v-if="canEdit && !canStartEvaluation"
               variant="warning"
               :title="$t('evaluation.view.setup_required')"
               class="mb-4"
@@ -323,6 +328,7 @@
                     {{ $t('evaluation.list.analysis') }}
                   </button>
                   <button
+                    v-if="canEdit"
                     class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm underline"
                     :title="$t('evaluation.list.delete_tooltip')"
                     @click.stop="confirmDeleteEvaluation(evaluation)"
