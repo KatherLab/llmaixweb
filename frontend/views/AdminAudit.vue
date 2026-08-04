@@ -381,7 +381,12 @@ const actionGroups = computed<{ label: string; actions: AuditAction[] }[]>(() =>
       'password_change',
       'password_reset',
       'sso_login',
+      'token_refresh',
     ],
+  },
+  {
+    label: t('admin.audit.action_groups.authorization'),
+    actions: ['access_denied'],
   },
   {
     label: t('admin.audit.action_groups.access_phi'),

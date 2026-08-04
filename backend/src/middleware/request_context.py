@@ -59,7 +59,14 @@ class RequestContextMiddleware:
         scope["state"]["request_id"] = request_id
         scope["state"]["client_ip"] = client_ip
 
-        set_request_context(request_id, client_ip)
+        # Raw path (not the templated route) — the audit trail wants the URL
+        # that was actually attempted. Bounded to keep a long query-less path
+        # from bloating a JSON detail blob.
+        route = (
+            str(scope.get("method") or "")[:8],
+            str(scope.get("path") or "")[:512],
+        )
+        set_request_context(request_id, client_ip, route)
 
         async def send_wrapper(message):
             if message["type"] == "http.response.start":

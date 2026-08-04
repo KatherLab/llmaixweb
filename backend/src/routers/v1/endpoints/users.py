@@ -373,8 +373,23 @@ def delete_my_identity(
             status.HTTP_400_BAD_REQUEST,
             "Cannot disconnect your last sign-in method without a password set on the account.",
         )
+    provider_id = identity.provider_id
     db.delete(identity)
     db.commit()
+    # Removing a sign-in method is an account-security event: it changes how the
+    # account can be reached. Admin-side IdP config changes are a separate
+    # action (SSO_PROVIDER_CHANGE) — this one is self-service.
+    record_audit(
+        AuditAction.DELETE,
+        actor=current_user,
+        resource_type="user_identity",
+        resource_id=identity_id,
+        detail={
+            "provider_id": provider_id,
+            "self_service": True,
+            "remaining_identities": len(remaining) - 1,
+        },
+    )
     return {"deleted": identity_id}
 
 

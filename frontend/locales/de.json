@@ -405,6 +405,7 @@
       },
       "action_groups": {
         "authentication": "Authentifizierung",
+        "authorization": "Autorisierung",
         "access_phi": "Zugriff (PHI)",
         "mutations": "Änderungen",
         "egress": "Ausgehender Datenverkehr",

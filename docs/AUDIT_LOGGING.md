@@ -24,8 +24,9 @@ Recorded actions (`AuditAction` in `backend/src/utils/enums.py`):
 | Group | Actions |
 |-------|---------|
 | Authentication | `login_success`, `login_failure`, `logout`, `token_refresh`, `account_locked`, `password_change`, `password_reset`, `sso_login` |
+| Authorization | `access_denied` — an authenticated user refused a project they don't own, or a non-admin hitting an admin route |
 | Access (PHI) | `document_view`, `document_download`, `file_download`, `trial_result_view`, `export` |
-| Mutations | `create`, `update`, `delete`, `cancel` (discriminated by `resource_type`) |
+| Mutations | `create`, `update`, `delete`, `cancel` (discriminated by `resource_type`; includes self-service SSO identity link/unlink as `user_identity`) |
 | Egress (PHI leaves) | `llm_extraction_call`, `ocr_external_call` — records endpoint host, model, document count |
 | Administration | `setting_change`, `user_create` (incl. the **first-admin bootstrap**, flagged `first_admin: true`), `user_role_change`, `user_deactivate`, `invitation_send`, `sso_provider_change` |
 
@@ -38,6 +39,14 @@ type/id, project id, outcome (`success`/`failure`/`denied`), a small PHI-free
 > read-only. Rows are written in an independent transaction so they survive a
 > rollback of the business operation and never break a request if the audit
 > write itself fails.
+
+**Denied-access rows are throttled.** Nothing rate-limits a client that hammers
+a forbidden endpoint, so identical denials (same actor, resource, method+path)
+collapse into one row per 60 s per API worker. A persistent prober therefore
+shows up as a steady trickle rather than one row per request — the burst is
+still visible, but it cannot inflate a table that is deliberately hard to prune.
+Each row's `detail` carries the attempted `method` and `path`, so you can see
+*what* was probed, not only which resource was refused.
 
 ### Error log (`error_logs`)
 

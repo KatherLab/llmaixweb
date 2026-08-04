@@ -16,6 +16,7 @@ from ..core.config import settings
 from ..dependencies import get_db
 from ..models.user import RefreshToken, User
 from ..utils.api_errors import api_error
+from ..utils.audit import record_denial
 from ..utils.enums import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
@@ -35,13 +36,39 @@ def admin_has_global_project_access(user: User) -> bool:
     return user.role == "admin" and settings.ADMIN_ALL_PROJECT_ACCESS
 
 
-def can_access_project(user: User, project) -> bool:
+def can_access_project(
+    user: User,
+    project,
+    *,
+    audit: bool = True,
+    permission: str | None = None,
+) -> bool:
     """Whether *user* may read/modify *project*.
 
     True for the project owner, or for an admin when cross-user project access
     is enabled via ``ADMIN_ALL_PROJECT_ACCESS``.
+
+    **Side effect:** a False result writes an ``ACCESS_DENIED`` audit row. Every
+    caller uses this as a gate that raises 403 on False, so a False *is* a
+    denial — auditing here covers all of them at one point instead of at ~55
+    call sites. Pass ``audit=False`` if you ever need the bare predicate (for
+    filtering a list, say), so the trail doesn't fill with non-events.
+
+    ``permission`` ("read"/"write"/…) is recorded on the denial row when the
+    caller distinguishes the kind of access it was gating.
     """
-    return project.owner_id == user.id or admin_has_global_project_access(user)
+    if project.owner_id == user.id or admin_has_global_project_access(user):
+        return True
+    if audit:
+        record_denial(
+            actor=user,
+            resource_type="project",
+            resource_id=getattr(project, "id", None),
+            project_id=getattr(project, "id", None),
+            reason="not_project_owner",
+            detail={"permission": permission} if permission else None,
+        )
+    return False
 
 
 def create_access_token(
@@ -272,6 +299,11 @@ def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
             return {"message": "Hello Admin!"}
     """
     if current_user.role != "admin":
+        record_denial(
+            actor=current_user,
+            resource_type="admin_route",
+            reason="admin_role_required",
+        )
         raise api_error(
             "core.admin_required",
             status.HTTP_403_FORBIDDEN,

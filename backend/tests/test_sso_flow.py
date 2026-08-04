@@ -45,6 +45,12 @@ def _admin_headers(client, api_url):
     return _login_headers(client, api_url, "admin@example.com", "Adminpassword1")
 
 
+def _audit_rows(client, api_url, headers, **params):
+    resp = client.get(f"{api_url}/admin/audit", headers=headers, params=params)
+    assert resp.status_code == 200, resp.text
+    return resp.json()["items"]
+
+
 @pytest.fixture
 def sso_settings(monkeypatch):
     """Enable SSO on the live settings instance (the proxy has __slots__=(),
@@ -351,6 +357,31 @@ def test_unverified_email_cannot_link_existing_account(
     )
     identities = client.get(f"{api_url}/user/me/identities", headers=headers).json()
     assert len(identities) == 1 and identities[0]["external_subject"] == "legit-subject"
+
+    # Attaching a sign-in method to a pre-existing account is its own audit
+    # event — SSO_LOGIN alone doesn't distinguish it from a routine login.
+    admin_headers = _admin_headers(client, api_url)
+    link_rows = _audit_rows(
+        client, api_url, admin_headers, action="create", resource_type="user_identity"
+    )
+    assert link_rows, "identity link to an existing account was not audited"
+    assert link_rows[0]["detail"]["linked_to_existing_account"] is True
+    assert link_rows[0]["detail"]["email_verified"] is True
+    assert link_rows[0]["detail"]["provider"] == provider["slug"]
+
+    # …and removing it is an account-security event too. Allowed here because
+    # the account still has a password to fall back on.
+    resp = client.delete(
+        f"{api_url}/user/me/identities/{identities[0]['id']}", headers=headers
+    )
+    assert resp.status_code == 200, resp.text
+    unlink_rows = _audit_rows(
+        client, api_url, admin_headers, action="delete", resource_type="user_identity"
+    )
+    assert unlink_rows, "identity unlink was not audited"
+    assert unlink_rows[0]["actor_email"] == "another@example.com"
+    assert unlink_rows[0]["detail"]["self_service"] is True
+    assert unlink_rows[0]["detail"]["remaining_identities"] == 0
 
 
 # ─────────────────────────── state / CSRF hardening ───────────────────────────

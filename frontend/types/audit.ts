@@ -16,6 +16,8 @@ export type AuditAction =
   | 'password_reset'
   | 'account_locked'
   | 'sso_login'
+  // authorization
+  | 'access_denied'
   // access (PHI)
   | 'document_view'
   | 'document_download'

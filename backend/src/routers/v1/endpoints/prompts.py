@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from .... import models, schemas
 from ....core.security import (
-    admin_has_global_project_access,
     can_access_project,
     get_current_user,
 )
@@ -31,20 +30,14 @@ def check_project_access(
     if not project:
         raise api_error("prompts.project_not_found", 404, "Project not found")
 
-    # Admin has full access only when cross-user project access is enabled
-    if admin_has_global_project_access(current_user):
-        return project
-
-    # Owner has full access
-    if project.owner_id == current_user.id:
-        return project
-
-    raise api_error(
-        "prompts.project_forbidden",
-        403,
-        f"Not authorized to {permission} this project",
-        permission=permission,
-    )
+    if not can_access_project(current_user, project, permission=permission):
+        raise api_error(
+            "prompts.project_forbidden",
+            403,
+            f"Not authorized to {permission} this project",
+            permission=permission,
+        )
+    return project
 
 
 @router.post("", response_model=schemas.Prompt)

@@ -14,6 +14,18 @@ that point forward.
 
 ## [Unreleased]
 
+### Added
+
+- Audit log now records denied access: an authenticated user refused a project
+  they don't own, or a non-admin hitting an admin route, is written as
+  `access_denied` (outcome `denied`) with the attempted method and path.
+  Filterable under a new "Authorization" group in the audit viewer. Repeated
+  identical denials collapse to one row per minute so a client hammering a
+  forbidden endpoint can't inflate the trail.
+- Audit log now records SSO identity changes: linking a sign-in method to an
+  existing account, SSO just-in-time account provisioning, and a user unlinking
+  their own identity.
+
 ### Changed
 
 - Renamed "Trials" to "Extraction Runs" in the UI (API and database keep the term "trial").

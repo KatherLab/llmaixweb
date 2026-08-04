@@ -83,10 +83,10 @@ class PreprocessingStrategy(str, Enum):
 class AuditAction(str, enum.Enum):
     """Actions recorded in the append-only audit log.
 
-    Grouped (by value prefix) into: authentication, PHI access, data
-    mutations, external egress (patient data leaving to an LLM/OCR endpoint),
-    and administrative changes. The enum is the single source of truth — the
-    frontend audit filter mirrors these values.
+    Grouped (by value prefix) into: authentication, authorization, PHI access,
+    data mutations, external egress (patient data leaving to an LLM/OCR
+    endpoint), and administrative changes. The enum is the single source of
+    truth — the frontend audit filter mirrors these values.
     """
 
     # ── Authentication ──
@@ -98,6 +98,13 @@ class AuditAction(str, enum.Enum):
     PASSWORD_RESET = "password_reset"
     ACCOUNT_LOCKED = "account_locked"
     SSO_LOGIN = "sso_login"
+
+    # ── Authorization ──
+    # An authenticated principal was refused a resource (project they don't own,
+    # admin-only route). Always paired with ``AuditOutcome.DENIED``. Failed
+    # *authentication* stays under LOGIN_FAILURE — this is the "logged in but
+    # not allowed" case that surfaces probing by a compromised account.
+    ACCESS_DENIED = "access_denied"
 
     # ── Access (reading PHI) ──
     DOCUMENT_VIEW = "document_view"

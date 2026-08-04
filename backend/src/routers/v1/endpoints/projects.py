@@ -256,22 +256,14 @@ def check_project_access(
     if not project:
         raise api_error("projects.not_found", 404, "Project not found")
 
-    # Admin has full access only when cross-user project access is enabled
-    if admin_has_global_project_access(current_user):
-        return project
-
-    # Owner has full access
-    if project.owner_id == current_user.id:
-        return project
-
-    # For non-owners, check specific permissions if needed
-    # You could extend this with a project_members table for shared projects
-    raise api_error(
-        "projects.not_authorized",
-        403,
-        f"Not authorized to {permission} this project",
-        permission=permission,
-    )
+    if not can_access_project(current_user, project, permission=permission):
+        raise api_error(
+            "projects.not_authorized",
+            403,
+            f"Not authorized to {permission} this project",
+            permission=permission,
+        )
+    return project
 
 
 @router.get(

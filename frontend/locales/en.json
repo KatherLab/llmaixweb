@@ -405,6 +405,7 @@
       },
       "action_groups": {
         "authentication": "Authentication",
+        "authorization": "Authorization",
         "access_phi": "Access (PHI)",
         "mutations": "Mutations",
         "egress": "Egress",

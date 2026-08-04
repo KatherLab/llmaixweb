@@ -23,6 +23,12 @@ _ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
 
 _request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 _client_ip_var: ContextVar[str | None] = ContextVar("client_ip", default=None)
+# (method, path) of the current request. Used by the audit service to record
+# *what* an actor tried to reach when access was denied — without it a denial
+# row says only "user X was refused project Y", not which endpoint they probed.
+_request_route_var: ContextVar[tuple[str, str] | None] = ContextVar(
+    "request_route", default=None
+)
 
 
 def new_request_id() -> str:
@@ -30,9 +36,14 @@ def new_request_id() -> str:
     return "".join(secrets.choice(_ALPHABET) for _ in range(12))
 
 
-def set_request_context(request_id: str, client_ip: str | None) -> None:
+def set_request_context(
+    request_id: str,
+    client_ip: str | None,
+    route: tuple[str, str] | None = None,
+) -> None:
     _request_id_var.set(request_id)
     _client_ip_var.set(client_ip)
+    _request_route_var.set(route)
 
 
 def get_request_id() -> str | None:
@@ -41,6 +52,12 @@ def get_request_id() -> str | None:
 
 def get_client_ip() -> str | None:
     return _client_ip_var.get()
+
+
+def get_request_route() -> tuple[str, str] | None:
+    """``(method, path)`` of the in-flight request, or ``None`` outside one
+    (e.g. a Celery worker)."""
+    return _request_route_var.get()
 
 
 _ALLOWED = set(_ALPHABET)

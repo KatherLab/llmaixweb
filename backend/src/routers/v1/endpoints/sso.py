@@ -408,6 +408,38 @@ def _resolve_or_provision_user(
     db.add(new_identity)
     db.commit()
     db.refresh(target)
+
+    # Both branches below are account-lifecycle events that the SSO_LOGIN row
+    # written by the caller does not distinguish. Attaching a new sign-in method
+    # to a *pre-existing* account is the email-linking path, so it gets its own
+    # row with the verification state that permitted it.
+    if user_by_email:
+        record_audit(
+            AuditAction.CREATE,
+            actor=target,
+            resource_type="user_identity",
+            resource_id=new_identity.id,
+            detail={
+                "provider": provider.slug,
+                "linked_to_existing_account": True,
+                "email_verified": email_verified,
+            },
+        )
+    else:
+        record_audit(
+            AuditAction.USER_CREATE,
+            actor=target,
+            resource_type="user",
+            resource_id=target.id,
+            detail={
+                "provider": provider.slug,
+                "provisioning": "sso_jit",
+                "role": target.role.value
+                if hasattr(target.role, "value")
+                else str(target.role),
+                "email_verified": email_verified,
+            },
+        )
     return target
 
 
