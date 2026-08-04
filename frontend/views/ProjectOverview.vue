@@ -6,7 +6,7 @@
       class="mb-6"
     >
       <template #icon>
-        <CircleCheckBig class="w-5 h-5" aria-hidden="true" />
+        <Folder class="w-5 h-5" aria-hidden="true" />
       </template>
       <template #actions>
         <CreateProjectButton />
@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { CircleCheckBig } from '@lucide/vue'
+import { Folder } from '@lucide/vue'
 import ProjectGrid from '@/components/projects/ProjectGrid.vue'
 import CreateProjectButton from '@/components/projects/CreateProjectButton.vue'
 import PageHeader from '@/components/common/PageHeader.vue'

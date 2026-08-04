@@ -14,6 +14,9 @@ import { ref } from 'vue'
 /** Default auto-dismiss delay (ms). Matches the previous global config. */
 const DEFAULT_TIMEOUT = 4000
 
+/** Error toasts linger longer by default — users need time to read failures. */
+const ERROR_DEFAULT_TIMEOUT = 8000
+
 /** Maximum toasts shown at once; older ones are pruned to avoid flooding. */
 const MAX_TOASTS = 5
 
@@ -84,9 +87,11 @@ export const useToastStore = defineStore('toast', () => {
    * Push a toast.
    * @returns The toast id (for programmatic dismiss).
    */
-  function add(message: string, { type = 'info', timeout = DEFAULT_TIMEOUT }: ToastOptions = {}) {
+  function add(message: string, { type = 'info', timeout }: ToastOptions = {}) {
+    // Explicit per-call timeouts win; otherwise errors get the longer default.
+    const resolvedTimeout = timeout ?? (type === 'error' ? ERROR_DEFAULT_TIMEOUT : DEFAULT_TIMEOUT)
     const id = ++seq
-    toasts.value.push({ id, message, type, timeout })
+    toasts.value.push({ id, message, type, timeout: resolvedTimeout })
 
     // Prune oldest when over capacity.
     while (toasts.value.length > MAX_TOASTS) {
@@ -94,7 +99,7 @@ export const useToastStore = defineStore('toast', () => {
       if (oldest) dismiss(oldest.id)
     }
 
-    if (timeout > 0) startTimer(id, timeout)
+    if (resolvedTimeout > 0) startTimer(id, resolvedTimeout)
     return id
   }
 

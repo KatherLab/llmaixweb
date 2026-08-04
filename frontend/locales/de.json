@@ -41,9 +41,9 @@
       "remove": "{label} entfernen"
     },
     "batch_action_bar": {
-      "item": "Element",
-      "selected": "ausgewählt",
-      "clear_selection": "Auswahl aufheben"
+      "clear_selection": "Auswahl aufheben",
+      "selected_count": "{count} {label} ausgewählt",
+      "items": "Elemente"
     },
     "data_table": {
       "selected": "ausgewählt",
@@ -564,7 +564,8 @@
       "unexpected": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
       "no_token": "Kein Einladungstoken angegeben",
       "invitation_expired": "Dieser Einladungslink ist ungültig oder abgelaufen"
-    }
+    },
+    "session_expired": "Sitzung abgelaufen. Bitte melden Sie sich erneut an."
   },
   "account": {
     "title": "Kontoeinstellungen",
@@ -646,8 +647,6 @@
       "empty_filtered_description": "Passe deine Filter an oder setze sie zurück, um mehr Ergebnisse zu sehen",
       "clear_all_filters": "Alle Filter zurücksetzen",
       "go_to_files": "Zu Dateien & Vorverarbeitung",
-      "batch_count_label": "Dokument",
-      "export_coming_soon": "Export folgt in Kürze",
       "tab_all": "Alle Dokumente",
       "tab_groups": "Dokumentgruppen"
     },
@@ -733,7 +732,7 @@
       "clear_selection": "Auswahl aufheben",
       "prev": "Zurück",
       "next": "Weiter",
-      "update_group": "Gruppe aktualisieren",
+      "update_group": "Änderungen speichern",
       "discard_title": "Nicht gespeicherte Änderungen verwerfen?",
       "discard_message": "Deine Änderungen an dieser Dokumentgruppe gehen verloren.",
       "discard_confirm": "Verwerfen",
@@ -780,7 +779,8 @@
       "restore_confirm": "Wiederherstellen",
       "version_restored": "Version wiederhergestellt",
       "restore_failed": "Version konnte nicht wiederhergestellt werden",
-      "load_preview_failed": "Dokumentvorschau konnte nicht geladen werden."
+      "load_preview_failed": "Dokumentvorschau konnte nicht geladen werden.",
+      "no_text_content": "Kein Textinhalt verfügbar"
     },
     "text_view": {
       "find_placeholder": "Im Dokument suchen…",
@@ -843,12 +843,6 @@
       "selected": "{count} {entity} ausgewählt",
       "force_reprocess": "Neuverarbeitung erzwingen (vorhandene Ergebnisse ignorieren)",
       "reprocess_note": "Die Neuverarbeitung läuft über die gesamte Quelldatei, nicht über einzelne Zeilen – wenn du Dokumente aus einem zeilenweisen CSV-/XLSX-Import auswählst, wird jede Zeile dieser Datei neu verarbeitet.",
-      "export_choose": "Exportformat und Optionen wählen:",
-      "export_format_label": "Exportformat",
-      "export_format_txt": "Nur Text",
-      "export_format_pdf": "PDF (mit Textebene)",
-      "include_metadata": "Metadaten einschließen",
-      "include_preprocessing": "Vorverarbeitungsinformationen einschließen",
       "warning_title": "Warnung: Diese Aktion kann nicht rückgängig gemacht werden",
       "checking_usage": "Verwendung wird geprüft…",
       "deps_preview_unavailable": "Die Verwendungsvorschau ist bei Auswahlen über {limit} {entity} nicht verfügbar – die obige Option gilt weiterhin für die gesamte Auswahl.",
@@ -862,10 +856,8 @@
       "processing": "Wird verarbeitet...",
       "title_default": "Stapelaktion",
       "title_reprocess": "{entity} neu verarbeiten",
-      "title_export": "{entity} exportieren",
       "title_delete": "{entity} löschen",
       "button_start_reprocessing": "Neuverarbeitung starten",
-      "button_export": "Exportieren",
       "button_delete": "{entity} löschen",
       "button_confirm": "Bestätigen",
       "cascade_files": "Auch erzeugte Dokumente sowie deren Durchläufe und Extraktionsergebnisse löschen und aus Gruppen entfernen",
@@ -880,14 +872,14 @@
       "impact_evaluation_metric": "{count} Bewertungsmetrik | {count} Bewertungsmetriken",
       "toast_no_files": "Die ausgewählten Dokumente konnten keinen Dateien zugeordnet werden.",
       "toast_reprocess_started": "Neuverarbeitung für {count} Datei gestartet | Neuverarbeitung für {count} Dateien gestartet",
-      "toast_export_stub": "Die Exportfunktion würde hier implementiert werden",
       "toast_check_usage_failed": "Verwendung konnte nicht geprüft werden",
       "toast_action_failed": "Die Aktion für die ausgewählten {entity} konnte nicht abgeschlossen werden.",
       "delete_failed_fallback": "{entity} konnte nicht gelöscht werden",
       "deleted_success": "{count} {entity} erfolgreich gelöscht",
       "more_count": "(+{count} weitere)",
       "hint_manage": "Wechsle zum Tab „Dokumentgruppen“, um sie zu verwalten.",
-      "delete_failed_summary": "{count} {entity} konnten nicht gelöscht werden: #{id} – {error}"
+      "delete_failed_summary": "{count} {entity} konnten nicht gelöscht werden: #{id} – {error}",
+      "selected_count": "{count} Dokument ausgewählt | {count} Dokumente ausgewählt"
     },
     "toasts": {
       "load_document_failed": "Dokument konnte nicht geladen werden",
@@ -1037,7 +1029,9 @@
       "doc_total": "{count} Dokument | {count} Dokumente",
       "col_document": "Dokument",
       "col_wrong_of_total": "Falsch von Gesamt",
-      "col_status": "Status"
+      "col_status": "Status",
+      "no_documents_title": "Keine Dokumente in dieser Bewertung",
+      "no_documents_hint": "Es konnten keine Dokumente der Ground Truth zugeordnet werden. Prüfen Sie das ID-Feld der Ground Truth, damit die Dokumentkennungen zu ihren Zeilen passen."
     },
     "metrics": {
       "accuracy": "Genauigkeit",
@@ -1124,6 +1118,96 @@
       "select_one_toast": "Bitte wählen Sie mindestens eine Auswertung zum Exportieren aus",
       "export_success": "Bericht exportiert",
       "export_failed": "Bericht konnte nicht exportiert werden: {error}"
+    },
+    "status_labels": {
+      "ok": "OK",
+      "low": "Niedrig",
+      "partial": "Teilweise",
+      "error": "Fehler"
+    },
+    "drawer_panels": {
+      "source": "Quelle",
+      "comparison": "Vergleich",
+      "output": "Ausgabe",
+      "reasoning": "Begründung"
+    },
+    "metric_defs": {
+      "accuracy": {
+        "long": "Anteil aller extrahierten Felder, die exakt mit der Ground Truth übereinstimmen.",
+        "guidance": "Hohe Genauigkeit = die meisten Felder sind insgesamt korrekt. Berechnet über zugeordnete Dokumente und die Felder, für die die Ground Truth tatsächlich einen Wert enthält."
+      },
+      "precision": {
+        "long": "Von den Werten, die das Modell extrahiert hat, der Anteil der korrekten.",
+        "guidance": "Niedrige Präzision bedeutet, dass das Modell oft falsche Werte extrahiert (falsch Positive). Ein falscher Wert, wo einer erwartet wurde, zählt ebenfalls gegen die Präzision."
+      },
+      "recall": {
+        "long": "Von den Werten, die extrahiert werden sollten, der Anteil, den das Modell richtig erfasst hat.",
+        "guidance": "Niedriger Recall bedeutet, dass das Modell Felder auslässt oder dort falsche Werte extrahiert, wo ein Wert erwartet wurde (falsch Negative). Der Recall pro Feld bezieht sich auf die Dokumente, deren Ground Truth einen Wert für dieses Feld enthält."
+      },
+      "f1_score": {
+        "long": "Harmonisches Mittel aus Präzision und Recall – vereint beide in einer Zahl.",
+        "guidance": "Verwenden Sie F1 zum Vergleich von Feldern, wenn sowohl fehlende als auch falsche Werte wichtig sind."
+      },
+      "confidence": {
+        "long": "Die vom Modell selbst angegebene Sicherheit für den extrahierten Wert (0–1).",
+        "guidance": "Geringe Konfidenz bei einem korrekten Wert kann auf Grenzfälle hinweisen, die eine Prüfung lohnen."
+      }
+    },
+    "error_types": {
+      "missing": {
+        "label": "Fehlend",
+        "description": "Das Feld wurde nicht aus dem Dokument extrahiert",
+        "suggestion": "Prüfen Sie, ob das Feld im Dokument vorhanden ist, oder verbessern Sie die Extraktions-Prompts"
+      },
+      "mismatch": {
+        "label": "Abweichung",
+        "description": "Der extrahierte Wert stimmt nicht mit der Ground Truth überein",
+        "suggestion": "Überprüfen Sie die Extraktionsgenauigkeit oder die Ground-Truth-Daten"
+      },
+      "fuzzy_mismatch": {
+        "label": "Unscharfe Abweichung",
+        "description": "Der extrahierte Wert ist ähnlich, aber nicht nah genug an der Ground Truth",
+        "suggestion": "Passen Sie ggf. den Schwellenwert für den unscharfen Vergleich an oder verbessern Sie die Extraktion"
+      },
+      "numeric_mismatch": {
+        "label": "Numerische Abweichung",
+        "description": "Der numerische Wert liegt außerhalb der zulässigen Toleranz",
+        "suggestion": "Prüfen Sie das Zahlen-Parsing oder passen Sie die Toleranz an"
+      },
+      "boolean_mismatch": {
+        "label": "Boolesche Abweichung",
+        "description": "Der boolesche Wert ist falsch",
+        "suggestion": "Überprüfen Sie die Zuordnung boolescher Werte oder die Extraktionslogik"
+      },
+      "category_mismatch": {
+        "label": "Kategorie-Abweichung",
+        "description": "Der Kategoriewert entspricht keiner der erwarteten Optionen",
+        "suggestion": "Überprüfen Sie die Kategoriezuordnungen oder verbessern Sie die Klassifikation"
+      },
+      "date_mismatch": {
+        "label": "Datumsabweichung",
+        "description": "Der Datumswert ist falsch oder hat das falsche Format",
+        "suggestion": "Prüfen Sie das Parsen des Datumsformats oder verbessern Sie die Datumsextraktion"
+      },
+      "type_error": {
+        "label": "Typfehler",
+        "description": "Der Werttyp ist falsch (z. B. Text statt Zahl)",
+        "suggestion": "Überprüfen Sie die Datentypkonvertierung oder die Schemadefinition"
+      },
+      "extra": {
+        "label": "Zusätzlich",
+        "description": "Das Feld wurde extrahiert, ist in der Ground Truth aber nicht vorgesehen",
+        "suggestion": "Prüfen Sie, ob dieses Feld in die Ground Truth aufgenommen werden sollte"
+      },
+      "date_parse_error": {
+        "label": "Datums-Parsing-Fehler",
+        "description": "Das Datum konnte für den Vergleich nicht geparst werden",
+        "suggestion": "Prüfen Sie das Parsen des Datumsformats oder verbessern Sie die Datumsextraktion"
+      },
+      "unknown": {
+        "description": "Unbekannter Fehlertyp",
+        "suggestion": "Überprüfen Sie die Extraktionslogik und die Ground-Truth-Daten"
+      }
     }
   },
   "files": {
@@ -1149,9 +1233,9 @@
       "view_errors": "Fehler anzeigen"
     },
     "batch": {
-      "count_label": "Datei",
       "needs_config_count": "{count} benötigt Konfiguration",
-      "needs_config_title": "{files} benötigt/benötigen eine Importkonfiguration — zum Konfigurieren klicken"
+      "needs_config_title": "{files} benötigt/benötigen eine Importkonfiguration — zum Konfigurieren klicken",
+      "selected_count": "{count} Datei ausgewählt | {count} Dateien ausgewählt"
     },
     "cancel_task": {
       "cancel": "Weiter ausführen",
@@ -1289,10 +1373,10 @@
       "present": "heute",
       "search_placeholder": "Dateien suchen...",
       "status_all": "Alle Status",
-      "status_completed": "Abgeschlossen",
+      "status_completed": "Vorverarbeitet",
       "status_failed": "Fehlgeschlagen",
-      "status_not_processed": "Nicht verarbeitet",
-      "status_processing": "Wird verarbeitet",
+      "status_not_processed": "Nicht vorverarbeitet",
+      "status_processing": "Wird vorverarbeitet",
       "type_all": "Alle Typen"
     },
     "hint": {
@@ -1305,8 +1389,6 @@
       "and_more": "…und {count} weitere",
       "aria_label": "Vorverarbeitungsverlauf",
       "documents_count": "{count} Dokument | {count} Dokumente",
-      "engine_local": "Local OCR",
-      "engine_local_force": "Local OCR + Erzwingen",
       "eta_left": "≈ {duration} verbleibend",
       "files_processed": "{processed} von {total} Dateien verarbeitet",
       "go_to_document": "Zum Dokument",
@@ -1323,14 +1405,15 @@
       "skipped_rows": "{count} übersprungene Zeile | {count} übersprungene Zeilen",
       "started": "Gestartet {time}",
       "status_cancelled": "Abgebrochen",
-      "status_done": "Fertig",
+      "status_done": "Abgeschlossen",
       "status_failed": "Fehlgeschlagen",
       "status_pending": "Ausstehend",
       "title": "Vorverarbeitungsverlauf",
       "took": "Dauer {duration}",
       "unknown_file": "Unbekannte Datei",
       "view_error": "Fehler anzeigen",
-      "warnings": "{count} Warnung | {count} Warnungen"
+      "warnings": "{count} Warnung | {count} Warnungen",
+      "engine_force": "{engine} + OCR erzwungen"
     },
     "import": {
       "all_unique": "Alle {count} IDs in dieser Spalte sind eindeutig.",
@@ -1423,8 +1506,8 @@
     "status": {
       "failed": "Fehlgeschlagen",
       "not_preprocessed": "Nicht vorverarbeitet",
-      "processed": "Verarbeitet",
-      "processing": "Wird verarbeitet"
+      "processed": "Vorverarbeitet",
+      "processing": "Wird vorverarbeitet"
     },
     "table": {
       "col_file": "Datei",
@@ -1520,7 +1603,7 @@
       "format_xlsx": "Excel (.xlsx, Punktpfade erzeugen Verschachtelung)",
       "important": "Wichtig:",
       "json_id_note": "Jedes Dokument muss ein 'id'-Feld haben, das mit Ihren Dokumentkennungen übereinstimmt.",
-      "tabular_id_note": "Im nächsten Schritt wählen Sie die ID-Spalte (passend zu Ihren Dokumentkennungen).",
+      "tabular_id_note": "Im nächsten Schritt wählen Sie das ID-Feld (passend zu Ihren Dokumentkennungen).",
       "files_label": "Datei(en)",
       "upload_files": "Datei(en) hochladen",
       "or_drag_and_drop": "oder per Drag & Drop",
@@ -1555,9 +1638,9 @@
       "required_count": "{count} erforderlich",
       "select_schema_hint": "Wählen Sie oben ein Schema aus, um dessen Felder zu laden.",
       "pick_schema_field": "Schemafeld wählen",
-      "pick_gt_field": "GT-Feld wählen",
+      "pick_gt_field": "Ground-Truth-Feld wählen",
       "create_mapping": "Zuordnung erstellen",
-      "map": "Zuordnen",
+      "map": "Zuordnung erstellen",
       "auto_map": "Übereinstimmende Namen automatisch zuordnen",
       "clear_all_mappings": "Alle Zuordnungen löschen",
       "gt_fields_heading": "Ground-Truth-Felder",
@@ -1565,13 +1648,13 @@
       "loading": "Wird geladen ...",
       "footer_select_schema": "Bitte wählen Sie ein Schema aus, um mit der Feldzuordnung zu beginnen.",
       "warning_required_unmapped": "Warnung: Nicht alle erforderlichen Felder sind zugeordnet!",
-      "select_id_before_save": "Bitte wählen Sie vor dem Speichern die ID-Spalte aus.",
+      "select_id_before_save": "Bitte wählen Sie vor dem Speichern das ID-Feld aus.",
       "cancel": "Abbrechen",
       "save_mappings": "Zuordnungen speichern",
       "saved": "Gespeichert!",
       "reason_select_schema": "Bitte wählen Sie ein Schema aus.",
       "reason_no_mappings": "Mindestens eine Feldzuordnung ist erforderlich.",
-      "reason_no_id_column": "Für CSV-/XLSX-Dateien müssen Sie eine ID-Spalte auswählen.",
+      "reason_no_id_column": "Für CSV-/XLSX-Dateien müssen Sie ein ID-Feld auswählen.",
       "reason_no_id_field": "Für JSON-Daten müssen Sie ein ID-Feld auswählen.",
       "reason_generic": "Speichern derzeit nicht möglich.",
       "mapping_count": "{count} Zuordnung | {count} Zuordnungen",
@@ -1598,10 +1681,10 @@
     },
     "mapping_list": {
       "empty_line1": "Noch keine Zuordnungen.",
-      "empty_line2": "Wählen Sie ein Schemafeld und ein GT-Feld und klicken Sie auf",
-      "map": "Zuordnen",
+      "empty_line2": "Wählen Sie ein Schemafeld und ein Ground-Truth-Feld und klicken Sie auf",
+      "map": "Zuordnung erstellen",
       "schema_field": "Schemafeld",
-      "gt_field": "GT-Feld",
+      "gt_field": "Ground-Truth-Feld",
       "options_for": "Vergleichsoptionen für {field}",
       "remove_mapping": "Zuordnung entfernen",
       "threshold": "Schwellenwert",
@@ -1610,13 +1693,13 @@
       "allow_partial": "Teil-/Teilstring-Übereinstimmung zulassen",
       "tolerance": "Toleranz",
       "relative": "relativ (±%)",
-      "hint_type_mismatch": "Typkonflikt: Schemafeld ist {schemaType}, GT-Spalte ist {gtType}",
+      "hint_type_mismatch": "Typkonflikt: Schemafeld ist {schemaType}, Ground-Truth-Feld ist {gtType}",
       "hint_unusual_method": "Der Vergleich \"{method}\" ist für ein {fieldType}-Feld ungewöhnlich"
     },
     "id_field": {
       "document_id": "Dokument-ID",
-      "select_id_column": "ID-Spalte auswählen ...",
-      "select_id_column_hint": "Bitte wählen Sie eine ID-Spalte aus, um die Bewertung zu aktivieren.",
+      "select_id_column": "ID-Feld auswählen ...",
+      "select_id_column_hint": "Bitte wählen Sie ein ID-Feld aus, um die Bewertung zu aktivieren.",
       "use_filename": "Dokumentdateinamen verwenden",
       "use_field": "Feld verwenden:",
       "select_field": "Feld auswählen ...",
@@ -1629,6 +1712,32 @@
       "none": "Keine der {total} Ground-Truth-Zeilen stimmt mit einem Dokument überein.",
       "hint": "Prüfen Sie, ob die Werte dieser Spalte mit Ihren Dokumentnamen oder -IDs übereinstimmen.",
       "failed": "Zuordnungsprüfung fehlgeschlagen: {error}"
+    },
+    "comparison_methods": {
+      "exact": {
+        "label": "Exakt",
+        "description": "Exakter Textvergleich (standardmäßig ohne Groß-/Kleinschreibung). Für IDs, Codes, Aufzählungen."
+      },
+      "fuzzy": {
+        "label": "Unscharf",
+        "description": "Ungefährer Textvergleich. Korrekt, wenn die Ähnlichkeit ≥ Schwellenwert ist (Standard 85). Toleriert Tippfehler und Wortumstellungen; Teilstring-Vergleich ist standardmäßig deaktiviert (Opt-in), da er in medizinischen Texten die Bedeutung umkehren kann."
+      },
+      "numeric": {
+        "label": "Numerisch",
+        "description": "Numerischer Vergleich innerhalb einer Toleranz (Standard 0,001, absolut). Für Messwerte, Anzahlen, Laborwerte."
+      },
+      "category": {
+        "label": "Kategorie",
+        "description": "Kategorievergleich mit optionalen Synonymzuordnungen. Erstellt eine Konfusionsmatrix."
+      },
+      "date": {
+        "label": "Datum",
+        "description": "Datumsgleichheit über gängige Formate hinweg (z. B. 2024-01-02 vs. 02.01.2024)."
+      },
+      "boolean": {
+        "label": "Boolesch",
+        "description": "Wahr/Falsch-Vergleich (true/ja/1 vs. false/nein/0)."
+      }
     }
   },
   "landing": {
@@ -1669,7 +1778,7 @@
       },
       "trials": {
         "title": "Reproduzierbare Läufe",
-        "description": "Führen Sie die Extraktion über Dokumentmengen hinweg mit konfigurierbaren Prompts, Schemas, Modellen, Temperatur und Token-Limits durch. Vergleichen Sie Läufe nebeneinander."
+        "description": "Führen Sie die Extraktion über Dokumentgruppen hinweg mit konfigurierbaren Prompts, Schemas, Modellen, Temperatur und Token-Limits durch. Vergleichen Sie Läufe nebeneinander."
       },
       "api": {
         "title": "OpenAI-kompatible APIs",
@@ -1762,7 +1871,7 @@
         },
         "selection_options": {
           "sets": {
-            "name": "Dokumentmengen",
+            "name": "Dokumentgruppen",
             "description": "Führen Sie einen Lauf für eine ganze Gruppe auf einmal durch"
           },
           "individual": {
@@ -1810,7 +1919,7 @@
         },
         "trial_config": {
           "limits": "Temperatur und Token-Limits festlegen",
-          "sets": "Über vollständige Dokumentmengen ausführen",
+          "sets": "Über vollständige Dokumentgruppen ausführen",
           "compare": "Prompts, Schemas und Modelle vergleichen",
           "tokens": "Token-Verbrauch pro Lauf nachverfolgen"
         }
@@ -2049,8 +2158,8 @@
       "format_json_title": "JSON formatieren",
       "cancel": "Abbrechen",
       "fix_field_names": "Korrigieren Sie zuerst die markierten Feldnamen (leere oder doppelte Namen).",
-      "update": "Aktualisieren",
-      "create": "Erstellen",
+      "update": "Änderungen speichern",
+      "create": "Schema erstellen",
       "discard_title": "Nicht gespeicherte Änderungen verwerfen?",
       "discard_message": "Ihre Schema-Änderungen gehen verloren.",
       "discard_confirm": "Verwerfen",
@@ -2151,8 +2260,8 @@
       "user_placeholder": "Extrahieren Sie die folgenden Informationen aus diesem Dokument:\\n\\n{ph}",
       "use_template": "Vorlage verwenden",
       "cancel": "Abbrechen",
-      "update": "Aktualisieren",
-      "create": "Erstellen",
+      "update": "Änderungen speichern",
+      "create": "Prompt erstellen",
       "discard_title": "Nicht gespeicherte Änderungen verwerfen?",
       "discard_message": "Ihre Prompt-Änderungen gehen verloren.",
       "discard_confirm": "Verwerfen",
@@ -2262,7 +2371,11 @@
       "required": "erforderlich",
       "options_count": "{count} Optionen",
       "no_fields": "Keine Felder definiert.",
-      "show_raw_json": "Rohes JSON anzeigen (erweitert)"
+      "show_raw_json": "Rohes JSON anzeigen (erweitert)",
+      "summary": "{count} Feld: {names} | {count} Felder: {names}",
+      "summary_empty": "Keine Felder definiert",
+      "summary_more": ", +{count} weitere",
+      "list_items": "{name} (Listeneinträge)"
     },
     "property": {
       "basic_info": "Grundinformationen",
@@ -2334,7 +2447,8 @@
       "examples": "Beispiele",
       "examples_placeholder": "Beispiele eingeben, eines pro Zeile",
       "key_required": "Ein Schlüssel ist erforderlich",
-      "key_invalid": "Nur Buchstaben, Zahlen und Unterstriche — darf nicht mit einer Zahl beginnen (z. B. patient_name)"
+      "key_invalid": "Nur Buchstaben, Zahlen und Unterstriche — darf nicht mit einer Zahl beginnen (z. B. patient_name)",
+      "pattern_help": "Hilfe zu Mustern"
     },
     "add_modal": {
       "title": "Feld hinzufügen",
@@ -2392,7 +2506,7 @@
       "delete": "Löschen"
     },
     "batch": {
-      "item_label": "Durchlauf"
+      "selected_count": "{count} Durchlauf ausgewählt | {count} Durchläufe ausgewählt"
     },
     "empty": {
       "none_title": "Noch keine Durchläufe",
@@ -2646,7 +2760,40 @@
     "model_test": {
       "title": "Modell- & Schema-Kompatibilität",
       "test_now": "Jetzt testen",
-      "warning_help": "Das Modell wird automatisch geprüft, wenn Sie den Durchlauf starten — oder testen Sie es jetzt, um die Kompatibilität vorab zu bestätigen."
+      "warning_help": "Das Modell wird automatisch geprüft, wenn Sie den Durchlauf starten — oder testen Sie es jetzt, um die Kompatibilität vorab zu bestätigen.",
+      "status": {
+        "testing_config": "Konfiguration wird getestet …",
+        "custom_needs_test": "Benutzerdefinierte API-Einstellungen müssen getestet werden",
+        "custom_connection_failed": "Verbindung zur benutzerdefinierten API fehlgeschlagen",
+        "no_models_custom": "Mit den aktuellen Einstellungen sind keine Modelle verfügbar",
+        "custom_connected": "Benutzerdefinierte API verbunden – {count} Modelle verfügbar",
+        "system_incomplete": "Systemkonfiguration unvollständig – wenden Sie sich an Ihren Administrator oder verwenden Sie benutzerdefinierte Einstellungen",
+        "system_error": "Fehler in der Systemkonfiguration – wenden Sie sich an Ihren Administrator: {error}",
+        "no_models_system": "Keine Modelle verfügbar – wenden Sie sich an Ihren Administrator",
+        "system_active": "Systemkonfiguration aktiv – {count} Modelle verfügbar",
+        "select_model_schema": "Wählen Sie zuerst ein Modell und ein Schema aus",
+        "testing_model": "Modell wird mit dem Schema getestet …",
+        "model_needs_test": "Das Modell muss vor dem Erstellen des Durchlaufs mit dem Schema getestet werden",
+        "model_supports_schema": "Modell '{model}' unterstützt das ausgewählte Schema"
+      },
+      "errors": {
+        "model_test_failed": "Modelltest fehlgeschlagen",
+        "no_models": "Verbindung erfolgreich, aber keine Modelle verfügbar",
+        "connection_failed": "Verbindungstest fehlgeschlagen",
+        "load_models_failed": "Modelle konnten nicht geladen werden"
+      },
+      "toast": {
+        "no_models_admin": "Keine Modelle verfügbar. Wenden Sie sich an Ihren Administrator.",
+        "connection_success": "Verbindung erfolgreich. {count} Modelle geladen.",
+        "system_incomplete": "Die System-LLM-Konfiguration ist unvollständig. Wenden Sie sich an Ihren Administrator oder geben Sie benutzerdefinierte API-Einstellungen an.",
+        "system_error": "Fehler in der System-LLM-Konfiguration: {error}. Wenden Sie sich an Ihren Administrator.",
+        "connection_failed": "Verbindung fehlgeschlagen: {error}",
+        "select_model_first": "Bitte wählen Sie zuerst ein Modell aus",
+        "select_schema_first": "Bitte wählen Sie zuerst ein Schema aus",
+        "no_structured_output": "Modell '{model}' unterstützt keine strukturierte Ausgabe. Bitte wählen Sie ein anderes Modell.",
+        "schema_validation_failed": "Schemavalidierung fehlgeschlagen: {message}",
+        "model_test_failed": "Modelltest fehlgeschlagen: {error}"
+      }
     },
     "results": {
       "aria": "Durchlaufergebnisse",
@@ -2760,7 +2907,8 @@
       "download_partial": "Teilweise herunterladen",
       "retry": "Wiederholen",
       "rename": "Umbenennen",
-      "delete": "Löschen"
+      "delete": "Löschen",
+      "more_actions": "Weitere Aktionen"
     },
     "doc_errors": {
       "count": "{count} Dokumentfehler | {count} Dokumentfehler",
@@ -3121,8 +3269,8 @@
       "not_authorized_create": "Sie sind nicht berechtigt, Durchläufe für dieses Projekt zu erstellen",
       "schema_not_found": "Schema nicht gefunden",
       "prompt_not_found": "Prompt nicht gefunden",
-      "document_set_not_found": "Dokumentensatz in diesem Projekt nicht gefunden",
-      "document_set_empty": "Der Dokumentensatz ist leer",
+      "document_set_not_found": "Dokumentgruppe in diesem Projekt nicht gefunden",
+      "document_set_empty": "Die Dokumentgruppe ist leer",
       "documents_not_found": "Dokument(e) mit der/den ID(s) {missing_ids} wurde(n) in Projekt {project_id} nicht gefunden",
       "no_documents_specified": "Es muss entweder document_ids oder document_set_id angegeben werden",
       "llm_config_incomplete": "Die LLM-Konfiguration ist unvollständig",
@@ -3169,5 +3317,30 @@
       "reset_token_invalid": "Ungültiges oder abgelaufenes Zurücksetzungstoken",
       "token_mismatch": "Token stimmt nicht überein"
     }
+  },
+  "not_found": {
+    "title": "Seite nicht gefunden",
+    "description": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+    "go_projects": "Zu den Projekten",
+    "go_login": "Zur Anmeldung"
+  },
+  "routes": {
+    "projects": "Projekte",
+    "account_settings": "Kontoeinstellungen",
+    "project": "Projekt",
+    "admin": "Admin",
+    "user_management": "Benutzerverwaltung",
+    "admin_settings": "Admin-Einstellungen",
+    "sso_providers": "SSO-Anbieter",
+    "audit_log": "Audit-Log",
+    "task_monitor": "Aufgabenmonitor",
+    "sign_in": "Anmelden",
+    "register": "Registrieren",
+    "forgot_password": "Passwort vergessen",
+    "reset_password": "Passwort zurücksetzen",
+    "invitation": "Einladung",
+    "signing_in": "Anmeldung läuft",
+    "first_admin_setup": "Ersteinrichtung Administrator",
+    "not_found": "Seite nicht gefunden"
   }
 }

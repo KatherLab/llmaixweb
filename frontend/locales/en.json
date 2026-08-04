@@ -41,9 +41,9 @@
       "remove": "Remove {label}"
     },
     "batch_action_bar": {
-      "item": "item",
-      "selected": "selected",
-      "clear_selection": "Clear selection"
+      "clear_selection": "Clear selection",
+      "selected_count": "{count} {label} selected",
+      "items": "items"
     },
     "data_table": {
       "selected": "selected",
@@ -564,7 +564,8 @@
       "unexpected": "An unexpected error occurred. Please try again.",
       "no_token": "No invitation token provided",
       "invitation_expired": "This invitation link is invalid or has expired"
-    }
+    },
+    "session_expired": "Session expired. Please sign in again."
   },
   "account": {
     "title": "Account settings",
@@ -646,8 +647,6 @@
       "empty_filtered_description": "Try adjusting or clearing your filters to see more results",
       "clear_all_filters": "Clear All Filters",
       "go_to_files": "Go to Files & Preprocessing",
-      "batch_count_label": "document",
-      "export_coming_soon": "Export is coming soon",
       "tab_all": "All Documents",
       "tab_groups": "Document Groups"
     },
@@ -733,7 +732,7 @@
       "clear_selection": "Clear Selection",
       "prev": "Prev",
       "next": "Next",
-      "update_group": "Update Group",
+      "update_group": "Save Changes",
       "discard_title": "Discard unsaved changes?",
       "discard_message": "Your changes to this document group will be lost.",
       "discard_confirm": "Discard",
@@ -780,7 +779,8 @@
       "restore_confirm": "Restore",
       "version_restored": "Version restored",
       "restore_failed": "Failed to restore version",
-      "load_preview_failed": "Failed to load document preview."
+      "load_preview_failed": "Failed to load document preview.",
+      "no_text_content": "No text content available"
     },
     "text_view": {
       "find_placeholder": "Find in document…",
@@ -843,12 +843,6 @@
       "selected": "{count} {entity} selected",
       "force_reprocess": "Force reprocess (ignore existing results)",
       "reprocess_note": "Reprocessing runs on the whole source file, not individual rows — selecting documents from a row-by-row CSV/XLSX import reprocesses every row of that file.",
-      "export_choose": "Choose export format and options:",
-      "export_format_label": "Export Format",
-      "export_format_txt": "Plain Text",
-      "export_format_pdf": "PDF (with text layer)",
-      "include_metadata": "Include metadata",
-      "include_preprocessing": "Include preprocessing information",
       "warning_title": "Warning: This action cannot be undone",
       "checking_usage": "Checking usage…",
       "deps_preview_unavailable": "Usage preview is unavailable for selections over {limit} {entity} — the option above still applies to the whole selection.",
@@ -862,10 +856,8 @@
       "processing": "Processing...",
       "title_default": "Batch Action",
       "title_reprocess": "Reprocess {entity}",
-      "title_export": "Export {entity}",
       "title_delete": "Delete {entity}",
       "button_start_reprocessing": "Start Reprocessing",
-      "button_export": "Export",
       "button_delete": "Delete {entity}",
       "button_confirm": "Confirm",
       "cascade_files": "Also delete produced documents and their extraction runs and results, and remove them from groups",
@@ -880,14 +872,14 @@
       "impact_evaluation_metric": "{count} evaluation metric | {count} evaluation metrics",
       "toast_no_files": "Could not resolve the selected documents to any files.",
       "toast_reprocess_started": "Reprocessing task started for {count} file | Reprocessing task started for {count} files",
-      "toast_export_stub": "Export functionality would be implemented here",
       "toast_check_usage_failed": "Failed to check usage",
       "toast_action_failed": "Failed to complete the action on the selected {entity}.",
       "delete_failed_fallback": "Failed to delete {entity}",
       "deleted_success": "{count} {entity} deleted successfully",
       "more_count": "(+{count} more)",
       "hint_manage": "Go to the Document Groups tab to manage.",
-      "delete_failed_summary": "Failed to delete {count} {entity}: #{id} — {error}"
+      "delete_failed_summary": "Failed to delete {count} {entity}: #{id} — {error}",
+      "selected_count": "{count} document selected | {count} documents selected"
     },
     "toasts": {
       "load_document_failed": "Failed to load document",
@@ -1037,7 +1029,9 @@
       "doc_total": "{count} doc | {count} docs",
       "col_document": "Document",
       "col_wrong_of_total": "Wrong of Total",
-      "col_status": "Status"
+      "col_status": "Status",
+      "no_documents_title": "No documents in this evaluation",
+      "no_documents_hint": "No documents could be matched to the ground truth. Check the ground truth's ID field so document identifiers line up with its rows."
     },
     "metrics": {
       "accuracy": "Accuracy",
@@ -1124,6 +1118,96 @@
       "select_one_toast": "Please select at least one evaluation to export",
       "export_success": "Report exported",
       "export_failed": "Failed to export report: {error}"
+    },
+    "status_labels": {
+      "ok": "OK",
+      "low": "Low",
+      "partial": "Partial",
+      "error": "Error"
+    },
+    "drawer_panels": {
+      "source": "Source",
+      "comparison": "Comparison",
+      "output": "Output",
+      "reasoning": "Reasoning"
+    },
+    "metric_defs": {
+      "accuracy": {
+        "long": "Share of all extracted fields that exactly match the ground truth.",
+        "guidance": "High accuracy = most fields are correct overall. Computed over matched documents and the fields the ground truth actually provides a value for."
+      },
+      "precision": {
+        "long": "Of the values the model extracted, the fraction that were correct.",
+        "guidance": "Low precision means the model often extracts wrong values (false positives). A wrong value where one was expected counts against precision too."
+      },
+      "recall": {
+        "long": "Of the values that should have been extracted, the fraction the model got right.",
+        "guidance": "Low recall means the model misses fields, or extracts the wrong value where a value was expected (false negatives). Per-field recall is over the documents whose ground truth has a value for that field."
+      },
+      "f1_score": {
+        "long": "Harmonic mean of precision and recall — balances both into one number.",
+        "guidance": "Use F1 to compare fields when you care about both missing and wrong values."
+      },
+      "confidence": {
+        "long": "The model's self-reported certainty for the extracted value (0–1).",
+        "guidance": "Low confidence on a correct value can hint at borderline cases worth reviewing."
+      }
+    },
+    "error_types": {
+      "missing": {
+        "label": "Missing",
+        "description": "Field was not extracted from the document",
+        "suggestion": "Check if the field exists in the document or improve extraction prompts"
+      },
+      "mismatch": {
+        "label": "Mismatch",
+        "description": "Extracted value does not match ground truth",
+        "suggestion": "Review extraction accuracy or ground truth data"
+      },
+      "fuzzy_mismatch": {
+        "label": "Fuzzy Mismatch",
+        "description": "Extracted value is similar but not close enough to ground truth",
+        "suggestion": "Consider adjusting fuzzy matching threshold or improving extraction"
+      },
+      "numeric_mismatch": {
+        "label": "Numeric Mismatch",
+        "description": "Numeric value is outside acceptable tolerance",
+        "suggestion": "Check numeric parsing or adjust tolerance settings"
+      },
+      "boolean_mismatch": {
+        "label": "Boolean Mismatch",
+        "description": "Boolean value is incorrect",
+        "suggestion": "Review boolean value mapping or extraction logic"
+      },
+      "category_mismatch": {
+        "label": "Category Mismatch",
+        "description": "Category value does not match expected options",
+        "suggestion": "Verify category mappings or improve classification"
+      },
+      "date_mismatch": {
+        "label": "Date Mismatch",
+        "description": "Date value is incorrect or in wrong format",
+        "suggestion": "Check date format parsing or improve date extraction"
+      },
+      "type_error": {
+        "label": "Type Error",
+        "description": "Value type is incorrect (e.g., text instead of number)",
+        "suggestion": "Review data type conversion or schema definition"
+      },
+      "extra": {
+        "label": "Extra",
+        "description": "Field was extracted but not expected in ground truth",
+        "suggestion": "Check if this field should be included in ground truth"
+      },
+      "date_parse_error": {
+        "label": "Date Parse Error",
+        "description": "Date could not be parsed for comparison",
+        "suggestion": "Check date format parsing or improve date extraction"
+      },
+      "unknown": {
+        "description": "Unknown error type",
+        "suggestion": "Review extraction logic and ground truth data"
+      }
     }
   },
   "files": {
@@ -1149,9 +1233,9 @@
       "view_errors": "View errors"
     },
     "batch": {
-      "count_label": "file",
       "needs_config_count": "{count} needs config",
-      "needs_config_title": "{files} need(s) import configuration — click to configure"
+      "needs_config_title": "{files} need(s) import configuration — click to configure",
+      "selected_count": "{count} file selected | {count} files selected"
     },
     "cancel_task": {
       "cancel": "Keep running",
@@ -1289,10 +1373,10 @@
       "present": "present",
       "search_placeholder": "Search files...",
       "status_all": "All Status",
-      "status_completed": "Completed",
+      "status_completed": "Preprocessed",
       "status_failed": "Failed",
-      "status_not_processed": "Not Processed",
-      "status_processing": "Processing",
+      "status_not_processed": "Not preprocessed",
+      "status_processing": "Preprocessing",
       "type_all": "All Types"
     },
     "hint": {
@@ -1305,8 +1389,6 @@
       "and_more": "…and {count} more",
       "aria_label": "Preprocessing history",
       "documents_count": "{count} document | {count} documents",
-      "engine_local": "Local OCR",
-      "engine_local_force": "Local OCR + Force",
       "eta_left": "≈ {duration} left",
       "files_processed": "{processed} of {total} files processed",
       "go_to_document": "Go to Document",
@@ -1323,14 +1405,15 @@
       "skipped_rows": "{count} skipped row | {count} skipped rows",
       "started": "Started {time}",
       "status_cancelled": "Cancelled",
-      "status_done": "Done",
+      "status_done": "Completed",
       "status_failed": "Failed",
       "status_pending": "Pending",
       "title": "Preprocessing History",
       "took": "took {duration}",
       "unknown_file": "Unknown file",
       "view_error": "View error",
-      "warnings": "{count} warning | {count} warnings"
+      "warnings": "{count} warning | {count} warnings",
+      "engine_force": "{engine} + Force OCR"
     },
     "import": {
       "all_unique": "All {count} IDs in this column are unique.",
@@ -1423,8 +1506,8 @@
     "status": {
       "failed": "Failed",
       "not_preprocessed": "Not preprocessed",
-      "processed": "Processed",
-      "processing": "Processing"
+      "processed": "Preprocessed",
+      "processing": "Preprocessing"
     },
     "table": {
       "col_file": "File",
@@ -1520,7 +1603,7 @@
       "format_xlsx": "Excel (.xlsx, dot-paths build nesting)",
       "important": "Important:",
       "json_id_note": "Each document must have an 'id' field that matches your document identifiers.",
-      "tabular_id_note": "You'll choose the ID column (matching your document identifiers) on the next step.",
+      "tabular_id_note": "You'll choose the ID field (matching your document identifiers) on the next step.",
       "files_label": "File(s)",
       "upload_files": "Upload file(s)",
       "or_drag_and_drop": "or drag and drop",
@@ -1555,9 +1638,9 @@
       "required_count": "{count} required",
       "select_schema_hint": "Select a schema above to load its fields.",
       "pick_schema_field": "pick schema field",
-      "pick_gt_field": "pick GT field",
+      "pick_gt_field": "pick ground-truth field",
       "create_mapping": "Create mapping",
-      "map": "Map",
+      "map": "Create mapping",
       "auto_map": "Auto-map matching names",
       "clear_all_mappings": "Clear all mappings",
       "gt_fields_heading": "Ground Truth Fields",
@@ -1565,13 +1648,13 @@
       "loading": "Loading...",
       "footer_select_schema": "Please select a schema to start mapping fields.",
       "warning_required_unmapped": "Warning: not all required fields are mapped!",
-      "select_id_before_save": "Please select the ID column before saving.",
+      "select_id_before_save": "Please select the ID field before saving.",
       "cancel": "Cancel",
       "save_mappings": "Save Mappings",
       "saved": "Saved!",
       "reason_select_schema": "Please select a schema.",
       "reason_no_mappings": "At least one field mapping is required.",
-      "reason_no_id_column": "You must select an ID column for CSV/XLSX files.",
+      "reason_no_id_column": "You must select an ID field for CSV/XLSX files.",
       "reason_no_id_field": "You must select an ID field for JSON data.",
       "reason_generic": "Cannot save right now.",
       "mapping_count": "{count} mapping | {count} mappings",
@@ -1598,10 +1681,10 @@
     },
     "mapping_list": {
       "empty_line1": "No mappings yet.",
-      "empty_line2": "Select a schema field and a GT field and click",
-      "map": "Map",
+      "empty_line2": "Select a schema field and a ground-truth field and click",
+      "map": "Create mapping",
       "schema_field": "Schema field",
-      "gt_field": "GT field",
+      "gt_field": "Ground-truth field",
       "options_for": "Comparison options for {field}",
       "remove_mapping": "Remove mapping",
       "threshold": "Threshold",
@@ -1610,13 +1693,13 @@
       "allow_partial": "allow partial / substring match",
       "tolerance": "Tolerance",
       "relative": "relative (±%)",
-      "hint_type_mismatch": "Type mismatch: schema field is {schemaType}, GT column is {gtType}",
+      "hint_type_mismatch": "Type mismatch: schema field is {schemaType}, ground-truth field is {gtType}",
       "hint_unusual_method": "\"{method}\" comparison is unusual for a {fieldType} field"
     },
     "id_field": {
       "document_id": "Document ID",
-      "select_id_column": "Select ID column...",
-      "select_id_column_hint": "Please select an ID column to enable evaluation.",
+      "select_id_column": "Select ID field...",
+      "select_id_column_hint": "Please select an ID field to enable evaluation.",
       "use_filename": "Use document filename",
       "use_field": "Use field:",
       "select_field": "Select field...",
@@ -1629,6 +1712,32 @@
       "none": "None of the {total} ground-truth rows match a document.",
       "hint": "Check that this column's values match your document names or IDs.",
       "failed": "Match check failed: {error}"
+    },
+    "comparison_methods": {
+      "exact": {
+        "label": "Exact",
+        "description": "Exact text match (case-insensitive by default). Use for IDs, codes, enums."
+      },
+      "fuzzy": {
+        "label": "Fuzzy",
+        "description": "Approximate string match. Correct if similarity ≥ threshold (default 85). Tolerates typos and word reordering; substring matching is off by default (opt-in) because it can invert meaning in medical text."
+      },
+      "numeric": {
+        "label": "Numeric",
+        "description": "Numeric comparison within a tolerance (default 0.001, absolute). Use for measurements, counts, lab values."
+      },
+      "category": {
+        "label": "Category",
+        "description": "Categorical match with optional synonym mappings. Builds a confusion matrix."
+      },
+      "date": {
+        "label": "Date",
+        "description": "Date equality across common formats (e.g. 2024-01-02 vs 02/01/2024)."
+      },
+      "boolean": {
+        "label": "Boolean",
+        "description": "True/false comparison (true/yes/1 vs false/no/0)."
+      }
     }
   },
   "landing": {
@@ -1669,7 +1778,7 @@
       },
       "trials": {
         "title": "Reproducible Runs",
-        "description": "Run extraction across document sets with configurable prompts, schemas, models, temperature, and token limits. Compare runs side by side."
+        "description": "Run extraction across document groups with configurable prompts, schemas, models, temperature, and token limits. Compare runs side by side."
       },
       "api": {
         "title": "OpenAI-Compatible APIs",
@@ -1762,7 +1871,7 @@
         },
         "selection_options": {
           "sets": {
-            "name": "Document Sets",
+            "name": "Document Groups",
             "description": "Run an extraction against an entire group at once"
           },
           "individual": {
@@ -1810,7 +1919,7 @@
         },
         "trial_config": {
           "limits": "Set temperature and token limits",
-          "sets": "Run across full document sets",
+          "sets": "Run across full document groups",
           "compare": "Compare prompts, schemas, and models",
           "tokens": "Track token usage per extraction run"
         }
@@ -2049,8 +2158,8 @@
       "format_json_title": "Format JSON",
       "cancel": "Cancel",
       "fix_field_names": "Fix the highlighted field names first (empty or duplicate names).",
-      "update": "Update",
-      "create": "Create",
+      "update": "Save Changes",
+      "create": "Create Schema",
       "discard_title": "Discard unsaved changes?",
       "discard_message": "Your schema edits will be lost.",
       "discard_confirm": "Discard",
@@ -2151,8 +2260,8 @@
       "user_placeholder": "Extract the following information from this document:\\n\\n{ph}",
       "use_template": "Use Template",
       "cancel": "Cancel",
-      "update": "Update",
-      "create": "Create",
+      "update": "Save Changes",
+      "create": "Create Prompt",
       "discard_title": "Discard unsaved changes?",
       "discard_message": "Your prompt edits will be lost.",
       "discard_confirm": "Discard",
@@ -2262,7 +2371,11 @@
       "required": "required",
       "options_count": "{count} options",
       "no_fields": "No fields defined.",
-      "show_raw_json": "Show raw JSON (advanced)"
+      "show_raw_json": "Show raw JSON (advanced)",
+      "summary": "{count} field: {names} | {count} fields: {names}",
+      "summary_empty": "No fields defined",
+      "summary_more": ", +{count} more",
+      "list_items": "{name} (list items)"
     },
     "property": {
       "basic_info": "Basic Information",
@@ -2334,7 +2447,8 @@
       "examples": "Examples",
       "examples_placeholder": "Enter examples, one per line",
       "key_required": "A key is required",
-      "key_invalid": "Only letters, numbers and underscores — must not start with a number (e.g., patient_name)"
+      "key_invalid": "Only letters, numbers and underscores — must not start with a number (e.g., patient_name)",
+      "pattern_help": "Pattern help"
     },
     "add_modal": {
       "title": "Add Field",
@@ -2392,7 +2506,7 @@
       "delete": "Delete"
     },
     "batch": {
-      "item_label": "extraction run"
+      "selected_count": "{count} extraction run selected | {count} extraction runs selected"
     },
     "empty": {
       "none_title": "No extraction runs yet",
@@ -2646,7 +2760,40 @@
     "model_test": {
       "title": "Model & Schema Compatibility",
       "test_now": "Test now",
-      "warning_help": "The model is checked automatically when you start the extraction run — or test it now to confirm compatibility beforehand."
+      "warning_help": "The model is checked automatically when you start the extraction run — or test it now to confirm compatibility beforehand.",
+      "status": {
+        "testing_config": "Testing configuration…",
+        "custom_needs_test": "Custom API settings need to be tested",
+        "custom_connection_failed": "Custom API connection failed",
+        "no_models_custom": "No models available with current settings",
+        "custom_connected": "Custom API connected — {count} models available",
+        "system_incomplete": "System configuration incomplete — please contact your administrator or use custom settings",
+        "system_error": "System configuration error — please contact your administrator: {error}",
+        "no_models_system": "No models available — please contact your administrator",
+        "system_active": "System configuration active — {count} models available",
+        "select_model_schema": "Select a model and schema first",
+        "testing_model": "Testing model with schema…",
+        "model_needs_test": "The model must be tested with the schema before creating the extraction run",
+        "model_supports_schema": "Model '{model}' supports the selected schema"
+      },
+      "errors": {
+        "model_test_failed": "Model test failed",
+        "no_models": "Connection successful but no models available",
+        "connection_failed": "Connection test failed",
+        "load_models_failed": "Failed to load models"
+      },
+      "toast": {
+        "no_models_admin": "No models available. Please contact your administrator.",
+        "connection_success": "Connection successful. Loaded {count} models.",
+        "system_incomplete": "System LLM configuration is incomplete. Please contact your administrator or provide custom API settings.",
+        "system_error": "System LLM configuration error: {error}. Please contact your administrator.",
+        "connection_failed": "Connection failed: {error}",
+        "select_model_first": "Please select a model first",
+        "select_schema_first": "Please select a schema first",
+        "no_structured_output": "Model '{model}' does not support structured output. Please select a different model.",
+        "schema_validation_failed": "Schema validation failed: {message}",
+        "model_test_failed": "Model test failed: {error}"
+      }
     },
     "results": {
       "aria": "Extraction run results",
@@ -2760,7 +2907,8 @@
       "download_partial": "Download partial",
       "retry": "Retry",
       "rename": "Rename",
-      "delete": "Delete"
+      "delete": "Delete",
+      "more_actions": "More actions"
     },
     "doc_errors": {
       "count": "{count} document error | {count} document errors",
@@ -2970,11 +3118,11 @@
       "document_in_trial": "Document is referenced in extraction run '{trial}'. Remove from extraction run(s) first.",
       "document_in_trial_result": "Document is referenced in an extraction run result. Remove results/extraction runs first.",
       "document_in_evaluation_metric": "Document is referenced in evaluation metrics. Remove related evaluation/extraction run first.",
-      "document_in_sets": "Document is part of {count} document sets. Remove from sets first.",
-      "create_set_forbidden": "Not authorized to create document sets for this project",
+      "document_in_sets": "Document is part of {count} document groups. Remove it from those groups first.",
+      "create_set_forbidden": "Not authorized to create document groups for this project",
       "trial_not_found_in_project": "Extraction run not found in this project",
       "document_set_not_found": "Document set not found",
-      "set_referenced_by_trials": "Cannot delete document set: one or more extraction runs reference it.",
+      "set_referenced_by_trials": "Cannot delete document group: one or more extraction runs reference it.",
       "trial_not_found": "Extraction run not found"
     },
     "evaluations": {
@@ -3121,8 +3269,8 @@
       "not_authorized_create": "Not authorized to create extraction runs for this project",
       "schema_not_found": "Schema not found",
       "prompt_not_found": "Prompt not found",
-      "document_set_not_found": "Document set not found in this project",
-      "document_set_empty": "Document set is empty",
+      "document_set_not_found": "Document group not found in this project",
+      "document_set_empty": "Document group is empty",
       "documents_not_found": "Document(s) with id(s) {missing_ids} not found in project {project_id}",
       "no_documents_specified": "Either document_ids or document_set_id must be provided",
       "llm_config_incomplete": "LLM configuration is incomplete",
@@ -3169,5 +3317,30 @@
       "reset_token_invalid": "Invalid or expired reset token",
       "token_mismatch": "Token mismatch"
     }
+  },
+  "not_found": {
+    "title": "Page Not Found",
+    "description": "The page you are looking for doesn't exist or has been moved.",
+    "go_projects": "Go to Projects",
+    "go_login": "Go to Login"
+  },
+  "routes": {
+    "projects": "Projects",
+    "account_settings": "Account Settings",
+    "project": "Project",
+    "admin": "Admin",
+    "user_management": "User Management",
+    "admin_settings": "Admin Settings",
+    "sso_providers": "SSO Providers",
+    "audit_log": "Audit Log",
+    "task_monitor": "Task Monitor",
+    "sign_in": "Sign in",
+    "register": "Register",
+    "forgot_password": "Forgot Password",
+    "reset_password": "Reset Password",
+    "invitation": "Invitation",
+    "signing_in": "Signing in",
+    "first_admin_setup": "First Admin Setup",
+    "not_found": "Page Not Found"
   }
 }

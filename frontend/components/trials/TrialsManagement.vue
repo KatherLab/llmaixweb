@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 space-y-8">
+  <div class="p-6 space-y-6">
     <!-- Header -->
     <PageHeader
       :title="$t('trials.title')"
@@ -28,8 +28,10 @@
       </template>
     </PageHeader>
 
-    <!-- Filter Panel -->
+    <!-- Filter Panel (hidden while the project has no runs at all — a fresh
+         tab should lead with the empty state, not seven filter dropdowns) -->
     <TrialFiltersPanel
+      v-if="trials.length > 0 || hasActiveFilters"
       v-model:filters="filters"
       v-model:custom-date-from="customDateFrom"
       v-model:custom-date-to="customDateTo"
@@ -112,7 +114,7 @@
       <!-- Floating Batch Toolbar -->
       <BatchActionBar
         :count="selectedTrials.length"
-        :count-label="$t('trials.batch.item_label')"
+        count-key="trials.batch.selected_count"
         @clear="selectedTrials = []"
       >
         <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
@@ -148,7 +150,7 @@
       :is-modal="true"
       :project-id="props.projectId"
       :trial-id="selectedTrialId ?? 0"
-      @close="showTrialResultsModal = false"
+      @close="closeTrialResults"
     />
     <RenameTrialModal
       v-if="showRenameModal"
@@ -760,8 +762,37 @@ function openDownloadModal(trial: TrialSummary): void {
 }
 
 function viewTrialResults(trial: TrialSummary): void {
-  selectedTrialId.value = trial.id
+  openTrialResults(trial.id)
+}
+
+// The open results panel is mirrored into "?trial=<id>" so a refresh (or a
+// shared link) restores it. Other query params (e.g. the project tab,
+// ?expandTrial) are preserved on every replace.
+function openTrialResults(trialId: number): void {
+  selectedTrialId.value = trialId
   showTrialResultsModal.value = true
+  if (route.query.trial !== String(trialId)) {
+    router.replace({ query: { ...route.query, trial: String(trialId) } })
+  }
+}
+
+function closeTrialResults(): void {
+  showTrialResultsModal.value = false
+  selectedTrialId.value = null
+  if (route.query.trial) {
+    router.replace({ query: { ...route.query, trial: undefined } })
+  }
+}
+
+// Restore the results panel from "?trial=" on mount (after trials load) —
+// mirrors the ?expandTrial deep-link consumption above.
+const consumeTrialParam = (): void => {
+  const raw = route.query.trial
+  const id = Number(raw)
+  if (raw && Number.isFinite(id) && id > 0) {
+    selectedTrialId.value = id
+    showTrialResultsModal.value = true
+  }
 }
 function viewTrialSchema(trial: TrialSummary): void {
   // Prefer the frozen snapshot captured at trial run; fall back to the live
@@ -820,6 +851,8 @@ onMounted(async () => {
   }
   // Deep-link from ActivityBell: highlight + scroll to a trial.
   consumeExpandTrialParam()
+  // Deep-link to an open results panel (?trial=).
+  consumeTrialParam()
 })
 onUnmounted(() => {
   stopWebSocket()

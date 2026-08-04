@@ -24,22 +24,12 @@
     </PageHeader>
 
     <!-- Mode toggle: durable activity trail vs. central error log -->
-    <div class="flex gap-2 mb-4">
-      <button
-        v-for="m in modes"
-        :key="m.value"
-        type="button"
-        :class="[
-          'px-3 py-1.5 text-sm font-medium rounded-card border transition',
-          mode === m.value
-            ? 'bg-primary text-white border-primary'
-            : 'bg-surface text-content-muted border-default hover:bg-surface-muted',
-        ]"
-        @click="setMode(m.value)"
-      >
-        {{ m.label }}
-      </button>
-    </div>
+    <BaseSegmentedControl
+      :model-value="mode"
+      :options="modes"
+      class="mb-4"
+      @update:model-value="setMode($event as Mode)"
+    />
 
     <!-- ─────────────── Activity trail ─────────────── -->
     <div v-if="mode === 'activity'">
@@ -359,6 +349,7 @@ import { auditApi } from '@/services/auditApi'
 import PageHeader from '@/components/common/PageHeader.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import EmptyState from '@/components/common/EmptyState.vue'

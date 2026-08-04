@@ -8,8 +8,8 @@
       class="mb-6"
     >
       <template #actions>
-        <BaseButton variant="secondary" @click="showUploadModal = true">
-          <Upload class="w-5 h-5 text-content-muted" />
+        <BaseButton variant="primary" @click="showUploadModal = true">
+          <Upload class="w-5 h-5" />
           {{ $t('files.actions.upload_files') }}
         </BaseButton>
       </template>
@@ -280,7 +280,7 @@
     <!-- Floating Batch Toolbar -->
     <BatchActionBar
       :count="selectedFiles.length"
-      :count-label="$t('files.batch.count_label')"
+      count-key="files.batch.selected_count"
       @clear="selectedFiles = []"
     >
       <template #warning>

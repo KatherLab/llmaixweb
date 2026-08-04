@@ -170,13 +170,13 @@ const defaultStep = 'files'
 
 // Per-step prerequisite guidance. Returns null when the current step's inputs
 // are ready (so no hint shows). Drives the Callout above the workspace.
-const stepLabels: Record<string, string> = {
+const stepLabels = computed<Record<string, string>>(() => ({
   files: t('projects.steps.files'),
   documents: t('projects.steps.documents'),
   schemas: t('projects.steps.schemas'),
   trials: t('projects.steps.trials'),
   evaluation: t('projects.steps.evaluation'),
-}
+}))
 const prerequisiteHint = computed<{
   title: string
   body: string
@@ -195,7 +195,7 @@ const prerequisiteHint = computed<{
           title: t('projects.hints.no_documents.title'),
           body: t('projects.hints.no_documents.body'),
           targetStep: 'files',
-          targetLabel: stepLabels.files,
+          targetLabel: stepLabels.value.files,
         }
       return null
     case 'schemas':
@@ -206,7 +206,7 @@ const prerequisiteHint = computed<{
           title: t('projects.hints.no_trial_documents.title'),
           body: t('projects.hints.no_trial_documents.body'),
           targetStep: 'files',
-          targetLabel: stepLabels.files,
+          targetLabel: stepLabels.value.files,
         }
       if (schemaCount === 0 || promptCount === 0)
         return {
@@ -216,7 +216,7 @@ const prerequisiteHint = computed<{
               : t('projects.hints.no_prompt.title'),
           body: t('projects.hints.schema_prompt.body'),
           targetStep: 'schemas',
-          targetLabel: stepLabels.schemas,
+          targetLabel: stepLabels.value.schemas,
         }
       return null
     case 'evaluation':
@@ -225,7 +225,7 @@ const prerequisiteHint = computed<{
           title: t('projects.hints.no_trials.title'),
           body: t('projects.hints.no_trials.body'),
           targetStep: 'trials',
-          targetLabel: stepLabels.trials,
+          targetLabel: stepLabels.value.trials,
         }
       return null
     default:

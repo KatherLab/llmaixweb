@@ -8,18 +8,18 @@
         <Compass class="w-14 h-14 text-content-subtle" aria-hidden="true" />
       </div>
       <h1 class="text-6xl font-extrabold text-content tracking-tight">404</h1>
-      <p class="text-xl text-content mt-4">Page Not Found</p>
+      <p class="text-xl text-content mt-4">{{ $t('not_found.title') }}</p>
       <p class="text-content-muted mt-2 mb-8">
-        The page you are looking for doesn't exist or has been moved.
+        {{ $t('not_found.description') }}
       </p>
       <div class="flex flex-col sm:flex-row gap-3 justify-center">
         <BaseButton variant="primary" size="lg" @click="goProjects">
           <Folder class="h-4 w-4" />
-          Go to Projects
+          {{ $t('not_found.go_projects') }}
         </BaseButton>
         <BaseButton variant="secondary" size="lg" @click="goLogin">
           <LogIn class="h-4 w-4" />
-          Go to Login
+          {{ $t('not_found.go_login') }}
         </BaseButton>
       </div>
     </div>

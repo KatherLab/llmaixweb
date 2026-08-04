@@ -64,21 +64,23 @@
           <template v-else-if="val.secret">
             <div class="flex flex-col gap-1">
               <div class="flex gap-2 mt-1">
-                <button
+                <BaseButton
                   type="button"
-                  class="px-2 py-1 rounded bg-primary-soft text-primary text-xs font-medium hover:bg-primary-soft"
+                  variant="secondary"
+                  size="sm"
                   @click="showSecretInput[key] = !showSecretInput[key]"
                 >
                   {{ val.is_set ? $t('admin.settings.update') : $t('admin.settings.set_action') }}
-                </button>
-                <button
+                </BaseButton>
+                <BaseButton
                   v-if="val.is_set"
                   type="button"
-                  class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
+                  variant="danger"
+                  size="sm"
                   @click="pendingClearKey = key"
                 >
                   {{ $t('admin.settings.clear') }}
-                </button>
+                </BaseButton>
               </div>
               <div v-if="showSecretInput[key]" class="mt-2 flex gap-2">
                 <input
@@ -112,42 +114,45 @@
           <template v-else-if="val.type === 'bool'">
             <div class="flex items-center gap-2">
               <input v-model="draft[key]" type="checkbox" class="w-5 h-5 text-primary" />
-              <button
+              <BaseButton
                 v-if="val.overridden"
                 type="button"
-                class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
+                variant="danger"
+                size="sm"
                 @click="pendingRevertKey = key"
               >
                 {{ $t('admin.settings.revert') }}
-              </button>
+              </BaseButton>
             </div>
           </template>
           <!-- Integer -->
           <template v-else-if="val.type === 'int'">
             <div class="flex items-center gap-2">
               <input v-model.number="draft[key]" type="number" :class="[inputClass, 'flex-1']" />
-              <button
+              <BaseButton
                 v-if="val.overridden"
                 type="button"
-                class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
+                variant="danger"
+                size="sm"
                 @click="pendingRevertKey = key"
               >
                 {{ $t('admin.settings.revert') }}
-              </button>
+              </BaseButton>
             </div>
           </template>
           <!-- String (default) -->
           <template v-else>
             <div class="flex items-center gap-2">
               <input v-model="draft[key]" type="text" :class="[inputClass, 'flex-1']" />
-              <button
+              <BaseButton
                 v-if="val.overridden"
                 type="button"
-                class="px-2 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
+                variant="danger"
+                size="sm"
                 @click="pendingRevertKey = key"
               >
                 {{ $t('admin.settings.revert') }}
-              </button>
+              </BaseButton>
             </div>
           </template>
         </div>
@@ -194,8 +199,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { CircleDot, Lock } from '@lucide/vue'
 import { adminApi } from '@/services/adminApi'
 import { useToast } from '@/composables/useToast'
@@ -210,6 +216,8 @@ import type { AdminSettings, AdminSettingEntry } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
+const route = useRoute()
+const router = useRouter()
 
 const settings = reactive<AdminSettings>({})
 // Draft values are a mix of booleans, numbers, and strings.
@@ -251,6 +259,16 @@ const categoryTabs = computed(() => {
   return present.map((cat) => ({ label: cat, value: cat }))
 })
 const activeTab = ref<string>('')
+
+// Mirror the active category into ?tab= so a refresh keeps the sub-tab. The
+// param is omitted for the default (first) category; replace, not push — tab
+// flips shouldn't pollute history, and other query params are preserved.
+watch(activeTab, (tab) => {
+  const defaultTab = categoryTabs.value[0]?.value
+  const desired = tab && tab !== defaultTab ? tab : undefined
+  if ((route.query.tab ?? undefined) === desired) return
+  router.replace({ query: { ...route.query, tab: desired } })
+})
 
 const filteredSettings = computed<AdminSettings>(() =>
   Object.fromEntries(Object.entries(settings).filter(([_k, v]) => v.category === activeTab.value)),
@@ -368,9 +386,13 @@ async function fetchSettings(): Promise<void> {
     const res = await adminApi.getSettings()
     Object.assign(settings, res.data)
     resetDraft()
-    // Default to the first available category tab once settings are loaded.
+    // Restore the category tab from ?tab= (deep link / refresh) when valid;
+    // otherwise default to the first available category once settings load.
     if (!activeTab.value && categoryTabs.value.length) {
-      activeTab.value = categoryTabs.value[0].value
+      const fromQuery = typeof route.query.tab === 'string' ? route.query.tab : ''
+      activeTab.value = categoryTabs.value.some((tabItem) => tabItem.value === fromQuery)
+        ? fromQuery
+        : categoryTabs.value[0].value
     }
   } catch {
     error.value = t('admin.settings.errors.load')

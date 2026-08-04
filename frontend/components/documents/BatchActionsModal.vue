@@ -38,36 +38,6 @@
       </Callout>
     </div>
 
-    <!-- Export Action -->
-    <div v-else-if="action === 'export'" class="space-y-4">
-      <p class="text-sm text-content-muted">{{ $t('documents.batch.export_choose') }}</p>
-      <div>
-        <label for="batch-export-format" :class="labelClass">
-          {{ $t('documents.batch.export_format_label') }}
-        </label>
-        <select id="batch-export-format" v-model="exportFormat" :class="selectClass">
-          <option value="json">JSON</option>
-          <option value="csv">CSV</option>
-          <option value="txt">{{ $t('documents.batch.export_format_txt') }}</option>
-          <option value="pdf">{{ $t('documents.batch.export_format_pdf') }}</option>
-        </select>
-      </div>
-      <div class="space-y-2">
-        <label class="flex items-center">
-          <input v-model="includeMetadata" type="checkbox" :class="checkboxClass" />
-          <span class="ml-2 text-sm text-content-muted">{{
-            $t('documents.batch.include_metadata')
-          }}</span>
-        </label>
-        <label class="flex items-center">
-          <input v-model="includePreprocessingInfo" type="checkbox" :class="checkboxClass" />
-          <span class="ml-2 text-sm text-content-muted">{{
-            $t('documents.batch.include_preprocessing')
-          }}</span>
-        </label>
-      </div>
-    </div>
-
     <!-- Delete Action -->
     <div v-else-if="action === 'delete'" class="space-y-4">
       <Callout variant="danger" :title="$t('documents.batch.warning_title')">
@@ -157,7 +127,7 @@ import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
-import { checkboxClass, selectClass, labelClass } from '@/utils/formStyles'
+import { checkboxClass } from '@/utils/formStyles'
 import { documentsApi } from '@/services/documentsApi'
 import { trialsApi } from '@/services/trialsApi'
 import { filesApi } from '@/services/filesApi'
@@ -204,9 +174,6 @@ const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
 
 // Form state
 const forceReprocess = ref<boolean>(false)
-const exportFormat = ref<string>('json')
-const includeMetadata = ref<boolean>(true)
-const includePreprocessingInfo = ref<boolean>(true)
 const confirmDelete = ref<boolean>(false)
 const isProcessing = ref<boolean>(false)
 // Live progress while a batch runs ("Deleting/Resolving X of Y…").
@@ -317,8 +284,6 @@ const actionTitle = computed(() => {
   switch (props.action) {
     case 'reprocess':
       return t('documents.batch.title_reprocess', { entity })
-    case 'export':
-      return t('documents.batch.title_export', { entity })
     case 'delete':
       return t('documents.batch.title_delete', { entity })
     default:
@@ -331,8 +296,6 @@ const actionButtonText = computed(() => {
   switch (props.action) {
     case 'reprocess':
       return t('documents.batch.button_start_reprocessing')
-    case 'export':
-      return t('documents.batch.button_export')
     case 'delete':
       return t('documents.batch.button_delete', { entity })
     default:
@@ -344,8 +307,6 @@ const canPerformAction = computed(() => {
   if (isProcessing.value) return false
   switch (props.action) {
     case 'reprocess':
-      return true
-    case 'export':
       return true
     case 'delete':
       return confirmDelete.value
@@ -362,9 +323,6 @@ const performAction = async (): Promise<void> => {
     switch (props.action) {
       case 'reprocess':
         await reprocessDocuments()
-        break
-      case 'export':
-        await exportDocuments()
         break
       case 'delete':
         await deleteDocuments()
@@ -454,13 +412,17 @@ const reprocessDocuments = async (): Promise<void> => {
   )
 }
 
-const exportDocuments = async (): Promise<void> => {
-  toast.info(t('documents.batch.toast_export_stub'))
-}
-
 interface FailedDoc {
   docId: number
   error: string
+  inGroups?: boolean
+}
+
+// Language-independent check for the "document is in groups" error code.
+const isInGroupsError = (error: unknown): boolean => {
+  const detail = (error as { response?: { data?: { detail?: { code?: unknown } } } })?.response
+    ?.data?.detail
+  return detail?.code === 'documents.document_in_sets'
 }
 
 // Normalize a batch-endpoint error entry (string or `{ message, links }`) to text.
@@ -525,6 +487,7 @@ const deleteDocuments = async (): Promise<number[]> => {
             error,
             t('documents.batch.delete_failed_fallback', { entity: entityOne }),
           ),
+          inGroups: isInGroupsError(error),
         })
       }
       progress.value = {
@@ -550,25 +513,22 @@ const deleteDocuments = async (): Promise<number[]> => {
   if (failedDocs.length > 0) {
     console.error('Failed to delete items:', failedDocs)
     // One summary toast instead of one per failed item. Surface the first
-    // error verbatim, note how many more, and add the document-set hint if any
-    // failure was caused by a set membership.
+    // error verbatim, note how many more, and add the manage-groups hint if any
+    // failure was caused by a group membership.
     const first = failedDocs[0]
     const more =
       failedDocs.length > 1
         ? ' ' + t('documents.batch.more_count', { count: failedDocs.length - 1 })
         : ''
-    const hint = failedDocs.some((f) => f.error.includes('document sets'))
+    const hint = failedDocs.some((f) => f.inGroups || /document groups?/i.test(f.error))
       ? ' ' + t('documents.batch.hint_manage')
       : ''
-    // The backend error text says "document sets"; the UI-facing term is
-    // "document groups" — normalize so one toast doesn't mix both.
-    const firstError = first.error.replace(/document set(s?)/gi, 'document group$1')
     toast.error(
       t('documents.batch.delete_failed_summary', {
         count: failedDocs.length,
         entity: t(entityKey.value, failedDocs.length),
         id: first.docId,
-        error: firstError,
+        error: first.error,
       }) +
         more +
         '.' +

@@ -107,13 +107,14 @@
         </BaseButton>
         <BaseButton
           v-if="canDownload"
-          variant="success"
+          variant="secondary"
           size="sm"
           :title="
             trial.status === 'completed' ? undefined : $t('trials.detail.download_partial_title')
           "
           @click.stop="emit('download', trial)"
         >
+          <Download class="w-4 h-4" />
           {{
             trial.status === 'completed'
               ? $t('trials.detail.download')
@@ -121,25 +122,60 @@
           }}
         </BaseButton>
       </div>
-      <div class="flex gap-2 flex-wrap">
-        <BaseButton variant="secondary" size="sm" @click.stop="emit('retry', trial)">
-          {{ $t('trials.detail.retry') }}
+      <!-- Secondary actions collapsed into an overflow menu -->
+      <div ref="menuContainer" class="relative" @keydown.escape="menuOpen = false">
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          :aria-label="$t('trials.detail.more_actions')"
+          :aria-expanded="menuOpen"
+          aria-haspopup="true"
+          @click.stop="menuOpen = !menuOpen"
+        >
+          <EllipsisVertical class="w-4 h-4" />
         </BaseButton>
-        <BaseButton variant="secondary" size="sm" @click.stop="emit('rename', trial)">
-          {{ $t('trials.detail.rename') }}
-        </BaseButton>
-        <BaseButton variant="danger" size="sm" @click.stop="emit('delete', trial)">
-          {{ $t('trials.detail.delete') }}
-        </BaseButton>
+        <transition name="fade-slide">
+          <div
+            v-if="menuOpen"
+            class="absolute right-0 mt-2 w-40 rounded-modal shadow-xl bg-surface ring-1 ring-default-border z-50 py-1"
+            role="menu"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              class="w-full text-left px-4 py-2 text-sm font-medium text-content-muted hover:bg-primary-soft hover:text-primary transition-colors"
+              @click.stop="menuAction('retry')"
+            >
+              {{ $t('trials.detail.retry') }}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              class="w-full text-left px-4 py-2 text-sm font-medium text-content-muted hover:bg-primary-soft hover:text-primary transition-colors"
+              @click.stop="menuAction('rename')"
+            >
+              {{ $t('trials.detail.rename') }}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              class="w-full text-left px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              @click.stop="menuAction('delete')"
+            >
+              {{ $t('trials.detail.delete') }}
+            </button>
+          </div>
+        </transition>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, type PropType } from 'vue'
-import { AlertCircle, CircleCheckBig } from '@lucide/vue'
+import { computed, ref, type PropType } from 'vue'
+import { AlertCircle, CircleCheckBig, Download, EllipsisVertical } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { useClickOutside } from '@/composables/useClickOutside'
 import { formatDuration, formatDateFull } from '@/utils/formatters'
 import type { TrialSummary, Schema, Prompt } from '@/types'
 
@@ -171,6 +207,19 @@ const promptName = computed(() => props.trial.prompt_snapshot?.name || prompt.va
 
 const isActive = computed(() => !['completed', 'failed', 'cancelled'].includes(props.trial.status))
 
+// Overflow ("⋯") menu for the secondary actions (Retry / Rename / Delete).
+const menuOpen = ref(false)
+const menuContainer = ref<HTMLElement | null>(null)
+useClickOutside(menuContainer, () => {
+  menuOpen.value = false
+})
+function menuAction(action: 'retry' | 'rename' | 'delete'): void {
+  menuOpen.value = false
+  if (action === 'retry') emit('retry', props.trial)
+  else if (action === 'rename') emit('rename', props.trial)
+  else emit('delete', props.trial)
+}
+
 // Completed trials are always downloadable. Failed/cancelled trials are downloadable
 // too when some documents finished — the archive contains only the successful results.
 const canDownload = computed(
@@ -200,3 +249,18 @@ const elapsedSeconds = computed(() =>
 )
 const etaSeconds = computed(() => props.trial.meta?.eta_seconds ?? 0)
 </script>
+
+<style scoped>
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+}
+</style>

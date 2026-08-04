@@ -78,7 +78,7 @@
         :aria-label="$t('documents.actions.view')"
         @click.stop="$emit('view', doc as DocumentListItem)"
       >
-        <Eye class="w-5 h-5" aria-hidden="true" />
+        <Eye class="w-4 h-4" aria-hidden="true" />
       </BaseButton>
       <BaseButton
         variant="icon"
@@ -87,7 +87,16 @@
         :aria-label="$t('documents.actions.download')"
         @click.stop="$emit('download', doc as DocumentListItem)"
       >
-        <CloudDownload class="w-5 h-5" aria-hidden="true" />
+        <Download class="w-4 h-4" aria-hidden="true" />
+      </BaseButton>
+      <BaseButton
+        variant="icon"
+        tone="red"
+        :title="$t('documents.actions.delete')"
+        :aria-label="$t('documents.actions.delete')"
+        @click.stop="$emit('delete', doc as DocumentListItem)"
+      >
+        <Trash2 class="w-4 h-4" aria-hidden="true" />
       </BaseButton>
     </template>
   </DataTable>
@@ -96,7 +105,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CloudDownload, Eye } from '@lucide/vue'
+import { Download, Eye, Trash2 } from '@lucide/vue'
 import FileIcon from '@/components/common/FileIcon.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
@@ -142,6 +151,7 @@ defineEmits<{
   sort: [key: string]
   view: [doc: DocumentListItem]
   download: [doc: DocumentListItem]
+  delete: [doc: DocumentListItem]
   'page-change': [page: number]
   'page-size-change': [size: number]
 }>()

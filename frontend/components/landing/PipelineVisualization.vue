@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, type Component } from 'vue'
+import { computed, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { UploadCloud, FileText, FolderOpen, Database, Zap, BarChart3 } from '@lucide/vue'
 import PipelineStep from '@/components/landing/PipelineStep.vue'
@@ -52,7 +52,8 @@ interface Step {
 
 const activeStep = ref<number | null>(null)
 
-const steps: Step[] = [
+// Computed (not a plain array) so the titles re-render on a language switch.
+const steps = computed<Step[]>(() => [
   {
     id: 1,
     title: t('landing.pipeline.steps.upload.title'),
@@ -101,7 +102,7 @@ const steps: Step[] = [
     shadow: 'shadow-teal-500/30',
     icon: BarChart3,
   },
-]
+])
 </script>
 
 <style scoped>

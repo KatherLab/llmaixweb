@@ -1,4 +1,6 @@
+import { watch } from 'vue'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { i18n } from '@/i18n'
 
 // Layouts + landing are eager: they're part of the first paint.
 import Landing from '@/views/Landing.vue'
@@ -42,35 +44,39 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'projects',
         component: ProjectOverview,
-        meta: { requiresAuth: true, title: 'Projects' },
+        meta: { requiresAuth: true, titleKey: 'routes.projects' },
       },
       {
         path: 'account',
         component: AccountSettings,
-        meta: { requiresAuth: true, title: 'Account Settings' },
+        meta: { requiresAuth: true, titleKey: 'routes.account_settings' },
       },
       {
         path: 'projects/:projectId',
         component: ProjectDetail,
         props: true,
-        meta: { requiresAuth: true, title: 'Project' },
+        meta: { requiresAuth: true, titleKey: 'routes.project' },
       },
       // Admin routes — all nested under /admin so they share the AdminDashboard
       // tab layout (single entry point: the gear "Admin" link in the navbar).
       {
         path: 'admin',
         component: AdminDashboard,
-        meta: { requiresAuth: true, adminOnly: true, title: 'Admin' },
+        meta: { requiresAuth: true, adminOnly: true, titleKey: 'routes.admin' },
         children: [
           {
             path: 'user-management',
             component: AdminUserManagement,
-            meta: { title: 'User Management' },
+            meta: { titleKey: 'routes.user_management' },
           },
-          { path: 'settings', component: AdminSettings, meta: { title: 'Admin Settings' } },
-          { path: 'sso', component: AdminSSO, meta: { title: 'SSO Providers' } },
-          { path: 'audit', component: AdminAudit, meta: { title: 'Audit Log' } },
-          { path: 'celery', component: AdminCelery, meta: { title: 'Task Monitor' } },
+          {
+            path: 'settings',
+            component: AdminSettings,
+            meta: { titleKey: 'routes.admin_settings' },
+          },
+          { path: 'sso', component: AdminSSO, meta: { titleKey: 'routes.sso_providers' } },
+          { path: 'audit', component: AdminAudit, meta: { titleKey: 'routes.audit_log' } },
+          { path: 'celery', component: AdminCelery, meta: { titleKey: 'routes.task_monitor' } },
           { path: '', redirect: '/admin/user-management' },
         ],
       },
@@ -82,22 +88,38 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: AuthLayout,
     children: [
-      { path: 'login', component: Login, meta: { title: 'Sign in' } },
-      { path: 'register', component: Register, meta: { title: 'Register' } },
-      { path: 'forgot-password', component: ForgotPassword, meta: { title: 'Forgot Password' } },
+      { path: 'login', component: Login, meta: { titleKey: 'routes.sign_in' } },
+      { path: 'register', component: Register, meta: { titleKey: 'routes.register' } },
+      {
+        path: 'forgot-password',
+        component: ForgotPassword,
+        meta: { titleKey: 'routes.forgot_password' },
+      },
       {
         path: 'reset-password/:token',
         component: ResetPassword,
-        meta: { title: 'Reset Password' },
+        meta: { titleKey: 'routes.reset_password' },
       },
-      { path: 'invitation/:token', component: InvitationLanding, meta: { title: 'Invitation' } },
-      { path: 'auth/sso/complete', component: SsoComplete, meta: { title: 'Signing in' } },
-      { path: 'first-admin', component: FirstAdminSetup, meta: { title: 'First Admin Setup' } },
+      {
+        path: 'invitation/:token',
+        component: InvitationLanding,
+        meta: { titleKey: 'routes.invitation' },
+      },
+      {
+        path: 'auth/sso/complete',
+        component: SsoComplete,
+        meta: { titleKey: 'routes.signing_in' },
+      },
+      {
+        path: 'first-admin',
+        component: FirstAdminSetup,
+        meta: { titleKey: 'routes.first_admin_setup' },
+      },
     ],
   },
 
   // 404 fallback
-  { path: '/:pathMatch(.*)*', component: NotFound, meta: { title: 'Page Not Found' } },
+  { path: '/:pathMatch(.*)*', component: NotFound, meta: { titleKey: 'routes.not_found' } },
 ]
 
 // Router creation
@@ -157,10 +179,18 @@ router.beforeEach(async (to) => {
   return true
 })
 
-// Per-route document titles from `meta.title` (child meta wins over parent).
-router.afterEach((to) => {
-  const title = typeof to.meta.title === 'string' ? to.meta.title : ''
+// Per-route document titles from `meta.titleKey` (child meta wins over
+// parent), resolved through the global i18n instance at navigation time.
+function applyDocumentTitle(): void {
+  const key = router.currentRoute.value.meta.titleKey
+  const title = typeof key === 'string' ? i18n.global.t(key) : ''
   document.title = title ? `${title} · LLMAIx` : 'LLMAIx'
-})
+}
+
+router.afterEach(applyDocumentTitle)
+
+// Re-title the current page when the user switches language (the locale is a
+// ref on the composition-mode global i18n, so it's cheaply watchable).
+watch(i18n.global.locale, applyDocumentTitle)
 
 export default router

@@ -11,7 +11,7 @@
     <BaseTabGroup v-model="activeTab" :tabs="tabs">
       <template #tab="{ tab }">
         {{ tab.label }}
-        <StatusBadge color="gray" class="ml-2">{{ tab.badge }}</StatusBadge>
+        <StatusBadge v-if="tab.badge" color="gray" class="ml-2">{{ tab.badge }}</StatusBadge>
       </template>
     </BaseTabGroup>
 
@@ -103,6 +103,7 @@
         @sort="handleSort"
         @view="viewDocument"
         @download="downloadDocument"
+        @delete="deleteSingleDocument"
         @page-change="handlePageChange"
         @page-size-change="handlePageSizeChange"
       />
@@ -111,7 +112,7 @@
       <BatchActionsModal
         :open="showBatchActions"
         :action="batchAction"
-        :documents="selectedDocuments"
+        :documents="batchTargetIds"
         :project-id="projectId"
         @close="showBatchActions = false"
         @complete="handleBatchComplete"
@@ -121,7 +122,7 @@
       <!-- Floating Batch Toolbar -->
       <BatchActionBar
         :count="selectedDocuments.length"
-        :count-label="$t('documents.management.batch_count_label')"
+        count-key="documents.batch.selected_count"
         @clear="selectedDocuments = []"
       >
         <BaseButton variant="secondary" size="sm" @click="createGroupFromSelection">
@@ -132,12 +133,6 @@
           <RefreshCw class="w-4 h-4" />
           {{ $t('documents.actions.reprocess') }}
         </BaseButton>
-        <Tooltip :text="$t('documents.management.export_coming_soon')">
-          <BaseButton variant="secondary" size="sm" disabled>
-            <Download class="w-4 h-4" />
-            {{ $t('documents.actions.export') }}
-          </BaseButton>
-        </Tooltip>
         <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
           <Trash2 class="w-4 h-4" />
           {{ $t('documents.actions.delete') }}
@@ -199,7 +194,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isAxiosError } from 'axios'
 import { useRoute, useRouter } from 'vue-router'
-import { Download, FileText, FolderPlus, RefreshCw, Search, Trash2 } from '@lucide/vue'
+import { FileText, FolderPlus, RefreshCw, Search, Trash2 } from '@lucide/vue'
 import { documentsApi } from '@/services/documentsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { filesApi } from '@/services/filesApi'
@@ -216,7 +211,6 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import BaseTabGroup from '@/components/common/BaseTabGroup.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import Tooltip from '@/components/common/Tooltip.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { usePagination } from '@/composables/usePagination'
@@ -264,7 +258,9 @@ const pagination = usePagination({
   pageSize: itemsPerPage,
 })
 const currentPage = pagination.currentPage
-const activeTab = ref<string>('documents')
+// Sub-tab (documents | groups), mirrored into ?dview= so a refresh keeps the
+// Groups sub-tab. The param is omitted for the default tab.
+const activeTab = ref<string>(route.query.dview === 'groups' ? 'groups' : 'documents')
 const showCreateGroupModal = ref<boolean>(false)
 const createGroupWithDocs = ref<number[]>([]) // Documents to pre-select when creating group
 const serverItems = ref<DocumentListItem[]>([]) // current page rows from the server
@@ -272,13 +268,25 @@ const documentGroupsCount = ref<number>(0) // count of document groups
 
 // Tab config for BaseTabGroup (badges rendered via #tab scoped slot to keep StatusBadge styling)
 const tabs = computed(() => [
-  { label: t('documents.management.tab_all'), value: 'documents', badge: totalCount.value },
+  {
+    label: t('documents.management.tab_all'),
+    value: 'documents',
+    badge: totalCount.value || null,
+  },
   {
     label: t('documents.management.tab_groups'),
     value: 'groups',
-    badge: documentGroupsCount.value,
+    badge: documentGroupsCount.value || null,
   },
 ])
+
+// Keep ?dview= in sync with the active sub-tab (replace, not push — tab flips
+// shouldn't pollute history; other query params like ?tab/?group are preserved).
+watch(activeTab, (tab) => {
+  const desired = tab === 'groups' ? 'groups' : undefined
+  if (route.query.dview === desired || (!route.query.dview && !desired)) return
+  router.replace({ query: { ...route.query, dview: desired } })
+})
 
 // Filters
 interface FilterState {
@@ -700,13 +708,27 @@ const downloadDocument = async (doc: DocumentListItem): Promise<void> => {
   }
 }
 
+// Documents the batch modal operates on. Usually a snapshot of the current
+// selection, but the per-row delete affordance targets a single document
+// without touching the user's selection.
+const batchTargetIds = ref<number[]>([])
+
 const performBatchAction = (action: string): void => {
   if (selectedDocuments.value.length === 0) {
     toast.warning(t('documents.toasts.select_documents_first'))
     return
   }
 
+  batchTargetIds.value = [...selectedDocuments.value]
   batchAction.value = action
+  showBatchActions.value = true
+}
+
+// Row-level delete: reuse the batch delete flow (confirmation + cascade
+// dependency preview) for a one-document "selection".
+const deleteSingleDocument = (doc: DocumentListItem): void => {
+  batchTargetIds.value = [doc.id]
+  batchAction.value = 'delete'
   showBatchActions.value = true
 }
 
@@ -769,8 +791,12 @@ const handleDocumentsDeleted = (deletedIds: number[]): void => {
 }
 
 const handleBatchComplete = (): void => {
-  // Clear selection and close modal - fetchDocuments will be called separately
-  selectedDocuments.value = []
+  // Drop the acted-on documents from the selection and close the modal. For
+  // batch actions the targets equal the selection (i.e. it's cleared); for a
+  // row-level delete the rest of the selection survives.
+  selectedDocuments.value = selectedDocuments.value.filter(
+    (id) => !batchTargetIds.value.includes(id),
+  )
   showBatchActions.value = false
   // Refresh the document list
   fetchDocuments()

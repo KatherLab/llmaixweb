@@ -202,7 +202,7 @@ const setDefaultView = (): void => {
 // Markdown rendering with XSS sanitizing
 const safeMarkdown = computed<string>(() => {
   const text = fullText.value
-  if (!text) return '<em>No text content available</em>'
+  if (!text) return `<em>${DOMPurify.sanitize(t('documents.viewer.no_text_content'))}</em>`
   return DOMPurify.sanitize(marked.parse(text) as string)
 })
 

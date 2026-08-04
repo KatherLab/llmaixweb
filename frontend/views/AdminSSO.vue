@@ -44,16 +44,10 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="font-semibold text-content">{{ p.name }}</span>
-            <span
-              class="text-xs px-2 py-0.5 rounded-full"
-              :class="
-                p.enabled
-                  ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                  : 'bg-surface-sunken text-content-muted'
-              "
-            >
-              {{ p.enabled ? $t('admin.sso.enabled') : $t('admin.sso.disabled') }}
-            </span>
+            <StatusBadge
+              :color="p.enabled ? 'green' : 'gray'"
+              :label="p.enabled ? $t('admin.sso.enabled') : $t('admin.sso.disabled')"
+            />
             <span v-if="!p.has_secret" class="text-xs text-amber-600 dark:text-amber-400">
               {{ $t('admin.sso.no_secret_set') }}
             </span>
@@ -194,6 +188,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import type { IdentityProviderResponse } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })

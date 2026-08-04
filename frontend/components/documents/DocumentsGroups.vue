@@ -23,9 +23,7 @@
     </div>
 
     <!-- Document Groups Table -->
-    <div v-if="isLoading" class="flex justify-center py-12">
-      <LoadingSpinner size="large" />
-    </div>
+    <SkeletonTable v-if="isLoading" :columns="4" :rows="8" />
 
     <div
       v-else-if="serverItems.length === 0"
@@ -133,7 +131,7 @@
           :aria-label="$t('documents.actions.view')"
           @click.stop="viewGroup(group as DocumentSetSummary)"
         >
-          <Eye class="w-5 h-5" aria-hidden="true" />
+          <Eye class="w-4 h-4" aria-hidden="true" />
         </BaseButton>
         <BaseButton
           v-if="!group.is_auto_generated"
@@ -143,7 +141,7 @@
           :aria-label="$t('documents.actions.edit')"
           @click.stop="editGroup(group as DocumentSetSummary)"
         >
-          <SquarePen class="w-5 h-5" aria-hidden="true" />
+          <Pencil class="w-4 h-4" aria-hidden="true" />
         </BaseButton>
         <Tooltip
           :text="
@@ -163,7 +161,7 @@
             :disabled="group.trials_count > 0"
             @click.stop="deleteGroup(group as DocumentSetSummary)"
           >
-            <Trash2 class="w-5 h-5" aria-hidden="true" />
+            <Trash2 class="w-4 h-4" aria-hidden="true" />
           </BaseButton>
         </Tooltip>
       </template>
@@ -216,13 +214,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Eye, Layers, Plus, SquarePen, Trash2 } from '@lucide/vue'
+import { Eye, Layers, Pencil, Plus, Trash2 } from '@lucide/vue'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { useToast } from '@/composables/useToast'
 import { formatDate } from '@/utils/formatters'
 import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
 import ViewDocumentGroupModal from './ViewDocumentGroupModal.vue'
-import LoadingSpinner from '../common/LoadingSpinner.vue'
+import SkeletonTable from '@/components/common/SkeletonTable.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import BaseButton from '@/components/common/BaseButton.vue'

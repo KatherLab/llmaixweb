@@ -41,9 +41,9 @@
       "remove": "Supprimer {label}"
     },
     "batch_action_bar": {
-      "item": "élément",
-      "selected": "sélectionné(s)",
-      "clear_selection": "Effacer la sélection"
+      "clear_selection": "Effacer la sélection",
+      "selected_count": "{count} {label} sélectionné(s)",
+      "items": "éléments"
     },
     "data_table": {
       "selected": "sélectionné(s)",
@@ -564,7 +564,8 @@
       "unexpected": "Une erreur inattendue s'est produite. Veuillez réessayer.",
       "no_token": "Aucun jeton d'invitation fourni",
       "invitation_expired": "Ce lien d'invitation est invalide ou a expiré"
-    }
+    },
+    "session_expired": "Session expirée. Veuillez vous reconnecter."
   },
   "account": {
     "title": "Paramètres du compte",
@@ -646,8 +647,6 @@
       "empty_filtered_description": "Essayez d'ajuster ou d'effacer vos filtres pour voir plus de résultats",
       "clear_all_filters": "Effacer tous les filtres",
       "go_to_files": "Aller à Fichiers et prétraitement",
-      "batch_count_label": "document",
-      "export_coming_soon": "L'export arrive bientôt",
       "tab_all": "Tous les documents",
       "tab_groups": "Groupes de documents"
     },
@@ -733,7 +732,7 @@
       "clear_selection": "Effacer la sélection",
       "prev": "Préc.",
       "next": "Suiv.",
-      "update_group": "Mettre à jour le groupe",
+      "update_group": "Enregistrer les modifications",
       "discard_title": "Ignorer les modifications non enregistrées ?",
       "discard_message": "Vos modifications de ce groupe de documents seront perdues.",
       "discard_confirm": "Ignorer",
@@ -780,7 +779,8 @@
       "restore_confirm": "Restaurer",
       "version_restored": "Version restaurée",
       "restore_failed": "Échec de la restauration de la version",
-      "load_preview_failed": "Échec du chargement de l'aperçu du document."
+      "load_preview_failed": "Échec du chargement de l'aperçu du document.",
+      "no_text_content": "Aucun contenu textuel disponible"
     },
     "text_view": {
       "find_placeholder": "Rechercher dans le document…",
@@ -843,12 +843,6 @@
       "selected": "{count} {entity} sélectionné(s)",
       "force_reprocess": "Forcer le retraitement (ignorer les résultats existants)",
       "reprocess_note": "Le retraitement porte sur l'intégralité du fichier source, pas sur les lignes individuelles — sélectionner des documents issus d'un import CSV/XLSX ligne par ligne retraite chaque ligne de ce fichier.",
-      "export_choose": "Choisissez le format et les options d'export :",
-      "export_format_label": "Format d'export",
-      "export_format_txt": "Texte brut",
-      "export_format_pdf": "PDF (avec couche de texte)",
-      "include_metadata": "Inclure les métadonnées",
-      "include_preprocessing": "Inclure les informations de prétraitement",
       "warning_title": "Avertissement : cette action est irréversible",
       "checking_usage": "Vérification de l'utilisation…",
       "deps_preview_unavailable": "L'aperçu de l'utilisation n'est pas disponible pour les sélections de plus de {limit} {entity} — l'option ci-dessus s'applique quand même à toute la sélection.",
@@ -862,10 +856,8 @@
       "processing": "Traitement...",
       "title_default": "Action groupée",
       "title_reprocess": "Retraiter {entity}",
-      "title_export": "Exporter {entity}",
       "title_delete": "Supprimer {entity}",
       "button_start_reprocessing": "Lancer le retraitement",
-      "button_export": "Exporter",
       "button_delete": "Supprimer {entity}",
       "button_confirm": "Confirmer",
       "cascade_files": "Supprimer aussi les documents produits, leurs exécutions d'extraction et résultats, et les retirer des groupes",
@@ -880,14 +872,14 @@
       "impact_evaluation_metric": "{count} métrique d'évaluation | {count} métriques d'évaluation",
       "toast_no_files": "Impossible d'associer les documents sélectionnés à des fichiers.",
       "toast_reprocess_started": "Tâche de retraitement lancée pour {count} fichier | Tâche de retraitement lancée pour {count} fichiers",
-      "toast_export_stub": "La fonctionnalité d'export serait implémentée ici",
       "toast_check_usage_failed": "Échec de la vérification de l'utilisation",
       "toast_action_failed": "Impossible de terminer l'action sur les {entity} sélectionnés.",
       "delete_failed_fallback": "Échec de la suppression de {entity}",
       "deleted_success": "{count} {entity} supprimé(s) avec succès",
       "more_count": "(+{count} de plus)",
       "hint_manage": "Accédez à l'onglet Groupes de documents pour les gérer.",
-      "delete_failed_summary": "Échec de la suppression de {count} {entity} : #{id} — {error}"
+      "delete_failed_summary": "Échec de la suppression de {count} {entity} : #{id} — {error}",
+      "selected_count": "{count} document sélectionné | {count} documents sélectionnés"
     },
     "toasts": {
       "load_document_failed": "Échec du chargement du document",
@@ -1037,7 +1029,9 @@
       "doc_total": "{count} document | {count} documents",
       "col_document": "Document",
       "col_wrong_of_total": "Incorrects sur total",
-      "col_status": "Statut"
+      "col_status": "Statut",
+      "no_documents_title": "Aucun document dans cette évaluation",
+      "no_documents_hint": "Aucun document n'a pu être associé à la Ground Truth. Vérifiez le champ ID de la Ground Truth afin que les identifiants de documents correspondent à ses lignes."
     },
     "metrics": {
       "accuracy": "Exactitude",
@@ -1124,6 +1118,96 @@
       "select_one_toast": "Veuillez sélectionner au moins une évaluation à exporter",
       "export_success": "Rapport exporté",
       "export_failed": "Échec de l'export du rapport : {error}"
+    },
+    "status_labels": {
+      "ok": "OK",
+      "low": "Faible",
+      "partial": "Partiel",
+      "error": "Erreur"
+    },
+    "drawer_panels": {
+      "source": "Source",
+      "comparison": "Comparaison",
+      "output": "Sortie",
+      "reasoning": "Raisonnement"
+    },
+    "metric_defs": {
+      "accuracy": {
+        "long": "Part de tous les champs extraits qui correspondent exactement à la Ground Truth.",
+        "guidance": "Une précision globale élevée = la plupart des champs sont corrects. Calculée sur les documents appariés et les champs pour lesquels la Ground Truth fournit réellement une valeur."
+      },
+      "precision": {
+        "long": "Parmi les valeurs extraites par le modèle, la fraction qui était correcte.",
+        "guidance": "Une précision faible signifie que le modèle extrait souvent des valeurs erronées (faux positifs). Une valeur erronée là où une valeur était attendue compte aussi contre la précision."
+      },
+      "recall": {
+        "long": "Parmi les valeurs qui auraient dû être extraites, la fraction que le modèle a correctement obtenue.",
+        "guidance": "Un rappel faible signifie que le modèle omet des champs ou extrait une valeur erronée là où une valeur était attendue (faux négatifs). Le rappel par champ porte sur les documents dont la Ground Truth contient une valeur pour ce champ."
+      },
+      "f1_score": {
+        "long": "Moyenne harmonique de la précision et du rappel — combine les deux en un seul nombre.",
+        "guidance": "Utilisez le F1 pour comparer des champs lorsque les valeurs manquantes et erronées comptent toutes les deux."
+      },
+      "confidence": {
+        "long": "La certitude autodéclarée du modèle pour la valeur extraite (0–1).",
+        "guidance": "Une confiance faible sur une valeur correcte peut signaler des cas limites à examiner."
+      }
+    },
+    "error_types": {
+      "missing": {
+        "label": "Manquant",
+        "description": "Le champ n'a pas été extrait du document",
+        "suggestion": "Vérifiez si le champ existe dans le document ou améliorez les prompts d'extraction"
+      },
+      "mismatch": {
+        "label": "Discordance",
+        "description": "La valeur extraite ne correspond pas à la Ground Truth",
+        "suggestion": "Vérifiez la précision de l'extraction ou les données Ground Truth"
+      },
+      "fuzzy_mismatch": {
+        "label": "Discordance floue",
+        "description": "La valeur extraite est similaire mais pas assez proche de la Ground Truth",
+        "suggestion": "Envisagez d'ajuster le seuil de correspondance floue ou d'améliorer l'extraction"
+      },
+      "numeric_mismatch": {
+        "label": "Discordance numérique",
+        "description": "La valeur numérique est en dehors de la tolérance acceptable",
+        "suggestion": "Vérifiez l'analyse numérique ou ajustez la tolérance"
+      },
+      "boolean_mismatch": {
+        "label": "Discordance booléenne",
+        "description": "La valeur booléenne est incorrecte",
+        "suggestion": "Vérifiez le mappage des valeurs booléennes ou la logique d'extraction"
+      },
+      "category_mismatch": {
+        "label": "Discordance de catégorie",
+        "description": "La valeur de catégorie ne correspond pas aux options attendues",
+        "suggestion": "Vérifiez les correspondances de catégories ou améliorez la classification"
+      },
+      "date_mismatch": {
+        "label": "Discordance de date",
+        "description": "La valeur de date est incorrecte ou dans un mauvais format",
+        "suggestion": "Vérifiez l'analyse du format de date ou améliorez l'extraction des dates"
+      },
+      "type_error": {
+        "label": "Erreur de type",
+        "description": "Le type de la valeur est incorrect (p. ex. texte au lieu de nombre)",
+        "suggestion": "Vérifiez la conversion des types de données ou la définition du schéma"
+      },
+      "extra": {
+        "label": "Supplémentaire",
+        "description": "Le champ a été extrait mais n'était pas attendu dans la Ground Truth",
+        "suggestion": "Vérifiez si ce champ devrait figurer dans la Ground Truth"
+      },
+      "date_parse_error": {
+        "label": "Erreur d'analyse de date",
+        "description": "La date n'a pas pu être analysée pour la comparaison",
+        "suggestion": "Vérifiez l'analyse du format de date ou améliorez l'extraction des dates"
+      },
+      "unknown": {
+        "description": "Type d'erreur inconnu",
+        "suggestion": "Vérifiez la logique d'extraction et les données Ground Truth"
+      }
     }
   },
   "files": {
@@ -1149,9 +1233,9 @@
       "view_errors": "Voir les erreurs"
     },
     "batch": {
-      "count_label": "fichier",
       "needs_config_count": "{count} à configurer",
-      "needs_config_title": "{files} nécessite(nt) une configuration d'import — cliquez pour configurer"
+      "needs_config_title": "{files} nécessite(nt) une configuration d'import — cliquez pour configurer",
+      "selected_count": "{count} fichier sélectionné | {count} fichiers sélectionnés"
     },
     "cancel_task": {
       "cancel": "Continuer l'exécution",
@@ -1289,10 +1373,10 @@
       "present": "aujourd'hui",
       "search_placeholder": "Rechercher des fichiers...",
       "status_all": "Tous les statuts",
-      "status_completed": "Terminé",
+      "status_completed": "Prétraité",
       "status_failed": "Échoué",
-      "status_not_processed": "Non traité",
-      "status_processing": "En traitement",
+      "status_not_processed": "Non prétraité",
+      "status_processing": "Prétraitement en cours",
       "type_all": "Tous les types"
     },
     "hint": {
@@ -1305,8 +1389,6 @@
       "and_more": "…et {count} de plus",
       "aria_label": "Historique du prétraitement",
       "documents_count": "{count} document | {count} documents",
-      "engine_local": "Local OCR",
-      "engine_local_force": "Local OCR + Forcé",
       "eta_left": "≈ {duration} restant",
       "files_processed": "{processed} sur {total} fichiers traités",
       "go_to_document": "Aller au document",
@@ -1330,7 +1412,8 @@
       "took": "durée {duration}",
       "unknown_file": "Fichier inconnu",
       "view_error": "Voir l'erreur",
-      "warnings": "{count} avertissement | {count} avertissements"
+      "warnings": "{count} avertissement | {count} avertissements",
+      "engine_force": "{engine} + OCR forcée"
     },
     "import": {
       "all_unique": "Les {count} identifiants de cette colonne sont uniques.",
@@ -1423,8 +1506,8 @@
     "status": {
       "failed": "Échoué",
       "not_preprocessed": "Non prétraité",
-      "processed": "Traité",
-      "processing": "En traitement"
+      "processed": "Prétraité",
+      "processing": "Prétraitement en cours"
     },
     "table": {
       "col_file": "Fichier",
@@ -1520,7 +1603,7 @@
       "format_xlsx": "Excel (.xlsx, les chemins avec points créent l'imbrication)",
       "important": "Important :",
       "json_id_note": "Chaque document doit comporter un champ « id » correspondant à vos identifiants de documents.",
-      "tabular_id_note": "Vous choisirez la colonne ID (correspondant à vos identifiants de documents) à l'étape suivante.",
+      "tabular_id_note": "Vous choisirez le champ ID (correspondant à vos identifiants de documents) à l'étape suivante.",
       "files_label": "Fichier(s)",
       "upload_files": "Importer un ou plusieurs fichiers",
       "or_drag_and_drop": "ou glissez-déposez",
@@ -1555,9 +1638,9 @@
       "required_count": "{count} obligatoire(s)",
       "select_schema_hint": "Sélectionnez un schéma ci-dessus pour charger ses champs.",
       "pick_schema_field": "choisir un champ de schéma",
-      "pick_gt_field": "choisir un champ GT",
+      "pick_gt_field": "choisir un champ Ground Truth",
       "create_mapping": "Créer un mappage",
-      "map": "Mapper",
+      "map": "Créer un mappage",
       "auto_map": "Mapper automatiquement les noms correspondants",
       "clear_all_mappings": "Effacer tous les mappages",
       "gt_fields_heading": "Champs Ground Truth",
@@ -1565,13 +1648,13 @@
       "loading": "Chargement…",
       "footer_select_schema": "Veuillez sélectionner un schéma pour commencer à mapper les champs.",
       "warning_required_unmapped": "Avertissement : tous les champs obligatoires ne sont pas mappés !",
-      "select_id_before_save": "Veuillez sélectionner la colonne ID avant d'enregistrer.",
+      "select_id_before_save": "Veuillez sélectionner le champ ID avant d'enregistrer.",
       "cancel": "Annuler",
       "save_mappings": "Enregistrer les mappages",
       "saved": "Enregistré !",
       "reason_select_schema": "Veuillez sélectionner un schéma.",
       "reason_no_mappings": "Au moins un mappage de champ est requis.",
-      "reason_no_id_column": "Vous devez sélectionner une colonne ID pour les fichiers CSV/XLSX.",
+      "reason_no_id_column": "Vous devez sélectionner un champ ID pour les fichiers CSV/XLSX.",
       "reason_no_id_field": "Vous devez sélectionner un champ ID pour les données JSON.",
       "reason_generic": "Impossible d'enregistrer pour le moment.",
       "mapping_count": "{count} mappage | {count} mappages",
@@ -1598,10 +1681,10 @@
     },
     "mapping_list": {
       "empty_line1": "Aucun mappage pour l'instant.",
-      "empty_line2": "Sélectionnez un champ de schéma et un champ GT, puis cliquez sur",
-      "map": "Mapper",
+      "empty_line2": "Sélectionnez un champ de schéma et un champ Ground Truth, puis cliquez sur",
+      "map": "Créer un mappage",
       "schema_field": "Champ de schéma",
-      "gt_field": "Champ GT",
+      "gt_field": "Champ Ground Truth",
       "options_for": "Options de comparaison pour {field}",
       "remove_mapping": "Supprimer le mappage",
       "threshold": "Seuil",
@@ -1610,13 +1693,13 @@
       "allow_partial": "autoriser la correspondance partielle / de sous-chaîne",
       "tolerance": "Tolérance",
       "relative": "relatif (±%)",
-      "hint_type_mismatch": "Incompatibilité de type : le champ de schéma est {schemaType}, la colonne GT est {gtType}",
+      "hint_type_mismatch": "Incompatibilité de type : le champ de schéma est {schemaType}, le champ Ground Truth est {gtType}",
       "hint_unusual_method": "La comparaison \"{method}\" est inhabituelle pour un champ {fieldType}"
     },
     "id_field": {
       "document_id": "ID du document",
-      "select_id_column": "Sélectionner la colonne ID...",
-      "select_id_column_hint": "Veuillez sélectionner une colonne ID pour activer l'évaluation.",
+      "select_id_column": "Sélectionner le champ ID...",
+      "select_id_column_hint": "Veuillez sélectionner un champ ID pour activer l'évaluation.",
       "use_filename": "Utiliser le nom de fichier du document",
       "use_field": "Utiliser le champ :",
       "select_field": "Sélectionner un champ...",
@@ -1629,6 +1712,32 @@
       "none": "Aucune des {total} lignes Ground Truth ne correspond à un document.",
       "hint": "Vérifiez que les valeurs de cette colonne correspondent aux noms ou aux ID de vos documents.",
       "failed": "Échec de la vérification de correspondance : {error}"
+    },
+    "comparison_methods": {
+      "exact": {
+        "label": "Exact",
+        "description": "Correspondance textuelle exacte (insensible à la casse par défaut). Pour les ID, codes, énumérations."
+      },
+      "fuzzy": {
+        "label": "Floue",
+        "description": "Correspondance approximative de chaînes. Correct si la similarité ≥ seuil (85 par défaut). Tolère les fautes de frappe et les inversions de mots ; la correspondance par sous-chaîne est désactivée par défaut (opt-in), car elle peut inverser le sens dans un texte médical."
+      },
+      "numeric": {
+        "label": "Numérique",
+        "description": "Comparaison numérique avec une tolérance (0,001 par défaut, absolue). Pour les mesures, comptages, valeurs de laboratoire."
+      },
+      "category": {
+        "label": "Catégorie",
+        "description": "Correspondance catégorielle avec des synonymes optionnels. Construit une matrice de confusion."
+      },
+      "date": {
+        "label": "Date",
+        "description": "Égalité de dates entre formats courants (p. ex. 2024-01-02 vs 02/01/2024)."
+      },
+      "boolean": {
+        "label": "Booléenne",
+        "description": "Comparaison vrai/faux (true/oui/1 vs false/non/0)."
+      }
     }
   },
   "landing": {
@@ -1669,7 +1778,7 @@
       },
       "trials": {
         "title": "Exécutions reproductibles",
-        "description": "Exécutez l'extraction sur des ensembles de documents avec des prompts, schémas, modèles, températures et limites de jetons configurables. Comparez les exécutions côte à côte."
+        "description": "Exécutez l'extraction sur des groupes de documents avec des prompts, schémas, modèles, températures et limites de jetons configurables. Comparez les exécutions côte à côte."
       },
       "api": {
         "title": "API compatibles OpenAI",
@@ -1762,7 +1871,7 @@
         },
         "selection_options": {
           "sets": {
-            "name": "Ensembles de documents",
+            "name": "Groupes de documents",
             "description": "Exécuter une extraction sur un groupe entier en une seule fois"
           },
           "individual": {
@@ -1810,7 +1919,7 @@
         },
         "trial_config": {
           "limits": "Définir la température et les limites de jetons",
-          "sets": "Exécuter sur des ensembles de documents complets",
+          "sets": "Exécuter sur des groupes de documents complets",
           "compare": "Comparer prompts, schémas et modèles",
           "tokens": "Suivre l'utilisation des jetons par exécution"
         }
@@ -2049,8 +2158,8 @@
       "format_json_title": "Formater le JSON",
       "cancel": "Annuler",
       "fix_field_names": "Corrigez d'abord les noms de champ en surbrillance (noms vides ou en double).",
-      "update": "Mettre à jour",
-      "create": "Créer",
+      "update": "Enregistrer les modifications",
+      "create": "Créer le schéma",
       "discard_title": "Abandonner les modifications non enregistrées ?",
       "discard_message": "Vos modifications du schéma seront perdues.",
       "discard_confirm": "Abandonner",
@@ -2151,8 +2260,8 @@
       "user_placeholder": "Extrayez les informations suivantes de ce document :\\n\\n{ph}",
       "use_template": "Utiliser un modèle",
       "cancel": "Annuler",
-      "update": "Mettre à jour",
-      "create": "Créer",
+      "update": "Enregistrer les modifications",
+      "create": "Créer le prompt",
       "discard_title": "Abandonner les modifications non enregistrées ?",
       "discard_message": "Vos modifications du prompt seront perdues.",
       "discard_confirm": "Abandonner",
@@ -2262,7 +2371,11 @@
       "required": "obligatoire",
       "options_count": "{count} options",
       "no_fields": "Aucun champ défini.",
-      "show_raw_json": "Afficher le JSON brut (avancé)"
+      "show_raw_json": "Afficher le JSON brut (avancé)",
+      "summary": "{count} champ : {names} | {count} champs : {names}",
+      "summary_empty": "Aucun champ défini",
+      "summary_more": ", +{count} de plus",
+      "list_items": "{name} (éléments de liste)"
     },
     "property": {
       "basic_info": "Informations de base",
@@ -2334,7 +2447,8 @@
       "examples": "Exemples",
       "examples_placeholder": "Saisissez des exemples, un par ligne",
       "key_required": "Une clé est requise",
-      "key_invalid": "Uniquement des lettres, des chiffres et des traits de soulignement — ne doit pas commencer par un chiffre (ex. : patient_name)"
+      "key_invalid": "Uniquement des lettres, des chiffres et des traits de soulignement — ne doit pas commencer par un chiffre (ex. : patient_name)",
+      "pattern_help": "Aide sur les motifs"
     },
     "add_modal": {
       "title": "Ajouter un champ",
@@ -2392,7 +2506,7 @@
       "delete": "Supprimer"
     },
     "batch": {
-      "item_label": "exécution d'extraction"
+      "selected_count": "{count} exécution d'extraction sélectionnée | {count} exécutions d'extraction sélectionnées"
     },
     "empty": {
       "none_title": "Aucune exécution d'extraction pour le moment",
@@ -2646,7 +2760,40 @@
     "model_test": {
       "title": "Compatibilité modèle et schéma",
       "test_now": "Tester maintenant",
-      "warning_help": "Le modèle est vérifié automatiquement lorsque vous lancez l'exécution — ou testez-le maintenant pour confirmer la compatibilité au préalable."
+      "warning_help": "Le modèle est vérifié automatiquement lorsque vous lancez l'exécution — ou testez-le maintenant pour confirmer la compatibilité au préalable.",
+      "status": {
+        "testing_config": "Test de la configuration…",
+        "custom_needs_test": "Les paramètres d'API personnalisés doivent être testés",
+        "custom_connection_failed": "Échec de la connexion à l'API personnalisée",
+        "no_models_custom": "Aucun modèle disponible avec les paramètres actuels",
+        "custom_connected": "API personnalisée connectée — {count} modèles disponibles",
+        "system_incomplete": "Configuration système incomplète — contactez votre administrateur ou utilisez des paramètres personnalisés",
+        "system_error": "Erreur de configuration système — contactez votre administrateur : {error}",
+        "no_models_system": "Aucun modèle disponible — contactez votre administrateur",
+        "system_active": "Configuration système active — {count} modèles disponibles",
+        "select_model_schema": "Sélectionnez d'abord un modèle et un schéma",
+        "testing_model": "Test du modèle avec le schéma…",
+        "model_needs_test": "Le modèle doit être testé avec le schéma avant de créer l'exécution d'extraction",
+        "model_supports_schema": "Le modèle '{model}' prend en charge le schéma sélectionné"
+      },
+      "errors": {
+        "model_test_failed": "Échec du test du modèle",
+        "no_models": "Connexion réussie mais aucun modèle disponible",
+        "connection_failed": "Échec du test de connexion",
+        "load_models_failed": "Impossible de charger les modèles"
+      },
+      "toast": {
+        "no_models_admin": "Aucun modèle disponible. Contactez votre administrateur.",
+        "connection_success": "Connexion réussie. {count} modèles chargés.",
+        "system_incomplete": "La configuration LLM du système est incomplète. Contactez votre administrateur ou fournissez des paramètres d'API personnalisés.",
+        "system_error": "Erreur de configuration LLM du système : {error}. Contactez votre administrateur.",
+        "connection_failed": "Échec de la connexion : {error}",
+        "select_model_first": "Veuillez d'abord sélectionner un modèle",
+        "select_schema_first": "Veuillez d'abord sélectionner un schéma",
+        "no_structured_output": "Le modèle '{model}' ne prend pas en charge la sortie structurée. Veuillez sélectionner un autre modèle.",
+        "schema_validation_failed": "Échec de la validation du schéma : {message}",
+        "model_test_failed": "Échec du test du modèle : {error}"
+      }
     },
     "results": {
       "aria": "Résultats de l'exécution d'extraction",
@@ -2760,7 +2907,8 @@
       "download_partial": "Télécharger partiellement",
       "retry": "Relancer",
       "rename": "Renommer",
-      "delete": "Supprimer"
+      "delete": "Supprimer",
+      "more_actions": "Plus d'actions"
     },
     "doc_errors": {
       "count": "{count} erreur de document | {count} erreurs de document",
@@ -3121,8 +3269,8 @@
       "not_authorized_create": "Vous n'êtes pas autorisé à créer des exécutions d'extraction pour ce projet",
       "schema_not_found": "Schéma introuvable",
       "prompt_not_found": "Invite introuvable",
-      "document_set_not_found": "Ensemble de documents introuvable dans ce projet",
-      "document_set_empty": "L'ensemble de documents est vide",
+      "document_set_not_found": "Groupe de documents introuvable dans ce projet",
+      "document_set_empty": "Le groupe de documents est vide",
       "documents_not_found": "Document(s) portant le(s) identifiant(s) {missing_ids} introuvable(s) dans le projet {project_id}",
       "no_documents_specified": "Vous devez fournir soit document_ids, soit document_set_id",
       "llm_config_incomplete": "La configuration du LLM est incomplète",
@@ -3169,5 +3317,30 @@
       "reset_token_invalid": "Jeton de réinitialisation invalide ou expiré",
       "token_mismatch": "Le jeton ne correspond pas"
     }
+  },
+  "not_found": {
+    "title": "Page introuvable",
+    "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "go_projects": "Aller aux projets",
+    "go_login": "Aller à la connexion"
+  },
+  "routes": {
+    "projects": "Projets",
+    "account_settings": "Paramètres du compte",
+    "project": "Projet",
+    "admin": "Admin",
+    "user_management": "Gestion des utilisateurs",
+    "admin_settings": "Paramètres d'administration",
+    "sso_providers": "Fournisseurs SSO",
+    "audit_log": "Journal d'audit",
+    "task_monitor": "Moniteur de tâches",
+    "sign_in": "Connexion",
+    "register": "Inscription",
+    "forgot_password": "Mot de passe oublié",
+    "reset_password": "Réinitialiser le mot de passe",
+    "invitation": "Invitation",
+    "signing_in": "Connexion en cours",
+    "first_admin_setup": "Configuration du premier administrateur",
+    "not_found": "Page introuvable"
   }
 }

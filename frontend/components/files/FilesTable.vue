@@ -118,7 +118,7 @@
         :aria-label="$t('files.actions.download')"
         @click.stop="onDownload(file)"
       >
-        <CloudDownload class="w-4 h-4" aria-hidden="true" />
+        <Download class="w-4 h-4" aria-hidden="true" />
       </BaseButton>
       <BaseButton
         variant="icon"
@@ -140,7 +140,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Clock, CloudDownload, Eye, FilePlus, Trash2 } from '@lucide/vue'
+import { Clock, Download, Eye, FilePlus, Trash2 } from '@lucide/vue'
 import FileIcon from '@/components/common/FileIcon.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'

@@ -397,6 +397,7 @@ import {
   X,
 } from '@lucide/vue'
 import { formatDuration, formatRelativeTime as sharedFormatRelativeTime } from '@/utils/formatters'
+import { getEngineLabel } from '@/utils/ocrLabels'
 import { getStatusDotClass, getStatusBadgeClass, getStatusBannerClass } from '@/utils/statusStyles'
 import BaseButton from '@/components/common/BaseButton.vue'
 import SlideOver from '@/components/common/SlideOver.vue'
@@ -451,15 +452,18 @@ watch(
   { immediate: true },
 )
 
-// Get engine name from task
+// Get engine name from task. Resolved through getEngineLabel() so admin
+// display-name overrides (setEngineLabels) apply here like everywhere else.
 const getEngineName = (task: PreprocessingTask): string => {
   const settings = (task.configuration?.additional_settings || {}) as Record<string, unknown>
-  const engine = settings.ocr_engine || 'local'
+  const engine = (settings.ocr_engine as string | null | undefined) || 'docling_tesseract'
+  const label = getEngineLabel(engine)
 
-  if (engine === 'mistral_ocr') return 'Mistral OCR'
-  if (engine === 'llm_vision') return 'Vision LLM'
-  if (settings.force_ocr) return t('files.history.engine_local_force')
-  return t('files.history.engine_local')
+  // Keep the force-OCR annotation for local runs (parity with the old labels).
+  if (engine !== 'mistral_ocr' && engine !== 'llm_vision' && settings.force_ocr) {
+    return t('files.history.engine_force', { engine: label })
+  }
+  return label
 }
 
 // Helper to check task status (handles enum or string)

@@ -8,10 +8,14 @@
     <div
       class="bg-inverse-surface text-inverse-content border border-inverse-border rounded-modal shadow-2xl px-6 py-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2"
     >
-      <span class="font-medium"
-        >{{ count }} {{ countLabel || $t('common.batch_action_bar.item')
-        }}{{ count !== 1 ? 's' : '' }} {{ $t('common.batch_action_bar.selected') }}</span
-      >
+      <span class="font-medium">{{
+        countKey
+          ? $t(countKey, { count }, count)
+          : $t('common.batch_action_bar.selected_count', {
+              count,
+              label: countLabel || $t('common.batch_action_bar.items'),
+            })
+      }}</span>
 
       <!-- Optional warning chip (e.g. "needs config") -->
       <slot name="warning" />
@@ -40,7 +44,16 @@ import { X } from '@lucide/vue'
 interface Props {
   /** Number of selected items. The bar only renders when > 0. */
   count: number
-  /** Noun label for the selection count, e.g. "files" / "documents" / "trials". */
+  /**
+   * Preferred: i18n key of a pluralized message rendered with `{ count }`,
+   * e.g. "files.batch.selected_count" = "{count} file selected | {count} files selected".
+   */
+  countKey?: string
+  /**
+   * Legacy fallback: already-translated PLURAL noun (e.g. "documents",
+   * "extraction runs") interpolated into common.batch_action_bar.selected_count.
+   * Prefer countKey — it pluralizes the noun correctly in every locale.
+   */
   countLabel?: string
 }
 

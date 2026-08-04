@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Component } from 'vue'
+import { computed, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Lock, Code, ClipboardList, BarChart3, LayoutDashboard, Terminal } from '@lucide/vue'
 import FeatureCard from '@/components/landing/FeatureCard.vue'
@@ -35,7 +35,8 @@ interface Feature {
   iconHoverBg: string
 }
 
-const features: Feature[] = [
+// Computed (not a plain array) so titles/descriptions re-render on a language switch.
+const features = computed<Feature[]>(() => [
   {
     title: t('landing.features.privacy.title'),
     description: t('landing.features.privacy.description'),
@@ -102,5 +103,5 @@ const features: Feature[] = [
     iconText: 'text-teal-600 dark:text-teal-400',
     iconHoverBg: 'group-hover:bg-teal-200 dark:group-hover:bg-teal-500/20',
   },
-]
+])
 </script>

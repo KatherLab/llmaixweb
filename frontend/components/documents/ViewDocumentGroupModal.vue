@@ -46,7 +46,7 @@
             {{ $t('documents.group_view.download_all') }}
           </BaseButton>
           <BaseButton variant="secondary" size="sm" @click="$emit('edit', group)">
-            <SquarePen class="h-4 w-4" />
+            <Pencil class="h-4 w-4" />
             {{ $t('documents.actions.edit') }}
           </BaseButton>
         </div>
@@ -126,9 +126,11 @@
               variant="ghost"
               size="sm"
               :disabled="docPage <= 1"
+              :title="$t('common.pagination.previous')"
+              :aria-label="$t('common.pagination.previous')"
               @click="handlePageChange(docPage - 1)"
             >
-              <ChevronLeft class="h-4 w-4" />
+              <ChevronLeft class="h-4 w-4" aria-hidden="true" />
             </BaseButton>
             <span class="text-xs text-content-muted tabular-nums">
               {{ docPage }} / {{ docTotalPages }}
@@ -137,9 +139,11 @@
               variant="ghost"
               size="sm"
               :disabled="docPage >= docTotalPages"
+              :title="$t('common.pagination.next')"
+              :aria-label="$t('common.pagination.next')"
               @click="handlePageChange(docPage + 1)"
             >
-              <ChevronRight class="h-4 w-4" />
+              <ChevronRight class="h-4 w-4" aria-hidden="true" />
             </BaseButton>
           </div>
         </div>
@@ -235,7 +239,7 @@ import {
   FileText,
   Package,
   PanelLeft,
-  SquarePen,
+  Pencil,
 } from '@lucide/vue'
 import { documentsApi } from '@/services/documentsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'

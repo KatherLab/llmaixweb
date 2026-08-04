@@ -184,10 +184,14 @@
         <label :class="labelClass" :for="`${uid}-pattern`">
           {{ $t('schemaEditor.property.pattern_label') }}
           <button
+            type="button"
             class="ml-1 text-content-subtle hover:text-content-muted"
+            :aria-label="$t('schemaEditor.property.pattern_help')"
+            :title="$t('schemaEditor.property.pattern_help')"
+            :aria-expanded="showPatternHelp"
             @click="showPatternHelp = !showPatternHelp"
           >
-            <CircleHelp class="h-4 w-4 inline" />
+            <CircleHelp class="h-4 w-4 inline" aria-hidden="true" />
           </button>
         </label>
         <input

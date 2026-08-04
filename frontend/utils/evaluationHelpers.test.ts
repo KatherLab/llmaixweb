@@ -1,15 +1,22 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   accuracyBarColor,
   accuracyColor,
   documentStatusColor,
   documentStatusLabel,
+  documentStatusTier,
   getEvaluationAccuracy,
   getEvaluationAccuracyPct,
   getEvaluationDocumentCount,
   prettifyErrorType,
   prettifyField,
 } from './evaluationHelpers'
+
+// The helpers resolve localized labels through the global i18n instance;
+// stub it so assertions are locale-catalog-independent (t returns the key).
+vi.mock('@/i18n', () => ({
+  i18n: { global: { t: (key: string) => key } },
+}))
 
 // These helpers deliberately accept loosely-shaped payloads at runtime; the
 // exported signatures require the full Evaluation types, so route the partial
@@ -52,9 +59,13 @@ describe('prettifyField', () => {
 })
 
 describe('prettifyErrorType', () => {
-  it('title-cases an error_type enum', () => {
-    expect(prettifyErrorType('fuzzy_mismatch')).toBe('Fuzzy Mismatch')
+  it('resolves known error types through the i18n catalog', () => {
+    expect(prettifyErrorType('fuzzy_mismatch')).toBe('evaluation.error_types.fuzzy_mismatch.label')
     expect(prettifyErrorType(null)).toBe('')
+  })
+
+  it('title-cases unknown error types as a fallback', () => {
+    expect(prettifyErrorType('weird_new_type')).toBe('Weird New Type')
   })
 })
 
@@ -76,11 +87,20 @@ describe('accuracy tiers', () => {
 })
 
 describe('document status', () => {
-  it('labels a document by its accuracy tier', () => {
-    expect(documentStatusLabel(doc({ accuracy: 0.95 }))).toBe('OK')
-    expect(documentStatusLabel(doc({ accuracy: 0.7 }))).toBe('Partial')
-    expect(documentStatusLabel(doc({ accuracy: 0.3 }))).toBe('Low')
-    expect(documentStatusLabel(doc({ has_error: true }))).toBe('Error')
+  it('assigns a tier by the shared thresholds', () => {
+    expect(documentStatusTier(doc({ accuracy: 0.95 }))).toBe('ok')
+    expect(documentStatusTier(doc({ accuracy: 0.7 }))).toBe('partial')
+    expect(documentStatusTier(doc({ accuracy: 0.3 }))).toBe('low')
+    expect(documentStatusTier(doc({ has_error: true }))).toBe('error')
+    expect(documentStatusTier(doc({ accuracy: null }))).toBe('')
+    expect(documentStatusTier(null)).toBe('')
+  })
+
+  it('labels a document via the status_labels catalog keys', () => {
+    expect(documentStatusLabel(doc({ accuracy: 0.95 }))).toBe('evaluation.status_labels.ok')
+    expect(documentStatusLabel(doc({ accuracy: 0.7 }))).toBe('evaluation.status_labels.partial')
+    expect(documentStatusLabel(doc({ accuracy: 0.3 }))).toBe('evaluation.status_labels.low')
+    expect(documentStatusLabel(doc({ has_error: true }))).toBe('evaluation.status_labels.error')
     expect(documentStatusLabel(doc({ accuracy: null }))).toBe('')
     expect(documentStatusLabel(null)).toBe('')
   })

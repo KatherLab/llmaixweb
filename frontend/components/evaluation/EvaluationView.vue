@@ -36,7 +36,7 @@
       >
         <template #actions>
           <BaseButton
-            variant="secondary"
+            variant="primary"
             :disabled="loadingStates.groundTruthFiles"
             @click="showUploadModal = true"
           >
@@ -45,7 +45,7 @@
           </BaseButton>
           <BaseButton
             v-if="evaluations.length > 0"
-            variant="success"
+            variant="secondary"
             :disabled="loadingStates.evaluations"
             @click="showExportModal = true"
           >

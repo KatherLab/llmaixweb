@@ -12,6 +12,7 @@
  *            'object'|'array'), falling back to 'any' when absent
  *  - depth:  nesting depth (0 = top-level), for indentation
  */
+import { i18n } from '@/i18n'
 import type { SchemaDefinition, SchemaProperty } from '@/types'
 
 export interface SchemaField {
@@ -98,7 +99,7 @@ function walk(
       const itemType = typeOf(child.items)
       fields.push({
         path: itemPath,
-        name: `${name} (list items)`,
+        name: i18n.global.t('schemaEditor.field_list.list_items', { name }),
         type: itemType,
         description: child.items?.description || child?.description || '',
         required: false,
@@ -148,8 +149,17 @@ export function summarizeSchema(
 ): string {
   const fields = flattenSchemaFields(schemaDefinition)
   const top = fields.filter((f) => f.depth === 0)
-  if (top.length === 0) return 'No fields defined'
+  if (top.length === 0) return i18n.global.t('schemaEditor.field_list.summary_empty')
   const shown = top.slice(0, maxNames).map((f) => f.name)
-  const more = top.length > maxNames ? `, +${top.length - maxNames} more` : ''
-  return `${top.length} field${top.length === 1 ? '' : 's'}: ${shown.join(', ')}${more}`
+  const more =
+    top.length > maxNames
+      ? i18n.global.t('schemaEditor.field_list.summary_more', { count: top.length - maxNames })
+      : ''
+  return (
+    i18n.global.t(
+      'schemaEditor.field_list.summary',
+      { count: top.length, names: shown.join(', ') },
+      top.length,
+    ) + more
+  )
 }

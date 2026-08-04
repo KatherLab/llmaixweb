@@ -58,12 +58,9 @@
               })
             "
           >
-            <option value="exact">exact</option>
-            <option value="fuzzy">fuzzy</option>
-            <option value="numeric">numeric</option>
-            <option value="category">category</option>
-            <option value="date">date</option>
-            <option value="boolean">boolean</option>
+            <option v-for="method in COMPARISON_METHODS" :key="method" :value="method">
+              {{ $t(`groundtruth.comparison_methods.${method}.label`) }}
+            </option>
           </select>
           <!-- Options toggle (only for methods with tunable options) -->
           <button
@@ -170,7 +167,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { AlertTriangle, ArrowRight, SlidersHorizontal, X } from '@lucide/vue'
 import Tooltip from '@/components/common/Tooltip.vue'
-import { getComparisonMethodDescription } from '@/utils/metricsDefinitions'
+import { COMPARISON_METHODS, getComparisonMethodDescription } from '@/utils/metricsDefinitions'
 import { selectClass, inputClass } from '@/utils/formStyles'
 import type { ComparisonMethod } from '@/types'
 

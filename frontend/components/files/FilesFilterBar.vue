@@ -133,6 +133,20 @@ const fileTypeLabels: Record<string, string> = {
 
 const getFileTypeLabel = (type: string): string => fileTypeLabels[type] || type
 
+// Status labels mapping — same keys as the select options, so the active-filter
+// chip shows "Not preprocessed" instead of the raw enum "not_preprocessed".
+const statusLabelKeys: Record<string, string> = {
+  not_preprocessed: 'files.filter.status_not_processed',
+  processing: 'files.filter.status_processing',
+  completed: 'files.filter.status_completed',
+  failed: 'files.filter.status_failed',
+}
+
+const getStatusLabel = (value: string): string => {
+  const key = statusLabelKeys[value]
+  return key ? t(key) : value
+}
+
 // Active filter chips (unified rendering via FilterBar's activeFilters prop)
 const activeFilters = computed<ActiveFilter[]>(() => {
   const chips: ActiveFilter[] = []
@@ -145,7 +159,7 @@ const activeFilters = computed<ActiveFilter[]>(() => {
   if (status.value)
     chips.push({
       key: 'status',
-      label: t('files.filter.chip_status', { value: status.value }),
+      label: t('files.filter.chip_status', { value: getStatusLabel(status.value) }),
       color: 'green',
     })
   if (fileType.value)

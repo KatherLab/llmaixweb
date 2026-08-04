@@ -23,10 +23,16 @@
  *   } = useModelTesting({ trialData, projectId, maxCompletionTokens, temperature, reasoningEffort })
  */
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
+import { i18n } from '@/i18n'
 import { useToast } from '@/composables/useToast'
 import { llmApi } from '@/services/llmApi'
 import { extractErrorMessage } from '@/utils/errors'
 import type { LlmModelSchemaTestRequest } from '@/types'
+
+// Non-component code — localize via the global composer (same precedent as
+// utils/errors.ts). Called inside computeds, so locale changes stay reactive.
+const t = (key: string, params?: Record<string, unknown>): string =>
+  i18n.global.t(key, params ?? {})
 
 /**
  * Shape of the trial-creation form data consumed by this composable. All fields
@@ -136,53 +142,68 @@ export function useModelTesting({
 
   const configStatus = computed<StatusDescriptor>(() => {
     if (isTestingConnection.value || isLoadingModels.value) {
-      return { type: 'loading', message: 'Testing configuration...' }
+      return { type: 'loading', message: t('trials.model_test.status.testing_config') }
     }
 
     if (hasCustomApiSettings.value) {
       if (!connectionTested.value)
-        return { type: 'warning', message: 'Custom API settings need to be tested' }
+        return { type: 'warning', message: t('trials.model_test.status.custom_needs_test') }
       if (!connectionValid.value)
-        return { type: 'error', message: customConfigError.value || 'Custom API connection failed' }
+        return {
+          type: 'error',
+          message:
+            customConfigError.value || t('trials.model_test.status.custom_connection_failed'),
+        }
       if (availableModels.value.length === 0)
-        return { type: 'error', message: 'No models available with current settings' }
+        return { type: 'error', message: t('trials.model_test.status.no_models_custom') }
       return {
         type: 'success',
-        message: `Custom API connected - ${availableModels.value.length} models available`,
+        message: t('trials.model_test.status.custom_connected', {
+          count: availableModels.value.length,
+        }),
       }
     } else {
       if (!hasSystemConfig.value)
         return {
           type: 'error',
-          message:
-            'System configuration incomplete - please contact administrator or use custom settings',
+          message: t('trials.model_test.status.system_incomplete'),
         }
       if (systemConfigError.value)
         return {
           type: 'error',
-          message: `System configuration error - please contact administrator: ${systemConfigError.value}`,
+          message: t('trials.model_test.status.system_error', {
+            error: systemConfigError.value,
+          }),
         }
       if (availableModels.value.length === 0)
-        return { type: 'error', message: 'No models available - please contact administrator' }
+        return { type: 'error', message: t('trials.model_test.status.no_models_system') }
       return {
         type: 'success',
-        message: `System configuration active - ${availableModels.value.length} models available`,
+        message: t('trials.model_test.status.system_active', {
+          count: availableModels.value.length,
+        }),
       }
     }
   })
 
   const modelTestStatus = computed<StatusDescriptor>(() => {
     if (!trialData.value.llm_model || !trialData.value.schema_id) {
-      return { type: 'none', message: 'Select a model and schema first' }
+      return { type: 'none', message: t('trials.model_test.status.select_model_schema') }
     }
-    if (isTestingModel.value) return { type: 'loading', message: 'Testing model with schema...' }
+    if (isTestingModel.value)
+      return { type: 'loading', message: t('trials.model_test.status.testing_model') }
     if (!modelTested.value)
-      return { type: 'warning', message: 'Model must be tested with schema before creating trial' }
+      return { type: 'warning', message: t('trials.model_test.status.model_needs_test') }
     if (!modelValid.value)
-      return { type: 'error', message: modelTestError.value || 'Model test failed' }
+      return {
+        type: 'error',
+        message: modelTestError.value || t('trials.model_test.errors.model_test_failed'),
+      }
     return {
       type: 'success',
-      message: `Model '${trialData.value.llm_model}' supports the selected schema`,
+      message: t('trials.model_test.status.model_supports_schema', {
+        model: trialData.value.llm_model,
+      }),
     }
   })
 
@@ -225,7 +246,7 @@ export function useModelTesting({
         }
       } else {
         availableModels.value = []
-        throw new Error(response.data.message || 'Failed to load models')
+        throw new Error(response.data.message || t('trials.model_test.errors.load_models_failed'))
       }
     } catch (error) {
       if (seq !== connectionSeq) return
@@ -276,21 +297,26 @@ export function useModelTesting({
         if (seq !== connectionSeq) return // superseded while loading models
 
         if (availableModels.value.length === 0) {
-          const errorMsg = 'Connection successful but no models available'
+          const errorMsg = t('trials.model_test.errors.no_models')
           if (hasCustomApiSettings.value) {
             customConfigError.value = errorMsg
             if (notify) toast.error(errorMsg)
           } else {
             systemConfigError.value = errorMsg
-            if (notify) toast.error('No models available. Please contact your administrator.')
+            if (notify) toast.error(t('trials.model_test.toast.no_models_admin'))
           }
         } else if (notify) {
-          toast.success(`Connection successful. Loaded ${availableModels.value.length} models.`)
+          toast.success(
+            t('trials.model_test.toast.connection_success', {
+              count: availableModels.value.length,
+            }),
+          )
         }
       } else {
         connectionValid.value = false
         connectionTested.value = true
-        const errorMsg = testResponse.data.message || 'Connection test failed'
+        const errorMsg =
+          testResponse.data.message || t('trials.model_test.errors.connection_failed')
 
         if (hasCustomApiSettings.value) {
           customConfigError.value = errorMsg
@@ -301,13 +327,9 @@ export function useModelTesting({
 
           if (notify) {
             if (testResponse.data.error_type === 'incomplete_config') {
-              toast.error(
-                'System LLM configuration is incomplete. Please contact your administrator or provide custom API settings.',
-              )
+              toast.error(t('trials.model_test.toast.system_incomplete'))
             } else {
-              toast.error(
-                `System LLM configuration error: ${errorMsg}. Please contact your administrator.`,
-              )
+              toast.error(t('trials.model_test.toast.system_error', { error: errorMsg }))
             }
           }
         }
@@ -322,15 +344,14 @@ export function useModelTesting({
         (error as { response?: { data?: { message?: string; detail?: string } } })?.response?.data
           ?.detail ||
         (error as Error)?.message ||
-        'Connection test failed'
+        t('trials.model_test.errors.connection_failed')
       if (hasCustomApiSettings.value) {
         customConfigError.value = errMsg
-        if (notify) toast.error(`Connection failed: ${errMsg}`)
+        if (notify) toast.error(t('trials.model_test.toast.connection_failed', { error: errMsg }))
       } else {
         systemConfigError.value = errMsg
         hasSystemConfig.value = false
-        if (notify)
-          toast.error(`System configuration error: ${errMsg}. Please contact your administrator.`)
+        if (notify) toast.error(t('trials.model_test.toast.system_error', { error: errMsg }))
       }
     } finally {
       if (seq === connectionSeq) isTestingConnection.value = false
@@ -339,11 +360,11 @@ export function useModelTesting({
 
   const testSelectedModel = async (): Promise<void> => {
     if (!trialData.value.llm_model) {
-      toast.error('Please select a model first')
+      toast.error(t('trials.model_test.toast.select_model_first'))
       return
     }
     if (!trialData.value.schema_id) {
-      toast.error('Please select a schema first')
+      toast.error(t('trials.model_test.toast.select_schema_first'))
       return
     }
 
@@ -384,24 +405,31 @@ export function useModelTesting({
         modelValid.value = true
       } else {
         modelValid.value = false
-        modelTestError.value = response.data.message || 'Model test failed'
+        modelTestError.value =
+          response.data.message || t('trials.model_test.errors.model_test_failed')
 
         if (response.data.error_type === 'structured_output_not_supported') {
           toast.error(
-            `Model '${trialData.value.llm_model}' does not support structured output. Please select a different model.`,
+            t('trials.model_test.toast.no_structured_output', {
+              model: trialData.value.llm_model,
+            }),
           )
         } else if (response.data.error_type === 'schema_validation_error') {
-          toast.error(`Schema validation failed: ${response.data.message}`)
+          toast.error(
+            t('trials.model_test.toast.schema_validation_failed', {
+              message: response.data.message,
+            }),
+          )
         } else {
-          toast.error(response.data.message || 'Model test failed')
+          toast.error(response.data.message || t('trials.model_test.errors.model_test_failed'))
         }
       }
     } catch (error) {
       modelTested.value = true
       modelValid.value = false
-      const errorMsg = extractErrorMessage(error, 'Model test failed')
+      const errorMsg = extractErrorMessage(error, t('trials.model_test.errors.model_test_failed'))
       modelTestError.value = errorMsg
-      toast.error(`Model test failed: ${errorMsg}`)
+      toast.error(t('trials.model_test.toast.model_test_failed', { error: errorMsg }))
     } finally {
       isTestingModel.value = false
     }

@@ -97,8 +97,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { Database, MessageSquare } from '@lucide/vue'
 import { schemasApi } from '@/services/schemasApi'
 import { promptsApi } from '@/services/promptsApi'
@@ -124,9 +125,22 @@ const props = defineProps<Props>()
 
 const { t } = useI18n({ useScope: 'global' })
 const toast = useToast()
+const route = useRoute()
+const router = useRouter()
 
-// Tab state
-const activeSection = ref<'schemas' | 'prompts'>('schemas')
+// Sub-tab (schemas | prompts), mirrored into ?section= so a refresh keeps the
+// Prompts sub-tab. The param is omitted for the default tab.
+const activeSection = ref<'schemas' | 'prompts'>(
+  route.query.section === 'prompts' ? 'prompts' : 'schemas',
+)
+
+// Keep ?section= in sync with the active sub-tab (replace, not push — tab
+// flips shouldn't pollute history; other query params like ?tab are preserved).
+watch(activeSection, (section) => {
+  const desired = section === 'prompts' ? 'prompts' : undefined
+  if (route.query.section === desired || (!route.query.section && !desired)) return
+  router.replace({ query: { ...route.query, section: desired } })
+})
 
 // Tab config for BaseTabGroup (icons + count badges rendered via the #tab scoped
 // slot to keep the Database/MessageSquare icons and StatusBadge styling).

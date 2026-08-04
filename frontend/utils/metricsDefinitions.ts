@@ -4,105 +4,89 @@
  * Single source of truth so the failure examiner, field tables, and any
  * summary view stay consistent. Used via the `Tooltip` component and as
  * inline helper text.
+ *
+ * All user-visible prose lives in the i18n catalog
+ * (`evaluation.metric_defs.*`, `evaluation.error_types.*`,
+ * `groundtruth.comparison_methods.*`); this module resolves the keys via the
+ * global i18n instance — same outside-setup pattern as `utils/errors.ts`.
  */
+import { i18n } from '@/i18n'
 
-interface MetricDefinition {
-  short: string
-  long: string
-  guidance: string
-}
+const t = (key: string): string => i18n.global.t(key)
+
+/** Metrics with catalog-backed definitions (`evaluation.metric_defs.<key>`). */
+const METRIC_KEYS = new Set(['accuracy', 'precision', 'recall', 'f1_score', 'confidence'])
 
 /**
- * Metric definitions: { metric: { short, long, guidance } }
- *  - short: one-line label (tooltip headline)
- *  - long: plain-language definition
- *  - guidance: "what this means for you"
- */
-export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
-  accuracy: {
-    short: 'Accuracy',
-    long: 'Share of all extracted fields that exactly match the ground truth.',
-    guidance:
-      'High accuracy = most fields are correct overall. Computed over matched documents and the fields the ground truth actually provides a value for.',
-  },
-  precision: {
-    short: 'Precision',
-    long: 'Of the values the model extracted, the fraction that were correct.',
-    guidance:
-      'Low precision means the model often extracts wrong values (false positives). A wrong value where one was expected counts against precision too.',
-  },
-  recall: {
-    short: 'Recall',
-    long: 'Of the values that should have been extracted, the fraction the model got right.',
-    guidance:
-      'Low recall means the model misses fields, or extracts the wrong value where a value was expected (false negatives). Per-field recall is over the documents whose ground truth has a value for that field.',
-  },
-  f1_score: {
-    short: 'F1 Score',
-    long: 'Harmonic mean of precision and recall — balances both into one number.',
-    guidance: 'Use F1 to compare fields when you care about both missing and wrong values.',
-  },
-  confidence: {
-    short: 'Confidence',
-    long: 'The model’s self-reported certainty for the extracted value (0–1).',
-    guidance: 'Low confidence on a correct value can hint at borderline cases worth reviewing.',
-  },
-}
-
-/**
- * Get the tooltip text (long + guidance) for a metric key.
+ * Get the tooltip text (long definition + guidance) for a metric key.
  * @param {string} key
  * @returns {string}
  */
 export function getMetricTooltip(key: string | null | undefined): string {
-  if (!key) return ''
-  const def = METRIC_DEFINITIONS[key]
-  if (!def) return ''
-  return `${def.long}\n${def.guidance}`
+  if (!key || !METRIC_KEYS.has(key)) return ''
+  return `${t(`evaluation.metric_defs.${key}.long`)}\n${t(`evaluation.metric_defs.${key}.guidance`)}`
 }
 
 /**
+ * `error_type` enums with catalog-backed texts
+ * (`evaluation.error_types.<type>.{label,description,suggestion}`).
+ * Unknown types fall back to `evaluation.error_types.unknown.*`.
+ */
+export const KNOWN_ERROR_TYPES = new Set([
+  'missing',
+  'mismatch',
+  'fuzzy_mismatch',
+  'numeric_mismatch',
+  'boolean_mismatch',
+  'category_mismatch',
+  'date_mismatch',
+  'type_error',
+  'extra',
+  'date_parse_error',
+])
+
+/**
  * Human-readable description for an error_type from EvaluationMetric.
- * Extracted from the former FieldErrorAnalysis.vue inline map.
  * @param {string|null} errorType
  * @returns {string}
  */
 export function getErrorTypeDescription(errorType: string | null | undefined): string {
-  const descriptions: Record<string, string> = {
-    missing: 'Field was not extracted from the document',
-    mismatch: 'Extracted value does not match ground truth',
-    fuzzy_mismatch: 'Extracted value is similar but not close enough to ground truth',
-    numeric_mismatch: 'Numeric value is outside acceptable tolerance',
-    boolean_mismatch: 'Boolean value is incorrect',
-    category_mismatch: 'Category value does not match expected options',
-    date_mismatch: 'Date value is incorrect or in wrong format',
-    type_error: 'Value type is incorrect (e.g., text instead of number)',
-    extra: 'Field was extracted but not expected in ground truth',
-    date_parse_error: 'Date could not be parsed for comparison',
-  }
-  return (errorType && descriptions[errorType]) || 'Unknown error type'
+  const key = errorType && KNOWN_ERROR_TYPES.has(errorType) ? errorType : 'unknown'
+  return t(`evaluation.error_types.${key}.description`)
 }
 
 /**
  * Actionable suggestion for an error_type.
- * Extracted from the former FieldErrorAnalysis.vue inline map.
  * @param {string|null} errorType
  * @returns {string}
  */
 export function getErrorSuggestion(errorType: string | null | undefined): string {
-  const suggestions: Record<string, string> = {
-    missing: 'Check if the field exists in the document or improve extraction prompts',
-    mismatch: 'Review extraction accuracy or ground truth data',
-    fuzzy_mismatch: 'Consider adjusting fuzzy matching threshold or improving extraction',
-    numeric_mismatch: 'Check numeric parsing or adjust tolerance settings',
-    boolean_mismatch: 'Review boolean value mapping or extraction logic',
-    category_mismatch: 'Verify category mappings or improve classification',
-    date_mismatch: 'Check date format parsing or improve date extraction',
-    type_error: 'Review data type conversion or schema definition',
-    extra: 'Check if this field should be included in ground truth',
-    date_parse_error: 'Check date format parsing or improve date extraction',
-  }
-  return (errorType && suggestions[errorType]) || 'Review extraction logic and ground truth data'
+  const key = errorType && KNOWN_ERROR_TYPES.has(errorType) ? errorType : 'unknown'
+  return t(`evaluation.error_types.${key}.suggestion`)
+}
+
+/**
+ * Comparison methods offered in the mapping configurator, in select order.
+ * Labels/descriptions live under `groundtruth.comparison_methods.<method>`.
+ */
+export const COMPARISON_METHODS = [
+  'exact',
+  'fuzzy',
+  'numeric',
+  'category',
+  'date',
+  'boolean',
+] as const
+
+/**
+ * Localized short label for a comparison method (e.g. the select options in
+ * the mapping list). Unknown methods fall through as the raw value.
+ * @param {string} method
+ * @returns {string}
+ */
+export function getComparisonMethodLabel(method: string | null | undefined): string {
+  if (!method || !(COMPARISON_METHODS as readonly string[]).includes(method)) return method || ''
+  return t(`groundtruth.comparison_methods.${method}.label`)
 }
 
 /**
@@ -112,17 +96,8 @@ export function getErrorSuggestion(errorType: string | null | undefined): string
  * @returns {string}
  */
 export function getComparisonMethodDescription(method: string | null | undefined): string {
-  const descriptions: Record<string, string> = {
-    exact: 'Exact text match (case-insensitive by default). Use for IDs, codes, enums.',
-    fuzzy:
-      'Approximate string match. Correct if similarity ≥ threshold (default 85). Tolerates typos and word reordering; substring matching is off by default (opt-in) because it can invert meaning in medical text.',
-    numeric:
-      'Numeric comparison within a tolerance (default 0.001, absolute). Use for measurements, counts, lab values.',
-    boolean: 'True/false comparison (true/yes/1 vs false/no/0).',
-    category: 'Categorical match with optional synonym mappings. Builds a confusion matrix.',
-    date: 'Date equality across common formats (e.g. 2024-01-02 vs 02/01/2024).',
-  }
-  return (method && descriptions[method]) || ''
+  if (!method || !(COMPARISON_METHODS as readonly string[]).includes(method)) return ''
+  return t(`groundtruth.comparison_methods.${method}.description`)
 }
 
 /**

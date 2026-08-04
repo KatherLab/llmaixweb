@@ -12,6 +12,8 @@
  * different assumptions, one of which produced "NaN% accuracy" in the export
  * modal).
  */
+import { i18n } from '@/i18n'
+import { KNOWN_ERROR_TYPES } from '@/utils/metricsDefinitions'
 import type { Evaluation, EvaluationSummary, DocumentEvaluationDetail } from '@/types'
 
 /**
@@ -141,20 +143,36 @@ export function accuracyBarColor(acc: number | null | undefined): string {
   return 'bg-yellow-500 dark:bg-yellow-400'
 }
 
+/** Accuracy-tier token for a document-eval row ('' when unknown). */
+export type DocumentStatusTier = 'ok' | 'low' | 'partial' | 'error' | ''
+
 /**
- * Short human label for a document's accuracy tier.
- *   ≥0.9 → 'OK', <0.5 → 'Low', else → 'Partial'.
- * Documents that failed to score (`has_error`/`error`) → 'Error'.
+ * Accuracy tier for a document-eval row.
+ *   ≥0.9 → 'ok', <0.5 → 'low', else → 'partial'.
+ * Documents that failed to score (`has_error`/`error`) → 'error'.
+ * @param {object} doc  a document-eval row ({ accuracy, has_error, error })
+ * @returns {string}
+ */
+export function documentStatusTier(
+  doc: DocumentEvaluationDetail | null | undefined,
+): DocumentStatusTier {
+  if (!doc) return ''
+  if (doc.has_error || doc.error) return 'error'
+  if (doc.accuracy == null) return ''
+  if (doc.accuracy >= ACCURACY_THRESHOLDS.HIGH) return 'ok'
+  if (doc.accuracy < ACCURACY_THRESHOLDS.LOW) return 'low'
+  return 'partial'
+}
+
+/**
+ * Short localized label for a document's accuracy tier
+ * (`evaluation.status_labels.<tier>`).
  * @param {object} doc  a document-eval row ({ accuracy, has_error, error })
  * @returns {string}
  */
 export function documentStatusLabel(doc: DocumentEvaluationDetail | null | undefined): string {
-  if (!doc) return ''
-  if (doc.has_error || doc.error) return 'Error'
-  if (doc.accuracy == null) return ''
-  if (doc.accuracy >= ACCURACY_THRESHOLDS.HIGH) return 'OK'
-  if (doc.accuracy < ACCURACY_THRESHOLDS.LOW) return 'Low'
-  return 'Partial'
+  const tier = documentStatusTier(doc)
+  return tier ? i18n.global.t(`evaluation.status_labels.${tier}`) : ''
 }
 
 /**
@@ -165,21 +183,25 @@ export function documentStatusLabel(doc: DocumentEvaluationDetail | null | undef
 export function documentStatusColor(
   doc: DocumentEvaluationDetail | null | undefined,
 ): 'red' | 'green' | 'yellow' {
-  const label = documentStatusLabel(doc)
-  if (label === 'Error' || label === 'Low') return 'red'
-  if (label === 'OK') return 'green'
+  const tier = documentStatusTier(doc)
+  if (tier === 'error' || tier === 'low') return 'red'
+  if (tier === 'ok') return 'green'
   return 'yellow'
 }
 
 /**
- * Prettify a raw error_type enum (e.g. `fuzzy_mismatch`) for inline display.
- * Kept here so chips/labels across the UI show the same wording as the
- * tooltips in metricsDefinitions.js.
+ * Localized display name for a raw error_type enum (e.g. `fuzzy_mismatch`)
+ * — `evaluation.error_types.<type>.label`, so chips/labels across the UI
+ * show the same wording as the tooltips in metricsDefinitions.ts. Unknown
+ * enum values fall back to Title Case of the raw value.
  * @param {string|null|undefined} errorType
  * @returns {string}
  */
 export function prettifyErrorType(errorType: string | null | undefined): string {
   if (!errorType) return ''
+  if (KNOWN_ERROR_TYPES.has(String(errorType))) {
+    return i18n.global.t(`evaluation.error_types.${errorType}.label`)
+  }
   return String(errorType)
     .replace(/[_-]+/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase())

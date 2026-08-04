@@ -228,6 +228,8 @@
               variant="ghost"
               size="sm"
               :disabled="currentPage <= 1"
+              :aria-label="$t('common.pagination.previous')"
+              :title="$t('common.pagination.previous')"
               @click="handlePageChange(currentPage - 1)"
             >
               <ChevronLeft class="h-4 w-4" />
@@ -239,6 +241,8 @@
               variant="ghost"
               size="sm"
               :disabled="currentPage >= totalPages"
+              :aria-label="$t('common.pagination.next')"
+              :title="$t('common.pagination.next')"
               @click="handlePageChange(currentPage + 1)"
             >
               <ChevronRight class="h-4 w-4" />

@@ -487,12 +487,20 @@ const hasOriginalContent = computed(
 const availablePanels = computed<PanelOption[]>(() => {
   const panels: PanelOption[] = []
   if (hasOriginalContent.value) {
-    panels.push({ key: 'source', label: 'Source', icon: FileText })
+    panels.push({ key: 'source', label: t('evaluation.drawer_panels.source'), icon: FileText })
   }
-  panels.push({ key: 'comparison', label: 'Comparison', icon: GitCompare })
-  panels.push({ key: 'output', label: 'Output', icon: Braces })
+  panels.push({
+    key: 'comparison',
+    label: t('evaluation.drawer_panels.comparison'),
+    icon: GitCompare,
+  })
+  panels.push({ key: 'output', label: t('evaluation.drawer_panels.output'), icon: Braces })
   if (reasoningContent.value) {
-    panels.push({ key: 'reasoning', label: 'Reasoning', icon: MessageSquare })
+    panels.push({
+      key: 'reasoning',
+      label: t('evaluation.drawer_panels.reasoning'),
+      icon: MessageSquare,
+    })
   }
   return panels
 })

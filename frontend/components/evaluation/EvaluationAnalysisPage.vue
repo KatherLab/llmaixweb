@@ -271,7 +271,12 @@
             row-clickable
             :highlighted-keys="selectedDocId ? [String(selectedDocId)] : []"
             :row-id-prefix="'eval-doc'"
-            :empty-title="$t('evaluation.analysis.no_documents_match')"
+            :empty-title="
+              hasActiveFilters
+                ? $t('evaluation.analysis.no_documents_match')
+                : $t('evaluation.analysis.no_documents_title')
+            "
+            :empty-description="hasActiveFilters ? '' : $t('evaluation.analysis.no_documents_hint')"
             @row-click="openDoc"
           >
             <template #cell-document_name="{ row }">
@@ -709,6 +714,18 @@ const filteredDocs = computed(() => {
   }
   return docs
 })
+
+// Whether any document filter is active — decides which empty-table message
+// to show (a "no matches" message would wrongly blame filters when e.g. every
+// document failed ground-truth ID matching).
+const hasActiveFilters = computed(() =>
+  Boolean(
+    search.value.trim() ||
+    statusFilter.value !== 'all' ||
+    selectedFieldFilter.value ||
+    confusionFilter.value,
+  ),
+)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredDocs.value.length / pageSize)))
 const visiblePages = computed(() => computeVisiblePages(currentPage.value, totalPages.value))

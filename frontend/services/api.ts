@@ -1,5 +1,6 @@
 import axios, { type AxiosRequestConfig } from 'axios'
 import router from '@/router'
+import { i18n } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 
@@ -58,9 +59,7 @@ api.interceptors.response.use(
       await authStore.logout({ serverSide: false })
       if (router.currentRoute.value.path !== '/login') {
         const toast = useToast()
-        toast.error('Session expired. Please sign in again.', {
-          timeout: 4000,
-        })
+        toast.error(i18n.global.t('auth.session_expired'))
         // Preserve the current location so login can return the user there
         // (matches the router guard's redirect pattern).
         router.push({
@@ -77,9 +76,7 @@ api.interceptors.response.use(
       await authStore.logout({ serverSide: false })
       if (router.currentRoute.value.path !== '/login') {
         const toast = useToast()
-        toast.error('Session expired. Please sign in again.', {
-          timeout: 4000,
-        })
+        toast.error(i18n.global.t('auth.session_expired'))
         router.push({
           path: '/login',
           query: { redirect: router.currentRoute.value.fullPath },

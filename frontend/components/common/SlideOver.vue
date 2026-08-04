@@ -39,16 +39,30 @@
           <div class="flex items-center gap-2 shrink-0">
             <slot name="actions" />
             <template v-if="showNav">
-              <BaseButton variant="secondary" size="sm" :disabled="!hasPrev" @click="emit('prev')">
-                <ChevronLeft class="h-4 w-4" />
+              <BaseButton
+                variant="secondary"
+                size="sm"
+                :disabled="!hasPrev"
+                :aria-label="$t('common.pagination.previous')"
+                :title="$t('common.pagination.previous')"
+                @click="emit('prev')"
+              >
+                <ChevronLeft class="h-4 w-4" aria-hidden="true" />
               </BaseButton>
               <span
                 class="text-xs font-medium text-content-muted tabular-nums px-1 whitespace-nowrap"
               >
                 {{ props.index + 1 }} / {{ props.total }}
               </span>
-              <BaseButton variant="secondary" size="sm" :disabled="!hasNext" @click="emit('next')">
-                <ChevronRight class="h-4 w-4" />
+              <BaseButton
+                variant="secondary"
+                size="sm"
+                :disabled="!hasNext"
+                :aria-label="$t('common.pagination.next')"
+                :title="$t('common.pagination.next')"
+                @click="emit('next')"
+              >
+                <ChevronRight class="h-4 w-4" aria-hidden="true" />
               </BaseButton>
             </template>
           </div>

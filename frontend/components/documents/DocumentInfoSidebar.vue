@@ -112,7 +112,7 @@
         <!-- Restore button for archived versions -->
         <BaseButton
           v-if="selectedVersion && !selectedVersion.is_latest"
-          variant="success"
+          variant="secondary"
           class="w-full"
           @click="$emit('restore-version', selectedVersion)"
         >
