@@ -41,9 +41,9 @@ dependencies = [
     "sqlalchemy==2.0.51",
     "psycopg[binary,pool]==3.3.4",
     "pydantic_settings==2.14.2",
-    "openai==2.52.0",
+    "openai==2.53.0",
     "bcrypt==5.0.0",
-    "boto3==1.43.62",
+    "boto3==1.43.63",
     "mistralai==2.8.0",
     "pypdf==6.14.2",
     "redis==8.1.0",
@@ -73,11 +73,11 @@ Documentation = "https://github.com/KatherLab/llmaixweb#readme"
 [dependency-groups]
 dev = [
     "ruff==0.16.1",
-    "ty==0.0.65",
+    "ty==0.0.66",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
     "httpx2==2.9.1",
-    "boto3-stubs==1.43.62",
+    "boto3-stubs==1.43.63",
     "pandas-stubs==3.0.5.260730",
     "celery-types==0.26.0",
     # Docling for local fallback during tests (when docling-serve unavailable).
@@ -86,7 +86,7 @@ dev = [
     # docling so the production image (`uv sync --no-dev`) doesn't ship ~1GB of
     # unused torch/opencv/scipy. torch/torchvision are declared explicitly so the
     # CPU-index pin in [tool.uv.sources] applies (avoids the huge CUDA build).
-    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.117.0",
+    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.118.0",
     "torch==2.13.0",
     "torchvision==0.28.0",
     "scipy==1.18.0",
